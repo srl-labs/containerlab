@@ -17,6 +17,9 @@
 
 # ignore the following files
 PRIVATE.md
+graph
 graph/*
+lab_wan
 lab_wan/*
 srl_config/license.key
+
