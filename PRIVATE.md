@@ -1,4 +1,4 @@
-env GOOS=linux GOARCH=amd64 go build -o bin/container-lab src/*.go
+env GOOS=linux GOARCH=amd64 go build -o bin/containerlab src/*.go
 
 go run src/*.go -h
 

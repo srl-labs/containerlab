@@ -13,3 +13,10 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+
+# ignore the following files
+PRIVATE.md
+graph/*
+lab_wan/*
+srl_config/license.key
