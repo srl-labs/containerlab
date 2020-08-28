@@ -1,0 +1,38 @@
+Prefix: wan
+Docker_info: 
+  bridge: srlinux_bridge
+  ipv4_subnet: "172.19.19.0/24"
+  ipv6_subnet: "2001:172:19:19::/80"
+
+SRL_image: srlinux:20.6.1-286
+SRL_config: srl_config/test.json
+SRL_license: srl_config/license.key
+Client_image: henderiw/client-alpine:1.0.0
+
+Duts:
+  wan1: ["srl", "bb", "ixr6", "srl_config/config.json"] 
+  wan2: ["srl", "bb", "ixr6", "srl_config/config.json"] 
+  wan3: ["srl", "pop1", "ixr6", "srl_config/config.json"] 
+  wan4: ["srl", "pop2", "ixr6", "srl_config/config.json"]
+  client1: ["alpine", "pop1"]
+  client2: ["alpine", "pop1"]
+  client3: ["alpine", "pop2"]
+  client4: ["alpine", "pop2"]
+
+Links:
+  - endpoints: ["wan1:e1-1", "wan2:e1-1"]
+  - endpoints: ["wan1:e1-2", "wan2:e1-2"]
+  - endpoints: ["wan1:e1-3", "wan2:e1-3"]
+  - endpoints: ["wan1:e1-4", "wan2:e1-4"]
+  - endpoints: ["wan3:e1-1", "wan1:e1-5"]
+  - endpoints: ["wan3:e1-2", "wan1:e1-6"]
+  - endpoints: ["wan4:e1-1", "wan1:e1-7"]
+  - endpoints: ["wan4:e1-2", "wan1:e1-8"]
+  - endpoints: ["wan3:e1-3", "wan2:e1-5"]
+  - endpoints: ["wan3:e1-4", "wan2:e1-6"]
+  - endpoints: ["wan4:e1-3", "wan2:e1-7"]
+  - endpoints: ["wan4:e1-4", "wan2:e1-8"]
+  - endpoints: ["client1:eth1", "wan3:e1-5"]
+  - endpoints: ["client2:eth1", "wan3:e1-6"]
+  - endpoints: ["client3:eth1", "wan4:e1-5"]
+  - endpoints: ["client4:eth1", "wan4:e1-6"]

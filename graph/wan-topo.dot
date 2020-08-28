@@ -1,0 +1,28 @@
+graph wantopo {
+	wan3--wan2[ color=green ];
+	wan1--wan2[ color=green ];
+	wan1--wan2[ color=green ];
+	wan3--wan1[ color=green ];
+	wan4--wan1[ color=green ];
+	client3--wan4[ color=green ];
+	client4--wan4[ color=green ];
+	wan1--wan2[ color=green ];
+	wan3--wan1[ color=green ];
+	wan3--wan2[ color=green ];
+	wan4--wan2[ color=green ];
+	wan4--wan2[ color=green ];
+	client1--wan3[ color=green ];
+	wan1--wan2[ color=green ];
+	wan4--wan1[ color=green ];
+	client2--wan3[ color=green ];
+	client1 [ color=red, fillcolor=green, group=pop1, label=client1, style=filled, xlabel=alpine ];
+	client2 [ color=red, fillcolor=green, group=pop1, label=client2, style=filled, xlabel=alpine ];
+	client3 [ color=red, fillcolor=green, group=pop2, label=client3, style=filled, xlabel=alpine ];
+	client4 [ color=red, fillcolor=green, group=pop2, label=client4, style=filled, xlabel=alpine ];
+	wan1 [ color=red, fillcolor=blue, group=bb, label=wan1, style=filled, xlabel=srl ];
+	wan2 [ color=red, fillcolor=blue, group=bb, label=wan2, style=filled, xlabel=srl ];
+	wan3 [ color=red, fillcolor=green, group=pop1, label=wan3, style=filled, xlabel=srl ];
+	wan4 [ color=red, fillcolor=green, group=pop2, label=wan4, style=filled, xlabel=srl ];
+
+}
+

@@ -1,0 +1,33 @@
+# nfpm example config file
+name: "containerlab"
+arch: "amd64"
+platform: "linux"
+version: "v1"
+section: "default"
+priority: "extra"
+replaces:
+- containerlab
+provides:
+- containerlab
+maintainer: "Wim Henderickx <wim.henderickx@nokia.com>"
+description: |
+  containerlab written go
+vendor: "Nokia"
+license: "BSD 2"
+bindir: "./containerlab/"
+files:
+  ./bin/containerlab: "./containerlab/containerlab"
+  ./srl_config/templates/topology-7220IXRD1.yml: "./containerlab/srl_config/templates/topology-7220IXRD1.yml"
+  ./srl_config/templates/topology-7220IXRD2.yml: "./containerlab/srl_config/templates/topology-7220IXRD2.yml"
+  ./srl_config/templates/topology-7220IXRD3.yml: "./containerlab/srl_config/templates/topology-7220IXRD3.yml"
+  ./srl_config/templates/topology-7250IXR6.yml: "./containerlab/srl_config/templates/topology-7250IXR6.yml"
+  ./srl_config/templates/topology-7250IXR10.yml: "./containerlab/srl_config/templates/topology-7250IXR10.yml"
+  ./srl_config/config.json: "./containerlab/srl_config/config.json"
+  ./srl_config/license.key: "./containerlab/srl_config/license.key"
+  ./srl_config/srl_env.conf: "./containerlab/srl_config/srl_env.conf"
+  ./labs/fabric-topo.yml: "./containerlab/labs/fabric-topo.yml"
+  ./labs/wan-topo.yml: "./containerlab/labs/wan-topo.yml"
+config_files:
+overrides:
+  rpm:
+    scripts:
