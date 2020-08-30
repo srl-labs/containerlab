@@ -63,6 +63,9 @@ type Node struct {
 	Binds      []string
 	Pid        int
 	Cid        string
+	MgmtIPv4   string
+	MgmtIPv6   string
+	MgmtMac    string
 }
 
 // Link is a struct that contains the information of a link between 2 containers

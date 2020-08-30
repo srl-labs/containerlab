@@ -1,0 +1,18 @@
+Prefix: test
+Docker_info: 
+  bridge: srlinux_bridge
+  ipv4_subnet: "172.19.19.0/24"
+  ipv6_subnet: "2001:172:19:19::/80"
+
+SRL_image: srlinux:20.6.1-286
+SRL_config: srl_config/test.json
+SRL_license: srl_config/license.key
+Client_image: henderiw/client-alpine:1.0.0
+
+Duts:
+  wan1: ["srl", "bb", "ixr6", "srl_config/config.json"] 
+  wan2: ["srl", "bb", "ixr6", "srl_config/config.json"] 
+
+
+Links:
+  - endpoints: ["wan1:e1-1", "wan2:e1-1"]

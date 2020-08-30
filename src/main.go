@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/pflag"
@@ -86,6 +88,11 @@ func main() {
 			if err = generateGraph(topo); err != nil {
 				log.Error(err)
 			}
+		}
+
+		//show management ip addresses per Node
+		for dutName, node := range Nodes {
+			log.Info(fmt.Sprintf("Mgmt IP addresses of container: %s, IPv4: %s, IPv6: %s, MAC: %s", dutName, node.MgmtIPv4, node.MgmtIPv6, node.MgmtMac))
 		}
 
 	case "destroy":

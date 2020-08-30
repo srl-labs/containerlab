@@ -141,7 +141,12 @@ func (d *Docker) createContainer(name string, node *Node) (err error) {
 		return err
 	}
 	node.Pid = s.State.Pid
+	node.MgmtIPv4 = s.NetworkSettings.Networks["srlinux_bridge"].IPAddress
+	node.MgmtIPv6 = s.NetworkSettings.Networks["srlinux_bridge"].GlobalIPv6Address
+	node.MgmtMac = s.NetworkSettings.Networks["srlinux_bridge"].MacAddress
+
 	log.Debug("Container pid: ", node.Pid)
+	log.Debug("Container pid: ", node.MgmtIPv4)
 
 	return nil
 }
