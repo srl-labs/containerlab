@@ -21,10 +21,12 @@ type dockerInfo struct {
 type conf struct {
 	Prefix      string              `yaml:"Prefix"`
 	DockerInfo  dockerInfo          `yaml:"Docker_info"`
-	SRLImage    string              `yaml:"SRL_image"`
 	ClientImage string              `yaml:"Client_image"`
+	SRLImage    string              `yaml:"SRL_image"`
 	SRLConfig   string              `yaml:"SRL_config"`
 	SRLLicense  string              `yaml:"SRL_license"`
+	CEOSImage   string              `yaml:"CEOS_image"`
+	CEOSConfig  string              `yaml:"CEOS_config"`
 	Duts        map[string][]string `yaml:"Duts"`
 	Links       []struct {
 		Endpoints []string `yaml:"endpoints"`
@@ -60,6 +62,7 @@ type Node struct {
 	Volumes    map[string]struct{}
 	Binds      []string
 	Pid        int
+	Cid        string
 }
 
 // Link is a struct that contains the information of a link between 2 containers
@@ -160,14 +163,59 @@ func NewNode(t *conf, dutName string, data []string, idx int) *Node {
 	// normalize the data to lower case to compare
 	node.OS = strings.ToLower(data[0])
 	switch node.OS {
+	case "ceos":
+		// initialize the global parameters with defaults, can be overwritten later
+		node.Config = t.CEOSConfig
+		//node.License = t.SRLLicense
+		node.Image = t.CEOSImage
+		//node.NodeType = "ixr6"
+
+		// initialize specifc container information
+		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker"
+		//node.Cmd = "/sbin/init"
+		node.Env = []string{
+			"CEOS=1",
+			"EOS_PLATFORM=ceoslab",
+			"container=docker",
+			"ETBA=1",
+			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
+			"INTFTYPE=eth"}
+		node.User = "root"
+		for i, d := range data {
+			switch i {
+			case 1:
+				// 2nd element in the string slice, should be the node group
+				if d != "" {
+					node.Group = d
+				}
+			case 2:
+				// 3rd element in the string slice, should be the node type
+				node.NodeType = d
+			case 3:
+				// 4th element in the string slice, should be config
+				// if there is a more specific config override the global config
+				if d != "" {
+					node.Config = d
+				}
+			default:
+			}
+		}
+		node.Sysctls = make(map[string]string)
+		node.Sysctls["net.ipv4.ip_forward"] = "0"
+		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+		node.Sysctls["net.ipv6.conf.all.accept_dad"] = "0"
+		node.Sysctls["net.ipv6.conf.default.accept_dad"] = "0"
+		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
+		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
+
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
 		node.Config = t.SRLConfig
 		node.License = t.SRLLicense
 		node.Image = t.SRLImage
 		node.NodeType = "ixr6"
-		//
 
+		// initialize specifc container information
 		node.Cmd = "sudo bash -c /opt/srlinux/bin/sr_linux"
 		node.Env = []string{"SRLINUX=1"}
 		node.User = "root"
@@ -206,11 +254,6 @@ func NewNode(t *conf, dutName string, data []string, idx int) *Node {
 			default:
 			}
 		}
-
-		// err := createNodeDirStructure(node, dutName)
-		// if err != nil {
-		// 	log.Error(err)
-		// }
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
@@ -262,10 +305,10 @@ func NewNode(t *conf, dutName string, data []string, idx int) *Node {
 
 		node.Volumes = make(map[string]struct{})
 		node.Volumes = map[string]struct{}{
-			node.Mounts["license"].Destination:    struct{}{},
-			node.Mounts["config"].Destination:    struct{}{},
-			node.Mounts["envConf"].Destination:    struct{}{},
-			node.Mounts["topology"].Destination:   struct{}{},
+			node.Mounts["license"].Destination:  struct{}{},
+			node.Mounts["config"].Destination:   struct{}{},
+			node.Mounts["envConf"].Destination:  struct{}{},
+			node.Mounts["topology"].Destination: struct{}{},
 		}
 
 		bindLicense := node.Mounts["license"].Source + ":" + node.Mounts["license"].Destination + ":" + "ro"

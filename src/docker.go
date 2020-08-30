@@ -98,7 +98,7 @@ func (d *Docker) deleteBridge() (err error) {
 }
 
 func (d *Docker) createContainer(name string, node *Node) (err error) {
-	log.Debug("Create and Start creating container: ", name)
+	log.Debug("Create container: ", name)
 	ctx := context.Background()
 
 	c, err := d.cli.ContainerCreate(ctx,
@@ -123,6 +123,8 @@ func (d *Docker) createContainer(name string, node *Node) (err error) {
 	}
 	log.Debug(fmt.Sprintf("Container create response: %v", c))
 
+	node.Cid = c.ID
+
 	err = d.cli.ContainerStart(ctx,
 		c.ID,
 		types.ContainerStartOptions{
@@ -135,6 +137,31 @@ func (d *Docker) createContainer(name string, node *Node) (err error) {
 	}
 
 	s, err := d.cli.ContainerInspect(ctx, c.ID)
+	if err != nil {
+		return err
+	}
+	node.Pid = s.State.Pid
+	log.Debug("Container pid: ", node.Pid)
+
+	return nil
+}
+
+func (d *Docker) startContainer(name string, node *Node) (err error) {
+	log.Debug("Start container: ", name)
+	ctx := context.Background()
+
+	err = d.cli.ContainerStart(ctx,
+		node.Cid,
+		types.ContainerStartOptions{
+			CheckpointID:  "",
+			CheckpointDir: "",
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	s, err := d.cli.ContainerInspect(ctx, node.Cid)
 	if err != nil {
 		return err
 	}
