@@ -40,9 +40,9 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ln", "-s", src, dst)
 	_, err = cmd.CombinedOutput()
-	//if err != nil {
-	//	log.Fatalf("cmd.Run() failed with %s\n", err)
-	//}
+	if err != nil {
+		log.Fatalf("cmd.Run() failed with %s\n", err)
+	}
 
 	log.Debug("create dummy veth pair")
 	cmd = exec.Command("sudo", "ip", "link", "add", "dummyA", "type", "veth", "peer", "name", "dummyB")
@@ -133,16 +133,16 @@ func (c *cLab) deleteVirtualWiring(id int, link *Link) (err error) {
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", nodeNameA)
 	_, err = cmd.CombinedOutput()
-	//if err != nil {
-	//	log.Fatalf("cmd.Run() failed with %s\n", err)
-	//}
+	if err != nil {
+		log.Errorf("cmd.Run() failed with %s\n", err)
+	}
 
 	log.Debug("Delete netns: ", nodeNameB)
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", nodeNameB)
 	_, err = cmd.CombinedOutput()
-	//if err != nil {
-	//	log.Fatalf("cmd.Run() failed with %s\n", err)
-	//}
+	if err != nil {
+		log.Errorf("cmd.Run() failed with %s\n", err)
+	}
 	return nil
 }
