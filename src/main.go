@@ -24,7 +24,7 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	// Get
+	// Get topology information
 	var t *conf
 	var err error
 	log.Info("Getting topology information ...")
@@ -32,6 +32,7 @@ func main() {
 		panic(err)
 	}
 
+	// Parse topology information
 	log.Info("Parsing topology information ...")
 	if err = parseTopology(t); err != nil {
 		panic(err)
