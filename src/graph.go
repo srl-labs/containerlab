@@ -8,7 +8,7 @@ import (
 
 var g *gographviz.Graph
 
-func (c *cLab) generateGraph(topo string) error {
+func generateGraph(topo string) error {
 	g = gographviz.NewGraph()
 	if err := g.SetName(FileInfo.shortname); err != nil {
 		return err
@@ -23,7 +23,7 @@ func (c *cLab) generateGraph(topo string) error {
 	attr["style"] = "filled"
 	attr["fillcolor"] = "red"
 
-	for nodeName, node := range c.Nodes {
+	for nodeName, node := range Nodes {
 		attr["label"] = nodeName
 		attr["xlabel"] = node.OS
 		attr["group"] = node.Group
@@ -43,7 +43,7 @@ func (c *cLab) generateGraph(topo string) error {
 	attr = make(map[string]string)
 	attr["color"] = "green"
 
-	for _, link := range c.Links {
+	for _, link := range Links {
 		if strings.Contains(link.b.Node.Name, "client") {
 			attr["color"] = "blue"
 		}
@@ -54,7 +54,7 @@ func (c *cLab) generateGraph(topo string) error {
 	}
 
 	// create graph directory
-	path := c.Conf.ConfigPath + "/" + "graph"
+	path := Path + "/" + "graph"
 	createDirectory(path, 0755)
 
 	// create graph filename
