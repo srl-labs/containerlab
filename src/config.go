@@ -369,14 +369,15 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
+	if len(split) != 2 {
+		panic(fmt.Sprintf("endpoint %s has wrong syntax", e))
+	}
 	// search the node pointer based in the name of the split function
 	found := false
 	for name, n := range c.Nodes {
 		if name == split[0] {
 			endpoint.Node = n
 			found = true
-		} else {
-
 		}
 	}
 	if !found {

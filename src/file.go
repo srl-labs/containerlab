@@ -121,8 +121,7 @@ func copyFile(src, dst string) (err error) {
 			return
 		}
 	}
-	err = copyFileContents(src, dst)
-	return nil
+	return copyFileContents(src, dst)
 }
 
 // copyFileContents copies the contents of the file named src to the file named
