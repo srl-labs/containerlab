@@ -43,8 +43,7 @@ func (d *Docker) createBridge() (err error) {
 	ipamConfig = append(ipamConfig, ipamIPv4Config)
 	ipamConfig = append(ipamConfig, ipamIPv6Config)
 
-	var ipam *network.IPAM
-	ipam = &network.IPAM{
+	ipam := &network.IPAM{
 		Driver: "default",
 		Config: ipamConfig,
 	}
@@ -60,14 +59,34 @@ func (d *Docker) createBridge() (err error) {
 		Ingress:        false,
 		ConfigOnly:     false,
 	}
-	_, err = d.cli.NetworkCreate(context.Background(), DockerInfo.Bridge, networkOptions)
+
+	var bridgeName string
+	var netCreateResponse types.NetworkCreateResponse
+	netCreateResponse, err = d.cli.NetworkCreate(context.Background(), DockerInfo.Bridge, networkOptions)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			log.Debug(fmt.Sprintf("Container network %s already exists", DockerInfo.Bridge))
+			log.Debugf("Container network %s already exists", DockerInfo.Bridge)
+			netResource, err := d.cli.NetworkInspect(context.TODO(), DockerInfo.Bridge, types.NetworkInspectOptions{})
+			if err != nil {
+				return err
+			}
+			log.Debugf("container network: %+v", netResource)
+			if len(netResource.ID) < 12 {
+				return fmt.Errorf("could not get bridge ID")
+			}
+			bridgeName = "br-" + netResource.ID[:12]
 		} else {
 			return err
 		}
 	}
+	if len(bridgeName) == 0 {
+		if len(netCreateResponse.ID) < 12 {
+			return fmt.Errorf("could not get bridge ID")
+		} else {
+			bridgeName = "br-" + netCreateResponse.ID[:12]
+		}
+	}
+	log.Debugf("container network %s : bridge name: %s", DockerInfo.Bridge, bridgeName)
 	log.Debug("Disable RPF check on the docker host part1")
 	if err = sysctl.Set("net.ipv4.conf.default.rp_filter", "0"); err != nil {
 		return err
@@ -77,14 +96,19 @@ func (d *Docker) createBridge() (err error) {
 		return err
 	}
 	log.Debug("Enable LLDP on the docker bridge")
-	var cmd *exec.Cmd
-	file := "/sys/class/net/" + DockerInfo.Bridge + "/bridge/group_fwd_mask"
-	cmd = exec.Command("sudo", "echo", "16384", ">", file)
-	_, err = cmd.CombinedOutput()
-
+	file := "/sys/class/net/" + bridgeName + "/bridge/group_fwd_mask"
+	var b []byte
+	b, err = exec.Command("sudo", "echo", "16384", ">", file).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to enable LLDP on docker bridge: %v", err)
+	}
+	log.Debugf("%s", string(b))
 	log.Debug("Disable Checksum Offloading on the docker bridge")
-	cmd = exec.Command("sudo", "ethtool", "--offload", DockerInfo.Bridge, "rx", "off", "tx", "off")
-
+	b, err = exec.Command("sudo", "ethtool", "--offload", bridgeName, "rx", "off", "tx", "off").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to disable Checksum Offloading on docker bridge: %v", err)
+	}
+	log.Debugf("%s", string(b))
 	return nil
 }
 
