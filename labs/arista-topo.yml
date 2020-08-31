@@ -14,9 +14,19 @@ CEOS_image: ceosimage64:4.24.2.1F
 CEOS_config: ""
 
 Duts:
-  wan1: ["srl", "bb", "ixr6", "srl_config/config.json"]
-  wan2: ["srl", "bb", "ixr6", "srl_config/config.json"]
-  wan3: ["ceos", "bb", "", ""] 
+  wan1:
+    kind: "srl"
+    group: "bb"
+    type: "ixr6"
+    config: "srl_config/config.json" 
+  wan2:
+    kind: "srl"
+    group: "bb"
+    type: "ixr6"
+    config: "srl_config/config.json"
+  wan3: 
+    kind: "ceos"
+    group: "bb"
 
 
 Links:

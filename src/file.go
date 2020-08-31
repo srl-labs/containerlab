@@ -176,7 +176,7 @@ func createDirectory(path string, perm os.FileMode) {
 
 func createNodeDirStructure(node *Node, dut string) (err error) {
 	// create lab directory
-	path := Path + "/" + "lab" + "_" + Prefix
+	path := Path + "/" + "lab" + "-" + Prefix
 	
 	switch node.OS {
 	case "srl":
