@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"docker.io/go-docker/api/types"
 	"docker.io/go-docker/api/types/container"
@@ -13,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (c *cLab) createBridge() (err error) {
+func (c *cLab) createBridge(ctx context.Context) (err error) {
 
 	ipamIPv4Config := network.IPAMConfig{
 		Subnet:  c.Conf.DockerInfo.Ipv4Subnet,
@@ -46,11 +47,15 @@ func (c *cLab) createBridge() (err error) {
 
 	var bridgeName string
 	var netCreateResponse types.NetworkCreateResponse
-	netCreateResponse, err = c.DockerClient.NetworkCreate(context.Background(), c.Conf.DockerInfo.Bridge, networkOptions)
+	nctx, ncancel := context.WithTimeout(ctx, 10*time.Second)
+	defer ncancel()
+	netCreateResponse, err = c.DockerClient.NetworkCreate(nctx, c.Conf.DockerInfo.Bridge, networkOptions)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			log.Debugf("Container network %s already exists", c.Conf.DockerInfo.Bridge)
-			netResource, err := c.DockerClient.NetworkInspect(context.TODO(), c.Conf.DockerInfo.Bridge, types.NetworkInspectOptions{})
+			nctx, ncancel := context.WithTimeout(ctx, 10*time.Second)
+			defer ncancel()
+			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Conf.DockerInfo.Bridge, types.NetworkInspectOptions{})
 			if err != nil {
 				return err
 			}
@@ -95,8 +100,10 @@ func (c *cLab) createBridge() (err error) {
 	return nil
 }
 
-func (c *cLab) deleteBridge() (err error) {
-	err = c.DockerClient.NetworkRemove(context.Background(), c.Conf.DockerInfo.Bridge)
+func (c *cLab) deleteBridge(ctx context.Context) (err error) {
+	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	err = c.DockerClient.NetworkRemove(nctx, c.Conf.DockerInfo.Bridge)
 	if err != nil {
 		return err
 
@@ -104,11 +111,11 @@ func (c *cLab) deleteBridge() (err error) {
 	return nil
 }
 
-func (c *cLab) createContainer(name string, node *Node) (err error) {
+func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (err error) {
 	log.Debug("Create container: ", name)
-	ctx := context.Background()
-
-	cont, err := c.DockerClient.ContainerCreate(ctx,
+	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{
 			Image:        node.Image,
 			Cmd:          strings.Fields(node.Cmd),
@@ -132,41 +139,21 @@ func (c *cLab) createContainer(name string, node *Node) (err error) {
 
 	node.Cid = cont.ID
 
-	err = c.startContainer(name, node)
+	err = c.startContainer(ctx, name, node)
 	if err != nil {
 		return err
 	}
-	// err = c.DockerClient.ContainerStart(ctx,
-	// 	cont.ID,
-	// 	types.ContainerStartOptions{
-	// 		CheckpointID:  "",
-	// 		CheckpointDir: "",
-	// 	},
-	// )
-	// if err != nil {
-	// 	return err
-	// }
-
-	// s, err := c.DockerClient.ContainerInspect(ctx, cont.ID)
-	// if err != nil {
-	// 	return err
-	// }
-	// node.Pid = s.State.Pid
-	// node.MgmtIPv4 = s.NetworkSettings.Networks["srlinux_bridge"].IPAddress
-	// node.MgmtIPv6 = s.NetworkSettings.Networks["srlinux_bridge"].GlobalIPv6Address
-	// node.MgmtMac = s.NetworkSettings.Networks["srlinux_bridge"].MacAddress
-
-	// log.Debug("Container pid: ", node.Pid)
-	// log.Debug("Container pid: ", node.MgmtIPv4)
 
 	return nil
 }
 
-func (c *cLab) startContainer(name string, node *Node) (err error) {
+func (c *cLab) startContainer(ctx context.Context, name string, node *Node) (err error) {
 	log.Debug("Start container: ", name)
-	ctx := context.Background()
 
-	err = c.DockerClient.ContainerStart(ctx,
+	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	err = c.DockerClient.ContainerStart(nctx,
 		node.Cid,
 		types.ContainerStartOptions{
 			CheckpointID:  "",
@@ -176,8 +163,14 @@ func (c *cLab) startContainer(name string, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
+	return c.inspectContainer(ctx, name, node)
+}
 
-	s, err := c.DockerClient.ContainerInspect(ctx, node.Cid)
+func (c *cLab) inspectContainer(ctx context.Context, name string, node *Node) (err error) {
+	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	s, err := c.DockerClient.ContainerInspect(nctx, node.Cid)
 	if err != nil {
 		return err
 	}
@@ -189,15 +182,15 @@ func (c *cLab) startContainer(name string, node *Node) (err error) {
 	log.Debugf("Container %s mgmtIPv4: %s", name, node.MgmtIPv4)
 	log.Debugf("Container %s mgmtIPv6: %s", name, node.MgmtIPv6)
 	log.Debugf("Container %s mgmtMAC: %s", name, node.MgmtMac)
-
 	return nil
 }
 
-func (c *cLab) deleteContainer(name string, node *Node) (err error) {
+func (c *cLab) deleteContainer(ctx context.Context, name string, node *Node) (err error) {
 	log.Debug("Delete and remove container: ", name)
-	ctx := context.Background()
 
-	containers, err := c.DockerClient.ContainerList(ctx, types.ContainerListOptions{All: true})
+	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	containers, err := c.DockerClient.ContainerList(nctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return err
 	}
@@ -213,11 +206,12 @@ func (c *cLab) deleteContainer(name string, node *Node) (err error) {
 	}
 
 	if cid != "" {
-		err = c.DockerClient.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{Force: true})
+		nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		err = c.DockerClient.ContainerRemove(nctx, cid, types.ContainerRemoveOptions{Force: true})
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
