@@ -39,7 +39,7 @@ type conf struct {
 	Links []struct {
 		Endpoints []string `yaml:"endpoints"`
 	} `yaml:"Links"`
-	ConfigPath string `yaml:"ConfigPath"`
+	ConfigPath string `yaml:"config_path"`
 }
 
 type volume struct {
@@ -90,21 +90,6 @@ type Endpoint struct {
 	EndpointName string
 }
 
-// Prefix variables to store prefix of the lab
-// var Prefix string
-
-// // DockerInfo variable to store the docker networking information
-// var DockerInfo dockerInfo
-
-// // Nodes variable stores all the node information
-// var Nodes map[string]*Node
-
-// // Links variable stores all the link information
-// var Links map[int]*Link
-
-// // Path variables stores the absolute path of the lab topology structure
-// var Path string
-
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
 	if c.Conf.DockerInfo.Bridge == "" {
@@ -137,18 +122,17 @@ func (c *cLab) parseIPInfo() error {
 }
 
 func (c *cLab) parseTopology() error {
-	// initialize Prefix
-	// Prefix = t.Prefix
-	log.Debug(fmt.Sprintf("Prefix: %s", c.Conf.Prefix))
+	log.Debugf("Prefix: %s", c.Conf.Prefix)
 	// initialize DockerInfo
 	err := c.parseIPInfo()
 	if err != nil {
 		return err
 	}
-	log.Debug(fmt.Sprintf("DockerInfo: %v", c.Conf.DockerInfo))
+	log.Debugf("DockerInfo: %v", c.Conf.DockerInfo)
 
-	c.Conf.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
-
+	if c.Conf.ConfigPath == "" {
+		c.Conf.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
+	}
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]*Node)
 	c.Links = make(map[int]*Link)
@@ -357,7 +341,6 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 
 	default:
 		panic("Node Kind, OS is not properly initialized; should be provided in Duts.dut_specifics.kind parameters or Duts.global_defaults.kind")
-
 	}
 	return node
 }

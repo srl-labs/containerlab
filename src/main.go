@@ -32,6 +32,7 @@ func newContainerLab() (*cLab, error) {
 	}
 	return c, nil
 }
+
 func main() {
 	// Flags variables + initialization
 	var topo string
@@ -51,8 +52,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Get topology information
-	// var t *conf
 
 	log.Info("Getting topology information ...")
 	if err = c.getTopology(&topo); err != nil {
@@ -67,7 +66,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_ = ctx
+
 	switch action {
 	case "deploy":
 		log.Info("Creating container lab: ", topo)
@@ -77,7 +76,7 @@ func main() {
 
 		log.Info("Creating docker bridge")
 		// create bridge
-		if err = c.createBridge(); err != nil {
+		if err = c.createBridge(ctx); err != nil {
 			log.Error(err)
 		}
 
@@ -88,7 +87,7 @@ func main() {
 				log.Error(err)
 			}
 
-			if err = c.createContainer(dutName, node); err != nil {
+			if err = c.createContainer(ctx, dutName, node); err != nil {
 				log.Error(err)
 			}
 		}
@@ -100,14 +99,6 @@ func main() {
 			}
 
 		}
-		// start container per node
-		// for dutName, node := range Nodes {
-		// 	log.Info("Start container:", dutName)
-
-		// 	if err = c.DockerClientstartContainer(dutName, node); err != nil {
-		// 		log.Error(err)
-		// 	}
-		//}
 		// generate graph of the lab topology
 		if graph {
 			log.Info("Generating lab graph ...")
@@ -125,13 +116,13 @@ func main() {
 		log.Info("Destroying container lab: ... ", topo)
 		// delete containers
 		for n, node := range c.Nodes {
-			if err = c.deleteContainer(n, node); err != nil {
+			if err = c.deleteContainer(ctx, n, node); err != nil {
 				log.Error(err)
 			}
 		}
 		// delete container management bridge
 		log.Info("Deleting docker bridge ...")
-		if err = c.deleteBridge(); err != nil {
+		if err = c.deleteBridge(ctx); err != nil {
 			log.Error(err)
 		}
 		// delete virtual wiring
@@ -152,5 +143,4 @@ func main() {
 			}
 		}
 	}
-
 }
