@@ -10,8 +10,16 @@ SRL_license: srl_config/license.key
 Client_image: henderiw/client-alpine:1.0.0
 
 Duts:
-  wan1: ["srl", "bb", "ixr6", "srl_config/config.json"] 
-  wan2: ["srl", "bb", "ixr6", "srl_config/config.json"] 
+  wan1: 
+    kind: "srl" 
+    group: "bb"
+    type: "ixr6"
+    config: "srl_config/config.json" 
+  wan2: 
+    kind: "srl" 
+    group: "bb" 
+    type: "ixr6" 
+    config: "srl_config/config.json"
 
 
 Links:

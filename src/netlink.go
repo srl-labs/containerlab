@@ -9,8 +9,8 @@ import (
 
 func createVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "_" + Prefix + "_" + link.a.Node.Name
-	nodeNameB := "lab" + "_" + Prefix + "_" + link.b.Node.Name
+	nodeNameA := "lab" + "-" + Prefix + "-" + link.a.Node.Name
+	nodeNameB := "lab" + "-" + Prefix + "-" + link.b.Node.Name
 	log.Debug("creating veth pair: ", nodeNameA, nodeNameB, link.a.EndpointName, link.b.EndpointName)
 
 	createDirectory("/run/netns/", 0755)
@@ -124,8 +124,8 @@ func createVirtualWiring(id int, link *Link) (err error) {
 
 func deleteVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "_" + Prefix + "_" + link.a.Node.Name
-	nodeNameB := "lab" + "_" + Prefix + "_" + link.b.Node.Name
+	nodeNameA := "lab" + "-" + Prefix + "-" + link.a.Node.Name
+	nodeNameB := "lab" + "-" + Prefix + "-" + link.b.Node.Name
 
 	var cmd *exec.Cmd
 
