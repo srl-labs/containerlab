@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"docker.io/go-docker"
@@ -63,11 +64,8 @@ func main() {
 	if err = c.parseTopology(); err != nil {
 		panic(err)
 	}
-
-	// var d *Docker
-	// if d, err = NewDocker(); err != nil {
-	// 	panic(err)
-	// }
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	switch action {
 	case "deploy":
@@ -78,7 +76,7 @@ func main() {
 
 		log.Info("Creating docker bridge")
 		// create bridge
-		if err = c.createBridge(); err != nil {
+		if err = c.createBridge(ctx); err != nil {
 			log.Error(err)
 		}
 
@@ -89,7 +87,7 @@ func main() {
 				log.Error(err)
 			}
 
-			if err = c.createContainer(dutName, node); err != nil {
+			if err = c.createContainer(ctx, dutName, node); err != nil {
 				log.Error(err)
 			}
 		}
@@ -126,13 +124,13 @@ func main() {
 		log.Info("Destroying container lab: ... ", topo)
 		// delete containers
 		for n, node := range c.Nodes {
-			if err = c.deleteContainer(n, node); err != nil {
+			if err = c.deleteContainer(ctx, n, node); err != nil {
 				log.Error(err)
 			}
 		}
 		// delete container management bridge
 		log.Info("Deleting docker bridge ...")
-		if err = c.deleteBridge(); err != nil {
+		if err = c.deleteBridge(ctx); err != nil {
 			log.Error(err)
 		}
 		// delete virtual wiring
