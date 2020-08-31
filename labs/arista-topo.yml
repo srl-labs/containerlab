@@ -4,30 +4,23 @@ Docker_info:
   ipv4_subnet: "172.19.19.0/24"
   ipv6_subnet: "2001:172:19:19::/80"
 
-SRL_image: srlinux:20.6.1-286
-SRL_config: srl_config/test.json
-SRL_license: srl_config/license.key
-
-Client_image: henderiw/client-alpine:1.0.0
-
-CEOS_image: ceosimage64:4.24.2.1F
-CEOS_config: ""
-
 Duts:
-  wan1:
-    kind: "srl"
-    group: "bb"
-    type: "ixr6"
-    config: "srl_config/config.json" 
-  wan2:
-    kind: "srl"
-    group: "bb"
-    type: "ixr6"
-    config: "srl_config/config.json"
-  wan3: 
-    kind: "ceos"
-    group: "bb"
-
+  global_defaults:
+    kind: srl
+    group: bb
+  kind_defaults:
+    srl:
+      type: ixr6
+      config: srl_config/config.json
+      image: srlinux:20.6.1-286
+      license: srl_config/license.key
+    ceos:
+      image: ceosimage64:4.24.2.1F
+  dut_specifics:
+    wan1: 
+    wan2: 
+    wan3:
+      kind: "ceos"
 
 Links:
   - endpoints: ["wan1:e1-1", "wan2:e1-1"]

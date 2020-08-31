@@ -19,23 +19,24 @@ type dockerInfo struct {
 }
 
 type dutInfo struct {
-	Kind   string `yaml:"kind"`
-	Group  string `yaml:"group"`
-	Type   string `yaml:"type"`
-	Config string `yaml:"config"`
+	Kind    string `yaml:"kind"`
+	Group   string `yaml:"group"`
+	Type    string `yaml:"type"`
+	Config  string `yaml:"config"`
+	Image   string `yaml:"image"`
+	License string `yaml:"license"`
 }
 
 type conf struct {
-	Prefix      string             `yaml:"Prefix"`
-	DockerInfo  dockerInfo         `yaml:"Docker_info"`
-	ClientImage string             `yaml:"Client_image"`
-	SRLImage    string             `yaml:"SRL_image"`
-	SRLConfig   string             `yaml:"SRL_config"`
-	SRLLicense  string             `yaml:"SRL_license"`
-	CEOSImage   string             `yaml:"CEOS_image"`
-	CEOSConfig  string             `yaml:"CEOS_config"`
-	Duts        map[string]dutInfo `yaml:"Duts"`
-	Links       []struct {
+	Prefix      string     `yaml:"Prefix"`
+	DockerInfo  dockerInfo `yaml:"Docker_info"`
+	ClientImage string     `yaml:"Client_image"`
+	Duts        struct {
+		GlobalDefaults dutInfo            `yaml:"global_defaults"`
+		KindDefaults   map[string]dutInfo `yaml:"kind_defaults"`
+		DutSpecifics   map[string]dutInfo `yaml:"dut_specifics"`
+	} `yaml:"Duts"`
+	Links []struct {
 		Endpoints []string `yaml:"endpoints"`
 	} `yaml:"Links"`
 }
@@ -153,7 +154,7 @@ func parseTopology(t *conf) error {
 
 	// initialize the Node information from the topology map
 	idx := 0
-	for dut, data := range t.Duts {
+	for dut, data := range t.Duts.DutSpecifics {
 		Nodes[dut] = NewNode(t, dut, data, idx)
 		idx++
 	}
@@ -164,20 +165,67 @@ func parseTopology(t *conf) error {
 	return nil
 }
 
+func kindInitialization(t *conf, dut *dutInfo) string {
+	if dut.Kind != "" {
+		return dut.Kind
+	}
+	return t.Duts.GlobalDefaults.Kind
+}
+
+func groupInitialization(t *conf, dut *dutInfo, kind string) string {
+	if dut.Group != "" {
+		return dut.Group
+	} else if t.Duts.KindDefaults[kind].Group != "" {
+		return t.Duts.KindDefaults[kind].Group
+	}
+	return t.Duts.GlobalDefaults.Group
+}
+
+func typeInitialization(t *conf, dut *dutInfo, kind string) string {
+	if dut.Type != "" {
+		return dut.Type
+	}
+	return t.Duts.KindDefaults[kind].Type
+}
+
+func configInitialization(t *conf, dut *dutInfo, kind string) string {
+	if dut.Config != "" {
+		return dut.Config
+	}
+	return t.Duts.KindDefaults[kind].Config
+}
+
+func imageInitialization(t *conf, dut *dutInfo, kind string) string {
+	if dut.Image != "" {
+		return dut.Image
+	}
+	return t.Duts.KindDefaults[kind].Image
+}
+
+func licenseInitialization(t *conf, dut *dutInfo, kind string) string {
+	if dut.License != "" {
+		return dut.License
+	}
+	return t.Duts.KindDefaults[kind].License
+}
+
 // NewNode initializes a new node object
 func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 	// initialize a new node
 	node := new(Node)
 	node.Name = dutName
 	node.Index = idx
+
+	// initialize the node with global parameters
+	// Kind initialization is either coming from dut_specific or from global
 	// normalize the data to lower case to compare
-	node.OS = strings.ToLower(dut.Kind)
+	node.OS = strings.ToLower(kindInitialization(t, &dut))
 	switch node.OS {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = t.CEOSConfig
+		node.Config = configInitialization(t, &dut, node.OS)
 		//node.License = t.SRLLicense
-		node.Image = t.CEOSImage
+		node.Image = imageInitialization(t, &dut, node.OS)
 		//node.NodeType = "ixr6"
 
 		// initialize specifc container information
@@ -191,7 +239,7 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
 			"INTFTYPE=eth"}
 		node.User = "root"
-		node.Group = dut.Group
+		node.Group = groupInitialization(t, &dut, node.OS)
 		node.NodeType = dut.Type
 		node.Config = dut.Config
 
@@ -205,19 +253,11 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = t.SRLConfig
-		node.License = t.SRLLicense
-		node.Image = t.SRLImage
-		node.NodeType = "ixr6"
-
-		// initialize specifc container information
-		node.Cmd = "sudo bash -c /opt/srlinux/bin/sr_linux"
-		node.Env = []string{"SRLINUX=1"}
-		node.User = "root"
-
-		node.Group = dut.Group
-		node.NodeType = dut.Type
-		node.Config = dut.Config
+		node.Config = configInitialization(t, &dut, node.OS)
+		node.License = licenseInitialization(t, &dut, node.OS)
+		node.Image = imageInitialization(t, &dut, node.OS)
+		node.Group = groupInitialization(t, &dut, node.OS)
+		node.NodeType = typeInitialization(t, &dut, node.OS)
 
 		switch node.NodeType {
 		case "ixr6":
@@ -233,6 +273,11 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 		default:
 			panic("wrong node type; should be ixr6, ixr10, ixrd1, ixrd2, ixrd3")
 		}
+
+		// initialize specifc container information
+		node.Cmd = "sudo bash -c /opt/srlinux/bin/sr_linux"
+		node.Env = []string{"SRLINUX=1"}
+		node.User = "root"
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
@@ -301,12 +346,16 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 		node.Binds = append(node.Binds, bindTopology)
 
 	case "alpine", "linux":
-		node.Image = t.ClientImage
+		node.Config = configInitialization(t, &dut, node.OS)
+		node.License = licenseInitialization(t, &dut, node.OS)
+		node.Image = imageInitialization(t, &dut, node.OS)
+		node.Group = groupInitialization(t, &dut, node.OS)
+		node.NodeType = typeInitialization(t, &dut, node.OS)
+
 		node.Cmd = "/bin/bash"
 
-		node.Group = dut.Group
-		node.NodeType = dut.Type
-		node.Config = dut.Config
+	default:
+		panic("Node Kind, OS is not properly initialized; should be provided in Duts.dut_specifics.kind parameters or Duts.global_defaults.kind")
 
 	}
 	return node
@@ -347,8 +396,7 @@ func NewEndpoint(e string) *Endpoint {
 		}
 	}
 	if !found {
-		log.Error("Not all nodes are specified in the duts section or the names dont match in the duts/endpoint section", split[0])
-		os.Exit(1)
+		panic(fmt.Sprintf("Not all nodes are specified in the duts section or the names dont match in the duts/endpoint section: %s", split[0]))
 	}
 
 	// initialize the endpoint name based on the split function
