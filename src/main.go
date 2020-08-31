@@ -64,11 +64,6 @@ func main() {
 		panic(err)
 	}
 
-	// var d *Docker
-	// if d, err = NewDocker(); err != nil {
-	// 	panic(err)
-	// }
-
 	switch action {
 	case "deploy":
 		log.Info("Creating container lab: ", topo)
@@ -101,14 +96,7 @@ func main() {
 			}
 
 		}
-		// start container per node
-		// for dutName, node := range Nodes {
-		// 	log.Info("Start container:", dutName)
 
-		// 	if err = d.startContainer(dutName, node); err != nil {
-		// 		log.Error(err)
-		// 	}
-		//}
 		// generate graph of the lab topology
 		if graph {
 			log.Info("Generating lab graph ...")
