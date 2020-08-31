@@ -21,22 +21,20 @@ type File struct {
 }
 
 // FileInfo global variable stores information on the filename
-var FileInfo *File
+// var FileInfo *File
 
-func getTopology(topo *string) (*conf, error) {
+func (c *cLab) getTopology(topo *string) error {
 	log.Debug("Topofile ", *topo)
 
 	yamlFile, err := ioutil.ReadFile(*topo)
 	if err != nil {
-		log.Error(err)
+		return err
 	}
 	log.Debug(fmt.Sprintf("File contents:\n%s\n", yamlFile))
 
-	var t *conf
-	err = yaml.Unmarshal(yamlFile, &t)
+	err = yaml.Unmarshal(yamlFile, c.Conf)
 	if err != nil {
-		log.Error(err)
-		return nil, err
+		return err
 	}
 
 	s := strings.Split(*topo, "/")
@@ -48,14 +46,14 @@ func getTopology(topo *string) (*conf, error) {
 		shortname += f
 	}
 	log.Debug(s, file, filename, shortname)
-	FileInfo = &File{
+	c.FileInfo = &File{
 		file:      file,
 		name:      filename[0],
 		shortname: shortname,
 	}
-	log.Debug("File : ", FileInfo)
+	log.Debug("File : ", c.FileInfo)
 
-	return t, nil
+	return nil
 
 }
 
@@ -123,8 +121,7 @@ func copyFile(src, dst string) (err error) {
 			return
 		}
 	}
-	err = copyFileContents(src, dst)
-	return nil
+	return copyFileContents(src, dst)
 }
 
 // copyFileContents copies the contents of the file named src to the file named
@@ -174,10 +171,10 @@ func createDirectory(path string, perm os.FileMode) {
 	}
 }
 
-func createNodeDirStructure(node *Node, dut string) (err error) {
+func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 	// create lab directory
-	path := Path + "/" + "lab" + "-" + Prefix
-	
+	path := c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
+
 	switch node.OS {
 	case "srl":
 		var src string

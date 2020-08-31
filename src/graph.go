@@ -8,9 +8,9 @@ import (
 
 var g *gographviz.Graph
 
-func generateGraph(topo string) error {
+func (c *cLab) generateGraph(topo string) error {
 	g = gographviz.NewGraph()
-	if err := g.SetName(FileInfo.shortname); err != nil {
+	if err := g.SetName(c.FileInfo.shortname); err != nil {
 		return err
 	}
 	if err := g.SetDir(false); err != nil {
@@ -23,7 +23,7 @@ func generateGraph(topo string) error {
 	attr["style"] = "filled"
 	attr["fillcolor"] = "red"
 
-	for nodeName, node := range Nodes {
+	for nodeName, node := range c.Nodes {
 		attr["label"] = nodeName
 		attr["xlabel"] = node.OS
 		attr["group"] = node.Group
@@ -34,7 +34,7 @@ func generateGraph(topo string) error {
 		if strings.Contains(node.Group, "bb") {
 			attr["fillcolor"] = "blue"
 		}
-		if err := g.AddNode(FileInfo.shortname, node.Name, attr); err != nil {
+		if err := g.AddNode(c.FileInfo.shortname, node.Name, attr); err != nil {
 			return err
 		}
 
@@ -43,7 +43,7 @@ func generateGraph(topo string) error {
 	attr = make(map[string]string)
 	attr["color"] = "green"
 
-	for _, link := range Links {
+	for _, link := range c.Links {
 		if strings.Contains(link.b.Node.Name, "client") {
 			attr["color"] = "blue"
 		}
@@ -54,11 +54,11 @@ func generateGraph(topo string) error {
 	}
 
 	// create graph directory
-	path := Path + "/" + "graph"
+	path := c.Conf.ConfigPath + "/" + "graph"
 	createDirectory(path, 0755)
 
 	// create graph filename
-	file := path + "/" + FileInfo.name + ".dot"
+	file := path + "/" + c.FileInfo.name + ".dot"
 
 	createFile(file, g.String())
 

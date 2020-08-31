@@ -7,10 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func createVirtualWiring(id int, link *Link) (err error) {
+func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "-" + Prefix + "-" + link.a.Node.Name
-	nodeNameB := "lab" + "-" + Prefix + "-" + link.b.Node.Name
+	nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
+	nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
 	log.Debug("creating veth pair: ", nodeNameA, nodeNameB, link.a.EndpointName, link.b.EndpointName)
 
 	createDirectory("/run/netns/", 0755)
@@ -40,9 +40,9 @@ func createVirtualWiring(id int, link *Link) (err error) {
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ln", "-s", src, dst)
 	_, err = cmd.CombinedOutput()
-	//if err != nil {
-	//	log.Fatalf("cmd.Run() failed with %s\n", err)
-	//}
+	if err != nil {
+		log.Fatalf("cmd.Run() failed with %s\n", err)
+	}
 
 	log.Debug("create dummy veth pair")
 	cmd = exec.Command("sudo", "ip", "link", "add", "dummyA", "type", "veth", "peer", "name", "dummyB")
@@ -122,10 +122,10 @@ func createVirtualWiring(id int, link *Link) (err error) {
 
 }
 
-func deleteVirtualWiring(id int, link *Link) (err error) {
+func (c *cLab) deleteVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "-" + Prefix + "-" + link.a.Node.Name
-	nodeNameB := "lab" + "-" + Prefix + "-" + link.b.Node.Name
+	nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
+	nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
 
 	var cmd *exec.Cmd
 
@@ -133,16 +133,16 @@ func deleteVirtualWiring(id int, link *Link) (err error) {
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", nodeNameA)
 	_, err = cmd.CombinedOutput()
-	//if err != nil {
-	//	log.Fatalf("cmd.Run() failed with %s\n", err)
-	//}
+	if err != nil {
+		log.Errorf("cmd.Run() failed with %s\n", err)
+	}
 
 	log.Debug("Delete netns: ", nodeNameB)
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", nodeNameB)
 	_, err = cmd.CombinedOutput()
-	//if err != nil {
-	//	log.Fatalf("cmd.Run() failed with %s\n", err)
-	//}
+	if err != nil {
+		log.Errorf("cmd.Run() failed with %s\n", err)
+	}
 	return nil
 }
