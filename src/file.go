@@ -23,7 +23,7 @@ type File struct {
 // FileInfo global variable stores information on the filename
 var FileInfo *File
 
-func (c *cLab) getTopology(topo *string) error {
+func getTopology(topo *string) (*conf, error) {
 	log.Debug("Topofile ", *topo)
 
 	yamlFile, err := ioutil.ReadFile(*topo)
@@ -32,11 +32,11 @@ func (c *cLab) getTopology(topo *string) error {
 	}
 	log.Debug(fmt.Sprintf("File contents:\n%s\n", yamlFile))
 
-	//var t *conf
-	err = yaml.Unmarshal(yamlFile, c.Conf)
+	var t *conf
+	err = yaml.Unmarshal(yamlFile, &t)
 	if err != nil {
 		log.Error(err)
-		return err
+		return nil, err
 	}
 
 	s := strings.Split(*topo, "/")
@@ -48,14 +48,14 @@ func (c *cLab) getTopology(topo *string) error {
 		shortname += f
 	}
 	log.Debug(s, file, filename, shortname)
-	c.FileInfo = &File{
+	FileInfo = &File{
 		file:      file,
 		name:      filename[0],
 		shortname: shortname,
 	}
-	log.Debug("File : ", c.FileInfo)
+	log.Debug("File : ", FileInfo)
 
-	return nil
+	return t, nil
 
 }
 
@@ -174,10 +174,10 @@ func createDirectory(path string, perm os.FileMode) {
 	}
 }
 
-func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
+func createNodeDirStructure(node *Node, dut string) (err error) {
 	// create lab directory
-	path := c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
-
+	path := Path + "/" + "lab" + "-" + Prefix
+	
 	switch node.OS {
 	case "srl":
 		var src string
