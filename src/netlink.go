@@ -88,13 +88,14 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
 	log.Debug(string(b))
-	log.Debug("set RX, TX offload off on container A")
-	b, err = exec.Command("sudo", "docker", "exec", "-ti", nodeNameA, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off").CombinedOutput()
-	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
-	}
-	log.Debug(string(b))
-	log.Debug("set RX, TX offload off on container B")
+
+	// log.Debug("set RX, TX offload off on container A")
+	// b, err = exec.Command("sudo", "docker", "exec", "-ti", nodeNameA, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off").CombinedOutput()
+	// if err != nil {
+	// 	log.Fatalf("cmd.Run() failed with %s\n", err)
+	// }
+	// log.Debug(string(b))
+	// log.Debug("set RX, TX offload off on container B")
 	// b, err = exec.Command("sudo", "docker", "exec", "-ti", nodeNameB, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off").CombinedOutput()
 	// if err != nil {
 	// 	log.Fatalf("cmd.Run() failed with %s\n", err)
