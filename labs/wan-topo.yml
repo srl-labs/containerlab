@@ -10,14 +10,38 @@ SRL_license: srl_config/license.key
 Client_image: henderiw/client-alpine:1.0.0
 
 Duts:
-  wan1: ["srl", "bb", "ixr6", "srl_config/config.json"] 
-  wan2: ["srl", "bb", "ixr6", "srl_config/config.json"] 
-  wan3: ["srl", "pop1", "ixr6", "srl_config/config.json"] 
-  wan4: ["srl", "pop2", "ixr6", "srl_config/config.json"]
-  client1: ["alpine", "pop1"]
-  client2: ["alpine", "pop1"]
-  client3: ["alpine", "pop2"]
-  client4: ["alpine", "pop2"]
+  wan1: 
+    kind: "srl" 
+    group: "bb"
+    type: "ixr6"
+    config: "srl_config/config.json" 
+  wan2: 
+    kind: "srl" 
+    group: "bb" 
+    type: "ixr6" 
+    config: "srl_config/config.json"
+  wan3: 
+    kind: "srl"
+    group: "pop1"
+    type: "ixr6"
+    config: "srl_config/config.json"  
+  wan4: 
+    kind: "srl"
+    group: "pop2"
+    type: "ixr6"
+    config: "srl_config/config.json"
+  client1: 
+    kind: "alpine"
+    group: "pop1"
+  client2: 
+    kind: "alpine"
+    group: "pop1"
+  client3: 
+    kind: "alpine"
+    group: "pop2"
+  client4: 
+    kind: "alpine"
+    group: "pop2"
 
 Links:
   - endpoints: ["wan1:e1-1", "wan2:e1-1"]

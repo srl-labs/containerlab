@@ -46,7 +46,7 @@ func main() {
 	case "deploy":
 		log.Info("Creating container lab: ", topo)
 		// create lab directory
-		path := Path + "/" + "lab" + "_" + Prefix
+		path := Path + "/" + "lab" + "-" + Prefix
 		createDirectory(path, 0755)
 
 		log.Info("Creating docker bridge")

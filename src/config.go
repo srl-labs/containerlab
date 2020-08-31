@@ -18,16 +18,23 @@ type dockerInfo struct {
 	Ipv6Gateway string `yaml:"ipv6_gateway"`
 }
 
+type dutInfo struct {
+	Kind   string `yaml:"kind"`
+	Group  string `yaml:"group"`
+	Type   string `yaml:"type"`
+	Config string `yaml:"config"`
+}
+
 type conf struct {
-	Prefix      string              `yaml:"Prefix"`
-	DockerInfo  dockerInfo          `yaml:"Docker_info"`
-	ClientImage string              `yaml:"Client_image"`
-	SRLImage    string              `yaml:"SRL_image"`
-	SRLConfig   string              `yaml:"SRL_config"`
-	SRLLicense  string              `yaml:"SRL_license"`
-	CEOSImage   string              `yaml:"CEOS_image"`
-	CEOSConfig  string              `yaml:"CEOS_config"`
-	Duts        map[string][]string `yaml:"Duts"`
+	Prefix      string             `yaml:"Prefix"`
+	DockerInfo  dockerInfo         `yaml:"Docker_info"`
+	ClientImage string             `yaml:"Client_image"`
+	SRLImage    string             `yaml:"SRL_image"`
+	SRLConfig   string             `yaml:"SRL_config"`
+	SRLLicense  string             `yaml:"SRL_license"`
+	CEOSImage   string             `yaml:"CEOS_image"`
+	CEOSConfig  string             `yaml:"CEOS_config"`
+	Duts        map[string]dutInfo `yaml:"Duts"`
 	Links       []struct {
 		Endpoints []string `yaml:"endpoints"`
 	} `yaml:"Links"`
@@ -158,13 +165,13 @@ func parseTopology(t *conf) error {
 }
 
 // NewNode initializes a new node object
-func NewNode(t *conf, dutName string, data []string, idx int) *Node {
+func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 	// initialize a new node
 	node := new(Node)
 	node.Name = dutName
 	node.Index = idx
 	// normalize the data to lower case to compare
-	node.OS = strings.ToLower(data[0])
+	node.OS = strings.ToLower(dut.Kind)
 	switch node.OS {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
@@ -184,25 +191,10 @@ func NewNode(t *conf, dutName string, data []string, idx int) *Node {
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
 			"INTFTYPE=eth"}
 		node.User = "root"
-		for i, d := range data {
-			switch i {
-			case 1:
-				// 2nd element in the string slice, should be the node group
-				if d != "" {
-					node.Group = d
-				}
-			case 2:
-				// 3rd element in the string slice, should be the node type
-				node.NodeType = d
-			case 3:
-				// 4th element in the string slice, should be config
-				// if there is a more specific config override the global config
-				if d != "" {
-					node.Config = d
-				}
-			default:
-			}
-		}
+		node.Group = dut.Group
+		node.NodeType = dut.Type
+		node.Config = dut.Config
+
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
 		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
@@ -223,39 +215,23 @@ func NewNode(t *conf, dutName string, data []string, idx int) *Node {
 		node.Env = []string{"SRLINUX=1"}
 		node.User = "root"
 
-		for i, d := range data {
-			switch i {
-			case 1:
-				// 2nd element in the string slice, should be the node group
-				if d != "" {
-					node.Group = d
-				}
-			case 2:
-				// 3rd element in the string slice, should be the node type
-				node.NodeType = d
-				switch node.NodeType {
-				case "ixr6":
-					node.Topology = "srl_config/templates/topology-7250IXR6.yml"
-				case "ixr10":
-					node.Topology = "srl_config/templates/topology-7250IXR10.yml"
-				case "ixrd1":
-					node.Topology = "srl_config/templates/topology-7220IXD1.yml"
-				case "isrd2":
-					node.Topology = "srl_config/templates/topology-7220IXD2.yml"
-				case "ixrd3":
-					node.Topology = "srl_config/templates/topology-7220IXD3.yml"
-				default:
-					log.Error("wrong node type; should be ixr6, ixr10, ixrd1, ixrd2, ixrd3")
-					os.Exit(1)
-				}
-			case 3:
-				// 4th element in the string slice, should be config
-				// if there is a more specific config override the global config
-				if d != "" {
-					node.Config = d
-				}
-			default:
-			}
+		node.Group = dut.Group
+		node.NodeType = dut.Type
+		node.Config = dut.Config
+
+		switch node.NodeType {
+		case "ixr6":
+			node.Topology = "srl_config/templates/topology-7250IXR6.yml"
+		case "ixr10":
+			node.Topology = "srl_config/templates/topology-7250IXR10.yml"
+		case "ixrd1":
+			node.Topology = "srl_config/templates/topology-7220IXD1.yml"
+		case "isrd2":
+			node.Topology = "srl_config/templates/topology-7220IXD2.yml"
+		case "ixrd3":
+			node.Topology = "srl_config/templates/topology-7220IXD3.yml"
+		default:
+			panic("wrong node type; should be ixr6, ixr10, ixrd1, ixrd2, ixrd3")
 		}
 
 		node.Sysctls = make(map[string]string)
@@ -268,7 +244,7 @@ func NewNode(t *conf, dutName string, data []string, idx int) *Node {
 
 		node.Mounts = make(map[string]volume)
 		var v volume
-		labPath := Path + "/" + "lab" + "_" + Prefix + "/"
+		labPath := Path + "/" + "lab" + "-" + Prefix + "/"
 		labDutPath := labPath + dutName + "/"
 		v.Source = labPath + "license.key"
 		v.Destination = "/opt/srlinux/etc/license.key"
@@ -328,21 +304,10 @@ func NewNode(t *conf, dutName string, data []string, idx int) *Node {
 		node.Image = t.ClientImage
 		node.Cmd = "/bin/bash"
 
-		for i, d := range data {
-			switch i {
-			case 1:
-				// 2nd element in the string slice, should be group
-				// if there is a more specific config override the global config
-				if d != "" {
-					node.Group = d
-				}
-			case 2:
-				// 3rd element not used for now
-			case 3:
-				// 4th element not used for now
-			default:
-			}
-		}
+		node.Group = dut.Group
+		node.NodeType = dut.Type
+		node.Config = dut.Config
+
 	}
 	return node
 }

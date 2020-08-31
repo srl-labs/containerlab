@@ -82,9 +82,8 @@ func (d *Docker) createBridge() (err error) {
 	if len(bridgeName) == 0 {
 		if len(netCreateResponse.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
-		} else {
-			bridgeName = "br-" + netCreateResponse.ID[:12]
 		}
+		bridgeName = "br-" + netCreateResponse.ID[:12]
 	}
 	log.Debugf("container network %s : bridge name: %s", DockerInfo.Bridge, bridgeName)
 	log.Debug("Disable RPF check on the docker host part1")
@@ -141,7 +140,7 @@ func (d *Docker) createContainer(name string, node *Node) (err error) {
 			Sysctls:     node.Sysctls,
 			Privileged:  true,
 			NetworkMode: container.NetworkMode(DockerInfo.Bridge),
-		}, nil, "lab"+"_"+Prefix+"_"+name)
+		}, nil, "lab"+"-"+Prefix+"-"+name)
 	if err != nil {
 		return err
 	}
@@ -212,7 +211,7 @@ func (d *Docker) deleteContainer(name string, node *Node) (err error) {
 
 	for _, container := range containers {
 		for _, n := range container.Names {
-			if strings.Contains(n, "lab"+"_"+Prefix+"_"+name) {
+			if strings.Contains(n, "lab"+"-"+Prefix+"-"+name) {
 				cid = container.ID
 				break
 			}
