@@ -39,6 +39,7 @@ type conf struct {
 	Links []struct {
 		Endpoints []string `yaml:"endpoints"`
 	} `yaml:"Links"`
+	ConfigPath string `yaml:"ConfigPath"`
 }
 
 type volume struct {
@@ -90,127 +91,127 @@ type Endpoint struct {
 }
 
 // Prefix variables to store prefix of the lab
-var Prefix string
+// var Prefix string
 
-// DockerInfo variable to store the docker networking information
-var DockerInfo dockerInfo
+// // DockerInfo variable to store the docker networking information
+// var DockerInfo dockerInfo
 
-// Nodes variable stores all the node information
-var Nodes map[string]*Node
+// // Nodes variable stores all the node information
+// var Nodes map[string]*Node
 
-// Links variable stores all the link information
-var Links map[int]*Link
+// // Links variable stores all the link information
+// var Links map[int]*Link
 
-// Path variables stores the absolute path of the lab topology structure
-var Path string
+// // Path variables stores the absolute path of the lab topology structure
+// var Path string
 
-func parseIPInfo(t *conf) error {
-	DockerInfo = t.DockerInfo
-	if DockerInfo.Bridge == "" {
-		DockerInfo.Bridge = "srlinux_bridge"
+func (c *cLab) parseIPInfo() error {
+	// DockerInfo = t.DockerInfo
+	if c.Conf.DockerInfo.Bridge == "" {
+		c.Conf.DockerInfo.Bridge = "srlinux_bridge"
 	}
-	if DockerInfo.Ipv4Subnet == "" {
-		DockerInfo.Bridge = "172.19.19.0/24"
+	if c.Conf.DockerInfo.Ipv4Subnet == "" {
+		c.Conf.DockerInfo.Bridge = "172.19.19.0/24"
 	}
-	if DockerInfo.Ipv6Subnet == "" {
-		DockerInfo.Bridge = "2001:172:19:19::/80"
+	if c.Conf.DockerInfo.Ipv6Subnet == "" {
+		c.Conf.DockerInfo.Bridge = "2001:172:19:19::/80"
 	}
 
-	_, ipv4Net, err := net.ParseCIDR(DockerInfo.Ipv4Subnet)
+	_, ipv4Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv4Subnet)
 	if err != nil {
 		return err
 	}
 	ipv4Gateway := ipv4Net.IP.To4()
 	ipv4Gateway[3]++
-	DockerInfo.Ipv4Gateway = ipv4Gateway.String()
+	c.Conf.DockerInfo.Ipv4Gateway = ipv4Gateway.String()
 
-	_, ipv6Net, err := net.ParseCIDR(DockerInfo.Ipv6Subnet)
+	_, ipv6Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv6Subnet)
 	if err != nil {
 		return err
 	}
 	ipv6Gateway := ipv6Net.IP
 	ipv6Gateway[15]++
-	DockerInfo.Ipv6Gateway = ipv6Gateway.String()
+	c.Conf.DockerInfo.Ipv6Gateway = ipv6Gateway.String()
 
 	return nil
 }
 
-func parseTopology(t *conf) error {
+func (c *cLab) parseTopology() error {
 	// initialize Prefix
-	Prefix = t.Prefix
-	log.Debug(fmt.Sprintf("Prefix: %s", Prefix))
+	// Prefix = t.Prefix
+	log.Debug(fmt.Sprintf("Prefix: %s", c.Conf.Prefix))
 	// initialize DockerInfo
-	err := parseIPInfo(t)
+	err := c.parseIPInfo()
 	if err != nil {
 		return err
 	}
-	log.Debug(fmt.Sprintf("DockerInfo: %v", DockerInfo))
+	log.Debug(fmt.Sprintf("DockerInfo: %v", c.Conf.DockerInfo))
 
-	Path, _ = filepath.Abs(os.Getenv("PWD"))
+	c.Conf.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 
 	// initialize Nodes and Links variable
-	Nodes = make(map[string]*Node)
-	Links = make(map[int]*Link)
+	c.Nodes = make(map[string]*Node)
+	c.Links = make(map[int]*Link)
 
 	// initialize the Node information from the topology map
 	idx := 0
-	for dut, data := range t.Duts.DutSpecifics {
-		Nodes[dut] = NewNode(t, dut, data, idx)
+	for dut, data := range c.Conf.Duts.DutSpecifics {
+		c.Nodes[dut] = c.NewNode(dut, data, idx)
 		idx++
 	}
-	for i, l := range t.Links {
+	for i, l := range c.Conf.Links {
 		// i represnts the endpoint integer and l provide the lik struct
-		Links[i] = NewLink(l.Endpoints)
+		c.Links[i] = c.NewLink(l.Endpoints)
 	}
 	return nil
 }
 
-func kindInitialization(t *conf, dut *dutInfo) string {
+func (c *cLab) kindInitialization(dut *dutInfo) string {
 	if dut.Kind != "" {
 		return dut.Kind
 	}
-	return t.Duts.GlobalDefaults.Kind
+	return c.Conf.Duts.GlobalDefaults.Kind
 }
 
-func groupInitialization(t *conf, dut *dutInfo, kind string) string {
+func (c *cLab) groupInitialization(dut *dutInfo, kind string) string {
 	if dut.Group != "" {
 		return dut.Group
-	} else if t.Duts.KindDefaults[kind].Group != "" {
-		return t.Duts.KindDefaults[kind].Group
+	} else if c.Conf.Duts.KindDefaults[kind].Group != "" {
+		return c.Conf.Duts.KindDefaults[kind].Group
 	}
-	return t.Duts.GlobalDefaults.Group
+	return c.Conf.Duts.GlobalDefaults.Group
 }
 
-func typeInitialization(t *conf, dut *dutInfo, kind string) string {
+func (c *cLab) typeInitialization(dut *dutInfo, kind string) string {
 	if dut.Type != "" {
 		return dut.Type
 	}
-	return t.Duts.KindDefaults[kind].Type
+	return c.Conf.Duts.KindDefaults[kind].Type
 }
 
-func configInitialization(t *conf, dut *dutInfo, kind string) string {
+func (c *cLab) configInitialization(dut *dutInfo, kind string) string {
 	if dut.Config != "" {
 		return dut.Config
 	}
-	return t.Duts.KindDefaults[kind].Config
+	return c.Conf.Duts.KindDefaults[kind].Config
 }
 
-func imageInitialization(t *conf, dut *dutInfo, kind string) string {
+func (c *cLab) imageInitialization(dut *dutInfo, kind string) string {
 	if dut.Image != "" {
 		return dut.Image
 	}
-	return t.Duts.KindDefaults[kind].Image
+	return c.Conf.Duts.KindDefaults[kind].Image
 }
 
-func licenseInitialization(t *conf, dut *dutInfo, kind string) string {
+func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
 	if dut.License != "" {
 		return dut.License
 	}
-	return t.Duts.KindDefaults[kind].License
+	return c.Conf.Duts.KindDefaults[kind].License
 }
 
 // NewNode initializes a new node object
-func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
+func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	// initialize a new node
 	node := new(Node)
 	node.Name = dutName
@@ -219,13 +220,13 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 	// initialize the node with global parameters
 	// Kind initialization is either coming from dut_specific or from global
 	// normalize the data to lower case to compare
-	node.OS = strings.ToLower(kindInitialization(t, &dut))
+	node.OS = strings.ToLower(c.kindInitialization(&dut))
 	switch node.OS {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = configInitialization(t, &dut, node.OS)
+		node.Config = c.configInitialization(&dut, node.OS)
 		//node.License = t.SRLLicense
-		node.Image = imageInitialization(t, &dut, node.OS)
+		node.Image = c.imageInitialization(&dut, node.OS)
 		//node.NodeType = "ixr6"
 
 		// initialize specifc container information
@@ -239,7 +240,7 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
 			"INTFTYPE=eth"}
 		node.User = "root"
-		node.Group = groupInitialization(t, &dut, node.OS)
+		node.Group = c.groupInitialization(&dut, node.OS)
 		node.NodeType = dut.Type
 		node.Config = dut.Config
 
@@ -253,11 +254,11 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = configInitialization(t, &dut, node.OS)
-		node.License = licenseInitialization(t, &dut, node.OS)
-		node.Image = imageInitialization(t, &dut, node.OS)
-		node.Group = groupInitialization(t, &dut, node.OS)
-		node.NodeType = typeInitialization(t, &dut, node.OS)
+		node.Config = c.configInitialization(&dut, node.OS)
+		node.License = c.licenseInitialization(&dut, node.OS)
+		node.Image = c.imageInitialization(&dut, node.OS)
+		node.Group = c.groupInitialization(&dut, node.OS)
+		node.NodeType = c.typeInitialization(&dut, node.OS)
 
 		switch node.NodeType {
 		case "ixr6":
@@ -289,7 +290,7 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 
 		node.Mounts = make(map[string]volume)
 		var v volume
-		labPath := Path + "/" + "lab" + "-" + Prefix + "/"
+		labPath := c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix + "/"
 		labDutPath := labPath + dutName + "/"
 		v.Source = labPath + "license.key"
 		v.Destination = "/opt/srlinux/etc/license.key"
@@ -346,11 +347,11 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 		node.Binds = append(node.Binds, bindTopology)
 
 	case "alpine", "linux":
-		node.Config = configInitialization(t, &dut, node.OS)
-		node.License = licenseInitialization(t, &dut, node.OS)
-		node.Image = imageInitialization(t, &dut, node.OS)
-		node.Group = groupInitialization(t, &dut, node.OS)
-		node.NodeType = typeInitialization(t, &dut, node.OS)
+		node.Config = c.configInitialization(&dut, node.OS)
+		node.License = c.licenseInitialization(&dut, node.OS)
+		node.Image = c.imageInitialization(&dut, node.OS)
+		node.Group = c.groupInitialization(&dut, node.OS)
+		node.NodeType = c.typeInitialization(&dut, node.OS)
 
 		node.Cmd = "/bin/bash"
 
@@ -362,7 +363,7 @@ func NewNode(t *conf, dutName string, dut dutInfo, idx int) *Node {
 }
 
 // NewLink initializes a new link object
-func NewLink(e []string) *Link {
+func (c *cLab) NewLink(e []string) *Link {
 	// initialize a new link
 	link := new(Link)
 
@@ -370,16 +371,16 @@ func NewLink(e []string) *Link {
 		// i indicates the number and d presents the string, which need to be
 		// split in node and endpoint name
 		if i == 0 {
-			link.a = NewEndpoint(d)
+			link.a = c.NewEndpoint(d)
 		} else {
-			link.b = NewEndpoint(d)
+			link.b = c.NewEndpoint(d)
 		}
 	}
 	return link
 }
 
 // NewEndpoint initializes a new endpoint object
-func NewEndpoint(e string) *Endpoint {
+func (c *cLab) NewEndpoint(e string) *Endpoint {
 	// initialize a new endpoint
 	endpoint := new(Endpoint)
 
@@ -387,7 +388,7 @@ func NewEndpoint(e string) *Endpoint {
 	split := strings.Split(e, ":")
 	// search the node pointer based in the name of the split function
 	found := false
-	for name, n := range Nodes {
+	for name, n := range c.Nodes {
 		if name == split[0] {
 			endpoint.Node = n
 			found = true

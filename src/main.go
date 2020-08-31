@@ -1,13 +1,37 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
+	"docker.io/go-docker"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/pflag"
 )
 
+type cLab struct {
+	Conf         *conf
+	FileInfo     *File
+	Nodes        map[string]*Node
+	Links        map[int]*Link
+	DockerClient *docker.Client
+}
+
+func newContainerLab() (*cLab, error) {
+	c := &cLab{
+		Conf:     new(conf),
+		FileInfo: new(File),
+		Nodes:    make(map[string]*Node),
+		Links:    make(map[int]*Link),
+	}
+	var err error
+	c.DockerClient, err = docker.NewEnvClient()
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
 func main() {
 	// Flags variables + initialization
 	var topo string
@@ -23,54 +47,55 @@ func main() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
-
+	c, err := newContainerLab()
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Get topology information
-	var t *conf
-	var err error
+	// var t *conf
+
 	log.Info("Getting topology information ...")
-	if t, err = getTopology(&topo); err != nil {
-		panic(err)
+	if err = c.getTopology(&topo); err != nil {
+		log.Fatal(err)
 	}
 
 	// Parse topology information
 	log.Info("Parsing topology information ...")
-	if err = parseTopology(t); err != nil {
-		panic(err)
+	if err = c.parseTopology(); err != nil {
+		log.Fatal(err)
 	}
 
-	var d *Docker
-	if d, err = NewDocker(); err != nil {
-		panic(err)
-	}
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	_ = ctx
 	switch action {
 	case "deploy":
 		log.Info("Creating container lab: ", topo)
 		// create lab directory
-		path := Path + "/" + "lab" + "-" + Prefix
+		path := c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
 		createDirectory(path, 0755)
 
 		log.Info("Creating docker bridge")
 		// create bridge
-		if err = d.createBridge(); err != nil {
+		if err = c.createBridge(); err != nil {
 			log.Error(err)
 		}
 
 		// create directory structure and container per node
-		for dutName, node := range Nodes {
+		for dutName, node := range c.Nodes {
 			log.Info("Create directory structure and create container:", dutName)
-			if err = createNodeDirStructure(node, dutName); err != nil {
+			if err = c.createNodeDirStructure(node, dutName); err != nil {
 				log.Error(err)
 			}
 
-			if err = d.createContainer(dutName, node); err != nil {
+			if err = c.createContainer(dutName, node); err != nil {
 				log.Error(err)
 			}
 		}
 		// wire the links between the nodes based on cabling plan
-		for i, link := range Links {
+		for i, link := range c.Links {
 			log.Info("Wire link between containers :", link.a.EndpointName, link.b.EndpointName)
-			if err = createVirtualWiring(i, link); err != nil {
+			if err = c.createVirtualWiring(i, link); err != nil {
 				log.Error(err)
 			}
 
@@ -79,40 +104,40 @@ func main() {
 		// for dutName, node := range Nodes {
 		// 	log.Info("Start container:", dutName)
 
-		// 	if err = d.startContainer(dutName, node); err != nil {
+		// 	if err = c.DockerClientstartContainer(dutName, node); err != nil {
 		// 		log.Error(err)
 		// 	}
 		//}
 		// generate graph of the lab topology
 		if graph {
 			log.Info("Generating lab graph ...")
-			if err = generateGraph(topo); err != nil {
+			if err = c.generateGraph(topo); err != nil {
 				log.Error(err)
 			}
 		}
 
 		//show management ip addresses per Node
-		for dutName, node := range Nodes {
+		for dutName, node := range c.Nodes {
 			log.Info(fmt.Sprintf("Mgmt IP addresses of container: %s, IPv4: %s, IPv6: %s, MAC: %s", dutName, node.MgmtIPv4, node.MgmtIPv6, node.MgmtMac))
 		}
 
 	case "destroy":
 		log.Info("Destroying container lab: ... ", topo)
 		// delete containers
-		for n, node := range Nodes {
-			if err = d.deleteContainer(n, node); err != nil {
+		for n, node := range c.Nodes {
+			if err = c.deleteContainer(n, node); err != nil {
 				log.Error(err)
 			}
 		}
 		// delete container management bridge
 		log.Info("Deleting docker bridge ...")
-		if err = d.deleteBridge(); err != nil {
+		if err = c.deleteBridge(); err != nil {
 			log.Error(err)
 		}
 		// delete virtual wiring
-		for n, link := range Links {
+		for n, link := range c.Links {
 			log.Info("Delete virtual wire:", link.a.EndpointName, link.b.EndpointName)
-			if err = deleteVirtualWiring(n, link); err != nil {
+			if err = c.deleteVirtualWiring(n, link); err != nil {
 				log.Error(err)
 			}
 
@@ -122,7 +147,7 @@ func main() {
 		log.Info("Empty action, if you want to deploy or destoy command should be ./containerlab -a deploy|destroy")
 		if graph {
 			log.Info("Generating lab graph ...")
-			if err = generateGraph(topo); err != nil {
+			if err = c.generateGraph(topo); err != nil {
 				log.Error(err)
 			}
 		}

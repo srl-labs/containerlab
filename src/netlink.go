@@ -7,10 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func createVirtualWiring(id int, link *Link) (err error) {
+func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "-" + Prefix + "-" + link.a.Node.Name
-	nodeNameB := "lab" + "-" + Prefix + "-" + link.b.Node.Name
+	nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
+	nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
 	log.Debug("creating veth pair: ", nodeNameA, nodeNameB, link.a.EndpointName, link.b.EndpointName)
 
 	createDirectory("/run/netns/", 0755)
@@ -122,10 +122,10 @@ func createVirtualWiring(id int, link *Link) (err error) {
 
 }
 
-func deleteVirtualWiring(id int, link *Link) (err error) {
+func (c *cLab) deleteVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "-" + Prefix + "-" + link.a.Node.Name
-	nodeNameB := "lab" + "-" + Prefix + "-" + link.b.Node.Name
+	nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
+	nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
 
 	var cmd *exec.Cmd
 
