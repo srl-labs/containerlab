@@ -92,7 +92,7 @@ func (c *cLab) createRootCA() (err error) {
 	log.Debug(fmt.Sprintf("CopyFile GoTemplate src %s -> dat %s succeeded\n", src, dst))
 
 	var cmd *exec.Cmd
-	cmd = exec.Command("/home/henderiw/work/bin/cfssl", "gencert", "-initca", dst)
+	cmd = exec.Command("cfssl", "gencert", "-initca", dst)
 	o, err := cmd.CombinedOutput()
 	//fmt.Println(string(o))
 	if err != nil {
@@ -141,7 +141,7 @@ func (c *cLab) createCERT(shortdutName string) (err error) {
 	var cmd *exec.Cmd
 	rootCert := c.Dir.LabCARoot + "/" + "root-ca.pem"
 	rootKey := c.Dir.LabCARoot + "/" + "root-ca-key.pem"
-	cmd = exec.Command("/home/henderiw/work/bin/cfssl", "gencert", "-ca", rootCert, "-ca-key", rootKey, dst)
+	cmd = exec.Command("cfssl", "gencert", "-ca", rootCert, "-ca-key", rootKey, dst)
 	o, err := cmd.CombinedOutput()
 	//fmt.Println(string(o))
 	if err != nil {
