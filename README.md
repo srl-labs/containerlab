@@ -7,6 +7,10 @@ Currently supporting standard linux containers as clients and networking contain
 
 ## installation
 
+## Prerequisites for installing CA
+
+go get -u github.com/cloudflare/cfssl/cmd/...
+
 ### cloning the repo
 
 git clone https://github.com/srl-wim/container-lab
