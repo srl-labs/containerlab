@@ -159,7 +159,7 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 			Sysctls:     node.Sysctls,
 			Privileged:  true,
 			NetworkMode: container.NetworkMode(c.Conf.DockerInfo.Bridge),
-		}, nil, "lab"+"-"+c.Conf.Prefix+"-"+name)
+		}, nil, node.LongName)
 	if err != nil {
 		return err
 	}
@@ -167,12 +167,12 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 
 	node.Cid = cont.ID
 
-	err = c.startContainer(ctx, "lab"+"-"+c.Conf.Prefix+"-"+name, node)
+	err = c.startContainer(ctx, node.LongName, node)
 	if err != nil {
 		return err
 	}
 
-	return c.inspectContainer(ctx, "lab"+"-"+c.Conf.Prefix+"-"+name, node)
+	return c.inspectContainer(ctx, node.LongName, node)
 }
 
 func (c *cLab) startContainer(ctx context.Context, name string, node *Node) (err error) {
@@ -203,10 +203,15 @@ func (c *cLab) deleteContainer(ctx context.Context, name string, node *Node) (er
 
 	for _, container := range containers {
 		for _, n := range container.Names {
-			if strings.Contains(n, "lab"+"-"+c.Conf.Prefix+"-"+name) {
+			if strings.Contains(n, node.LongName) {
 				cid = container.ID
 				break
 			}
+
+			//if strings.Contains(n, "lab"+"-"+c.Conf.Prefix+"-"+name) {
+			//	cid = container.ID
+			//	break
+			//}
 		}
 	}
 
