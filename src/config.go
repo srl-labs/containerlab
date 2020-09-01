@@ -79,6 +79,9 @@ type Node struct {
 	MgmtIPv4   string
 	MgmtIPv6   string
 	MgmtMac    string
+
+	TLSCert string
+	TLSKey  string
 }
 
 // Link is a struct that contains the information of a link between 2 containers
@@ -141,8 +144,8 @@ func (c *cLab) parseTopology() error {
 	c.Dir = new(cLabDirectory)
 	c.Dir.Lab = c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
-	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root" 
-	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph" 
+	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
+	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]*Node)
