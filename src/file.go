@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"text/template"
@@ -162,7 +165,6 @@ func createFile(file, content string) {
 	if _, err := f.WriteString(content + "\n"); err != nil {
 		panic(err)
 	}
-
 }
 
 func createDirectory(path string, perm os.FileMode) {
@@ -178,7 +180,7 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 		var dst string
 		// copy license file to node specific directory in lab
 		src = node.License
-		dst = c.Dir.Lab + "/" + "license.key"
+		dst = path.Join(c.Dir.Lab, "license.key")
 		if err = copyFile(src, dst); err != nil {
 			log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
 			return err
@@ -190,7 +192,7 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 
 		// copy topology to node specific directory in lab
 		src = node.Topology
-		dst = node.LabDir + "/" + "topology.yml"
+		dst = path.Join(node.LabDir, "topology.yml")
 		tpl, err := template.ParseFiles(src)
 		if err != nil {
 			log.Fatalln(err)
@@ -220,15 +222,20 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 		// copy config file to node specific directory in lab
 
 		createDirectory(node.LabDir+"/"+"config", 0777)
-		src = node.Config
-		dst = node.LabDir + "/" + "config" + "/" + "config.json"
+
+		dst = path.Join(node.LabDir, "config", "config.json")
 		if !fileExists(dst) {
-			err = copyFile(src, dst)
+			err = node.generateConfig(dst)
 			if err != nil {
-				log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
-				return err
+				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 			}
-			log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
+			//src = node.Config
+			// err = copyFile(src, dst)
+			// if err != nil {
+			// 	log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
+			// 	return err
+			// }
+			// log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
 		} else {
 			log.Debug("Config File Exists")
 		}
@@ -252,4 +259,50 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 	}
 
 	return nil
+}
+
+func (node *Node) generateConfig(dst string) error {
+	tpl, err := template.ParseFiles("./srl_config/templates/config.tpl")
+	if err != nil {
+		return err
+	}
+	dstBytes := new(bytes.Buffer)
+	err = tpl.Execute(dstBytes, node)
+	if err != nil {
+		return err
+	}
+	log.Debugf("config:\n%s", dstBytes.String())
+	f, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	var cfg interface{}
+	err = yaml.Unmarshal(dstBytes.Bytes(), &cfg)
+	if err != nil {
+		return err
+	}
+	cfgMap := convert(cfg)
+	b, err := json.MarshalIndent(cfgMap, "", "  ")
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(b)
+	return err
+}
+
+func convert(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		nm := map[string]interface{}{}
+		for k, v := range x {
+			nm[k.(string)] = convert(v)
+		}
+		return nm
+	case []interface{}:
+		for i, v := range x {
+			x[i] = convert(v)
+		}
+	}
+	return i
 }
