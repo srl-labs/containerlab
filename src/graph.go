@@ -34,7 +34,7 @@ func (c *cLab) generateGraph(topo string) error {
 		if strings.Contains(node.Group, "bb") {
 			attr["fillcolor"] = "blue"
 		}
-		if err := g.AddNode(c.FileInfo.shortname, node.Name, attr); err != nil {
+		if err := g.AddNode(c.FileInfo.shortname, node.ShortName, attr); err != nil {
 			return err
 		}
 
@@ -44,26 +44,22 @@ func (c *cLab) generateGraph(topo string) error {
 	attr["color"] = "green"
 
 	for _, link := range c.Links {
-		if strings.Contains(link.b.Node.Name, "client") {
+		if strings.Contains(link.b.Node.ShortName, "client") {
 			attr["color"] = "blue"
 		}
-		if err := g.AddEdge(link.a.Node.Name, link.b.Node.Name, false, attr); err != nil {
+		if err := g.AddEdge(link.a.Node.ShortName, link.b.Node.ShortName, false, attr); err != nil {
 			return err
 		}
 
 	}
 
 	// create graph directory
-	path := c.Conf.ConfigPath + "/" + "graph"
-	createDirectory(path, 0755)
+	createDirectory(c.Dir.LabGraph, 0755)
 
 	// create graph filename
-	file := path + "/" + c.FileInfo.name + ".dot"
+	file := c.Dir.LabGraph + "/" + c.FileInfo.name + ".dot"
 
 	createFile(file, g.String())
-
-	//s := g.String()
-	//fmt.Println(s)
 
 	return nil
 }
