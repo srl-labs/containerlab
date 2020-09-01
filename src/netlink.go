@@ -102,10 +102,10 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 
 	log.Debug("set RX, TX offload off on container B")
 	cmd = exec.Command("sudo", "docker", "exec", "-ti", link.b.Node.LongName, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
-	// _, err = cmd.CombinedOutput()
-	// if err != nil {
-	// 	log.Fatalf("cmd.Run() failed with %s\n", err)
-	// }
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Debug("cmd.Run() failed with", err)
+	}
 
 	//ip link add tmp_a type veth peer name tmp_b
 	//ip link set tmp_a netns $srl_a
