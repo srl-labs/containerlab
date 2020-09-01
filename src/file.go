@@ -172,16 +172,13 @@ func createDirectory(path string, perm os.FileMode) {
 }
 
 func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
-	// create lab directory
-	path := c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
-
 	switch node.OS {
 	case "srl":
 		var src string
 		var dst string
 		// copy license file to node specific directory in lab
 		src = node.License
-		dst = path + "/" + "license.key"
+		dst = c.Dir.Lab + "/" + "license.key"
 		if err = copyFile(src, dst); err != nil {
 			log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
 			return err
@@ -189,13 +186,11 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 		log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
 
 		// create dut directory in lab
-		path += "/" + dut
-		createDirectory(path, 0777)
-		node.Path = path
+		createDirectory(node.LabDir, 0777)
 
 		// copy topology to node specific directory in lab
 		src = node.Topology
-		dst = path + "/" + "topology.yml"
+		dst = node.LabDir + "/" + "topology.yml"
 		tpl, err := template.ParseFiles(src)
 		if err != nil {
 			log.Fatalln(err)
@@ -224,9 +219,9 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 
 		// copy config file to node specific directory in lab
 
-		createDirectory(path+"/"+"config", 0777)
+		createDirectory(node.LabDir+"/"+"config", 0777)
 		src = node.Config
-		dst = path + "/" + "config" + "/" + "config.json"
+		dst = node.LabDir + "/" + "config" + "/" + "config.json"
 		if !fileExists(dst) {
 			err = copyFile(src, dst)
 			if err != nil {
@@ -242,7 +237,7 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 		// copy env config to node specific directory in lab
 
 		src = "srl_config/srl_env.conf"
-		dst = path + "/" + "srlinux.conf"
+		dst = node.LabDir + "/" + "srlinux.conf"
 		err = copyFile(src, dst)
 		if err != nil {
 			log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
@@ -252,6 +247,8 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 		node.EnvConf = dst
 
 	case "alpine":
+	case "ceos":
+	default:
 	}
 
 	return nil
