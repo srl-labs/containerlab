@@ -41,12 +41,13 @@ func newContainerLab() (*cLab, error) {
 	return c, nil
 }
 
+var debug bool
+
 func main() {
 	// Flags variables + initialization
 	var topo string
 	var action string
 	var graph bool
-	var debug bool
 	var certGen bool
 	pflag.StringVarP(&topo, "topo", "t", "labs/wan-topo.yml", "YAML file with topology information")
 	pflag.StringVarP(&action, "action", "a", "", "action: deploy or destroy")
