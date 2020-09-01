@@ -129,6 +129,19 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 	log.Debug("Create container: ", name)
 	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	labels := map[string]string{
+		"containerlab":         "lab-" + c.Conf.Prefix,
+		"lab-" + c.Conf.Prefix: name,
+	}
+	if node.OS != "" {
+		labels["kind"] = node.OS
+	}
+	if node.NodeType != "" {
+		labels["type"] = node.NodeType
+	}
+	if node.Group != "" {
+		labels["group"] = node.Group
+	}
 	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{
 			Image:        node.Image,
@@ -140,13 +153,7 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 			Volumes:      node.Volumes,
 			Tty:          true,
 			User:         node.User,
-			Labels: map[string]string{
-				"containerlab":         "lab-" + c.Conf.Prefix,
-				"lab-" + c.Conf.Prefix: name,
-				"kind":                 node.OS,
-				"type":                 node.NodeType,
-				"group":                node.Group,
-			},
+			Labels:       labels,
 		}, &container.HostConfig{
 			Binds:       node.Binds,
 			Sysctls:     node.Sysctls,
