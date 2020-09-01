@@ -140,6 +140,10 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 			Volumes:      node.Volumes,
 			Tty:          true,
 			User:         node.User,
+			Labels: map[string]string{
+				"containerlab":         "lab-" + c.Conf.Prefix,
+				"lab-" + c.Conf.Prefix: name,
+			},
 		}, &container.HostConfig{
 			Binds:       node.Binds,
 			Sysctls:     node.Sysctls,
@@ -217,7 +221,7 @@ func (c *cLab) inspectContainer(ctx context.Context, id string, node *Node) (err
 	node.MgmtIPv4 = s.NetworkSettings.Networks["srlinux_bridge"].IPAddress
 	node.MgmtIPv6 = s.NetworkSettings.Networks["srlinux_bridge"].GlobalIPv6Address
 	node.MgmtMac = s.NetworkSettings.Networks["srlinux_bridge"].MacAddress
-	
+
 	log.Debug("Container pid: ", node.Pid)
 	log.Debug("Container mgmt IPv4: ", node.MgmtIPv4)
 	log.Debug("Container mgmt IPv6: ", node.MgmtIPv6)
