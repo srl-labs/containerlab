@@ -9,9 +9,9 @@ import (
 
 func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
-	nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
-	log.Debug("creating veth pair: ", nodeNameA, nodeNameB, link.a.EndpointName, link.b.EndpointName)
+	//nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
+	//nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
+	log.Debug("creating veth pair: ", link.a.Node.ShortName, link.b.Node.ShortName, link.a.EndpointName, link.b.EndpointName)
 
 	createDirectory("/run/netns/", 0755)
 
@@ -24,24 +24,24 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 	// 	log.Error(err)
 	// }
 
-	log.Debug("Create link to /run/netns/ ", nodeNameA)
+	log.Debug("Create link to /run/netns/ ", link.a.Node.LongName)
 	src = "/proc/" + strconv.Itoa(link.a.Node.Pid) + "/ns/net"
-	dst = "/run/netns/" + nodeNameA
-	//err = linkFile(src, dst)
-	cmd = exec.Command("sudo", "ln", "-s", src, dst)
-	_, err = cmd.CombinedOutput()
-	//if err != nil {
-	//	log.Fatalf("cmd.Run() failed with %s\n", err)
-	//}
-
-	log.Debug("Create link to /run/netns/ ", nodeNameB)
-	src = "/proc/" + strconv.Itoa(link.b.Node.Pid) + "/ns/net"
-	dst = "/run/netns/" + nodeNameB
+	dst = "/run/netns/" + link.a.Node.LongName
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ln", "-s", src, dst)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Debug("cmd.Run() failed with", err)
+	}
+
+	log.Debug("Create link to /run/netns/ ", link.b.Node.LongName)
+	src = "/proc/" + strconv.Itoa(link.b.Node.Pid) + "/ns/net"
+	dst = "/run/netns/" + link.b.Node.LongName
+	//err = linkFile(src, dst)
+	cmd = exec.Command("sudo", "ln", "-s", src, dst)
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Debug("cmd.Run() failed with", err)
 	}
 
 	log.Debug("create dummy veth pair")
@@ -52,56 +52,56 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 	}
 
 	log.Debug("map dummy interface on container A to NS")
-	cmd = exec.Command("sudo", "ip", "link", "set", "dummyA", "netns", nodeNameA)
+	cmd = exec.Command("sudo", "ip", "link", "set", "dummyA", "netns", link.a.Node.LongName)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
 
 	log.Debug("map dummy interface on container B to NS")
-	cmd = exec.Command("sudo", "ip", "link", "set", "dummyB", "netns", nodeNameB)
+	cmd = exec.Command("sudo", "ip", "link", "set", "dummyB", "netns", link.b.Node.LongName)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
 
 	log.Debug("rename interface container NS A")
-	cmd = exec.Command("sudo", "ip", "netns", "exec", nodeNameA, "ip", "link", "set", "dummyA", "name", link.a.EndpointName)
+	cmd = exec.Command("sudo", "ip", "netns", "exec", link.a.Node.LongName, "ip", "link", "set", "dummyA", "name", link.a.EndpointName)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
 
 	log.Debug("rename interface container NS B")
-	cmd = exec.Command("sudo", "ip", "netns", "exec", nodeNameB, "ip", "link", "set", "dummyB", "name", link.b.EndpointName)
+	cmd = exec.Command("sudo", "ip", "netns", "exec", link.b.Node.LongName, "ip", "link", "set", "dummyB", "name", link.b.EndpointName)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
 
 	log.Debug("set interface up in container NS A")
-	cmd = exec.Command("sudo", "ip", "netns", "exec", nodeNameA, "ip", "link", "set", link.a.EndpointName, "up")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", link.a.Node.LongName, "ip", "link", "set", link.a.EndpointName, "up")
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
 
 	log.Debug("set interface up in container NS B")
-	cmd = exec.Command("sudo", "ip", "netns", "exec", nodeNameB, "ip", "link", "set", link.b.EndpointName, "up")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", link.b.Node.LongName, "ip", "link", "set", link.b.EndpointName, "up")
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
 
 	log.Debug("set RX, TX offload off on container A")
-	cmd = exec.Command("sudo", "docker", "exec", "-ti", nodeNameA, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off")
-	// _, err = cmd.CombinedOutput()
-	// if err != nil {
-	// 	log.Fatalf("cmd.Run() failed with %s\n", err)
-	// }
+	cmd = exec.Command("sudo", "docker", "exec", "-ti", link.a.Node.LongName, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Debug("cmd.Run() failed with", err)
+	}
 
 	log.Debug("set RX, TX offload off on container B")
-	cmd = exec.Command("sudo", "docker", "exec", "-ti", nodeNameB, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
+	cmd = exec.Command("sudo", "docker", "exec", "-ti", link.b.Node.LongName, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
 	// _, err = cmd.CombinedOutput()
 	// if err != nil {
 	// 	log.Fatalf("cmd.Run() failed with %s\n", err)
@@ -124,25 +124,22 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 
 func (c *cLab) deleteVirtualWiring(id int, link *Link) (err error) {
 
-	nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
-	nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
-
 	var cmd *exec.Cmd
 
-	log.Debug("Delete netns: ", nodeNameA)
+	log.Debug("Delete netns: ", link.a.Node.LongName)
 	//err = linkFile(src, dst)
-	cmd = exec.Command("sudo", "ip", "netns", "del", nodeNameA)
+	cmd = exec.Command("sudo", "ip", "netns", "del", link.a.Node.LongName)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Errorf("cmd.Run() failed with %s\n", err)
+		log.Debug("cmd.Run() failed with", err)
 	}
 
-	log.Debug("Delete netns: ", nodeNameB)
+	log.Debug("Delete netns: ", link.b.Node.LongName)
 	//err = linkFile(src, dst)
-	cmd = exec.Command("sudo", "ip", "netns", "del", nodeNameB)
+	cmd = exec.Command("sudo", "ip", "netns", "del", link.b.Node.LongName)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Errorf("cmd.Run() failed with %s\n", err)
+		log.Debug("cmd.Run() failed with", err)
 	}
 	return nil
 }

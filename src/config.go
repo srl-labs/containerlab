@@ -50,7 +50,11 @@ type volume struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	Name       string
+	ShortName  string
+	LongName   string
+	Fqdn       string
+	LabDir     string
+	CertDir    string
 	Index      int
 	Group      string
 	OS         string
@@ -133,6 +137,13 @@ func (c *cLab) parseTopology() error {
 	if c.Conf.ConfigPath == "" {
 		c.Conf.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 	}
+
+	c.Dir = new(cLabDirectory)
+	c.Dir.Lab = c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
+	c.Dir.LabCA = c.Dir.Lab + "/" + "ca" + "/"
+	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root" + "/"
+	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph" + "/"
+
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]*Node)
 	c.Links = make(map[int]*Link)
@@ -198,7 +209,11 @@ func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
 func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	// initialize a new node
 	node := new(Node)
-	node.Name = dutName
+	node.ShortName = dutName
+	node.LongName = "lab" + "-" + c.Conf.Prefix + "-" + dutName
+	node.Fqdn = dutName + "." + c.Conf.Prefix + ".io"
+	node.LabDir = c.Dir.Lab + "/" + dutName
+	node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
 
 	// initialize the node with global parameters
@@ -274,39 +289,25 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 
 		node.Mounts = make(map[string]volume)
 		var v volume
-		labPath := c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix + "/"
-		labDutPath := labPath + dutName + "/"
-		v.Source = labPath + "license.key"
+		v.Source = c.Dir.Lab + "/" + "license.key"
 		v.Destination = "/opt/srlinux/etc/license.key"
 		v.ReadOnly = true
 		log.Debug("License key: ", v.Source)
 		node.Mounts["license"] = v
 
-		v.Source = labDutPath + "config/"
+		v.Source = node.LabDir + "/" + "config/"
 		v.Destination = "/etc/opt/srlinux/"
 		v.ReadOnly = false
 		log.Debug("Config: ", v.Source)
 		node.Mounts["config"] = v
 
-		v.Source = labDutPath + "srlinux.conf"
+		v.Source = node.LabDir + "/" + "srlinux.conf"
 		v.Destination = "/home/admin/.srlinux.conf"
 		v.ReadOnly = false
 		log.Debug("Env Config: ", v.Source)
 		node.Mounts["envConf"] = v
 
-		// v.Source = labDutPath + "tls/"
-		// v.Destination = "/etc/opt/srlinux/tls/"
-		// v.ReadOnly = false
-		// log.Debug("TLS Dir: ", v.Source)
-		// node.Mounts["tls"] = v
-
-		// v.Source = labDutPath + "checkpoint/"
-		// v.Destination = "/etc/opt/srlinux/checkpoint/"
-		// v.ReadOnly = false
-		// log.Debug("checkPoint Dir: ", v.Source)
-		// node.Mounts["checkPoint"] = v
-
-		v.Source = labDutPath + "topology.yml"
+		v.Source = node.LabDir + "/" + "topology.yml"
 		v.Destination = "/tmp/topology.yml"
 		v.ReadOnly = true
 		log.Debug("Topology File: ", v.Source)
