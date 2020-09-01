@@ -1,0 +1,16 @@
+{
+    "CN": "{{.Prefix}} Root CA",
+    "key": {
+       "algo": "rsa",
+       "size": 2048
+    },
+    "names": [{
+       "C": "BE",
+       "L": "Antwerp",
+       "O": "Nokia",
+       "OU": "Container lab"
+    }],
+    "ca": {
+       "expiry": "262800h"
+    }
+}

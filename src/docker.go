@@ -167,12 +167,12 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 
 	node.Cid = cont.ID
 
-	err = c.startContainer(ctx, name, node)
+	err = c.startContainer(ctx, "lab"+"-"+c.Conf.Prefix+"-"+name, node)
 	if err != nil {
 		return err
 	}
 
-	return c.inspectContainer(ctx, name, node)
+	return c.inspectContainer(ctx, "lab"+"-"+c.Conf.Prefix+"-"+name, node)
 }
 
 func (c *cLab) startContainer(ctx context.Context, name string, node *Node) (err error) {
@@ -228,9 +228,11 @@ func (c *cLab) inspectContainer(ctx context.Context, id string, node *Node) (err
 		return err
 	}
 	node.Pid = s.State.Pid
-	node.MgmtIPv4 = s.NetworkSettings.Networks["srlinux_bridge"].IPAddress
-	node.MgmtIPv6 = s.NetworkSettings.Networks["srlinux_bridge"].GlobalIPv6Address
-	node.MgmtMac = s.NetworkSettings.Networks["srlinux_bridge"].MacAddress
+	if _, ok := s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge]; ok {
+		node.MgmtIPv4 = s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].IPAddress
+		node.MgmtIPv6 = s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].GlobalIPv6Address
+		node.MgmtMac = s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].MacAddress
+	}
 
 	log.Debug("Container pid: ", node.Pid)
 	log.Debug("Container mgmt IPv4: ", node.MgmtIPv4)

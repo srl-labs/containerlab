@@ -16,6 +16,14 @@ type cLab struct {
 	Nodes        map[string]*Node
 	Links        map[int]*Link
 	DockerClient *docker.Client
+	Dir          *cLabDirectory
+}
+
+type cLabDirectory struct {
+	Lab       string
+	LabCA     string
+	LabCARoot string
+	LabGraph  string
 }
 
 func newContainerLab() (*cLab, error) {
@@ -39,9 +47,11 @@ func main() {
 	var action string
 	var graph bool
 	var debug bool
+	var certGen bool
 	pflag.StringVarP(&topo, "topo", "t", "labs/wan-topo.yml", "YAML file with topology information")
 	pflag.StringVarP(&action, "action", "a", "", "action: deploy or destroy")
 	pflag.BoolVarP(&graph, "graph", "g", false, "generate a graph of the topology")
+	pflag.BoolVarP(&certGen, "gen-certs", "c", true, "generate a certificate per container")
 	pflag.BoolVarP(&debug, "debug", "d", false, "set log level to debug")
 	pflag.Parse()
 
@@ -71,8 +81,13 @@ func main() {
 	case "deploy":
 		log.Info("Creating container lab: ", topo)
 		// create lab directory
-		path := c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
-		createDirectory(path, 0755)
+		createDirectory(c.Dir.Lab, 0755)
+
+		// create root CA
+		log.Info("Creating root CA")
+		if err = c.createRootCA(); err != nil {
+			log.Error(err)
+		}
 
 		log.Info("Creating docker bridge")
 		// create bridge
@@ -81,13 +96,20 @@ func main() {
 		}
 
 		// create directory structure and container per node
-		for dutName, node := range c.Nodes {
-			log.Info("Create directory structure and create container:", dutName)
-			if err = c.createNodeDirStructure(node, dutName); err != nil {
+		for shortDutName, node := range c.Nodes {
+			// create CERT
+			log.Info("Creating CA for dut: ", shortDutName)
+			if err = c.createCERT(shortDutName); err != nil {
 				log.Error(err)
 			}
 
-			if err = c.createContainer(ctx, dutName, node); err != nil {
+			log.Info("Create directory structure:", shortDutName)
+			if err = c.createNodeDirStructure(node, shortDutName); err != nil {
+				log.Error(err)
+			}
+
+			log.Info("Create contaianer:", shortDutName)
+			if err = c.createContainer(ctx, shortDutName, node); err != nil {
 				log.Error(err)
 			}
 		}
@@ -115,8 +137,8 @@ func main() {
 	case "destroy":
 		log.Info("Destroying container lab: ... ", topo)
 		// delete containers
-		for n, node := range c.Nodes {
-			if err = c.deleteContainer(ctx, n, node); err != nil {
+		for shortDutName, node := range c.Nodes {
+			if err = c.deleteContainer(ctx, shortDutName, node); err != nil {
 				log.Error(err)
 			}
 		}
