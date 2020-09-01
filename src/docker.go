@@ -143,6 +143,9 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 			Labels: map[string]string{
 				"containerlab":         "lab-" + c.Conf.Prefix,
 				"lab-" + c.Conf.Prefix: name,
+				"kind":                 node.OS,
+				"type":                 node.NodeType,
+				"group":                node.Group,
 			},
 		}, &container.HostConfig{
 			Binds:       node.Binds,
