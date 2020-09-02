@@ -11,23 +11,26 @@ provides:
 - containerlab
 maintainer: "Wim Henderickx <wim.henderickx@nokia.com>"
 description: |
-  containerlab written go
+  containerlab written in go
 vendor: "Nokia"
 license: "BSD 2"
-bindir: "./containerlab/"
+bindir: "/etc/containerlab/"
 files:
-  ./bin/containerlab: "./containerlab/containerlab"
-  ./srl_config/templates/topology-7220IXRD1.yml: "./containerlab/srl_config/templates/topology-7220IXRD1.yml"
-  ./srl_config/templates/topology-7220IXRD2.yml: "./containerlab/srl_config/templates/topology-7220IXRD2.yml"
-  ./srl_config/templates/topology-7220IXRD3.yml: "./containerlab/srl_config/templates/topology-7220IXRD3.yml"
-  ./srl_config/templates/topology-7250IXR6.yml: "./containerlab/srl_config/templates/topology-7250IXR6.yml"
-  ./srl_config/templates/topology-7250IXR10.yml: "./containerlab/srl_config/templates/topology-7250IXR10.yml"
-  ./srl_config/config.json: "./containerlab/srl_config/config.json"
-  ./srl_config/license.key: "./containerlab/srl_config/license.key"
-  ./srl_config/srl_env.conf: "./containerlab/srl_config/srl_env.conf"
-  ./labs/fabric-topo.yml: "./containerlab/labs/fabric-topo.yml"
-  ./labs/wan-topo.yml: "./containerlab/labs/wan-topo.yml"
+  ./dist/container-lab_linux_amd64/container-lab: "/usr/local/bin/containerlab"
 config_files:
+  ./lab-examples/wan-topo.yml: "/etc/containerlab/lab-examples/wan-topo.yml"
+  ./lab-examples/simple.yml: "/etc/containerlab/lab-examples/simple.yml"
+  ./lab-examples/arista-topo.yml: "/etc/containerlab/lab-examples/arista-topo.yml"
+  ./templates/ca/csr-root-ca.json: "/etc/containerlab/templates/ca/csr-root-ca.json"
+  ./templates/ca/csr.json: "/etc/containerlab/templates/ca/csr.json"
+  ./templates/srl/config.json: "/etc/containerlab/templates/srl/srlconfig.json"
+  ./templates/srl/config.tpl: "/etc/containerlab/templates/srl/srlconfig.tpl"
+  ./templates/srl/srl_env.conf: "/etc/containerlab/templates/srl/srl_env.conf"
+  ./templates/srl/topology-7220IXRD1.yml: "/etc/containerlab/templates/srl/topology-7220IXRD1.yml"
+  ./templates/srl/topology-7220IXRD2.yml: "/etc/containerlab/templates/srl/topology-7220IXRD2.yml"
+  ./templates/srl/topology-7220IXRD3.yml: "/etc/containerlab/templates/srl/topology-7220IXRD3.yml"
+  ./templates/srl/topology-7250IXR6.yml: "/etc/containerlab/templates/srl/topology-7250IXR6.yml"
+  ./templates/srl/topology-7250IXR10.yml: "/etc/containerlab/templates/srl/topology-7250IXR10.yml"
 overrides:
   rpm:
     scripts:

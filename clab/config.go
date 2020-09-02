@@ -144,7 +144,7 @@ func (c *cLab) ParseTopology() error {
 	}
 
 	c.Dir = new(cLabDirectory)
-	c.Dir.Lab = c.Conf.ConfigPath + "/" + "lab" + "-" + c.Conf.Prefix
+	c.Dir.Lab = c.Conf.ConfigPath + "/" + "containerlab" + "-" + c.Conf.Prefix
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
 	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
@@ -215,7 +215,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
-	node.LongName = "lab" + "-" + c.Conf.Prefix + "-" + dutName
+	node.LongName = "containerlab" + "-" + c.Conf.Prefix + "-" + dutName
 	node.Fqdn = dutName + "." + c.Conf.Prefix + ".io"
 	node.LabDir = c.Dir.Lab + "/" + dutName
 	node.CertDir = c.Dir.LabCA + "/" + dutName
@@ -266,15 +266,15 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 
 		switch node.NodeType {
 		case "ixr6":
-			node.Topology = "srl_config/templates/topology-7250IXR6.yml"
+			node.Topology = "/etc/containerlab/templates/srl/topology-7250IXR6.yml"
 		case "ixr10":
-			node.Topology = "srl_config/templates/topology-7250IXR10.yml"
+			node.Topology = "/etc/containerlab/templates/srl/topology-7250IXR10.yml"
 		case "ixrd1":
-			node.Topology = "srl_config/templates/topology-7220IXD1.yml"
+			node.Topology = "/etc/containerlab/templates/srl/topology-7220IXD1.yml"
 		case "isrd2":
-			node.Topology = "srl_config/templates/topology-7220IXD2.yml"
+			node.Topology = "/etc/containerlab/templates/srl/topology-7220IXD2.yml"
 		case "ixrd3":
-			node.Topology = "srl_config/templates/topology-7220IXD3.yml"
+			node.Topology = "/etc/containerlab/templates/srl/topology-7220IXD3.yml"
 		default:
 			panic("wrong node type; should be ixr6, ixr10, ixrd1, ixrd2, ixrd3")
 		}
