@@ -11,9 +11,9 @@ Duts:
   kind_defaults:
     srl:
       type: ixr6
-      config: srl_config/config.json
+      config: /etc/containerlab/templates/srl/config.json
       image: srlinux:20.6.1-286
-      license: srl_config/license.key
+      license: license.key
     alpine:
       image: henderiw/client-alpine:1.0.0
   dut_specifics:

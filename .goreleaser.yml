@@ -30,3 +30,34 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+nfpms:
+  -
+    id: "containerlab"
+    package_name: "containerlab"
+    maintainer: "Wim Henderickx <wim.henderickx@nokia.com>"
+    description: |
+      containerlab written in go
+    vendor: "Nokia"
+    license: "BSD 2"
+    formats:
+      - rpm
+    bindir: /usr/bin
+    files:
+      ./dist/container-lab_linux_amd64/container-lab: "/usr/local/bin/containerlab"
+    config_files:
+      ./lab-examples/wan-topo.yml: "/etc/containerlab/lab-examples/wan-topo.yml"
+      ./lab-examples/simple.yml: "/etc/containerlab/lab-examples/simple.yml"
+      ./lab-examples/arista-topo.yml: "/etc/containerlab/lab-examples/arista-topo.yml"
+      ./templates/ca/csr-root-ca.json: "/etc/containerlab/templates/ca/csr-root-ca.json"
+      ./templates/ca/csr.json: "/etc/containerlab/templates/ca/csr.json"
+      ./templates/srl/config.json: "/etc/containerlab/templates/srl/srlconfig.json"
+      ./templates/srl/config.tpl: "/etc/containerlab/templates/srl/srlconfig.tpl"
+      ./templates/srl/srl_env.conf: "/etc/containerlab/templates/srl/srl_env.conf"
+      ./templates/srl/topology-7220IXRD1.yml: "/etc/containerlab/templates/srl/topology-7220IXRD1.yml"
+      ./templates/srl/topology-7220IXRD2.yml: "/etc/containerlab/templates/srl/topology-7220IXRD2.yml"
+      ./templates/srl/topology-7220IXRD3.yml: "/etc/containerlab/templates/srl/topology-7220IXRD3.yml"
+      ./templates/srl/topology-7250IXR6.yml: "/etc/containerlab/templates/srl/topology-7250IXR6.yml"
+      ./templates/srl/topology-7250IXR10.yml: "/etc/containerlab/templates/srl/topology-7250IXR10.yml"
+    overrides:
+      rpm:
+        scripts:

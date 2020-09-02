@@ -22,6 +22,7 @@ Containerlab is build in [golang](https://golang.org) for people interested in t
 * Install [golang](https://golang.org): this is used for the following step in support of installing [cfssl](https://cfssl.org)
 * Install [cfssl](https://cfssl.org): To build a CA per lab, containerlab is leveraging cfssl, build by cloudflare,  to manage the certificates
 	* go get -u github.com/cloudflare/cfssl/cmd/...
+* load the container images in docker locally
 
 ### Cloning the repo
 
@@ -82,9 +83,9 @@ Duts:
   kind_defaults:
     srl:
       type: ixr6
-      config: srl_config/config.json
+      config: templates/srl/config.json
       image: srlinux:20.6.1-286
-      license: srl_config/license.key
+      license: templates/srl/license.key
     alpine:
       image: henderiw/client-alpine:1.0.0
   dut_specifics:
