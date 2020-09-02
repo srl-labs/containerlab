@@ -262,10 +262,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node, dut string) (err error) {
 
 // GenerateConfig generates configuration for the duts
 func (node *Node) generateConfig(dst string) error {
-	tpl, err := template.New("srlconfig.tpl").
-		Funcs(template.FuncMap{
-			"indent": indent,
-		}).ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
+	tpl, err := template.New("srlconfig.tpl").ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
 	if err != nil {
 		return err
 	}
@@ -282,9 +279,4 @@ func (node *Node) generateConfig(dst string) error {
 	defer f.Close()
 	_, err = f.Write(dstBytes.Bytes())
 	return err
-}
-
-func indent(spaces int, v string) string {
-	pad := strings.Repeat(" ", spaces)
-	return pad + strings.Replace(v, "\n", "\n"+pad, -1)
 }
