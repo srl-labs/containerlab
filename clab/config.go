@@ -80,8 +80,9 @@ type Node struct {
 	MgmtIPv6   string
 	MgmtMac    string
 
-	TLSCert string
-	TLSKey  string
+	TLSCert   string
+	TLSKey    string
+	TLSAnchor string
 }
 
 // Link is a struct that contains the information of a link between 2 containers
