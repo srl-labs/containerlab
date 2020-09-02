@@ -1,4 +1,4 @@
-package main
+package clab
 
 import (
 	"bytes"
@@ -23,10 +23,8 @@ type File struct {
 	shortname string
 }
 
-// FileInfo global variable stores information on the filename
-// var FileInfo *File
-
-func (c *cLab) getTopology(topo *string) error {
+// GetTopology gets the lab topology information
+func (c *cLab) GetTopology(topo *string) error {
 	log.Debug("Topofile ", *topo)
 
 	yamlFile, err := ioutil.ReadFile(*topo)
@@ -167,13 +165,15 @@ func createFile(file, content string) {
 	}
 }
 
-func createDirectory(path string, perm os.FileMode) {
+// CreateDirectory creates a directory
+func CreateDirectory(path string, perm os.FileMode) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		os.Mkdir(path, perm)
 	}
 }
 
-func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
+// CreateNodeDirStructure create the directory structure and files for the clab
+func (c *cLab) CreateNodeDirStructure(node *Node, dut string) (err error) {
 	switch node.OS {
 	case "srl":
 		var src string
@@ -188,7 +188,7 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 		log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
 
 		// create dut directory in lab
-		createDirectory(node.LabDir, 0777)
+		CreateDirectory(node.LabDir, 0777)
 
 		// copy topology to node specific directory in lab
 		src = node.Topology
@@ -221,7 +221,7 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 
 		// copy config file to node specific directory in lab
 
-		createDirectory(node.LabDir+"/"+"config", 0777)
+		CreateDirectory(node.LabDir+"/"+"config", 0777)
 
 		dst = path.Join(node.LabDir, "config", "config.json")
 		if !fileExists(dst) {
@@ -261,6 +261,7 @@ func (c *cLab) createNodeDirStructure(node *Node, dut string) (err error) {
 	return nil
 }
 
+// GenerateConfig generates configuration for the duts
 func (node *Node) generateConfig(dst string) error {
 	tpl, err := template.ParseFiles("./srl_config/templates/config.tpl")
 	if err != nil {

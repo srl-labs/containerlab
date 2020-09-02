@@ -1,4 +1,4 @@
-package main
+package clab
 
 import (
 	"bytes"
@@ -51,12 +51,13 @@ func cfssljson(b []byte, file string, node *Node) {
 	}
 }
 
-func (c *cLab) createRootCA() (err error) {
+// CreateRootCA creates a root CA
+func (c *cLab) CreateRootCA() (err error) {
 	//create root CA diretcory
-	createDirectory(c.Dir.LabCA, 0755)
+	CreateDirectory(c.Dir.LabCA, 0755)
 
 	//create root CA root diretcory
-	createDirectory(c.Dir.LabCARoot, 0755)
+	CreateDirectory(c.Dir.LabCARoot, 0755)
 
 	var src string
 	var dst string
@@ -102,13 +103,14 @@ func (c *cLab) createRootCA() (err error) {
 	return nil
 }
 
-func (c *cLab) createCERT(shortdutName string) (err error) {
+// CreateCERT create a certificate
+func (c *cLab) CreateCERT(shortdutName string) (err error) {
 	node, ok := c.Nodes[shortdutName]
 	if !ok {
 		return fmt.Errorf("unknown dut name: %s", shortdutName)
 	}
 	//create dut cert diretcory
-	createDirectory(c.Nodes[shortdutName].CertDir, 0755)
+	CreateDirectory(c.Nodes[shortdutName].CertDir, 0755)
 
 	var src string
 	var dst string

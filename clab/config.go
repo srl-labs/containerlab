@@ -1,4 +1,4 @@
-package main
+package clab
 
 import (
 	"fmt"
@@ -97,6 +97,7 @@ type Endpoint struct {
 	EndpointName string
 }
 
+// ParseIPInfo parses IP information
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
 	if c.Conf.DockerInfo.Bridge == "" {
@@ -128,7 +129,8 @@ func (c *cLab) parseIPInfo() error {
 	return nil
 }
 
-func (c *cLab) parseTopology() error {
+// ParseTopology parses the lab topology
+func (c *cLab) ParseTopology() error {
 	log.Debugf("Prefix: %s", c.Conf.Prefix)
 	// initialize DockerInfo
 	err := c.parseIPInfo()

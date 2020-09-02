@@ -1,4 +1,4 @@
-package main
+package clab
 
 import (
 	"os/exec"
@@ -7,22 +7,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
+// CreateVirtualWiring provides the virtual topology between the containers
+func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
+	log.Info("Create virtual wire :", link.a.Node.ShortName, link.b.Node.ShortName, link.a.EndpointName, link.b.EndpointName)
 
-	//nodeNameA := "lab" + "-" + c.Conf.Prefix + "-" + link.a.Node.Name
-	//nodeNameB := "lab" + "-" + c.Conf.Prefix + "-" + link.b.Node.Name
-	log.Debug("creating veth pair: ", link.a.Node.ShortName, link.b.Node.ShortName, link.a.EndpointName, link.b.EndpointName)
-
-	createDirectory("/run/netns/", 0755)
+	CreateDirectory("/run/netns/", 0755)
 
 	var src, dst string
 	var cmd *exec.Cmd
-
-	// var ns netns.NsHandle
-	// ns, err = netns.NewNamed(nodeNameA)
-	// if err != nil {
-	// 	log.Error(err)
-	// }
 
 	log.Debug("Create link to /run/netns/ ", link.a.Node.LongName)
 	src = "/proc/" + strconv.Itoa(link.a.Node.Pid) + "/ns/net"
@@ -114,7 +106,6 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 	//ip netns exec $srl_b ip link set tmp_b name $srl_b_int
 	//ip netns exec $srl_a ip link set $srl_a_int up
 	//ip netns exec $srl_b ip link set $srl_b_int up
-
 	//docker exec -ti $srl_a ethtool --offload $srl_a_int rx off tx off
 	//docker exec -ti $srl_b ethtool --offload $srl_b_int rx off tx off
 
@@ -122,7 +113,9 @@ func (c *cLab) createVirtualWiring(id int, link *Link) (err error) {
 
 }
 
-func (c *cLab) deleteVirtualWiring(id int, link *Link) (err error) {
+// DeleteVirtualWiring deletes the virtual wiring
+func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
+	log.Info("Delete virtual wire :", link.a.Node.ShortName, link.b.Node.ShortName, link.a.EndpointName, link.b.EndpointName)
 
 	var cmd *exec.Cmd
 
