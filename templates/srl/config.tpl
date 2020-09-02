@@ -2,7 +2,8 @@ srl_nokia-acl:acl:
   cpm-filter:
     ipv4-filter:
       entry:
-      - description: Accept incoming ICMP unreachable messages
+      - sequence-id: 10
+        description: Accept incoming ICMP unreachable messages
         match:
           icmp:
             code:
@@ -14,201 +15,257 @@ srl_nokia-acl:acl:
             - 13
             type: dest-unreachable
           protocol: icmp
-        sequence-id: 10
-      - description: Accept incoming TACACS+ when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 20
+        description: Accept incoming ICMP time-exceeded messages
+        match:
+          icmp:
+            type: time-exceeded
+          protocol: icmp
+        action:
+          accept:
+      - sequence-id: 30
+        description: Accept incoming ICMP parameter problem messages
+        match:
+          icmp:
+            type: param-problem
+          protocol: icmp
+        action:
+          accept:
+      - sequence-id: 40
+        description: Accept incoming ICMP echo messages
+        match:
+          icmp:
+            type: echo
+          protocol: icmp
+        action:
+          accept:
+      - sequence-id: 50
+        description: Accept incoming ICMP echo-reply messages
+        match:
+          icmp:
+            type: echo-reply
+          protocol: icmp
+        action:
+          accept:
+      - sequence-id: 60
+        description: Accept incoming SSH when the other host initiates the TCP connection
+        match:
+          destination-port:
+            operator: eq
+            value: 22
+          protocol: tcp
+        action:
+          accept:
+      - sequence-id: 70
+        description: Accept incoming SSH when this router initiates the TCP connection
+        match:
+          protocol: tcp
+          source-port:
+            operator: eq
+            value: 22
+        action:
+          accept:
+      - sequence-id: 80
+        description: Accept incoming Telnet when the other host initiates the TCP connection
+        match:
+          destination-port:
+            operator: eq
+            value: 23
+          protocol: tcp
+        action:
+          accept:
+      - sequence-id: 90
+        description: Accept incoming Telnet when this router initiates the TCP connection
+        match:
+          protocol: tcp
+          source-port:
+            operator: eq
+            value: 23
+        action:
+          accept:
+      - sequence-id: 100 
+        description: Accept incoming TACACS+ when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 49
           protocol: tcp
-        sequence-id: 100
-      - description: Accept incoming TACACS+ when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 110
+        description: Accept incoming TACACS+ when this router initiates the TCP connection
         match:
           protocol: tcp
           source-port:
             operator: eq
             value: 49
-        sequence-id: 110
-      - description: Accept incoming DNS response messages
+        action:
+          accept:
+      - sequence-id: 120
+        description: Accept incoming DNS response messages
         match:
           protocol: udp
           source-port:
             operator: eq
             value: 53
-        sequence-id: 120
-      - description: Accept incoming DHCP messages targeted for BOOTP/DHCP client
+        action:
+          accept:
+      - sequence-id: 130
+        description: Accept incoming DHCP messages targeted for BOOTP/DHCP client
         match:
           destination-port:
             operator: eq
             value: 68
           protocol: udp
-        sequence-id: 130
-      - description: Accept incoming TFTP read-request and write-request messages
+        action:
+          accept:
+      - sequence-id: 140
+        description: Accept incoming TFTP read-request and write-request messages
         match:
           destination-port:
             operator: eq
             value: 69
           protocol: udp
-        sequence-id: 140
-      - description: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 150
+        description: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 80
           protocol: tcp
-        sequence-id: 150
-      - description: Accept incoming HTTP(JSON-RPC) when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 160
+        description: Accept incoming HTTP(JSON-RPC) when this router initiates the TCP connection
         match:
           protocol: tcp
           source-port:
             operator: eq
             value: 80
-        sequence-id: 160
-      - description: Accept incoming NTP messages from servers
+        action:
+          accept:
+      - sequence-id: 170
+        description: Accept incoming NTP messages from servers
         match:
           protocol: udp
           source-port:
             operator: eq
             value: 123
-        sequence-id: 170
-      - description: Accept incoming SNMP GET/GETNEXT messages from servers
+        action:
+          accept:
+      - sequence-id: 180
+        description: Accept incoming SNMP GET/GETNEXT messages from servers
         match:
           destination-port:
             operator: eq
             value: 161
           protocol: udp
-        sequence-id: 180
-      - description: Accept incoming BGP when the other router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 190
+        description: Accept incoming BGP when the other router initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 179
           protocol: tcp
-        sequence-id: 190
-      - description: Accept incoming ICMP time-exceeded messages
-        match:
-          icmp:
-            type: time-exceeded
-          protocol: icmp
-        sequence-id: 20
-      - description: Accept incoming BGP when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 200
+        description: Accept incoming BGP when this router initiates the TCP connection
         match:
           protocol: tcp
           source-port:
             operator: eq
             value: 179
-        sequence-id: 200
-      - description: Accept incoming HTTPS(JSON-RPC) when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 210
+        description: Accept incoming HTTPS(JSON-RPC) when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 443
           protocol: tcp
-        sequence-id: 210
-      - description: Accept incoming HTTPS(JSON-RPC) when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 220
+        description: Accept incoming HTTPS(JSON-RPC) when this router initiates the TCP connection
         match:
           protocol: tcp
           source-port:
             operator: eq
             value: 443
-        sequence-id: 220
-      - description: Accept incoming single-hop BFD session messages
+        action:
+          accept:
+      - sequence-id: 230
+        description: Accept incoming single-hop BFD session messages
         match:
           destination-port:
             operator: eq
             value: 3784
           protocol: udp
-        sequence-id: 230
-      - description: Accept incoming multi-hop BFD session messages
+        action:
+          accept:
+      - sequence-id: 240
+        description: Accept incoming multi-hop BFD session messages
         match:
           destination-port:
             operator: eq
             value: 4784
           protocol: udp
-        sequence-id: 240
-      - description: Accept incoming uBFD session messages
+        action:
+          accept:
+      - sequence-id: 250
+        description: Accept incoming uBFD session messages
         match:
           destination-port:
             operator: eq
             value: 6784
           protocol: udp
-        sequence-id: 250
-      - description: Accept incoming gNMI messages when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 260
+        description: Accept incoming gNMI messages when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 57400
           protocol: tcp
-        sequence-id: 260
-      - description: Accept incoming UDP traceroute messages
+        action:
+          accept:
+      - sequence-id: 270
+        description: Accept incoming UDP traceroute messages
         match:
           destination-port:
             range:
               end: 33464
               start: 33434
           protocol: udp
-        sequence-id: 270
-      - description: Accept incoming ICMP timestamp messages
+        action:
+          accept:
+      - sequence-id: 280
+        description: Accept incoming ICMP timestamp messages
         match:
           icmp:
             type: timestamp
           protocol: icmp
-        sequence-id: 280
-      - action:
+        action:
+          accept:
+      - sequence-id: 290 
+        action:
           drop:
             log: true
         description: Drop all else
-        sequence-id: 290
-      - description: Accept incoming ICMP parameter problem messages
-        match:
-          icmp:
-            type: param-problem
-          protocol: icmp
-        sequence-id: 30
-      - description: Accept incoming ICMP echo messages
-        match:
-          icmp:
-            type: echo
-          protocol: icmp
-        sequence-id: 40
-      - description: Accept incoming ICMP echo-reply messages
-        match:
-          icmp:
-            type: echo-reply
-          protocol: icmp
-        sequence-id: 50
-      - description: Accept incoming SSH when the other host initiates the TCP connection
-        match:
-          destination-port:
-            operator: eq
-            value: 22
-          protocol: tcp
-        sequence-id: 60
-      - description: Accept incoming SSH when this router initiates the TCP connection
-        match:
-          protocol: tcp
-          source-port:
-            operator: eq
-            value: 22
-        sequence-id: 70
-      - description: Accept incoming Telnet when the other host initiates the TCP connection
-        match:
-          destination-port:
-            operator: eq
-            value: 23
-          protocol: tcp
-        sequence-id: 80
-      - description: Accept incoming Telnet when this router initiates the TCP connection
-        match:
-          protocol: tcp
-          source-port:
-            operator: eq
-            value: 23
-        sequence-id: 90
       statistics-per-entry: true
     ipv6-filter:
       entry:
-      - description: Accept incoming ICMPv6 unreachable messages
+      - sequence-id: 10
+        description: Accept incoming ICMPv6 unreachable messages
         match:
           icmp6:
             code:
@@ -220,224 +277,290 @@ srl_nokia-acl:acl:
             - 5
             - 6
             type: dest-unreachable
+          next-header: icmp6      
+        action:
+          accept:
+      - sequence-id: 20
+        description: Accept incoming ICMPv6 packet-too-big messages
+        match:
+          icmp6:
+            type: packet-too-big
           next-header: icmp6
-        sequence-id: 10
-      - description: Accept incoming SSH when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 30
+        description: Accept incoming ICMPv6 time-exceeded messages
+        match:
+          icmp6:
+            type: time-exceeded
+          next-header: icmp6
+        action:
+          accept:
+      - sequence-id: 40
+        description: Accept incoming ICMPv6 parameter problem messages
+        match:
+          icmp6:
+            type: param-problem
+          next-header: icmp6
+        action:
+          accept:
+      - sequence-id: 50
+        description: Accept incoming ICMPv6 echo-request messages
+        match:
+          icmp6:
+            type: echo-request
+          next-header: icmp6
+        action:
+          accept:
+      - sequence-id: 60
+        description: Accept incoming ICMPv6 echo-reply messages
+        match:
+          icmp6:
+            type: echo-reply
+          next-header: icmp6
+        action:
+          accept:
+      - sequence-id: 70
+        description: Accept incoming ICMPv6 router-advertisement messages
+        match:
+          icmp6:
+            type: router-advertise
+          next-header: icmp6
+        action:
+          accept:
+      - sequence-id: 80
+        description: Accept incoming ICMPv6 neighbor-solicitation messages
+        match:
+          icmp6:
+            type: neighbor-solicit
+          next-header: icmp6
+        action:
+          accept:
+      - sequence-id: 90
+        description: Accept incoming ICMPv6 neighbor-advertisement messages
+        match:
+          icmp6:
+            type: neighbor-advertise
+          next-header: icmp6
+        action:
+          accept:
+      - sequence-id: 100
+        description: Accept incoming SSH when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 22
           next-header: tcp
-        sequence-id: 100
-      - description: Accept incoming SSH when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 110
+        description: Accept incoming SSH when this router initiates the TCP connection
         match:
           next-header: tcp
           source-port:
             operator: eq
             value: 22
-        sequence-id: 110
-      - description: Accept incoming Telnet when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 120
+        description: Accept incoming Telnet when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 23
           next-header: tcp
-        sequence-id: 120
-      - description: Accept incoming Telnet when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 130
+        description: Accept incoming Telnet when this router initiates the TCP connection
         match:
           next-header: tcp
           source-port:
             operator: eq
             value: 23
-        sequence-id: 130
-      - description: Accept incoming TACACS+ when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 140
+        description: Accept incoming TACACS+ when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 49
           next-header: tcp
-        sequence-id: 140
-      - description: Accept incoming TACACS+ when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 150
+        description: Accept incoming TACACS+ when this router initiates the TCP connection
         match:
           next-header: tcp
           source-port:
             operator: eq
             value: 49
-        sequence-id: 150
-      - description: Accept incoming DNS response messages
+        action:
+          accept:
+      - sequence-id: 160
+        description: Accept incoming DNS response messages
         match:
           next-header: udp
           source-port:
             operator: eq
             value: 53
-        sequence-id: 160
-      - description: Accept incoming TFTP read-request and write-request messages
+        action:
+          accept:
+      - sequence-id: 170
+        description: Accept incoming TFTP read-request and write-request messages
         match:
           destination-port:
             operator: eq
             value: 69
           next-header: udp
-        sequence-id: 170
-      - description: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 180
+        description: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 80
           next-header: tcp
-        sequence-id: 180
-      - description: Accept incoming HTTP(JSON-RPC) when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 190
+        description: Accept incoming HTTP(JSON-RPC) when this router initiates the TCP connection
         match:
           next-header: tcp
           source-port:
             operator: eq
             value: 80
-        sequence-id: 190
-      - description: Accept incoming ICMPv6 packet-too-big messages
-        match:
-          icmp6:
-            type: packet-too-big
-          next-header: icmp6
-        sequence-id: 20
-      - description: Accept incoming NTP messages from servers
+        action:
+          accept:
+      - sequence-id: 200
+        description: Accept incoming NTP messages from servers
         match:
           next-header: udp
           source-port:
             operator: eq
             value: 123
-        sequence-id: 200
-      - description: Accept incoming SNMP GET/GETNEXT messages from servers
+        action:
+          accept:
+      - sequence-id: 210
+        description: Accept incoming SNMP GET/GETNEXT messages from servers
         match:
           destination-port:
             operator: eq
             value: 161
           next-header: udp
-        sequence-id: 210
-      - description: Accept incoming BGP when the other router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 220
+        description: Accept incoming BGP when the other router initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 179
           next-header: tcp
-        sequence-id: 220
-      - description: Accept incoming BGP when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 230
+        description: Accept incoming BGP when this router initiates the TCP connection
         match:
           next-header: tcp
           source-port:
             operator: eq
             value: 179
-        sequence-id: 230
-      - description: Accept incoming HTTPS(JSON-RPC) when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 240
+        description: Accept incoming HTTPS(JSON-RPC) when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 443
           next-header: tcp
-        sequence-id: 240
-      - description: Accept incoming HTTPS(JSON-RPC) when this router initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 250
+        description: Accept incoming HTTPS(JSON-RPC) when this router initiates the TCP connection
         match:
           next-header: tcp
           source-port:
             operator: eq
             value: 443
-        sequence-id: 250
-      - description: Accept incoming DHCPv6 client messages
+        action:
+          accept:
+      - sequence-id: 260
+        description: Accept incoming DHCPv6 client messages
         match:
           destination-port:
             operator: eq
             value: 546
           next-header: udp
-        sequence-id: 260
-      - description: Accept incoming single-hop BFD session messages
+        action:
+          accept:
+      - sequence-id: 270
+        description: Accept incoming single-hop BFD session messages
         match:
           destination-port:
             operator: eq
             value: 3784
           next-header: udp
-        sequence-id: 270
-      - description: Accept incoming multi-hop BFD session messages
+        action:
+          accept:
+      - sequence-id: 280
+        description: Accept incoming multi-hop BFD session messages
         match:
           destination-port:
             operator: eq
             value: 4784
           next-header: udp
-        sequence-id: 280
-      - description: Accept incoming uBFD session messages
+        action:
+          accept:
+      - sequence-id: 290
+        description: Accept incoming uBFD session messages
         match:
           destination-port:
             operator: eq
             value: 6784
           next-header: udp
-        sequence-id: 290
-      - description: Accept incoming ICMPv6 time-exceeded messages
-        match:
-          icmp6:
-            type: time-exceeded
-          next-header: icmp6
-        sequence-id: 30
-      - description: Accept incoming gNMI messages when the other host initiates the TCP connection
+        action:
+          accept:
+      - sequence-id: 300
+        description: Accept incoming gNMI messages when the other host initiates the TCP connection
         match:
           destination-port:
             operator: eq
             value: 57400
           next-header: tcp
-        sequence-id: 300
-      - description: Accept incoming UDP traceroute messages
+        action:
+          accept:
+      - sequence-id: 310
+        description: Accept incoming UDP traceroute messages
         match:
           destination-port:
             range:
               end: 33464
               start: 33434
           next-header: udp
-        sequence-id: 310
-      - description: Accept incoming IPV6 hop-in-hop messages
+        action:
+          accept:
+      - sequence-id: 320
+        description: Accept incoming IPV6 hop-in-hop messages
         match:
           next-header: 0
-        sequence-id: 320
-      - description: Accept incoming IPV6 fragment header messages
+        action:
+          accept:
+      - sequence-id: 330
+        description: Accept incoming IPV6 fragment header messages
         match:
           next-header: 44
-        sequence-id: 330
-      - action:
+        action:
+          accept:
+      - sequence-id: 340
+        action:
           drop:
             log: true
         description: Drop all else
-        sequence-id: 340
-      - description: Accept incoming ICMPv6 parameter problem messages
-        match:
-          icmp6:
-            type: param-problem
-          next-header: icmp6
-        sequence-id: 40
-      - description: Accept incoming ICMPv6 echo-request messages
-        match:
-          icmp6:
-            type: echo-request
-          next-header: icmp6
-        sequence-id: 50
-      - description: Accept incoming ICMPv6 echo-reply messages
-        match:
-          icmp6:
-            type: echo-reply
-          next-header: icmp6
-        sequence-id: 60
-      - description: Accept incoming ICMPv6 router-advertisement messages
-        match:
-          icmp6:
-            type: router-advertise
-          next-header: icmp6
-        sequence-id: 70
-      - description: Accept incoming ICMPv6 neighbor-solicitation messages
-        match:
-          icmp6:
-            type: neighbor-solicit
-          next-header: icmp6
-        sequence-id: 80
-      - description: Accept incoming ICMPv6 neighbor-advertisement messages
-        match:
-          icmp6:
-            type: neighbor-advertise
-          next-header: icmp6
-        sequence-id: 90
+
       statistics-per-entry: true
 
 srl_nokia-interfaces:interface:
@@ -483,6 +606,13 @@ srl_nokia-system:system:
   srl_nokia-tls:tls:
     server-profile:
     - name: "tls-profile-1"
-{{ if .TLSCert }}      certificate: "{{ .TLSCert }}"{{end}}
-{{ if .TLSKey }}      key: "{{ .TLSKey }}"{{end }}
+{{ if .TLSCert }}      certificate: |
+        {{ .TLSCert }}
+{{- end}}
+{{ if .TLSKey }}      key: |
+        {{ .TLSKey }}
+{{- end }}
+{{ if .TLSAnchor }}      trust-anchor: |
+        {{ .TLSAnchor }}
+{{- end }}
       authenticate-client: false
