@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func cfssljson(b []byte, file string, node *Node) {
+func (c *cLab) cfssljson(b []byte, file string, node *Node) {
 	var input = map[string]interface{}{}
 	var err error
 	var cert string
@@ -30,6 +30,10 @@ func cfssljson(b []byte, file string, node *Node) {
 		cert = contents.(string)
 		if node != nil {
 			node.TLSCert = strings.Replace(cert, "\n", "\\n", -1)
+		} else {
+			for nm := range c.Nodes {
+				c.Nodes[nm].TLSAnchor = strings.Replace(cert, "\n", "\\n", -1)
+			}
 		}
 	}
 	createFile(file+".pem", cert)
@@ -98,7 +102,7 @@ func (c *cLab) CreateRootCA() (err error) {
 		log.Debugf("'cfssl gencert -initca' output:\n%s", jsCert.String())
 	}
 
-	cfssljson(o, c.Dir.LabCARoot+"/"+"root-ca", nil)
+	c.cfssljson(o, c.Dir.LabCARoot+"/"+"root-ca", nil)
 
 	return nil
 }
@@ -156,6 +160,6 @@ func (c *cLab) CreateCERT(shortdutName string) (err error) {
 		log.Debugf("'cfssl gencert -ca rootCert -caKey rootKey' output:\n%s", jsCert.String())
 	}
 
-	cfssljson(o, path.Join(node.CertDir, shortdutName), node)
+	c.cfssljson(o, path.Join(node.CertDir, shortdutName), node)
 	return nil
 }
