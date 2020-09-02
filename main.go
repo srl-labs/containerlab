@@ -4,42 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"docker.io/go-docker"
+	"github.com/wim-srl/container-lab/clab"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/pflag"
 )
-
-type cLab struct {
-	Conf         *conf
-	FileInfo     *File
-	Nodes        map[string]*Node
-	Links        map[int]*Link
-	DockerClient *docker.Client
-	Dir          *cLabDirectory
-}
-
-type cLabDirectory struct {
-	Lab       string
-	LabCA     string
-	LabCARoot string
-	LabGraph  string
-}
-
-func newContainerLab() (*cLab, error) {
-	c := &cLab{
-		Conf:     new(conf),
-		FileInfo: new(File),
-		Nodes:    make(map[string]*Node),
-		Links:    make(map[int]*Link),
-	}
-	var err error
-	c.DockerClient, err = docker.NewEnvClient()
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
-}
 
 var debug bool
 
@@ -59,19 +29,19 @@ func main() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
-	c, err := newContainerLab()
+	c, err := clab.NewContainerLab(debug)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Info("Getting topology information ...")
-	if err = c.getTopology(&topo); err != nil {
+	if err = c.GetTopology(&topo); err != nil {
 		log.Fatal(err)
 	}
 
 	// Parse topology information
 	log.Info("Parsing topology information ...")
-	if err = c.parseTopology(); err != nil {
+	if err = c.ParseTopology(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -80,19 +50,19 @@ func main() {
 
 	switch action {
 	case "deploy":
-		log.Info("Creating container lab: ", topo)
 		// create lab directory
-		createDirectory(c.Dir.Lab, 0755)
+		log.Info("Creating container lab directory: ", topo)
+		clab.CreateDirectory(c.Dir.Lab, 0755)
 
 		// create root CA
 		log.Info("Creating root CA")
-		if err = c.createRootCA(); err != nil {
+		if err = c.CreateRootCA(); err != nil {
 			log.Error(err)
 		}
 
-		log.Info("Creating docker bridge")
 		// create bridge
-		if err = c.createBridge(ctx); err != nil {
+		log.Info("Creating docker bridge")
+		if err = c.CreateBridge(ctx); err != nil {
 			log.Error(err)
 		}
 
@@ -100,24 +70,23 @@ func main() {
 		for shortDutName, node := range c.Nodes {
 			// create CERT
 			log.Info("Creating CA for dut: ", shortDutName)
-			if err = c.createCERT(shortDutName); err != nil {
+			if err = c.CreateCERT(shortDutName); err != nil {
 				log.Error(err)
 			}
 
 			log.Info("Create directory structure:", shortDutName)
-			if err = c.createNodeDirStructure(node, shortDutName); err != nil {
+			if err = c.CreateNodeDirStructure(node, shortDutName); err != nil {
 				log.Error(err)
 			}
 
 			log.Info("Create contaianer:", shortDutName)
-			if err = c.createContainer(ctx, shortDutName, node); err != nil {
+			if err = c.CreateContainer(ctx, shortDutName, node); err != nil {
 				log.Error(err)
 			}
 		}
 		// wire the links between the nodes based on cabling plan
 		for i, link := range c.Links {
-			log.Info("Wire link between containers :", link.a.EndpointName, link.b.EndpointName)
-			if err = c.createVirtualWiring(i, link); err != nil {
+			if err = c.CreateVirtualWiring(i, link); err != nil {
 				log.Error(err)
 			}
 
@@ -125,7 +94,7 @@ func main() {
 		// generate graph of the lab topology
 		if graph {
 			log.Info("Generating lab graph ...")
-			if err = c.generateGraph(topo); err != nil {
+			if err = c.GenerateGraph(topo); err != nil {
 				log.Error(err)
 			}
 		}
@@ -139,19 +108,18 @@ func main() {
 		log.Info("Destroying container lab: ... ", topo)
 		// delete containers
 		for shortDutName, node := range c.Nodes {
-			if err = c.deleteContainer(ctx, shortDutName, node); err != nil {
+			if err = c.DeleteContainer(ctx, shortDutName, node); err != nil {
 				log.Error(err)
 			}
 		}
 		// delete container management bridge
 		log.Info("Deleting docker bridge ...")
-		if err = c.deleteBridge(ctx); err != nil {
+		if err = c.DeleteBridge(ctx); err != nil {
 			log.Error(err)
 		}
 		// delete virtual wiring
 		for n, link := range c.Links {
-			log.Info("Delete virtual wire:", link.a.EndpointName, link.b.EndpointName)
-			if err = c.deleteVirtualWiring(n, link); err != nil {
+			if err = c.DeleteVirtualWiring(n, link); err != nil {
 				log.Error(err)
 			}
 
@@ -161,7 +129,7 @@ func main() {
 		log.Info("Empty action, if you want to deploy or destoy command should be ./containerlab -a deploy|destroy")
 		if graph {
 			log.Info("Generating lab graph ...")
-			if err = c.generateGraph(topo); err != nil {
+			if err = c.GenerateGraph(topo); err != nil {
 				log.Error(err)
 			}
 		}

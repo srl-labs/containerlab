@@ -1,4 +1,4 @@
-package main
+package clab
 
 import (
 	"strings"
@@ -8,7 +8,8 @@ import (
 
 var g *gographviz.Graph
 
-func (c *cLab) generateGraph(topo string) error {
+// GenerateGraph generates a graph for the lab topology
+func (c *cLab) GenerateGraph(topo string) error {
 	g = gographviz.NewGraph()
 	if err := g.SetName(c.FileInfo.shortname); err != nil {
 		return err
@@ -54,7 +55,7 @@ func (c *cLab) generateGraph(topo string) error {
 	}
 
 	// create graph directory
-	createDirectory(c.Dir.LabGraph, 0755)
+	CreateDirectory(c.Dir.LabGraph, 0755)
 
 	// create graph filename
 	file := c.Dir.LabGraph + "/" + c.FileInfo.name + ".dot"

@@ -1,4 +1,4 @@
-package main
+package clab
 
 import (
 	"context"
@@ -28,7 +28,8 @@ import (
 // 	return d, nil
 // }
 
-func (c *cLab) createBridge(ctx context.Context) (err error) {
+// CreateBridge creates a docker bridge
+func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 
 	ipamIPv4Config := network.IPAMConfig{
 		Subnet:  c.Conf.DockerInfo.Ipv4Subnet,
@@ -123,7 +124,9 @@ func (c *cLab) createBridge(ctx context.Context) (err error) {
 	return nil
 }
 
-func (c *cLab) deleteBridge(ctx context.Context) (err error) {
+
+// DeleteBridge deletes a docker bridge
+func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	err = c.DockerClient.NetworkRemove(nctx, c.Conf.DockerInfo.Bridge)
@@ -133,7 +136,8 @@ func (c *cLab) deleteBridge(ctx context.Context) (err error) {
 	return nil
 }
 
-func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (err error) {
+// CreateContainer creates a docker container
+func (c *cLab) CreateContainer(ctx context.Context, name string, node *Node) (err error) {
 	log.Debug("Create container: ", name)
 	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -175,15 +179,17 @@ func (c *cLab) createContainer(ctx context.Context, name string, node *Node) (er
 
 	node.Cid = cont.ID
 
-	err = c.startContainer(ctx, node.LongName, node)
+	err = c.StartContainer(ctx, node.LongName, node)
 	if err != nil {
 		return err
 	}
 
-	return c.inspectContainer(ctx, node.LongName, node)
+	return c.InspectContainer(ctx, node.LongName, node)
 }
 
-func (c *cLab) startContainer(ctx context.Context, name string, node *Node) (err error) {
+
+// StartContainer starts a docker container
+func (c *cLab) StartContainer(ctx context.Context, name string, node *Node) (err error) {
 	log.Debug("Start container: ", name)
 	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -200,7 +206,8 @@ func (c *cLab) startContainer(ctx context.Context, name string, node *Node) (err
 	return nil
 }
 
-func (c *cLab) deleteContainer(ctx context.Context, name string, node *Node) (err error) {
+// DeleteContainer deletes a docker container
+func (c *cLab) DeleteContainer(ctx context.Context, name string, node *Node) (err error) {
 	log.Debug("Delete and remove container: ", name)
 
 	containers, err := c.DockerClient.ContainerList(ctx, types.ContainerListOptions{All: true})
@@ -215,11 +222,6 @@ func (c *cLab) deleteContainer(ctx context.Context, name string, node *Node) (er
 				cid = container.ID
 				break
 			}
-
-			//if strings.Contains(n, "lab"+"-"+c.Conf.Prefix+"-"+name) {
-			//	cid = container.ID
-			//	break
-			//}
 		}
 	}
 
@@ -233,7 +235,9 @@ func (c *cLab) deleteContainer(ctx context.Context, name string, node *Node) (er
 	return nil
 }
 
-func (c *cLab) inspectContainer(ctx context.Context, id string, node *Node) (err error) {
+
+// InspectContainer inspects a docker container
+func (c *cLab) InspectContainer(ctx context.Context, id string, node *Node) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	s, err := c.DockerClient.ContainerInspect(nctx, id)
