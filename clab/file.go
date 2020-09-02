@@ -2,7 +2,6 @@ package clab
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -263,7 +262,10 @@ func (c *cLab) CreateNodeDirStructure(node *Node, dut string) (err error) {
 
 // GenerateConfig generates configuration for the duts
 func (node *Node) generateConfig(dst string) error {
-	tpl, err := template.ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
+	tpl, err := template.New("srlconfig.tpl").
+		Funcs(template.FuncMap{
+			"indent": indent,
+		}).ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
 	if err != nil {
 		return err
 	}
@@ -278,32 +280,11 @@ func (node *Node) generateConfig(dst string) error {
 		return err
 	}
 	defer f.Close()
-	var cfg interface{}
-	err = yaml.Unmarshal(dstBytes.Bytes(), &cfg)
-	if err != nil {
-		return err
-	}
-	cfgMap := convert(cfg)
-	b, err := json.MarshalIndent(cfgMap, "", "  ")
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(b)
+	_, err = f.Write(dstBytes.Bytes())
 	return err
 }
 
-func convert(i interface{}) interface{} {
-	switch x := i.(type) {
-	case map[interface{}]interface{}:
-		nm := map[string]interface{}{}
-		for k, v := range x {
-			nm[k.(string)] = convert(v)
-		}
-		return nm
-	case []interface{}:
-		for i, v := range x {
-			x[i] = convert(v)
-		}
-	}
-	return i
+func indent(spaces int, v string) string {
+	pad := strings.Repeat(" ", spaces)
+	return pad + strings.Replace(v, "\n", "\n"+pad, -1)
 }

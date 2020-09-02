@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
@@ -29,7 +28,7 @@ func cfssljson(b []byte, file string, node *Node) {
 	if contents, ok := input["cert"]; ok {
 		cert = contents.(string)
 		if node != nil {
-			node.TLSCert = strings.Replace(cert, "\n", "", -1)
+			node.TLSCert = cert
 		}
 	}
 	createFile(file+".pem", cert)
@@ -37,7 +36,7 @@ func cfssljson(b []byte, file string, node *Node) {
 	if contents, ok := input["key"]; ok {
 		key = contents.(string)
 		if node != nil {
-			node.TLSKey = strings.Replace(key, "\n", "", -1)
+			node.TLSKey = key // TODO: figure out how to transform key bytes before storing
 		}
 	}
 	createFile(file+"-key.pem", key)
