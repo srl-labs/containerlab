@@ -27,5 +27,8 @@ graph/*
 containerlab*
 containerlab*/
 license.key
+<<<<<<< Updated upstream
 lab-wan
 lab-wan/*
+=======
+>>>>>>> Stashed changes
