@@ -243,7 +243,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node, dut string) (err error) {
 
 		// copy env config to node specific directory in lab
 
-		src = "srl_config/srl_env.conf"
+		src = "/etc/containerlab/templates/srl/srl_env.conf"
 		dst = node.LabDir + "/" + "srlinux.conf"
 		err = copyFile(src, dst)
 		if err != nil {
@@ -263,7 +263,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node, dut string) (err error) {
 
 // GenerateConfig generates configuration for the duts
 func (node *Node) generateConfig(dst string) error {
-	tpl, err := template.ParseFiles("./srl_config/templates/config.tpl")
+	tpl, err := template.ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
 	if err != nil {
 		return err
 	}

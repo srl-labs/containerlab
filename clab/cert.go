@@ -63,7 +63,7 @@ func (c *cLab) CreateRootCA() (err error) {
 	var dst string
 
 	// copy topology to node specific directory in lab
-	src = "ca_config/templates/csr-root-ca.json"
+	src = "/etc/containerlab/templates/ca/csr-root-ca.json"
 	dst = c.Dir.LabCARoot + "/" + "csr-root-ca.json"
 	tpl, err := template.ParseFiles(src)
 	if err != nil {
@@ -73,7 +73,7 @@ func (c *cLab) CreateRootCA() (err error) {
 		Prefix string
 	}
 	prefix := Prefix{
-		Prefix: "lab" + "-" + c.Conf.Prefix,
+		Prefix: "containerlab" + "-" + c.Conf.Prefix,
 	}
 	f, err := os.Create(dst)
 	if err != nil {
@@ -116,7 +116,7 @@ func (c *cLab) CreateCERT(shortdutName string) (err error) {
 	var dst string
 
 	// copy topology to node specific directory in lab
-	src = "ca_config/templates/csr.json"
+	src = "/etc/containerlab/templates/ca/csr.json"
 	dst = path.Join(node.CertDir, "csr"+"-"+shortdutName+".json")
 	tpl, err := template.ParseFiles(src)
 	if err != nil {

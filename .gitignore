@@ -24,8 +24,8 @@ dist
 PRIVATE.md
 graph
 graph/*
-lab_wan
-lab_wan/*
-srl_config/license.key
+containerlab*
+containerlab*/
+license.key
 lab-wan
 lab-wan/*

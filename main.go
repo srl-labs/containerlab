@@ -19,7 +19,7 @@ func main() {
 	var action string
 	var graph bool
 	var certGen bool
-	pflag.StringVarP(&topo, "topo", "t", "labs/wan-topo.yml", "YAML file with topology information")
+	pflag.StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "YAML file with topology information")
 	pflag.StringVarP(&action, "action", "a", "", "action: deploy or destroy")
 	pflag.BoolVarP(&graph, "graph", "g", false, "generate a graph of the topology")
 	pflag.BoolVarP(&certGen, "gen-certs", "c", true, "generate a certificate per container")
