@@ -1155,8 +1155,8 @@
             }
           ]
         }
-      ],
-     }
+      ]
+    }
   },
   "srl_nokia-network-instance:network-instance": [
     {
