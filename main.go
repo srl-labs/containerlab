@@ -79,7 +79,7 @@ func main() {
 				log.Error(err)
 			}
 
-			log.Info("Create contaianer:", shortDutName)
+			log.Info("Create container:", shortDutName)
 			if err = c.CreateContainer(ctx, shortDutName, node); err != nil {
 				log.Error(err)
 			}

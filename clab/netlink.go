@@ -86,18 +86,19 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	}
 
 	log.Debug("set RX, TX offload off on container A")
-	cmd = exec.Command("sudo", "docker", "exec", "-ti", link.a.Node.LongName, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off")
-	_, err = cmd.CombinedOutput()
+	var b []byte
+	b, err = exec.Command("docker", "exec", link.a.Node.LongName, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off").CombinedOutput()
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debugf("cmd.Run() failed with: %s", err)
 	}
+	log.Debugf("%s", string(b))
 
 	log.Debug("set RX, TX offload off on container B")
-	cmd = exec.Command("sudo", "docker", "exec", "-ti", link.b.Node.LongName, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
-	_, err = cmd.CombinedOutput()
+	b, err = exec.Command("docker", "exec", link.b.Node.LongName, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off").CombinedOutput()
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debugf("cmd.Run() failed with: %s", err)
 	}
+	log.Debugf("%s", string(b))
 
 	//ip link add tmp_a type veth peer name tmp_b
 	//ip link set tmp_a netns $srl_a
