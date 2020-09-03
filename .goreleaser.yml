@@ -11,7 +11,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - windows
+      # - windows
       - darwin
 archives:
   - replacements:
