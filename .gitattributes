@@ -1,2 +1,2 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Do not detect labguages in templates folder
+templates/* -linguist-detectable
