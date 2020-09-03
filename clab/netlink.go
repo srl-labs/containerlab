@@ -21,9 +21,9 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	dst = "/run/netns/" + link.a.Node.LongName
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ln", "-s", src, dst)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debug("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("Create link to /run/netns/ ", link.b.Node.LongName)
@@ -31,72 +31,72 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	dst = "/run/netns/" + link.b.Node.LongName
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ln", "-s", src, dst)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debug("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("create dummy veth pair")
 	cmd = exec.Command("sudo", "ip", "link", "add", "dummyA", "type", "veth", "peer", "name", "dummyB")
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("map dummy interface on container A to NS")
 	cmd = exec.Command("sudo", "ip", "link", "set", "dummyA", "netns", link.a.Node.LongName)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("map dummy interface on container B to NS")
 	cmd = exec.Command("sudo", "ip", "link", "set", "dummyB", "netns", link.b.Node.LongName)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("rename interface container NS A")
 	cmd = exec.Command("sudo", "ip", "netns", "exec", link.a.Node.LongName, "ip", "link", "set", "dummyA", "name", link.a.EndpointName)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("rename interface container NS B")
 	cmd = exec.Command("sudo", "ip", "netns", "exec", link.b.Node.LongName, "ip", "link", "set", "dummyB", "name", link.b.EndpointName)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("set interface up in container NS A")
 	cmd = exec.Command("sudo", "ip", "netns", "exec", link.a.Node.LongName, "ip", "link", "set", link.a.EndpointName, "up")
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("set interface up in container NS B")
 	cmd = exec.Command("sudo", "ip", "netns", "exec", link.b.Node.LongName, "ip", "link", "set", link.b.EndpointName, "up")
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("set RX, TX offload off on container A")
-	cmd = exec.Command("sudo", "docker", "exec", "-ti", link.a.Node.LongName, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off")
-	_, err = cmd.CombinedOutput()
+	cmd = exec.Command("sudo", "docker", "exec", "-i", link.a.Node.LongName, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off")
+	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debug("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("set RX, TX offload off on container B")
-	cmd = exec.Command("sudo", "docker", "exec", "-ti", link.b.Node.LongName, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
-	_, err = cmd.CombinedOutput()
+	cmd = exec.Command("sudo", "docker", "exec", "-i", link.b.Node.LongName, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
+	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debug("%s failed with: %v", cmd.String(), err)
 	}
 
 	//ip link add tmp_a type veth peer name tmp_b
@@ -122,17 +122,28 @@ func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
 	log.Debug("Delete netns: ", link.a.Node.LongName)
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", link.a.Node.LongName)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debug("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("Delete netns: ", link.b.Node.LongName)
 	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", link.b.Node.LongName)
-	_, err = cmd.CombinedOutput()
+	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("cmd.Run() failed with", err)
+		log.Debug("%s failed with: %v", cmd.String(), err)
 	}
+	return nil
+}
+
+func runCmd(cmd *exec.Cmd) error {
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Errorf("'%s' failed with: %v", cmd.String(), err)
+		log.Errorf("'%s' failed output: %v", cmd.String(), string(b))
+		return err
+	}
+	log.Debugf("'%s' output: %v", cmd.String(), string(b))
 	return nil
 }
