@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,13 +25,11 @@ var deployCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		log.Info("Getting topology information ...")
 		if err = c.GetTopology(&topo); err != nil {
 			log.Fatal(err)
 		}
 
 		// Parse topology information
-		log.Info("Parsing topology information ...")
 		if err = c.ParseTopology(); err != nil {
 			log.Fatal(err)
 		}
@@ -45,13 +42,11 @@ var deployCmd = &cobra.Command{
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
 		// create root CA
-		log.Info("Creating root CA")
 		if err = c.CreateRootCA(); err != nil {
 			log.Error(err)
 		}
 
 		// create bridge
-		log.Info("Creating docker bridge")
 		if err = c.CreateBridge(ctx); err != nil {
 			log.Error(err)
 		}
@@ -59,17 +54,15 @@ var deployCmd = &cobra.Command{
 		// create directory structure and container per node
 		for shortDutName, node := range c.Nodes {
 			// create CERT
-			log.Info("Creating CA for dut: ", shortDutName)
+
 			if err = c.CreateCERT(shortDutName); err != nil {
 				log.Error(err)
 			}
 
-			log.Info("Create directory structure:", shortDutName)
 			if err = c.CreateNodeDirStructure(node, shortDutName); err != nil {
 				log.Error(err)
 			}
 
-			log.Info("Create container:", shortDutName)
 			if err = c.CreateContainer(ctx, shortDutName, node); err != nil {
 				log.Error(err)
 			}
@@ -83,7 +76,6 @@ var deployCmd = &cobra.Command{
 		}
 		// generate graph of the lab topology
 		if graph {
-			log.Info("Generating lab graph ...")
 			if err = c.GenerateGraph(topo); err != nil {
 				log.Error(err)
 			}
@@ -91,7 +83,10 @@ var deployCmd = &cobra.Command{
 
 		// show management ip addresses per Node
 		for dutName, node := range c.Nodes {
-			log.Info(fmt.Sprintf("Mgmt IP addresses of container: %s, IPv4: %s, IPv6: %s, MAC: %s", dutName, node.MgmtIPv4, node.MgmtIPv6, node.MgmtMac))
+			if node.Kind != "bridge" {
+				log.Infof("Mgmt IP addresses of container: %s, ContainerName: %s, IPv4: %s, IPv6: %s, MAC: %s", dutName, node.LongName, node.MgmtIPv4, node.MgmtIPv6, node.MgmtMac)
+			}
+
 		}
 	},
 }

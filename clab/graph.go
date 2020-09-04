@@ -4,12 +4,14 @@ import (
 	"strings"
 
 	"github.com/awalterschulze/gographviz"
+	log "github.com/sirupsen/logrus"
 )
 
 var g *gographviz.Graph
 
 // GenerateGraph generates a graph for the lab topology
 func (c *cLab) GenerateGraph(topo string) error {
+	log.Info("Generating lab graph ...")
 	g = gographviz.NewGraph()
 	if err := g.SetName(c.FileInfo.shortname); err != nil {
 		return err
@@ -26,10 +28,10 @@ func (c *cLab) GenerateGraph(topo string) error {
 
 	for nodeName, node := range c.Nodes {
 		attr["label"] = nodeName
-		attr["xlabel"] = node.OS
+		attr["xlabel"] = node.Kind
 		attr["group"] = node.Group
 
-		if strings.Contains(node.OS, "srl") {
+		if strings.Contains(node.Kind, "srl") {
 			attr["fillcolor"] = "green"
 		}
 		if strings.Contains(node.Group, "bb") {

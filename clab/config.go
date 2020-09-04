@@ -57,7 +57,7 @@ type Node struct {
 	CertDir    string
 	Index      int
 	Group      string
-	OS         string
+	Kind       string
 	Config     string
 	NodeType   string
 	License    string
@@ -132,6 +132,7 @@ func (c *cLab) parseIPInfo() error {
 
 // ParseTopology parses the lab topology
 func (c *cLab) ParseTopology() error {
+	log.Info("Parsing topology information ...")
 	log.Debugf("Prefix: %s", c.Conf.Prefix)
 	// initialize DockerInfo
 	err := c.parseIPInfo()
@@ -225,13 +226,13 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	// initialize the node with global parameters
 	// Kind initialization is either coming from dut_specific or from global
 	// normalize the data to lower case to compare
-	node.OS = strings.ToLower(c.kindInitialization(&dut))
-	switch node.OS {
+	node.Kind = strings.ToLower(c.kindInitialization(&dut))
+	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&dut, node.OS)
+		node.Config = c.configInitialization(&dut, node.Kind)
 		//node.License = t.SRLLicense
-		node.Image = c.imageInitialization(&dut, node.OS)
+		node.Image = c.imageInitialization(&dut, node.Kind)
 		//node.NodeType = "ixr6"
 
 		// initialize specifc container information
@@ -245,7 +246,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
 			"INTFTYPE=eth"}
 		node.User = "root"
-		node.Group = c.groupInitialization(&dut, node.OS)
+		node.Group = c.groupInitialization(&dut, node.Kind)
 		node.NodeType = dut.Type
 		node.Config = dut.Config
 
@@ -259,11 +260,11 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&dut, node.OS)
-		node.License = c.licenseInitialization(&dut, node.OS)
-		node.Image = c.imageInitialization(&dut, node.OS)
-		node.Group = c.groupInitialization(&dut, node.OS)
-		node.NodeType = c.typeInitialization(&dut, node.OS)
+		node.Config = c.configInitialization(&dut, node.Kind)
+		node.License = c.licenseInitialization(&dut, node.Kind)
+		node.Image = c.imageInitialization(&dut, node.Kind)
+		node.Group = c.groupInitialization(&dut, node.Kind)
+		node.NodeType = c.typeInitialization(&dut, node.Kind)
 
 		switch node.NodeType {
 		case "ixr6":
@@ -338,13 +339,16 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 		node.Binds = append(node.Binds, bindTopology)
 
 	case "alpine", "linux":
-		node.Config = c.configInitialization(&dut, node.OS)
-		node.License = c.licenseInitialization(&dut, node.OS)
-		node.Image = c.imageInitialization(&dut, node.OS)
-		node.Group = c.groupInitialization(&dut, node.OS)
-		node.NodeType = c.typeInitialization(&dut, node.OS)
+		node.Config = c.configInitialization(&dut, node.Kind)
+		node.License = c.licenseInitialization(&dut, node.Kind)
+		node.Image = c.imageInitialization(&dut, node.Kind)
+		node.Group = c.groupInitialization(&dut, node.Kind)
+		node.NodeType = c.typeInitialization(&dut, node.Kind)
 
 		node.Cmd = "/bin/bash"
+
+	case "bridge":
+		node.Group = c.groupInitialization(&dut, node.Kind)
 
 	default:
 		panic("Node Kind, OS is not properly initialized; should be provided in Duts.dut_specifics.kind parameters or Duts.global_defaults.kind")
@@ -388,11 +392,16 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		}
 	}
 	if !found {
-		panic(fmt.Sprintf("Not all nodes are specified in the duts section or the names dont match in the duts/endpoint section: %s", split[0]))
+		log.Fatalf("Not all nodes are specified in the duts section or the names don't match in the duts/endpoint section: %s", split[0])
 	}
 
 	// initialize the endpoint name based on the split function
-	endpoint.EndpointName = split[1]
+	if c.Nodes[split[0]].Kind == "bridge" {
+		endpoint.EndpointName = "veth" + "prefix" + split[1]
+	} else {
+		endpoint.EndpointName = split[1]
+	}
+	
 
 	return endpoint
 }
