@@ -23,7 +23,7 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	cmd = exec.Command("sudo", "ln", "-s", src, dst)
 	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("%s failed with: %v", cmd.String(), err)
+		log.Debugf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("Create link to /run/netns/ ", link.b.Node.LongName)
