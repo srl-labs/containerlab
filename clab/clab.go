@@ -1,6 +1,8 @@
 package clab
 
-import "docker.io/go-docker"
+import (
+	docker "github.com/docker/engine/client"
+)
 
 var debug bool
 
