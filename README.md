@@ -1,4 +1,6 @@
-# Container-lab
+<p align=center><img src=https://gitlab.com/rdodin/pics/-/wikis/uploads/18b84497134ee39510d9daa6bc6712ad/containerlab_export.svg?sanitize=true/></p>
+
+---
 
 ## Description
 
@@ -21,16 +23,21 @@ Containerlab is build in [golang](https://golang.org) for people interested in t
 * Install [docker](https://www.docker.com): this is used manage the containers
 * Install [cfssl](https://cfssl.org): To build a CA per lab, containerlab is leveraging cfssl, build by cloudflare,  to manage the certificates
 
-```
-curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl && chmod a+x /usr/local/bin/cfssl
-curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssljson_1.4.1_linux_amd64 -o /usr/local/bin/cfssljson && chmod a+x /usr/local/bin/cfssljson
-echo "cfssl installed"
-```
+    ```
+    curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl && chmod a+x /usr/local/bin/cfssl
+    curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssljson_1.4.1_linux_amd64 -o /usr/local/bin/cfssljson && chmod a+x
+    /usr/local/bin/cfssljson
+    echo "cfssl installed"
+    ```
 * load the container images in docker locally
 
 ### Using rpm installation
 
-```
+```bash
+# install the rpm with yum without downloading the RPM
+yum -y https://github.com/srl-wim/container-lab/releases/download/v0.2.0/container-lab_0.2.0_linux_amd64.rpm
+
+# or when rpm is downloaded to the host
 sudo rpm -i container-lab_v0.2.0-next_linux_amd64.rpm
 ```
 
@@ -40,32 +47,31 @@ sudo rpm -i container-lab_v0.2.0-next_linux_amd64.rpm
 
 To help build the lab topologies a YAML file is used with the following parameters:
 
-* Prefix: The prefix can be seen as a namespace for the lab to make them unique.
-* Docker_info: we use docker to manage the various containers. In this section we specify the management bridge name and the IPV4 and IPV6 prefixes we use for connecting as an OOB management to the containers
-	* bridge
-	* ipv4_subnet
-	* ipv6_subnet
-* Duts: this section provides information with respect to the dut containers that are used in the lab. The dut configuration provides an inheritance to optimize the configuration in 3 levels: global_defaults, kind_defaults, dut_specifics.
-	*  	global_defaults: This section specifies the global defaults and will be inherited if the parameters are not specified in the more specific sections. As an example if kind = srl is specified in the global_defaults section and the kind is not specified in the kind_defaults or dut_specifics sections, the container will be using kind = srl
-		* Kind: the kind of container e.g. srl, ceos, alpine, linux or bridge
-			* bridge is used to connect to an external defined bridge for external connectivity
-		* Group: used in the graph output, to help visualize the output
-	* kind_defaults: This section specifies the kind defaults
-		* type: the type of container. e.g. to use 7220-dx, or 7220-ixr series
-		* config: the config file that is used by default for this kind of container
-		* image: the image that is used for this kind of container
-		* license: the license file that is used for this kind of container
-	* dut_specifics: This section specifies the dut specific details. If parameters are not set the can be inherited from higher sections.
-		* 	Kind: the kind of container e.g. srl, ceos or alpine
-		*  Group: used in the graph output, to help visualize the output
-	* kind_defaults: This section specifies the kind defaults
-		* <dutName>
-			* type: the type of container. e.g. to use 7220-dx, or 7220-ixr series
-			* config: the config file that is used for this specific dut
-			* image: the image that is used for this specific dut
-			* license: the license file that is used for this specific dut
-* Links: Define the virtual wiring for the lab
-	* endpoints: define the virtual wire specified as: 
+* `Prefix`: The prefix can be seen as a namespace for the lab to make them unique.
+* `Docker_info`: we use docker to manage the various containers. In this section we specify the management bridge name and the IPV4 and IPV6 prefixes we use for connecting as an OOB management to the containers
+	* `bridge`
+	* `ipv4_subnet`
+	* `ipv6_subnet`
+* `Duts`: this section provides information with respect to the dut containers that are used in the lab. The dut configuration provides an inheritance to optimize the configuration in 3 levels: global_defaults, kind_defaults, dut_specifics.
+	*  	`global_defaults`: This section specifies the global defaults and will be inherited if the parameters are not specified in the more specific sections. As an example if kind = srl is specified in the global_defaults section and the kind is not specified in the kind_defaults or dut_specifics sections, the container will be using kind = srl
+		* `kind`: the kind of container e.g. srl, ceos or alpine
+		* `group`: used in the graph output, to help visualize the output
+	* `kind_defaults`: This section specifies the kind defaults
+		* `type`: the type of container. e.g. to use 7220-dx, or 7220-ixr series
+		* `config`: the config file that is used by default for this kind of container
+		* `image`: the image that is used for this kind of container
+		* `license`: the license file that is used for this kind of container
+	* `dut_specifics`: This section specifies the dut specific details. If parameters are not set the can be inherited from higher sections.
+		* 	`kind`: the kind of container e.g. srl, ceos or alpine
+		*  `group`: used in the graph output, to help visualize the output
+	* `kind_defaults`: This section specifies the kind defaults
+		* `<dutName>`
+			* `type`: the type of container. e.g. to use 7220-dx, or 7220-ixr series
+			* `config`: the config file that is used for this specific dut
+			* `image`: the image that is used for this specific dut
+			* `license`: the license file that is used for this specific dut
+* `Links`: Define the virtual wiring for the lab
+	* `endpoints`: define the virtual wire specified as: 
 	```
 	["<dutName-A>:<intf-dutName-A>", "<dutName-B>:<intf-dutName-B>"]
 	```
