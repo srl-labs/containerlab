@@ -96,7 +96,7 @@ func (c *cLab) CreateRootCA() (err error) {
 	if err != nil {
 		log.Errorf("cmd.Run() failed with %s", err)
 	}
-	if debug {
+	if c.debug {
 		jsCert := new(bytes.Buffer)
 		json.Indent(jsCert, o, "", "  ")
 		log.Debugf("'cfssl gencert -initca' output:\n%s", jsCert.String())
@@ -154,7 +154,7 @@ func (c *cLab) CreateCERT(shortdutName string) (err error) {
 	if err != nil {
 		log.Errorf("'cfssl gencert -ca rootCert -caKey rootKey' failed with: %v", err)
 	}
-	if debug {
+	if c.debug {
 		jsCert := new(bytes.Buffer)
 		json.Indent(jsCert, o, "", "  ")
 		log.Debugf("'cfssl gencert -ca rootCert -caKey rootKey' output:\n%s", jsCert.String())

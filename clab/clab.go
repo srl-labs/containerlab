@@ -4,7 +4,7 @@ import (
 	docker "github.com/docker/engine/client"
 )
 
-var debug bool
+// var debug bool
 
 type cLab struct {
 	Conf         *conf
@@ -13,6 +13,8 @@ type cLab struct {
 	Links        map[int]*Link
 	DockerClient *docker.Client
 	Dir          *cLabDirectory
+
+	debug bool
 }
 
 type cLabDirectory struct {
@@ -23,18 +25,17 @@ type cLabDirectory struct {
 }
 
 // NewContainerLab function defines a new container lab
-func NewContainerLab(d bool) (*cLab, error) {
-	c := &cLab{
+func NewContainerLab(d bool) *cLab {
+	return &cLab{
 		Conf:     new(conf),
 		FileInfo: new(File),
 		Nodes:    make(map[string]*Node),
 		Links:    make(map[int]*Link),
+		debug:    d,
 	}
-	debug = d
-	var err error
+}
+
+func (c *cLab) Init() (err error) {
 	c.DockerClient, err = docker.NewEnvClient()
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
+	return
 }

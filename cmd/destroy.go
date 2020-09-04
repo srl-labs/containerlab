@@ -14,7 +14,8 @@ var destroyCmd = &cobra.Command{
 	Short: "destroy a lab",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := clab.NewContainerLab(debug)
+		c := clab.NewContainerLab(debug)
+		err := c.Init()
 		if err != nil {
 			log.Fatal(err)
 		}
