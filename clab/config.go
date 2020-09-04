@@ -397,11 +397,10 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 
 	// initialize the endpoint name based on the split function
 	if c.Nodes[split[0]].Kind == "bridge" {
-		endpoint.EndpointName = "veth" + "prefix" + split[1]
+		endpoint.EndpointName = "veth" + c.Conf.Prefix + split[1]
 	} else {
 		endpoint.EndpointName = split[1]
 	}
-	
 
 	return endpoint
 }
