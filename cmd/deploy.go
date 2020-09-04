@@ -81,12 +81,9 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		// show management ip addresses per Node
-		for dutName, node := range c.Nodes {
-			if node.Kind != "bridge" {
-				log.Infof("Mgmt IP addresses of container: %s, ContainerName: %s, IPv4: %s, IPv6: %s, MAC: %s", dutName, node.LongName, node.MgmtIPv4, node.MgmtIPv6, node.MgmtMac)
-			}
-
+		// show topology output
+		if err = c.CreateLabOutput(); err != nil {
+			log.Error(err)
 		}
 	},
 }
