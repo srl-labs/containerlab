@@ -1,4 +1,6 @@
-# Container-lab
+<p align=center><img src=https://gitlab.com/rdodin/pics/-/wikis/uploads/18b84497134ee39510d9daa6bc6712ad/containerlab_export.svg?sanitize=true/></p>
+
+---
 
 ## Description
 
@@ -21,16 +23,21 @@ Containerlab is build in [golang](https://golang.org) for people interested in t
 * Install [docker](https://www.docker.com): this is used manage the containers
 * Install [cfssl](https://cfssl.org): To build a CA per lab, containerlab is leveraging cfssl, build by cloudflare,  to manage the certificates
 
-```
-curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl && chmod a+x /usr/local/bin/cfssl
-curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssljson_1.4.1_linux_amd64 -o /usr/local/bin/cfssljson && chmod a+x /usr/local/bin/cfssljson
-echo "cfssl installed"
-```
+    ```
+    curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl && chmod a+x /usr/local/bin/cfssl
+    curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssljson_1.4.1_linux_amd64 -o /usr/local/bin/cfssljson && chmod a+x
+    /usr/local/bin/cfssljson
+    echo "cfssl installed"
+    ```
 * load the container images in docker locally
 
 ### Using rpm installation
 
-```
+```bash
+# install the rpm with yum without downloading the RPM
+yum -y https://github.com/srl-wim/container-lab/releases/download/v0.2.0/container-lab_0.2.0_linux_amd64.rpm
+
+# or when rpm is downloaded to the host
 sudo rpm -i container-lab_v0.2.0-next_linux_amd64.rpm
 ```
 
