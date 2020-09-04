@@ -47,7 +47,8 @@ To help build the lab topologies a YAML file is used with the following paramete
 	* ipv6_subnet
 * Duts: this section provides information with respect to the dut containers that are used in the lab. The dut configuration provides an inheritance to optimize the configuration in 3 levels: global_defaults, kind_defaults, dut_specifics.
 	*  	global_defaults: This section specifies the global defaults and will be inherited if the parameters are not specified in the more specific sections. As an example if kind = srl is specified in the global_defaults section and the kind is not specified in the kind_defaults or dut_specifics sections, the container will be using kind = srl
-		* Kind: the kind of container e.g. srl, ceos or alpine
+		* Kind: the kind of container e.g. srl, ceos, alpine, linux or bridge
+			* bridge is used to connect to an external defined bridge for external connectivity
 		* Group: used in the graph output, to help visualize the output
 	* kind_defaults: This section specifies the kind defaults
 		* type: the type of container. e.g. to use 7220-dx, or 7220-ixr series
