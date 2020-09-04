@@ -24,6 +24,7 @@ type File struct {
 
 // GetTopology gets the lab topology information
 func (c *cLab) GetTopology(topo *string) error {
+	log.Info("Getting topology information ...")
 	log.Debug("Topofile ", *topo)
 
 	yamlFile, err := ioutil.ReadFile(*topo)
@@ -172,9 +173,10 @@ func CreateDirectory(path string, perm os.FileMode) {
 }
 
 // CreateNodeDirStructure create the directory structure and files for the clab
-func (c *cLab) CreateNodeDirStructure(node *Node, dut string) (err error) {
-	switch node.OS {
+func (c *cLab) CreateNodeDirStructure(node *Node, shortDutName string) (err error) {
+	switch node.Kind {
 	case "srl":
+		log.Info("Create directory structure for SRL container:", shortDutName)
 		var src string
 		var dst string
 		// copy license file to node specific directory in lab
@@ -253,7 +255,9 @@ func (c *cLab) CreateNodeDirStructure(node *Node, dut string) (err error) {
 		node.EnvConf = dst
 
 	case "alpine":
+	case "linux":
 	case "ceos":
+	case "bridge":
 	default:
 	}
 

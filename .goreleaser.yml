@@ -48,6 +48,7 @@ nfpms:
       ./lab-examples/wan-topo.yml: "/etc/containerlab/lab-examples/wan-topo.yml"
       ./lab-examples/simple.yml: "/etc/containerlab/lab-examples/simple.yml"
       ./lab-examples/arista-topo.yml: "/etc/containerlab/lab-examples/arista-topo.yml"
+      ./lab-examples/external-bridge.yml: "/etc/containerlab/lab-examples/external-bridge.yml"
       ./templates/ca/csr-root-ca.json: "/etc/containerlab/templates/ca/csr-root-ca.json"
       ./templates/ca/csr.json: "/etc/containerlab/templates/ca/csr.json"
       ./templates/srl/config.json: "/etc/containerlab/templates/srl/srlconfig.json"

@@ -57,6 +57,7 @@ func (c *cLab) cfssljson(b []byte, file string, node *Node) {
 
 // CreateRootCA creates a root CA
 func (c *cLab) CreateRootCA() (err error) {
+	log.Info("Creating root CA")
 	//create root CA diretcory
 	CreateDirectory(c.Dir.LabCA, 0755)
 
@@ -108,58 +109,63 @@ func (c *cLab) CreateRootCA() (err error) {
 }
 
 // CreateCERT create a certificate
-func (c *cLab) CreateCERT(shortdutName string) (err error) {
-	node, ok := c.Nodes[shortdutName]
+func (c *cLab) CreateCERT(shortDutName string) (err error) {
+	node, ok := c.Nodes[shortDutName]
 	if !ok {
-		return fmt.Errorf("unknown dut name: %s", shortdutName)
+		return fmt.Errorf("unknown dut name: %s", shortDutName)
 	}
-	//create dut cert diretcory
-	CreateDirectory(c.Nodes[shortdutName].CertDir, 0755)
+	if node.Kind != " bridge" {
+		log.Info("Creating CA for dut: ", shortDutName)
+		//create dut cert diretcory
+		CreateDirectory(c.Nodes[shortDutName].CertDir, 0755)
 
-	var src string
-	var dst string
+		var src string
+		var dst string
 
-	// copy topology to node specific directory in lab
-	src = "/etc/containerlab/templates/ca/csr.json"
-	dst = path.Join(node.CertDir, "csr"+"-"+shortdutName+".json")
-	tpl, err := template.ParseFiles(src)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	type CERT struct {
-		Name   string
-		Prefix string
-	}
-	cert := CERT{
-		Name:   shortdutName,
-		Prefix: c.Conf.Prefix,
-	}
-	f, err := os.Create(dst)
-	if err != nil {
-		log.Error("create file: ", err)
-		return err
-	}
-	defer f.Close()
+		// copy topology to node specific directory in lab
+		src = "/etc/containerlab/templates/ca/csr.json"
+		dst = path.Join(node.CertDir, "csr"+"-"+shortDutName+".json")
+		tpl, err := template.ParseFiles(src)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		type CERT struct {
+			Name   string
+			Prefix string
+		}
+		cert := CERT{
+			Name:   shortDutName,
+			Prefix: c.Conf.Prefix,
+		}
+		f, err := os.Create(dst)
+		if err != nil {
+			log.Error("create file: ", err)
+			return err
+		}
+		defer f.Close()
 
-	if err = tpl.Execute(f, cert); err != nil {
-		panic(err)
-	}
-	log.Debug(fmt.Sprintf("CopyFile GoTemplate src %s -> dat %s succeeded\n", src, dst))
+		if err = tpl.Execute(f, cert); err != nil {
+			panic(err)
+		}
+		log.Debug(fmt.Sprintf("CopyFile GoTemplate src %s -> dat %s succeeded\n", src, dst))
 
-	var cmd *exec.Cmd
-	rootCert := path.Join(c.Dir.LabCARoot, "root-ca.pem")
-	rootKey := path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
-	cmd = exec.Command("cfssl", "gencert", "-ca", rootCert, "-ca-key", rootKey, dst)
-	o, err := cmd.Output()
-	if err != nil {
-		log.Errorf("'cfssl gencert -ca rootCert -caKey rootKey' failed with: %v", err)
-	}
-	if c.debug {
-		jsCert := new(bytes.Buffer)
-		json.Indent(jsCert, o, "", "  ")
-		log.Debugf("'cfssl gencert -ca rootCert -caKey rootKey' output:\n%s", jsCert.String())
+		var cmd *exec.Cmd
+		rootCert := path.Join(c.Dir.LabCARoot, "root-ca.pem")
+		rootKey := path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
+		cmd = exec.Command("cfssl", "gencert", "-ca", rootCert, "-ca-key", rootKey, dst)
+		o, err := cmd.Output()
+		if err != nil {
+			log.Errorf("'cfssl gencert -ca rootCert -caKey rootKey' failed with: %v", err)
+		}
+		if c.debug {
+			jsCert := new(bytes.Buffer)
+			json.Indent(jsCert, o, "", "  ")
+			log.Debugf("'cfssl gencert -ca rootCert -caKey rootKey' output:\n%s", jsCert.String())
+		}
+
+		c.cfssljson(o, path.Join(node.CertDir, shortDutName), node)
+
 	}
 
-	c.cfssljson(o, path.Join(node.CertDir, shortdutName), node)
 	return nil
 }
