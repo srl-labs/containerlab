@@ -9,7 +9,7 @@ import (
 
 // CreateVirtualWiring provides the virtual topology between the containers
 func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
-	log.Info("Create virtual wire :", link.a.Node.ShortName, link.b.Node.ShortName, link.a.EndpointName, link.b.EndpointName)
+	log.Infof("Create virtual wire : %s, %s, %s, %s", link.a.Node.LongName, link.b.Node.LongName, link.a.EndpointName, link.b.EndpointName)
 
 	CreateDirectory("/run/netns/", 0755)
 
