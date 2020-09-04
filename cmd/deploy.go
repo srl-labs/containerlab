@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"net"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -10,8 +11,11 @@ import (
 
 // path to the topology file
 var topo string
-
 var graph bool
+var bridge string
+var prefix string
+var ipv4Subnet net.IPNet
+var ipv6Subnet net.IPNet
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
@@ -28,7 +32,8 @@ var deployCmd = &cobra.Command{
 		if err = c.GetTopology(&topo); err != nil {
 			log.Fatal(err)
 		}
-
+		setFlags(c.Conf)
+		log.Debugf("lab Conf: %+v", c.Conf)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
 			log.Fatal(err)
@@ -92,4 +97,23 @@ func init() {
 	rootCmd.AddCommand(deployCmd)
 	deployCmd.Flags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
 	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
+	deployCmd.Flags().StringVarP(&bridge, "bridge", "b", "", "docker network name for management")
+	deployCmd.Flags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
+	deployCmd.Flags().IPNetVarP(&ipv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
+	deployCmd.Flags().IPNetVarP(&ipv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+}
+
+func setFlags(conf *clab.Conf) {
+	if prefix != "" {
+		conf.Prefix = prefix
+	}
+	if bridge != "" {
+		conf.DockerInfo.Bridge = bridge
+	}
+	if ipv4Subnet.String() != "<nil>" {
+		conf.DockerInfo.Ipv4Subnet = ipv4Subnet.String()
+	}
+	if ipv6Subnet.String() != "<nil>" {
+		conf.DockerInfo.Ipv6Subnet = ipv6Subnet.String()
+	}
 }
