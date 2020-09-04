@@ -219,9 +219,9 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	srlTypes := map[string]string{
 		"ixr6": "topology-7250IXR6.yml",
 		"ixr10": "topology-7250IXR10.yml",
-		"ixrd1": "topology-7220IXD1.yml",
-		"ixrd2": "topology-7220IXD2.yml",
-		"ixrd3": "topology-7220IXD3.yml",
+		"ixrd1": "topology-7220IXRD1.yml",
+		"ixrd2": "topology-7220IXRD2.yml",
+		"ixrd3": "topology-7220IXRD3.yml",
 	}
 
 	// initialize a new node
