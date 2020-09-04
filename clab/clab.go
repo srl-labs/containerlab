@@ -23,19 +23,17 @@ type cLabDirectory struct {
 }
 
 // NewContainerLab function defines a new container lab
-func NewContainerLab(d bool) (*cLab, error) {
-	c := &cLab{
+func NewContainerLab(d bool) *cLab {
+	return &cLab{
 		Conf:     new(conf),
 		FileInfo: new(File),
 		Nodes:    make(map[string]*Node),
 		Links:    make(map[int]*Link),
 		debug:    d,
 	}
+}
 
-	var err error
+func (c *cLab) Init() (err error) {
 	c.DockerClient, err = docker.NewEnvClient()
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
+	return
 }
