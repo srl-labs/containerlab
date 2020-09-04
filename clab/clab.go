@@ -2,7 +2,7 @@ package clab
 
 import "docker.io/go-docker"
 
-var debug bool
+// var debug bool
 
 type cLab struct {
 	Conf         *conf
@@ -11,6 +11,8 @@ type cLab struct {
 	Links        map[int]*Link
 	DockerClient *docker.Client
 	Dir          *cLabDirectory
+
+	debug bool
 }
 
 type cLabDirectory struct {
@@ -27,8 +29,9 @@ func NewContainerLab(d bool) (*cLab, error) {
 		FileInfo: new(File),
 		Nodes:    make(map[string]*Node),
 		Links:    make(map[int]*Link),
+		debug:    d,
 	}
-	debug = d
+
 	var err error
 	c.DockerClient, err = docker.NewEnvClient()
 	if err != nil {
