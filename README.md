@@ -19,14 +19,20 @@ Containerlab is build in [golang](https://golang.org) for people interested in t
 
 * Have sudo rights on the system: containerlab is using some sudo commands to set some parameters in the linux system to support the various options the containers need
 * Install [docker](https://www.docker.com): this is used manage the containers
-* Install [golang](https://golang.org): this is used for the following step in support of installing [cfssl](https://cfssl.org)
 * Install [cfssl](https://cfssl.org): To build a CA per lab, containerlab is leveraging cfssl, build by cloudflare,  to manage the certificates
-	* go get -u github.com/cloudflare/cfssl/cmd/...
+
+```
+curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl && chmod a+x /usr/local/bin/cfssl
+curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssljson_1.4.1_linux_amd64 -o /usr/local/bin/cfssljson && chmod a+x /usr/local/bin/cfssljson
+echo "cfssl installed"
+```
 * load the container images in docker locally
 
 ### Using rpm installation
 
+```
 sudo rpm -i container-lab_v0.2.0-next_linux_amd64.rpm
+```
 
 ## Usage
 
