@@ -7,7 +7,7 @@ import (
 // var debug bool
 
 type cLab struct {
-	Conf         *conf
+	Conf         *Conf
 	FileInfo     *File
 	Nodes        map[string]*Node
 	Links        map[int]*Link
@@ -27,7 +27,7 @@ type cLabDirectory struct {
 // NewContainerLab function defines a new container lab
 func NewContainerLab(d bool) *cLab {
 	return &cLab{
-		Conf:     new(conf),
+		Conf:     new(Conf),
 		FileInfo: new(File),
 		Nodes:    make(map[string]*Node),
 		Links:    make(map[int]*Link),

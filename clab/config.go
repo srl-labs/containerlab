@@ -27,7 +27,7 @@ type dutInfo struct {
 	License string `yaml:"license"`
 }
 
-type conf struct {
+type Conf struct {
 	Prefix      string     `yaml:"Prefix"`
 	DockerInfo  dockerInfo `yaml:"Docker_info"`
 	ClientImage string     `yaml:"Client_image"`
