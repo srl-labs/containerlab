@@ -214,6 +214,16 @@ func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
 
 // NewNode initializes a new node object
 func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
+	base_config_dir := "/etc/containerlab/templates/srl/"
+
+	srl_types := map[string]string{
+		"ixr6": "topology-7250IXR6.yml",
+		"ixr10": "topology-7250IXR10.yml",
+		"ixrd1": "topology-7220IXD1.yml",
+		"ixrd2": "topology-7220IXD2.yml",
+		"ixrd3": "topology-7220IXD3.yml",
+	}
+
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
@@ -266,19 +276,15 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 		node.Group = c.groupInitialization(&dut, node.Kind)
 		node.NodeType = c.typeInitialization(&dut, node.Kind)
 
-		switch node.NodeType {
-		case "ixr6":
-			node.Topology = "/etc/containerlab/templates/srl/topology-7250IXR6.yml"
-		case "ixr10":
-			node.Topology = "/etc/containerlab/templates/srl/topology-7250IXR10.yml"
-		case "ixrd1":
-			node.Topology = "/etc/containerlab/templates/srl/topology-7220IXD1.yml"
-		case "isrd2":
-			node.Topology = "/etc/containerlab/templates/srl/topology-7220IXD2.yml"
-		case "ixrd3":
-			node.Topology = "/etc/containerlab/templates/srl/topology-7220IXD3.yml"
-		default:
-			panic("wrong node type; should be ixr6, ixr10, ixrd1, ixrd2, ixrd3")
+
+		if filename, found := srl_types[node.NodeType]; found {
+			node.Topology = base_config_dir + filename
+		} else {
+			keys := []string{}
+			for key, _ := range srl_types {
+				keys = append(keys, key)
+			}
+			panic("wrong node type; should be " + strings.Join(keys, ", "))
 		}
 
 		// initialize specifc container information
