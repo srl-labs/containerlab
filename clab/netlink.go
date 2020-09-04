@@ -33,7 +33,7 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	cmd = exec.Command("sudo", "ln", "-s", src, dst)
 	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("%s failed with: %v", cmd.String(), err)
+		log.Debugf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("create dummy veth pair")
@@ -142,8 +142,8 @@ func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
 func runCmd(cmd *exec.Cmd) error {
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Errorf("'%s' failed with: %v", cmd.String(), err)
-		log.Errorf("'%s' failed output: %v", cmd.String(), string(b))
+		log.Warnf("'%s' failed with: %v", cmd.String(), err)
+		log.Warnf("'%s' failed output: %v", cmd.String(), string(b))
 		return err
 	}
 	log.Debugf("'%s' output: %v", cmd.String(), string(b))
