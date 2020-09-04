@@ -4,7 +4,7 @@
 
 ## Description
 
-Containerlab provides a framework for setting up and destroying labs for networking containers. it builds a virtual wiring using veth pairs between the containers to provide virtual topologies. A CA can be provided per lab and when enabled, containerlab generates certificates per device that can be used for various use cases, like GNMI, JSON RPC, etc. Lastly, containerlab also allows for a graphical outpur to validate the lab in a visual format using [graphviz](https://graphviz.org)
+Containerlab provides a framework for setting up and destroying labs for networking containers. it builds a virtual wiring using veth pairs between the containers to provide virtual topologies. The labs could also be wired to an external bridge to connect to external environment or to build hierarchical labs. A CA can be provided per lab and when enabled, containerlab generates certificates per device that can be used for various use cases, like GNMI, JSON RPC, etc. Lastly, containerlab also allows for a graphical output to validate the lab in a visual format using [graphviz](https://graphviz.org)
 
 Containerlab supports the following containers:
 
@@ -54,7 +54,8 @@ To help build the lab topologies a YAML file is used with the following paramete
 	* `ipv6_subnet`
 * `Duts`: this section provides information with respect to the dut containers that are used in the lab. The dut configuration provides an inheritance to optimize the configuration in 3 levels: global_defaults, kind_defaults, dut_specifics.
 	*  	`global_defaults`: This section specifies the global defaults and will be inherited if the parameters are not specified in the more specific sections. As an example if kind = srl is specified in the global_defaults section and the kind is not specified in the kind_defaults or dut_specifics sections, the container will be using kind = srl
-		* `kind`: the kind of container e.g. srl, ceos or alpine
+		* `kind`: the kind of container e.g. srl, ceos, alpine, linux or bridge
+			* *bridge* is a special kind and is used to connect to an external bridge
 		* `group`: used in the graph output, to help visualize the output
 	* `kind_defaults`: This section specifies the kind defaults
 		* `type`: the type of container. e.g. to use 7220-dx, or 7220-ixr series
@@ -62,7 +63,7 @@ To help build the lab topologies a YAML file is used with the following paramete
 		* `image`: the image that is used for this kind of container
 		* `license`: the license file that is used for this kind of container
 	* `dut_specifics`: This section specifies the dut specific details. If parameters are not set the can be inherited from higher sections.
-		* 	`kind`: the kind of container e.g. srl, ceos or alpine
+		* 	`kind`: the kind of container e.g. srl, ceos, alpine, linux or bridge
 		*  `group`: used in the graph output, to help visualize the output
 	* `kind_defaults`: This section specifies the kind defaults
 		* `<dutName>`
