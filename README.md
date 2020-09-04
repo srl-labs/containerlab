@@ -26,7 +26,7 @@ Containerlab is build in [golang](https://golang.org) for people interested in t
 
 ### Using rpm installation
 
-sudo rpm -i contaianerlab-1.0.0.x86_64.rpm
+sudo rpm -i container-lab_v0.2.0-next_linux_amd64.rpm
 
 ## Usage
 
@@ -96,16 +96,31 @@ Links:
 
 To deploy a lab there are a few parameters that can be used:
 
-* -a, --action string   action: deploy or destroy
-* -d, --debug           set log level to debug
-* -c, --gen-certs       generate a certificate per container (default true)
-* -g, --graph           generate a graph of the topology
-* -t, --topo string     YAML file with topology information (default "labs/wan-topo.yml")
+```
+[henderiw@srlinux-2 clab]$ containerlab -h
+deploy container based lab environments with a user-defined interconnections
+
+Usage:
+  containerlab [command]
+
+Available Commands:
+  deploy      deploy a lab
+  destroy     destroy a lab
+  graph       generate a topology graph
+  help        Help about any command
+  version     show containerlab version
+
+Flags:
+  -d, --debug   enable debug mode
+  -h, --help    help for containerlab
+
+Use "containerlab [command] --help" for more information about a command.
+```
 
 Example:
 
 ```
-./containerlab -t labs/wan-topo.yml -a deploy
+./containerlab deploy -t labs/wan-topo.yml 
 ```
 
 ### Destroy the lab
@@ -113,7 +128,7 @@ Example:
 Example:
 
 ```
-./containerlab -t labs/wan-topo.yml -a destroy
+./containerlab destroy -t labs/wan-topo.yml
 ```
 
 ### Generating a graph for the lab
