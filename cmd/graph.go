@@ -12,9 +12,10 @@ var graphCmd = &cobra.Command{
 	Short: "generate a topology graph",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := clab.NewContainerLab(debug)
+		c := clab.NewContainerLab(debug)
+		err := c.Init()
 		if err != nil {
-			log.Fatal(err)
+			log.Info(err)
 		}
 
 		log.Info("Getting topology information ...")
