@@ -120,19 +120,17 @@ func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
 	var cmd *exec.Cmd
 
 	log.Debug("Delete netns: ", link.a.Node.LongName)
-	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", link.a.Node.LongName)
 	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("%s failed with: %v", cmd.String(), err)
+		log.Debugf("%s failed with: %v", cmd.String(), err)
 	}
 
 	log.Debug("Delete netns: ", link.b.Node.LongName)
-	//err = linkFile(src, dst)
 	cmd = exec.Command("sudo", "ip", "netns", "del", link.b.Node.LongName)
 	err = runCmd(cmd)
 	if err != nil {
-		log.Debug("%s failed with: %v", cmd.String(), err)
+		log.Debugf("%s failed with: %v", cmd.String(), err)
 	}
 	return nil
 }
@@ -140,8 +138,8 @@ func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
 func runCmd(cmd *exec.Cmd) error {
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Warnf("'%s' failed with: %v", cmd.String(), err)
-		log.Warnf("'%s' failed output: %v", cmd.String(), string(b))
+		log.Debugf("'%s' failed with: %v", cmd.String(), err)
+		log.Debugf("'%s' failed output: %v", cmd.String(), string(b))
 		return err
 	}
 	log.Debugf("'%s' output: %v", cmd.String(), string(b))
