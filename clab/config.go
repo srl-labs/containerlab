@@ -214,9 +214,9 @@ func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
 
 // NewNode initializes a new node object
 func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
-	base_config_dir := "/etc/containerlab/templates/srl/"
+	baseConfigDir := "/etc/containerlab/templates/srl/"
 
-	srl_types := map[string]string{
+	srlTypes := map[string]string{
 		"ixr6": "topology-7250IXR6.yml",
 		"ixr10": "topology-7250IXR10.yml",
 		"ixrd1": "topology-7220IXD1.yml",
@@ -277,11 +277,11 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 		node.NodeType = c.typeInitialization(&dut, node.Kind)
 
 
-		if filename, found := srl_types[node.NodeType]; found {
-			node.Topology = base_config_dir + filename
+		if filename, found := srlTypes[node.NodeType]; found {
+			node.Topology = baseConfigDir + filename
 		} else {
-			keys := []string{}
-			for key, _ := range srl_types {
+			keys := make([]string, 0, len(srlTypes))
+			for key, _ := range srlTypes {
 				keys = append(keys, key)
 			}
 			panic("wrong node type; should be " + strings.Join(keys, ", "))
