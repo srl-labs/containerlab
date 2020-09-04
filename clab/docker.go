@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"docker.io/go-docker/api/types"
-	"docker.io/go-docker/api/types/container"
-	"docker.io/go-docker/api/types/network"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -51,13 +51,13 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	networkOptions := types.NetworkCreate{
 		CheckDuplicate: true,
 		Driver:         "bridge",
-		Scope:          "local",
-		EnableIPv6:     true,
-		IPAM:           ipam,
-		Internal:       false,
-		Attachable:     false,
-		Ingress:        false,
-		ConfigOnly:     false,
+		//Scope:          "local",
+		EnableIPv6: true,
+		IPAM:       ipam,
+		Internal:   false,
+		Attachable: false,
+		//Ingress:        false,
+		//ConfigOnly:     false,
 	}
 
 	var bridgeName string
@@ -70,7 +70,7 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 			log.Debugf("Container network %s already exists", c.Conf.DockerInfo.Bridge)
 			nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
-			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Conf.DockerInfo.Bridge, types.NetworkInspectOptions{})
+			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Conf.DockerInfo.Bridge) //, types.NetworkInspectOptions{})
 			if err != nil {
 				return err
 			}
@@ -123,7 +123,6 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Debugf("%s", string(b))
 	return nil
 }
-
 
 // DeleteBridge deletes a docker bridge
 func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
@@ -187,7 +186,6 @@ func (c *cLab) CreateContainer(ctx context.Context, name string, node *Node) (er
 	return c.InspectContainer(ctx, node.LongName, node)
 }
 
-
 // StartContainer starts a docker container
 func (c *cLab) StartContainer(ctx context.Context, name string, node *Node) (err error) {
 	log.Debug("Start container: ", name)
@@ -234,7 +232,6 @@ func (c *cLab) DeleteContainer(ctx context.Context, name string, node *Node) (er
 
 	return nil
 }
-
 
 // InspectContainer inspects a docker container
 func (c *cLab) InspectContainer(ctx context.Context, id string, node *Node) (err error) {
