@@ -29,7 +29,8 @@ theme:
     text: Manrope
     code: Fira Mono
   icon:
-    logo: material/science
+    logo: fontawesome/solid/flask
+  favicon: images/flask.svg
 
 # Plugins
 plugins:
