@@ -47,10 +47,10 @@ func (c *cLab) GenerateGraph(topo string) error {
 	attr["color"] = "green"
 
 	for _, link := range c.Links {
-		if strings.Contains(link.b.Node.ShortName, "client") {
+		if strings.Contains(link.B.Node.ShortName, "client") {
 			attr["color"] = "blue"
 		}
-		if err := g.AddEdge(link.a.Node.ShortName, link.b.Node.ShortName, false, attr); err != nil {
+		if err := g.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName, false, attr); err != nil {
 			return err
 		}
 

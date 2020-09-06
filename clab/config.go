@@ -87,8 +87,8 @@ type Node struct {
 
 // Link is a struct that contains the information of a link between 2 containers
 type Link struct {
-	a *Endpoint
-	b *Endpoint
+	A *Endpoint
+	B *Endpoint
 }
 
 // Endpoint is a sttruct that contains information of a link endpoint
@@ -371,9 +371,9 @@ func (c *cLab) NewLink(e []string) *Link {
 		// i indicates the number and d presents the string, which need to be
 		// split in node and endpoint name
 		if i == 0 {
-			link.a = c.NewEndpoint(d)
+			link.A = c.NewEndpoint(d)
 		} else {
-			link.b = c.NewEndpoint(d)
+			link.B = c.NewEndpoint(d)
 		}
 	}
 	return link
