@@ -9,17 +9,17 @@ import (
 
 // CreateVirtualWiring provides the virtual topology between the containers
 func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
-	log.Infof("Create virtual wire : %s, %s, %s, %s", link.a.Node.LongName, link.b.Node.LongName, link.a.EndpointName, link.b.EndpointName)
+	log.Infof("Create virtual wire : %s, %s, %s, %s", link.A.Node.LongName, link.B.Node.LongName, link.A.EndpointName, link.B.EndpointName)
 
 	CreateDirectory("/run/netns/", 0755)
 
 	var src, dst string
 	var cmd *exec.Cmd
 
-	if link.a.Node.Kind != "bridge" { // if the node is not a bridge
-		log.Debug("Create link to /run/netns/ ", link.a.Node.LongName)
-		src = "/proc/" + strconv.Itoa(link.a.Node.Pid) + "/ns/net"
-		dst = "/run/netns/" + link.a.Node.LongName
+	if link.A.Node.Kind != "bridge" { // if the node is not a bridge
+		log.Debug("Create link to /run/netns/ ", link.A.Node.LongName)
+		src = "/proc/" + strconv.Itoa(link.A.Node.Pid) + "/ns/net"
+		dst = "/run/netns/" + link.A.Node.LongName
 		//err = linkFile(src, dst)
 		cmd = exec.Command("sudo", "ln", "-s", src, dst)
 		err = runCmd(cmd)
@@ -28,10 +28,10 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 		}
 	}
 
-	if link.b.Node.Kind != "bridge" { // if the node is not a bridge
-		log.Debug("Create link to /run/netns/ ", link.b.Node.LongName)
-		src = "/proc/" + strconv.Itoa(link.b.Node.Pid) + "/ns/net"
-		dst = "/run/netns/" + link.b.Node.LongName
+	if link.B.Node.Kind != "bridge" { // if the node is not a bridge
+		log.Debug("Create link to /run/netns/ ", link.B.Node.LongName)
+		src = "/proc/" + strconv.Itoa(link.B.Node.Pid) + "/ns/net"
+		dst = "/run/netns/" + link.B.Node.LongName
 		//err = linkFile(src, dst)
 		cmd = exec.Command("sudo", "ln", "-s", src, dst)
 		err = runCmd(cmd)
@@ -40,137 +40,137 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 		}
 	}
 
-	if link.a.Node.Kind != "bridge" && link.b.Node.Kind != "bridge" { // none of the 2 nodes is a bridge
+	if link.A.Node.Kind != "bridge" && link.B.Node.Kind != "bridge" { // none of the 2 nodes is a bridge
 		log.Debug("create dummy veth pair")
 		cmd = exec.Command("sudo", "ip", "link", "add", "dummyA", "type", "veth", "peer", "name", "dummyB")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
-	} else if link.a.Node.Kind != "bridge" { // node of link A is a bridge
+	} else if link.A.Node.Kind != "bridge" { // node of link A is a bridge
 		log.Debug("create dummy veth pair")
-		cmd = exec.Command("sudo", "ip", "link", "add", "dummyA", "type", "veth", "peer", "name", link.b.EndpointName)
+		cmd = exec.Command("sudo", "ip", "link", "add", "dummyA", "type", "veth", "peer", "name", link.B.EndpointName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	} else { // node of link B is a bridge
 		log.Debug("create dummy veth pair")
-		cmd = exec.Command("sudo", "ip", "link", "add", "dummyB", "type", "veth", "peer", "name", link.a.EndpointName)
+		cmd = exec.Command("sudo", "ip", "link", "add", "dummyB", "type", "veth", "peer", "name", link.A.EndpointName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.a.Node.Kind != "bridge" { // if node A of link is not a bridge
+	if link.A.Node.Kind != "bridge" { // if node A of link is not a bridge
 		log.Debug("map dummy interface on container A to NS")
-		cmd = exec.Command("sudo", "ip", "link", "set", "dummyA", "netns", link.a.Node.LongName)
+		cmd = exec.Command("sudo", "ip", "link", "set", "dummyA", "netns", link.A.Node.LongName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.b.Node.Kind != "bridge" { // if node B of link is not a bridge
+	if link.B.Node.Kind != "bridge" { // if node B of link is not a bridge
 		log.Debug("map dummy interface on container B to NS")
-		cmd = exec.Command("sudo", "ip", "link", "set", "dummyB", "netns", link.b.Node.LongName)
+		cmd = exec.Command("sudo", "ip", "link", "set", "dummyB", "netns", link.B.Node.LongName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.a.Node.Kind != "bridge" { // if node A of link is not a bridge
+	if link.A.Node.Kind != "bridge" { // if node A of link is not a bridge
 		log.Debug("rename interface container NS A")
-		cmd = exec.Command("sudo", "ip", "netns", "exec", link.a.Node.LongName, "ip", "link", "set", "dummyA", "name", link.a.EndpointName)
+		cmd = exec.Command("sudo", "ip", "netns", "exec", link.A.Node.LongName, "ip", "link", "set", "dummyA", "name", link.A.EndpointName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	} else {
 		log.Debug("map veth pair to bridge")
-		cmd = exec.Command("sudo", "ip", "link", "set", link.a.EndpointName, "master", link.a.Node.ShortName)
+		cmd = exec.Command("sudo", "ip", "link", "set", link.A.EndpointName, "master", link.A.Node.ShortName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.b.Node.Kind != "bridge" { // if node B of link is not a bridge
+	if link.B.Node.Kind != "bridge" { // if node B of link is not a bridge
 		log.Debug("rename interface container NS B")
-		cmd = exec.Command("sudo", "ip", "netns", "exec", link.b.Node.LongName, "ip", "link", "set", "dummyB", "name", link.b.EndpointName)
+		cmd = exec.Command("sudo", "ip", "netns", "exec", link.B.Node.LongName, "ip", "link", "set", "dummyB", "name", link.B.EndpointName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	} else {
 		log.Debug("map veth pair to bridge")
-		cmd = exec.Command("sudo", "ip", "link", "set", link.b.EndpointName, "master", link.b.Node.ShortName)
+		cmd = exec.Command("sudo", "ip", "link", "set", link.B.EndpointName, "master", link.B.Node.ShortName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.a.Node.Kind != "bridge" { // if node A of link is not a bridge
+	if link.A.Node.Kind != "bridge" { // if node A of link is not a bridge
 		log.Debug("set interface up in container NS A")
-		cmd = exec.Command("sudo", "ip", "netns", "exec", link.a.Node.LongName, "ip", "link", "set", link.a.EndpointName, "up")
+		cmd = exec.Command("sudo", "ip", "netns", "exec", link.A.Node.LongName, "ip", "link", "set", link.A.EndpointName, "up")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	} else {
 		log.Debug("set interface up in bridge")
-		cmd = exec.Command("sudo", "ip", "link", "set", link.a.EndpointName, "up")
+		cmd = exec.Command("sudo", "ip", "link", "set", link.A.EndpointName, "up")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.b.Node.Kind != "bridge" { // if node B of link is not a bridge
+	if link.B.Node.Kind != "bridge" { // if node B of link is not a bridge
 		log.Debug("set interface up in container NS B")
-		cmd = exec.Command("sudo", "ip", "netns", "exec", link.b.Node.LongName, "ip", "link", "set", link.b.EndpointName, "up")
+		cmd = exec.Command("sudo", "ip", "netns", "exec", link.B.Node.LongName, "ip", "link", "set", link.B.EndpointName, "up")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	} else {
 		log.Debug("set interface up in bridge")
-		cmd = exec.Command("sudo", "ip", "link", "set", link.b.EndpointName, "up")
+		cmd = exec.Command("sudo", "ip", "link", "set", link.B.EndpointName, "up")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Fatalf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.a.Node.Kind != "bridge" { // if node A of link is not a bridge
+	if link.A.Node.Kind != "bridge" { // if node A of link is not a bridge
 		log.Debug("set RX, TX offload off on container A")
-		cmd = exec.Command("docker", "exec", link.a.Node.LongName, "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off")
+		cmd = exec.Command("docker", "exec", link.A.Node.LongName, "ethtool", "--offload", link.A.EndpointName, "rx", "off", "tx", "off")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
 		}
 	} else {
 		log.Debug("set RX, TX offload off on veth of the bridge interface")
-		cmd = exec.Command("sudo", "ethtool", "--offload", link.a.EndpointName, "rx", "off", "tx", "off")
+		cmd = exec.Command("sudo", "ethtool", "--offload", link.A.EndpointName, "rx", "off", "tx", "off")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.b.Node.Kind != "bridge" { // if node B of link is not a bridge
+	if link.B.Node.Kind != "bridge" { // if node B of link is not a bridge
 		log.Debug("set RX, TX offload off on container B")
-		cmd = exec.Command("docker", "exec", link.b.Node.LongName, "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
+		cmd = exec.Command("docker", "exec", link.B.Node.LongName, "ethtool", "--offload", link.B.EndpointName, "rx", "off", "tx", "off")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
 		}
 	} else {
 		log.Debug("set RX, TX offload off on veth of the bridge interface")
-		cmd = exec.Command("sudo", "ethtool", "--offload", link.b.EndpointName, "rx", "off", "tx", "off")
+		cmd = exec.Command("sudo", "ethtool", "--offload", link.B.EndpointName, "rx", "off", "tx", "off")
 		err = runCmd(cmd)
 		if err != nil {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
@@ -205,22 +205,22 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 
 // DeleteVirtualWiring deletes the virtual wiring
 func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
-	log.Info("Delete virtual wire :", link.a.Node.ShortName, link.b.Node.ShortName, link.a.EndpointName, link.b.EndpointName)
+	log.Info("Delete virtual wire :", link.A.Node.ShortName, link.B.Node.ShortName, link.A.EndpointName, link.B.EndpointName)
 
 	var cmd *exec.Cmd
 
-	if link.a.Node.Kind != "bridge" {
-		log.Debug("Delete netns: ", link.a.Node.LongName)
-		cmd = exec.Command("sudo", "ip", "netns", "del", link.a.Node.LongName)
+	if link.A.Node.Kind != "bridge" {
+		log.Debug("Delete netns: ", link.A.Node.LongName)
+		cmd = exec.Command("sudo", "ip", "netns", "del", link.A.Node.LongName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
 		}
 	}
 
-	if link.b.Node.Kind != "bridge" {
-		log.Debug("Delete netns: ", link.b.Node.LongName)
-		cmd = exec.Command("sudo", "ip", "netns", "del", link.b.Node.LongName)
+	if link.B.Node.Kind != "bridge" {
+		log.Debug("Delete netns: ", link.B.Node.LongName)
+		cmd = exec.Command("sudo", "ip", "netns", "del", link.B.Node.LongName)
 		err = runCmd(cmd)
 		if err != nil {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
