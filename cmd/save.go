@@ -1,14 +1,9 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/pkg/stdcopy"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-wim/container-lab/clab"
@@ -37,11 +32,7 @@ var saveCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		filter := filters.NewArgs()
-		filter.Add("label", fmt.Sprintf("containerlab=lab-%s", prefix))
-		containers, err := c.DockerClient.ContainerList(ctx, types.ContainerListOptions{
-			Filters: filter,
-		})
+		containers, err := c.ListContainers(ctx, []string{"containerlab=lab-" + prefix, "kind=srl"})
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
 		}
@@ -62,54 +53,10 @@ var saveCmd = &cobra.Command{
 					continue
 				}
 			}
-			id, err := c.DockerClient.ContainerExecCreate(ctx, cont.ID, types.ExecConfig{
-				User:         "root",
-				AttachStderr: true,
-				AttachStdout: true,
-				Cmd:          saveCmd,
-			})
+			stdout, stderr, err := c.Exec(ctx, cont.ID, saveCmd)
 			if err != nil {
-				log.Errorf("failed to create exec in container %s: %v", cont.Names, err)
-			}
-			log.Debugf("%s exec created %v", cont.Names, id)
-			rsp, err := c.DockerClient.ContainerExecAttach(ctx, id.ID, types.ExecConfig{
-				User:         "root",
-				AttachStderr: true,
-				AttachStdout: true,
-				Cmd:          saveCmd,
-			})
-			if err != nil {
-				log.Errorf("failed exec in container %s: %v", cont.Names, err)
-			}
-			defer rsp.Close()
-			log.Debugf("%s exec attached %v", cont.Names, id)
-
-			var outBuf, errBuf bytes.Buffer
-			outputDone := make(chan error)
-
-			go func() {
-				_, err = stdcopy.StdCopy(&outBuf, &errBuf, rsp.Reader)
-				outputDone <- err
-			}()
-
-			select {
-			case err := <-outputDone:
-				if err != nil {
-					log.Errorf("%s: command exec error: %v", cont.Names, err)
-					log.Errorf("%s: stdout: %s", cont.Names, outBuf.String())
-					log.Errorf("%s: stderr: %s", cont.Names, errBuf.String())
-					continue
-				}
-			case <-ctx.Done():
-				return
-			}
-			stdout, err := ioutil.ReadAll(&outBuf)
-			if err != nil {
-				log.Errorf("%s failed to read stdout buffer: %v", cont.Names, err)
-			}
-			stderr, err := ioutil.ReadAll(&errBuf)
-			if err != nil {
-				log.Errorf("%s failed to read stderr buffer: %v", cont.Names, err)
+				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
+				continue
 			}
 			if len(stdout) > 0 {
 				log.Infof("%s: stdout: %s", cont.Names, string(stdout))
