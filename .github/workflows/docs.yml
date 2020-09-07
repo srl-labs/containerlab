@@ -2,7 +2,9 @@ name: docs
 on:
   push:
     branches:
-      - master
+      - "refs/tags/v*"
+      - "docs-*"
+
 jobs:
   publish:
     runs-on: ubuntu-latest
