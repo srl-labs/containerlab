@@ -130,12 +130,16 @@ func (c *cLab) CreateCERT(shortDutName string) (err error) {
 			log.Fatalln(err)
 		}
 		type CERT struct {
-			Name   string
-			Prefix string
+			Name      string
+			LongName  string
+			Fqdn      string
+			Prefix    string
 		}
 		cert := CERT{
-			Name:   shortDutName,
-			Prefix: c.Conf.Prefix,
+			Name:     shortDutName,
+			LongName: node.LongName,
+			Fqdn:     node.Fqdn,
+			Prefix:   c.Conf.Prefix,
 		}
 		f, err := os.Create(dst)
 		if err != nil {
