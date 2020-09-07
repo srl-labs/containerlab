@@ -11,6 +11,9 @@
       "OU": "Container lab"
     }],
     "hosts": [
-      "{{.Name}}"
+      "{{.Name}}",
+      "{{.LongName}}",
+      "{{.Fqdn}}"
     ]
-  }
+}
+
