@@ -21,18 +21,17 @@ archives:
       #386: i386
       #amd64: x86_64
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"
 nfpms:
-  -
-    id: "containerlab"
+  - id: "containerlab"
     package_name: "containerlab"
     maintainer: "Wim Henderickx <wim.henderickx@nokia.com>"
     description: |
@@ -41,6 +40,7 @@ nfpms:
     license: "BSD 2"
     formats:
       - rpm
+      - deb
     bindir: /usr/bin
     files:
       ./dist/container-lab_linux_amd64/container-lab: "/usr/local/bin/containerlab"
