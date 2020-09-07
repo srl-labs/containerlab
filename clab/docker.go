@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
@@ -9,7 +10,9 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/pkg/stdcopy"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -258,4 +261,62 @@ func (c *cLab) InspectContainer(ctx context.Context, id string, node *Node) (err
 	log.Debug("Container mgmt IPv6: ", node.MgmtIPv6)
 	log.Debug("Container mgmt MAC: ", node.MgmtMac)
 	return nil
+}
+
+// ListContainers lists all containers with labels []string
+func (c *cLab) ListContainers(ctx context.Context, labels []string) ([]types.Container, error) {
+	filter := filters.NewArgs()
+	for _, l := range labels {
+		filter.Add("label", l)
+	}
+	return c.DockerClient.ContainerList(ctx, types.ContainerListOptions{
+		Filters: filter,
+	})
+}
+
+// Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error
+func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byte, error) {
+	cont, err := c.DockerClient.ContainerInspect(ctx, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	execID, err := c.DockerClient.ContainerExecCreate(ctx, id, types.ExecConfig{
+		User:         "root",
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          cmd,
+	})
+	if err != nil {
+		log.Errorf("failed to create exec in container %s: %v", cont.Name, err)
+	}
+	log.Debugf("%s exec created %v", cont.Name, id)
+	rsp, err := c.DockerClient.ContainerExecAttach(ctx, execID.ID, types.ExecConfig{
+		User:         "root",
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          cmd,
+	})
+	if err != nil {
+		log.Errorf("failed exec in container %s: %v", cont.Name, err)
+	}
+	defer rsp.Close()
+	log.Debugf("%s exec attached %v", cont.Name, id)
+
+	var outBuf, errBuf bytes.Buffer
+	outputDone := make(chan error)
+
+	go func() {
+		_, err = stdcopy.StdCopy(&outBuf, &errBuf, rsp.Reader)
+		outputDone <- err
+	}()
+
+	select {
+	case err := <-outputDone:
+		if err != nil {
+			return outBuf.Bytes(), errBuf.Bytes(), err
+		}
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
+	}
+	return outBuf.Bytes(), errBuf.Bytes(), nil
 }
