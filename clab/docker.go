@@ -288,6 +288,7 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 	})
 	if err != nil {
 		log.Errorf("failed to create exec in container %s: %v", cont.Name, err)
+		return nil, nil, err
 	}
 	log.Debugf("%s exec created %v", cont.Name, id)
 	rsp, err := c.DockerClient.ContainerExecAttach(ctx, execID.ID, types.ExecConfig{
@@ -298,6 +299,7 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 	})
 	if err != nil {
 		log.Errorf("failed exec in container %s: %v", cont.Name, err)
+		return nil, nil, err
 	}
 	defer rsp.Close()
 	log.Debugf("%s exec attached %v", cont.Name, id)
