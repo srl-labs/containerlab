@@ -72,6 +72,8 @@ var deployCmd = &cobra.Command{
 				log.Error(err)
 			}
 		}
+		// cleanup hanging resources if a deployment failed before
+		c.InitVirtualWiring()
 		// wire the links between the nodes based on cabling plan
 		for i, link := range c.Links {
 			if err = c.CreateVirtualWiring(i, link); err != nil {

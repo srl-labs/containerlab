@@ -78,6 +78,7 @@ var destroyCmd = &cobra.Command{
 				log.Error(err)
 			}
 		}
+		c.InitVirtualWiring()
 	},
 }
 
