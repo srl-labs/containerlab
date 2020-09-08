@@ -7,9 +7,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (c *cLab) InitVirtualWiring() {
+	log.Debug("delete dummyA eth link")
+	var cmd *exec.Cmd
+	var err error
+	cmd = exec.Command("sudo", "ip", "link", "del", "dummyA")
+	err = runCmd(cmd)
+	if err != nil {
+		log.Debugf("%s failed with: %v", cmd.String(), err)
+	}
+	cmd = exec.Command("sudo", "ip", "link", "del", "dummyB")
+	err = runCmd(cmd)
+	if err != nil {
+		log.Debugf("%s failed with: %v", cmd.String(), err)
+	}
+}
+
 // CreateVirtualWiring provides the virtual topology between the containers
 func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	log.Infof("Create virtual wire : %s, %s, %s, %s", link.A.Node.LongName, link.B.Node.LongName, link.A.EndpointName, link.B.EndpointName)
+
 
 	CreateDirectory("/run/netns/", 0755)
 
@@ -226,6 +243,7 @@ func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
 		}
 	}
+	
 	return nil
 }
 
