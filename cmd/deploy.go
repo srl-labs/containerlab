@@ -55,7 +55,7 @@ var deployCmd = &cobra.Command{
 		}
 		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Prefix})
 		if err != nil {
-			log.Fatalf("failed to generate rootCa", err)
+			log.Fatalf("failed to generate rootCa: %v", err)
 		}
 		if debug {
 			log.Debugf("root CSR: %s", string(rootCerts.Csr))
@@ -88,7 +88,7 @@ var deployCmd = &cobra.Command{
 				certIn,
 			)
 			if err != nil {
-				log.Errorf("failed to generate certificates for node %s", shortDutName, err)
+				log.Errorf("failed to generate certificates for node %s: %v", shortDutName, err)
 			}
 			if debug {
 				log.Debugf("%s CSR: %s", shortDutName, string(nodeCerts.Csr))
