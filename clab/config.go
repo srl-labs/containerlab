@@ -27,6 +27,12 @@ type dutInfo struct {
 	License string `yaml:"license"`
 }
 
+type link struct {
+	Endpoints []string          `yaml:"endpoints"`
+	Labels    map[string]string `yaml:"labels,omitempty"`
+}
+
+// Conf holds the configuration file input
 type Conf struct {
 	Prefix      string     `yaml:"Prefix"`
 	DockerInfo  dockerInfo `yaml:"Docker_info"`
@@ -36,9 +42,7 @@ type Conf struct {
 		KindDefaults   map[string]dutInfo `yaml:"kind_defaults"`
 		DutSpecifics   map[string]dutInfo `yaml:"dut_specifics"`
 	} `yaml:"Duts"`
-	Links []struct {
-		Endpoints []string `yaml:"endpoints"`
-	} `yaml:"Links"`
+	Links      []link `yaml:"Links"`
 	ConfigPath string `yaml:"config_path"`
 }
 
@@ -87,8 +91,12 @@ type Node struct {
 
 // Link is a struct that contains the information of a link between 2 containers
 type Link struct {
-	A *Endpoint
-	B *Endpoint
+	A      *Endpoint
+	B      *Endpoint
+	Kind   string
+	Type   string
+	Vlan   string
+	Labels map[string]string
 }
 
 // Endpoint is a sttruct that contains information of a link endpoint
@@ -162,8 +170,8 @@ func (c *cLab) ParseTopology() error {
 		idx++
 	}
 	for i, l := range c.Conf.Links {
-		// i represnts the endpoint integer and l provide the lik struct
-		c.Links[i] = c.NewLink(l.Endpoints)
+		// i represnts the endpoint integer and l provide the link struct
+		c.Links[i] = c.NewLink(l)
 	}
 	return nil
 }
@@ -217,7 +225,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	baseConfigDir := "/etc/containerlab/templates/srl/"
 
 	srlTypes := map[string]string{
-		"ixr6": "topology-7250IXR6.yml",
+		"ixr6":  "topology-7250IXR6.yml",
 		"ixr10": "topology-7250IXR10.yml",
 		"ixrd1": "topology-7220IXRD1.yml",
 		"ixrd2": "topology-7220IXRD2.yml",
@@ -276,12 +284,11 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 		node.Group = c.groupInitialization(&dut, node.Kind)
 		node.NodeType = c.typeInitialization(&dut, node.Kind)
 
-
 		if filename, found := srlTypes[node.NodeType]; found {
 			node.Topology = baseConfigDir + filename
 		} else {
 			keys := make([]string, 0, len(srlTypes))
-			for key, _ := range srlTypes {
+			for key := range srlTypes {
 				keys = append(keys, key)
 			}
 			panic("wrong node type; should be " + strings.Join(keys, ", "))
@@ -363,11 +370,31 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 }
 
 // NewLink initializes a new link object
-func (c *cLab) NewLink(e []string) *Link {
+func (c *cLab) NewLink(l link) *Link {
 	// initialize a new link
 	link := new(Link)
+	link.Kind = "wan"
+	link.Type = "p2p"
+	link.Vlan = "0"
 
-	for i, d := range e {
+	//for _, label := range l.Labels {
+	// Kind is either a backbone facing or customer facing interface
+	// wan is customer facing, client
+	if _, exists := l.Labels["kind"]; exists {
+		link.Kind = l.Labels["kind"]
+	}
+	// Type is either a lag or a p2p link
+	if _, exists := l.Labels["type"]; exists {
+		link.Type = l.Labels["type"]
+	}
+	// Vlan is a string which is 0 for untagged and >0 for tagged
+	if _, exists := l.Labels["vlan"]; exists {
+		link.Vlan = l.Labels["vlan"]
+	}
+	//}
+	link.Labels = l.Labels
+
+	for i, d := range l.Endpoints {
 		// i indicates the number and d presents the string, which need to be
 		// split in node and endpoint name
 		if i == 0 {
