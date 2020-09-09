@@ -4,172 +4,142 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 	"path"
-	"strings"
 	"text/template"
 
+	"github.com/cloudflare/cfssl/api/generator"
+	"github.com/cloudflare/cfssl/cli/genkey"
+	"github.com/cloudflare/cfssl/config"
+	"github.com/cloudflare/cfssl/csr"
+	"github.com/cloudflare/cfssl/initca"
+	"github.com/cloudflare/cfssl/signer"
+	"github.com/cloudflare/cfssl/signer/universal"
 	log "github.com/sirupsen/logrus"
 )
 
-func (c *cLab) cfssljson(b []byte, file string, node *Node) {
-	var input = map[string]interface{}{}
-	var err error
-	var cert string
-	var key string
-	var csr string
-
-	//log.Debugf("cfssl output:\n%s", string(b))
-	err = json.Unmarshal(b, &input)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse input: %v\n", err)
-		os.Exit(1)
-	}
-	if contents, ok := input["cert"]; ok {
-		cert = contents.(string)
-		if node != nil {
-			node.TLSCert = strings.Replace(cert, "\n", "\\n", -1)
-		} else {
-			for nm := range c.Nodes {
-				c.Nodes[nm].TLSAnchor = strings.Replace(cert, "\n", "\\n", -1)
-			}
-		}
-	}
-	createFile(file+".pem", cert)
-
-	if contents, ok := input["key"]; ok {
-		key = contents.(string)
-		if node != nil {
-			node.TLSKey = strings.Replace(key, "\n", "\\n", -1) // TODO: figure out how to transform key bytes before storing
-		}
-	}
-	createFile(file+"-key.pem", key)
-
-	if contents, ok := input["csr"]; ok {
-		csr = contents.(string)
-	}
-	createFile(file+".csr", csr)
-	if node != nil {
-		log.Debugf("node: %+v", node)
-	}
+type certificates struct {
+	Key  []byte
+	Csr  []byte
+	Cert []byte
 }
 
-// CreateRootCA creates a root CA
-func (c *cLab) CreateRootCA() (err error) {
+type CertInput struct {
+	Name     string
+	LongName string
+	Fqdn     string
+	Prefix   string
+}
+type CaRootInput struct {
+	Prefix string
+	Names  map[string]string // Not used right now
+}
+
+func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*certificates, error) {
 	log.Info("Creating root CA")
 	//create root CA diretcory
 	CreateDirectory(c.Dir.LabCA, 0755)
 
 	//create root CA root diretcory
 	CreateDirectory(c.Dir.LabCARoot, 0755)
-
-	var src string
-	var dst string
-
-	// copy topology to node specific directory in lab
-	src = "/etc/containerlab/templates/ca/csr-root-ca.json"
-	dst = c.Dir.LabCARoot + "/" + "csr-root-ca.json"
-	tpl, err := template.ParseFiles(src)
+	var err error
+	csrBuff := new(bytes.Buffer)
+	err = csrRootJsonTpl.Execute(csrBuff, input)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
-	type Prefix struct {
-		Prefix string
+	req := csr.CertificateRequest{
+		KeyRequest: csr.NewKeyRequest(),
 	}
-	prefix := Prefix{
-		Prefix: "containerlab" + "-" + c.Conf.Prefix,
-	}
-	f, err := os.Create(dst)
+	err = json.Unmarshal(csrBuff.Bytes(), &req)
 	if err != nil {
-		log.Error("create file: ", err)
-		return err
+		return nil, err
 	}
-	defer f.Close()
-
-	if err = tpl.Execute(f, prefix); err != nil {
-		panic(err)
-	}
-	log.Debug(fmt.Sprintf("CopyFile GoTemplate src %s -> dat %s succeeded\n", src, dst))
-
-	cmd := exec.Command("cfssl", "gencert", "-initca", dst)
-	o, err := cmd.Output()
+	//
+	var key, csrPEM, cert []byte
+	cert, csrPEM, key, err = initca.New(&req)
 	if err != nil {
-		log.Errorf("cmd.Run() failed with %s", err)
+		return nil, err
 	}
-	if c.debug {
-		jsCert := new(bytes.Buffer)
-		json.Indent(jsCert, o, "", "  ")
-		log.Debugf("'cfssl gencert -initca' output:\n%s", jsCert.String())
+	certs := &certificates{
+		Key:  key,
+		Csr:  csrPEM,
+		Cert: cert,
 	}
-
-	c.cfssljson(o, c.Dir.LabCARoot+"/"+"root-ca", nil)
-
-	return nil
+	c.writeCertFiles(certs, path.Join(c.Dir.LabCARoot, "root-ca"))
+	return certs, nil
 }
 
-// CreateCERT create a certificate
-func (c *cLab) CreateCERT(shortDutName string) (err error) {
-	node, ok := c.Nodes[shortDutName]
+func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput) (*certificates, error) {
+	node, ok := c.Nodes[input.Name]
 	if !ok {
-		return fmt.Errorf("unknown dut name: %s", shortDutName)
+		return nil, fmt.Errorf("node %s not found", input.Name)
 	}
-	if node.Kind != " bridge" {
-		log.Info("Creating CA for dut: ", shortDutName)
-		//create dut cert diretcory
-		CreateDirectory(c.Nodes[shortDutName].CertDir, 0755)
-
-		var src string
-		var dst string
-
-		// copy topology to node specific directory in lab
-		src = "/etc/containerlab/templates/ca/csr.json"
-		dst = path.Join(node.CertDir, "csr"+"-"+shortDutName+".json")
-		tpl, err := template.ParseFiles(src)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		type CERT struct {
-			Name      string
-			LongName  string
-			Fqdn      string
-			Prefix    string
-		}
-		cert := CERT{
-			Name:     shortDutName,
-			LongName: node.LongName,
-			Fqdn:     node.Fqdn,
-			Prefix:   c.Conf.Prefix,
-		}
-		f, err := os.Create(dst)
-		if err != nil {
-			log.Error("create file: ", err)
-			return err
-		}
-		defer f.Close()
-
-		if err = tpl.Execute(f, cert); err != nil {
-			panic(err)
-		}
-		log.Debug(fmt.Sprintf("CopyFile GoTemplate src %s -> dat %s succeeded\n", src, dst))
-
-		var cmd *exec.Cmd
-		rootCert := path.Join(c.Dir.LabCARoot, "root-ca.pem")
-		rootKey := path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
-		cmd = exec.Command("cfssl", "gencert", "-ca", rootCert, "-ca-key", rootKey, dst)
-		o, err := cmd.Output()
-		if err != nil {
-			log.Errorf("'cfssl gencert -ca rootCert -caKey rootKey' failed with: %v", err)
-		}
-		if c.debug {
-			jsCert := new(bytes.Buffer)
-			json.Indent(jsCert, o, "", "  ")
-			log.Debugf("'cfssl gencert -ca rootCert -caKey rootKey' output:\n%s", jsCert.String())
-		}
-
-		c.cfssljson(o, path.Join(node.CertDir, shortDutName), node)
-
+	CreateDirectory(node.CertDir, 0755)
+	var err error
+	csrBuff := new(bytes.Buffer)
+	err = csrJSONTpl.Execute(csrBuff, input)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	req := csr.CertificateRequest{
+		KeyRequest: csr.NewKeyRequest(),
+	}
+	err = json.Unmarshal(csrBuff.Bytes(), &req)
+	if err != nil {
+		return nil, err
+	}
+
+	var key, csrBytes []byte
+	gen := &csr.Generator{Validator: genkey.Validator}
+	csrBytes, key, err = gen.ProcessRequest(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	policy := &config.Signing{
+		Profiles: map[string]*config.SigningProfile{},
+		Default:  config.DefaultConfig(),
+	}
+	root := universal.Root{
+		Config: map[string]string{
+			"cert-file": ca,
+			"key-file":  caKey,
+		},
+		ForceRemote: false,
+	}
+	s, err := universal.NewSigner(root, policy)
+	if err != nil {
+		return nil, err
+	}
+
+	var cert []byte
+	signReq := signer.SignRequest{
+		Request: string(csrBytes),
+	}
+	cert, err = s.Sign(signReq)
+	if err != nil {
+		return nil, err
+	}
+	if len(signReq.Hosts) == 0 && len(req.Hosts) == 0 {
+		log.Warning(generator.CSRNoHostMessage)
+	}
+	//
+
+	node.TLSCert = string(cert)
+	node.TLSKey = string(key)
+	certs := &certificates{
+		Key:  key,
+		Csr:  csrBytes,
+		Cert: cert,
+	}
+	//
+	c.writeCertFiles(certs, path.Join(node.CertDir, input.Name))
+	return certs, nil
+}
+
+func (c *cLab) writeCertFiles(certs *certificates, filesPrefix string) {
+	createFile(filesPrefix+".pem", string(certs.Cert))
+	createFile(filesPrefix+"-key.pem", string(certs.Key))
+	createFile(filesPrefix+".csr", string(certs.Csr))
 }
