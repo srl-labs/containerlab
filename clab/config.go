@@ -28,8 +28,8 @@ type dutInfo struct {
 }
 
 type link struct {
-	Endpoints []string            `yaml:"endpoints"`
-	Labels    []map[string]string `yaml:"labels,omitempty"`
+	Endpoints []string          `yaml:"endpoints"`
+	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
 // Conf holds the configuration file input
@@ -96,7 +96,7 @@ type Link struct {
 	Kind   string
 	Type   string
 	Vlan   string
-	Labels []map[string]string
+	Labels map[string]string
 }
 
 // Endpoint is a sttruct that contains information of a link endpoint
@@ -377,21 +377,21 @@ func (c *cLab) NewLink(l link) *Link {
 	link.Type = "p2p"
 	link.Vlan = "0"
 
-	for _, label := range l.Labels {
-		// Kind is either a backbone facing or customer facing interface
-		// wan is customer facing, client
-		if _, exists := label["kind"]; exists {
-			link.Kind = label["kind"]
-		}
-		// Type is either a lag or a p2p link
-		if _, exists := label["type"]; exists {
-			link.Type = label["type"]
-		}
-		// Vlan is a string which is 0 for untagged and >0 for tagged
-		if _, exists := label["vlan"]; exists {
-			link.Vlan = label["vlan"]
-		}
+	//for _, label := range l.Labels {
+	// Kind is either a backbone facing or customer facing interface
+	// wan is customer facing, client
+	if _, exists := l.Labels["kind"]; exists {
+		link.Kind = l.Labels["kind"]
 	}
+	// Type is either a lag or a p2p link
+	if _, exists := l.Labels["type"]; exists {
+		link.Type = l.Labels["type"]
+	}
+	// Vlan is a string which is 0 for untagged and >0 for tagged
+	if _, exists := l.Labels["vlan"]; exists {
+		link.Vlan = l.Labels["vlan"]
+	}
+	//}
 	link.Labels = l.Labels
 
 	for i, d := range l.Endpoints {
