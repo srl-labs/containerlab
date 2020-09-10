@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"net"
+	"path"
+	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -47,8 +49,18 @@ var deployCmd = &cobra.Command{
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
 		// create root CA
-		if err = c.CreateRootCA(); err != nil {
-			log.Error(err)
+		tpl, err := template.ParseFiles(rootCaCsrTemplate)
+		if err != nil {
+			log.Fatalf("failed to parse rootCACsrTemplate: %v", err)
+		}
+		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Prefix})
+		if err != nil {
+			log.Fatalf("failed to generate rootCa: %v", err)
+		}
+		if debug {
+			log.Debugf("root CSR: %s", string(rootCerts.Csr))
+			log.Debugf("root Cert: %s", string(rootCerts.Cert))
+			log.Debugf("root Key: %s", string(rootCerts.Key))
 		}
 
 		// create bridge
@@ -56,14 +68,33 @@ var deployCmd = &cobra.Command{
 			log.Error(err)
 		}
 
+		certTpl, err := template.ParseFiles(certCsrTemplate)
+		if err != nil {
+			log.Fatalf("failed to parse certCsrTemplate: %v", err)
+		}
 		// create directory structure and container per node
 		for shortDutName, node := range c.Nodes {
 			// create CERT
-
-			if err = c.CreateCERT(shortDutName); err != nil {
-				log.Error(err)
+			certIn := clab.CertInput{
+				Name:     shortDutName,
+				LongName: node.LongName,
+				Fqdn:     node.Fqdn,
+				Prefix:   c.Conf.Prefix,
 			}
-
+			nodeCerts, err := c.GenerateCert(
+				path.Join(c.Dir.LabCARoot, "root-ca.pem"),
+				path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
+				certTpl,
+				certIn,
+			)
+			if err != nil {
+				log.Errorf("failed to generate certificates for node %s: %v", shortDutName, err)
+			}
+			if debug {
+				log.Debugf("%s CSR: %s", shortDutName, string(nodeCerts.Csr))
+				log.Debugf("%s Cert: %s", shortDutName, string(nodeCerts.Cert))
+				log.Debugf("%s Key: %s", shortDutName, string(nodeCerts.Key))
+			}
 			if err = c.CreateNodeDirStructure(node, shortDutName); err != nil {
 				log.Error(err)
 			}
@@ -79,7 +110,6 @@ var deployCmd = &cobra.Command{
 			if err = c.CreateVirtualWiring(i, link); err != nil {
 				log.Error(err)
 			}
-
 		}
 		// generate graph of the lab topology
 		if graph {
