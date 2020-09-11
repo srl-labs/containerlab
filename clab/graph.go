@@ -1,93 +1,93 @@
 package clab
 
 import (
-	"bytes"
+	"fmt"
+	"os/exec"
 	"strings"
 
-	"github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
+	"github.com/awalterschulze/gographviz"
 	log "github.com/sirupsen/logrus"
 )
 
-// GenerateGraph generates a graph for the lab topology
+var g *gographviz.Graph
+
+// GenerateGraph generates a graph of the lab topology
 func (c *cLab) GenerateGraph(topo string) error {
-	h := graphviz.New()
-	graph, err := h.Graph()
-	if err != nil {
-		log.Fatal(err)
+	log.Info("Generating lab graph ...")
+	g = gographviz.NewGraph()
+	if err := g.SetName(c.FileInfo.shortname); err != nil {
+		return err
 	}
-	defer func() {
-		if err := graph.Close(); err != nil {
-			log.Fatal(err)
-		}
-		h.Close()
-	}()
+	if err := g.SetDir(false); err != nil {
+		return err
+	}
 
-	graph.Attr(1, "style", "filled")  // kind 1 == node defaults
-	graph.Attr(1, "fillcolor", "red") // kind 1 == node defaults
+	var attr map[string]string
 
-	var graphNodeMap = make(map[string]*cgraph.Node)
-
-	// Create Nodes
+	// Process the Nodes
 	for nodeName, node := range c.Nodes {
-		n, err := graph.CreateNode(nodeName)
-		if err != nil {
-			log.Fatal(err)
-		}
-		n.SetLabel(nodeName)
-		n.SetXLabel(node.Kind)
-		n.SetGroup(node.Group)
+		attr = make(map[string]string)
+		attr["color"] = "red"
+		attr["style"] = "filled"
+		attr["fillcolor"] = "red"
 
-		if strings.Contains(node.Kind, "srl") {
-			n.SetFillColor("green")
-		}
+		attr["label"] = nodeName
+		attr["xlabel"] = node.Kind
+		attr["group"] = node.Group
+
 		if strings.Contains(node.Group, "bb") {
-			n.SetFillColor("blue")
-			n.SetFontColor("white")
+			attr["fillcolor"] = "blue"
+			attr["color"] = "blue"
+			attr["fontcolor"] = "white"
+		} else if strings.Contains(node.Kind, "srl") {
+			attr["fillcolor"] = "green"
+			attr["color"] = "green"
+			attr["fontcolor"] = "black"
 		}
 
-		graphNodeMap[nodeName] = n
+		if err := g.AddNode(c.FileInfo.shortname, node.ShortName, attr); err != nil {
+			return err
+		}
+
 	}
 
-	// Create Edges between the Nodes
-	graph.Attr(2, "fillcolor", "green") // kind 2 == edge defaults
-	graph.Attr(2, "arrowhead", "none")  // kind 2 == edge defaults
-	graph.Attr(2, "arrowtail", "none")  // kind 2 == edge defaults
+	// Process the links inbetween Nodes
 	for _, link := range c.Links {
-		aEnd, ok := graphNodeMap[link.A.Node.ShortName]
-		if !ok {
-			log.Fatal("Node ", link.A.EndpointName, " does not exist!")
+		attr = make(map[string]string)
+		attr["color"] = "black"
+
+		if (strings.Contains(link.A.Node.ShortName, "client")) || (strings.Contains(link.B.Node.ShortName, "client")) {
+			attr["color"] = "blue"
 		}
-		bEnd, ok := graphNodeMap[link.B.Node.ShortName]
-		if !ok {
-			log.Fatal("Node ", link.B.EndpointName, " does not exist!")
+		if err := g.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName, false, attr); err != nil {
+			return err
 		}
-		e, err := graph.CreateEdge("", aEnd, bEnd)
-		if err != nil {
-			log.Fatal(err)
-		}
-		_ = e
-		// Print node and interface name in edge label
-		//e.SetLabel(link.A.Node.ShortName + " " + link.A.EndpointName + "\n" + link.B.Node.ShortName + " " + link.B.EndpointName)
+		//log.Info(link.A.Node.ShortName, " <-> ", link.B.Node.ShortName)
 	}
 
 	// create graph directory
 	CreateDirectory(c.Dir.Lab, 0755)
 	CreateDirectory(c.Dir.LabGraph, 0755)
 
-	// write .dot file
-	var buf bytes.Buffer
-	if err := h.Render(graph, "dot", &buf); err != nil {
-		log.Fatal(err)
-	}
-	//fmt.Println(buf.String())
-	dotFile := c.Dir.LabGraph + "/" + c.FileInfo.name + ".dot"
-	createFile(dotFile, buf.String())
+	// create graph filename
+	dotfile := c.Dir.LabGraph + "/" + c.FileInfo.name + ".dot"
+	createFile(dotfile, g.String())
 
-	pngFile := c.Dir.LabGraph + "/" + c.FileInfo.name + ".png"
-	if err := h.RenderFilename(graph, graphviz.PNG, pngFile); err != nil {
-		log.Fatal(err)
+	pngfile := c.Dir.LabGraph + "/" + c.FileInfo.name + ".png"
+
+	generatePngFromDot(dotfile, pngfile)
+	log.Info("Done generating lab graph!")
+	return nil
+}
+
+func generatePngFromDot(dotfile string, outfile string) (err error) {
+	var b []byte
+
+	b, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
+	if err != nil {
+		log.Error("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
+		return fmt.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
 	}
-	log.Info("Done")
+	_ = b
 	return nil
 }

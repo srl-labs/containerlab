@@ -30,3 +30,5 @@ license.key
 lab-wan
 lab-wan/*
 labs/
+container-lab
+.vscode/

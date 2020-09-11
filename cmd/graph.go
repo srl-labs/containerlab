@@ -18,18 +18,15 @@ var graphCmd = &cobra.Command{
 			log.Info(err)
 		}
 
-		log.Info("Getting topology information ...")
 		if err = c.GetTopology(&topo); err != nil {
 			log.Fatal(err)
 		}
 
 		// Parse topology information
-		log.Info("Parsing topology information ...")
 		if err = c.ParseTopology(); err != nil {
 			log.Fatal(err)
 		}
 
-		log.Info("Generating lab graph ...")
 		if err = c.GenerateGraph(topo); err != nil {
 			log.Error(err)
 		}
