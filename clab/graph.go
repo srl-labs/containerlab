@@ -81,13 +81,10 @@ func (c *cLab) GenerateGraph(topo string) error {
 }
 
 func generatePngFromDot(dotfile string, outfile string) (err error) {
-	var b []byte
-
-	b, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
+	_, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
-		log.Error("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
+		log.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
 		return fmt.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
 	}
-	_ = b
 	return nil
 }
