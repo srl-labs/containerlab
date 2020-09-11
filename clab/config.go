@@ -93,9 +93,6 @@ type Node struct {
 type Link struct {
 	A      *Endpoint
 	B      *Endpoint
-	Kind   string
-	Type   string
-	Vlan   string
 	Labels map[string]string
 }
 
@@ -373,25 +370,6 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 func (c *cLab) NewLink(l link) *Link {
 	// initialize a new link
 	link := new(Link)
-	link.Kind = "wan"
-	link.Type = "p2p"
-	link.Vlan = "0"
-
-	//for _, label := range l.Labels {
-	// Kind is either a backbone facing or customer facing interface
-	// wan is customer facing, client
-	if _, exists := l.Labels["kind"]; exists {
-		link.Kind = l.Labels["kind"]
-	}
-	// Type is either a lag or a p2p link
-	if _, exists := l.Labels["type"]; exists {
-		link.Type = l.Labels["type"]
-	}
-	// Vlan is a string which is 0 for untagged and >0 for tagged
-	if _, exists := l.Labels["vlan"]; exists {
-		link.Vlan = l.Labels["vlan"]
-	}
-	//}
 	link.Labels = l.Labels
 
 	for i, d := range l.Endpoints {
