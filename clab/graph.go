@@ -72,14 +72,20 @@ func (c *cLab) GenerateGraph(topo string) error {
 	// create graph filename
 	dotfile := c.Dir.LabGraph + "/" + c.FileInfo.name + ".dot"
 	createFile(dotfile, g.String())
+	log.Info("Created", dotfile, "!")
 
 	pngfile := c.Dir.LabGraph + "/" + c.FileInfo.name + ".png"
 
-	generatePngFromDot(dotfile, pngfile)
+	// Only try to create png
+	if commandExists("dot") {
+		generatePngFromDot(dotfile, pngfile)
+		log.Info("Created ", pngfile)
+	}
 	log.Info("Done generating lab graph!")
 	return nil
 }
 
+// generatePngFromDot generated PNG from the provided dot file
 func generatePngFromDot(dotfile string, outfile string) (err error) {
 	_, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
@@ -87,4 +93,15 @@ func generatePngFromDot(dotfile string, outfile string) (err error) {
 		return fmt.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
 	}
 	return nil
+}
+
+// commandExists checks for the existence of the given command on the system
+func commandExists(cmd string) bool {
+	_, err := exec.LookPath(cmd)
+	if err == nil {
+		log.Debugf("executable %s exists!", cmd)
+	} else {
+		log.Debugf("executable %s doesn't exist!", cmd)
+	}
+	return err == nil
 }

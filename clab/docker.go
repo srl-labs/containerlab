@@ -100,6 +100,7 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to disable Checksum Offloading on docker bridge: %v", err)
 	}
+	log.Debugf("%s", string(b))
 	//if err = sysctl.Set("net.ipv4.conf.default.rp_filter", "0"); err != nil {
 	//	return err
 	//}

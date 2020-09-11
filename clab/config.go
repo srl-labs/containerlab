@@ -288,7 +288,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 			for key := range srlTypes {
 				keys = append(keys, key)
 			}
-			panic("wrong node type; should be " + strings.Join(keys, ", "))
+			log.Fatalf("wrong node type. '%s' doesn't exist. should be any of %s", node.NodeType, strings.Join(keys, ", "))
 		}
 
 		// initialize specifc container information
