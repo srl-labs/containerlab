@@ -29,16 +29,28 @@ Containerlab is build in [golang](https://golang.org) for people interested in t
     /usr/local/bin/cfssljson
     echo "cfssl installed"
     ```
+* For the generation of png images out of the topology files graphviz needs to be installed.
+
+  If you don't want to install graphviz, just create the .dot file, the description of the graph and use an online graphviz tool [e.g. https://dreampuf.github.io/GraphvizOnline] to render the picture.
+    ```
+     # Debian / Ubuntu
+     sudo apt-get install graphviz
+
+     # CentOS / Fedora / RedHat
+     sudo yum install graphviz
+    ```
+  
 * load the container images in docker locally
+
 
 ### Using rpm installation
 
 ```bash
 # install the rpm with yum without downloading the RPM
-yum -y https://github.com/srl-wim/container-lab/releases/download/v0.2.0/container-lab_0.2.0_linux_amd64.rpm
+yum -y https://github.com/srl-wim/container-lab/releases/download/v0.4.0/container-lab_0.4.0_linux_amd64.rpm
 
 # or when rpm is downloaded to the host
-sudo rpm -i container-lab_v0.2.0-next_linux_amd64.rpm
+sudo rpm -i container-lab_0.4.0-next_linux_amd64.rpm
 ```
 
 ## Usage
@@ -120,8 +132,10 @@ Usage:
 Available Commands:
   deploy      deploy a lab
   destroy     destroy a lab
+  exec        execute a command on one or multiple containers
   graph       generate a topology graph
   help        Help about any command
+  save        save containers configuration
   version     show containerlab version
 
 Flags:
@@ -134,7 +148,7 @@ Use "containerlab [command] --help" for more information about a command.
 Example:
 
 ```
-./containerlab deploy -t labs/wan-topo.yml 
+./containerlab deploy -t lab-examples/wan-topo.yml 
 ```
 
 ### Destroy the lab
@@ -142,23 +156,20 @@ Example:
 Example:
 
 ```
-./containerlab destroy -t labs/wan-topo.yml
+./containerlab destroy -t lab-examples/wan-topo.yml
 ```
 
 ### Generating a graph for the lab
 
-containerlab has the option to generate a topology graph using [graphviz](https://graphviz.org) that can help showing the topology in a graph.
+containerlab has the option to generate a topology graph based on [graphviz](https://graphviz.org), which can be utilized to generate a picture of the topology.
 
 ```
-./containerlab -g
+./containerlab graph -t lab-examples/wan-topo.yml
 ```
 
-this commands generates some files in the lab topology
+If graphviz is installed on your system (see pre-requisites), this will generate the graphviz .dot file as well as a final png file which can be viewed in any image viewer.
+If the graphviz executabe `dot` is not found on your system, just the `<topology_name>.dot` file is created which can then be transformed into an image via e.g. this website https://dreampuf.github.io/GraphvizOnline.
 
-```
-dot -Tps graph/wan-topo.dot -o graph/wan-topo.ps
-dot -Tpng -Gdpi=300 graph/wan-topo.dot > graph/wan-topo.png
-```
 
 ## logging in into the containers
 
