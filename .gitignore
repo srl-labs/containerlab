@@ -32,3 +32,4 @@ lab-wan/*
 labs/
 container-lab
 .vscode/
+.DS_Store
