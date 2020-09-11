@@ -13,15 +13,16 @@ import (
 )
 
 var format string
+var details bool
 
 type containerDetails struct {
-	Name        string
-	Image       string
-	Kind        string
-	Group       string
-	State       string
-	IPv4Address string
-	IPv6Address string
+	Name        string `json:"name,omitempty"`
+	Image       string `json:"image,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Group       string `json:"group,omitempty"`
+	State       string `json:"state,omitempty"`
+	IPv4Address string `json:"ipv4_address,omitempty"`
+	IPv6Address string `json:"ipv6_address,omitempty"`
 }
 type BridgeDetails struct{}
 
@@ -57,7 +58,7 @@ var inspectCmd = &cobra.Command{
 			log.Println("no containers found")
 			return
 		}
-		if format == "json" {
+		if details {
 			b, err := json.MarshalIndent(containers, "", "  ")
 			if err != nil {
 				log.Fatalf("failed to marshal containers struct: %v", err)
@@ -65,7 +66,7 @@ var inspectCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return
 		}
-		details := make([]containerDetails, 0, len(containers))
+		contDetails := make([]containerDetails, 0, len(containers))
 		for _, cont := range containers {
 			cdet := containerDetails{
 				Image: cont.Image,
@@ -95,9 +96,17 @@ var inspectCmd = &cobra.Command{
 					}
 				}
 			}
-			details = append(details, cdet)
+			contDetails = append(contDetails, cdet)
 		}
-		tabData := toTableData(details)
+		if format == "json" {
+			b, err := json.MarshalIndent(contDetails, "", "  ")
+			if err != nil {
+				log.Fatalf("failed to marshal container details: %v", err)
+			}
+			fmt.Println(string(b))
+			return
+		}
+		tabData := toTableData(contDetails)
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
 			"Name",
@@ -105,9 +114,10 @@ var inspectCmd = &cobra.Command{
 			"Kind",
 			"Group",
 			"State",
-			"IPv4Address",
-			"IPv6Address",
+			"IPv4 Address",
+			"IPv6 Address",
 		})
+		table.SetAutoFormatHeaders(false)
 		table.SetAutoWrapText(false)
 		table.AppendBulk(tabData)
 		table.Render()
@@ -119,6 +129,7 @@ func init() {
 
 	inspectCmd.Flags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
 	inspectCmd.Flags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
+	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&format, "format", "f", "", "lab name prefix")
 }
 
