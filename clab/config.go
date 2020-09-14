@@ -83,6 +83,7 @@ type Node struct {
 	MgmtIPv4   string
 	MgmtIPv6   string
 	MgmtMac    string
+	AS         uint32
 
 	TLSCert   string
 	TLSKey    string
