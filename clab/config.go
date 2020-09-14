@@ -19,12 +19,13 @@ type dockerInfo struct {
 }
 
 type dutInfo struct {
-	Kind    string `yaml:"kind"`
-	Group   string `yaml:"group"`
-	Type    string `yaml:"type"`
-	Config  string `yaml:"config"`
-	Image   string `yaml:"image"`
-	License string `yaml:"license"`
+	Kind     string `yaml:"kind"`
+	Group    string `yaml:"group"`
+	Type     string `yaml:"type"`
+	Config   string `yaml:"config"`
+	Image    string `yaml:"image"`
+	License  string `yaml:"license"`
+	Position string `yaml:"position"`
 }
 
 type link struct {
@@ -64,6 +65,7 @@ type Node struct {
 	Kind       string
 	Config     string
 	NodeType   string
+	Position   string
 	License    string
 	Image      string
 	Topology   string
@@ -218,6 +220,15 @@ func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
 	return c.Conf.Duts.KindDefaults[kind].License
 }
 
+func (c *cLab) positionInitialization(dut *dutInfo, kind string) string {
+	if dut.Position != "" {
+		return dut.Position
+	} else if c.Conf.Duts.KindDefaults[kind].Position != "" {
+		return c.Conf.Duts.KindDefaults[kind].Position
+	}
+	return c.Conf.Duts.GlobalDefaults.Position
+}
+
 // NewNode initializes a new node object
 func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	baseConfigDir := "/etc/containerlab/templates/srl/"
@@ -239,10 +250,10 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
 
-	// initialize the node with global parameters
-	// Kind initialization is either coming from dut_specific or from global
-	// normalize the data to lower case to compare
-	node.Kind = strings.ToLower(c.kindInitialization(&dut))
+		// initialize the node with global parameters
+		// Kind initialization is either coming from dut_specific or from global
+		// normalize the data to lower case to compare
+		node.Kind = strings.ToLower(c.kindInitialization(&dut))
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
@@ -250,6 +261,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 		//node.License = t.SRLLicense
 		node.Image = c.imageInitialization(&dut, node.Kind)
 		//node.NodeType = "ixr6"
+		node.Position = c.positionInitialization(&dut, node.Kind)
 
 		// initialize specifc container information
 		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker"
@@ -281,6 +293,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 		node.Image = c.imageInitialization(&dut, node.Kind)
 		node.Group = c.groupInitialization(&dut, node.Kind)
 		node.NodeType = c.typeInitialization(&dut, node.Kind)
+		node.Position = c.positionInitialization(&dut, node.Kind)
 
 		if filename, found := srlTypes[node.NodeType]; found {
 			node.Topology = baseConfigDir + filename
@@ -355,11 +368,13 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 		node.Image = c.imageInitialization(&dut, node.Kind)
 		node.Group = c.groupInitialization(&dut, node.Kind)
 		node.NodeType = c.typeInitialization(&dut, node.Kind)
+		node.Position = c.positionInitialization(&dut, node.Kind)
 
 		node.Cmd = "/bin/bash"
 
 	case "bridge":
 		node.Group = c.groupInitialization(&dut, node.Kind)
+		node.Position = c.positionInitialization(&dut, node.Kind)
 
 	default:
 		panic("Node Kind, OS is not properly initialized; should be provided in Duts.dut_specifics.kind parameters or Duts.global_defaults.kind")
