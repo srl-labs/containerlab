@@ -23,17 +23,21 @@ type certificates struct {
 	Cert []byte
 }
 
+// CertInput struct
 type CertInput struct {
 	Name     string
 	LongName string
 	Fqdn     string
 	Prefix   string
 }
+
+// CaRootInput struct
 type CaRootInput struct {
 	Prefix string
 	Names  map[string]string // Not used right now
 }
 
+// GenerateRootCa function
 func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*certificates, error) {
 	log.Info("Creating root CA")
 	//create root CA diretcory
