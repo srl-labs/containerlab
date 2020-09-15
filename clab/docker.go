@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -143,6 +144,7 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 // CreateContainer creates a docker container
 func (c *cLab) CreateContainer(ctx context.Context, shortDutName string, node *Node) (err error) {
 	log.Info("Create container:", shortDutName)
+
 	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	labels := map[string]string{
@@ -187,8 +189,11 @@ func (c *cLab) CreateContainer(ctx context.Context, shortDutName string, node *N
 	if err != nil {
 		return err
 	}
-
-	return c.InspectContainer(ctx, node.LongName, node)
+	err = c.InspectContainer(ctx, node.LongName, node)
+	if err != nil {
+		return err
+	}
+	return createContainerNS(node.Pid, node.LongName)
 }
 
 // StartContainer starts a docker container
@@ -319,4 +324,11 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 		return nil, nil, ctx.Err()
 	}
 	return outBuf.Bytes(), errBuf.Bytes(), nil
+}
+func createContainerNS(pid int, containerName string) error {
+	CreateDirectory("/run/netns/", 0755)
+	src := "/proc/" + strconv.Itoa(pid) + "/ns/net"
+	dst := "/run/netns/" + containerName
+	cmd := exec.Command("sudo", "ln", "-s", src, dst)
+	return runCmd(cmd)
 }

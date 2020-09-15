@@ -2,7 +2,6 @@ package clab
 
 import (
 	"os/exec"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,35 +26,7 @@ func (c *cLab) InitVirtualWiring() {
 func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	log.Infof("Create virtual wire : %s, %s, %s, %s", link.A.Node.LongName, link.B.Node.LongName, link.A.EndpointName, link.B.EndpointName)
 
-
-	CreateDirectory("/run/netns/", 0755)
-
-	var src, dst string
 	var cmd *exec.Cmd
-
-	if link.A.Node.Kind != "bridge" { // if the node is not a bridge
-		log.Debug("Create link to /run/netns/ ", link.A.Node.LongName)
-		src = "/proc/" + strconv.Itoa(link.A.Node.Pid) + "/ns/net"
-		dst = "/run/netns/" + link.A.Node.LongName
-		//err = linkFile(src, dst)
-		cmd = exec.Command("sudo", "ln", "-s", src, dst)
-		err = runCmd(cmd)
-		if err != nil {
-			log.Debugf("%s failed with: %v", cmd.String(), err)
-		}
-	}
-
-	if link.B.Node.Kind != "bridge" { // if the node is not a bridge
-		log.Debug("Create link to /run/netns/ ", link.B.Node.LongName)
-		src = "/proc/" + strconv.Itoa(link.B.Node.Pid) + "/ns/net"
-		dst = "/run/netns/" + link.B.Node.LongName
-		//err = linkFile(src, dst)
-		cmd = exec.Command("sudo", "ln", "-s", src, dst)
-		err = runCmd(cmd)
-		if err != nil {
-			log.Debugf("%s failed with: %v", cmd.String(), err)
-		}
-	}
 
 	if link.A.Node.Kind != "bridge" && link.B.Node.Kind != "bridge" { // none of the 2 nodes is a bridge
 		log.Debug("create dummy veth pair")
@@ -243,7 +214,7 @@ func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
 			log.Debugf("%s failed with: %v", cmd.String(), err)
 		}
 	}
-	
+
 	return nil
 }
 
