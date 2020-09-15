@@ -411,14 +411,13 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		panic(fmt.Sprintf("endpoint %s has wrong syntax", e))
 	}
 	// search the node pointer based in the name of the split function
-	found := false
 	for name, n := range c.Nodes {
 		if name == split[0] {
 			endpoint.Node = n
-			found = true
+			break
 		}
 	}
-	if !found {
+	if endpoint.Node == nil {
 		log.Fatalf("Not all nodes are specified in the duts section or the names don't match in the duts/endpoint section: %s", split[0])
 	}
 
