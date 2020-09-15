@@ -74,6 +74,9 @@ var deployCmd = &cobra.Command{
 		}
 		// create directory structure and container per node
 		for shortDutName, node := range c.Nodes {
+			if node.Kind == "bridge" {
+				continue
+			}
 			// create CERT
 			certIn := clab.CertInput{
 				Name:     shortDutName,
