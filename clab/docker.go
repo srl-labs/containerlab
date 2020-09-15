@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -142,56 +143,57 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 
 // CreateContainer creates a docker container
 func (c *cLab) CreateContainer(ctx context.Context, shortDutName string, node *Node) (err error) {
-	if node.Kind != "bridge" {
-		log.Info("Create container:", shortDutName)
-		nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		labels := map[string]string{
-			"containerlab":         "lab-" + c.Conf.Prefix,
-			"lab-" + c.Conf.Prefix: shortDutName,
-		}
-		if node.Kind != "" {
-			labels["kind"] = node.Kind
-		}
-		if node.NodeType != "" {
-			labels["type"] = node.NodeType
-		}
-		if node.Group != "" {
-			labels["group"] = node.Group
-		}
-		cont, err := c.DockerClient.ContainerCreate(nctx,
-			&container.Config{
-				Image:        node.Image,
-				Cmd:          strings.Fields(node.Cmd),
-				Env:          node.Env,
-				AttachStdout: true,
-				AttachStderr: true,
-				Hostname:     shortDutName,
-				Volumes:      node.Volumes,
-				Tty:          true,
-				User:         node.User,
-				Labels:       labels,
-			}, &container.HostConfig{
-				Binds:       node.Binds,
-				Sysctls:     node.Sysctls,
-				Privileged:  true,
-				NetworkMode: container.NetworkMode(c.Conf.DockerInfo.Bridge),
-			}, nil, node.LongName)
-		if err != nil {
-			return err
-		}
-		log.Debug(fmt.Sprintf("Container create response: %v", c))
+	log.Info("Create container:", shortDutName)
 
-		node.Cid = cont.ID
-
-		err = c.StartContainer(ctx, node.LongName, node)
-		if err != nil {
-			return err
-		}
-
-		return c.InspectContainer(ctx, node.LongName, node)
+	nctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	labels := map[string]string{
+		"containerlab":         "lab-" + c.Conf.Prefix,
+		"lab-" + c.Conf.Prefix: shortDutName,
 	}
-	return nil
+	if node.Kind != "" {
+		labels["kind"] = node.Kind
+	}
+	if node.NodeType != "" {
+		labels["type"] = node.NodeType
+	}
+	if node.Group != "" {
+		labels["group"] = node.Group
+	}
+	cont, err := c.DockerClient.ContainerCreate(nctx,
+		&container.Config{
+			Image:        node.Image,
+			Cmd:          strings.Fields(node.Cmd),
+			Env:          node.Env,
+			AttachStdout: true,
+			AttachStderr: true,
+			Hostname:     shortDutName,
+			Volumes:      node.Volumes,
+			Tty:          true,
+			User:         node.User,
+			Labels:       labels,
+		}, &container.HostConfig{
+			Binds:       node.Binds,
+			Sysctls:     node.Sysctls,
+			Privileged:  true,
+			NetworkMode: container.NetworkMode(c.Conf.DockerInfo.Bridge),
+		}, nil, node.LongName)
+	if err != nil {
+		return err
+	}
+	log.Debug(fmt.Sprintf("Container create response: %v", c))
+
+	node.Cid = cont.ID
+
+	err = c.StartContainer(ctx, node.LongName, node)
+	if err != nil {
+		return err
+	}
+	err = c.InspectContainer(ctx, node.LongName, node)
+	if err != nil {
+		return err
+	}
+	return createContainerNS(node.Pid, node.LongName)
 }
 
 // StartContainer starts a docker container
@@ -322,4 +324,11 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 		return nil, nil, ctx.Err()
 	}
 	return outBuf.Bytes(), errBuf.Bytes(), nil
+}
+func createContainerNS(pid int, containerName string) error {
+	CreateDirectory("/run/netns/", 0755)
+	src := "/proc/" + strconv.Itoa(pid) + "/ns/net"
+	dst := "/run/netns/" + containerName
+	cmd := exec.Command("sudo", "ln", "-s", src, dst)
+	return runCmd(cmd)
 }
