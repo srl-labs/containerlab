@@ -10,6 +10,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const baseConfigDir = "/etc/containerlab/templates/srl/"
+
+var srlTypes = map[string]string{
+	"ixr6":  "topology-7250IXR6.yml",
+	"ixr10": "topology-7250IXR10.yml",
+	"ixrd1": "topology-7220IXRD1.yml",
+	"ixrd2": "topology-7220IXRD2.yml",
+	"ixrd3": "topology-7220IXRD3.yml",
+}
+
 type dockerInfo struct {
 	Bridge      string `yaml:"bridge"`
 	Ipv4Subnet  string `yaml:"ipv4_subnet"`
@@ -166,7 +176,7 @@ func (c *cLab) ParseTopology() error {
 	// initialize the Node information from the topology map
 	idx := 0
 	for dut, data := range c.Conf.Duts.DutSpecifics {
-		c.Nodes[dut] = c.NewNode(dut, data, idx)
+		c.NewNode(dut, data, idx)
 		idx++
 	}
 	for i, l := range c.Conf.Links {
@@ -230,17 +240,7 @@ func (c *cLab) positionInitialization(dut *dutInfo, kind string) string {
 }
 
 // NewNode initializes a new node object
-func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
-	baseConfigDir := "/etc/containerlab/templates/srl/"
-
-	srlTypes := map[string]string{
-		"ixr6":  "topology-7250IXR6.yml",
-		"ixr10": "topology-7250IXR10.yml",
-		"ixrd1": "topology-7220IXRD1.yml",
-		"ixrd2": "topology-7220IXRD2.yml",
-		"ixrd3": "topology-7220IXRD3.yml",
-	}
-
+func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
@@ -250,10 +250,10 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
 
-		// initialize the node with global parameters
-		// Kind initialization is either coming from dut_specific or from global
-		// normalize the data to lower case to compare
-		node.Kind = strings.ToLower(c.kindInitialization(&dut))
+	// initialize the node with global parameters
+	// Kind initialization is either coming from dut_specific or from global
+	// normalize the data to lower case to compare
+	node.Kind = strings.ToLower(c.kindInitialization(&dut))
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
@@ -346,10 +346,10 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 
 		node.Volumes = make(map[string]struct{})
 		node.Volumes = map[string]struct{}{
-			node.Mounts["license"].Destination:  struct{}{},
-			node.Mounts["config"].Destination:   struct{}{},
-			node.Mounts["envConf"].Destination:  struct{}{},
-			node.Mounts["topology"].Destination: struct{}{},
+			node.Mounts["license"].Destination:  {},
+			node.Mounts["config"].Destination:   {},
+			node.Mounts["envConf"].Destination:  {},
+			node.Mounts["topology"].Destination: {},
 		}
 
 		bindLicense := node.Mounts["license"].Source + ":" + node.Mounts["license"].Destination + ":" + "ro"
@@ -379,7 +379,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) *Node {
 	default:
 		panic("Node Kind, OS is not properly initialized; should be provided in Duts.dut_specifics.kind parameters or Duts.global_defaults.kind")
 	}
-	return node
+	c.Nodes[dutName] = node
 }
 
 // NewLink initializes a new link object
