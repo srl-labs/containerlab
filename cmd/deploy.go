@@ -130,10 +130,8 @@ var deployCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
 	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
 	deployCmd.Flags().StringVarP(&bridge, "bridge", "b", "", "docker network name for management")
-	deployCmd.Flags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
 	deployCmd.Flags().IPNetVarP(&ipv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&ipv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 }
