@@ -38,4 +38,6 @@ func Execute() {
 func init() {
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
+	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
+	rootCmd.PersistentFlags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
 }

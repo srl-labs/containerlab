@@ -70,6 +70,4 @@ var saveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(saveCmd)
-	saveCmd.Flags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
-	saveCmd.Flags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
 }

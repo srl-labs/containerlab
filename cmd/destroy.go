@@ -84,6 +84,4 @@ var destroyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(destroyCmd)
-	destroyCmd.Flags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
-	destroyCmd.Flags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
 }

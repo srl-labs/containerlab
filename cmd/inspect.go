@@ -127,8 +127,6 @@ var inspectCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(inspectCmd)
 
-	inspectCmd.Flags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
-	inspectCmd.Flags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&format, "format", "f", "", "lab name prefix")
 }
