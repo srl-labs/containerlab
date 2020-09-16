@@ -26,7 +26,7 @@ var deployCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		c := clab.NewContainerLab(debug)
-		err := c.Init()
+		err := c.Init(timeout)
 		if err != nil {
 			log.Fatal(err)
 		}
