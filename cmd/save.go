@@ -19,7 +19,7 @@ var saveCmd = &cobra.Command{
 			return
 		}
 		c := clab.NewContainerLab(debug)
-		err := c.Init()
+		err := c.Init(timeout)
 		if err != nil {
 			log.Fatal(err)
 		}

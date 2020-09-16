@@ -1,6 +1,8 @@
 package clab
 
 import (
+	"time"
+
 	docker "github.com/docker/engine/client"
 )
 
@@ -14,7 +16,8 @@ type cLab struct {
 	DockerClient *docker.Client
 	Dir          *cLabDirectory
 
-	debug bool
+	debug   bool
+	timeout time.Duration
 }
 
 type cLabDirectory struct {
@@ -35,7 +38,8 @@ func NewContainerLab(d bool) *cLab {
 	}
 }
 
-func (c *cLab) Init() (err error) {
+func (c *cLab) Init(timeout time.Duration) (err error) {
 	c.DockerClient, err = docker.NewEnvClient()
+	c.timeout = timeout
 	return
 }
