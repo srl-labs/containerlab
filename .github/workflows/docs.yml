@@ -2,8 +2,9 @@ name: docs
 on:
   push:
     branches:
-      - "refs/tags/v*"
       - "docs-*"
+    tags:
+      - "v*"
 
 jobs:
   publish:
