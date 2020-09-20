@@ -1,6 +1,8 @@
 site_name: containerlab
 nav:
   - Home: index.md
+  - Installation: install.md
+  - Usage: usage.md
 
 site_author: Roman Dodin
 site_description: >-
