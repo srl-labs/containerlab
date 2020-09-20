@@ -7,7 +7,7 @@
 : ${PROJECT_NAME:="containerlab"} # if project name does not match binary name
 : ${USE_SUDO:="true"}
 : ${USE_PKG:="true"} # default --use-pkg flag value. will use package installation by default unless the default is changed to false
-: ${VERIFY_CHECKSUM:="true"}
+: ${VERIFY_CHECKSUM:="false"}
 : ${BIN_INSTALL_DIR:="/usr/local/bin"}
 : ${REPO_NAME:="srl-wim/container-lab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
@@ -74,7 +74,7 @@ verifySupported() {
 verifyOpenssl() {
     if [ $VERIFY_CHECKSUM == "true" ]; then
         if ! type "openssl" &>/dev/null; then
-            echo "openssl is not found. It is used to verify checksum of the downloaded archive.\nEither install openssl or provide '--skip-checksum' flag to the installer"
+            echo "openssl is not found. It is used to verify checksum of the downloaded file."
             exit 1
         fi
     fi
@@ -212,7 +212,7 @@ help() {
     echo -e "\te.g. --version v0.1.1"
     echo -e "\t[--use-pkg]  ->> install from deb/rpm packages"
     echo -e "\t[--no-sudo]  ->> install without sudo"
-    echo -e "\t[--skip-checksum]  ->> disable automatic checksum verification"
+    echo -e "\t[--verify-checksum]  ->> verify checksum of the downloaded file"
 }
 
 # removes temporary directory used to download artefacts
@@ -245,8 +245,8 @@ while [[ $# -gt 0 ]]; do
     '--no-sudo')
         USE_SUDO="false"
         ;;
-    '--skip-checksum')
-        VERIFY_CHECKSUM="false"
+    '--verify-checksum')
+        VERIFY_CHECKSUM="true"
         ;;
     '--use-pkg')
         USE_PKG="true"
