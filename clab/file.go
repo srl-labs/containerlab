@@ -67,36 +67,6 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func linkFile(src, dst string) (err error) {
-	sfi, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	if !sfi.Mode().IsRegular() {
-		// cannot copy non-regular files (e.g., directories,
-		// symlinks, devices, etc.)
-		return fmt.Errorf("CopyFile: non-regular source file %s (%q)", sfi.Name(), sfi.Mode().String())
-	}
-	dfi, err := os.Stat(dst)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-	} else {
-		if !(dfi.Mode().IsRegular()) {
-			return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
-		}
-		if os.SameFile(sfi, dfi) {
-			return err
-		}
-	}
-	err = os.Link(src, dst)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherise, copy the file contents from src to dst.
 func copyFile(src, dst string) (err error) {
