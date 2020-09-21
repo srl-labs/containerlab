@@ -24,7 +24,7 @@ var slug = `
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "show containerlab version",
+	Short: "show containerlab version or upgrade",
 
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(slug)
