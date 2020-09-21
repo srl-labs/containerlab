@@ -1,8 +1,10 @@
 package clab
 
 import (
+	"fmt"
 	"os/exec"
 
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -10,6 +12,9 @@ func (c *cLab) InitVirtualWiring() {
 	log.Debug("delete dummyA eth link")
 	var cmd *exec.Cmd
 	var err error
+	// list intefaces
+	cmd = exec.Command("sudo", "ip", "link", "show")
+	// TODO
 	cmd = exec.Command("sudo", "ip", "link", "del", "dummyA")
 	err = runCmd(cmd)
 	if err != nil {
@@ -27,7 +32,13 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 	log.Infof("Create virtual wire : %s, %s, %s, %s", link.A.Node.LongName, link.B.Node.LongName, link.A.EndpointName, link.B.EndpointName)
 
 	var cmd *exec.Cmd
-
+	if link.A.Node.Kind != "bridge" && link.B.Node.Kind != "bridge" {
+		err = c.createAToBveth(link)
+		if err != nil {
+			return err
+		}
+	}
+	//
 	if link.A.Node.Kind != "bridge" && link.B.Node.Kind != "bridge" { // none of the 2 nodes is a bridge
 		log.Debug("create dummy veth pair")
 		cmd = exec.Command("sudo", "ip", "link", "add", "dummyA", "type", "veth", "peer", "name", "dummyB")
@@ -191,6 +202,115 @@ func (c *cLab) CreateVirtualWiring(id int, link *Link) (err error) {
 
 }
 
+func (c *cLab) createAToBveth(l *Link) error {
+	log.Debug("create dummy veth pair")
+	interfaceA := fmt.Sprintf("dA-%s", genIfName())
+	interfaceB := fmt.Sprintf("dB-%s", genIfName())
+
+	var cmd *exec.Cmd
+	var err error
+	cmd = exec.Command("sudo", "ip", "link", "add", interfaceA, "type", "veth", "peer", "name", interfaceB)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("map dummy interface on container A to NS")
+	cmd = exec.Command("sudo", "ip", "link", "set", interfaceA, "netns", l.A.Node.LongName)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("map dummy interface on container B to NS")
+	cmd = exec.Command("sudo", "ip", "link", "set", interfaceB, "netns", l.B.Node.LongName)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("rename interface container NS A")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", l.A.Node.LongName, "ip", "link", "set", interfaceA, "name", l.A.EndpointName)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("rename interface container NS B")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", l.B.Node.LongName, "ip", "link", "set", interfaceB, "name", l.B.EndpointName)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("set interface up in container NS A")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", l.A.Node.LongName, "ip", "link", "set", l.A.EndpointName, "up")
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("set interface up in container NS B")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", l.B.Node.LongName, "ip", "link", "set", l.B.EndpointName, "up")
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("set RX, TX offload off on container A")
+	cmd = exec.Command("docker", "exec", l.A.Node.LongName, "ethtool", "--offload", l.A.EndpointName, "rx", "off", "tx", "off")
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("set RX, TX offload off on container B")
+	cmd = exec.Command("docker", "exec", l.B.Node.LongName, "ethtool", "--offload", l.B.EndpointName, "rx", "off", "tx", "off")
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *cLab) createvethToBridge(l *Link) error {
+	var cmd *exec.Cmd
+	var err error
+	dummyIface := fmt.Sprintf("dA-%s", genIfName())
+	// assume A is a bridge
+	bridgeIfname := l.A.EndpointName
+	containerNS := l.B.Node.LongName
+	containerIfName := l.B.EndpointName
+
+	if l.A.Node.Kind != "bridge" { // change var values if A is not a bridge
+		bridgeIfname = l.B.EndpointName
+		containerIfName = l.A.EndpointName
+		containerNS = l.B.Node.LongName
+	}
+	log.Debug("create dummy veth pair")
+	cmd = exec.Command("sudo", "ip", "link", "add", dummyIface, "type", "veth", "peer", "name", bridgeIfname)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("map dummy interface on container A to NS")
+	cmd = exec.Command("sudo", "ip", "link", "set", dummyIface, "netns", containerNS)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("rename interface container NS A")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", containerNS, "ip", "link", "set", dummyIface, "name", containerIfName)
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("set interface up in container NS A")
+	cmd = exec.Command("sudo", "ip", "netns", "exec", containerNS, "ip", "link", "set", containerIfName, "up")
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	log.Debug("set RX, TX offload off on container A")
+	cmd = exec.Command("docker", "exec", containerNS, "ethtool", "--offload", containerIfName, "rx", "off", "tx", "off")
+	err = runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // DeleteVirtualWiring deletes the virtual wiring
 func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
 	log.Info("Delete virtual wire :", link.A.Node.ShortName, link.B.Node.ShortName, link.A.EndpointName, link.B.EndpointName)
@@ -227,4 +347,9 @@ func runCmd(cmd *exec.Cmd) error {
 	}
 	log.Debugf("'%s' output: %v", cmd.String(), string(b))
 	return nil
+}
+
+func genIfName() string {
+	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
+	return string(s[:8])
 }
