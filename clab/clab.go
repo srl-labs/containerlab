@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"sync"
 	"time"
 
 	docker "github.com/docker/engine/client"
@@ -11,6 +12,7 @@ import (
 type cLab struct {
 	Conf         *Conf
 	FileInfo     *File
+	m            *sync.Mutex
 	Nodes        map[string]*Node
 	Links        map[int]*Link
 	DockerClient *docker.Client
@@ -32,6 +34,7 @@ func NewContainerLab(d bool) *cLab {
 	return &cLab{
 		Conf:     new(Conf),
 		FileInfo: new(File),
+		m:        new(sync.Mutex),
 		Nodes:    make(map[string]*Node),
 		Links:    make(map[int]*Link),
 		debug:    d,
