@@ -31,3 +31,12 @@ sudo yum install graphviz
 ```
 
 Note, that `graphviz` installation is optional and is only required when a user wants to generate PNG files on the system out of the generated `dot` files.
+
+### Upgrade
+To upgrade `containerlab` to the latest available version issue the following command:
+
+```
+containerlab version upgrade
+```
+
+This command will fetch the installation script and will upgrade the tool to its most recent version.
