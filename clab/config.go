@@ -427,6 +427,8 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 	} else {
 		endpoint.EndpointName = split[1]
 	}
-
+	if len(endpoint.EndpointName) > 15 {
+		log.Fatalf("interface '%s' name too long > 15", endpoint.EndpointName)
+	}
 	return endpoint
 }
