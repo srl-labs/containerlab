@@ -1,11 +1,4 @@
-# This is an example goreleaser.yaml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
-before:
-  hooks:
-    # You may remove this if you don't use go modules.
-    - go mod download
-    # you may remove this if you don't need go generate
-    - go generate ./...
+project_name: containerlab
 builds:
   - env:
       - CGO_ENABLED=0
@@ -13,15 +6,11 @@ builds:
       - -s -w -X github.com/srl-wim/container-lab/cmd.version={{.Version}} -X github.com/srl-wim/container-lab/cmd.commit={{.ShortCommit}} -X github.com/srl-wim/container-lab/cmd.date={{.Date}}
     goos:
       - linux
-      # - windows
       - darwin
 archives:
   - replacements:
       darwin: Darwin
       linux: Linux
-      #windows: Windows
-      #386: i386
-      #amd64: x86_64
 checksum:
   name_template: "checksums.txt"
 snapshot:
@@ -32,8 +21,10 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
 nfpms:
   - id: "containerlab"
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     package_name: "containerlab"
     maintainer: "Wim Henderickx <wim.henderickx@nokia.com>"
     description: |
@@ -43,9 +34,7 @@ nfpms:
     formats:
       - rpm
       - deb
-    bindir: /usr/bin
-    files:
-      ./dist/container-lab_linux_amd64/container-lab: "/usr/local/bin/containerlab"
+    bindir: /usr/local/bin
     config_files:
       ./lab-examples/wan-topo.yml: "/etc/containerlab/lab-examples/wan-topo.yml"
       ./lab-examples/simple.yml: "/etc/containerlab/lab-examples/simple.yml"
