@@ -47,13 +47,11 @@ var destroyCmd = &cobra.Command{
 			}
 			return
 		}
-		log.Info("Getting topology information ...")
 		if err = c.GetTopology(&topo); err != nil {
 			log.Fatal(err)
 		}
 
 		// Parse topology information
-		log.Info("Parsing topology information ...")
 		if err = c.ParseTopology(); err != nil {
 			log.Fatal(err)
 		}
