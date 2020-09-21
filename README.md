@@ -47,7 +47,7 @@ Containerlab is build in [golang](https://golang.org) for people interested in t
 
 ```bash
 # install the rpm with yum without downloading the RPM
-yum -y https://github.com/srl-wim/container-lab/releases/download/v0.4.0/container-lab_0.4.0_linux_amd64.rpm
+yum install -y https://github.com/srl-wim/container-lab/releases/download/v0.4.0/container-lab_0.4.0_linux_amd64.rpm
 
 # or when rpm is downloaded to the host
 sudo rpm -i container-lab_0.4.0-next_linux_amd64.rpm
