@@ -65,11 +65,11 @@ type volume struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	ShortName  string
-	LongName   string
-	Fqdn       string
-	LabDir     string
-	CertDir    string
+	ShortName string
+	LongName  string
+	Fqdn      string
+	LabDir    string
+	// CertDir    string
 	Index      int
 	Group      string
 	Kind       string
@@ -247,7 +247,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 	node.LongName = "containerlab" + "-" + c.Conf.Prefix + "-" + dutName
 	node.Fqdn = dutName + "." + c.Conf.Prefix + ".io"
 	node.LabDir = c.Dir.Lab + "/" + dutName
-	node.CertDir = c.Dir.LabCA + "/" + dutName
+	// node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
 
 	// initialize the node with global parameters

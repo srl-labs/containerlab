@@ -3,7 +3,6 @@ package clab
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"path"
 	"text/template"
 
@@ -74,11 +73,7 @@ func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 }
 
 func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput) (*certificates, error) {
-	node, ok := c.Nodes[input.Name]
-	if !ok {
-		return nil, fmt.Errorf("node %s not found", input.Name)
-	}
-	CreateDirectory(node.CertDir, 0755)
+	CreateDirectory(path.Join(c.Dir.LabCA, input.Name), 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
 	err = csrJSONTpl.Execute(csrBuff, input)
@@ -129,16 +124,19 @@ func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		log.Warning(generator.CSRNoHostMessage)
 	}
 	//
-
-	node.TLSCert = string(cert)
-	node.TLSKey = string(key)
+	c.m.Lock()
+	if node, ok := c.Nodes[input.Name]; ok {
+		node.TLSCert = string(cert)
+		node.TLSKey = string(key)
+	}
+	c.m.Unlock()
 	certs := &certificates{
 		Key:  key,
 		Csr:  csrBytes,
 		Cert: cert,
 	}
 	//
-	c.writeCertFiles(certs, path.Join(node.CertDir, input.Name))
+	c.writeCertFiles(certs, path.Join(c.Dir.LabCA, input.Name, input.Name))
 	return certs, nil
 }
 
