@@ -15,7 +15,7 @@ import (
 var destroyCmd = &cobra.Command{
 	Use:   "destroy",
 	Short: "destroy a lab",
-
+	Aliases: []string{"des"},
 	Run: func(cmd *cobra.Command, args []string) {
 		c := clab.NewContainerLab(debug)
 		err := c.Init(timeout)

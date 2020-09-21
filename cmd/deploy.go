@@ -23,7 +23,7 @@ var ipv6Subnet net.IPNet
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "deploy a lab",
-
+	Aliases: []string{"dep"},
 	Run: func(cmd *cobra.Command, args []string) {
 		c := clab.NewContainerLab(debug)
 		err := c.Init(timeout)
