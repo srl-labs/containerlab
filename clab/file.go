@@ -143,10 +143,10 @@ func CreateDirectory(path string, perm os.FileMode) {
 }
 
 // CreateNodeDirStructure create the directory structure and files for the clab
-func (c *cLab) CreateNodeDirStructure(node *Node, shortDutName string) (err error) {
+func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	switch node.Kind {
 	case "srl":
-		log.Infof("Create directory structure for SRL container: %s", shortDutName)
+		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
 		var src string
 		var dst string
 		// copy license file to node specific directory in lab
