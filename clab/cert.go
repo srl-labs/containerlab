@@ -73,6 +73,8 @@ func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 }
 
 func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*certificates, error) {
+	c.m.RLock()
+	defer c.m.RUnlock()
 	input := CertInput{
 		Name:     node.ShortName,
 		LongName: node.LongName,
@@ -87,17 +89,17 @@ func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		return nil, err
 	}
 
-	req := csr.CertificateRequest{
+	req := &csr.CertificateRequest{
 		KeyRequest: csr.NewKeyRequest(),
 	}
-	err = json.Unmarshal(csrBuff.Bytes(), &req)
+	err = json.Unmarshal(csrBuff.Bytes(), req)
 	if err != nil {
 		return nil, err
 	}
 
 	var key, csrBytes []byte
 	gen := &csr.Generator{Validator: genkey.Validator}
-	csrBytes, key, err = gen.ProcessRequest(&req)
+	csrBytes, key, err = gen.ProcessRequest(req)
 	if err != nil {
 		return nil, err
 	}
