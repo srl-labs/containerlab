@@ -72,7 +72,13 @@ func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 	return certs, nil
 }
 
-func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput) (*certificates, error) {
+func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*certificates, error) {
+	input := CertInput{
+		Name:     node.ShortName,
+		LongName: node.LongName,
+		Fqdn:     node.Fqdn,
+		Prefix:   c.Conf.Prefix,
+	}
 	CreateDirectory(path.Join(c.Dir.LabCA, input.Name), 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
