@@ -146,17 +146,17 @@ func CreateDirectory(path string, perm os.FileMode) {
 func (c *cLab) CreateNodeDirStructure(node *Node, shortDutName string) (err error) {
 	switch node.Kind {
 	case "srl":
-		log.Info("Create directory structure for SRL container:", shortDutName)
+		log.Infof("Create directory structure for SRL container: %s", shortDutName)
 		var src string
 		var dst string
 		// copy license file to node specific directory in lab
 		src = node.License
 		dst = path.Join(c.Dir.Lab, "license.key")
 		if err = copyFile(src, dst); err != nil {
-			log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
+			log.Errorf("CopyFile src %s -> dst %s failed %q\n", src, dst, err)
 			return err
 		}
-		log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
+		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
 		// create dut directory in lab
 		CreateDirectory(node.LabDir, 0777)
@@ -200,15 +200,8 @@ func (c *cLab) CreateNodeDirStructure(node *Node, shortDutName string) (err erro
 			if err != nil {
 				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 			}
-			//src = node.Config
-			// err = copyFile(src, dst)
-			// if err != nil {
-			// 	log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
-			// 	return err
-			// }
-			// log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
 		} else {
-			log.Debug("Config File Exists")
+			log.Debugf("Config File Exists for node %s", node.ShortName)
 		}
 		node.Config = dst
 
