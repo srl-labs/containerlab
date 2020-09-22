@@ -69,7 +69,6 @@ type Node struct {
 	LongName  string
 	Fqdn      string
 	LabDir    string
-	// CertDir    string
 	Index      int
 	Group      string
 	Kind       string
@@ -79,10 +78,7 @@ type Node struct {
 	License    string
 	Image      string
 	Topology   string
-	Path       string
 	EnvConf    string
-	TLS        string
-	Checkpoint string
 	Sysctls    map[string]string
 	User       string
 	Cmd        string
@@ -95,7 +91,6 @@ type Node struct {
 	MgmtIPv4   string
 	MgmtIPv6   string
 	MgmtMac    string
-	AS         uint32
 
 	TLSCert   string
 	TLSKey    string
