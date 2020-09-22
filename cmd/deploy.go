@@ -98,6 +98,9 @@ var deployCmd = &cobra.Command{
 				log.Debugf("%s Cert: %s", shortDutName, string(nodeCerts.Cert))
 				log.Debugf("%s Key: %s", shortDutName, string(nodeCerts.Key))
 			}
+			
+			node.TLSCert = string(nodeCerts.Cert)
+			node.TLSKey = string(nodeCerts.Key)
 			if err = c.CreateNodeDirStructure(node, shortDutName); err != nil {
 				log.Error(err)
 			}
