@@ -25,4 +25,4 @@ Containerlab supports the following containers:
 	* Nokia SR-Linux
 	* Arista cEOS.
 
-Containerlab documentation is provided at containerlab.srlinux.dev.
+Containerlab documentation is provided at https://containerlab.srlinux.dev.
