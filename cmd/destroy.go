@@ -60,10 +60,9 @@ var destroyCmd = &cobra.Command{
 
 		log.Info("Destroying container lab: ... ", topo)
 		// delete containers
-		for shortDutName, node := range c.Nodes {
-			if err = c.DeleteContainer(ctx, shortDutName, node); err != nil {
-				log.Error(err)
-			}
+		err = c.DeleteContainers(ctx, c.Conf.Prefix)
+		if err != nil {
+			log.Errorf("failed to delete containers: %v", err)
 		}
 		// delete container management bridge
 		log.Info("Deleting docker bridge ...")

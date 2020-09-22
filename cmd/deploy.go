@@ -102,7 +102,7 @@ var deployCmd = &cobra.Command{
 				log.Error(err)
 			}
 
-			if err = c.CreateContainer(ctx, shortDutName, node); err != nil {
+			if err = c.CreateContainer(ctx, node); err != nil {
 				log.Error(err)
 			}
 		}
