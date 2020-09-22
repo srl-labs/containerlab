@@ -16,21 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// // Docker struct
-// type Docker struct {
-// 	cli *docker.Client
-// }
-
-// // NewDocker initializes the docker client
-// func NewDocker() (d *Docker, err error) {
-// 	d = new(Docker)
-// 	d.cli, err = docker.NewEnvClient()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return d, nil
-// }
-
 // CreateBridge creates a docker bridge
 func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Info("Creating docker bridge")
@@ -141,14 +126,14 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 }
 
 // CreateContainer creates a docker container
-func (c *cLab) CreateContainer(ctx context.Context, shortDutName string, node *Node) (err error) {
-	log.Info("Create container:", shortDutName)
+func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
+	log.Infof("Create container: %s", node.ShortName)
 
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{
 		"containerlab":         "lab-" + c.Conf.Prefix,
-		"lab-" + c.Conf.Prefix: shortDutName,
+		"lab-" + c.Conf.Prefix: node.ShortName,
 	}
 	if node.Kind != "" {
 		labels["kind"] = node.Kind
@@ -166,7 +151,7 @@ func (c *cLab) CreateContainer(ctx context.Context, shortDutName string, node *N
 			Env:          node.Env,
 			AttachStdout: true,
 			AttachStderr: true,
-			Hostname:     shortDutName,
+			Hostname:     node.ShortName,
 			Volumes:      node.Volumes,
 			Tty:          true,
 			User:         node.User,
@@ -180,15 +165,14 @@ func (c *cLab) CreateContainer(ctx context.Context, shortDutName string, node *N
 	if err != nil {
 		return err
 	}
-	log.Debug(fmt.Sprintf("Container create response: %v", c))
-
+	log.Debugf("Container '%s' create response: %v", node.ShortName, cont)
 	node.Cid = cont.ID
-
-	err = c.StartContainer(ctx, node.LongName, node)
+	log.Debugf("Start container: %s", node.LongName)
+	err = c.StartContainer(ctx, node.Cid)
 	if err != nil {
 		return err
 	}
-	err = c.InspectContainer(ctx, node.LongName, node)
+	err = c.InspectContainer(ctx, node)
 	if err != nil {
 		return err
 	}
@@ -196,58 +180,23 @@ func (c *cLab) CreateContainer(ctx context.Context, shortDutName string, node *N
 }
 
 // StartContainer starts a docker container
-func (c *cLab) StartContainer(ctx context.Context, name string, node *Node) (err error) {
-	log.Debug("Start container: ", name)
+func (c *cLab) StartContainer(ctx context.Context, id string) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	err = c.DockerClient.ContainerStart(nctx,
-		node.Cid,
+	return c.DockerClient.ContainerStart(nctx,
+		id,
 		types.ContainerStartOptions{
 			CheckpointID:  "",
 			CheckpointDir: "",
 		},
 	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// DeleteContainer deletes a docker container
-func (c *cLab) DeleteContainer(ctx context.Context, name string, node *Node) (err error) {
-	if node.Kind != " bridge" {
-		log.Debug("Delete and remove container: ", name)
-
-		containers, err := c.DockerClient.ContainerList(ctx, types.ContainerListOptions{All: true})
-		if err != nil {
-			return err
-		}
-		var cid string
-
-		for _, container := range containers {
-			for _, n := range container.Names {
-				if strings.Contains(n, node.LongName) {
-					cid = container.ID
-					break
-				}
-			}
-		}
-
-		if cid != "" {
-			err = c.DockerClient.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{Force: true})
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // InspectContainer inspects a docker container
-func (c *cLab) InspectContainer(ctx context.Context, id string, node *Node) (err error) {
+func (c *cLab) InspectContainer(ctx context.Context, node *Node) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	s, err := c.DockerClient.ContainerInspect(nctx, id)
+	s, err := c.DockerClient.ContainerInspect(nctx, node.Cid)
 	if err != nil {
 		return err
 	}
@@ -324,6 +273,27 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 	}
 	return outBuf.Bytes(), errBuf.Bytes(), nil
 }
+
+// DeleteContainers deletes all containers with label=containerlab=lab-$prefix
+func (c *cLab) DeleteContainers(ctx context.Context, prefix string) error {
+	conts, err := c.ListContainers(ctx, []string{"containerlab=lab-" + prefix})
+	if err != nil {
+		return err
+	}
+	if len(conts) == 0 {
+		log.Info("no containers found")
+		return nil
+	}
+	for _, cont := range conts {
+		log.Infof("Delete container %s", cont.Names)
+		err = c.DockerClient.ContainerRemove(ctx, cont.ID, types.ContainerRemoveOptions{Force: true})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func createContainerNS(pid int, containerName string) error {
 	CreateDirectory("/run/netns/", 0755)
 	src := "/proc/" + strconv.Itoa(pid) + "/ns/net"
