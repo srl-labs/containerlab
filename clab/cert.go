@@ -123,13 +123,6 @@ func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	if len(signReq.Hosts) == 0 && len(req.Hosts) == 0 {
 		log.Warning(generator.CSRNoHostMessage)
 	}
-	//
-	c.m.Lock()
-	if node, ok := c.Nodes[input.Name]; ok {
-		node.TLSCert = string(cert)
-		node.TLSKey = string(key)
-	}
-	c.m.Unlock()
 	certs := &certificates{
 		Key:  key,
 		Csr:  csrBytes,
