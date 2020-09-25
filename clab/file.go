@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -143,85 +142,49 @@ func CreateDirectory(path string, perm os.FileMode) {
 }
 
 // CreateNodeDirStructure create the directory structure and files for the clab
-func (c *cLab) CreateNodeDirStructure(node *Node, shortDutName string) (err error) {
+func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	switch node.Kind {
 	case "srl":
-		log.Info("Create directory structure for SRL container:", shortDutName)
+		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
 		var src string
 		var dst string
 		// copy license file to node specific directory in lab
 		src = node.License
 		dst = path.Join(c.Dir.Lab, "license.key")
 		if err = copyFile(src, dst); err != nil {
-			log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
-			return err
+			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
-		log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
+		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
 		// create dut directory in lab
 		CreateDirectory(node.LabDir, 0777)
-
-		// copy topology to node specific directory in lab
-		src = node.Topology
-		dst = path.Join(node.LabDir, "topology.yml")
-		tpl, err := template.ParseFiles(src)
+		// generate SRL topology file
+		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		type Mac struct {
-			MAC string
-		}
-		x := strconv.FormatInt(int64(node.Index), 16)
-		d2 := fmt.Sprintf("%02s", x)
-		m := "00:01:" + strings.ToUpper(d2) + ":00:00:00"
-		mac := Mac{
-			MAC: m,
-		}
-		log.Debug(mac, dst)
-		f, err := os.Create(dst)
-		if err != nil {
-			log.Error("create file: ", err)
-			return err
-		}
-		defer f.Close()
 
-		if err = tpl.Execute(f, mac); err != nil {
-			panic(err)
-		}
-		log.Debug(fmt.Sprintf("CopyFile GoTemplate src %s -> dat %s succeeded\n", src, dst))
-
-		// copy config file to node specific directory in lab
-
-		CreateDirectory(node.LabDir+"/"+"config", 0777)
-
+		// generate a config file if the destination does not exist
+		CreateDirectory(path.Join(node.LabDir, "config"), 0777)
 		dst = path.Join(node.LabDir, "config", "config.json")
 		if !fileExists(dst) {
 			err = node.generateConfig(dst)
 			if err != nil {
 				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 			}
-			//src = node.Config
-			// err = copyFile(src, dst)
-			// if err != nil {
-			// 	log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
-			// 	return err
-			// }
-			// log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
 		} else {
-			log.Debug("Config File Exists")
+			log.Debugf("Config File Exists for node %s", node.ShortName)
 		}
 		node.Config = dst
 
 		// copy env config to node specific directory in lab
-
 		src = "/etc/containerlab/templates/srl/srl_env.conf"
 		dst = node.LabDir + "/" + "srlinux.conf"
 		err = copyFile(src, dst)
 		if err != nil {
-			log.Error(fmt.Sprintf("CopyFile src %s -> dat %s failed %q\n", src, dst, err))
-			return err
+			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
-		log.Debug(fmt.Sprintf("CopyFile src %s -> dat %s succeeded\n", src, dst))
+		log.Debug(fmt.Sprintf("CopyFile src %s -> dst %s succeeded\n", src, dst))
 		node.EnvConf = dst
 
 	case "alpine":
@@ -263,7 +226,7 @@ func (node *Node) generateConfig(dst string) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("config:\n%s", dstBytes.String())
+	log.Debugf("node '%s' generated config: %s", node.ShortName, dstBytes.String())
 	f, err := os.Create(dst)
 	if err != nil {
 		return err

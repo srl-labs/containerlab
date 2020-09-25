@@ -3,7 +3,6 @@ package clab
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"path"
 	"text/template"
 
@@ -73,12 +72,16 @@ func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 	return certs, nil
 }
 
-func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput) (*certificates, error) {
-	node, ok := c.Nodes[input.Name]
-	if !ok {
-		return nil, fmt.Errorf("node %s not found", input.Name)
+func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*certificates, error) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+	input := CertInput{
+		Name:     node.ShortName,
+		LongName: node.LongName,
+		Fqdn:     node.Fqdn,
+		Prefix:   c.Conf.Prefix,
 	}
-	CreateDirectory(node.CertDir, 0755)
+	CreateDirectory(path.Join(c.Dir.LabCA, input.Name), 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
 	err = csrJSONTpl.Execute(csrBuff, input)
@@ -86,17 +89,17 @@ func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		return nil, err
 	}
 
-	req := csr.CertificateRequest{
+	req := &csr.CertificateRequest{
 		KeyRequest: csr.NewKeyRequest(),
 	}
-	err = json.Unmarshal(csrBuff.Bytes(), &req)
+	err = json.Unmarshal(csrBuff.Bytes(), req)
 	if err != nil {
 		return nil, err
 	}
 
 	var key, csrBytes []byte
 	gen := &csr.Generator{Validator: genkey.Validator}
-	csrBytes, key, err = gen.ProcessRequest(&req)
+	csrBytes, key, err = gen.ProcessRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -128,17 +131,13 @@ func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	if len(signReq.Hosts) == 0 && len(req.Hosts) == 0 {
 		log.Warning(generator.CSRNoHostMessage)
 	}
-	//
-
-	node.TLSCert = string(cert)
-	node.TLSKey = string(key)
 	certs := &certificates{
 		Key:  key,
 		Csr:  csrBytes,
 		Cert: cert,
 	}
 	//
-	c.writeCertFiles(certs, path.Join(node.CertDir, input.Name))
+	c.writeCertFiles(certs, path.Join(c.Dir.LabCA, input.Name, input.Name))
 	return certs, nil
 }
 

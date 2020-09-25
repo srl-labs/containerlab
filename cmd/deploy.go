@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"path"
+	"sync"
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
@@ -73,47 +74,48 @@ var deployCmd = &cobra.Command{
 			log.Fatalf("failed to parse certCsrTemplate: %v", err)
 		}
 		// create directory structure and container per node
-		for shortDutName, node := range c.Nodes {
-			if node.Kind == "bridge" {
-				continue
-			}
-			// create CERT
-			certIn := clab.CertInput{
-				Name:     shortDutName,
-				LongName: node.LongName,
-				Fqdn:     node.Fqdn,
-				Prefix:   c.Conf.Prefix,
-			}
-			nodeCerts, err := c.GenerateCert(
-				path.Join(c.Dir.LabCARoot, "root-ca.pem"),
-				path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
-				certTpl,
-				certIn,
-			)
-			if err != nil {
-				log.Errorf("failed to generate certificates for node %s: %v", shortDutName, err)
-			}
-			if debug {
-				log.Debugf("%s CSR: %s", shortDutName, string(nodeCerts.Csr))
-				log.Debugf("%s Cert: %s", shortDutName, string(nodeCerts.Cert))
-				log.Debugf("%s Key: %s", shortDutName, string(nodeCerts.Key))
-			}
-			if err = c.CreateNodeDirStructure(node, shortDutName); err != nil {
-				log.Error(err)
-			}
-
-			if err = c.CreateContainer(ctx, shortDutName, node); err != nil {
-				log.Error(err)
-			}
+		wg := new(sync.WaitGroup)
+		wg.Add(len(c.Nodes))
+		for _, node := range c.Nodes {
+			go func(node *clab.Node) {
+				defer wg.Done()
+				if node.Kind == "bridge" {
+					return
+				}
+				// create CERT
+				nodeCerts, err := c.GenerateCert(
+					path.Join(c.Dir.LabCARoot, "root-ca.pem"),
+					path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
+					certTpl,
+					node,
+				)
+				if err != nil {
+					log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+				}
+				log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
+				log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
+				log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
+				err = c.CreateNode(ctx, node, nodeCerts)
+				if err != nil {
+					log.Error(err)
+				}
+			}(node)
 		}
+		wg.Wait()
 		// cleanup hanging resources if a deployment failed before
 		c.InitVirtualWiring()
+		wg = new(sync.WaitGroup)
+		wg.Add(len(c.Links))
 		// wire the links between the nodes based on cabling plan
 		for _, link := range c.Links {
-			if err = c.CreateVirtualWiring(link); err != nil {
-				log.Error(err)
-			}
+			go func(link *clab.Link) {
+				defer wg.Done()
+				if err = c.CreateVirtualWiring(link); err != nil {
+					log.Error(err)
+				}
+			}(link)
 		}
+		wg.Wait()
 		// generate graph of the lab topology
 		if graph {
 			if err = c.GenerateGraph(topo); err != nil {
