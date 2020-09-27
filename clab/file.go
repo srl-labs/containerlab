@@ -134,7 +134,8 @@ func createFile(file, content string) {
 	}
 }
 
-// CreateDirectory creates a directory
+// CreateDirectory creates a directory by a path with a mode/permission specified by perm.
+// If directory exists, the function does not do anything.
 func CreateDirectory(path string, perm os.FileMode) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		os.Mkdir(path, perm)
