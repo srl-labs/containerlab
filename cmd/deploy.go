@@ -22,8 +22,8 @@ var ipv6Subnet net.IPNet
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
-	Use:   "deploy",
-	Short: "deploy a lab",
+	Use:     "deploy",
+	Short:   "deploy a lab",
 	Aliases: []string{"dep"},
 	Run: func(cmd *cobra.Command, args []string) {
 		c := clab.NewContainerLab(debug)
@@ -46,7 +46,7 @@ var deployCmd = &cobra.Command{
 		defer cancel()
 
 		// create lab directory
-		log.Info("Creating container lab directory: ", topo)
+		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
 		// create root CA
