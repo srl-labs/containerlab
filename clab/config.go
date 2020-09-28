@@ -365,7 +365,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 		node.NodeType = c.typeInitialization(&dut, node.Kind)
 		node.Position = c.positionInitialization(&dut, node.Kind)
 
-		node.Cmd = "/bin/bash"
+		node.Cmd = "/bin/sh"
 
 	case "bridge":
 		node.Group = c.groupInitialization(&dut, node.Kind)
