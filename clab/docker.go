@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -144,6 +146,12 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if node.Group != "" {
 		labels["group"] = node.Group
 	}
+
+	err = c.PullImageIfRequired(nctx, node)
+	if err != nil {
+		return err
+	}
+
 	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{
 			Image:        node.Image,
@@ -177,6 +185,55 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		return err
 	}
 	return createContainerNS(node.Pid, node.LongName)
+}
+
+func (c *cLab) PullImageIfRequired(ctx context.Context, node *Node) (err error) {
+	filter := filters.NewArgs()
+	filter.Add("reference", node.Image)
+
+	ilo := types.ImageListOptions{
+		All:     false,
+		Filters: filter,
+	}
+
+	log.Debugf("Looking up %s Docker image", node.Image)
+
+	images, err := c.DockerClient.ImageList(ctx, ilo)
+	if err != nil {
+		return err
+	}
+
+	// If Image doesn't exist, we need to pull it
+	if len(images) > 0 {
+		log.Debugf("Image %s present, skip pulling", node.Image)
+		return nil
+	}
+
+	// might need canonical name e.g.
+	//    -> alpine == docker.io/library/alpine
+	//    -> foo/bar == docker.io/foo/bar
+	//    -> docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch
+	canonicalImageName := node.Image
+	slashCount := strings.Count(node.Image, "/")
+
+	switch slashCount {
+	case 0:
+		canonicalImageName = "docker.io/library/" + node.Image
+	case 1:
+		canonicalImageName = "docker.io/" + node.Image
+	}
+
+	log.Infof("Pulling %s Docker image", node.Image)
+	reader, err := c.DockerClient.ImagePull(ctx, canonicalImageName, types.ImagePullOptions{})
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	// must read from reader, otherwise image is not properly pulled
+	io.Copy(ioutil.Discard, reader)
+	log.Infof("Done pulling %s", canonicalImageName)
+
+	return nil
 }
 
 // StartContainer starts a docker container

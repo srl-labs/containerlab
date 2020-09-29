@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	docker "github.com/docker/engine/client"
+	docker "github.com/docker/docker/client"
 )
 
 // var debug bool
