@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	log "github.com/sirupsen/logrus"
 )
+
+const sysctlBase = "/proc/sys"
 
 // CreateBridge creates a docker bridge
 func (c *cLab) CreateBridge(ctx context.Context) (err error) {
@@ -79,33 +83,27 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 		bridgeName = "br-" + netCreateResponse.ID[:12]
 	}
 	log.Debugf("container network %s : bridge name: %s", c.Conf.DockerInfo.Bridge, bridgeName)
-	log.Debug("Disable RPF check on the docker host part1")
-	var b []byte
-	b, err = exec.Command("sudo", "sysctl", "-w", "net.ipv4.conf.all.rp_filter=0").CombinedOutput()
+
+	log.Debug("Disable RPF check on the docker host")
+	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
 	if err != nil {
-		return fmt.Errorf("failed to disable Checksum Offloading on docker bridge: %v", err)
+		return fmt.Errorf("failed to disable RP filter on docker host for the 'all' scope: %v", err)
 	}
-	log.Debugf("%s", string(b))
-	//if err = sysctl.Set("net.ipv4.conf.default.rp_filter", "0"); err != nil {
-	//	return err
-	//}
-	log.Debug("Disable RPF check on the docker host part2")
-	b, err = exec.Command("sudo", "sysctl", "-w", "net.ipv4.conf.all.rp_filter=0").CombinedOutput()
+	err = setSysctl("net/ipv4/conf/default/rp_filter", 0)
 	if err != nil {
-		return fmt.Errorf("failed to disable Checksum Offloading on docker bridge: %v", err)
+		return fmt.Errorf("failed to disable RP filter on docker host for the 'default' scope: %v", err)
 	}
-	log.Debugf("%s", string(b))
-	//if err = sysctl.Set("net.ipv4.conf.all.rp_filter", "0"); err != nil {
-	//	return err
-	//}
-	log.Debug("Enable LLDP on the docker bridge")
+
+	log.Debugf("Enable LLDP on the docker bridge %s", bridgeName)
 	file := "/sys/class/net/" + bridgeName + "/bridge/group_fwd_mask"
-	b, err = exec.Command("sudo", "echo", "16384", ">", file).CombinedOutput()
+
+	err = ioutil.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
 	if err != nil {
 		return fmt.Errorf("failed to enable LLDP on docker bridge: %v", err)
 	}
-	log.Debugf("%s", string(b))
+
 	log.Debug("Disable Checksum Offloading on the docker bridge")
+	var b []byte
 	b, err = exec.Command("sudo", "ethtool", "--offload", bridgeName, "rx", "off", "tx", "off").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to disable Checksum Offloading on docker bridge: %v", err)
@@ -300,4 +298,9 @@ func createContainerNS(pid int, containerName string) error {
 	dst := "/run/netns/" + containerName
 	cmd := exec.Command("sudo", "ln", "-s", src, dst)
 	return runCmd(cmd)
+}
+
+// setSysctl writes sysctl data by writing to a specific file
+func setSysctl(sysctl string, newVal int) error {
+	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
 }
