@@ -1011,6 +1011,9 @@
         }
       ]
     },
+    "srl_nokia-lldp:lldp": {
+      "admin-state": "enable"
+    },
     "srl_nokia-logging:logging": {
       "network-instance": "mgmt",
       "buffer": [
