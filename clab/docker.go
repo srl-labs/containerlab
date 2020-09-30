@@ -87,7 +87,11 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
 	if err != nil {
-		return fmt.Errorf("failed to disable RP filter on docker host: %v", err)
+		return fmt.Errorf("failed to disable RP filter on docker host for the 'all' scope: %v", err)
+	}
+	err = setSysctl("net/ipv4/conf/default/rp_filter", 0)
+	if err != nil {
+		return fmt.Errorf("failed to disable RP filter on docker host for the 'default' scope: %v", err)
 	}
 
 	log.Debugf("Enable LLDP on the docker bridge %s", bridgeName)
