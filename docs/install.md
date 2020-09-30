@@ -3,7 +3,7 @@ Containerlab is distributed as Linux package and can be installed on any Debian-
 ### Pre-requisites
 * Have `sudo` rights on the system: `containerlab` sets some parameters in the linux system to support the various options the containers need
 * [Install docker](https://docs.docker.com/engine/install/): this is used to manage the containers
-* Pull the container images which you intend to run to the Linux system
+* Import or Pull container images (e.g. Nokia SR-Linux, Arista cEOS) which are not online available for download from a registry. Containerlab will try to pull images if they do not exist on execution time.
 
 ### Package installation
 Containerlab package can be installed using the [installer script](https://github.com/srl-wim/container-lab/blob/master/get.sh) which detects the operating system type and installs the relevant package:
