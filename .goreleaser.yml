@@ -42,7 +42,6 @@ nfpms:
       ./lab-examples/external-bridge.yml: "/etc/containerlab/lab-examples/external-bridge.yml"
       ./templates/ca/csr-root-ca.json: "/etc/containerlab/templates/ca/csr-root-ca.json"
       ./templates/ca/csr.json: "/etc/containerlab/templates/ca/csr.json"
-      ./templates/srl/config.json: "/etc/containerlab/templates/srl/srlconfig.json"
       ./templates/srl/srlconfig.tpl: "/etc/containerlab/templates/srl/srlconfig.tpl"
       ./templates/srl/srl_env.conf: "/etc/containerlab/templates/srl/srl_env.conf"
       ./templates/srl/topology-7220IXRD1.yml: "/etc/containerlab/templates/srl/topology-7220IXRD1.yml"
