@@ -36,6 +36,7 @@ type dutInfo struct {
 	Image    string `yaml:"image"`
 	License  string `yaml:"license"`
 	Position string `yaml:"position"`
+	Cmd      string `yaml:"cmd"`
 }
 
 type link struct {
@@ -69,28 +70,28 @@ type Node struct {
 	LongName  string
 	Fqdn      string
 	LabDir    string
-	Index      int
-	Group      string
-	Kind       string
-	Config     string
-	NodeType   string
-	Position   string
-	License    string
-	Image      string
-	Topology   string
-	EnvConf    string
-	Sysctls    map[string]string
-	User       string
-	Cmd        string
-	Env        []string
-	Mounts     map[string]volume
-	Volumes    map[string]struct{}
-	Binds      []string
-	Pid        int
-	Cid        string
-	MgmtIPv4   string
-	MgmtIPv6   string
-	MgmtMac    string
+	Index     int
+	Group     string
+	Kind      string
+	Config    string
+	NodeType  string
+	Position  string
+	License   string
+	Image     string
+	Topology  string
+	EnvConf   string
+	Sysctls   map[string]string
+	User      string
+	Cmd       string
+	Env       []string
+	Mounts    map[string]volume
+	Volumes   map[string]struct{}
+	Binds     []string
+	Pid       int
+	Cid       string
+	MgmtIPv4  string
+	MgmtIPv6  string
+	MgmtMac   string
 
 	TLSCert   string
 	TLSKey    string
@@ -223,6 +224,16 @@ func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
 		return dut.License
 	}
 	return c.Conf.Duts.KindDefaults[kind].License
+}
+
+func (c *cLab) cmdInitialization(dut *dutInfo, kind string, deflt string) string {
+	if dut.Cmd != "" {
+		return dut.Cmd
+	}
+	if c.Conf.Duts.KindDefaults[kind].Cmd != "" {
+		return c.Conf.Duts.KindDefaults[kind].Cmd
+	}
+	return deflt
 }
 
 func (c *cLab) positionInitialization(dut *dutInfo, kind string) string {
@@ -359,13 +370,12 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&dut, node.Kind)
-		node.License = c.licenseInitialization(&dut, node.Kind)
+		node.License = ""
 		node.Image = c.imageInitialization(&dut, node.Kind)
 		node.Group = c.groupInitialization(&dut, node.Kind)
 		node.NodeType = c.typeInitialization(&dut, node.Kind)
 		node.Position = c.positionInitialization(&dut, node.Kind)
-
-		node.Cmd = "/bin/bash"
+		node.Cmd = c.cmdInitialization(&dut, node.Kind, "/bin/sh")
 
 	case "bridge":
 		node.Group = c.groupInitialization(&dut, node.Kind)
