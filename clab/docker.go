@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"strconv"
@@ -181,7 +182,7 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
-	return createContainerNS(node.Pid, node.LongName)
+	return linkContainerNS(node.Pid, node.LongName)
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, node *Node) (err error) {
@@ -348,12 +349,17 @@ func (c *cLab) DeleteContainers(ctx context.Context, prefix string) error {
 	return nil
 }
 
-func createContainerNS(pid int, containerName string) error {
+// linkContainerNS creates a symlink for containers network namespace
+// so that it can be managed by iproute2 utility
+func linkContainerNS(pid int, containerName string) error {
 	CreateDirectory("/run/netns/", 0755)
 	src := "/proc/" + strconv.Itoa(pid) + "/ns/net"
 	dst := "/run/netns/" + containerName
-	cmd := exec.Command("sudo", "ln", "-s", src, dst)
-	return runCmd(cmd)
+	err := os.Symlink(src, dst)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // setSysctl writes sysctl data by writing to a specific file
