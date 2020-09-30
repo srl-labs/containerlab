@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 )
 
 func (c *cLab) InitVirtualWiring() {
-	var cmd *exec.Cmd
-	// list intefaces
+	// list interfaces
 	log.Debug("listing system interfaces...")
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -24,10 +24,13 @@ func (c *cLab) InitVirtualWiring() {
 	for i := range interfaces {
 		if strings.HasPrefix(interfaces[i].Name, "clab-") {
 			log.Debugf("deleting interface %s", interfaces[i].Name)
-			cmd = exec.Command("sudo", "ip", "link", "del", interfaces[i].Name)
-			err = runCmd(cmd)
+			l, err := netlink.LinkByName(interfaces[i].Name)
 			if err != nil {
-				log.Debugf("%s failed with: %v", cmd.String(), err)
+				log.Debugf("failed to find interface for deletion by name: %v", interfaces[i].Name)
+			}
+			err = netlink.LinkDel(l)
+			if err != nil {
+				log.Debugf("failed to delete interface %s: %v", interfaces[i].Name, err)
 			}
 		}
 	}
