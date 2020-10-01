@@ -13,8 +13,8 @@ import (
 
 // destroyCmd represents the destroy command
 var destroyCmd = &cobra.Command{
-	Use:   "destroy",
-	Short: "destroy a lab",
+	Use:     "destroy",
+	Short:   "destroy a lab",
 	Aliases: []string{"des"},
 	Run: func(cmd *cobra.Command, args []string) {
 		c := clab.NewContainerLab(debug)
@@ -70,8 +70,8 @@ var destroyCmd = &cobra.Command{
 			log.Error(err)
 		}
 		// delete virtual wiring
-		for n, link := range c.Links {
-			if err = c.DeleteVirtualWiring(n, link); err != nil {
+		for _, link := range c.Links {
+			if err = c.DeleteVirtualWiring(link); err != nil {
 				log.Error(err)
 			}
 		}

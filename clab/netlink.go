@@ -75,6 +75,7 @@ func (c *cLab) createAToBveth(l *Link) error {
 	wg.Wait()
 	return nil
 }
+
 func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
 	var cmd *exec.Cmd
 	var err error
@@ -104,6 +105,7 @@ func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
 	}
 	return nil
 }
+
 func (c *cLab) createvethToBridge(l *Link) error {
 	var cmd *exec.Cmd
 	var err error
@@ -156,7 +158,7 @@ func (c *cLab) createvethToBridge(l *Link) error {
 }
 
 // DeleteVirtualWiring deletes the virtual wiring by deleting network namespaces
-func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
+func (c *cLab) DeleteVirtualWiring(link *Link) (err error) {
 	log.Infof("Deleting virtual wire %s:%s<-->%s:%s", link.A.Node.ShortName, link.A.EndpointName, link.B.Node.ShortName, link.B.EndpointName)
 
 	if link.A.Node.Kind != "bridge" {
