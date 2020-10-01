@@ -8,7 +8,7 @@
 
 Containerlab provides a framework for setting up networking labs with containers. It builds a virtual wiring between the containers to create virtual topologies of users choice.
 
-![clab-example-topos](https://gitlab.com/rdodin/pics/-/wikis/uploads/5a10778e2a10fa4ca581c7164b71175f/image.png)
+![clab-example-topos](https://gitlab.com/rdodin/pics/-/wikis/uploads/73c44a90194ff0e55b09a966986ca560/image.png)
 
 Conainerlab focuses on _networking_ containers which are typically used to test network features and designs, such as:
 
