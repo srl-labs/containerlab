@@ -126,9 +126,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		// show topology output
-		if err = c.CreateLabOutput(); err != nil {
-			log.Error(err)
-		}
+		c.CreateHostsFile()
 		return nil
 	},
 }
