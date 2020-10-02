@@ -17,6 +17,8 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/vishvananda/netlink v1.1.0
+	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae
 	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )

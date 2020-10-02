@@ -3,17 +3,19 @@ package clab
 import (
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 func (c *cLab) InitVirtualWiring() {
-	var cmd *exec.Cmd
-	// list intefaces
+	// list interfaces
 	log.Debug("listing system interfaces...")
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -24,10 +26,13 @@ func (c *cLab) InitVirtualWiring() {
 	for i := range interfaces {
 		if strings.HasPrefix(interfaces[i].Name, "clab-") {
 			log.Debugf("deleting interface %s", interfaces[i].Name)
-			cmd = exec.Command("sudo", "ip", "link", "del", interfaces[i].Name)
-			err = runCmd(cmd)
+			l, err := netlink.LinkByName(interfaces[i].Name)
 			if err != nil {
-				log.Debugf("%s failed with: %v", cmd.String(), err)
+				log.Debugf("failed to find interface for deletion by name: %v", interfaces[i].Name)
+			}
+			err = netlink.LinkDel(l)
+			if err != nil {
+				log.Debugf("failed to delete interface %s: %v", interfaces[i].Name, err)
 			}
 		}
 	}
@@ -70,6 +75,7 @@ func (c *cLab) createAToBveth(l *Link) error {
 	wg.Wait()
 	return nil
 }
+
 func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
 	var cmd *exec.Cmd
 	var err error
@@ -99,6 +105,7 @@ func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
 	}
 	return nil
 }
+
 func (c *cLab) createvethToBridge(l *Link) error {
 	var cmd *exec.Cmd
 	var err error
@@ -150,28 +157,16 @@ func (c *cLab) createvethToBridge(l *Link) error {
 	return nil
 }
 
-// DeleteVirtualWiring deletes the virtual wiring
-func (c *cLab) DeleteVirtualWiring(id int, link *Link) (err error) {
-	log.Info("Delete virtual wire :", link.A.Node.ShortName, link.B.Node.ShortName, link.A.EndpointName, link.B.EndpointName)
-
-	var cmd *exec.Cmd
+// DeleteVirtualWiring deletes the virtual wiring by deleting network namespaces
+func (c *cLab) DeleteVirtualWiring(link *Link) (err error) {
+	log.Infof("Deleting virtual wire %s:%s<-->%s:%s", link.A.Node.ShortName, link.A.EndpointName, link.B.Node.ShortName, link.B.EndpointName)
 
 	if link.A.Node.Kind != "bridge" {
-		log.Debug("Delete netns: ", link.A.Node.LongName)
-		cmd = exec.Command("sudo", "ip", "netns", "del", link.A.Node.LongName)
-		err = runCmd(cmd)
-		if err != nil {
-			log.Debugf("%s failed with: %v", cmd.String(), err)
-		}
+		deleteNamedNetns(link.A.Node.LongName)
 	}
 
 	if link.B.Node.Kind != "bridge" {
-		log.Debug("Delete netns: ", link.B.Node.LongName)
-		cmd = exec.Command("sudo", "ip", "netns", "del", link.B.Node.LongName)
-		err = runCmd(cmd)
-		if err != nil {
-			log.Debugf("%s failed with: %v", cmd.String(), err)
-		}
+		deleteNamedNetns(link.B.Node.LongName)
 	}
 
 	return nil
@@ -191,4 +186,21 @@ func runCmd(cmd *exec.Cmd) error {
 func genIfName() string {
 	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
 	return string(s[:8])
+}
+
+// deleteNamedNetns deletes a network namespace and removes the symlink created by linkContainerNS func
+func deleteNamedNetns(n string) error {
+	log.Debug("Deleting netns: ", n)
+	err := netns.DeleteNamed(n)
+	if err != nil {
+		log.Debugf("Failed to delete namespace %s: %v", n, err)
+	}
+	// remove symlink created by linkContainerNS
+	log.Debug("Deleting netns symlink: ", n)
+	sl := fmt.Sprintf("/run/netns/%s", n)
+	err = os.Remove(sl)
+	if err != nil {
+		log.Debug("Failed to delete netns symlink by path:", sl)
+	}
+	return nil
 }
