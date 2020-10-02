@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"path"
 	"sync"
@@ -22,24 +23,25 @@ var ipv6Subnet net.IPNet
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
-	Use:     "deploy",
-	Short:   "deploy a lab",
-	Aliases: []string{"dep"},
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "deploy",
+	Short:        "deploy a lab",
+	Aliases:      []string{"dep"},
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		c := clab.NewContainerLab(debug)
 		err := c.Init(timeout)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		if err = c.GetTopology(&topo); err != nil {
-			log.Fatal(err)
+			return err
 		}
 		setFlags(c.Conf)
 		log.Debugf("lab Conf: %+v", c.Conf)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -52,11 +54,11 @@ var deployCmd = &cobra.Command{
 		// create root CA
 		tpl, err := template.ParseFiles(rootCaCsrTemplate)
 		if err != nil {
-			log.Fatalf("failed to parse rootCACsrTemplate: %v", err)
+			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
 		}
 		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Prefix})
 		if err != nil {
-			log.Fatalf("failed to generate rootCa: %v", err)
+			return fmt.Errorf("failed to generate rootCa: %v", err)
 		}
 		if debug {
 			log.Debugf("root CSR: %s", string(rootCerts.Csr))
@@ -71,7 +73,7 @@ var deployCmd = &cobra.Command{
 
 		certTpl, err := template.ParseFiles(certCsrTemplate)
 		if err != nil {
-			log.Fatalf("failed to parse certCsrTemplate: %v", err)
+			return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
 		}
 		// create directory structure and container per node
 		wg := new(sync.WaitGroup)
@@ -97,7 +99,7 @@ var deployCmd = &cobra.Command{
 				log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 				err = c.CreateNode(ctx, node, nodeCerts)
 				if err != nil {
-					log.Error(err)
+					log.Errorf("failed to create node %s: %v", node.ShortName, err)
 				}
 			}(node)
 		}
@@ -127,6 +129,7 @@ var deployCmd = &cobra.Command{
 		if err = c.CreateLabOutput(); err != nil {
 			log.Error(err)
 		}
+		return nil
 	},
 }
 
