@@ -271,6 +271,8 @@ func (c *cLab) InspectContainer(ctx context.Context, node *Node) error {
 
 // ListContainers lists all containers with labels []string
 func (c *cLab) ListContainers(ctx context.Context, labels []string) ([]types.Container, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	filter := filters.NewArgs()
 	for _, l := range labels {
 		filter.Add("label", l)
