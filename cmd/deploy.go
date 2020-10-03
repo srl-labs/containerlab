@@ -131,6 +131,17 @@ var deployCmd = &cobra.Command{
 
 		// show topology output
 		c.CreateHostsFile()
+
+		// print table summary
+		labels = append(labels, "containerlab=lab-"+c.Conf.Prefix)
+		containers, err := c.ListContainers(ctx, labels)
+		if err != nil {
+			return fmt.Errorf("could not list containers: %v", err)
+		}
+		if len(containers) == 0 {
+			return fmt.Errorf("no containers found")
+		}
+		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
 		return nil
 	},
 }
