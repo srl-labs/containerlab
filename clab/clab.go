@@ -50,9 +50,9 @@ func (c *cLab) Init(timeout time.Duration) (err error) {
 
 func (c *cLab) CreateNode(ctx context.Context, node *Node, certs *certificates) error {
 	c.m.Lock()
-	defer c.m.Unlock()
 	node.TLSCert = string(certs.Cert)
 	node.TLSKey = string(certs.Key)
+	c.m.Unlock()
 	err := c.CreateNodeDirStructure(node)
 	if err != nil {
 		return err
