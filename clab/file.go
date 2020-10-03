@@ -144,6 +144,8 @@ func CreateDirectory(path string, perm os.FileMode) {
 
 // CreateNodeDirStructure create the directory structure and files for the clab
 func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
+	c.m.RLock()
+	defer c.m.RUnlock()
 	switch node.Kind {
 	case "srl":
 		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
@@ -162,7 +164,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		// generate SRL topology file
 		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
 		// generate a config file if the destination does not exist
@@ -176,7 +178,6 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		} else {
 			log.Debugf("Config File Exists for node %s", node.ShortName)
 		}
-		node.Config = dst
 
 		// copy env config to node specific directory in lab
 		src = "/etc/containerlab/templates/srl/srl_env.conf"
@@ -185,8 +186,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		if err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
-		log.Debug(fmt.Sprintf("CopyFile src %s -> dst %s succeeded\n", src, dst))
-		node.EnvConf = dst
+		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
 
 	case "alpine":
 	case "linux":
