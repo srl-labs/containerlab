@@ -60,11 +60,10 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to generate rootCa: %v", err)
 		}
-		if debug {
-			log.Debugf("root CSR: %s", string(rootCerts.Csr))
-			log.Debugf("root Cert: %s", string(rootCerts.Cert))
-			log.Debugf("root Key: %s", string(rootCerts.Key))
-		}
+
+		log.Debugf("root CSR: %s", string(rootCerts.Csr))
+		log.Debugf("root Cert: %s", string(rootCerts.Cert))
+		log.Debugf("root Key: %s", string(rootCerts.Key))
 
 		// create bridge
 		if err = c.CreateBridge(ctx); err != nil {
@@ -104,10 +103,6 @@ var deployCmd = &cobra.Command{
 			}(node)
 		}
 		wg.Wait()
-		err = c.SetNodesDetails(ctx)
-		if err != nil {
-			return err
-		}
 		// cleanup hanging resources if a deployment failed before
 		c.InitVirtualWiring()
 		wg = new(sync.WaitGroup)
