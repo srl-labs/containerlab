@@ -87,11 +87,6 @@ type Node struct {
 	Mounts    map[string]volume
 	Volumes   map[string]struct{}
 	Binds     []string
-	Pid       int
-	Cid       string
-	MgmtIPv4  string
-	MgmtIPv6  string
-	MgmtMac   string
 
 	TLSCert   string
 	TLSKey    string
