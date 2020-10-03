@@ -11,7 +11,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -174,7 +173,18 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	}
 	log.Debugf("Container '%s' create response: %v", node.ShortName, cont)
 	log.Debugf("Start container: %s", node.LongName)
-	return c.StartContainer(ctx, cont.ID)
+
+	err = c.StartContainer(ctx, cont.ID)
+	if err != nil {
+		return err
+	}
+	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
+	defer cancelFn()
+	cJson, err := c.DockerClient.ContainerInspect(nctx, cont.ID)
+	if err != nil {
+		return err
+	}
+	return linkContainerNS(cJson.State.Pid, node.LongName)
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, node *Node) (err error) {
@@ -237,26 +247,6 @@ func (c *cLab) StartContainer(ctx context.Context, id string) error {
 			CheckpointDir: "",
 		},
 	)
-}
-
-// InspectContainer inspects a docker container
-func (c *cLab) InspectContainer(ctx context.Context, node *Node) error {
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	cJson, err := c.DockerClient.ContainerInspect(nctx, node.Cid)
-	if err != nil {
-		return err
-	}
-	c.m.Lock()
-	defer c.m.Unlock()
-	node.Cid = cJson.ID
-	node.Pid = cJson.State.Pid
-	if _, ok := cJson.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge]; ok {
-		node.MgmtIPv4 = cJson.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].IPAddress
-		node.MgmtIPv6 = cJson.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].GlobalIPv6Address
-		node.MgmtMac = cJson.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].MacAddress
-	}
-	return linkContainerNS(node.Pid, node.LongName)
 }
 
 // ListContainers lists all containers with labels []string
@@ -337,49 +327,6 @@ func (c *cLab) DeleteContainers(ctx context.Context, prefix string) error {
 		if err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func (c *cLab) SetNodesDetails(ctx context.Context) error {
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	conts, err := c.ListContainers(nctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Conf.Prefix)})
-	if err != nil {
-		return err
-	}
-	errs := make([]error, 0, len(conts))
-	errChan := make(chan error)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case err := <-errChan:
-				errs = append(errs, err)
-			}
-		}
-	}()
-	wg := new(sync.WaitGroup)
-	wg.Add(len(conts))
-	for _, cont := range conts {
-		go func(cont types.Container) {
-			defer wg.Done()
-			if nodeName, ok := cont.Labels[fmt.Sprintf("lab-%s", c.Conf.Prefix)]; ok {
-				if node, ok := c.Nodes[nodeName]; ok {
-					err = c.InspectContainer(ctx, node)
-					if err != nil {
-						log.Error(err)
-						errChan <- err
-					}
-				}
-			}
-		}(cont)
-	}
-	wg.Wait()
-	close(errChan)
-	if len(errs) > 0 {
-		return fmt.Errorf("%v", errs)
 	}
 	return nil
 }
