@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"path"
 	"sync"
 	"text/template"
 
+	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-wim/container-lab/clab"
@@ -125,7 +128,6 @@ var deployCmd = &cobra.Command{
 		}
 
 		// show topology output
-		c.CreateHostsFile()
 
 		// print table summary
 		labels = append(labels, "containerlab=lab-"+c.Conf.Prefix)
@@ -135,6 +137,10 @@ var deployCmd = &cobra.Command{
 		}
 		if len(containers) == 0 {
 			return fmt.Errorf("no containers found")
+		}
+		err = createHostsFile(containers, c.Dir.Lab, c.Conf.DockerInfo.Bridge)
+		if err != nil {
+			log.Errorf("failed to crate hosts file: %v", err)
 		}
 		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
 		return nil
@@ -162,4 +168,46 @@ func setFlags(conf *clab.Conf) {
 	if ipv6Subnet.String() != "<nil>" {
 		conf.DockerInfo.Ipv6Subnet = ipv6Subnet.String()
 	}
+}
+
+func createHostsFile(containers []types.Container, dirPath string, bridgeName string) error {
+	if bridgeName == "" {
+		return fmt.Errorf("missing bridge name")
+	}
+	buff := bytes.Buffer{}
+	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			continue
+		}
+		if cont.NetworkSettings != nil {
+			if br, ok := cont.NetworkSettings.Networks[bridgeName]; ok {
+				if br.IPAddress != "" {
+					buff.WriteString(br.IPAddress)
+					buff.WriteString("\t")
+					buff.WriteString(cont.Names[0])
+					buff.WriteString("\n")
+				}
+				if br.GlobalIPv6Address != "" {
+					buff.WriteString(br.GlobalIPv6Address)
+					buff.WriteString("\t")
+					buff.WriteString(cont.Names[0])
+					buff.WriteString("\n")
+				}
+			}
+		}
+	}
+
+	f, err := os.Create(path.Join(dirPath, "hosts"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(buff.Bytes())
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Generated hosts filename: %s", path.Join(dirPath, "hosts"))
+	return nil
 }

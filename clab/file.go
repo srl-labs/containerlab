@@ -198,21 +198,6 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	return nil
 }
 
-func (c *cLab) CreateHostsFile() {
-	var v4Hosts []string
-	var v6Hosts []string
-	for dutName, node := range c.Nodes {
-		if node.Kind != "bridge" {
-			log.Infof("Mgmt IP addresses of container: %s, ContainerName: %s, IPv4: %s, IPv6: %s, MAC: %s", dutName, node.LongName, node.MgmtIPv4, node.MgmtIPv6, node.MgmtMac)
-			v4Hosts = append(v4Hosts, fmt.Sprintf("%s \t\t\t %s\n", node.MgmtIPv4, node.LongName))
-			v6Hosts = append(v6Hosts, fmt.Sprintf("%s \t\t %s\n", node.MgmtIPv6, node.LongName))
-		}
-	}
-
-	hosts := append(v4Hosts, v6Hosts...)
-	createFile(path.Join(c.Dir.Lab, "hosts"), strings.Join(hosts, ""))
-	log.Infof("Generated hosts filename: %s", path.Join(c.Dir.Lab, "hosts"))
-}
 
 // GenerateConfig generates configuration for the duts
 func (node *Node) generateConfig(dst string) error {
