@@ -104,6 +104,10 @@ var deployCmd = &cobra.Command{
 			}(node)
 		}
 		wg.Wait()
+		err = c.SetNodesDetails(ctx)
+		if err != nil {
+			return err
+		}
 		// cleanup hanging resources if a deployment failed before
 		c.InitVirtualWiring()
 		wg = new(sync.WaitGroup)
