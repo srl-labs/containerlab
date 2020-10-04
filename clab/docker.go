@@ -184,7 +184,10 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
-	return linkContainerNS(cJson.State.Pid, node.LongName)
+	if len(c.Links) >= 0 {
+		return linkContainerNS(cJson.State.Pid, node.LongName)
+	}
+	return nil
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, node *Node) (err error) {
