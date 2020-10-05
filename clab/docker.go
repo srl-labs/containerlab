@@ -145,7 +145,7 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		labels["group"] = node.Group
 	}
 
-	err = c.PullImageIfRequired(nctx, node)
+	err = c.PullImageIfRequired(nctx, node.Image)
 	if err != nil {
 		return err
 	}
@@ -187,16 +187,16 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	return linkContainerNS(cJson.State.Pid, node.LongName)
 }
 
-func (c *cLab) PullImageIfRequired(ctx context.Context, node *Node) (err error) {
+func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error {
 	filter := filters.NewArgs()
-	filter.Add("reference", node.Image)
+	filter.Add("reference", imageName)
 
 	ilo := types.ImageListOptions{
 		All:     false,
 		Filters: filter,
 	}
 
-	log.Debugf("Looking up %s Docker image", node.Image)
+	log.Debugf("Looking up %s Docker image", imageName)
 
 	images, err := c.DockerClient.ImageList(ctx, ilo)
 	if err != nil {
@@ -205,7 +205,7 @@ func (c *cLab) PullImageIfRequired(ctx context.Context, node *Node) (err error) 
 
 	// If Image doesn't exist, we need to pull it
 	if len(images) > 0 {
-		log.Debugf("Image %s present, skip pulling", node.Image)
+		log.Debugf("Image %s present, skip pulling", imageName)
 		return nil
 	}
 
@@ -213,17 +213,17 @@ func (c *cLab) PullImageIfRequired(ctx context.Context, node *Node) (err error) 
 	//    -> alpine == docker.io/library/alpine
 	//    -> foo/bar == docker.io/foo/bar
 	//    -> docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch
-	canonicalImageName := node.Image
-	slashCount := strings.Count(node.Image, "/")
+	canonicalImageName := imageName
+	slashCount := strings.Count(imageName, "/")
 
 	switch slashCount {
 	case 0:
-		canonicalImageName = "docker.io/library/" + node.Image
+		canonicalImageName = "docker.io/library/" + imageName
 	case 1:
-		canonicalImageName = "docker.io/" + node.Image
+		canonicalImageName = "docker.io/" + imageName
 	}
 
-	log.Infof("Pulling %s Docker image", node.Image)
+	log.Infof("Pulling %s Docker image", canonicalImageName)
 	reader, err := c.DockerClient.ImagePull(ctx, canonicalImageName, types.ImagePullOptions{})
 	if err != nil {
 		return err
