@@ -35,7 +35,7 @@ var inspectCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		if prefix == "" && topo == "" {
-			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
+			fmt.Println("provide either a lab prefix (--prefix) or a topology file path (--topo)")
 			return
 		}
 		c := clab.NewContainerLab(debug)

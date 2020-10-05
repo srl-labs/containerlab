@@ -40,8 +40,8 @@ func Execute() {
 func init() {
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
-	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "/etc/containerlab/lab-examples/wan-topo.yml", "path to the file with topology information")
+	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "", "path to the file with topology information")
 	rootCmd.PersistentFlags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
-	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 30 *time.Second, "timeout for docker requests, e.g: 30s, 1m, 2m30s")
+	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 30*time.Second, "timeout for docker requests, e.g: 30s, 1m, 2m30s")
 
 }
