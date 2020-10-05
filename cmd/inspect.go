@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
@@ -33,7 +34,7 @@ var inspectCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		if prefix == "" && topo == "" {
-			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
+			fmt.Println("provide either a lab prefix (--prefix) or a topology file path (--topo)")
 			return
 		}
 		c := clab.NewContainerLab(debug)
@@ -73,7 +74,8 @@ var inspectCmd = &cobra.Command{
 				State: cont.State,
 			}
 			if len(cont.Names) > 0 {
-				cdet.Name = cont.Names[0]
+				// we remove a "/" prefix from the container name returned by docker inspect cmd
+				cdet.Name = strings.TrimLeft(cont.Names[0], "/")
 			}
 			if kind, ok := cont.Labels["kind"]; ok {
 				cdet.Kind = kind
