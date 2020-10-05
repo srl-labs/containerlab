@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/olekukonko/tablewriter"
@@ -94,7 +95,7 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 			State: cont.State,
 		}
 		if len(cont.Names) > 0 {
-			cdet.Name = cont.Names[0]
+			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
 		}
 		if kind, ok := cont.Labels["kind"]; ok {
 			cdet.Kind = kind
