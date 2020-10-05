@@ -172,17 +172,19 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		return err
 	}
 	log.Debugf("Container '%s' create response: %v", node.ShortName, cont)
-	node.Cid = cont.ID
 	log.Debugf("Start container: %s", node.LongName)
-	err = c.StartContainer(ctx, node.Cid)
+
+	err = c.StartContainer(ctx, cont.ID)
 	if err != nil {
 		return err
 	}
-	err = c.InspectContainer(ctx, node)
+	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
+	defer cancelFn()
+	cJson, err := c.DockerClient.ContainerInspect(nctx, cont.ID)
 	if err != nil {
 		return err
 	}
-	return linkContainerNS(node.Pid, node.LongName)
+	return linkContainerNS(cJson.State.Pid, node.LongName)
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error {
@@ -247,30 +249,10 @@ func (c *cLab) StartContainer(ctx context.Context, id string) error {
 	)
 }
 
-// InspectContainer inspects a docker container
-func (c *cLab) InspectContainer(ctx context.Context, node *Node) error {
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	s, err := c.DockerClient.ContainerInspect(nctx, node.Cid)
-	if err != nil {
-		return err
-	}
-	node.Pid = s.State.Pid
-	if _, ok := s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge]; ok {
-		node.MgmtIPv4 = s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].IPAddress
-		node.MgmtIPv6 = s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].GlobalIPv6Address
-		node.MgmtMac = s.NetworkSettings.Networks[c.Conf.DockerInfo.Bridge].MacAddress
-	}
-
-	log.Debug("Container pid: ", node.Pid)
-	log.Debug("Container mgmt IPv4: ", node.MgmtIPv4)
-	log.Debug("Container mgmt IPv6: ", node.MgmtIPv6)
-	log.Debug("Container mgmt MAC: ", node.MgmtMac)
-	return nil
-}
-
 // ListContainers lists all containers with labels []string
 func (c *cLab) ListContainers(ctx context.Context, labels []string) ([]types.Container, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	filter := filters.NewArgs()
 	for _, l := range labels {
 		filter.Add("label", l)

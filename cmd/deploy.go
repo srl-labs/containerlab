@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net"
+	"os"
 	"path"
 	"sync"
 	"text/template"
 
+	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-wim/container-lab/clab"
@@ -22,24 +26,25 @@ var ipv6Subnet net.IPNet
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
-	Use:     "deploy",
-	Short:   "deploy a lab",
-	Aliases: []string{"dep"},
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "deploy",
+	Short:        "deploy a lab",
+	Aliases:      []string{"dep"},
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		c := clab.NewContainerLab(debug)
 		err := c.Init(timeout)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		if err = c.GetTopology(&topo); err != nil {
-			log.Fatal(err)
+			return err
 		}
 		setFlags(c.Conf)
 		log.Debugf("lab Conf: %+v", c.Conf)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -52,17 +57,16 @@ var deployCmd = &cobra.Command{
 		// create root CA
 		tpl, err := template.ParseFiles(rootCaCsrTemplate)
 		if err != nil {
-			log.Fatalf("failed to parse rootCACsrTemplate: %v", err)
+			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
 		}
 		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Prefix})
 		if err != nil {
-			log.Fatalf("failed to generate rootCa: %v", err)
+			return fmt.Errorf("failed to generate rootCa: %v", err)
 		}
-		if debug {
-			log.Debugf("root CSR: %s", string(rootCerts.Csr))
-			log.Debugf("root Cert: %s", string(rootCerts.Cert))
-			log.Debugf("root Key: %s", string(rootCerts.Key))
-		}
+
+		log.Debugf("root CSR: %s", string(rootCerts.Csr))
+		log.Debugf("root Cert: %s", string(rootCerts.Cert))
+		log.Debugf("root Key: %s", string(rootCerts.Key))
 
 		// create bridge
 		if err = c.CreateBridge(ctx); err != nil {
@@ -71,7 +75,7 @@ var deployCmd = &cobra.Command{
 
 		certTpl, err := template.ParseFiles(certCsrTemplate)
 		if err != nil {
-			log.Fatalf("failed to parse certCsrTemplate: %v", err)
+			return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
 		}
 		// create directory structure and container per node
 		wg := new(sync.WaitGroup)
@@ -97,7 +101,7 @@ var deployCmd = &cobra.Command{
 				log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 				err = c.CreateNode(ctx, node, nodeCerts)
 				if err != nil {
-					log.Error(err)
+					log.Errorf("failed to create node %s: %v", node.ShortName, err)
 				}
 			}(node)
 		}
@@ -124,9 +128,22 @@ var deployCmd = &cobra.Command{
 		}
 
 		// show topology output
-		if err = c.CreateLabOutput(); err != nil {
-			log.Error(err)
+
+		// print table summary
+		labels = append(labels, "containerlab=lab-"+c.Conf.Prefix)
+		containers, err := c.ListContainers(ctx, labels)
+		if err != nil {
+			return fmt.Errorf("could not list containers: %v", err)
 		}
+		if len(containers) == 0 {
+			return fmt.Errorf("no containers found")
+		}
+		err = createHostsFile(containers, c.Dir.Lab, c.Conf.DockerInfo.Bridge)
+		if err != nil {
+			log.Errorf("failed to crate hosts file: %v", err)
+		}
+		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
+		return nil
 	},
 }
 
@@ -151,4 +168,46 @@ func setFlags(conf *clab.Conf) {
 	if ipv6Subnet.String() != "<nil>" {
 		conf.DockerInfo.Ipv6Subnet = ipv6Subnet.String()
 	}
+}
+
+func createHostsFile(containers []types.Container, dirPath string, bridgeName string) error {
+	if bridgeName == "" {
+		return fmt.Errorf("missing bridge name")
+	}
+	buff := bytes.Buffer{}
+	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			continue
+		}
+		if cont.NetworkSettings != nil {
+			if br, ok := cont.NetworkSettings.Networks[bridgeName]; ok {
+				if br.IPAddress != "" {
+					buff.WriteString(br.IPAddress)
+					buff.WriteString("\t")
+					buff.WriteString(cont.Names[0])
+					buff.WriteString("\n")
+				}
+				if br.GlobalIPv6Address != "" {
+					buff.WriteString(br.GlobalIPv6Address)
+					buff.WriteString("\t")
+					buff.WriteString(cont.Names[0])
+					buff.WriteString("\n")
+				}
+			}
+		}
+	}
+
+	f, err := os.Create(path.Join(dirPath, "hosts"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(buff.Bytes())
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Generated hosts filename: %s", path.Join(dirPath, "hosts"))
+	return nil
 }

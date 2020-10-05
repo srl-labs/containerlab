@@ -144,6 +144,8 @@ func CreateDirectory(path string, perm os.FileMode) {
 
 // CreateNodeDirStructure create the directory structure and files for the clab
 func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
+	c.m.RLock()
+	defer c.m.RUnlock()
 	switch node.Kind {
 	case "srl":
 		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
@@ -162,7 +164,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		// generate SRL topology file
 		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
 		// generate a config file if the destination does not exist
@@ -176,7 +178,6 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		} else {
 			log.Debugf("Config File Exists for node %s", node.ShortName)
 		}
-		node.Config = dst
 
 		// copy env config to node specific directory in lab
 		src = "/etc/containerlab/templates/srl/srl_env.conf"
@@ -185,8 +186,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		if err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
-		log.Debug(fmt.Sprintf("CopyFile src %s -> dst %s succeeded\n", src, dst))
-		node.EnvConf = dst
+		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
 
 	case "alpine":
 	case "linux":
@@ -198,23 +198,6 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	return nil
 }
 
-func (c *cLab) CreateLabOutput() (err error) {
-	var v4Hosts []string
-	var v6Hosts []string
-	for dutName, node := range c.Nodes {
-		if node.Kind != "bridge" {
-			log.Infof("Mgmt IP addresses of container: %s, ContainerName: %s, IPv4: %s, IPv6: %s, MAC: %s", dutName, node.LongName, node.MgmtIPv4, node.MgmtIPv6, node.MgmtMac)
-			v4Hosts = append(v4Hosts, fmt.Sprintf("%s \t\t\t %s\n", node.MgmtIPv4, node.LongName))
-			v6Hosts = append(v6Hosts, fmt.Sprintf("%s \t\t %s\n", node.MgmtIPv6, node.LongName))
-		}
-
-	}
-
-	hosts := append(v4Hosts, v6Hosts...)
-	createFile(path.Join(c.Dir.Lab, "hosts"), strings.Join(hosts, ""))
-	log.Infof("Generated hosts filename: %s", path.Join(c.Dir.Lab, "hosts"))
-	return nil
-}
 
 // GenerateConfig generates configuration for the duts
 func (node *Node) generateConfig(dst string) error {
