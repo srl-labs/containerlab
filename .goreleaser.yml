@@ -6,10 +6,8 @@ builds:
       - -s -w -X github.com/srl-wim/container-lab/cmd.version={{.Version}} -X github.com/srl-wim/container-lab/cmd.commit={{.ShortCommit}} -X github.com/srl-wim/container-lab/cmd.date={{.Date}}
     goos:
       - linux
-      - darwin
 archives:
   - replacements:
-      darwin: Darwin
       linux: Linux
 checksum:
   name_template: "checksums.txt"
