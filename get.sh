@@ -107,7 +107,7 @@ setDesiredVersion() {
 # if it needs to be changed.
 checkInstalledVersion() {
     if [[ -f "${BIN_INSTALL_DIR}/${BINARY_NAME}" ]]; then
-        local version=$("${BIN_INSTALL_DIR}/${BINARY_NAME}" version | head -1 | awk '{print $NF}')
+        local version=$("${BIN_INSTALL_DIR}/${BINARY_NAME}" version | grep version | awk '{print $NF}')
         if [[ "v$version" == "$TAG" ]]; then
             echo "${BINARY_NAME} is already at ${DESIRED_VERSION:-latest ($version)}" version
             return 0
