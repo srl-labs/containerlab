@@ -173,7 +173,7 @@ installPkg() {
     if [ $PKG_FORMAT == "deb" ]; then
         runAsRoot dpkg -i $TMP_FILE
     elif [ $PKG_FORMAT == "rpm" ]; then
-        runAsRoot rpm -i $TMP_FILE
+        runAsRoot rpm -U $TMP_FILE
     fi
 }
 
