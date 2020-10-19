@@ -29,6 +29,7 @@ func (c *cLab) InitVirtualWiring() {
 			l, err := netlink.LinkByName(interfaces[i].Name)
 			if err != nil {
 				log.Debugf("failed to find interface for deletion by name: %v", interfaces[i].Name)
+				return
 			}
 			err = netlink.LinkDel(l)
 			if err != nil {
