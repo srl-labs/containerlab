@@ -1,11 +1,16 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-wim/container-lab/clab"
@@ -16,54 +21,51 @@ var destroyCmd = &cobra.Command{
 	Use:     "destroy",
 	Short:   "destroy a lab",
 	Aliases: []string{"des"},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		c := clab.NewContainerLab(debug)
 		err := c.Init(timeout)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		if prefix != "" {
-			filter := filters.NewArgs()
-			filter.Add("label", fmt.Sprintf("containerlab=lab-%s", prefix))
-			containers, err := c.DockerClient.ContainerList(ctx, types.ContainerListOptions{
-				Filters: filter,
-			})
-			if err != nil {
-				log.Fatalf("could not list containers: %v", err)
-			}
-			var name string
-			for _, cont := range containers {
-				name = cont.ID
-				if len(cont.Names) > 0 {
-					name = cont.Names[0]
-				}
-				log.Infof("Removing container: %s", name)
-				err = c.DockerClient.ContainerRemove(ctx, cont.ID, types.ContainerRemoveOptions{})
-				if err != nil {
-					log.Errorf("could not remove container '%s': %v", name, err)
-				}
-			}
-			return
-		}
 		if err = c.GetTopology(&topo); err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
-			log.Fatal(err)
+			return err
 		}
 
-		defer cancel()
-
-		log.Info("Destroying container lab: ... ", topo)
-		// delete containers
-		err = c.DeleteContainers(ctx, c.Conf.Prefix)
+		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Conf.Prefix)})
 		if err != nil {
-			log.Errorf("failed to delete containers: %v", err)
+			return fmt.Errorf("could not list containers: %v", err)
 		}
+
+		log.Infof("Destroying container lab: %s", topo)
+		wg := new(sync.WaitGroup)
+		wg.Add(len(containers))
+		for _, cont := range containers {
+			go func(cont types.Container) {
+				defer wg.Done()
+				name := cont.ID
+				if len(cont.Names) > 0 {
+					name = cont.Names[0]
+				}
+				log.Infof("Stopping container: %s", name)
+				err = c.DeleteContainer(ctx, name, 30*time.Second)
+				if err != nil {
+					log.Error("could not remove container '%s': %v", name, err)
+				}
+			}(cont)
+		}
+		wg.Wait()
+		err = deleteEntriesFromHostsFile(containers, c.Conf.DockerInfo.Bridge)
+		if err != nil {
+			return err
+		}
+
 		// delete container management bridge
 		log.Info("Deleting docker bridge ...")
 		if err = c.DeleteBridge(ctx); err != nil {
@@ -76,9 +78,59 @@ var destroyCmd = &cobra.Command{
 			}
 		}
 		c.InitVirtualWiring()
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(destroyCmd)
+}
+
+func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string) error {
+	if bridgeName == "" {
+		return fmt.Errorf("missing bridge name")
+	}
+	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	data := hostsEntries(containers, bridgeName)
+	remainingLines := make([][]byte, 0)
+	reader := bufio.NewReader(f)
+	for {
+		line, _, err := reader.ReadLine()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		found := false
+		sLine := strings.Join(strings.Fields(string(line)), " ")
+		for _, dl := range strings.Split(string(data), "\n") {
+			sdl := strings.Join(strings.Fields(string(dl)), " ")
+			if strings.Compare(sLine, sdl) == 0 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			remainingLines = append(remainingLines, line)
+		}
+	}
+
+	err = f.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+	for _, l := range remainingLines {
+		f.Write(l)
+		f.Write([]byte("\n"))
+	}
+	return nil
 }
