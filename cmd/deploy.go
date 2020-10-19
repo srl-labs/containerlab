@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"text/template"
 
@@ -138,9 +139,9 @@ var deployCmd = &cobra.Command{
 		if len(containers) == 0 {
 			return fmt.Errorf("no containers found")
 		}
-		err = createHostsFile(containers, c.Dir.Lab, c.Conf.DockerInfo.Bridge)
+		err = createHostsFile(containers, c.Conf.DockerInfo.Bridge)
 		if err != nil {
-			log.Errorf("failed to crate hosts file: %v", err)
+			log.Errorf("failed to create hosts file: %v", err)
 		}
 		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
 		return nil
@@ -170,10 +171,31 @@ func setFlags(conf *clab.Conf) {
 	}
 }
 
-func createHostsFile(containers []types.Container, dirPath string, bridgeName string) error {
+func createHostsFile(containers []types.Container, bridgeName string) error {
 	if bridgeName == "" {
 		return fmt.Errorf("missing bridge name")
 	}
+	data := hostsEntries(containers, bridgeName)
+	if len(data) == 0 {
+		return nil
+	}
+	f, err := os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString("\n")
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func hostsEntries(containers []types.Container, bridgeName string) []byte {
 	buff := bytes.Buffer{}
 	for _, cont := range containers {
 		if len(cont.Names) == 0 {
@@ -184,30 +206,17 @@ func createHostsFile(containers []types.Container, dirPath string, bridgeName st
 				if br.IPAddress != "" {
 					buff.WriteString(br.IPAddress)
 					buff.WriteString("\t")
-					buff.WriteString(cont.Names[0])
+					buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
 					buff.WriteString("\n")
 				}
 				if br.GlobalIPv6Address != "" {
 					buff.WriteString(br.GlobalIPv6Address)
 					buff.WriteString("\t")
-					buff.WriteString(cont.Names[0])
+					buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
 					buff.WriteString("\n")
 				}
 			}
 		}
 	}
-
-	f, err := os.Create(path.Join(dirPath, "hosts"))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(buff.Bytes())
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Generated hosts filename: %s", path.Join(dirPath, "hosts"))
-	return nil
+	return buff.Bytes()
 }
