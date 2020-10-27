@@ -313,15 +313,15 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *cLab) DeleteContainer(ctx context.Context, name string, cid string, timeout time.Duration) error {
+func (c *cLab) DeleteContainer(ctx context.Context, name string, timeout time.Duration) error {
 	force := false
-	err := c.DockerClient.ContainerStop(ctx, cid, &timeout)
+	err := c.DockerClient.ContainerStop(ctx, name, &timeout)
 	if err != nil {
 		log.Errorf("could not stop container '%s': %v", name, err)
 		force = true
 	}
 	log.Infof("Removing container: %s", name)
-	err = c.DockerClient.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{Force: force})
+	err = c.DockerClient.ContainerRemove(ctx, name, types.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
