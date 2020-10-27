@@ -54,7 +54,7 @@ var destroyCmd = &cobra.Command{
 					name = cont.Names[0]
 				}
 				log.Infof("Stopping container: %s", name)
-				err = c.DeleteContainer(ctx, name, 30*time.Second)
+				err = c.DeleteContainer(ctx, name, cont.ID, 30*time.Second)
 				if err != nil {
 					log.Errorf("could not remove container '%s': %v", name, err)
 				}
