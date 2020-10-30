@@ -139,6 +139,7 @@ var deployCmd = &cobra.Command{
 		if len(containers) == 0 {
 			return fmt.Errorf("no containers found")
 		}
+		log.Info("Writing /etc/hosts file")
 		err = createHostsFile(containers, c.Conf.DockerInfo.Bridge)
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
