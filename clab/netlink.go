@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
 )
 
 func (c *cLab) InitVirtualWiring() {
@@ -157,16 +156,13 @@ func (c *cLab) createvethToBridge(l *Link) error {
 	return nil
 }
 
-// DeleteVirtualWiring deletes the virtual wiring by deleting network namespaces
-func (c *cLab) DeleteVirtualWiring(link *Link) (err error) {
-	log.Infof("Deleting virtual wire %s:%s<-->%s:%s", link.A.Node.ShortName, link.A.EndpointName, link.B.Node.ShortName, link.B.EndpointName)
-
-	if link.A.Node.Kind != "bridge" {
-		deleteNamedNetns(link.A.Node.LongName)
-	}
-
-	if link.B.Node.Kind != "bridge" {
-		deleteNamedNetns(link.B.Node.LongName)
+// DeleteNetnsSymlinks deletes the symlink file created for each container netns
+func (c *cLab) DeleteNetnsSymlinks() (err error) {
+	for _, node := range c.Nodes {
+		log.Infof("Deleting %s network namespace", node.LongName)
+		if err := deleteNetnsSymlink(node.LongName); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -188,17 +184,11 @@ func genIfName() string {
 	return string(s[:8])
 }
 
-// deleteNamedNetns deletes a network namespace and removes the symlink created by linkContainerNS func
-func deleteNamedNetns(n string) error {
-	log.Debug("Deleting netns: ", n)
-	err := netns.DeleteNamed(n)
-	if err != nil {
-		log.Debugf("Failed to delete namespace %s: %v", n, err)
-	}
-	// remove symlink created by linkContainerNS
+// deleteNetnsSymlink deletes a network namespace and removes the symlink created by linkContainerNS func
+func deleteNetnsSymlink(n string) error {
 	log.Debug("Deleting netns symlink: ", n)
 	sl := fmt.Sprintf("/run/netns/%s", n)
-	err = os.Remove(sl)
+	err := os.Remove(sl)
 	if err != nil {
 		log.Debug("Failed to delete netns symlink by path:", sl)
 	}
