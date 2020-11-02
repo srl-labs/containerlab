@@ -372,6 +372,9 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 		node.Position = c.positionInitialization(&dut, node.Kind)
 		node.Cmd = c.cmdInitialization(&dut, node.Kind, "/bin/sh")
 
+		node.Sysctls = make(map[string]string)
+		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+
 	case "bridge":
 		node.Group = c.groupInitialization(&dut, node.Kind)
 		node.Position = c.positionInitialization(&dut, node.Kind)
