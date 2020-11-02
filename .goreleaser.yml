@@ -10,7 +10,7 @@ archives:
   - replacements:
       linux: Linux
 checksum:
-  name_template: "checksums.txt"
+  name_template: checksums.txt
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
@@ -21,32 +21,18 @@ changelog:
       - "^test:"
 
 nfpms:
-  - id: "containerlab"
+  - id: containerlab
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    package_name: "containerlab"
-    maintainer: "Wim Henderickx <wim.henderickx@nokia.com>"
+    package_name: containerlab
+    maintainer: Wim Henderickx <wim.henderickx@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>, Roman Dodin <dodin.roman@gmail.com>
     description: |
       containerlab written in go
-    vendor: "Nokia"
-    license: "BSD 2"
+    vendor: Nokia
+    license: GNU GPLv3
     formats:
       - rpm
       - deb
     bindir: /usr/local/bin
-    config_files:
-      ./lab-examples/wan-topo.yml: "/etc/containerlab/lab-examples/wan-topo.yml"
-      ./lab-examples/simple.yml: "/etc/containerlab/lab-examples/simple.yml"
-      ./lab-examples/arista-topo.yml: "/etc/containerlab/lab-examples/arista-topo.yml"
-      ./lab-examples/external-bridge.yml: "/etc/containerlab/lab-examples/external-bridge.yml"
-      ./templates/ca/csr-root-ca.json: "/etc/containerlab/templates/ca/csr-root-ca.json"
-      ./templates/ca/csr.json: "/etc/containerlab/templates/ca/csr.json"
-      ./templates/srl/srlconfig.tpl: "/etc/containerlab/templates/srl/srlconfig.tpl"
-      ./templates/srl/srl_env.conf: "/etc/containerlab/templates/srl/srl_env.conf"
-      ./templates/srl/topology-7220IXRD1.yml: "/etc/containerlab/templates/srl/topology-7220IXRD1.yml"
-      ./templates/srl/topology-7220IXRD2.yml: "/etc/containerlab/templates/srl/topology-7220IXRD2.yml"
-      ./templates/srl/topology-7220IXRD3.yml: "/etc/containerlab/templates/srl/topology-7220IXRD3.yml"
-      ./templates/srl/topology-7250IXR6.yml: "/etc/containerlab/templates/srl/topology-7250IXR6.yml"
-      ./templates/srl/topology-7250IXR10.yml: "/etc/containerlab/templates/srl/topology-7250IXR10.yml"
-    overrides:
-      rpm:
-        scripts:
+    files:
+      ./lab-examples/**/*: /etc/containerlab/lab-examples
+      ./templates/**/*: /etc/containerlab/templates
