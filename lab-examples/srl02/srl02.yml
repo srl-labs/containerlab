@@ -1,0 +1,20 @@
+Prefix: srl02
+Docker_info:
+  bridge: containerlab
+  ipv4_subnet: "172.20.20.0/24"
+  ipv6_subnet: "2001:172:20:20::/80"
+
+Duts:
+  kind_defaults:
+    srl:
+      type: ixr6
+      image: srlinux:20.6.1-286
+      license: license.key
+  dut_specifics:
+    srl1:
+      kind: srl
+    srl2:
+      kind: srl
+
+Links:
+  - endpoints: ["srl1:e1-1", "srl2:e1-1"]
