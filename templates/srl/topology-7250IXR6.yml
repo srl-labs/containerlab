@@ -1,9 +1,9 @@
 chassis_configuration:
-    "chassis_type": 42
-    "base_mac" : {{.MAC}}
-    "cpm_card_type" : 69
+  "chassis_type": 42
+  "base_mac": "{{ .MAC }}"
+  "cpm_card_type": 69 # cpm2-ixr
 
 slot_configuration:
-    1:
-        "card_type": 127
-        "mda_type": 36
+  1:
+    "card_type": 127
+    "mda_type": 36 # 32xQSFP28+4xQSFP-DD (imm32-100g-qsfp28+4-400g-qsfpdd)

@@ -3,6 +3,11 @@ nav:
   - Home: index.md
   - Installation: install.md
   - Usage: usage.md
+  - Lab examples:
+      - About: lab-examples/lab-examples.md
+      - Single SR Linux node: lab-examples/single-srl.md
+      - Two SR Linux nodes: lab-examples/two-srls.md
+      - 3-nodes CLOS: lab-examples/min-clos.md
 
 site_author: Roman Dodin
 site_description: >-
