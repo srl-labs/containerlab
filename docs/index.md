@@ -23,4 +23,4 @@ But, of course, containerlab is perfectly capable of wiring up any typical linux
 * TLS certificates can be generated automatically for every node of a lab.
 * The lab topology can be graphically visualized with [graphviz](https://graphviz.org) tool (WIP).
 
-<script type="text/javascript" src="https://viewer.diagrams.net/embed2.js?&fetch=https%3A%2F%2Fraw.githubusercontent.com%2Fsrl-wim%2Fcontainerlab-diagrams%2Fmain%2Fcontainerlab.drawio"></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/embed2.js?&fetch=https%3A%2F%2Fraw.githubusercontent.com%2Fsrl-wim%2Fcontainerlab-diagrams%2Fmain%2Fcontainerlab.drawio" async></script>
