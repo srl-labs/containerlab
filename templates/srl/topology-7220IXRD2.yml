@@ -1,9 +1,9 @@
 chassis_configuration:
-    "chassis_type": 65
-    "base_mac" : {{.MAC}}
-    "cpm_card_type" : 176
+  "chassis_type": 65
+  "base_mac": "{{ .MAC }}"
+  "cpm_card_type": 176
 
 slot_configuration:
-    1:
-        "card_type": 176
-        "mda_type": 195
+  1:
+    "card_type": 176
+    "mda_type": 195 # imm48-25g-sfp28+8-100g-qsfp28
