@@ -1,0 +1,19 @@
+Prefix: srlceos01
+Docker_info:
+  bridge: containerlab
+  ipv4_subnet: "172.20.20.0/24"
+  ipv6_subnet: "2001:172:20:20::/80"
+
+Duts:
+  dut_specifics:
+    srl:
+      kind: srl
+      type: ixrd2
+      image: srlinux:20.6.1-286
+      license: license.key
+    ceos:
+      kind: ceos
+      image: ceos:4.25.0F
+
+Links:
+  - endpoints: ["srl:e1-1", "ceos:eth1"]
