@@ -196,6 +196,7 @@ func createHostsFile(containers []types.Container, bridgeName string) error {
 	return nil
 }
 
+// hostEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
 func hostsEntries(containers []types.Container, bridgeName string) []byte {
 	buff := bytes.Buffer{}
 	for _, cont := range containers {
