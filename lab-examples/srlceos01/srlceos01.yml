@@ -9,11 +9,11 @@ Duts:
     srl:
       kind: srl
       type: ixrd2
-      image: srlinux:20.6.1-286
+      image: srlinux
       license: license.key
     ceos:
       kind: ceos
-      image: ceos:4.25.0F
+      image: ceos
 
 Links:
   - endpoints: ["srl:e1-1", "ceos:eth1"]

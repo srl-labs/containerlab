@@ -8,7 +8,7 @@ Duts:
   kind_defaults:
     srl:
       type: ixr6
-      image: srlinux:20.6.1-286
+      image: srlinux
       license: license.key
   dut_specifics:
     srl:

@@ -7,7 +7,7 @@ Docker_info:
 Duts:
   kind_defaults:
     srl:
-      image: srlinux:20.6.1-286
+      image: srlinux
       license: license.key
     linux:
       image: ghcr.io/hellt/network-multitool
