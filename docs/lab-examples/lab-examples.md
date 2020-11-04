@@ -5,6 +5,11 @@
 
 These lab examples are meant to be used as-is or as a base layer to a more customized or elaborated lab scenario. Once `containerlab` is installed, you will find the lab examples directories by the `/etc/containerlab/lab-examples` path.  Copy those directories over to your working directory to start using the provided labs.
 
+!!!note "Container images versions"
+    The provided lab examples use the images without a tag, i.e. `image: srlinux`. This means that the image with a `latest` tag must exist. A user needs to tag the image themselves if the `latest` tag is missing.
+
+    For example: `docker tag srlinux:20.6.1-286 srlinux:latest`
+
 The source code of the lab examples is contained within the [containerlab repo](https://github.com/srl-wim/container-lab/tree/master/lab-examples); any questions or issues regarding the provided examples can be addressed via [Github issues](https://github.com/srl-wim/container-lab/issues).
 
 Each lab comes with a definitive description that can be found in this documentation section.
