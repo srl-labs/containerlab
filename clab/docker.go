@@ -11,6 +11,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -311,23 +312,20 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 	return outBuf.Bytes(), errBuf.Bytes(), nil
 }
 
-// DeleteContainers deletes all containers with label=containerlab=lab-$prefix
-func (c *cLab) DeleteContainers(ctx context.Context, prefix string) error {
-	conts, err := c.ListContainers(ctx, []string{"containerlab=lab-" + prefix})
+// DeleteContainer tries to stop a container then remove it
+func (c *cLab) DeleteContainer(ctx context.Context, name string, timeout time.Duration) error {
+	force := false
+	err := c.DockerClient.ContainerStop(ctx, name, &timeout)
+	if err != nil {
+		log.Errorf("could not stop container '%s': %v", name, err)
+		force = true
+	}
+	log.Infof("Removing container: %s", name)
+	err = c.DockerClient.ContainerRemove(ctx, name, types.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	if len(conts) == 0 {
-		log.Info("no containers found")
-		return nil
-	}
-	for _, cont := range conts {
-		log.Infof("Delete container %s", cont.Names)
-		err = c.DockerClient.ContainerRemove(ctx, cont.ID, types.ContainerRemoveOptions{Force: true})
-		if err != nil {
-			return err
-		}
-	}
+	log.Infof("Removed container: %s", name)
 	return nil
 }
 
