@@ -23,7 +23,7 @@ This lightweight lab enables the users to perform the following exercises:
 * write/debug/manage custom apps built for SR Linux NDK
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/single-srl/srl01.yaml
+[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/srl01/srl01.yml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 [^2]: Check out [gnmic](https://gnmic.kmrd.dev) gNMI client to interact with SR Linux gNMI server.

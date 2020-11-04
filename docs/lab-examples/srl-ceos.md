@@ -16,7 +16,7 @@ This lab allows users to launch basic interoperability scenarios between Nokia S
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [ceos]: https://www.arista.com/en/products/software-controlled-container-networking
-[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/srlceos01/srlceos01.yaml
+[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/srlceos01/srlceos01.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 
