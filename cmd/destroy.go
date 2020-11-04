@@ -61,6 +61,7 @@ var destroyCmd = &cobra.Command{
 			}(cont)
 		}
 		wg.Wait()
+		log.Info("Removing container entries from /etc/hosts file")
 		err = deleteEntriesFromHostsFile(containers, c.Conf.DockerInfo.Bridge)
 		if err != nil {
 			return err
