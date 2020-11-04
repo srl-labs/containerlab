@@ -1,3 +1,4 @@
+# topology documentation: http://containerlab.srlinux.dev/lab-examples/srl-ceos/
 Prefix: srlceos01
 Docker_info:
   bridge: containerlab

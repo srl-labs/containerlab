@@ -1,3 +1,4 @@
+# topology documentation: http://containerlab.srlinux.dev/lab-examples/two-srls/
 Prefix: srl02
 Docker_info:
   bridge: containerlab
