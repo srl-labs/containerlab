@@ -78,7 +78,11 @@ func (c *cLab) createAToBveth(l *Link) error {
 
 func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
 	var cmd *exec.Cmd
-	var err error
+	log.Debugf("Disabling TX checksum offloading for the %s interface...", dummyInterface)
+	err := EthtoolTXOff(dummyInterface)
+	if err != nil {
+		return err
+	}
 	log.Debugf("map dummy interface '%s' to container %s", dummyInterface, ns)
 	cmd = exec.Command("sudo", "ip", "link", "set", dummyInterface, "netns", ns)
 	err = runCmd(cmd)
@@ -93,12 +97,6 @@ func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
 	}
 	log.Debugf("set interface %s state to up in NS %s", endpointName, ns)
 	cmd = exec.Command("sudo", "ip", "netns", "exec", ns, "ip", "link", "set", endpointName, "up")
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	log.Debugf("set RX, TX offload off for interface '%s' in NS %s", endpointName, ns)
-	cmd = exec.Command("docker", "exec", ns, "ethtool", "--offload", endpointName, "rx", "off", "tx", "off")
 	err = runCmd(cmd)
 	if err != nil {
 		return err
@@ -148,9 +146,8 @@ func (c *cLab) createvethToBridge(l *Link) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("set RX, TX offload off on veth of the bridge interface")
-	cmd = exec.Command("sudo", "ethtool", "--offload", bridgeIfname, "rx", "off", "tx", "off")
-	err = runCmd(cmd)
+	log.Debugf("Disabling TX checksum offloading for the %s interface...", bridgeIfname)
+	err = EthtoolTXOff(bridgeIfname)
 	if err != nil {
 		return err
 	}
