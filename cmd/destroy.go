@@ -72,12 +72,8 @@ var destroyCmd = &cobra.Command{
 		if err = c.DeleteBridge(ctx); err != nil {
 			log.Error(err)
 		}
-		// delete virtual wiring
-		for _, link := range c.Links {
-			if err = c.DeleteVirtualWiring(link); err != nil {
-				log.Error(err)
-			}
-		}
+		// delete container network namespaces symlinks
+		c.DeleteNetnsSymlinks()
 		c.InitVirtualWiring()
 		return nil
 	},
