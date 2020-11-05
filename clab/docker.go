@@ -119,6 +119,20 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
+	nres, err := c.DockerClient.NetworkInspect(ctx, c.Conf.DockerInfo.Bridge)
+	if err != nil {
+		return err
+	}
+	numEndpoints := len(nres.Containers)
+	if numEndpoints > 0 {
+		log.Warnf("network '%s' has %d active endpoints", c.Conf.DockerInfo.Bridge, numEndpoints)
+		if c.debug {
+			for _, endp := range nres.Containers {
+				log.Debugf("'%s' is connected to %s", endp.Name, c.Conf.DockerInfo.Bridge)
+			}
+		}
+		return nil
+	}
 	err = c.DockerClient.NetworkRemove(nctx, c.Conf.DockerInfo.Bridge)
 	if err != nil {
 		return err
