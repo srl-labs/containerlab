@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -84,6 +85,7 @@ func toTableData(det []containerDetails) [][]string {
 	for _, d := range det {
 		tabData = append(tabData, []string{d.Name, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 	}
+	sort.Slice(tabData, func(i, j int) bool { return tabData[i][0] < tabData[j][0] })
 	return tabData
 }
 
