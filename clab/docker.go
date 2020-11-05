@@ -126,8 +126,10 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
 		log.Warnf("network '%s' has %d active endpoints", c.Conf.DockerInfo.Bridge, numEndpoints)
-		for _, endp := range nres.Containers {
-			log.Debugf("'%s' is connected to %s", endp.Name, c.Conf.DockerInfo.Bridge)
+		if c.debug {
+			for _, endp := range nres.Containers {
+				log.Debugf("'%s' is connected to %s", endp.Name, c.Conf.DockerInfo.Bridge)
+			}
 		}
 		return nil
 	}
