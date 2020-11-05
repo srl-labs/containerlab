@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -105,13 +104,11 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to enable LLDP on docker bridge: %v", err)
 	}
 
-	log.Debug("Disable Checksum Offloading on the docker bridge")
-	var b []byte
-	b, err = exec.Command("sudo", "ethtool", "--offload", bridgeName, "rx", "off", "tx", "off").CombinedOutput()
+	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", bridgeName)
+	err = EthtoolTXOff(bridgeName)
 	if err != nil {
-		return fmt.Errorf("failed to disable Checksum Offloading on docker bridge: %v", err)
+		return fmt.Errorf("Failed to disable TX checksum offloading for the %s bridge interface: %v", bridgeName, err)
 	}
-	log.Debugf("%s", string(b))
 	return nil
 }
 
