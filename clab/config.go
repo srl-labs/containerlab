@@ -1,13 +1,13 @@
 package clab
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 )
 
 const baseConfigDir = "/etc/containerlab/templates/srl/"
@@ -171,7 +171,7 @@ func (c *cLab) ParseTopology() error {
 		idx++
 	}
 	for i, l := range c.Conf.Links {
-		// i represnts the endpoint integer and l provide the link struct
+		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
 	return nil
@@ -411,8 +411,10 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
 	if len(split) != 2 {
-		panic(fmt.Sprintf("endpoint %s has wrong syntax", e))
+		log.Fatalf("endpoint %s has wrong syntax", e)
 	}
+	nName := split[0]  // node name
+	epName := split[1] // endpoint name
 	// search the node pointer based in the name of the split function
 	for name, n := range c.Nodes {
 		if name == split[0] {
@@ -421,17 +423,20 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		}
 	}
 	if endpoint.Node == nil {
-		log.Fatalf("Not all nodes are specified in the duts section or the names don't match in the duts/endpoint section: %s", split[0])
+		log.Fatalf("Not all nodes are specified in the duts section or the names don't match in the duts/endpoint section: %s", nName)
 	}
 
 	// initialize the endpoint name based on the split function
-	if c.Nodes[split[0]].Kind == "bridge" {
-		endpoint.EndpointName = "veth" + c.Conf.Prefix + split[1]
+	if c.Nodes[nName].Kind == "bridge" {
+		if _, err := netlink.LinkByName(nName); err != nil {
+			log.Fatalf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", nName)
+		}
+		endpoint.EndpointName = c.Conf.Prefix + epName
 	} else {
-		endpoint.EndpointName = split[1]
+		endpoint.EndpointName = epName
 	}
 	if len(endpoint.EndpointName) > 15 {
-		log.Fatalf("interface '%s' name too long > 15", endpoint.EndpointName)
+		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
 	return endpoint
 }
