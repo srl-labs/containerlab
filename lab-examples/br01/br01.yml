@@ -1,0 +1,27 @@
+# topology documentation: http://containerlab.srlinux.dev/lab-examples/ext-bridge/
+Prefix: br01
+Docker_info:
+  bridge: containerlab
+  ipv4_subnet: "172.20.20.0/24"
+  ipv6_subnet: "2001:172:20:20::/80"
+
+Duts:
+  kind_defaults:
+    srl:
+      type: ixrd1
+      image: srlinux
+      license: license.key
+  dut_specifics:
+    srl1:
+      kind: srl
+    srl2:
+      kind: srl
+    srl3:
+      kind: srl
+    br-clab:
+      kind: bridge
+
+Links:
+  - endpoints: ["srl1:e1-1", "br-clab:eth1"]
+  - endpoints: ["srl2:e1-1", "br-clab:eth2"]
+  - endpoints: ["srl3:e1-1", "br-clab:eth3"]
