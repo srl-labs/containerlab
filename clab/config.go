@@ -171,7 +171,7 @@ func (c *cLab) ParseTopology() error {
 		idx++
 	}
 	for i, l := range c.Conf.Links {
-		// i represnts the endpoint integer and l provide the link struct
+		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
 	return nil
