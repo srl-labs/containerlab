@@ -157,10 +157,13 @@ func (c *cLab) createvethToBridge(l *Link) error {
 // DeleteNetnsSymlinks deletes the symlink file created for each container netns
 func (c *cLab) DeleteNetnsSymlinks() (err error) {
 	for _, node := range c.Nodes {
-		log.Infof("Deleting %s network namespace", node.LongName)
-		if err := deleteNetnsSymlink(node.LongName); err != nil {
-			return err
+		if node.Kind != "bridge" {
+			log.Infof("Deleting %s network namespace", node.LongName)
+			if err := deleteNetnsSymlink(node.LongName); err != nil {
+				return err
+			}
 		}
+
 	}
 
 	return nil
