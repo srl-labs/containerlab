@@ -111,13 +111,13 @@ type Endpoint struct {
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
 	if c.Conf.DockerInfo.Bridge == "" {
-		c.Conf.DockerInfo.Bridge = "srlinux_bridge"
+		c.Conf.DockerInfo.Bridge = dockerNet
 	}
 	if c.Conf.DockerInfo.Ipv4Subnet == "" {
-		c.Conf.DockerInfo.Bridge = "172.19.19.0/24"
+		c.Conf.DockerInfo.Ipv4Subnet = "172.20.20.0/24"
 	}
 	if c.Conf.DockerInfo.Ipv6Subnet == "" {
-		c.Conf.DockerInfo.Bridge = "2001:172:19:19::/80"
+		c.Conf.DockerInfo.Ipv6Subnet = "2001:172:20:20::/80"
 	}
 
 	_, ipv4Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv4Subnet)
@@ -155,7 +155,7 @@ func (c *cLab) ParseTopology() error {
 	}
 
 	c.Dir = new(cLabDirectory)
-	c.Dir.Lab = c.Conf.ConfigPath + "/" + "containerlab" + "-" + c.Conf.Prefix
+	c.Dir.Lab = c.Conf.ConfigPath + "/" + prefix + "-" + c.Conf.Prefix
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
 	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
@@ -245,7 +245,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
-	node.LongName = "containerlab" + "-" + c.Conf.Prefix + "-" + dutName
+	node.LongName = prefix + "-" + c.Conf.Prefix + "-" + dutName
 	node.Fqdn = dutName + "." + c.Conf.Prefix + ".io"
 	node.LabDir = c.Dir.Lab + "/" + dutName
 	// node.CertDir = c.Dir.LabCA + "/" + dutName
