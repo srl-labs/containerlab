@@ -11,6 +11,7 @@ nav:
       - 5-stage CLOS: lab-examples/min-5clos.md
       - Nokia SR Linux and Arista cEOS: lab-examples/srl-ceos.md
       - External bridge capability: lab-examples/ext-bridge.md
+      - WAN topology: lab-examples/wan.md
 
 site_author: Roman Dodin
 site_description: >-
