@@ -10,11 +10,6 @@ import (
 
 // var debug bool
 
-const (
-	prefix    string = "clab"
-	dockerNet string = "clab"
-)
-
 type cLab struct {
 	Conf         *Conf
 	FileInfo     *File
