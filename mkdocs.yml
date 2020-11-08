@@ -3,6 +3,15 @@ nav:
   - Home: index.md
   - Installation: install.md
   - Usage: usage.md
+  - Lab examples:
+      - About: lab-examples/lab-examples.md
+      - Single SR Linux node: lab-examples/single-srl.md
+      - Two SR Linux nodes: lab-examples/two-srls.md
+      - 3-nodes CLOS: lab-examples/min-clos.md
+      - 5-stage CLOS: lab-examples/min-5clos.md
+      - Nokia SR Linux and Arista cEOS: lab-examples/srl-ceos.md
+      - External bridge capability: lab-examples/ext-bridge.md
+      - WAN topology: lab-examples/wan.md
 
 site_author: Roman Dodin
 site_description: >-

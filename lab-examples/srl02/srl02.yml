@@ -1,0 +1,17 @@
+# topology documentation: http://containerlab.srlinux.dev/lab-examples/two-srls/
+Prefix: srl02
+
+Duts:
+  kind_defaults:
+    srl:
+      type: ixr6
+      image: srlinux
+      license: license.key
+  dut_specifics:
+    srl1:
+      kind: srl
+    srl2:
+      kind: srl
+
+Links:
+  - endpoints: ["srl1:e1-1", "srl2:e1-1"]

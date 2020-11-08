@@ -1,0 +1,16 @@
+# topology documentation: http://containerlab.srlinux.dev/lab-examples/srl-ceos/
+Prefix: srlceos01
+
+Duts:
+  dut_specifics:
+    srl:
+      kind: srl
+      type: ixrd2
+      image: srlinux
+      license: license.key
+    ceos:
+      kind: ceos
+      image: ceos
+
+Links:
+  - endpoints: ["srl:e1-1", "ceos:eth1"]
