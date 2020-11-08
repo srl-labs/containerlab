@@ -10,7 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const baseConfigDir = "/etc/containerlab/templates/srl/"
+const (
+	baseConfigDir  = "/etc/containerlab/templates/srl/"
+	prefix         = "clab"
+	dockerNetName  = "clab"
+	dockerIPv4Addr = "172.20.20.0/24"
+	dockerIPv6Addr = "2001:172:20:20::/80"
+)
 
 var srlTypes = map[string]string{
 	"ixr6":  "topology-7250IXR6.yml",
@@ -100,7 +106,7 @@ type Link struct {
 	Labels map[string]string
 }
 
-// Endpoint is a sttruct that contains information of a link endpoint
+// Endpoint is a struct that contains information of a link endpoint
 type Endpoint struct {
 	Node *Node
 	// e1-x, eth, etc
@@ -111,13 +117,13 @@ type Endpoint struct {
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
 	if c.Conf.DockerInfo.Bridge == "" {
-		c.Conf.DockerInfo.Bridge = dockerNet
+		c.Conf.DockerInfo.Bridge = dockerNetName
 	}
 	if c.Conf.DockerInfo.Ipv4Subnet == "" {
-		c.Conf.DockerInfo.Ipv4Subnet = "172.20.20.0/24"
+		c.Conf.DockerInfo.Ipv4Subnet = dockerIPv4Addr
 	}
 	if c.Conf.DockerInfo.Ipv6Subnet == "" {
-		c.Conf.DockerInfo.Ipv6Subnet = "2001:172:20:20::/80"
+		c.Conf.DockerInfo.Ipv6Subnet = dockerIPv6Addr
 	}
 
 	_, ipv4Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv4Subnet)
@@ -171,7 +177,7 @@ func (c *cLab) ParseTopology() error {
 		idx++
 	}
 	for i, l := range c.Conf.Links {
-		// i represnts the endpoint integer and l provide the link struct
+		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
 	return nil
