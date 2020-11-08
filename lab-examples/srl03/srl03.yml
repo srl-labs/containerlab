@@ -1,0 +1,60 @@
+Prefix: srl03
+
+Duts:
+  kind_defaults:
+    srl:
+      type: ixr6
+      image: srlinux
+      license: license.key
+    linux:
+      image: ghcr.io/hellt/network-multitool
+  dut_specifics:
+    wan1:
+      kind: srl
+    wan2:
+      kind: srl
+    wan3:
+      kind: srl
+    wan4:
+      kind: srl
+    client1:
+      kind: "linux"
+    client2:
+      kind: "linux"
+    client3:
+      kind: "linux"
+    client4:
+      kind: "linux"
+
+Links:
+  # wan1 <-> wan2 connections
+  - endpoints: ["wan1:e1-1", "wan2:e1-1"]
+  - endpoints: ["wan1:e1-2", "wan2:e1-2"]
+  - endpoints: ["wan1:e1-3", "wan2:e1-3"]
+  - endpoints: ["wan1:e1-4", "wan2:e1-4"]
+
+  # wan1 <-> wan3 connections
+  - endpoints: ["wan1:e1-5", "wan3:e1-1"]
+  - endpoints: ["wan1:e1-6", "wan3:e1-2"]
+
+  # wan1 <-> wan4 connections
+  - endpoints: ["wan1:e1-7", "wan4:e1-1"]
+  - endpoints: ["wan1:e1-8", "wan4:e1-2"]
+
+  # wan2 <-> wan3 connections
+  - endpoints: ["wan2:e1-5", "wan3:e1-3"]
+  - endpoints: ["wan2:e1-6", "wan3:e1-4"]
+
+  # wan2 <-> wan4 connections
+  - endpoints: ["wan2:e1-7", "wan4:e1-3"]
+  - endpoints: ["wan2:e1-8", "wan4:e1-4"]
+
+  # wan3 <-> wan4 connections
+  - endpoints: ["wan3:e1-5", "wan4:e1-5"]
+  - endpoints: ["wan3:e1-6", "wan4:e1-6"]
+
+  # client connections
+  - endpoints: ["client1:eth1", "wan1:e1-9"]
+  - endpoints: ["client2:eth1", "wan2:e1-9"]
+  - endpoints: ["client3:eth1", "wan3:e1-7"]
+  - endpoints: ["client4:eth1", "wan4:e1-7"]
