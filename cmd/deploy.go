@@ -17,13 +17,8 @@ import (
 	"github.com/srl-wim/container-lab/clab"
 )
 
-// path to the topology file
-var topo string
-var graph bool
-
 // name of the container management network
 var mgmtNetName string
-var prefix string
 
 // IPv4/6 address range for container management network
 var mgmtIPv4Subnet net.IPNet
