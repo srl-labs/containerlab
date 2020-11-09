@@ -42,6 +42,7 @@ func NewContainerLab(d bool) *cLab {
 	}
 }
 
+// Init creates a docker client and adds it to containerlab structure
 func (c *cLab) Init(timeout time.Duration) (err error) {
 	c.DockerClient, err = docker.NewEnvClient()
 	c.timeout = timeout
