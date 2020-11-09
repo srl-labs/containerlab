@@ -18,7 +18,7 @@ var graphCmd = &cobra.Command{
 			log.Info(err)
 		}
 
-		if err = c.GetTopology(&topo); err != nil {
+		if err = c.GetTopology(topo); err != nil {
 			log.Fatal(err)
 		}
 

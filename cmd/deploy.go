@@ -37,7 +37,7 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		if err = c.GetTopology(&topo); err != nil {
+		if err = c.GetTopology(topo); err != nil {
 			return err
 		}
 		setFlags(c.Conf)
