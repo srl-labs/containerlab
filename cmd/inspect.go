@@ -69,7 +69,7 @@ var inspectCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return
 		}
-		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
+		printContainerInspect(containers, c.Conf.Mgmt.Network, format)
 	},
 }
 
