@@ -53,10 +53,9 @@ type link struct {
 
 // Conf defines lab configuration as it is provided in the YAML file
 type Conf struct {
-	Name        string
-	Mgmt        mgmtNet
-	ClientImage string `yaml:"Client_image"`
-	Duts        struct {
+	Name string
+	Mgmt mgmtNet
+	Duts struct {
 		GlobalDefaults dutInfo            `yaml:"global_defaults"`
 		KindDefaults   map[string]dutInfo `yaml:"kind_defaults"`
 		DutSpecifics   map[string]dutInfo `yaml:"dut_specifics"`
