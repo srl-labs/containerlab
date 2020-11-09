@@ -144,8 +144,8 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{
-		"containerlab":         "lab-" + c.Conf.Prefix,
-		"lab-" + c.Conf.Prefix: node.ShortName,
+		"containerlab":       "lab-" + c.Conf.Name,
+		"lab-" + c.Conf.Name: node.ShortName,
 	}
 	if node.Kind != "" {
 		labels["kind"] = node.Kind

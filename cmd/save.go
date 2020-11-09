@@ -27,7 +27,7 @@ var saveCmd = &cobra.Command{
 			if err = c.GetTopology(topo); err != nil {
 				log.Fatal(err)
 			}
-			prefix = c.Conf.Prefix
+			prefix = c.Conf.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

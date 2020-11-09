@@ -59,7 +59,7 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
 		}
-		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Prefix})
+		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Name})
 		if err != nil {
 			return fmt.Errorf("failed to generate rootCa: %v", err)
 		}
@@ -130,7 +130,7 @@ var deployCmd = &cobra.Command{
 		// show topology output
 
 		// print table summary
-		labels = append(labels, "containerlab=lab-"+c.Conf.Prefix)
+		labels = append(labels, "containerlab=lab-"+c.Conf.Name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
@@ -158,7 +158,7 @@ func init() {
 
 func setFlags(conf *clab.Conf) {
 	if prefix != "" {
-		conf.Prefix = prefix
+		conf.Name = prefix
 	}
 	if mgmtNetName != "" {
 		conf.DockerInfo.Bridge = mgmtNetName

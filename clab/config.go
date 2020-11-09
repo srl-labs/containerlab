@@ -52,9 +52,9 @@ type link struct {
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
-// Conf holds the configuration file input
+// Conf defines lab configuration as it is provided in the YAML file
 type Conf struct {
-	Prefix      string     `yaml:"Prefix"`
+	Name        string
 	DockerInfo  dockerInfo `yaml:"Docker_info"`
 	ClientImage string     `yaml:"Client_image"`
 	Duts        struct {
@@ -150,7 +150,7 @@ func (c *cLab) parseIPInfo() error {
 // ParseTopology parses the lab topology
 func (c *cLab) ParseTopology() error {
 	log.Info("Parsing topology information ...")
-	log.Debugf("Prefix: %s", c.Conf.Prefix)
+	log.Debugf("Prefix: %s", c.Conf.Name)
 	// initialize DockerInfo
 	err := c.parseIPInfo()
 	if err != nil {
@@ -163,7 +163,7 @@ func (c *cLab) ParseTopology() error {
 	}
 
 	c.Dir = new(cLabDirectory)
-	c.Dir.Lab = c.Conf.ConfigPath + "/" + prefix + "-" + c.Conf.Prefix
+	c.Dir.Lab = c.Conf.ConfigPath + "/" + prefix + "-" + c.Conf.Name
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
 	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
@@ -253,8 +253,8 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
-	node.LongName = prefix + "-" + c.Conf.Prefix + "-" + dutName
-	node.Fqdn = dutName + "." + c.Conf.Prefix + ".io"
+	node.LongName = prefix + "-" + c.Conf.Name + "-" + dutName
+	node.Fqdn = dutName + "." + c.Conf.Name + ".io"
 	node.LabDir = c.Dir.Lab + "/" + dutName
 	// node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
@@ -439,7 +439,7 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		if _, err := netlink.LinkByName(nName); err != nil {
 			log.Fatalf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", nName)
 		}
-		endpoint.EndpointName = c.Conf.Prefix + epName
+		endpoint.EndpointName = c.Conf.Name + epName
 	} else {
 		endpoint.EndpointName = epName
 	}

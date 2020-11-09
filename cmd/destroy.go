@@ -38,7 +38,7 @@ var destroyCmd = &cobra.Command{
 			return err
 		}
 
-		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Conf.Prefix)})
+		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Conf.Name)})
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
 		}
