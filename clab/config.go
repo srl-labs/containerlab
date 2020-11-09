@@ -11,11 +11,13 @@ import (
 )
 
 const (
-	baseConfigDir  = "/etc/containerlab/templates/srl/"
-	prefix         = "clab"
-	dockerNetName  = "clab"
-	dockerIPv4Addr = "172.20.20.0/24"
-	dockerIPv6Addr = "2001:172:20:20::/80"
+	baseConfigDir = "/etc/containerlab/templates/srl/"
+	// prefix is used to distinct containerlab created files/dirs/containers
+	prefix = "clab"
+	// a name of a docker network that nodes management interfaces connect to
+	dockerNetName     = "clab"
+	dockerNetIPv4Addr = "172.20.20.0/24"
+	dockerNetIPv6Addr = "2001:172:20:20::/80"
 )
 
 var srlTypes = map[string]string{
@@ -120,10 +122,10 @@ func (c *cLab) parseIPInfo() error {
 		c.Conf.DockerInfo.Bridge = dockerNetName
 	}
 	if c.Conf.DockerInfo.Ipv4Subnet == "" {
-		c.Conf.DockerInfo.Ipv4Subnet = dockerIPv4Addr
+		c.Conf.DockerInfo.Ipv4Subnet = dockerNetIPv4Addr
 	}
 	if c.Conf.DockerInfo.Ipv6Subnet == "" {
-		c.Conf.DockerInfo.Ipv6Subnet = dockerIPv6Addr
+		c.Conf.DockerInfo.Ipv6Subnet = dockerNetIPv6Addr
 	}
 
 	_, ipv4Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv4Subnet)
