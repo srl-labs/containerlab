@@ -29,7 +29,7 @@ var destroyCmd = &cobra.Command{
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		if err = c.GetTopology(&topo); err != nil {
+		if err = c.GetTopology(topo); err != nil {
 			return err
 		}
 

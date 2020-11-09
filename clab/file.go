@@ -14,47 +14,36 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// File type is a struct which define parameter of the topology file
-type File struct {
-	file      string
-	name      string
-	shortname string
+// TopoFile type is a struct which defines parameters of the topology file
+type TopoFile struct {
+	fullName string // file name with extension
+	name     string // file name without extension
 }
 
-// GetTopology gets the lab topology information
-func (c *cLab) GetTopology(topo *string) error {
-	log.Info("Getting topology information ...")
-	log.Debug("Topofile ", *topo)
+// GetTopology parses the topology file into c.Conf structure
+// as well as populates the TopoFile structure with the topology file related information
+func (c *cLab) GetTopology(topo string) error {
+	log.Infof("Getting topology information from %s file...", topo)
 
-	yamlFile, err := ioutil.ReadFile(*topo)
+	yamlFile, err := ioutil.ReadFile(topo)
 	if err != nil {
 		return err
 	}
-	log.Debug(fmt.Sprintf("File contents:\n%s\n", yamlFile))
+	log.Debug(fmt.Sprintf("Topology file contents:\n%s\n", yamlFile))
 
 	err = yaml.Unmarshal(yamlFile, c.Conf)
 	if err != nil {
 		return err
 	}
 
-	s := strings.Split(*topo, "/")
+	s := strings.Split(topo, "/")
 	file := s[len(s)-1]
 	filename := strings.Split(file, ".")
-	sf := strings.Split(filename[0], "-")
-	shortname := ""
-	for _, f := range sf {
-		shortname += f
+	c.TopoFile = &TopoFile{
+		fullName: file,
+		name:     filename[0],
 	}
-	log.Debug(s, file, filename, shortname)
-	c.FileInfo = &File{
-		file:      file,
-		name:      filename[0],
-		shortname: shortname,
-	}
-	log.Debug("File : ", c.FileInfo)
-
 	return nil
-
 }
 
 func fileExists(filename string) bool {
@@ -197,7 +186,6 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 
 	return nil
 }
-
 
 // GenerateConfig generates configuration for the duts
 func (node *Node) generateConfig(dst string) error {

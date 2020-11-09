@@ -12,7 +12,7 @@ import (
 
 type cLab struct {
 	Conf         *Conf
-	FileInfo     *File
+	TopoFile     *TopoFile
 	m            *sync.RWMutex
 	Nodes        map[string]*Node
 	Links        map[int]*Link
@@ -34,7 +34,7 @@ type cLabDirectory struct {
 func NewContainerLab(d bool) *cLab {
 	return &cLab{
 		Conf:     new(Conf),
-		FileInfo: new(File),
+		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]*Node),
 		Links:    make(map[int]*Link),
