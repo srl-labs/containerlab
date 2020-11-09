@@ -20,10 +20,14 @@ import (
 // path to the topology file
 var topo string
 var graph bool
-var bridge string
+
+// name of the container management network
+var mgmtNetName string
 var prefix string
-var ipv4Subnet net.IPNet
-var ipv6Subnet net.IPNet
+
+// IPv4/6 address range for container management network
+var mgmtIPv4Subnet net.IPNet
+var mgmtIPv6Subnet net.IPNet
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
@@ -152,23 +156,23 @@ var deployCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(deployCmd)
 	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
-	deployCmd.Flags().StringVarP(&bridge, "bridge", "b", "", "docker network name for management")
-	deployCmd.Flags().IPNetVarP(&ipv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	deployCmd.Flags().IPNetVarP(&ipv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "n", "", "management network name")
+	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
+	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 }
 
 func setFlags(conf *clab.Conf) {
 	if prefix != "" {
 		conf.Prefix = prefix
 	}
-	if bridge != "" {
-		conf.DockerInfo.Bridge = bridge
+	if mgmtNetName != "" {
+		conf.DockerInfo.Bridge = mgmtNetName
 	}
-	if ipv4Subnet.String() != "<nil>" {
-		conf.DockerInfo.Ipv4Subnet = ipv4Subnet.String()
+	if mgmtIPv4Subnet.String() != "<nil>" {
+		conf.DockerInfo.Ipv4Subnet = mgmtIPv4Subnet.String()
 	}
-	if ipv6Subnet.String() != "<nil>" {
-		conf.DockerInfo.Ipv6Subnet = ipv6Subnet.String()
+	if mgmtIPv6Subnet.String() != "<nil>" {
+		conf.DockerInfo.Ipv6Subnet = mgmtIPv6Subnet.String()
 	}
 }
 
