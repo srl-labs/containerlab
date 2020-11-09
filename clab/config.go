@@ -10,7 +10,15 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const baseConfigDir = "/etc/containerlab/templates/srl/"
+const (
+	baseConfigDir = "/etc/containerlab/templates/srl/"
+	// prefix is used to distinct containerlab created files/dirs/containers
+	prefix = "clab"
+	// a name of a docker network that nodes management interfaces connect to
+	dockerNetName     = "clab"
+	dockerNetIPv4Addr = "172.20.20.0/24"
+	dockerNetIPv6Addr = "2001:172:20:20::/80"
+)
 
 var srlTypes = map[string]string{
 	"ixr6":  "topology-7250IXR6.yml",
@@ -100,7 +108,7 @@ type Link struct {
 	Labels map[string]string
 }
 
-// Endpoint is a sttruct that contains information of a link endpoint
+// Endpoint is a struct that contains information of a link endpoint
 type Endpoint struct {
 	Node *Node
 	// e1-x, eth, etc
@@ -111,13 +119,13 @@ type Endpoint struct {
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
 	if c.Conf.DockerInfo.Bridge == "" {
-		c.Conf.DockerInfo.Bridge = "srlinux_bridge"
+		c.Conf.DockerInfo.Bridge = dockerNetName
 	}
 	if c.Conf.DockerInfo.Ipv4Subnet == "" {
-		c.Conf.DockerInfo.Bridge = "172.19.19.0/24"
+		c.Conf.DockerInfo.Ipv4Subnet = dockerNetIPv4Addr
 	}
 	if c.Conf.DockerInfo.Ipv6Subnet == "" {
-		c.Conf.DockerInfo.Bridge = "2001:172:19:19::/80"
+		c.Conf.DockerInfo.Ipv6Subnet = dockerNetIPv6Addr
 	}
 
 	_, ipv4Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv4Subnet)
@@ -155,7 +163,7 @@ func (c *cLab) ParseTopology() error {
 	}
 
 	c.Dir = new(cLabDirectory)
-	c.Dir.Lab = c.Conf.ConfigPath + "/" + "containerlab" + "-" + c.Conf.Prefix
+	c.Dir.Lab = c.Conf.ConfigPath + "/" + prefix + "-" + c.Conf.Prefix
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
 	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
@@ -245,7 +253,7 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
-	node.LongName = "containerlab" + "-" + c.Conf.Prefix + "-" + dutName
+	node.LongName = prefix + "-" + c.Conf.Prefix + "-" + dutName
 	node.Fqdn = dutName + "." + c.Conf.Prefix + ".io"
 	node.LabDir = c.Dir.Lab + "/" + dutName
 	// node.CertDir = c.Dir.LabCA + "/" + dutName
