@@ -139,11 +139,11 @@ var deployCmd = &cobra.Command{
 			return fmt.Errorf("no containers found")
 		}
 		log.Info("Writing /etc/hosts file")
-		err = createHostsFile(containers, c.Conf.DockerInfo.Bridge)
+		err = createHostsFile(containers, c.Conf.Mgmt.Network)
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
 		}
-		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
+		printContainerInspect(containers, c.Conf.Mgmt.Network, format)
 		return nil
 	},
 }
@@ -161,13 +161,13 @@ func setFlags(conf *clab.Conf) {
 		conf.Name = prefix
 	}
 	if mgmtNetName != "" {
-		conf.DockerInfo.Bridge = mgmtNetName
+		conf.Mgmt.Network = mgmtNetName
 	}
 	if mgmtIPv4Subnet.String() != "<nil>" {
-		conf.DockerInfo.Ipv4Subnet = mgmtIPv4Subnet.String()
+		conf.Mgmt.Ipv4Subnet = mgmtIPv4Subnet.String()
 	}
 	if mgmtIPv6Subnet.String() != "<nil>" {
-		conf.DockerInfo.Ipv6Subnet = mgmtIPv6Subnet.String()
+		conf.Mgmt.Ipv6Subnet = mgmtIPv6Subnet.String()
 	}
 }
 

@@ -1,7 +1,6 @@
 package clab
 
 import (
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,12 +27,12 @@ var srlTypes = map[string]string{
 	"ixrd3": "topology-7220IXRD3.yml",
 }
 
-type dockerInfo struct {
-	Bridge      string `yaml:"bridge"`
-	Ipv4Subnet  string `yaml:"ipv4_subnet"`
-	Ipv4Gateway string `yaml:"ipv4_gateway"`
-	Ipv6Subnet  string `yaml:"ipv6_subnet"`
-	Ipv6Gateway string `yaml:"ipv6_gateway"`
+// mgmtNet struct defines the management network options
+// it is provided via docker network object
+type mgmtNet struct {
+	Network    string // docker network name
+	Ipv4Subnet string `yaml:"ipv4_subnet"`
+	Ipv6Subnet string `yaml:"ipv6_subnet"`
 }
 
 type dutInfo struct {
@@ -55,8 +54,8 @@ type link struct {
 // Conf defines lab configuration as it is provided in the YAML file
 type Conf struct {
 	Name        string
-	DockerInfo  dockerInfo `yaml:"Docker_info"`
-	ClientImage string     `yaml:"Client_image"`
+	Mgmt        mgmtNet
+	ClientImage string `yaml:"Client_image"`
 	Duts        struct {
 		GlobalDefaults dutInfo            `yaml:"global_defaults"`
 		KindDefaults   map[string]dutInfo `yaml:"kind_defaults"`
@@ -118,32 +117,15 @@ type Endpoint struct {
 // ParseIPInfo parses IP information
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
-	if c.Conf.DockerInfo.Bridge == "" {
-		c.Conf.DockerInfo.Bridge = dockerNetName
+	if c.Conf.Mgmt.Network == "" {
+		c.Conf.Mgmt.Network = dockerNetName
 	}
-	if c.Conf.DockerInfo.Ipv4Subnet == "" {
-		c.Conf.DockerInfo.Ipv4Subnet = dockerNetIPv4Addr
+	if c.Conf.Mgmt.Ipv4Subnet == "" {
+		c.Conf.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
 	}
-	if c.Conf.DockerInfo.Ipv6Subnet == "" {
-		c.Conf.DockerInfo.Ipv6Subnet = dockerNetIPv6Addr
+	if c.Conf.Mgmt.Ipv6Subnet == "" {
+		c.Conf.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
 	}
-
-	_, ipv4Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv4Subnet)
-	if err != nil {
-		return err
-	}
-	ipv4Gateway := ipv4Net.IP.To4()
-	ipv4Gateway[3]++
-	c.Conf.DockerInfo.Ipv4Gateway = ipv4Gateway.String()
-
-	_, ipv6Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv6Subnet)
-	if err != nil {
-		return err
-	}
-	ipv6Gateway := ipv6Net.IP
-	ipv6Gateway[15]++
-	c.Conf.DockerInfo.Ipv6Gateway = ipv6Gateway.String()
-
 	return nil
 }
 
@@ -156,7 +138,7 @@ func (c *cLab) ParseTopology() error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("DockerInfo: %v", c.Conf.DockerInfo)
+	log.Debugf("DockerInfo: %v", c.Conf.Mgmt)
 
 	if c.Conf.ConfigPath == "" {
 		c.Conf.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
