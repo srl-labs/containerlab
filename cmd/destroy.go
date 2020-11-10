@@ -38,7 +38,7 @@ var destroyCmd = &cobra.Command{
 			return err
 		}
 
-		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Conf.Name)})
+		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
 		}
@@ -62,7 +62,7 @@ var destroyCmd = &cobra.Command{
 		}
 		wg.Wait()
 		log.Info("Removing container entries from /etc/hosts file")
-		err = deleteEntriesFromHostsFile(containers, c.Conf.Mgmt.Network)
+		err = deleteEntriesFromHostsFile(containers, c.Config.Mgmt.Network)
 		if err != nil {
 			return err
 		}

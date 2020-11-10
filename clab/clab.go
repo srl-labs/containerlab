@@ -11,7 +11,7 @@ import (
 // var debug bool
 
 type cLab struct {
-	Conf         *Conf
+	Config       *Config
 	TopoFile     *TopoFile
 	m            *sync.RWMutex
 	Nodes        map[string]*Node
@@ -33,7 +33,7 @@ type cLabDirectory struct {
 // NewContainerLab function defines a new container lab
 func NewContainerLab(d bool) *cLab {
 	return &cLab{
-		Conf:     new(Conf),
+		Config:   new(Config),
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]*Node),

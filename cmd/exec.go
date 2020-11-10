@@ -36,7 +36,7 @@ var execCmd = &cobra.Command{
 			if err = c.GetTopology(topo); err != nil {
 				log.Fatal(err)
 			}
-			prefix = c.Conf.Name
+			prefix = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
