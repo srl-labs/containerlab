@@ -48,7 +48,7 @@ var inspectCmd = &cobra.Command{
 			if err = c.GetTopology(topo); err != nil {
 				log.Fatal(err)
 			}
-			prefix = c.Conf.Name
+			prefix = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -69,7 +69,7 @@ var inspectCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return
 		}
-		printContainerInspect(containers, c.Conf.Mgmt.Network, format)
+		printContainerInspect(containers, c.Config.Mgmt.Network, format)
 	},
 }
 

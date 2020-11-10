@@ -51,8 +51,8 @@ type link struct {
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
-// Conf defines lab configuration as it is provided in the YAML file
-type Conf struct {
+// Config defines lab configuration as it is provided in the YAML file
+type Config struct {
 	Name string
 	Mgmt mgmtNet
 	Duts struct {
@@ -116,14 +116,14 @@ type Endpoint struct {
 // ParseIPInfo parses IP information
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
-	if c.Conf.Mgmt.Network == "" {
-		c.Conf.Mgmt.Network = dockerNetName
+	if c.Config.Mgmt.Network == "" {
+		c.Config.Mgmt.Network = dockerNetName
 	}
-	if c.Conf.Mgmt.Ipv4Subnet == "" {
-		c.Conf.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
+	if c.Config.Mgmt.Ipv4Subnet == "" {
+		c.Config.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
 	}
-	if c.Conf.Mgmt.Ipv6Subnet == "" {
-		c.Conf.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
+	if c.Config.Mgmt.Ipv6Subnet == "" {
+		c.Config.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
 	}
 	return nil
 }
@@ -131,20 +131,20 @@ func (c *cLab) parseIPInfo() error {
 // ParseTopology parses the lab topology
 func (c *cLab) ParseTopology() error {
 	log.Info("Parsing topology information ...")
-	log.Debugf("Prefix: %s", c.Conf.Name)
+	log.Debugf("Prefix: %s", c.Config.Name)
 	// initialize DockerInfo
 	err := c.parseIPInfo()
 	if err != nil {
 		return err
 	}
-	log.Debugf("DockerInfo: %v", c.Conf.Mgmt)
+	log.Debugf("DockerInfo: %v", c.Config.Mgmt)
 
-	if c.Conf.ConfigPath == "" {
-		c.Conf.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
+	if c.Config.ConfigPath == "" {
+		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 	}
 
 	c.Dir = new(cLabDirectory)
-	c.Dir.Lab = c.Conf.ConfigPath + "/" + prefix + "-" + c.Conf.Name
+	c.Dir.Lab = c.Config.ConfigPath + "/" + prefix + "-" + c.Config.Name
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
 	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
@@ -155,11 +155,11 @@ func (c *cLab) ParseTopology() error {
 
 	// initialize the Node information from the topology map
 	idx := 0
-	for dut, data := range c.Conf.Duts.DutSpecifics {
+	for dut, data := range c.Config.Duts.DutSpecifics {
 		c.NewNode(dut, data, idx)
 		idx++
 	}
-	for i, l := range c.Conf.Links {
+	for i, l := range c.Config.Links {
 		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
@@ -170,52 +170,52 @@ func (c *cLab) kindInitialization(dut *dutInfo) string {
 	if dut.Kind != "" {
 		return dut.Kind
 	}
-	return c.Conf.Duts.GlobalDefaults.Kind
+	return c.Config.Duts.GlobalDefaults.Kind
 }
 
 func (c *cLab) groupInitialization(dut *dutInfo, kind string) string {
 	if dut.Group != "" {
 		return dut.Group
-	} else if c.Conf.Duts.KindDefaults[kind].Group != "" {
-		return c.Conf.Duts.KindDefaults[kind].Group
+	} else if c.Config.Duts.KindDefaults[kind].Group != "" {
+		return c.Config.Duts.KindDefaults[kind].Group
 	}
-	return c.Conf.Duts.GlobalDefaults.Group
+	return c.Config.Duts.GlobalDefaults.Group
 }
 
 func (c *cLab) typeInitialization(dut *dutInfo, kind string) string {
 	if dut.Type != "" {
 		return dut.Type
 	}
-	return c.Conf.Duts.KindDefaults[kind].Type
+	return c.Config.Duts.KindDefaults[kind].Type
 }
 
 func (c *cLab) configInitialization(dut *dutInfo, kind string) string {
 	if dut.Config != "" {
 		return dut.Config
 	}
-	return c.Conf.Duts.KindDefaults[kind].Config
+	return c.Config.Duts.KindDefaults[kind].Config
 }
 
 func (c *cLab) imageInitialization(dut *dutInfo, kind string) string {
 	if dut.Image != "" {
 		return dut.Image
 	}
-	return c.Conf.Duts.KindDefaults[kind].Image
+	return c.Config.Duts.KindDefaults[kind].Image
 }
 
 func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
 	if dut.License != "" {
 		return dut.License
 	}
-	return c.Conf.Duts.KindDefaults[kind].License
+	return c.Config.Duts.KindDefaults[kind].License
 }
 
 func (c *cLab) cmdInitialization(dut *dutInfo, kind string, deflt string) string {
 	if dut.Cmd != "" {
 		return dut.Cmd
 	}
-	if c.Conf.Duts.KindDefaults[kind].Cmd != "" {
-		return c.Conf.Duts.KindDefaults[kind].Cmd
+	if c.Config.Duts.KindDefaults[kind].Cmd != "" {
+		return c.Config.Duts.KindDefaults[kind].Cmd
 	}
 	return deflt
 }
@@ -223,10 +223,10 @@ func (c *cLab) cmdInitialization(dut *dutInfo, kind string, deflt string) string
 func (c *cLab) positionInitialization(dut *dutInfo, kind string) string {
 	if dut.Position != "" {
 		return dut.Position
-	} else if c.Conf.Duts.KindDefaults[kind].Position != "" {
-		return c.Conf.Duts.KindDefaults[kind].Position
+	} else if c.Config.Duts.KindDefaults[kind].Position != "" {
+		return c.Config.Duts.KindDefaults[kind].Position
 	}
-	return c.Conf.Duts.GlobalDefaults.Position
+	return c.Config.Duts.GlobalDefaults.Position
 }
 
 // NewNode initializes a new node object
@@ -234,8 +234,8 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
-	node.LongName = prefix + "-" + c.Conf.Name + "-" + dutName
-	node.Fqdn = dutName + "." + c.Conf.Name + ".io"
+	node.LongName = prefix + "-" + c.Config.Name + "-" + dutName
+	node.Fqdn = dutName + "." + c.Config.Name + ".io"
 	node.LabDir = c.Dir.Lab + "/" + dutName
 	// node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
@@ -420,7 +420,7 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		if _, err := netlink.LinkByName(nName); err != nil {
 			log.Fatalf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", nName)
 		}
-		endpoint.EndpointName = c.Conf.Name + epName
+		endpoint.EndpointName = c.Config.Name + epName
 	} else {
 		endpoint.EndpointName = epName
 	}

@@ -40,8 +40,8 @@ var deployCmd = &cobra.Command{
 		if err = c.GetTopology(topo); err != nil {
 			return err
 		}
-		setFlags(c.Conf)
-		log.Debugf("lab Conf: %+v", c.Conf)
+		setFlags(c.Config)
+		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
 			return err
@@ -59,7 +59,7 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
 		}
-		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Name})
+		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Config.Name})
 		if err != nil {
 			return fmt.Errorf("failed to generate rootCa: %v", err)
 		}
@@ -130,7 +130,7 @@ var deployCmd = &cobra.Command{
 		// show topology output
 
 		// print table summary
-		labels = append(labels, "containerlab=lab-"+c.Conf.Name)
+		labels = append(labels, "containerlab=lab-"+c.Config.Name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
@@ -139,11 +139,11 @@ var deployCmd = &cobra.Command{
 			return fmt.Errorf("no containers found")
 		}
 		log.Info("Writing /etc/hosts file")
-		err = createHostsFile(containers, c.Conf.Mgmt.Network)
+		err = createHostsFile(containers, c.Config.Mgmt.Network)
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
 		}
-		printContainerInspect(containers, c.Conf.Mgmt.Network, format)
+		printContainerInspect(containers, c.Config.Mgmt.Network, format)
 		return nil
 	},
 }
@@ -156,7 +156,7 @@ func init() {
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 }
 
-func setFlags(conf *clab.Conf) {
+func setFlags(conf *clab.Config) {
 	if prefix != "" {
 		conf.Name = prefix
 	}

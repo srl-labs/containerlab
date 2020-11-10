@@ -31,7 +31,7 @@ func (c *cLab) GetTopology(topo string) error {
 	}
 	log.Debug(fmt.Sprintf("Topology file contents:\n%s\n", yamlFile))
 
-	err = yaml.Unmarshal(yamlFile, c.Conf)
+	err = yaml.Unmarshal(yamlFile, c.Config)
 	if err != nil {
 		return err
 	}
