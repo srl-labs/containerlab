@@ -1,12 +1,12 @@
 # topology documentation: http://containerlab.srlinux.dev/lab-examples/single-srl/
-Prefix: srl01
+name: srl01
 
-Duts:
-  kind_defaults:
+topology:
+  kinds:
     srl:
       type: ixr6
       image: srlinux
       license: license.key
-  dut_specifics:
+  nodes:
     srl:
       kind: srl

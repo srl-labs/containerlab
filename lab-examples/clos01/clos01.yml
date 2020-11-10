@@ -1,14 +1,14 @@
 # topology documentation: http://containerlab.srlinux.dev/lab-examples/min-clos/
-Prefix: clos01
+name: clos01
 
-Duts:
-  kind_defaults:
+topology:
+  kinds:
     srl:
       image: srlinux
       license: license.key
     linux:
       image: ghcr.io/hellt/network-multitool
-  dut_specifics:
+  nodes:
     leaf1:
       kind: srl
       type: ixrd1
@@ -23,7 +23,7 @@ Duts:
     client2:
       kind: linux
 
-Links:
+links:
   - endpoints: ["leaf1:e1-1", "spine:e1-1"]
   - endpoints: ["leaf2:e1-1", "spine:e1-2"]
   - endpoints: ["client1:eth1", "leaf1:e1-2"]

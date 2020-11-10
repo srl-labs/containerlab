@@ -1,23 +1,24 @@
 # topology documentation: http://containerlab.srlinux.dev/lab-examples/ext-bridge/
-Prefix: br01
+name: br01
 
-Duts:
-  kind_defaults:
+topology:
+  kinds:
     srl:
       type: ixrd1
       image: srlinux
       license: license.key
-  dut_specifics:
+  nodes:
     srl1:
       kind: srl
     srl2:
       kind: srl
     srl3:
       kind: srl
+    # note, that the bridge br-clab must be created manually
     br-clab:
       kind: bridge
 
-Links:
+links:
   - endpoints: ["srl1:e1-1", "br-clab:eth1"]
   - endpoints: ["srl2:e1-1", "br-clab:eth2"]
   - endpoints: ["srl3:e1-1", "br-clab:eth3"]
