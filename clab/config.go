@@ -35,15 +35,23 @@ type mgmtNet struct {
 	Ipv6Subnet string `yaml:"ipv6_subnet"`
 }
 
-type dutInfo struct {
-	Kind     string `yaml:"kind"`
-	Group    string `yaml:"group"`
-	Type     string `yaml:"type"`
-	Config   string `yaml:"config"`
-	Image    string `yaml:"image"`
-	License  string `yaml:"license"`
-	Position string `yaml:"position"`
-	Cmd      string `yaml:"cmd"`
+// NodeConfig represents a configuration a given node can have in the lab definition file
+type NodeConfig struct {
+	Kind     string
+	Group    string
+	Type     string
+	Config   string
+	Image    string
+	License  string
+	Position string
+	Cmd      string
+}
+
+// Topology represents a lab topology
+type Topology struct {
+	Defaults NodeConfig
+	Kinds    map[string]NodeConfig
+	Nodes    map[string]NodeConfig
 }
 
 type link struct {
@@ -53,13 +61,9 @@ type link struct {
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name string
-	Mgmt mgmtNet
-	Duts struct {
-		GlobalDefaults dutInfo            `yaml:"global_defaults"`
-		KindDefaults   map[string]dutInfo `yaml:"kind_defaults"`
-		DutSpecifics   map[string]dutInfo `yaml:"dut_specifics"`
-	} `yaml:"Duts"`
+	Name       string
+	Mgmt       mgmtNet
+	Topology   Topology
 	Links      []link `yaml:"Links"`
 	ConfigPath string `yaml:"config_path"`
 }
@@ -155,7 +159,7 @@ func (c *cLab) ParseTopology() error {
 
 	// initialize the Node information from the topology map
 	idx := 0
-	for dut, data := range c.Config.Duts.DutSpecifics {
+	for dut, data := range c.Config.Topology.Nodes {
 		c.NewNode(dut, data, idx)
 		idx++
 	}
@@ -166,71 +170,71 @@ func (c *cLab) ParseTopology() error {
 	return nil
 }
 
-func (c *cLab) kindInitialization(dut *dutInfo) string {
+func (c *cLab) kindInitialization(dut *NodeConfig) string {
 	if dut.Kind != "" {
 		return dut.Kind
 	}
-	return c.Config.Duts.GlobalDefaults.Kind
+	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *cLab) groupInitialization(dut *dutInfo, kind string) string {
+func (c *cLab) groupInitialization(dut *NodeConfig, kind string) string {
 	if dut.Group != "" {
 		return dut.Group
-	} else if c.Config.Duts.KindDefaults[kind].Group != "" {
-		return c.Config.Duts.KindDefaults[kind].Group
+	} else if c.Config.Topology.Kinds[kind].Group != "" {
+		return c.Config.Topology.Kinds[kind].Group
 	}
-	return c.Config.Duts.GlobalDefaults.Group
+	return c.Config.Topology.Defaults.Group
 }
 
-func (c *cLab) typeInitialization(dut *dutInfo, kind string) string {
+func (c *cLab) typeInitialization(dut *NodeConfig, kind string) string {
 	if dut.Type != "" {
 		return dut.Type
 	}
-	return c.Config.Duts.KindDefaults[kind].Type
+	return c.Config.Topology.Kinds[kind].Type
 }
 
-func (c *cLab) configInitialization(dut *dutInfo, kind string) string {
+func (c *cLab) configInitialization(dut *NodeConfig, kind string) string {
 	if dut.Config != "" {
 		return dut.Config
 	}
-	return c.Config.Duts.KindDefaults[kind].Config
+	return c.Config.Topology.Kinds[kind].Config
 }
 
-func (c *cLab) imageInitialization(dut *dutInfo, kind string) string {
+func (c *cLab) imageInitialization(dut *NodeConfig, kind string) string {
 	if dut.Image != "" {
 		return dut.Image
 	}
-	return c.Config.Duts.KindDefaults[kind].Image
+	return c.Config.Topology.Kinds[kind].Image
 }
 
-func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
+func (c *cLab) licenseInitialization(dut *NodeConfig, kind string) string {
 	if dut.License != "" {
 		return dut.License
 	}
-	return c.Config.Duts.KindDefaults[kind].License
+	return c.Config.Topology.Kinds[kind].License
 }
 
-func (c *cLab) cmdInitialization(dut *dutInfo, kind string, deflt string) string {
+func (c *cLab) cmdInitialization(dut *NodeConfig, kind string, defCmd string) string {
 	if dut.Cmd != "" {
 		return dut.Cmd
 	}
-	if c.Config.Duts.KindDefaults[kind].Cmd != "" {
-		return c.Config.Duts.KindDefaults[kind].Cmd
+	if c.Config.Topology.Kinds[kind].Cmd != "" {
+		return c.Config.Topology.Kinds[kind].Cmd
 	}
-	return deflt
+	return defCmd
 }
 
-func (c *cLab) positionInitialization(dut *dutInfo, kind string) string {
+func (c *cLab) positionInitialization(dut *NodeConfig, kind string) string {
 	if dut.Position != "" {
 		return dut.Position
-	} else if c.Config.Duts.KindDefaults[kind].Position != "" {
-		return c.Config.Duts.KindDefaults[kind].Position
+	} else if c.Config.Topology.Kinds[kind].Position != "" {
+		return c.Config.Topology.Kinds[kind].Position
 	}
-	return c.Config.Duts.GlobalDefaults.Position
+	return c.Config.Topology.Defaults.Position
 }
 
 // NewNode initializes a new node object
-func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
+func (c *cLab) NewNode(dutName string, dut NodeConfig, idx int) {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = dutName
