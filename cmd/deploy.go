@@ -48,6 +48,10 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
+		if err = c.VerifyBridgesExist(); err != nil {
+			return err
+		}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
