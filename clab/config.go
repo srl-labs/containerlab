@@ -55,7 +55,7 @@ type Topology struct {
 }
 
 type link struct {
-	Endpoints []string          `yaml:"endpoints"`
+	Endpoints []string
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
@@ -64,7 +64,7 @@ type Config struct {
 	Name       string
 	Mgmt       mgmtNet
 	Topology   Topology
-	Links      []link `yaml:"Links"`
+	Links      []link
 	ConfigPath string `yaml:"config_path"`
 }
 
