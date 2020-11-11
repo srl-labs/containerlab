@@ -148,7 +148,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
-		// create dut directory in lab
+		// create node directory in lab
 		CreateDirectory(node.LabDir, 0777)
 		// generate SRL topology file
 		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
@@ -187,7 +187,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	return nil
 }
 
-// GenerateConfig generates configuration for the duts
+// GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
 	tpl, err := template.New("srlconfig.tpl").ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
 	if err != nil {
