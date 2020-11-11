@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,9 @@ const (
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
 )
+
+// supported kinds
+var kinds = []string{"srl", "ceos", "linux", "alpine", "bridge"}
 
 var srlTypes = map[string]string{
 	"ixr6":  "topology-7250IXR6.yml",
@@ -159,8 +163,10 @@ func (c *cLab) ParseTopology() error {
 
 	// initialize the Node information from the topology map
 	idx := 0
-	for dut, data := range c.Config.Topology.Nodes {
-		c.NewNode(dut, data, idx)
+	for nodeName, node := range c.Config.Topology.Nodes {
+		if err = c.NewNode(nodeName, node, idx); err != nil {
+			return err
+		}
 		idx++
 	}
 	for i, l := range c.Config.Links {
@@ -234,28 +240,28 @@ func (c *cLab) positionInitialization(dut *NodeConfig, kind string) string {
 }
 
 // NewNode initializes a new node object
-func (c *cLab) NewNode(dutName string, dut NodeConfig, idx int) {
+func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
 	node := new(Node)
-	node.ShortName = dutName
-	node.LongName = prefix + "-" + c.Config.Name + "-" + dutName
-	node.Fqdn = dutName + "." + c.Config.Name + ".io"
-	node.LabDir = c.Dir.Lab + "/" + dutName
+	node.ShortName = nodeName
+	node.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
+	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
+	node.LabDir = c.Dir.Lab + "/" + nodeName
 	// node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
 
 	// initialize the node with global parameters
 	// Kind initialization is either coming from dut_specific or from global
 	// normalize the data to lower case to compare
-	node.Kind = strings.ToLower(c.kindInitialization(&dut))
+	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&dut, node.Kind)
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
 		//node.License = t.SRLLicense
-		node.Image = c.imageInitialization(&dut, node.Kind)
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		//node.NodeType = "ixr6"
-		node.Position = c.positionInitialization(&dut, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		// initialize specifc container information
 		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker"
@@ -268,9 +274,9 @@ func (c *cLab) NewNode(dutName string, dut NodeConfig, idx int) {
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
 			"INTFTYPE=eth"}
 		node.User = "root"
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.NodeType = dut.Type
-		node.Config = dut.Config
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.NodeType = nodeCfg.Type
+		node.Config = nodeCfg.Config
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
@@ -282,12 +288,12 @@ func (c *cLab) NewNode(dutName string, dut NodeConfig, idx int) {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&dut, node.Kind)
-		node.License = c.licenseInitialization(&dut, node.Kind)
-		node.Image = c.imageInitialization(&dut, node.Kind)
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.NodeType = c.typeInitialization(&dut, node.Kind)
-		node.Position = c.positionInitialization(&dut, node.Kind)
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.License = c.licenseInitialization(&nodeCfg, node.Kind)
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		if filename, found := srlTypes[node.NodeType]; found {
 			node.Topology = baseConfigDir + filename
@@ -357,25 +363,26 @@ func (c *cLab) NewNode(dutName string, dut NodeConfig, idx int) {
 		node.Binds = append(node.Binds, bindTopology)
 
 	case "alpine", "linux":
-		node.Config = c.configInitialization(&dut, node.Kind)
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
 		node.License = ""
-		node.Image = c.imageInitialization(&dut, node.Kind)
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.NodeType = c.typeInitialization(&dut, node.Kind)
-		node.Position = c.positionInitialization(&dut, node.Kind)
-		node.Cmd = c.cmdInitialization(&dut, node.Kind, "/bin/sh")
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.Cmd = c.cmdInitialization(&nodeCfg, node.Kind, "/bin/sh")
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
 
 	case "bridge":
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.Position = c.positionInitialization(&dut, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 	default:
-		panic("Node Kind, OS is not properly initialized; should be provided in Duts.dut_specifics.kind parameters or Duts.global_defaults.kind")
+		return fmt.Errorf("Node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
 	}
-	c.Nodes[dutName] = node
+	c.Nodes[nodeName] = node
+	return nil
 }
 
 // NewLink initializes a new link object
