@@ -1,14 +1,14 @@
-Prefix: srl03
+name: srl03
 
-Duts:
-  kind_defaults:
+topology:
+  kinds:
     srl:
       type: ixr6
       image: srlinux
       license: license.key
     linux:
       image: ghcr.io/hellt/network-multitool
-  dut_specifics:
+  nodes:
     wan1:
       kind: srl
     wan2:
@@ -26,7 +26,7 @@ Duts:
     client4:
       kind: "linux"
 
-Links:
+links:
   # wan1 <-> wan2 connections
   - endpoints: ["wan1:e1-1", "wan2:e1-1"]
   - endpoints: ["wan1:e1-2", "wan2:e1-2"]

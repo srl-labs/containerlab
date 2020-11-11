@@ -14,7 +14,7 @@ var graphCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		c := clab.NewContainerLab(debug)
 
-		if err := c.GetTopology(&topo); err != nil {
+		if err := c.GetTopology(topo); err != nil {
 			log.Fatal(err)
 		}
 

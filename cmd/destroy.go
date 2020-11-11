@@ -29,7 +29,7 @@ var destroyCmd = &cobra.Command{
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		if err = c.GetTopology(&topo); err != nil {
+		if err = c.GetTopology(topo); err != nil {
 			return err
 		}
 
@@ -38,7 +38,7 @@ var destroyCmd = &cobra.Command{
 			return err
 		}
 
-		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Conf.Prefix)})
+		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
 		}
@@ -62,7 +62,7 @@ var destroyCmd = &cobra.Command{
 		}
 		wg.Wait()
 		log.Info("Removing container entries from /etc/hosts file")
-		err = deleteEntriesFromHostsFile(containers, c.Conf.DockerInfo.Bridge)
+		err = deleteEntriesFromHostsFile(containers, c.Config.Mgmt.Network)
 		if err != nil {
 			return err
 		}
