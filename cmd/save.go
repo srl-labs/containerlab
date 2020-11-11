@@ -24,10 +24,10 @@ var saveCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 		if prefix == "" {
-			if err = c.GetTopology(&topo); err != nil {
+			if err = c.GetTopology(topo); err != nil {
 				log.Fatal(err)
 			}
-			prefix = c.Conf.Prefix
+			prefix = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

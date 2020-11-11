@@ -17,6 +17,13 @@ const (
 var debug bool
 var timeout time.Duration
 
+// path to the topology file
+var topo string
+var graph bool
+
+// lab prefix
+var prefix string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "containerlab",
