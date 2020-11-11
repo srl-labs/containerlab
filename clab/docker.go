@@ -27,12 +27,10 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Info("Creating docker bridge")
 
 	ipamIPv4Config := network.IPAMConfig{
-		Subnet:  c.Conf.DockerInfo.Ipv4Subnet,
-		Gateway: c.Conf.DockerInfo.Ipv4Gateway,
+		Subnet: c.Config.Mgmt.Ipv4Subnet,
 	}
 	ipamIPv6Config := network.IPAMConfig{
-		Subnet:  c.Conf.DockerInfo.Ipv6Subnet,
-		Gateway: c.Conf.DockerInfo.Ipv6Gateway,
+		Subnet: c.Config.Mgmt.Ipv6Subnet,
 	}
 	var ipamConfig []network.IPAMConfig
 	ipamConfig = append(ipamConfig, ipamIPv4Config)
@@ -59,13 +57,13 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	var netCreateResponse types.NetworkCreateResponse
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	netCreateResponse, err = c.DockerClient.NetworkCreate(nctx, c.Conf.DockerInfo.Bridge, networkOptions)
+	netCreateResponse, err = c.DockerClient.NetworkCreate(nctx, c.Config.Mgmt.Network, networkOptions)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			log.Debugf("Container network %s already exists", c.Conf.DockerInfo.Bridge)
+			log.Debugf("Container network %s already exists", c.Config.Mgmt.Network)
 			nctx, cancel := context.WithTimeout(ctx, c.timeout)
 			defer cancel()
-			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Conf.DockerInfo.Bridge) //, types.NetworkInspectOptions{})
+			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Config.Mgmt.Network) //, types.NetworkInspectOptions{})
 			if err != nil {
 				return err
 			}
@@ -84,7 +82,7 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 		}
 		bridgeName = "br-" + netCreateResponse.ID[:12]
 	}
-	log.Debugf("container network %s : bridge name: %s", c.Conf.DockerInfo.Bridge, bridgeName)
+	log.Debugf("container network %s : bridge name: %s", c.Config.Mgmt.Network, bridgeName)
 
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
@@ -116,21 +114,21 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	nres, err := c.DockerClient.NetworkInspect(ctx, c.Conf.DockerInfo.Bridge)
+	nres, err := c.DockerClient.NetworkInspect(ctx, c.Config.Mgmt.Network)
 	if err != nil {
 		return err
 	}
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
-		log.Warnf("network '%s' has %d active endpoints", c.Conf.DockerInfo.Bridge, numEndpoints)
+		log.Warnf("network '%s' has %d active endpoints", c.Config.Mgmt.Network, numEndpoints)
 		if c.debug {
 			for _, endp := range nres.Containers {
-				log.Debugf("'%s' is connected to %s", endp.Name, c.Conf.DockerInfo.Bridge)
+				log.Debugf("'%s' is connected to %s", endp.Name, c.Config.Mgmt.Network)
 			}
 		}
 		return nil
 	}
-	err = c.DockerClient.NetworkRemove(nctx, c.Conf.DockerInfo.Bridge)
+	err = c.DockerClient.NetworkRemove(nctx, c.Config.Mgmt.Network)
 	if err != nil {
 		return err
 	}
@@ -144,8 +142,8 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{
-		"containerlab":         "lab-" + c.Conf.Prefix,
-		"lab-" + c.Conf.Prefix: node.ShortName,
+		"containerlab":         "lab-" + c.Config.Name,
+		"lab-" + c.Config.Name: node.ShortName,
 	}
 	if node.Kind != "" {
 		labels["kind"] = node.Kind
@@ -178,7 +176,7 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 			Binds:       node.Binds,
 			Sysctls:     node.Sysctls,
 			Privileged:  true,
-			NetworkMode: container.NetworkMode(c.Conf.DockerInfo.Bridge),
+			NetworkMode: container.NetworkMode(c.Config.Mgmt.Network),
 		}, nil, node.LongName)
 	if err != nil {
 		return err

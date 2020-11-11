@@ -45,10 +45,10 @@ var inspectCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 		if prefix == "" {
-			if err = c.GetTopology(&topo); err != nil {
+			if err = c.GetTopology(topo); err != nil {
 				log.Fatal(err)
 			}
-			prefix = c.Conf.Prefix
+			prefix = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -69,7 +69,7 @@ var inspectCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return
 		}
-		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
+		printContainerInspect(containers, c.Config.Mgmt.Network, format)
 	},
 }
 

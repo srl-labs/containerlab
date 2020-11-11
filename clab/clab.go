@@ -11,8 +11,8 @@ import (
 // var debug bool
 
 type cLab struct {
-	Conf         *Conf
-	FileInfo     *File
+	Config       *Config
+	TopoFile     *TopoFile
 	m            *sync.RWMutex
 	Nodes        map[string]*Node
 	Links        map[int]*Link
@@ -33,8 +33,8 @@ type cLabDirectory struct {
 // NewContainerLab function defines a new container lab
 func NewContainerLab(d bool) *cLab {
 	return &cLab{
-		Conf:     new(Conf),
-		FileInfo: new(File),
+		Config:   new(Config),
+		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]*Node),
 		Links:    make(map[int]*Link),
@@ -42,6 +42,7 @@ func NewContainerLab(d bool) *cLab {
 	}
 }
 
+// Init creates a docker client and adds it to containerlab structure
 func (c *cLab) Init(timeout time.Duration) (err error) {
 	c.DockerClient, err = docker.NewEnvClient()
 	c.timeout = timeout
