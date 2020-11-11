@@ -427,9 +427,6 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 
 	// initialize the endpoint name based on the split function
 	if c.Nodes[nName].Kind == "bridge" {
-		if _, err := netlink.LinkByName(nName); err != nil {
-			log.Fatalf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", nName)
-		}
 		endpoint.EndpointName = c.Config.Name + epName
 	} else {
 		endpoint.EndpointName = epName
@@ -438,4 +435,16 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
 	return endpoint
+}
+
+// VerifyBridgeExists verifies if every node of kind=bridge exists on the lab host
+func (c *cLab) VerifyBridgesExist() error {
+	for name, node := range c.Nodes {
+		if node.Kind == "bridge" {
+			if _, err := netlink.LinkByName(name); err != nil {
+				return fmt.Errorf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
+			}
+		}
+	}
+	return nil
 }

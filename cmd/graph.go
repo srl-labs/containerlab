@@ -13,21 +13,17 @@ var graphCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			log.Info(err)
-		}
 
-		if err = c.GetTopology(topo); err != nil {
+		if err := c.GetTopology(topo); err != nil {
 			log.Fatal(err)
 		}
 
 		// Parse topology information
-		if err = c.ParseTopology(); err != nil {
+		if err := c.ParseTopology(); err != nil {
 			log.Fatal(err)
 		}
 
-		if err = c.GenerateGraph(topo); err != nil {
+		if err := c.GenerateGraph(topo); err != nil {
 			log.Error(err)
 		}
 	},
