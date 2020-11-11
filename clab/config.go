@@ -176,53 +176,53 @@ func (c *cLab) ParseTopology() error {
 	return nil
 }
 
-func (c *cLab) kindInitialization(dut *NodeConfig) string {
-	if dut.Kind != "" {
-		return dut.Kind
+func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
+	if nodeCfg.Kind != "" {
+		return nodeCfg.Kind
 	}
 	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *cLab) groupInitialization(dut *NodeConfig, kind string) string {
-	if dut.Group != "" {
-		return dut.Group
+func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Group != "" {
+		return nodeCfg.Group
 	} else if c.Config.Topology.Kinds[kind].Group != "" {
 		return c.Config.Topology.Kinds[kind].Group
 	}
 	return c.Config.Topology.Defaults.Group
 }
 
-func (c *cLab) typeInitialization(dut *NodeConfig, kind string) string {
-	if dut.Type != "" {
-		return dut.Type
+func (c *cLab) typeInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Type != "" {
+		return nodeCfg.Type
 	}
 	return c.Config.Topology.Kinds[kind].Type
 }
 
-func (c *cLab) configInitialization(dut *NodeConfig, kind string) string {
-	if dut.Config != "" {
-		return dut.Config
+func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Config != "" {
+		return nodeCfg.Config
 	}
 	return c.Config.Topology.Kinds[kind].Config
 }
 
-func (c *cLab) imageInitialization(dut *NodeConfig, kind string) string {
-	if dut.Image != "" {
-		return dut.Image
+func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Image != "" {
+		return nodeCfg.Image
 	}
 	return c.Config.Topology.Kinds[kind].Image
 }
 
-func (c *cLab) licenseInitialization(dut *NodeConfig, kind string) string {
-	if dut.License != "" {
-		return dut.License
+func (c *cLab) licenseInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.License != "" {
+		return nodeCfg.License
 	}
 	return c.Config.Topology.Kinds[kind].License
 }
 
-func (c *cLab) cmdInitialization(dut *NodeConfig, kind string, defCmd string) string {
-	if dut.Cmd != "" {
-		return dut.Cmd
+func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
+	if nodeCfg.Cmd != "" {
+		return nodeCfg.Cmd
 	}
 	if c.Config.Topology.Kinds[kind].Cmd != "" {
 		return c.Config.Topology.Kinds[kind].Cmd
@@ -230,9 +230,9 @@ func (c *cLab) cmdInitialization(dut *NodeConfig, kind string, defCmd string) st
 	return defCmd
 }
 
-func (c *cLab) positionInitialization(dut *NodeConfig, kind string) string {
-	if dut.Position != "" {
-		return dut.Position
+func (c *cLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Position != "" {
+		return nodeCfg.Position
 	} else if c.Config.Topology.Kinds[kind].Position != "" {
 		return c.Config.Topology.Kinds[kind].Position
 	}
@@ -247,11 +247,10 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
 	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
 	node.LabDir = c.Dir.Lab + "/" + nodeName
-	// node.CertDir = c.Dir.LabCA + "/" + dutName
 	node.Index = idx
 
 	// initialize the node with global parameters
-	// Kind initialization is either coming from dut_specific or from global
+	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 	switch node.Kind {
@@ -423,7 +422,7 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		}
 	}
 	if endpoint.Node == nil {
-		log.Fatalf("Not all nodes are specified in the duts section or the names don't match in the duts/endpoint section: %s", nName)
+		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName)
 	}
 
 	// initialize the endpoint name based on the split function
