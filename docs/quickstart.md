@@ -143,7 +143,7 @@ ssh admin@clab-srl02-srl1
 To remove the lab, use the `destroy` command that takes a topology file as an argument:
 
 ```
-containerlab destroy -topo srl02.yml
+containerlab destroy --topo srl02.yml
 ```
 
 [^1]: Make sure to satisfy lab host [pre-requisites](install.md#pre-requisites)
