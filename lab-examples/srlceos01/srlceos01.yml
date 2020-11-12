@@ -12,5 +12,5 @@ topology:
       kind: ceos
       image: ceos
 
-links:
-  - endpoints: ["srl:e1-1", "ceos:eth1"]
+  links:
+    - endpoints: ["srl:e1-1", "ceos:eth1"]

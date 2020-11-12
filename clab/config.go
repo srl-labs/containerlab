@@ -56,6 +56,7 @@ type Topology struct {
 	Defaults NodeConfig
 	Kinds    map[string]NodeConfig
 	Nodes    map[string]NodeConfig
+	Links    []link
 }
 
 type link struct {
@@ -68,7 +69,6 @@ type Config struct {
 	Name       string
 	Mgmt       mgmtNet
 	Topology   Topology
-	Links      []link
 	ConfigPath string `yaml:"config_path"`
 }
 
@@ -169,7 +169,7 @@ func (c *cLab) ParseTopology() error {
 		}
 		idx++
 	}
-	for i, l := range c.Config.Links {
+	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
