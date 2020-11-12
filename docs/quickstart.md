@@ -45,8 +45,8 @@ topology:
     srl2:
       kind: srl
 
-links:
-  - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
 ```
 
 A [topology definition deep-dive](manual/topo-def-file.md) is part of our Users Manual, so we keep it short here, glancing over the key components of it:
