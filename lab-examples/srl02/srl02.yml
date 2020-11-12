@@ -13,5 +13,5 @@ topology:
     srl2:
       kind: srl
 
-links:
-  - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]

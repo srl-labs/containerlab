@@ -18,7 +18,7 @@ topology:
     br-clab:
       kind: bridge
 
-links:
-  - endpoints: ["srl1:e1-1", "br-clab:eth1"]
-  - endpoints: ["srl2:e1-1", "br-clab:eth2"]
-  - endpoints: ["srl3:e1-1", "br-clab:eth3"]
+  links:
+    - endpoints: ["srl1:e1-1", "br-clab:eth1"]
+    - endpoints: ["srl2:e1-1", "br-clab:eth2"]
+    - endpoints: ["srl3:e1-1", "br-clab:eth3"]
