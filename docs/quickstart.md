@@ -139,6 +139,21 @@ or by using node's fully qualified names, for which containerlab creates `/etc/h
 ssh admin@clab-srl02-srl1
 ```
 
+The following tab view aggregates the ways to open the NOS CLI per supported device:
+
+=== "Nokia SR Linux"
+    ```bash
+    # access CLI
+    docker exec -it <name> sr_cli
+    # access bash
+    docker exec -it <name> bash
+    ```
+=== "Arista cEOS"
+    ```bash
+    # access CLI
+    docker exec -it <name> Cli
+    ```
+
 ## Destroying a lab
 To remove the lab, use the `destroy` command that takes a topology file as an argument:
 
