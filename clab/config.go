@@ -99,7 +99,6 @@ type Node struct {
 	Cmd       string
 	Env       []string
 	Mounts    map[string]volume
-	Volumes   map[string]struct{}
 	Binds     []string
 
 	TLSCert   string
@@ -342,14 +341,6 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		v.ReadOnly = true
 		log.Debug("Topology File: ", v.Source)
 		node.Mounts["topology"] = v
-
-		node.Volumes = make(map[string]struct{})
-		node.Volumes = map[string]struct{}{
-			node.Mounts["license"].Destination:  {},
-			node.Mounts["config"].Destination:   {},
-			node.Mounts["envConf"].Destination:  {},
-			node.Mounts["topology"].Destination: {},
-		}
 
 		bindLicense := node.Mounts["license"].Source + ":" + node.Mounts["license"].Destination + ":" + "ro"
 		bindConfig := node.Mounts["config"].Source + ":" + node.Mounts["config"].Destination + ":" + "rw"
