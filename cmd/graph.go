@@ -39,7 +39,7 @@ var graphCmd = &cobra.Command{
 	Use:   "graph",
 	Short: "generate a topology graph",
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
@@ -106,6 +106,6 @@ var graphCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(graphCmd)
-	graphCmd.Flags().StringVarP(&srv, "srv", "", "", "server address to view, customize and download your topology PNG")
+	graphCmd.Flags().StringVarP(&srv, "srv", "", "", "HTTP server address to view, customize and export your topology")
 	graphCmd.Flags().StringVarP(&tmpl, "template", "", templatePath, "golang html template used to generate the graph")
 }
