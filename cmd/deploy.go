@@ -112,18 +112,13 @@ var deployCmd = &cobra.Command{
 		wg.Wait()
 		// cleanup hanging resources if a deployment failed before
 		c.InitVirtualWiring()
-		wg = new(sync.WaitGroup)
-		wg.Add(len(c.Links))
+
 		// wire the links between the nodes based on cabling plan
 		for _, link := range c.Links {
-			go func(link *clab.Link) {
-				defer wg.Done()
-				if err = c.CreateVirtualWiring(link); err != nil {
-					log.Error(err)
-				}
-			}(link)
+			if err = c.CreateVirtualWiring(link); err != nil {
+				log.Error(err)
+			}
 		}
-		wg.Wait()
 		// generate graph of the lab topology
 		if graph {
 			if err = c.GenerateGraph(topo); err != nil {

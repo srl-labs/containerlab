@@ -6,11 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 func (c *cLab) InitVirtualWiring() {
@@ -51,56 +51,100 @@ func (c *cLab) createAToBveth(l *Link) error {
 	interfaceA := fmt.Sprintf("clab-%s", genIfName())
 	interfaceB := fmt.Sprintf("clab-%s", genIfName())
 
-	cmd := exec.Command("sudo", "ip", "link", "add", interfaceA, "type", "veth", "peer", "name", interfaceB)
-	err := runCmd(cmd)
+	nllA := &netlink.Veth{PeerName: interfaceB, LinkAttrs: netlink.LinkAttrs{Name: interfaceA}}
+
+	err := netlink.LinkAdd(nllA)
 	if err != nil {
 		return err
 	}
-	wg := new(sync.WaitGroup)
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		err := c.configVeth(interfaceA, l.A.EndpointName, l.A.Node.LongName)
-		if err != nil {
-			log.Fatalf("failed to config interface '%s' in container %s: %v", l.A.EndpointName, l.A.Node.LongName, err)
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		err = c.configVeth(interfaceB, l.B.EndpointName, l.B.Node.LongName)
-		if err != nil {
-			log.Fatalf("failed to config interface '%s' in container %s: %v", l.B.EndpointName, l.B.Node.LongName, err)
-		}
-	}()
-	wg.Wait()
+
+	la := c.newLinkAttributes()
+	la.Name = l.A.EndpointName
+	err = c.configVeth(interfaceA, la, l.A.Node.LongName)
+	if err != nil {
+		log.Fatalf("failed to config interface '%s' in container %s: %v", l.A.EndpointName, l.A.Node.LongName, err)
+	}
+
+	la = c.newLinkAttributes()
+	la.Name = l.B.EndpointName
+	err = c.configVeth(interfaceB, la, l.B.Node.LongName)
+	if err != nil {
+		log.Fatalf("failed to config interface '%s' in container %s: %v", l.B.EndpointName, l.B.Node.LongName, err)
+	}
+
 	return nil
 }
 
-func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
-	var cmd *exec.Cmd
+// Type for the adjustment of the Link Attributes
+type LinkAttributes struct {
+	Name   string
+	MTU    int
+	LinkUp bool
+}
+
+func (c *cLab) newLinkAttributes() LinkAttributes {
+	return LinkAttributes{Name: "", MTU: 1500, LinkUp: true}
+}
+
+func (c *cLab) configVeth(dummyInterface string, la LinkAttributes, ns string) error {
+
 	log.Debugf("Disabling TX checksum offloading for the %s interface...", dummyInterface)
 	err := EthtoolTXOff(dummyInterface)
 	if err != nil {
 		return err
 	}
+
+	netNS, err := netns.GetFromName(ns)
+	if err != nil {
+		return err
+	}
+
+	netLink, err := netlink.LinkByName(dummyInterface)
+	if err != nil {
+		return err
+	}
+
 	log.Debugf("map dummy interface '%s' to container %s", dummyInterface, ns)
-	cmd = exec.Command("sudo", "ip", "link", "set", dummyInterface, "netns", ns)
-	err = runCmd(cmd)
+	err = netlink.LinkSetNsFd(netLink, int(netNS))
 	if err != nil {
 		return err
 	}
-	log.Debugf("rename interface %s to %s", dummyInterface, endpointName)
-	cmd = exec.Command("sudo", "ip", "netns", "exec", ns, "ip", "link", "set", dummyInterface, "name", endpointName)
-	err = runCmd(cmd)
+
+	err = c.setLinkAttributes(ns, netNS, dummyInterface, la)
 	if err != nil {
 		return err
 	}
-	log.Debugf("set interface %s state to up in NS %s", endpointName, ns)
-	cmd = exec.Command("sudo", "ip", "netns", "exec", ns, "ip", "link", "set", endpointName, "up")
-	err = runCmd(cmd)
+
+	return nil
+}
+
+func (c *cLab) setLinkAttributes(namespaceName string, cnamespace netns.NsHandle, oldLinkName string, la LinkAttributes) error {
+	hostNetNs, _ := netns.Get()
+	netns.Set(cnamespace)
+	link, err := netlink.LinkByName(oldLinkName)
 	if err != nil {
 		return err
 	}
+	if la.Name != "" {
+		log.Debugf("rename interface %s to %s", oldLinkName, la.Name)
+		err = netlink.LinkSetName(link, la.Name)
+		if err != nil {
+			return err
+		}
+	}
+	if la.LinkUp {
+		log.Debugf("set interface %s state to up in NS %s", la.Name, namespaceName)
+		err = netlink.LinkSetUp(link)
+		if err != nil {
+			return err
+		}
+	}
+	log.Debugf("setting interface %s MTU to %d", la.Name, la.MTU)
+	netlink.LinkSetMTU(link, la.MTU)
+	if err != nil {
+		return err
+	}
+	netns.Set(hostNetNs)
 	return nil
 }
 
@@ -130,7 +174,10 @@ func (c *cLab) createvethToBridge(l *Link) error {
 	if err != nil {
 		return err
 	}
-	err = c.configVeth(dummyIface, containerIfName, containerNS)
+
+	la := c.newLinkAttributes()
+	la.Name = containerIfName
+	err = c.configVeth(dummyIface, la, containerNS)
 	if err != nil {
 		return err
 	}
