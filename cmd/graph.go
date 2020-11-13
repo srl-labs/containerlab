@@ -106,6 +106,6 @@ var graphCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(graphCmd)
-	graphCmd.Flags().StringVarP(&srv, "srv", "", "", "HTTP server address to view, customize and export your topology")
+	graphCmd.Flags().StringVarP(&srv, "srv", "s", "", "HTTP server address to view, customize and export your topology")
 	graphCmd.Flags().StringVarP(&tmpl, "template", "", templatePath, "golang html template used to generate the graph")
 }
