@@ -98,7 +98,7 @@ type Node struct {
 	User      string
 	Cmd       string
 	Env       []string
-	Mounts    map[string]volume
+	Mounts    []string // Bind mounts strings (src:dest:options)
 	Binds     []string
 
 	TLSCert   string
@@ -316,41 +316,24 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
 		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
 
-		node.Mounts = make(map[string]volume)
-		var v volume
-		v.Source = c.Dir.Lab + "/" + "license.key"
-		v.Destination = "/opt/srlinux/etc/license.key"
-		v.ReadOnly = true
-		log.Debug("License key: ", v.Source)
-		node.Mounts["license"] = v
+		// mount license path
+		licPath, err := filepath.Abs(node.License)
+		if err != nil {
+			return err
+		}
+		node.Mounts = append(node.Mounts, fmt.Sprint(licPath, ":/opt/srlinux/etc/license.key:ro"))
 
-		v.Source = node.LabDir + "/" + "config/"
-		v.Destination = "/etc/opt/srlinux/"
-		v.ReadOnly = false
-		log.Debug("Config: ", v.Source)
-		node.Mounts["config"] = v
+		// mount config directory
+		cfgPath := filepath.Join(node.LabDir, "config")
+		node.Mounts = append(node.Mounts, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
-		v.Source = node.LabDir + "/" + "srlinux.conf"
-		v.Destination = "/home/admin/.srlinux.conf"
-		v.ReadOnly = false
-		log.Debug("Env Config: ", v.Source)
-		node.Mounts["envConf"] = v
+		// mount srlinux.conf
+		srlconfPath := filepath.Join(node.LabDir, "srlinux.conf")
+		node.Mounts = append(node.Mounts, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
 
-		v.Source = node.LabDir + "/" + "topology.yml"
-		v.Destination = "/tmp/topology.yml"
-		v.ReadOnly = true
-		log.Debug("Topology File: ", v.Source)
-		node.Mounts["topology"] = v
-
-		bindLicense := node.Mounts["license"].Source + ":" + node.Mounts["license"].Destination + ":" + "ro"
-		bindConfig := node.Mounts["config"].Source + ":" + node.Mounts["config"].Destination + ":" + "rw"
-		bindEnvConf := node.Mounts["envConf"].Source + ":" + node.Mounts["envConf"].Destination + ":" + "rw"
-		bindTopology := node.Mounts["topology"].Source + ":" + node.Mounts["topology"].Destination + ":" + "ro"
-
-		node.Binds = append(node.Binds, bindLicense)
-		node.Binds = append(node.Binds, bindConfig)
-		node.Binds = append(node.Binds, bindEnvConf)
-		node.Binds = append(node.Binds, bindTopology)
+		// mount srlinux topology
+		topoPath := filepath.Join(node.LabDir, "topology.yml")
+		node.Mounts = append(node.Mounts, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
