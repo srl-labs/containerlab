@@ -31,15 +31,15 @@ var deployCmd = &cobra.Command{
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			return err
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
+		c := clab.NewContainerLab(opts...)
 
-		if err = c.GetTopology(topo); err != nil {
-			return err
-		}
+		var err error
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information

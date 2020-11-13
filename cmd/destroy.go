@@ -22,17 +22,17 @@ var destroyCmd = &cobra.Command{
 	Short:   "destroy a lab",
 	Aliases: []string{"des"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			return err
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
+		c := clab.NewContainerLab(opts...)
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		if err = c.GetTopology(topo); err != nil {
-			return err
-		}
-
+		var err error
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
 			return err

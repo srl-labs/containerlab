@@ -18,15 +18,14 @@ var saveCmd = &cobra.Command{
 			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
 			return
 		}
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			log.Fatal(err)
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
+		c := clab.NewContainerLab(opts...)
 		if prefix == "" {
-			if err = c.GetTopology(topo); err != nil {
-				log.Fatal(err)
-			}
 			prefix = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())

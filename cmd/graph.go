@@ -39,12 +39,13 @@ var graphCmd = &cobra.Command{
 	Use:   "graph",
 	Short: "generate a topology graph",
 
-	RunE: func(cmd *cobra.Command, args []string) error {
-		c := clab.NewContainerLab(debug)
-
-		if err := c.GetTopology(topo); err != nil {
-			return err
+	Run: func(cmd *cobra.Command, args []string) {
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
 		}
+		c := clab.NewContainerLab(opts...)
 
 		// Parse topology information
 		if err := c.ParseTopology(); err != nil {
