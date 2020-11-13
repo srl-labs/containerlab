@@ -168,7 +168,6 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 			AttachStdout: true,
 			AttachStderr: true,
 			Hostname:     node.ShortName,
-			Volumes:      node.Volumes,
 			Tty:          true,
 			User:         node.User,
 			Labels:       labels,
