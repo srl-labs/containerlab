@@ -5,6 +5,7 @@ nav:
   - Quick start: quickstart.md
   - User manual:
       - Topology definition: manual/topo-def-file.md
+      - Kinds: manual/kinds.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
