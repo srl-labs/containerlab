@@ -49,6 +49,7 @@ type NodeConfig struct {
 	License  string
 	Position string
 	Cmd      string
+	Mounts   []string // list of bind mount compatible strings
 }
 
 // Topology represents a lab topology
@@ -182,6 +183,13 @@ func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
 	return c.Config.Topology.Defaults.Kind
 }
 
+func (c *cLab) mountsInit(nodeCfg *NodeConfig) []string {
+	if len(nodeCfg.Mounts) != 0 {
+		return nodeCfg.Mounts
+	}
+	return c.Config.Topology.Kinds[nodeCfg.Kind].Mounts
+}
+
 func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Group != "" {
 		return nodeCfg.Group
@@ -252,6 +260,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+	node.Mounts = c.mountsInit(&nodeCfg)
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
