@@ -172,7 +172,7 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 			User:         node.User,
 			Labels:       labels,
 		}, &container.HostConfig{
-			Binds:       node.Binds,
+			Binds:       node.Mounts,
 			Sysctls:     node.Sysctls,
 			Privileged:  true,
 			NetworkMode: container.NetworkMode(c.Config.Mgmt.Network),
