@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	templatePath = "/etc/containerlab/templates/d3js/index.html"
+	defaultTemplatePath = "/etc/containerlab/templates/d3js/index.html"
 )
 
 var srv string
@@ -85,7 +85,7 @@ var graphCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		log.Debug(string(b))
+		log.Debugf("generating graph using data:%s",string(b))
 		topoD := topoData{
 			Name: c.Config.Name,
 			Data: template.JS(string(b)),
@@ -95,7 +95,7 @@ var graphCmd = &cobra.Command{
 			tmpl.Execute(w, topoD)
 		})
 
-		log.Printf("Listening on %s...", srv)
+		log.Infof("Listening on %s...", srv)
 		err = http.ListenAndServe(srv, nil)
 		if err != nil {
 			return err
@@ -107,5 +107,5 @@ var graphCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(graphCmd)
 	graphCmd.Flags().StringVarP(&srv, "srv", "s", "", "HTTP server address to view, customize and export your topology")
-	graphCmd.Flags().StringVarP(&tmpl, "template", "", templatePath, "golang html template used to generate the graph")
+	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultTemplatePath, "Go html template used to generate the graph")
 }
