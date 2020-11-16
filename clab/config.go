@@ -49,6 +49,7 @@ type NodeConfig struct {
 	License  string
 	Position string
 	Cmd      string
+	Binds    []string // list of bind mount compatible strings
 }
 
 // Topology represents a lab topology
@@ -98,9 +99,7 @@ type Node struct {
 	User      string
 	Cmd       string
 	Env       []string
-	Mounts    map[string]volume
-	Volumes   map[string]struct{}
-	Binds     []string
+	Binds     []string // Bind mounts strings (src:dest:options)
 
 	TLSCert   string
 	TLSKey    string
@@ -183,6 +182,13 @@ func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
 	return c.Config.Topology.Defaults.Kind
 }
 
+func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
+	if len(nodeCfg.Binds) != 0 {
+		return nodeCfg.Binds
+	}
+	return c.Config.Topology.Kinds[nodeCfg.Kind].Binds
+}
+
 func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Group != "" {
 		return nodeCfg.Group
@@ -253,6 +259,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+	node.Binds = c.bindsInit(&nodeCfg)
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
@@ -317,49 +324,24 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
 		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
 
-		node.Mounts = make(map[string]volume)
-		var v volume
-		v.Source = c.Dir.Lab + "/" + "license.key"
-		v.Destination = "/opt/srlinux/etc/license.key"
-		v.ReadOnly = true
-		log.Debug("License key: ", v.Source)
-		node.Mounts["license"] = v
-
-		v.Source = node.LabDir + "/" + "config/"
-		v.Destination = "/etc/opt/srlinux/"
-		v.ReadOnly = false
-		log.Debug("Config: ", v.Source)
-		node.Mounts["config"] = v
-
-		v.Source = node.LabDir + "/" + "srlinux.conf"
-		v.Destination = "/home/admin/.srlinux.conf"
-		v.ReadOnly = false
-		log.Debug("Env Config: ", v.Source)
-		node.Mounts["envConf"] = v
-
-		v.Source = node.LabDir + "/" + "topology.yml"
-		v.Destination = "/tmp/topology.yml"
-		v.ReadOnly = true
-		log.Debug("Topology File: ", v.Source)
-		node.Mounts["topology"] = v
-
-		node.Volumes = make(map[string]struct{})
-		node.Volumes = map[string]struct{}{
-			node.Mounts["license"].Destination:  {},
-			node.Mounts["config"].Destination:   {},
-			node.Mounts["envConf"].Destination:  {},
-			node.Mounts["topology"].Destination: {},
+		// mount license path
+		licPath, err := filepath.Abs(node.License)
+		if err != nil {
+			return err
 		}
+		node.Binds = append(node.Binds, fmt.Sprint(licPath, ":/opt/srlinux/etc/license.key:ro"))
 
-		bindLicense := node.Mounts["license"].Source + ":" + node.Mounts["license"].Destination + ":" + "ro"
-		bindConfig := node.Mounts["config"].Source + ":" + node.Mounts["config"].Destination + ":" + "rw"
-		bindEnvConf := node.Mounts["envConf"].Source + ":" + node.Mounts["envConf"].Destination + ":" + "rw"
-		bindTopology := node.Mounts["topology"].Source + ":" + node.Mounts["topology"].Destination + ":" + "ro"
+		// mount config directory
+		cfgPath := filepath.Join(node.LabDir, "config")
+		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
-		node.Binds = append(node.Binds, bindLicense)
-		node.Binds = append(node.Binds, bindConfig)
-		node.Binds = append(node.Binds, bindEnvConf)
-		node.Binds = append(node.Binds, bindTopology)
+		// mount srlinux.conf
+		srlconfPath := filepath.Join(node.LabDir, "srlinux.conf")
+		node.Binds = append(node.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
+
+		// mount srlinux topology
+		topoPath := filepath.Join(node.LabDir, "topology.yml")
+		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
