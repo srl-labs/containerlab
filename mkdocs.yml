@@ -7,6 +7,10 @@ nav:
       - Topology definition: manual/topo-def-file.md
       - Nodes: manual/nodes.md
       - Kinds: manual/kinds.md
+      - Configuration artifacts: manual/conf-artifacts.md
+      - Command reference:
+          - deploy: cmd/deploy.md
+          - destroy: cmd/destroy.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
