@@ -18,6 +18,8 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
+
+	defaultConfigTemplate = "/etc/containerlab/templates/srl/srlconfig.tpl"
 )
 
 // supported kinds
@@ -203,7 +205,15 @@ func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Config != "" {
 		return nodeCfg.Config
 	}
-	return c.Config.Topology.Kinds[kind].Config
+	if kindConfig, ok := c.Config.Topology.Kinds[kind]; ok {
+		if kindConfig.Config != "" {
+			return kindConfig.Config
+		}
+	}
+	if c.Config.Topology.Defaults.Config != "" {
+		return c.Config.Topology.Defaults.Config
+	}
+	return defaultConfigTemplate
 }
 
 func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
