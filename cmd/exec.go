@@ -18,7 +18,7 @@ var execCmd = &cobra.Command{
 	Short: "execute a command on one or multiple containers",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if prefix == "" && topo == "" {
+		if name == "" && topo == "" {
 			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
 			return
 		}
@@ -35,12 +35,12 @@ var execCmd = &cobra.Command{
 		}
 		c := clab.NewContainerLab(opts...)
 
-		if prefix == "" {
-			prefix = c.Config.Name
+		if name == "" {
+			name = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		labels = append(labels, "containerlab=lab-"+prefix)
+		labels = append(labels, "containerlab=lab-"+name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)

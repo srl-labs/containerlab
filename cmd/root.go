@@ -21,8 +21,8 @@ var timeout time.Duration
 var topo string
 var graph bool
 
-// lab prefix
-var prefix string
+// lab name
+var name string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -53,7 +53,7 @@ func init() {
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "", "path to the file with topology information")
-	rootCmd.PersistentFlags().StringVarP(&prefix, "prefix", "p", "", "lab name prefix")
+	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 30*time.Second, "timeout for docker requests, e.g: 30s, 1m, 2m30s")
 
 }

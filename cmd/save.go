@@ -14,7 +14,7 @@ var saveCmd = &cobra.Command{
 	Use:   "save",
 	Short: "save containers configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		if prefix == "" && topo == "" {
+		if name == "" && topo == "" {
 			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
 			return
 		}
@@ -25,13 +25,13 @@ var saveCmd = &cobra.Command{
 			clab.WithEnvDockerClient(),
 		}
 		c := clab.NewContainerLab(opts...)
-		if prefix == "" {
-			prefix = c.Config.Name
+		if name == "" {
+			name = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		containers, err := c.ListContainers(ctx, []string{"containerlab=lab-" + prefix, "kind=srl"})
+		containers, err := c.ListContainers(ctx, []string{"containerlab=lab-" + name, "kind=srl"})
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
 		}
