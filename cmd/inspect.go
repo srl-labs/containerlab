@@ -35,7 +35,7 @@ var inspectCmd = &cobra.Command{
 	Short: "inspect lab details",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if prefix == "" && topo == "" {
+		if name == "" && topo == "" {
 			fmt.Println("provide either a lab prefix (--prefix) or a topology file path (--topo)")
 			return
 		}
@@ -46,12 +46,12 @@ var inspectCmd = &cobra.Command{
 			clab.WithEnvDockerClient(),
 		}
 		c := clab.NewContainerLab(opts...)
-		if prefix == "" {
-			prefix = c.Config.Name
+		if name == "" {
+			name = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		labels = append(labels, "containerlab=lab-"+prefix)
+		labels = append(labels, "containerlab=lab-"+name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
