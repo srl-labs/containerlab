@@ -49,7 +49,7 @@ type NodeConfig struct {
 	License  string
 	Position string
 	Cmd      string
-	Mounts   []string // list of bind mount compatible strings
+	Binds    []string // list of bind mount compatible strings
 }
 
 // Topology represents a lab topology
@@ -99,8 +99,7 @@ type Node struct {
 	User      string
 	Cmd       string
 	Env       []string
-	Mounts    []string // Bind mounts strings (src:dest:options)
-	Binds     []string
+	Binds     []string // Bind mounts strings (src:dest:options)
 
 	TLSCert   string
 	TLSKey    string
@@ -183,11 +182,11 @@ func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
 	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *cLab) mountsInit(nodeCfg *NodeConfig) []string {
-	if len(nodeCfg.Mounts) != 0 {
-		return nodeCfg.Mounts
+func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
+	if len(nodeCfg.Binds) != 0 {
+		return nodeCfg.Binds
 	}
-	return c.Config.Topology.Kinds[nodeCfg.Kind].Mounts
+	return c.Config.Topology.Kinds[nodeCfg.Kind].Binds
 }
 
 func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -260,7 +259,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
-	node.Mounts = c.mountsInit(&nodeCfg)
+	node.Binds = c.bindsInit(&nodeCfg)
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
@@ -330,19 +329,19 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		if err != nil {
 			return err
 		}
-		node.Mounts = append(node.Mounts, fmt.Sprint(licPath, ":/opt/srlinux/etc/license.key:ro"))
+		node.Binds = append(node.Binds, fmt.Sprint(licPath, ":/opt/srlinux/etc/license.key:ro"))
 
 		// mount config directory
 		cfgPath := filepath.Join(node.LabDir, "config")
-		node.Mounts = append(node.Mounts, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
+		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
 		// mount srlinux.conf
 		srlconfPath := filepath.Join(node.LabDir, "srlinux.conf")
-		node.Mounts = append(node.Mounts, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
+		node.Binds = append(node.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
 
 		// mount srlinux topology
 		topoPath := filepath.Join(node.LabDir, "topology.yml")
-		node.Mounts = append(node.Mounts, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
