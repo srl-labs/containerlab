@@ -5,7 +5,7 @@ nav:
   - Quick start: quickstart.md
   - User manual:
       - Topology definition: manual/topo-def-file.md
-      - Node configuration: manual/node-cfg.md
+      - Nodes: manual/nodes.md
       - Kinds: manual/kinds.md
   - Lab examples:
       - About: lab-examples/lab-examples.md

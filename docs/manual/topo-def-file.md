@@ -6,7 +6,7 @@ Containerlab builds labs based on the topology information that users pass to it
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js?&fetch=https%3A%2F%2Fraw.githubusercontent.com%2Fsrl-wim%2Fcontainerlab-diagrams%2Fmain%2Fcontainerlab.drawio" async></script>
 
 ## Topology definition components
-The topology definition file is a configuration file expressed in YAML. In this document we will take a pre-packaged [Nokia SR Linux and Arista cEOS](../lab-examples/srl-ceos.md) lab and explain the topology definition structure using its definition file [srlceos01.yml](https://github.com/srl-wim/container-lab/tree/master/lab-examples/srlceos01/srlceos01.yml) which is pasted below:
+The topology definition file is a configuration file expressed in YAML. In this document we take a pre-packaged [Nokia SR Linux and Arista cEOS](../lab-examples/srl-ceos.md) lab and explain the topology definition structure using its definition file [srlceos01.yml](https://github.com/srl-wim/container-lab/tree/master/lab-examples/srlceos01/srlceos01.yml) which is pasted below:
 
 ```yaml
 name: srlceos01
@@ -25,6 +25,11 @@ topology:
   links:
     - endpoints: ["srl:e1-1", "ceos:eth1"]
 ```
+
+This topology results in the two nodes being started up and interconnected with each other using a single point-po-point interface:
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:2,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div>
+
+Let's touch on the key components of the topology definition file used in this example.
 
 ### Name
 The topology must have a name associated with it. The name is used to distinct one topology from another, to allow multiple topologies to be deployed on the host without their names clashed.
@@ -93,7 +98,7 @@ topology:
 
 As you see, the `topology.links` container consists of links. The link itself is expressed as list of two `endpoints`. This might sound complicated, lets use a graphical explanation:
 
-<center><div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="{&quot;page&quot;:11,&quot;zoom&quot;:1,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div></center>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:11,&quot;zoom&quot;:1,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div>
 
 As demonstrated on a diagram above, the links between the containers are the point-to-point links which are defined by a pair of interfaces. The link defined as:
 

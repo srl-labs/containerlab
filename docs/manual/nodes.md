@@ -1,6 +1,6 @@
-Nodes configuration is one of pillars of containerlab. By exposing nodes configuration we allow users to create flexible and customizable labs.
+Node object is one of the pillars of containerlab. Essentially, it is nodes and links what constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
 
-The node configuration **may** consist of the following fields that we explain in details below. The only mandatory node's configuration field is `kind`.
+The node configuration is part of the [topology definition file](topo-def-file.md) and **may** consist of the following fields that we explain in details below.
 
 ```yaml
 # part of topology definition file
