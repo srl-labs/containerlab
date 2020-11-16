@@ -166,7 +166,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "g", false, "regenerate configuration artefacts and overwrite the previous ones if any")
+	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artefacts and overwrite the previous ones if any")
 }
 
 func setFlags(conf *clab.Config) {
