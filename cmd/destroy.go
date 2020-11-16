@@ -89,7 +89,7 @@ var destroyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(destroyCmd)
-	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete config artefacts")
+	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
 }
 
 func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string) error {
