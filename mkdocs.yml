@@ -5,6 +5,7 @@ nav:
   - Quick start: quickstart.md
   - User manual:
       - Topology definition: manual/topo-def-file.md
+      - Node configuration: manual/node-cfg.md
       - Kinds: manual/kinds.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
@@ -37,8 +38,8 @@ theme:
   language: en
   palette:
     scheme: preference
-    primary: black
-    accent: pink
+    primary: white
+    accent: cyan
   font:
     text: Manrope
     code: Fira Mono
