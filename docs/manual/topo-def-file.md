@@ -60,9 +60,9 @@ topology:
       image: ceos
 ```
 
-We defined individual `nodes` under the `topology.nodes` container. The name of the node is the key under which it is defined. Following the example, our two nodes will be named `srl` and `ceos`.
+We defined individual `nodes` under the `topology.nodes` container. The name of the node is the key under which it is defined. Following the example, our two nodes will be named `srl` and `ceos` respectively.
 
-Each node can be defined with a set of properties. Such as the `srl` node is defined with the following properties:
+Each node can be defined with a set of properties. Such as the `srl` node is defined with the following node-specific properties:
 
 ```yaml
 srl:
@@ -72,13 +72,7 @@ srl:
   license: license.key
 ```
 
-The `kind` property selects which kind this node is of. Kinds are essentially a way of telling containerlab how to treat the nodes properties considering the specific flavor of the node. We dedicated a [separate section](kinds.md) to discuss kinds in details.
-
-With `type` the user can sets a type of the node. Types work in combination with the kinds, such as the type value of `ixrd2` sets the chassis type for SR Linux node, thus this value only makes sense to nodes of kind `srl`.
-
-The common `image` attribute sets the container image name that will be used to start the node. The image name should be provided in a regular format of `repository(:tag)`.
-
-Some containerized NOSes require a license to operate. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
+Refer to the [node configuration](node-cfg.md) document to understand which options are available for nodes and what is their meaning.
 
 #### Links
 Although its totally fine to define the node without any links (like in [this lab](../lab-examples/single-srl.md)) most of the time we interconnect the nodes with links. One of containerlab purposes is to make the interconnection of nodes simple.
