@@ -16,6 +16,8 @@ import (
 	"github.com/srl-wim/container-lab/clab"
 )
 
+var cleanup bool
+
 // destroyCmd represents the destroy command
 var destroyCmd = &cobra.Command{
 	Use:     "destroy",
@@ -38,6 +40,12 @@ var destroyCmd = &cobra.Command{
 			return err
 		}
 
+		if cleanup {
+			err = os.RemoveAll(c.Dir.Lab)
+			if err != nil {
+				log.Errorf("error deleting lab directory: %v", err)
+			}
+		}
 		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
@@ -81,6 +89,7 @@ var destroyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(destroyCmd)
+	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete config artefacts")
 }
 
 func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string) error {
