@@ -189,7 +189,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 
 // GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
-	tpl, err := template.New("srlconfig.tpl").ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
+	tpl, err := template.New(fmt.Sprintf("config-template-%s", node.ShortName)).ParseFiles(node.Config)
 	if err != nil {
 		return err
 	}
