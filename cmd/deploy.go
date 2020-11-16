@@ -24,6 +24,9 @@ var mgmtNetName string
 var mgmtIPv4Subnet net.IPNet
 var mgmtIPv6Subnet net.IPNet
 
+// reconfigure flag
+var reconfigure bool
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -46,7 +49,12 @@ var deployCmd = &cobra.Command{
 		if err = c.ParseTopology(); err != nil {
 			return err
 		}
-
+		if reconfigure {
+			err = os.RemoveAll(c.Dir.Lab)
+			if err != nil {
+				return err
+			}
+		}
 		if err = c.VerifyBridgesExist(); err != nil {
 			return err
 		}
@@ -158,6 +166,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artefacts and overwrite the previous ones if any")
 }
 
 func setFlags(conf *clab.Config) {
