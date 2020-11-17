@@ -22,7 +22,6 @@ dist
 
 # ignore the following files
 PRIVATE.md
-graph
 graph/*
 containerlab*
 containerlab*/
