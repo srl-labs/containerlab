@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -56,7 +57,7 @@ func fileExists(filename string) bool {
 }
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
-// the same, then return success. Otherise, copy the file contents from src to dst.
+// the same, then return success. Otherwise, copy the file contents from src to dst.
 func copyFile(src, dst string) (err error) {
 	sfi, err := os.Stat(src)
 	if err != nil {
@@ -140,16 +141,18 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
 		var src string
 		var dst string
+
+		// create node directory in lab
+		CreateDirectory(node.LabDir, 0777)
+
 		// copy license file to node specific directory in lab
 		src = node.License
-		dst = path.Join(c.Dir.Lab, "license.key")
+		dst = path.Join(node.LabDir, "license.key")
 		if err = copyFile(src, dst); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
-		// create node directory in lab
-		CreateDirectory(node.LabDir, 0777)
 		// generate SRL topology file
 		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
 		if err != nil {
@@ -189,7 +192,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 
 // GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
-	tpl, err := template.New(fmt.Sprintf("config-template-%s", node.ShortName)).ParseFiles(node.Config)
+	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
 	if err != nil {
 		return err
 	}
