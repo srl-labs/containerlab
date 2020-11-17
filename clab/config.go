@@ -240,11 +240,21 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 		}
 		return lp, nil
 	}
-	lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
-	if err != nil {
-		return "", err
+	if c.Config.Topology.Kinds[kind].License != "" {
+		lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
 	}
-	return lp, nil
+	if c.Config.Topology.Defaults.License != "" {
+		lp, err := filepath.Abs(c.Config.Topology.Defaults.License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
+	}
+	return "", fmt.Errorf("no license found for node(s) of kind %s", nodeCfg.Kind)
 }
 
 func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
