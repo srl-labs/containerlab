@@ -43,23 +43,23 @@ type mgmtNet struct {
 
 // NodeConfig represents a configuration a given node can have in the lab definition file
 type NodeConfig struct {
-	Kind     string
-	Group    string
-	Type     string
-	Config   string
-	Image    string
-	License  string
-	Position string
-	Cmd      string
-	Binds    []string // list of bind mount compatible strings
+	Kind     string   `yaml:"kind,omitempty"`
+	Group    string   `yaml:"group,omitempty"`
+	Type     string   `yaml:"type,omitempty"`
+	Config   string   `yaml:"config,omitempty"`
+	Image    string   `yaml:"image,omitempty"`
+	License  string   `yaml:"license,omitempty"`
+	Position string   `yaml:"position,omitempty"`
+	Cmd      string   `yaml:"cmd,omitempty"`
+	Binds    []string `yaml:"binds,omitempty"` // list of bind mount compatible strings
 }
 
 // Topology represents a lab topology
 type Topology struct {
-	Defaults NodeConfig
-	Kinds    map[string]NodeConfig
-	Nodes    map[string]NodeConfig
-	Links    []LinkConfig
+	Defaults NodeConfig            `yaml:"defaults,omitempty"`
+	Kinds    map[string]NodeConfig `yaml:"kinds,omitempty"`
+	Nodes    map[string]NodeConfig `yaml:"nodes,omitempty"`
+	Links    []LinkConfig          `yaml:"links,omitempty"`
 }
 
 type LinkConfig struct {
@@ -69,10 +69,10 @@ type LinkConfig struct {
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string
-	Mgmt       mgmtNet
-	Topology   Topology
-	ConfigPath string `yaml:"config_path"`
+	Name       string   `json:"name,omitempty"`
+	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
+	Topology   Topology `json:"topology,omitempty"`
+	ConfigPath string   `yaml:"config_path,omitempty"`
 }
 
 type volume struct {
