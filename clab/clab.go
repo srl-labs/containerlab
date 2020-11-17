@@ -20,8 +20,9 @@ type cLab struct {
 	DockerClient *docker.Client
 	Dir          *cLabDirectory
 
-	debug   bool
-	timeout time.Duration
+	debug            bool
+	timeout          time.Duration
+	gracefulShutdown bool
 }
 
 type cLabDirectory struct {
@@ -63,6 +64,12 @@ func WithTopoFile(file string) ClabOption {
 		if err := c.GetTopology(file); err != nil {
 			log.Fatalf("failed to read topology file: %v", err)
 		}
+	}
+}
+
+func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
+	return func(c *cLab) {
+		c.gracefulShutdown = gracefulShutdown
 	}
 }
 
