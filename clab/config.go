@@ -226,7 +226,10 @@ func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Image != "" {
 		return nodeCfg.Image
 	}
-	return c.Config.Topology.Kinds[kind].Image
+	if c.Config.Topology.Kinds[kind].Image != "" {
+		return c.Config.Topology.Kinds[kind].Image
+	}
+	return c.Config.Topology.Defaults.Image
 }
 
 func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
