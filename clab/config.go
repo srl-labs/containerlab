@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -52,6 +53,7 @@ type NodeConfig struct {
 	Position string
 	Cmd      string
 	Binds    []string // list of bind mount compatible strings
+	Ports    []string // list of port bindings
 }
 
 // Topology represents a lab topology
@@ -83,25 +85,26 @@ type volume struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	ShortName string
-	LongName  string
-	Fqdn      string
-	LabDir    string
-	Index     int
-	Group     string
-	Kind      string
-	Config    string
-	NodeType  string
-	Position  string
-	License   string
-	Image     string
-	Topology  string
-	EnvConf   string
-	Sysctls   map[string]string
-	User      string
-	Cmd       string
-	Env       []string
-	Binds     []string // Bind mounts strings (src:dest:options)
+	ShortName    string
+	LongName     string
+	Fqdn         string
+	LabDir       string
+	Index        int
+	Group        string
+	Kind         string
+	Config       string
+	NodeType     string
+	Position     string
+	License      string
+	Image        string
+	Topology     string
+	EnvConf      string
+	Sysctls      map[string]string
+	User         string
+	Cmd          string
+	Env          []string
+	Binds        []string    // Bind mounts strings (src:dest:options)
+	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
 
 	TLSCert   string
 	TLSKey    string
@@ -191,6 +194,18 @@ func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
 	return c.Config.Topology.Kinds[nodeCfg.Kind].Binds
 }
 
+// portsInit produces the nat.PortMap out of the slice of string representation of port bindings
+func (c *cLab) portsInit(nodeCfg *NodeConfig) (nat.PortMap, error) {
+	if len(nodeCfg.Ports) != 0 {
+		_, pm, err := nat.ParsePortSpecs(nodeCfg.Ports)
+		if err != nil {
+			return nil, err
+		}
+		return pm, nil
+	}
+	return nil, nil
+}
+
 func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Group != "" {
 		return nodeCfg.Group
@@ -278,6 +293,13 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// normalize the data to lower case to compare
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 	node.Binds = c.bindsInit(&nodeCfg)
+
+	pb, err := c.portsInit(&nodeCfg)
+	if err != nil {
+		return err
+	}
+	node.PortBindings = pb
+
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
