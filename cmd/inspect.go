@@ -92,8 +92,10 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	contDetails := make([]containerDetails, 0, len(containers))
 	for _, cont := range containers {
 		cdet := containerDetails{
-			Image: cont.Image,
-			State: cont.State,
+			Image:       cont.Image,
+			State:       cont.State,
+			IPv4Address: getContainerIPv4(cont, bridgeName),
+			IPv6Address: getContainerIPv6(cont, bridgeName),
 		}
 		if len(cont.Names) > 0 {
 			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
@@ -103,21 +105,6 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		}
 		if group, ok := cont.Labels["group"]; ok {
 			cdet.Group = group
-		}
-		if cont.NetworkSettings != nil {
-			if bridgeName != "" {
-				if br, ok := cont.NetworkSettings.Networks[bridgeName]; ok {
-					cdet.IPv4Address = fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
-					cdet.IPv6Address = fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
-				}
-			}
-			if cdet.IPv4Address == "" && cdet.IPv6Address == "" {
-				for _, br := range cont.NetworkSettings.Networks {
-					cdet.IPv4Address = fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
-					cdet.IPv6Address = fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
-					break
-				}
-			}
 		}
 		contDetails = append(contDetails, cdet)
 	}
@@ -144,4 +131,32 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	table.SetAutoWrapText(false)
 	table.AppendBulk(tabData)
 	table.Render()
+}
+
+func getContainerIPv4(container types.Container, bridgeName string) string {
+	if container.NetworkSettings != nil {
+		if bridgeName != "" {
+			if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
+				return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
+			}
+		}
+		for _, br := range container.NetworkSettings.Networks {
+			return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
+		}
+	}
+	return ""
+}
+
+func getContainerIPv6(container types.Container, bridgeName string) string {
+	if container.NetworkSettings != nil {
+		if bridgeName != "" {
+			if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
+				return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
+			}
+		}
+		for _, br := range container.NetworkSettings.Networks {
+			return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
+		}
+	}
+	return ""
 }

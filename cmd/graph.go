@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"sort"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,6 +47,7 @@ var graphCmd = &cobra.Command{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
 		c := clab.NewContainerLab(opts...)
 
@@ -62,13 +66,30 @@ var graphCmd = &cobra.Command{
 			Nodes: make([]containerDetails, 0, len(c.Nodes)),
 			Links: make([]link, 0, len(c.Links)),
 		}
-		for name, n := range c.Nodes {
-			gtopo.Nodes = append(gtopo.Nodes, containerDetails{
-				Name:  name,
-				Kind:  n.Kind,
-				Image: n.Image,
-				Group: n.Group,
-			})
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
+		if err != nil {
+			log.Errorf("could not list containers: %v", err)
+		}
+		log.Debugf("found %d containers", len(containers))
+		for _, cont := range containers {
+			var name string
+			if len(cont.Names) > 0 {
+				name = strings.TrimPrefix(cont.Names[0], fmt.Sprintf("/clab-%s-", c.Config.Name))
+			}
+			log.Debugf("looking for node name %s", name)
+			if node, ok := c.Nodes[name]; ok {
+				gtopo.Nodes = append(gtopo.Nodes, containerDetails{
+					Name:        name,
+					Kind:        node.Kind,
+					Image:       cont.Image,
+					Group:       node.Group,
+					State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
+					IPv4Address: getContainerIPv4(cont, c.Config.Mgmt.Network),
+					IPv6Address: getContainerIPv6(cont, c.Config.Mgmt.Network),
+				})
+			}
 		}
 		sort.Slice(gtopo.Nodes, func(i, j int) bool {
 			return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
@@ -85,7 +106,7 @@ var graphCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		log.Debugf("generating graph using data:%s",string(b))
+		log.Debugf("generating graph using data: %s", string(b))
 		topoD := topoData{
 			Name: c.Config.Name,
 			Data: template.JS(string(b)),

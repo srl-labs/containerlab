@@ -51,7 +51,7 @@
         function main() {
             setSize(data)
             draw() 
-            tabulate(data.nodes, ["name", "image","kind", "group"]); // TODO: add state and ip addresses 
+            tabulate(data.nodes, ["name", "image", "kind", "group", "state", "ipv4_address", "ipv6_address"]); 
             // Set-up the export button
             d3.select('#saveButton').on('click', function(){
               var svgString = getSVGString(svg.node());
@@ -181,7 +181,9 @@
                 .data(columns)
                 .enter()
                 .append("th")
-                    .text(function(column) { return column; });
+                    .text(function(column) { 
+                      return column.replace("_", " ");
+                    });
 
             // create a row for each object in the data
             var rows = tbody.selectAll("tr")
