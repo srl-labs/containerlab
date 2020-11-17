@@ -10,7 +10,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -321,9 +320,9 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *cLab) DeleteContainer(ctx context.Context, name string, timeout time.Duration) error {
+func (c *cLab) DeleteContainer(ctx context.Context, name string) error {
 	force := false
-	err := c.DockerClient.ContainerStop(ctx, name, &timeout)
+	err := c.DockerClient.ContainerStop(ctx, name, &c.timeout)
 	if err != nil {
 		log.Errorf("could not stop container '%s': %v", name, err)
 		force = true

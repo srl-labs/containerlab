@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
@@ -62,7 +61,7 @@ var destroyCmd = &cobra.Command{
 					name = strings.TrimLeft(cont.Names[0], "/")
 				}
 				log.Infof("Stopping container: %s", name)
-				err = c.DeleteContainer(ctx, name, 30*time.Second)
+				err = c.DeleteContainer(ctx, name)
 				if err != nil {
 					log.Errorf("could not remove container '%s': %v", name, err)
 				}
