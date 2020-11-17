@@ -53,7 +53,7 @@ type NodeConfig struct {
 	Position string
 	Cmd      string
 	Binds    []string // list of bind mount compatible strings
-	Ports    []string // list ports to expose
+	Ports    []string // list of port bindings
 }
 
 // Topology represents a lab topology
