@@ -229,11 +229,19 @@ func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Kinds[kind].Image
 }
 
-func (c *cLab) licenseInitialization(nodeCfg *NodeConfig, kind string) string {
+func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 	if nodeCfg.License != "" {
-		return nodeCfg.License
+		lp, err := filepath.Abs(nodeCfg.License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
 	}
-	return c.Config.Topology.Kinds[kind].License
+	lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
+	if err != nil {
+		return "", err
+	}
+	return lp, nil
 }
 
 func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
@@ -305,7 +313,13 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
-		node.License = c.licenseInitialization(&nodeCfg, node.Kind)
+
+		lp, err := c.licenseInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
+		node.License = lp
+
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
@@ -334,12 +348,9 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
 		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
 
-		// mount license path
-		licPath, err := filepath.Abs(node.License)
-		if err != nil {
-			return err
-		}
-		node.Binds = append(node.Binds, fmt.Sprint(licPath, ":/opt/srlinux/etc/license.key:ro"))
+		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+		// in (c *cLab) CreateNodeDirStructure
+		node.Binds = append(node.Binds, fmt.Sprint(filepath.Join(node.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 
 		// mount config directory
 		cfgPath := filepath.Join(node.LabDir, "config")
