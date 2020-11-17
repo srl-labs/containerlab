@@ -59,10 +59,10 @@ type Topology struct {
 	Defaults NodeConfig
 	Kinds    map[string]NodeConfig
 	Nodes    map[string]NodeConfig
-	Links    []link
+	Links    []LinkConfig
 }
 
-type link struct {
+type LinkConfig struct {
 	Endpoints []string
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
@@ -377,7 +377,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 }
 
 // NewLink initializes a new link object
-func (c *cLab) NewLink(l link) *Link {
+func (c *cLab) NewLink(l LinkConfig) *Link {
 	// initialize a new link
 	link := new(Link)
 	link.Labels = l.Labels
