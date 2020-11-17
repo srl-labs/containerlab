@@ -322,7 +322,7 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 // DeleteContainer tries to stop a container then remove it
 func (c *cLab) DeleteContainer(ctx context.Context, name string) error {
 	var err error
-	force := false
+	force := !c.gracefulShutdown
 	if c.gracefulShutdown {
 		err = c.DockerClient.ContainerStop(ctx, name, &c.timeout)
 		if err != nil {
