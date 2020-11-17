@@ -25,7 +25,7 @@ Without this flag present, containerlab will keep the lab directory and all file
 Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get more information on the lab directory contents.
 
 #### graceful
-To make containerlab attempt a graceful stop of the containers, add the `--graceful` flag. Without it, containers will be removed forcefully.
+To make containerlab attempt a graceful shutdown of the running containers, add the `--graceful` flag to destroy cmd. Without it, containers will be removed forcefully without even attempting to stop them.
 
 ### Examples
 
