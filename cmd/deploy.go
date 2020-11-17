@@ -119,9 +119,11 @@ var deployCmd = &cobra.Command{
 		}
 		wg.Wait()
 		// cleanup hanging resources if a deployment failed before
+		log.Debug("cleaning up interfaces...")
 		c.InitVirtualWiring()
 		wg = new(sync.WaitGroup)
 		wg.Add(len(c.Links))
+		log.Debug("creating links...")
 		// wire the links between the nodes based on cabling plan
 		for _, link := range c.Links {
 			go func(link *clab.Link) {
@@ -138,10 +140,9 @@ var deployCmd = &cobra.Command{
 				log.Error(err)
 			}
 		}
-
+		log.Debug("containers created, retrieving state and IP addresses...")
 		// show topology output
 
-		// print table summary
 		labels = append(labels, "containerlab=lab-"+c.Config.Name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
@@ -155,6 +156,7 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
 		}
+		// print table summary
 		printContainerInspect(containers, c.Config.Mgmt.Network, format)
 		return nil
 	},
