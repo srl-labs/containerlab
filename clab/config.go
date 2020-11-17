@@ -140,7 +140,7 @@ func (c *cLab) parseIPInfo() error {
 // ParseTopology parses the lab topology
 func (c *cLab) ParseTopology() error {
 	log.Info("Parsing topology information ...")
-	log.Debugf("Prefix: %s", c.Config.Name)
+	log.Debugf("Lab name: %s", c.Config.Name)
 	// initialize DockerInfo
 	err := c.parseIPInfo()
 	if err != nil {

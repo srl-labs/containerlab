@@ -4,7 +4,7 @@
 | **Components**                | [Nokia SR Linux][srl], [Arista cEOS][ceos]                           |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [srlceos01.yml][topofile]                                            |
-| **Prefix**                    | srlceos01                                                            |
+| **Name**                      | srlceos01                                                            |
 
 ## Description
 A lab consists of an SR Linux node connected with Arista cEOS via a point-to-point ethernet link. Both nodes are also connected with their management interfaces to the `containerlab` docker network.

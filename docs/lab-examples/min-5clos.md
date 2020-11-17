@@ -4,7 +4,7 @@
 | **Components**                | [Nokia SR Linux][srl]                                                |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 4 <br/>:fontawesome-solid-memory: 8 GB |
 | **Topology file**             | [clos02.yml][topofile]                                               |
-| **Prefix**                    | clos02                                                               |
+| **Name**                      | clos02                                                               |
 
 ## Description
 This labs provides a lightweight folded 5-stage CLOS fabric with Super Spine level bridging two PODs.

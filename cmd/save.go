@@ -15,7 +15,7 @@ var saveCmd = &cobra.Command{
 	Short: "save containers configuration",
 	Run: func(cmd *cobra.Command, args []string) {
 		if name == "" && topo == "" {
-			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
+			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
 			return
 		}
 		opts := []clab.ClabOption{

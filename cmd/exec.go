@@ -19,7 +19,7 @@ var execCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		if name == "" && topo == "" {
-			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
+			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
 			return
 		}
 		log.Debugf("raw command: %v", args)
