@@ -15,7 +15,12 @@ topology:
       binds:
         - /usr/local/bin/gobgp:/root/gobgp
         - /root/files:/root/files:ro
+      ports:
+      - 80:8080
+      - 55555:43555/udp
+      - 55554:43554/tcp
 ```
+
 ### kind
 The `kind` property selects which kind this node is of. Kinds are essentially a way of telling containerlab how to treat the nodes properties considering the specific flavor of the node. We dedicated a [separate section](kinds.md) to discuss kinds in details.
 
@@ -68,3 +73,16 @@ binds:
   # mount a directory from a host to a container in RO mode
   - /root/files:/root/files:ro
 ```
+
+### ports
+To bind the ports between the lab host and the containers the users can populate the `ports` object inside the node:
+
+```yaml
+ports:
+  - 80:8080 # tcp port 80 of the host is mapped to port 8080 of the container
+  - 55555:43555/udp
+  - 55554:43554/tcp
+```
+The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--export` flag](https://docs.docker.com/engine/reference/commandline/run/#publish-or-expose-port--p---expose).
+
+This option is only configurable under the node level.
