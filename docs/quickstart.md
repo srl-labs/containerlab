@@ -85,7 +85,7 @@ topology:
 That means that containerlab will look for this file by the `${PWD}/license.key` path. Before deploying our lab, we need to copy the file in the `~/clab-quickstart` directory to make it available by the specified path.
 
 ## Deploying a lab
-Now when we know what topology file consists of, sorted out the container image name and license file, we can deploy this lab.
+Now when we know what topology file consists of, sorted out the container image name and license file, we can deploy this lab. To keep things easy and guessable, the command to deploy a lab is called [`deploy`](cmd/deploy.md).
 
 ```bash
 # checking that topology and license files are present in ~/clab-quickstart
@@ -155,7 +155,7 @@ The following tab view aggregates the ways to open the NOS CLI per supported dev
     ```
 
 ## Destroying a lab
-To remove the lab, use the `destroy` command that takes a topology file as an argument:
+To remove the lab, use the [`destroy`](cmd/destroy.md) command that takes a topology file as an argument:
 
 ```
 containerlab destroy --topo srl02.yml
