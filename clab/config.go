@@ -37,8 +37,8 @@ var srlTypes = map[string]string{
 // it is provided via docker network object
 type mgmtNet struct {
 	Network    string // docker network name
-	Ipv4Subnet string `yaml:"ipv4_subnet"`
-	Ipv6Subnet string `yaml:"ipv6_subnet"`
+	Ipv4Subnet string `yaml:"ipv4_subnet,omitempty"`
+	Ipv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 }
 
 // NodeConfig represents a configuration a given node can have in the lab definition file
