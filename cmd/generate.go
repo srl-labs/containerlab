@@ -179,7 +179,7 @@ func parseLicenseFlag(kind string, license []string) (map[string]string, error) 
 			if _, ok := result[items[0]]; !ok {
 				result[items[0]] = items[1]
 			} else {
-				return nil, fmt.Errorf("duplicated license for kind '%s'", items[1])
+				return nil, fmt.Errorf("duplicated license for kind '%s'", items[0])
 			}
 		}
 	}
