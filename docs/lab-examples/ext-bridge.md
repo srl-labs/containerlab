@@ -4,7 +4,7 @@
 | **Components**                | [Nokia SR Linux][srl]                                                |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [br01.yml][topofile]                                                 |
-| **Prefix**                    | br01                                                                 |
+| **Name**                      | br01                                                                 |
 
 ## Description
 This lab consists of three Nokia SR Linux nodes connected to a linux bridge.

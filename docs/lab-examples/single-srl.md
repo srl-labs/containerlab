@@ -4,7 +4,7 @@
 | **Components**                | [Nokia SR Linux][srl]                                                  |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 0.5 <br/>:fontawesome-solid-memory: 1 GB |
 | **Topology file**             | [srl01.yml][topofile]                                                  |
-| **Prefix**                    | srl01                                                                  |
+| **Name**                      | srl01                                                                  |
 
 ## Description
 A lab consists of a single SR Linux container equipped with a single interface - its management interface. No other network/data interfaces are created.
