@@ -16,6 +16,7 @@ import (
 )
 
 var cleanup bool
+var graceful bool
 
 // destroyCmd represents the destroy command
 var destroyCmd = &cobra.Command{
@@ -28,6 +29,7 @@ var destroyCmd = &cobra.Command{
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
 			clab.WithEnvDockerClient(),
+			clab.WithGracefulShutdown(graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 
@@ -89,6 +91,7 @@ var destroyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
+	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
 }
 
 func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string) error {
