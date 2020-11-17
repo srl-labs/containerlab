@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultTemplatePath = "/etc/containerlab/templates/d3js/index.html"
+	defaultTemplatePath = "/etc/containerlab/templates/graph/index.html"
 )
 
 var srv string
