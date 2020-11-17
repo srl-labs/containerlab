@@ -134,29 +134,31 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 }
 
 func getContainerIPv4(container types.Container, bridgeName string) string {
-	if container.NetworkSettings != nil {
-		if bridgeName != "" {
-			if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
-				return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
-			}
-		}
-		for _, br := range container.NetworkSettings.Networks {
+	if container.NetworkSettings == nil {
+		return ""
+	}
+	if bridgeName != "" {
+		if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
 			return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
 		}
+	}
+	for _, br := range container.NetworkSettings.Networks {
+		return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
 	}
 	return ""
 }
 
 func getContainerIPv6(container types.Container, bridgeName string) string {
-	if container.NetworkSettings != nil {
-		if bridgeName != "" {
-			if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
-				return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
-			}
-		}
-		for _, br := range container.NetworkSettings.Networks {
+	if container.NetworkSettings == nil {
+		return ""
+	}
+	if bridgeName != "" {
+		if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
 			return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
 		}
+	}
+	for _, br := range container.NetworkSettings.Networks {
+		return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
 	}
 	return ""
 }
