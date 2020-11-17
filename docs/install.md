@@ -32,17 +32,3 @@ containerlab version upgrade
 ```
 
 This command will fetch the installation script and will upgrade the tool to its most recent version.
-
-### Graphviz
-Containerlab's `graph` command can render a topology graph. For the generation of PNG images out of the topology files `graphviz` tool needs to be installed.
-
-If you don't want to install graphviz, just create the .dot file and use an [online graphviz tool](https://dreampuf.github.io/GraphvizOnline).
-```bash
-# Debian / Ubuntu
-sudo apt-get install graphviz
-
-# CentOS / Fedora / RedHat
-sudo yum install graphviz
-```
-
-Note, that `graphviz` installation is optional and is only required when a user wants to generate PNG files on the system out of the generated `dot` files.
