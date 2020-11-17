@@ -4,7 +4,7 @@
 | **Components**                | [Nokia SR Linux][srl]                                                |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [srl02.yml][topofile]                                                |
-| **Prefix**                    | srl02                                                                |
+| **Name**                      | srl02                                                                |
 
 ## Description
 A lab consists of two SR Linux nodes connected with each other via a point-to-point link over `e1-1` interfaces. Both nodes are also connected with their management interfaces to the `containerlab` docker network.

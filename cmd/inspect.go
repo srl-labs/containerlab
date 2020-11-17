@@ -36,7 +36,7 @@ var inspectCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		if name == "" && topo == "" {
-			fmt.Println("provide either a lab prefix (--prefix) or a topology file path (--topo)")
+			fmt.Println("provide either a lab name (--name) or a topology file path (--topo)")
 			return
 		}
 		opts := []clab.ClabOption{
@@ -76,7 +76,7 @@ func init() {
 	rootCmd.AddCommand(inspectCmd)
 
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
-	inspectCmd.Flags().StringVarP(&format, "format", "f", "", "lab name prefix")
+	inspectCmd.Flags().StringVarP(&format, "format", "f", "", "lab name")
 }
 
 func toTableData(det []containerDetails) [][]string {
