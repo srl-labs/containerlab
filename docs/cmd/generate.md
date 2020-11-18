@@ -95,8 +95,11 @@ With `--ipv4-subnet` and `ipv6-subnet` its possible to change the address ranges
 ```bash
 # generate and deploy a lab topology for 3-tier CLOS network
 # with 8 leafs, 4 spines and 2 superspines
-# all using Nokia SR Linux nodes with license and image provided
-containerlab generate -n 3tier --image srl=srlinux:latest \
+# all using Nokia SR Linux nodes with license and image provided.
+# Note that `srl` kind in the image and license flags might be omitted,
+# as it is implied by default)
+
+containerlab generate --name 3tier --image srl=srlinux:latest \
                       --license srl=license.key \
                       --nodes 8,4,2 --deploy
 ```
