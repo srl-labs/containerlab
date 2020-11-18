@@ -68,7 +68,7 @@ var generateCmd = &cobra.Command{
 	Short:   "generate a Clos topology file, based on provided flags",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" {
-			return errors.New("--name is mandatory")
+			return errors.New("provide a lab name with --name flag")
 		}
 		licenses, err := parseFlag(kind, license)
 		if err != nil {
