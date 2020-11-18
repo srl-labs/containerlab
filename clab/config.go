@@ -52,8 +52,8 @@ type NodeConfig struct {
 	License  string   `yaml:"license,omitempty"`
 	Position string   `yaml:"position,omitempty"`
 	Cmd      string   `yaml:"cmd,omitempty"`
-	Binds    []string `yaml:"binds,omitempty"` // list of bind mount compatible strings
-	Ports    []string // list of port bindings
+	Binds    []string `yaml:"binds,omitempty" json:"binds,omitempty"` // list of bind mount compatible strings
+	Ports    []string `yaml:"ports,omitempty"`                        // list of port bindings
 }
 
 // Topology represents a lab topology
