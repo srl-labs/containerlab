@@ -160,6 +160,18 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 		}
 		config.Topology.Kinds[k] = clab.NodeConfig{License: lic}
 	}
+	if numStages == 1 {
+		for j := uint(0); j < nodes[0].numNodes; j++ {
+			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
+			if _, ok := config.Topology.Nodes[node1]; !ok {
+				config.Topology.Nodes[node1] = clab.NodeConfig{
+					Group: fmt.Sprintf("%s-1", groupPrefix),
+					Kind:  nodes[0].kind,
+					Type:  nodes[0].typ,
+				}
+			}
+		}
+	}
 	for i := 0; i < numStages-1; i++ {
 		interfaceOffset := uint(0)
 		if i > 0 {
