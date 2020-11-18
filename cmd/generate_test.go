@@ -162,28 +162,28 @@ var nodesTestSet = map[string]struct {
 
 func TestParseFlag(t *testing.T) {
 	for name, set := range flagTestSet {
-		t.Logf("test '%s' running", name)
-		result, err := parseFlag(set.in.kind, set.in.lics)
-		if !cmp.Equal(result, set.out.out) {
-			t.Errorf("failed at '%s', expected %v, got %+v", name, set.out.out, result)
-		}
-		if err != set.out.err {
-			t.Errorf("failed at '%s', expected error %+v, got %+v", name, set.out.err, err)
-		}
-		t.Logf("test '%s' OK", name)
+		t.Run(name, func(t *testing.T) {
+			result, err := parseFlag(set.in.kind, set.in.lics)
+			if !cmp.Equal(result, set.out.out) {
+				t.Errorf("failed at '%s', expected %v, got %+v", name, set.out.out, result)
+			}
+			if err != set.out.err {
+				t.Errorf("failed at '%s', expected error %+v, got %+v", name, set.out.err, err)
+			}
+		})
 	}
 }
 
 func TestParseNodes(t *testing.T) {
 	for name, set := range nodesTestSet {
-		t.Logf("test '%s' running", name)
-		result, err := parseNodesFlag(set.in.kind, set.in.nodes...)
-		if !cmp.Equal(result, set.out.out, cmp.AllowUnexported(nodesDef{})) {
-			t.Errorf("failed at '%s', expected %+v, got %+v", name, set.out.out, result)
-		}
-		if err != set.out.err {
-			t.Errorf("failed at '%s', expected error %+v, got %+v", name, set.out.err, err)
-		}
-		t.Logf("test '%s' OK", name)
+		t.Run(name, func(t *testing.T) {
+			result, err := parseNodesFlag(set.in.kind, set.in.nodes...)
+			if !cmp.Equal(result, set.out.out, cmp.AllowUnexported(nodesDef{})) {
+				t.Errorf("failed at '%s', expected %+v, got %+v", name, set.out.out, result)
+			}
+			if err != set.out.err {
+				t.Errorf("failed at '%s', expected error %+v, got %+v", name, set.out.err, err)
+			}
+		})
 	}
 }
