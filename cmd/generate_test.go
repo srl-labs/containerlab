@@ -133,11 +133,11 @@ var nodesTestSet = map[string]struct {
 	"kind_nodes_with_kind": {
 		in: nodesInput{
 			kind:  "srl",
-			nodes: []string{"1:srl", "2", "3:ceos"},
+			nodes: []string{"1:linux", "2", "3:ceos"},
 		},
 		out: nodesOutput{
 			out: []nodesDef{
-				{numNodes: 1, kind: "srl", typ: "ixr6"},
+				{numNodes: 1, kind: "linux", typ: ""},
 				{numNodes: 2, kind: "srl", typ: "ixr6"},
 				{numNodes: 3, kind: "ceos", typ: ""},
 			},
