@@ -51,7 +51,11 @@ var inspectCmd = &cobra.Command{
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		labels = append(labels, "containerlab=lab-"+name)
+		if all {
+			labels = append(labels, "containerlab")
+		} else {
+			labels = append(labels, "containerlab=lab-"+name)
+		}
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
