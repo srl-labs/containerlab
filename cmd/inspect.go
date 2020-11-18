@@ -20,6 +20,7 @@ var details bool
 var all bool
 
 type containerDetails struct {
+	LabName     string `json:"lab_name,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Image       string `json:"image,omitempty"`
 	Kind        string `json:"kind,omitempty"`
@@ -88,9 +89,18 @@ func init() {
 func toTableData(det []containerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
 	for _, d := range det {
+		if all {
+			tabData = append(tabData, []string{d.LabName, d.Name, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+			continue
+		}
 		tabData = append(tabData, []string{d.Name, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 	}
-	sort.Slice(tabData, func(i, j int) bool { return tabData[i][0] < tabData[j][0] })
+	sort.Slice(tabData, func(i, j int) bool { 
+		if tabData[i][0] == tabData[j][0] {
+			return tabData[i][1] < tabData[j][1]
+		}
+		return tabData[i][0] < tabData[j][0] 
+	})
 	return tabData
 }
 
@@ -98,6 +108,7 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	contDetails := make([]containerDetails, 0, len(containers))
 	for _, cont := range containers {
 		cdet := containerDetails{
+			LabName:     strings.TrimPrefix(cont.Labels["containerlab"], "lab-"),
 			Image:       cont.Image,
 			State:       cont.State,
 			IPv4Address: getContainerIPv4(cont, bridgeName),
@@ -124,7 +135,8 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	}
 	tabData := toTableData(contDetails)
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{
+	header := []string{
+		"Lab Name",
 		"Name",
 		"Image",
 		"Kind",
@@ -132,7 +144,12 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		"State",
 		"IPv4 Address",
 		"IPv6 Address",
-	})
+	}
+	if all {
+		table.SetHeader(header)
+	} else {
+		table.SetHeader(header[1:])
+	}
 	table.SetAutoFormatHeaders(false)
 	table.SetAutoWrapText(false)
 	table.AppendBulk(tabData)
