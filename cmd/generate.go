@@ -50,6 +50,7 @@ var license []string
 var nodePrefix string
 var groupPrefix string
 var file string
+var deploy bool
 
 type nodesDef struct {
 	numNodes uint
@@ -82,17 +83,28 @@ var generateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if file != "" {
+			err = saveTopoFile(file, b)
+			if err != nil {
+				return err
+			}
+		}
+		if deploy {
+			reconfigure = true
+			if file == "" {
+				file = fmt.Sprintf("%s.yaml", name)
+				err = saveTopoFile(file, b)
+				if err != nil {
+					return err
+				}
+			}
+			topo = file
+			return deployCmd.RunE(deployCmd, []string{})
+		}
 		if file == "" {
 			fmt.Println(string(b))
-			return nil
 		}
-		file, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		_, err = file.Write(b)
-		return err
+		return nil
 	},
 }
 
@@ -108,6 +120,7 @@ func init() {
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
+	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false, "deploy a fabric based on the generated topology file")
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string, images map[string]string, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
@@ -251,4 +264,14 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 		result[idx] = def
 	}
 	return result, nil
+}
+
+func saveTopoFile(path string, data []byte) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write(data)
+	return err
 }
