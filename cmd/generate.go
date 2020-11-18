@@ -40,7 +40,7 @@ const (
 	defaultGroupPrefix = "group"
 )
 
-var errDuplicatedLicense = errors.New("duplicated license for kind")
+var errDuplicatedLicense = errors.New("duplicated license definition")
 var errSyntax = errors.New("syntax error")
 
 var image string
@@ -175,6 +175,10 @@ func parseLicenseFlag(kind string, license []string) (map[string]string, error) 
 		items := strings.SplitN(lic, ":", 2)
 		switch len(items) {
 		case 1:
+			if kind == "" {
+				log.Errorf("no kind specified for license '%s'", lic)
+				return nil, errSyntax
+			}
 			if _, ok := result[kind]; !ok {
 				result[kind] = items[0]
 			} else {
@@ -215,6 +219,10 @@ func parseNodes(kind string, nodes ...string) ([]nodesDef, error) {
 		def.numNodes = uint(i)
 		switch len(items) {
 		case 1:
+			if kind == "" {
+				log.Errorf("no kind specified for nodes '%s'", n)
+				return nil, errSyntax
+			}
 			def.kind = kind
 			if kind == "srl" {
 				def.typ = defaultSRLType
@@ -227,6 +235,10 @@ func parseNodes(kind string, nodes ...string) ([]nodesDef, error) {
 				def.kind = items[1]
 				def.typ = defaultSRLType
 			default:
+				if kind == "" {
+					log.Errorf("no kind specified for nodes '%s'", n)
+					return nil, errSyntax
+				}
 				def.kind = kind
 				def.typ = items[1]
 			}
