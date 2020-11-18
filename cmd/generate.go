@@ -71,10 +71,12 @@ var generateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Println("licenses:", licenses)
 		images, err := parseFlag(kind, image)
 		if err != nil {
 			return err
 		}
+		fmt.Println("images:", images)
 		nodeDefs, err := parseNodesFlag(kind, nodes...)
 		if err != nil {
 			return err
@@ -113,10 +115,10 @@ func init() {
 	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "clab", "management network name")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>:<image_name>")
+	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>=<image_name>")
 	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", "container kind")
 	generateCmd.Flags().StringSliceVarP(&nodes, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
-	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>:/path/to/file")
+	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>=/path/to/file")
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
@@ -139,11 +141,16 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 	if ipv6range != "<nil>" {
 		config.Mgmt.Ipv6Subnet = ipv6range
 	}
-	for k, lic := range licenses {
-		config.Topology.Kinds[k] = clab.NodeConfig{License: lic}
-	}
 	for k, img := range images {
 		config.Topology.Kinds[k] = clab.NodeConfig{Image: img}
+	}
+	for k, lic := range licenses {
+		if knd, ok := config.Topology.Kinds[k]; ok {
+			knd.License = lic
+			config.Topology.Kinds[k] = knd
+			continue
+		}
+		config.Topology.Kinds[k] = clab.NodeConfig{Image: lic}
 	}
 	for i := 0; i < numStages-1; i++ {
 		interfaceOffset := uint(0)
@@ -183,7 +190,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 func parseFlag(kind string, ls []string) (map[string]string, error) {
 	result := make(map[string]string)
 	for _, l := range ls {
-		items := strings.SplitN(l, ":", 2)
+		items := strings.SplitN(l, "=", 2)
 		switch len(items) {
 		case 0:
 			log.Errorf("missing value for flag item '%s'", l)
