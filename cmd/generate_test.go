@@ -51,7 +51,7 @@ var flagTestSet = map[string]struct {
 	"1_item_with_kind": {
 		in: flagInput{
 			kind: "srl",
-			lics: []string{"ceos:/path/to/license.key"},
+			lics: []string{"ceos=/path/to/license.key"},
 		},
 		out: flagOutput{
 			out: map[string]string{"ceos": "/path/to/license.key"},
@@ -61,7 +61,7 @@ var flagTestSet = map[string]struct {
 	"2_items_with_kind": {
 		in: flagInput{
 			kind: "dummy",
-			lics: []string{"srl:/path1", "ceos:/path2"},
+			lics: []string{"srl=/path1", "ceos=/path2"},
 		},
 		out: flagOutput{
 			out: map[string]string{"srl": "/path1", "ceos": "/path2"},
@@ -81,7 +81,7 @@ var flagTestSet = map[string]struct {
 	"1_item_without_kind_1_item_with_kind": {
 		in: flagInput{
 			kind: "srl",
-			lics: []string{"/path1", "ceos:/path2"},
+			lics: []string{"/path1", "ceos=/path2"},
 		},
 		out: flagOutput{
 			out: map[string]string{"srl": "/path1", "ceos": "/path2"},
