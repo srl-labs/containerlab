@@ -67,7 +67,7 @@ The value of this flag follows the `kind=path` pattern. For example, to set the 
 #### deploy
 When `--deploy` flag is present, the lab deployment process starts using the generated topology definition file.
 
-The generated definition file is first saved by the path set with `--flag` or, if file path is not set, by the default path of `<lab-name>.yml`. Then the equivalent of the `deploy -t <file> --regenerate` command is executed.
+The generated definition file is first saved by the path set with `--flag` or, if file path is not set, by the default path of `<lab-name>.yml`. Then the equivalent of the `deploy -t <file> --reconfigure` command is executed.
 
 #### file
 With `--file` flag its possible to save the generated topology definition in a file by a given path.
