@@ -21,9 +21,9 @@ It is assumed, that the interconnection between the tiers is done in a full-mesh
 With the global `--name | -n` flag a user sets the name of the lab that will be generated.
 
 #### nodes
-The user configures the CLOS fabric topology by using the `--nodes` flag. The flag value is a comma separated list of CLOS tiers where each tier is defined by the number of nodes, its kind and type:
+The user configures the CLOS fabric topology by using the `--nodes` flag. The flag value is a comma separated list of CLOS tiers where each tier is defined by the number of nodes, its kind and type. Multiple `--node` flags can be specified.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:12,&quot;zoom&quot;:2,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:12,&quot;zoom&quot;:1.4,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div>
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js?&fetch=https%3A%2F%2Fraw.githubusercontent.com%2Fsrl-wim%2Fcontainerlab-diagrams%2Fmain%2Fcontainerlab.drawio" async></script>
 
@@ -52,9 +52,9 @@ containerlab gen -n 3tier --nodes 4,2,1
 #### image
 Use `--image` flag to specify the container image that should be used by a given kind.
 
-The value of this flag follows the `kind=image` pattern. For example, to set the container image for the `ceos` kind: `--image ceos=4.21.F`.
+The value of this flag follows the `kind=image` pattern. For example, to set the container image `ceos:4.21.F` for the `ceos` kind the flag will be: `--image ceos=ceos:4.21.F`.
 
-To set images for multiple kinds repeat the flag: `--image srl=srlinux:latest --image ceos=4.21.F`
+To set images for multiple kinds repeat the flag: `--image srl=srlinux:latest --image ceos=ceos:4.21.F` or use the comma separated form: `--image srl=srlinux:latest,ceos=ceos:latest`
 
 If the kind information is not provided in the `image` flag, the kind value will be taken from the `--kind` flag.
 
@@ -62,6 +62,8 @@ If the kind information is not provided in the `image` flag, the kind value will
 With `--license` flag it is possible to set the license path that should be used by a given kind.
 
 The value of this flag follows the `kind=path` pattern. For example, to set the license path for the `srl` kind: `--license srl=/tmp/license.key`.
+
+To set license for multiple kinds repeat the flag: `--license <kind1>=/path1 --image <kind2>=/path2` or use the comma separated form: `--license <kind1>=/path1,<kind2>=/path2`
 
 #### deploy
 When `--deploy` flag is present, the lab deployment process starts using the generated topology definition file.
