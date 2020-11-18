@@ -40,7 +40,7 @@ var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic", "crpd"}
 const (
 	defaultSRLType     = "ixr6"
 	defaultNodePrefix  = "node"
-	defaultGroupPrefix = "group"
+	defaultGroupPrefix = "tier"
 )
 
 var errDuplicatedValue = errors.New("duplicated value definition")
