@@ -35,5 +35,5 @@ Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get 
 containerlab deploy -t mylab.yml
 
 # deploy a lab from mylab.yml file and regenerate all configuration artifacts
-containerlab deploy -t mylab.yml --regenerate
+containerlab deploy -t mylab.yml --reconfigure
 ```
