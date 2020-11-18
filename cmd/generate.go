@@ -30,9 +30,12 @@ import (
 )
 
 var interfaceFormat = map[string]string{
-	"srl":  "e1-%d",
-	"ceos": "eth%d",
+	"srl":    "e1-%d",
+	"ceos":   "eth%d",
+	"linux":  "eth$d",
+	"bridge": "veth%d",
 }
+var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic", "crpd"}
 
 const (
 	defaultSRLType     = "ixr6"
@@ -121,7 +124,7 @@ func init() {
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>=<image_name>")
-	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", "container kind")
+	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", fmt.Sprintf("container kind, one of %v", supportedKinds))
 	generateCmd.Flags().StringSliceVarP(&nodes, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
 	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>=/path/to/file")
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
@@ -255,12 +258,13 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 			}
 		case 2:
 			switch items[1] {
-			case "ceos":
+			case "ceos", "linux", "bridge", "sonic", "crpd":
 				def.kind = items[1]
 			case "srl":
 				def.kind = items[1]
 				def.typ = defaultSRLType
 			default:
+				// assume second item is a type if kind set using --kind
 				if kind == "" {
 					log.Errorf("no kind specified for nodes '%s'", n)
 					return nil, errSyntax
@@ -269,6 +273,7 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 				def.typ = items[1]
 			}
 		case 3:
+			// srl with #nodes, kind and type
 			def.numNodes = uint(i)
 			def.kind = items[1]
 			def.typ = items[2]
