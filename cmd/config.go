@@ -42,7 +42,7 @@ func init() {
 	configCmd.AddCommand(configApplyCmd)
 	//
 	configGenerateCmd.Flags().BoolVarP(&infra, "infra", "", false, "generate infra config")
-	generateCmd.Flags().BoolVarP(&workload, "workload", "", false, "generate workloads config")
+	configGenerateCmd.Flags().BoolVarP(&workload, "workload", "", false, "generate workloads config")
 	//
 	configApplyCmd.Flags().BoolVarP(&infra, "infra", "", false, "generate infra config")
 	configApplyCmd.Flags().BoolVarP(&workload, "workload", "", false, "generate workloads config")
