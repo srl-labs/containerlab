@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -13,6 +14,8 @@ import (
 var saveCmd = &cobra.Command{
 	Use:   "save",
 	Short: "save containers configuration",
+	Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
+Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the exact command used per node's kind`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if name == "" && topo == "" {
 			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
@@ -58,10 +61,10 @@ var saveCmd = &cobra.Command{
 				continue
 			}
 			if len(stdout) > 0 {
-				log.Infof("%s: stdout: %s", cont.Names, string(stdout))
+				log.Infof("%s output: %s", strings.TrimLeft(cont.Names[0], "/"), string(stdout))
 			}
 			if len(stderr) > 0 {
-				log.Infof("%s: stderr: %s", cont.Names, string(stderr))
+				log.Infof("%s errors: %s", strings.TrimLeft(cont.Names[0], "/"), string(stderr))
 			}
 		}
 	},
