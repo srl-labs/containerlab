@@ -40,10 +40,10 @@ const (
 	defaultGroupPrefix = "group"
 )
 
-var errDuplicatedLicense = errors.New("duplicated license definition")
+var errDuplicatedValue = errors.New("duplicated value definition")
 var errSyntax = errors.New("syntax error")
 
-var image string
+var image []string
 var kind string
 var nodes []string
 var license []string
@@ -66,11 +66,19 @@ var generateCmd = &cobra.Command{
 		if name == "" {
 			return errors.New("--name is mandatory")
 		}
-		nodeDefs, licenses, err := parseInput(kind, license, nodes...)
+		licenses, err := parseFlag(kind, license)
 		if err != nil {
 			return err
 		}
-		b, err := generateTopologyConfig(name, mgmtNetName, mgmtIPv4Subnet.String(), mgmtIPv6Subnet.String(), image, licenses, nodeDefs...)
+		images, err := parseFlag(kind, image)
+		if err != nil {
+			return err
+		}
+		nodeDefs, err := parseNodesFlag(kind, nodes...)
+		if err != nil {
+			return err
+		}
+		b, err := generateTopologyConfig(name, mgmtNetName, mgmtIPv4Subnet.String(), mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
 		if err != nil {
 			return err
 		}
@@ -93,7 +101,7 @@ func init() {
 	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "clab", "management network name")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	generateCmd.Flags().StringVarP(&image, "image", "", "", "container image name")
+	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>:<image_name>")
 	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", "container kind")
 	generateCmd.Flags().StringSliceVarP(&nodes, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
 	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>:/path/to/file")
@@ -102,17 +110,13 @@ func init() {
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
 }
 
-func generateTopologyConfig(name, network, ipv4range, ipv6range, image string, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
+func generateTopologyConfig(name, network, ipv4range, ipv6range string, images map[string]string, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
 	numStages := len(nodes)
 	config := &clab.Config{
 		Name: name,
 		Topology: clab.Topology{
 			Kinds: make(map[string]clab.NodeConfig),
 			Nodes: make(map[string]clab.NodeConfig),
-			Defaults: clab.NodeConfig{
-				Image: image,
-				//License: license,
-			},
 		},
 	}
 	config.Mgmt.Network = network
@@ -124,6 +128,9 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range, image string, l
 	}
 	for k, lic := range licenses {
 		config.Topology.Kinds[k] = clab.NodeConfig{License: lic}
+	}
+	for k, img := range images {
+		config.Topology.Kinds[k] = clab.NodeConfig{Image: img}
 	}
 	for i := 0; i < numStages-1; i++ {
 		interfaceOffset := uint(0)
@@ -160,44 +167,38 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range, image string, l
 	return yaml.Marshal(config)
 }
 
-func parseInput(kind string, license []string, nodes ...string) ([]nodesDef, map[string]string, error) {
-	licenses, err := parseLicenseFlag(kind, license)
-	if err != nil {
-		return nil, nil, err
-	}
-	result, err := parseNodes(kind, nodes...)
-	return result, licenses, err
-}
-
-func parseLicenseFlag(kind string, license []string) (map[string]string, error) {
+func parseFlag(kind string, ls []string) (map[string]string, error) {
 	result := make(map[string]string)
-	for _, lic := range license {
-		items := strings.SplitN(lic, ":", 2)
+	for _, l := range ls {
+		items := strings.SplitN(l, ":", 2)
 		switch len(items) {
+		case 0:
+			log.Errorf("missing value for flag item '%s'", l)
+			return nil, errSyntax
 		case 1:
 			if kind == "" {
-				log.Errorf("no kind specified for license '%s'", lic)
+				log.Errorf("no kind specified for flag item '%s'", l)
 				return nil, errSyntax
 			}
 			if _, ok := result[kind]; !ok {
 				result[kind] = items[0]
 			} else {
-				log.Errorf("duplicated license for kind '%s'", kind)
-				return nil, errDuplicatedLicense
+				log.Errorf("duplicated flag item for kind '%s'", kind)
+				return nil, errDuplicatedValue
 			}
 		case 2:
 			if _, ok := result[items[0]]; !ok {
 				result[items[0]] = items[1]
 			} else {
-				log.Errorf("duplicated license for kind '%s'", items[0])
-				return nil, errDuplicatedLicense
+				log.Errorf("duplicated flag item for kind '%s'", items[0])
+				return nil, errDuplicatedValue
 			}
 		}
 	}
 	return result, nil
 }
 
-func parseNodes(kind string, nodes ...string) ([]nodesDef, error) {
+func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 	numStages := len(nodes)
 	if numStages == 0 {
 		log.Error("no nodes specified using --nodes")
