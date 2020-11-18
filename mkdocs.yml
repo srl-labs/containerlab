@@ -11,6 +11,7 @@ nav:
       - Command reference:
           - deploy: cmd/deploy.md
           - destroy: cmd/destroy.md
+          - inspect: cmd/inspect.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
