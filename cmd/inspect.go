@@ -77,6 +77,7 @@ func init() {
 
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&format, "format", "f", "table", "output format. One of [table, json]")
+	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all containerlab labs in the host")
 }
 
 func toTableData(det []containerDetails) [][]string {
