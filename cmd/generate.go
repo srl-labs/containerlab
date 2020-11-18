@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-wim/container-lab/clab"
 	"gopkg.in/yaml.v2"
@@ -38,6 +39,9 @@ const (
 	defaultNodePrefix  = "node"
 	defaultGroupPrefix = "group"
 )
+
+var errDuplicatedLicense = errors.New("duplicated license for kind")
+var errSyntax = errors.New("syntax error")
 
 var image string
 var kind string
@@ -155,6 +159,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range, image string, l
 	}
 	return yaml.Marshal(config)
 }
+
 func parseInput(kind string, license []string, nodes ...string) ([]nodesDef, map[string]string, error) {
 	licenses, err := parseLicenseFlag(kind, license)
 	if err != nil {
@@ -173,13 +178,15 @@ func parseLicenseFlag(kind string, license []string) (map[string]string, error) 
 			if _, ok := result[kind]; !ok {
 				result[kind] = items[0]
 			} else {
-				return nil, fmt.Errorf("duplicated license for kind '%s'", kind)
+				log.Errorf("duplicated license for kind '%s'", kind)
+				return nil, errDuplicatedLicense
 			}
 		case 2:
 			if _, ok := result[items[0]]; !ok {
 				result[items[0]] = items[1]
 			} else {
-				return nil, fmt.Errorf("duplicated license for kind '%s'", items[0])
+				log.Errorf("duplicated license for kind '%s'", items[0])
+				return nil, errDuplicatedLicense
 			}
 		}
 	}
@@ -189,18 +196,21 @@ func parseLicenseFlag(kind string, license []string) (map[string]string, error) 
 func parseNodes(kind string, nodes ...string) ([]nodesDef, error) {
 	numStages := len(nodes)
 	if numStages == 0 {
-		return nil, errors.New("no nodes specified using --nodes")
+		log.Error("no nodes specified using --nodes")
+		return nil, errSyntax
 	}
 	result := make([]nodesDef, numStages)
 	for idx, n := range nodes {
 		def := nodesDef{}
 		items := strings.SplitN(n, ":", 3)
 		if len(items) == 0 {
-			return nil, fmt.Errorf("wrong --nodes format '%s'", n)
+			log.Errorf("wrong --nodes format '%s'", n)
+			return nil, errSyntax
 		}
 		i, err := strconv.Atoi(items[0])
 		if err != nil {
-			return nil, fmt.Errorf("failed converting '%s' to an integer: %v", items[0], err)
+			log.Errorf("failed converting '%s' to an integer: %v", items[0], err)
+			return nil, errSyntax
 		}
 		def.numNodes = uint(i)
 		switch len(items) {
