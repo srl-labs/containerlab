@@ -71,20 +71,25 @@ var generateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println("licenses:", licenses)
+		log.Debugf("parsed licenses: %+v", licenses)
+
 		images, err := parseFlag(kind, image)
 		if err != nil {
 			return err
 		}
-		fmt.Println("images:", images)
+		log.Debugf("parsed images: %+v", images)
+
 		nodeDefs, err := parseNodesFlag(kind, nodes...)
 		if err != nil {
 			return err
 		}
+		log.Debugf("parsed nodes definitions: %+v", nodeDefs)
+
 		b, err := generateTopologyConfig(name, mgmtNetName, mgmtIPv4Subnet.String(), mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
 		if err != nil {
 			return err
 		}
+		log.Debugf("generated topo: %s", string(b))
 		if file != "" {
 			err = saveTopoFile(file, b)
 			if err != nil {
@@ -101,7 +106,7 @@ var generateCmd = &cobra.Command{
 				}
 			}
 			topo = file
-			return deployCmd.RunE(deployCmd, []string{})
+			return deployCmd.RunE(deployCmd, nil)
 		}
 		if file == "" {
 			fmt.Println(string(b))
