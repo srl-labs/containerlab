@@ -17,6 +17,7 @@ import (
 
 var format string
 var details bool
+var all bool
 
 type containerDetails struct {
 	Name        string `json:"name,omitempty"`
@@ -35,8 +36,8 @@ var inspectCmd = &cobra.Command{
 	Short: "inspect lab details",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if name == "" && topo == "" {
-			fmt.Println("provide either a lab name (--name) or a topology file path (--topo)")
+		if name == "" && topo == "" && !all {
+			fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
 			return
 		}
 		opts := []clab.ClabOption{
