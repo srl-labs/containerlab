@@ -54,6 +54,9 @@ var execCmd = &cobra.Command{
 			cmds = append(cmds, strings.Split(a, " ")...)
 		}
 		for _, cont := range containers {
+			if cont.State != "running" {
+				continue
+			}
 			stdout, stderr, err := c.Exec(ctx, cont.ID, cmds)
 			if err != nil {
 				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)

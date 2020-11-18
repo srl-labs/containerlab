@@ -44,6 +44,9 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		}
 		var saveCmd []string
 		for _, cont := range containers {
+			if cont.State != "running" {
+				continue
+			}
 			log.Debugf("container: %+v", cont)
 			if k, ok := cont.Labels["kind"]; ok {
 				switch k {
