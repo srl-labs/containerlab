@@ -77,12 +77,6 @@ type Config struct {
 	ConfigPath string   `yaml:"config_path,omitempty"`
 }
 
-type volume struct {
-	Source      string
-	Destination string
-	ReadOnly    bool
-}
-
 // Node is a struct that contains the information of a container element
 type Node struct {
 	ShortName    string
