@@ -50,6 +50,9 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 		Attachable: false,
 		//Ingress:        false,
 		//ConfigOnly:     false,
+		Labels: map[string]string{
+			"containerlab": "",
+		},
 	}
 
 	var bridgeName string
