@@ -267,6 +267,7 @@ func (c *cLab) ListContainers(ctx context.Context, labels []string) ([]types.Con
 		filter.Add("label", l)
 	}
 	return c.DockerClient.ContainerList(ctx, types.ContainerListOptions{
+		All:     true,
 		Filters: filter,
 	})
 }
