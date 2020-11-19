@@ -1,0 +1,10 @@
+name: manual docs publish
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:6.1.5 gh-deploy --force --strict
