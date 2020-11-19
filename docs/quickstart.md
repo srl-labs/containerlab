@@ -9,11 +9,11 @@ sudo curl -sL https://get-clab.srlinux.dev | sudo bash
 ```
 
 ## Topology definition file
-Once installed, the tool can manage container-based labs defined in the so-called [topology definition files](). A user can write a custom topology definition file, or use the [various examples](lab-examples/lab-examples.md) we provide within the containerlab package.
+Once installed, containerlab manages the labs defined in the so-called [topology definition files](manual/topo-def-file.md). A user can write a topology definition file of their own, or use the [various examples](lab-examples/lab-examples.md) we provide within the containerlab package.
 
 In this tutorial we will be using [one of the provided labs](lab-examples/two-srls.md) which consists of two Nokia SR Linux nodes connected one to another.
 
-<center><div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="{&quot;page&quot;:10,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div></center>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:10,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div>
 
 The lab topology is defined in the [srl02.yml](https://github.com/srl-wim/container-lab/blob/master/lab-examples/srl02/srl02.yml) file. To make use of this lab example, we need to copy the corresponding files to our working directory:
 
@@ -49,17 +49,18 @@ topology:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
 ```
 
-A [topology definition deep-dive](manual/topo-def-file.md) is part of our Users Manual, so we keep it short here, glancing over the key components of it:
+!!!info
+    A [topology definition deep-dive](manual/topo-def-file.md) document provides a complete reference of the topology definition syntax. In the quickstart we keep it short, glancing over the key components of the file.
 
 * Each lab/topology has a `name`.
 * The lab topology is defined under the `topology` element.
-* Topology is a combination of of `nodes` and `links` between them.
-* The nodes are always of a certain `kind`. The `kind` defines the node configuration and behavior.
+* Topology is a set of [`nodes`](manual/nodes.md) and [`links`](manual/topo-def-file.md#links) between them.
+* The nodes are always of a certain [`kind`](manual/kinds.md). The `kind` defines the node configuration and behavior.
 * Containerlab supports a fixed number of `kinds`. In the example above, the `srl` kind is one of the supported kinds and it has been provided with a few additional options in the `topology.kinds.srl` element.
-* `nodes` are interconnected with `links`. Each `link` is defined by a set of `endpoints`.
+* `nodes` are interconnected with `links`. Each `link` is [defined](manual/topo-def-file.md#links) by a set of `endpoints`.
 
 ## Container image
-One of node's most important properties is the container `image` they use. In the example above the container image is set under the `srl` kind.
+One of node's most important properties is the container [`image`](manual/nodes.md#image) they use. In the example above the container image is set under the `srl` kind.
 Effectively, the nodes of `srl` kind will inherit this property and will use the `srlinux` image to boot from.
 
 The image name follows the same rules as the images you use with, for example, Docker client or k8s pods. For example, the provided `srlinux` image name assumes that the tag of the image is `latest`.
@@ -70,7 +71,7 @@ The image name follows the same rules as the images you use with, for example, D
     For example: `docker tag srlinux:20.6.1-286 srlinux:latest`
 
 ## License files
-For the nodes/kinds which require a license to run (like Nokia SR Linux) the `license` element must specify a path to a valid license file.
+For the nodes/kinds which require a license to run (like Nokia SR Linux) the [`license`](manual/nodes.md#license) element must specify a path to a valid license file.
 In the example we work with, the license path is set to `license.key` for `srl` kind.
 
 ```yaml
@@ -85,7 +86,7 @@ topology:
 That means that containerlab will look for this file by the `${PWD}/license.key` path. Before deploying our lab, we need to copy the file in the `~/clab-quickstart` directory to make it available by the specified path.
 
 ## Deploying a lab
-Now when we know what topology file consists of, sorted out the container image name and license file, we can deploy this lab. To keep things easy and guessable, the command to deploy a lab is called [`deploy`](cmd/deploy.md).
+Now when we know what a basic topology file consists of, sorted out the container image name and license file, we can deploy this lab. To keep things easy and guessable, the command to deploy a lab is called [`deploy`](cmd/deploy.md).
 
 ```bash
 # checking that topology and license files are present in ~/clab-quickstart
@@ -98,18 +99,18 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 srlinux             latest              79019d14cfc7        3 months ago        1.32GB
 
 # start the lab deployment by referencing the topology file
-containerab deploy --topo srl02.yml
+containerlab deploy --topo srl02.yml
 ```
 
 After a couple of seconds you will see the summary of the deployed nodes:
 
 ```
-+-----------------+---------+------+-------+---------+----------------+----------------------+
-|      Name       |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-+-----------------+---------+------+-------+---------+----------------+----------------------+
-| clab-srl02-srl1 | srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
-| clab-srl02-srl2 | srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
-+-----------------+---------+------+-------+---------+----------------+----------------------+
++---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
+| # |      Name       | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
++---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
+| 1 | clab-srl02-srl1 | dd5c5a8dc51a | srlinux | srl  |       | running | 172.20.20.5/24 | 2001:172:20:20::5/80 |
+| 2 | clab-srl02-srl2 | b623b3957f8f | srlinux | srl  |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
++---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
 ```
 
 The node name presented in the summary table is the fully qualified node name, it is built using the following pattern: `clab-{{lab_name}}-{{node_name}}`.
@@ -162,3 +163,8 @@ containerlab destroy --topo srl02.yml
 ```
 
 [^1]: Make sure to satisfy lab host [pre-requisites](install.md#pre-requisites)
+
+## What next?
+To get a broader view on the containerlab features and components, refer to the **User manual** section.
+
+Do not forget to check out the **Lab examples** section where we provide complete and ready-to-run topology definition files. This is a great starting point to explore containerlab by doing.
