@@ -84,24 +84,18 @@ func init() {
 
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&format, "format", "f", "table", "output format. One of [table, json]")
-	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all containerlab labs in the host")
+	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 }
 
 func toTableData(det []containerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
-	for _, d := range det {
+	for i, d := range det {
 		if all {
-			tabData = append(tabData, []string{d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 			continue
 		}
-		tabData = append(tabData, []string{d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+		tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 	}
-	sort.Slice(tabData, func(i, j int) bool {
-		if tabData[i][0] == tabData[j][0] {
-			return tabData[i][1] < tabData[j][1]
-		}
-		return tabData[i][0] < tabData[j][0]
-	})
 	return tabData
 }
 
@@ -129,6 +123,12 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		}
 		contDetails = append(contDetails, cdet)
 	}
+	sort.Slice(contDetails, func(i, j int) bool {
+		if contDetails[i].LabName == contDetails[j].LabName {
+			return contDetails[i].Name < contDetails[j].Name
+		}
+		return contDetails[i].LabName < contDetails[j].LabName
+	})
 	if format == "json" {
 		b, err := json.MarshalIndent(contDetails, "", "  ")
 		if err != nil {
@@ -151,9 +151,9 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		"IPv6 Address",
 	}
 	if all {
-		table.SetHeader(header)
+		table.SetHeader(append([]string{"#"}, header...))
 	} else {
-		table.SetHeader(header[1:])
+		table.SetHeader(append([]string{"#"}, header[1:]...))
 	}
 	table.SetAutoFormatHeaders(false)
 	table.SetAutoWrapText(false)
