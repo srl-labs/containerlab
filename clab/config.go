@@ -37,7 +37,7 @@ var srlTypes = map[string]string{
 // mgmtNet struct defines the management network options
 // it is provided via docker network object
 type mgmtNet struct {
-	Network    string // docker network name
+	Network    string `yaml:"network,omitempty"` // docker network name
 	Ipv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	Ipv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 }
