@@ -107,7 +107,7 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", bridgeName)
 	err = EthtoolTXOff(bridgeName)
 	if err != nil {
-		return fmt.Errorf("Failed to disable TX checksum offloading for the %s bridge interface: %v", bridgeName, err)
+		return fmt.Errorf("failed to disable TX checksum offloading for the %s bridge interface: %v", bridgeName, err)
 	}
 	return nil
 }

@@ -37,7 +37,7 @@ var srlTypes = map[string]string{
 // mgmtNet struct defines the management network options
 // it is provided via docker network object
 type mgmtNet struct {
-	Network    string // docker network name
+	Network    string `yaml:"network,omitempty"` // docker network name
 	Ipv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	Ipv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 }
@@ -75,12 +75,6 @@ type Config struct {
 	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
 	Topology   Topology `json:"topology,omitempty"`
 	ConfigPath string   `yaml:"config_path,omitempty"`
-}
-
-type volume struct {
-	Source      string
-	Destination string
-	ReadOnly    bool
 }
 
 // Node is a struct that contains the information of a container element
@@ -480,7 +474,7 @@ func (c *cLab) VerifyBridgesExist() error {
 	for name, node := range c.Nodes {
 		if node.Kind == "bridge" {
 			if _, err := netlink.LinkByName(name); err != nil {
-				return fmt.Errorf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
+				return fmt.Errorf("fridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
 			}
 		}
 	}
