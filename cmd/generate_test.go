@@ -158,6 +158,18 @@ var nodesTestSet = map[string]struct {
 			err: nil,
 		},
 	},
+	"single_stage": {
+		in: nodesInput{
+			kind:  "srl",
+			nodes: []string{"2"},
+		},
+		out: nodesOutput{
+			out: []nodesDef{
+				{numNodes: 2, kind: "srl", typ: "ixr6"},
+			},
+			err: nil,
+		},
+	},
 }
 
 func TestParseFlag(t *testing.T) {
