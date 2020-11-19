@@ -33,18 +33,18 @@ func (c *cLab) GenerateGraph(topo string) error {
 
 		attr["label"] = nodeName
 		attr["xlabel"] = node.Kind
-		attr["group"] = node.Group
-
-		if strings.Contains(node.Group, "bb") {
-			attr["fillcolor"] = "blue"
-			attr["color"] = "blue"
-			attr["fontcolor"] = "white"
-		} else if strings.Contains(node.Kind, "srl") {
-			attr["fillcolor"] = "green"
-			attr["color"] = "green"
-			attr["fontcolor"] = "black"
+		if len(strings.TrimSpace(node.Group)) != 0 {
+			attr["group"] = node.Group
+			if strings.Contains(node.Group, "bb") {
+				attr["fillcolor"] = "blue"
+				attr["color"] = "blue"
+				attr["fontcolor"] = "white"
+			} else if strings.Contains(node.Kind, "srl") {
+				attr["fillcolor"] = "green"
+				attr["color"] = "green"
+				attr["fontcolor"] = "black"
+			}
 		}
-
 		if err := g.AddNode(c.TopoFile.name, node.ShortName, attr); err != nil {
 			return err
 		}
