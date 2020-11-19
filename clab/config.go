@@ -474,7 +474,7 @@ func (c *cLab) VerifyBridgesExist() error {
 	for name, node := range c.Nodes {
 		if node.Kind == "bridge" {
 			if _, err := netlink.LinkByName(name); err != nil {
-				return fmt.Errorf("fridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
+				return fmt.Errorf("bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
 			}
 		}
 	}
