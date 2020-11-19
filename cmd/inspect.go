@@ -22,6 +22,7 @@ var all bool
 type containerDetails struct {
 	LabName     string `json:"lab_name,omitempty"`
 	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
 	Image       string `json:"image,omitempty"`
 	Kind        string `json:"kind,omitempty"`
 	Group       string `json:"group,omitempty"`
@@ -90,16 +91,16 @@ func toTableData(det []containerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
 	for _, d := range det {
 		if all {
-			tabData = append(tabData, []string{d.LabName, d.Name, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+			tabData = append(tabData, []string{d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 			continue
 		}
-		tabData = append(tabData, []string{d.Name, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+		tabData = append(tabData, []string{d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 	}
-	sort.Slice(tabData, func(i, j int) bool { 
+	sort.Slice(tabData, func(i, j int) bool {
 		if tabData[i][0] == tabData[j][0] {
 			return tabData[i][1] < tabData[j][1]
 		}
-		return tabData[i][0] < tabData[j][0] 
+		return tabData[i][0] < tabData[j][0]
 	})
 	return tabData
 }
@@ -113,6 +114,9 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 			State:       cont.State,
 			IPv4Address: getContainerIPv4(cont, bridgeName),
 			IPv6Address: getContainerIPv6(cont, bridgeName),
+		}
+		if len(cont.ID) > 11 {
+			cdet.ContainerID = cont.ID[:12]
 		}
 		if len(cont.Names) > 0 {
 			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
@@ -138,6 +142,7 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	header := []string{
 		"Lab Name",
 		"Name",
+		"Container ID",
 		"Image",
 		"Kind",
 		"Group",
