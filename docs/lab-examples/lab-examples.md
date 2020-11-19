@@ -14,3 +14,36 @@ These lab examples are meant to be used as-is or as a base layer to a more custo
 The source code of the lab examples is contained within the [containerlab repo](https://github.com/srl-wim/container-lab/tree/master/lab-examples); any questions, issues or contributions related to the provided examples can be addressed via [Github issues](https://github.com/srl-wim/container-lab/issues).
 
 Each lab comes with a definitive description that can be found in this documentation section.
+
+## How to deploy a lab from the lab catalog?
+Running the labs from the catalog is easy.
+
+#### Copy lab catalog
+First, you need to copy the lab catalog to your working directory, to ensure that the changes you might make to the lab files will not be overwritten once you upgrade containerlab. To copy the entire catalog into your working directory:
+
+```bash
+# copy over the srl02 lab files
+cp -a /etc/containerlab/lab-examples/* .
+```
+
+as a result of this command you will get several dire
+
+#### Get the lab name
+Every lab in the catalog has a unique short name. For example [this lab](two-srls.md) states in the summary table its name is `srl02`. You will find a folder matching this name in your working directory, change into it:
+```bash
+cd srl02
+```
+
+#### Check images and licenses
+Within the lab directory you will find the files that are used in the lab. Usually its only the [topology definition files](../manual/topo-def-file.md) and, sometimes, config files.
+
+If you check the topology file you will see if any license files are required and what images are specified for each node/kind.
+
+Either change the topology file to point to the right image/license or change the image/license to match the topo definition file values.
+
+#### Deploy the lab
+You are ready to deploy!
+
+```bash
+containerlab deploy -t <lab_name>
+```
