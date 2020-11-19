@@ -29,9 +29,15 @@ var rootCmd = &cobra.Command{
 	Use:   "containerlab",
 	Short: "deploy container based lab environments with a user-defined interconnections",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		id := os.Geteuid()
+		if id != 0 {
+			fmt.Println("containerlab requires sudo privileges to run!")
+			os.Exit(1)
+		}
 		if debug {
 			log.SetLevel(log.DebugLevel)
 		}
+
 	},
 }
 
@@ -44,11 +50,6 @@ func Execute() {
 }
 
 func init() {
-	id := os.Geteuid()
-	if id != 0 {
-		fmt.Println("containerlab requires sudo privileges to run!")
-		os.Exit(1)
-	}
 
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")

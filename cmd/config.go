@@ -19,7 +19,7 @@ var configCmd = &cobra.Command{
 }
 
 // generateCmd represents the generate command
-var generateCmd = &cobra.Command{
+var configGenerateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "generate configuration for the lab",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -28,7 +28,7 @@ var generateCmd = &cobra.Command{
 }
 
 // applyCmd represents the apply command
-var applyCmd = &cobra.Command{
+var configApplyCmd = &cobra.Command{
 	Use:   "apply",
 	Short: "apply the generated configuration on the lab nodes",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -38,12 +38,12 @@ var applyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.AddCommand(generateCmd)
-	configCmd.AddCommand(applyCmd)
+	configCmd.AddCommand(configGenerateCmd)
+	configCmd.AddCommand(configApplyCmd)
 	//
-	generateCmd.Flags().BoolVarP(&infra, "infra", "", false, "generate infra config")
-	generateCmd.Flags().BoolVarP(&workload, "workload", "", false, "generate workloads config")
+	configGenerateCmd.Flags().BoolVarP(&infra, "infra", "", false, "generate infra config")
+	configGenerateCmd.Flags().BoolVarP(&workload, "workload", "", false, "generate workloads config")
 	//
-	applyCmd.Flags().BoolVarP(&infra, "infra", "", false, "generate infra config")
-	applyCmd.Flags().BoolVarP(&workload, "workload", "", false, "generate workloads config")
+	configApplyCmd.Flags().BoolVarP(&infra, "infra", "", false, "generate infra config")
+	configApplyCmd.Flags().BoolVarP(&workload, "workload", "", false, "generate workloads config")
 }

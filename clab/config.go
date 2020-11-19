@@ -38,30 +38,30 @@ var srlTypes = map[string]string{
 // it is provided via docker network object
 type mgmtNet struct {
 	Network    string // docker network name
-	Ipv4Subnet string `yaml:"ipv4_subnet"`
-	Ipv6Subnet string `yaml:"ipv6_subnet"`
+	Ipv4Subnet string `yaml:"ipv4_subnet,omitempty"`
+	Ipv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 }
 
 // NodeConfig represents a configuration a given node can have in the lab definition file
 type NodeConfig struct {
-	Kind     string
-	Group    string
-	Type     string
-	Config   string
-	Image    string
-	License  string
-	Position string
-	Cmd      string
-	Binds    []string // list of bind mount compatible strings
-	Ports    []string // list of port bindings
+	Kind     string   `yaml:"kind,omitempty"`
+	Group    string   `yaml:"group,omitempty"`
+	Type     string   `yaml:"type,omitempty"`
+	Config   string   `yaml:"config,omitempty"`
+	Image    string   `yaml:"image,omitempty"`
+	License  string   `yaml:"license,omitempty"`
+	Position string   `yaml:"position,omitempty"`
+	Cmd      string   `yaml:"cmd,omitempty"`
+	Binds    []string `yaml:"binds,omitempty" json:"binds,omitempty"` // list of bind mount compatible strings
+	Ports    []string `yaml:"ports,omitempty"`                        // list of port bindings
 }
 
 // Topology represents a lab topology
 type Topology struct {
-	Defaults NodeConfig
-	Kinds    map[string]NodeConfig
-	Nodes    map[string]NodeConfig
-	Links    []LinkConfig
+	Defaults NodeConfig            `yaml:"defaults,omitempty"`
+	Kinds    map[string]NodeConfig `yaml:"kinds,omitempty"`
+	Nodes    map[string]NodeConfig `yaml:"nodes,omitempty"`
+	Links    []LinkConfig          `yaml:"links,omitempty"`
 }
 
 type LinkConfig struct {
@@ -71,10 +71,10 @@ type LinkConfig struct {
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string
-	Mgmt       mgmtNet
-	Topology   Topology
-	ConfigPath string `yaml:"config_path"`
+	Name       string   `json:"name,omitempty"`
+	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
+	Topology   Topology `json:"topology,omitempty"`
+	ConfigPath string   `yaml:"config_path,omitempty"`
 }
 
 type volume struct {
@@ -241,7 +241,10 @@ func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Image != "" {
 		return nodeCfg.Image
 	}
-	return c.Config.Topology.Kinds[kind].Image
+	if c.Config.Topology.Kinds[kind].Image != "" {
+		return c.Config.Topology.Kinds[kind].Image
+	}
+	return c.Config.Topology.Defaults.Image
 }
 
 func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
@@ -252,11 +255,21 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 		}
 		return lp, nil
 	}
-	lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
-	if err != nil {
-		return "", err
+	if c.Config.Topology.Kinds[kind].License != "" {
+		lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
 	}
-	return lp, nil
+	if c.Config.Topology.Defaults.License != "" {
+		lp, err := filepath.Abs(c.Config.Topology.Defaults.License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
+	}
+	return "", fmt.Errorf("no license found for node(s) of kind %s", nodeCfg.Kind)
 }
 
 func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
