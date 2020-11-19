@@ -32,7 +32,7 @@ nfpms:
     formats:
       - rpm
       - deb
-    bindir: /usr/local/bin
+    bindir: /usr/bin
     files:
       ./lab-examples/**/*: /etc/containerlab/lab-examples
       ./templates/**/*: /etc/containerlab/templates
