@@ -10,19 +10,37 @@
 
 ## Description
 
-Containerlab provides a framework for setting up and destroying labs for networking containers. It builds a virtual wiring using veth pairs between the containers to provide virtual topologies.
+Containerlab provides a framework for setting up networking labs with containers. It starts the containers and builds a virtual wiring between them to create lab topologies of users choice.
 
-The labs could also be wired to an external bridge to connect to external environment or to build hierarchical labs.
+![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/8244ceb188abd3831e3715c42d4fa38f/image.png)
+Containerlab focuses on containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
-A CA can be provided per lab and when enabled, containerlab generates certificates per device that can be used for various use cases, like GNMI, JSON RPC, etc. 
+* [Nokia SR-Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/)
+* [Arista cEOS](https://www.arista.com/en/products/software-controlled-container-networking)
+* [SONiC](https://azure.github.io/SONiC/)
+* [Juniper cRPD](https://www.juniper.net/documentation/en_US/crpd/topics/concept/understanding-crpd.html)
 
-Lastly, containerlab also allows for a graphical output to validate the lab in a visual format using [graphviz](https://graphviz.org)
+But, of course, containerlab is perfectly capable of wiring up arbitrary containers which can host your network applications, virtual router or simply be a test client.
 
-Containerlab supports the following containers:
+<p align="center">
+<img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/e9222468fe580bc57a9ff2da03cca1cb/image.png" width="40%">
+</p>
 
-* standard linux/alpine containers, typically used as test clients
-* networking containers:
-	* Nokia SR-Linux
-	* Arista cEOS.
+## Features
+* **IaaC approach**  
+    Declarative way of defining the labs by means of the [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/).
+* **Network Operating Systems centric**  
+    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.srlinux.dev/manual/kinds/) which allows the user to focus on the use cases, rather than infrastructure.
+* **Simplicity and convenience are keys**  
+    One-click [installation](https://containerlab.srlinux.dev/install/) and upgrade capabilities.
+* **Fast**  
+    Blazing fast way to create container based labs on any Debian or RHEL system.
+* **Automated TLS certificates provisioning**  
+    The nodes which require TLS certs will get them automatically on start.
+* **Documentation is a first-class citizen**  
+    We do not let our users guess by making a complete, concise and clean [documentation](https://containerlab.srlinux.dev).
+* **Lab catalog**  
+   The "most-wanted" lab topologies are [documented and included](https://containerlab.srlinux.dev/lab-examples/lab-examples/) with containerlab installation. Based on this cherry-picked selection you can start crafting the labs answering your needs.
+
 
 Containerlab documentation is provided at https://containerlab.srlinux.dev.
