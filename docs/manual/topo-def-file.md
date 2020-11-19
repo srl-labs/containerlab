@@ -77,7 +77,7 @@ srl:
   license: license.key
 ```
 
-Refer to the [node configuration](node-cfg.md) document to understand which options are available for nodes and what is their meaning.
+Refer to the [node configuration](nodes.md) document to understand which options are available for nodes and what is their meaning.
 
 #### Links
 Although its totally fine to define the node without any links (like in [this lab](../lab-examples/single-srl.md)) most of the time we interconnect the nodes with links. One of containerlab purposes is to make the interconnection of nodes simple.
