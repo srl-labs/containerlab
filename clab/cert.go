@@ -79,7 +79,7 @@ func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		Name:     node.ShortName,
 		LongName: node.LongName,
 		Fqdn:     node.Fqdn,
-		Prefix:   c.Conf.Prefix,
+		Prefix:   c.Config.Name,
 	}
 	CreateDirectory(path.Join(c.Dir.LabCA, input.Name), 0755)
 	var err error

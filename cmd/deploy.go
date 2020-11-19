@@ -17,13 +17,15 @@ import (
 	"github.com/srl-wim/container-lab/clab"
 )
 
-// path to the topology file
-var topo string
-var graph bool
-var bridge string
-var prefix string
-var ipv4Subnet net.IPNet
-var ipv6Subnet net.IPNet
+// name of the container management network
+var mgmtNetName string
+
+// IPv4/6 address range for container management network
+var mgmtIPv4Subnet net.IPNet
+var mgmtIPv6Subnet net.IPNet
+
+// reconfigure flag
+var reconfigure bool
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
@@ -32,19 +34,28 @@ var deployCmd = &cobra.Command{
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			return err
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
+		c := clab.NewContainerLab(opts...)
 
-		if err = c.GetTopology(&topo); err != nil {
-			return err
-		}
-		setFlags(c.Conf)
-		log.Debugf("lab Conf: %+v", c.Conf)
+		var err error
+		setFlags(c.Config)
+		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
+			return err
+		}
+		if reconfigure {
+			err = os.RemoveAll(c.Dir.Lab)
+			if err != nil {
+				return err
+			}
+		}
+		if err = c.VerifyBridgesExist(); err != nil {
 			return err
 		}
 
@@ -60,7 +71,7 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
 		}
-		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Conf.Prefix})
+		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Config.Name})
 		if err != nil {
 			return fmt.Errorf("failed to generate rootCa: %v", err)
 		}
@@ -108,9 +119,11 @@ var deployCmd = &cobra.Command{
 		}
 		wg.Wait()
 		// cleanup hanging resources if a deployment failed before
+		log.Debug("cleaning up interfaces...")
 		c.InitVirtualWiring()
 		wg = new(sync.WaitGroup)
 		wg.Add(len(c.Links))
+		log.Debug("creating links...")
 		// wire the links between the nodes based on cabling plan
 		for _, link := range c.Links {
 			go func(link *clab.Link) {
@@ -127,11 +140,10 @@ var deployCmd = &cobra.Command{
 				log.Error(err)
 			}
 		}
-
+		log.Debug("containers created, retrieving state and IP addresses...")
 		// show topology output
 
-		// print table summary
-		labels = append(labels, "containerlab=lab-"+c.Conf.Prefix)
+		labels = append(labels, "containerlab=lab-"+c.Config.Name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
@@ -140,11 +152,12 @@ var deployCmd = &cobra.Command{
 			return fmt.Errorf("no containers found")
 		}
 		log.Info("Writing /etc/hosts file")
-		err = createHostsFile(containers, c.Conf.DockerInfo.Bridge)
+		err = createHostsFile(containers, c.Config.Mgmt.Network)
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
 		}
-		printContainerInspect(containers, c.Conf.DockerInfo.Bridge, format)
+		// print table summary
+		printContainerInspect(containers, c.Config.Mgmt.Network, format)
 		return nil
 	},
 }
@@ -152,23 +165,24 @@ var deployCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(deployCmd)
 	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
-	deployCmd.Flags().StringVarP(&bridge, "bridge", "b", "", "docker network name for management")
-	deployCmd.Flags().IPNetVarP(&ipv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	deployCmd.Flags().IPNetVarP(&ipv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
+	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
+	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
 }
 
-func setFlags(conf *clab.Conf) {
-	if prefix != "" {
-		conf.Prefix = prefix
+func setFlags(conf *clab.Config) {
+	if name != "" {
+		conf.Name = name
 	}
-	if bridge != "" {
-		conf.DockerInfo.Bridge = bridge
+	if mgmtNetName != "" {
+		conf.Mgmt.Network = mgmtNetName
 	}
-	if ipv4Subnet.String() != "<nil>" {
-		conf.DockerInfo.Ipv4Subnet = ipv4Subnet.String()
+	if mgmtIPv4Subnet.String() != "<nil>" {
+		conf.Mgmt.Ipv4Subnet = mgmtIPv4Subnet.String()
 	}
-	if ipv6Subnet.String() != "<nil>" {
-		conf.DockerInfo.Ipv6Subnet = ipv6Subnet.String()
+	if mgmtIPv6Subnet.String() != "<nil>" {
+		conf.Mgmt.Ipv6Subnet = mgmtIPv6Subnet.String()
 	}
 }
 
