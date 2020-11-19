@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -14,47 +15,36 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// File type is a struct which define parameter of the topology file
-type File struct {
-	file      string
-	name      string
-	shortname string
+// TopoFile type is a struct which defines parameters of the topology file
+type TopoFile struct {
+	fullName string // file name with extension
+	name     string // file name without extension
 }
 
-// GetTopology gets the lab topology information
-func (c *cLab) GetTopology(topo *string) error {
-	log.Info("Getting topology information ...")
-	log.Debug("Topofile ", *topo)
+// GetTopology parses the topology file into c.Conf structure
+// as well as populates the TopoFile structure with the topology file related information
+func (c *cLab) GetTopology(topo string) error {
+	log.Infof("Getting topology information from %s file...", topo)
 
-	yamlFile, err := ioutil.ReadFile(*topo)
+	yamlFile, err := ioutil.ReadFile(topo)
 	if err != nil {
 		return err
 	}
-	log.Debug(fmt.Sprintf("File contents:\n%s\n", yamlFile))
+	log.Debug(fmt.Sprintf("Topology file contents:\n%s\n", yamlFile))
 
-	err = yaml.Unmarshal(yamlFile, c.Conf)
+	err = yaml.Unmarshal(yamlFile, c.Config)
 	if err != nil {
 		return err
 	}
 
-	s := strings.Split(*topo, "/")
+	s := strings.Split(topo, "/")
 	file := s[len(s)-1]
 	filename := strings.Split(file, ".")
-	sf := strings.Split(filename[0], "-")
-	shortname := ""
-	for _, f := range sf {
-		shortname += f
+	c.TopoFile = &TopoFile{
+		fullName: file,
+		name:     filename[0],
 	}
-	log.Debug(s, file, filename, shortname)
-	c.FileInfo = &File{
-		file:      file,
-		name:      filename[0],
-		shortname: shortname,
-	}
-	log.Debug("File : ", c.FileInfo)
-
 	return nil
-
 }
 
 func fileExists(filename string) bool {
@@ -67,7 +57,7 @@ func fileExists(filename string) bool {
 }
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
-// the same, then return success. Otherise, copy the file contents from src to dst.
+// the same, then return success. Otherwise, copy the file contents from src to dst.
 func copyFile(src, dst string) (err error) {
 	sfi, err := os.Stat(src)
 	if err != nil {
@@ -151,16 +141,18 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
 		var src string
 		var dst string
+
+		// create node directory in lab
+		CreateDirectory(node.LabDir, 0777)
+
 		// copy license file to node specific directory in lab
 		src = node.License
-		dst = path.Join(c.Dir.Lab, "license.key")
+		dst = path.Join(node.LabDir, "license.key")
 		if err = copyFile(src, dst); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
-		// create dut directory in lab
-		CreateDirectory(node.LabDir, 0777)
 		// generate SRL topology file
 		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
 		if err != nil {
@@ -198,10 +190,9 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	return nil
 }
 
-
-// GenerateConfig generates configuration for the duts
+// GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
-	tpl, err := template.New("srlconfig.tpl").ParseFiles("/etc/containerlab/templates/srl/srlconfig.tpl")
+	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
 	if err != nil {
 		return err
 	}

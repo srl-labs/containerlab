@@ -1,11 +1,12 @@
 package clab
 
 import (
-	"net"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -18,7 +19,12 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
+
+	defaultConfigTemplate = "/etc/containerlab/templates/srl/srlconfig.tpl"
 )
+
+// supported kinds
+var kinds = []string{"srl", "ceos", "linux", "alpine", "bridge"}
 
 var srlTypes = map[string]string{
 	"ixr6":  "topology-7250IXR6.yml",
@@ -28,42 +34,47 @@ var srlTypes = map[string]string{
 	"ixrd3": "topology-7220IXRD3.yml",
 }
 
-type dockerInfo struct {
-	Bridge      string `yaml:"bridge"`
-	Ipv4Subnet  string `yaml:"ipv4_subnet"`
-	Ipv4Gateway string `yaml:"ipv4_gateway"`
-	Ipv6Subnet  string `yaml:"ipv6_subnet"`
-	Ipv6Gateway string `yaml:"ipv6_gateway"`
+// mgmtNet struct defines the management network options
+// it is provided via docker network object
+type mgmtNet struct {
+	Network    string // docker network name
+	Ipv4Subnet string `yaml:"ipv4_subnet,omitempty"`
+	Ipv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 }
 
-type dutInfo struct {
-	Kind     string `yaml:"kind"`
-	Group    string `yaml:"group"`
-	Type     string `yaml:"type"`
-	Config   string `yaml:"config"`
-	Image    string `yaml:"image"`
-	License  string `yaml:"license"`
-	Position string `yaml:"position"`
-	Cmd      string `yaml:"cmd"`
+// NodeConfig represents a configuration a given node can have in the lab definition file
+type NodeConfig struct {
+	Kind     string   `yaml:"kind,omitempty"`
+	Group    string   `yaml:"group,omitempty"`
+	Type     string   `yaml:"type,omitempty"`
+	Config   string   `yaml:"config,omitempty"`
+	Image    string   `yaml:"image,omitempty"`
+	License  string   `yaml:"license,omitempty"`
+	Position string   `yaml:"position,omitempty"`
+	Cmd      string   `yaml:"cmd,omitempty"`
+	Binds    []string `yaml:"binds,omitempty" json:"binds,omitempty"` // list of bind mount compatible strings
+	Ports    []string `yaml:"ports,omitempty"`                        // list of port bindings
 }
 
-type link struct {
-	Endpoints []string          `yaml:"endpoints"`
+// Topology represents a lab topology
+type Topology struct {
+	Defaults NodeConfig            `yaml:"defaults,omitempty"`
+	Kinds    map[string]NodeConfig `yaml:"kinds,omitempty"`
+	Nodes    map[string]NodeConfig `yaml:"nodes,omitempty"`
+	Links    []LinkConfig          `yaml:"links,omitempty"`
+}
+
+type LinkConfig struct {
+	Endpoints []string
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
-// Conf holds the configuration file input
-type Conf struct {
-	Prefix      string     `yaml:"Prefix"`
-	DockerInfo  dockerInfo `yaml:"Docker_info"`
-	ClientImage string     `yaml:"Client_image"`
-	Duts        struct {
-		GlobalDefaults dutInfo            `yaml:"global_defaults"`
-		KindDefaults   map[string]dutInfo `yaml:"kind_defaults"`
-		DutSpecifics   map[string]dutInfo `yaml:"dut_specifics"`
-	} `yaml:"Duts"`
-	Links      []link `yaml:"Links"`
-	ConfigPath string `yaml:"config_path"`
+// Config defines lab configuration as it is provided in the YAML file
+type Config struct {
+	Name       string   `json:"name,omitempty"`
+	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
+	Topology   Topology `json:"topology,omitempty"`
+	ConfigPath string   `yaml:"config_path,omitempty"`
 }
 
 type volume struct {
@@ -74,27 +85,26 @@ type volume struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	ShortName string
-	LongName  string
-	Fqdn      string
-	LabDir    string
-	Index     int
-	Group     string
-	Kind      string
-	Config    string
-	NodeType  string
-	Position  string
-	License   string
-	Image     string
-	Topology  string
-	EnvConf   string
-	Sysctls   map[string]string
-	User      string
-	Cmd       string
-	Env       []string
-	Mounts    map[string]volume
-	Volumes   map[string]struct{}
-	Binds     []string
+	ShortName    string
+	LongName     string
+	Fqdn         string
+	LabDir       string
+	Index        int
+	Group        string
+	Kind         string
+	Config       string
+	NodeType     string
+	Position     string
+	License      string
+	Image        string
+	Topology     string
+	EnvConf      string
+	Sysctls      map[string]string
+	User         string
+	Cmd          string
+	Env          []string
+	Binds        []string    // Bind mounts strings (src:dest:options)
+	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
 
 	TLSCert   string
 	TLSKey    string
@@ -118,52 +128,35 @@ type Endpoint struct {
 // ParseIPInfo parses IP information
 func (c *cLab) parseIPInfo() error {
 	// DockerInfo = t.DockerInfo
-	if c.Conf.DockerInfo.Bridge == "" {
-		c.Conf.DockerInfo.Bridge = dockerNetName
+	if c.Config.Mgmt.Network == "" {
+		c.Config.Mgmt.Network = dockerNetName
 	}
-	if c.Conf.DockerInfo.Ipv4Subnet == "" {
-		c.Conf.DockerInfo.Ipv4Subnet = dockerNetIPv4Addr
+	if c.Config.Mgmt.Ipv4Subnet == "" {
+		c.Config.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
 	}
-	if c.Conf.DockerInfo.Ipv6Subnet == "" {
-		c.Conf.DockerInfo.Ipv6Subnet = dockerNetIPv6Addr
+	if c.Config.Mgmt.Ipv6Subnet == "" {
+		c.Config.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
 	}
-
-	_, ipv4Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv4Subnet)
-	if err != nil {
-		return err
-	}
-	ipv4Gateway := ipv4Net.IP.To4()
-	ipv4Gateway[3]++
-	c.Conf.DockerInfo.Ipv4Gateway = ipv4Gateway.String()
-
-	_, ipv6Net, err := net.ParseCIDR(c.Conf.DockerInfo.Ipv6Subnet)
-	if err != nil {
-		return err
-	}
-	ipv6Gateway := ipv6Net.IP
-	ipv6Gateway[15]++
-	c.Conf.DockerInfo.Ipv6Gateway = ipv6Gateway.String()
-
 	return nil
 }
 
 // ParseTopology parses the lab topology
 func (c *cLab) ParseTopology() error {
 	log.Info("Parsing topology information ...")
-	log.Debugf("Prefix: %s", c.Conf.Prefix)
+	log.Debugf("Lab name: %s", c.Config.Name)
 	// initialize DockerInfo
 	err := c.parseIPInfo()
 	if err != nil {
 		return err
 	}
-	log.Debugf("DockerInfo: %v", c.Conf.DockerInfo)
+	log.Debugf("DockerInfo: %v", c.Config.Mgmt)
 
-	if c.Conf.ConfigPath == "" {
-		c.Conf.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
+	if c.Config.ConfigPath == "" {
+		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 	}
 
 	c.Dir = new(cLabDirectory)
-	c.Dir.Lab = c.Conf.ConfigPath + "/" + prefix + "-" + c.Conf.Prefix
+	c.Dir.Lab = c.Config.ConfigPath + "/" + prefix + "-" + c.Config.Name
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
 	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
@@ -174,103 +167,160 @@ func (c *cLab) ParseTopology() error {
 
 	// initialize the Node information from the topology map
 	idx := 0
-	for dut, data := range c.Conf.Duts.DutSpecifics {
-		c.NewNode(dut, data, idx)
+	for nodeName, node := range c.Config.Topology.Nodes {
+		if err = c.NewNode(nodeName, node, idx); err != nil {
+			return err
+		}
 		idx++
 	}
-	for i, l := range c.Conf.Links {
+	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
 	return nil
 }
 
-func (c *cLab) kindInitialization(dut *dutInfo) string {
-	if dut.Kind != "" {
-		return dut.Kind
+func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
+	if nodeCfg.Kind != "" {
+		return nodeCfg.Kind
 	}
-	return c.Conf.Duts.GlobalDefaults.Kind
+	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *cLab) groupInitialization(dut *dutInfo, kind string) string {
-	if dut.Group != "" {
-		return dut.Group
-	} else if c.Conf.Duts.KindDefaults[kind].Group != "" {
-		return c.Conf.Duts.KindDefaults[kind].Group
+func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
+	if len(nodeCfg.Binds) != 0 {
+		return nodeCfg.Binds
 	}
-	return c.Conf.Duts.GlobalDefaults.Group
+	return c.Config.Topology.Kinds[nodeCfg.Kind].Binds
 }
 
-func (c *cLab) typeInitialization(dut *dutInfo, kind string) string {
-	if dut.Type != "" {
-		return dut.Type
+// portsInit produces the nat.PortMap out of the slice of string representation of port bindings
+func (c *cLab) portsInit(nodeCfg *NodeConfig) (nat.PortMap, error) {
+	if len(nodeCfg.Ports) != 0 {
+		_, pm, err := nat.ParsePortSpecs(nodeCfg.Ports)
+		if err != nil {
+			return nil, err
+		}
+		return pm, nil
 	}
-	return c.Conf.Duts.KindDefaults[kind].Type
+	return nil, nil
 }
 
-func (c *cLab) configInitialization(dut *dutInfo, kind string) string {
-	if dut.Config != "" {
-		return dut.Config
+func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Group != "" {
+		return nodeCfg.Group
+	} else if c.Config.Topology.Kinds[kind].Group != "" {
+		return c.Config.Topology.Kinds[kind].Group
 	}
-	return c.Conf.Duts.KindDefaults[kind].Config
+	return c.Config.Topology.Defaults.Group
 }
 
-func (c *cLab) imageInitialization(dut *dutInfo, kind string) string {
-	if dut.Image != "" {
-		return dut.Image
+func (c *cLab) typeInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Type != "" {
+		return nodeCfg.Type
 	}
-	return c.Conf.Duts.KindDefaults[kind].Image
+	return c.Config.Topology.Kinds[kind].Type
 }
 
-func (c *cLab) licenseInitialization(dut *dutInfo, kind string) string {
-	if dut.License != "" {
-		return dut.License
+func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Config != "" {
+		return nodeCfg.Config
 	}
-	return c.Conf.Duts.KindDefaults[kind].License
+	if kindConfig, ok := c.Config.Topology.Kinds[kind]; ok {
+		if kindConfig.Config != "" {
+			return kindConfig.Config
+		}
+	}
+	if c.Config.Topology.Defaults.Config != "" {
+		return c.Config.Topology.Defaults.Config
+	}
+	return defaultConfigTemplate
 }
 
-func (c *cLab) cmdInitialization(dut *dutInfo, kind string, deflt string) string {
-	if dut.Cmd != "" {
-		return dut.Cmd
+func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Image != "" {
+		return nodeCfg.Image
 	}
-	if c.Conf.Duts.KindDefaults[kind].Cmd != "" {
-		return c.Conf.Duts.KindDefaults[kind].Cmd
+	if c.Config.Topology.Kinds[kind].Image != "" {
+		return c.Config.Topology.Kinds[kind].Image
 	}
-	return deflt
+	return c.Config.Topology.Defaults.Image
 }
 
-func (c *cLab) positionInitialization(dut *dutInfo, kind string) string {
-	if dut.Position != "" {
-		return dut.Position
-	} else if c.Conf.Duts.KindDefaults[kind].Position != "" {
-		return c.Conf.Duts.KindDefaults[kind].Position
+func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
+	if nodeCfg.License != "" {
+		lp, err := filepath.Abs(nodeCfg.License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
 	}
-	return c.Conf.Duts.GlobalDefaults.Position
+	if c.Config.Topology.Kinds[kind].License != "" {
+		lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
+	}
+	if c.Config.Topology.Defaults.License != "" {
+		lp, err := filepath.Abs(c.Config.Topology.Defaults.License)
+		if err != nil {
+			return "", err
+		}
+		return lp, nil
+	}
+	return "", fmt.Errorf("no license found for node(s) of kind %s", nodeCfg.Kind)
+}
+
+func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
+	if nodeCfg.Cmd != "" {
+		return nodeCfg.Cmd
+	}
+	if c.Config.Topology.Kinds[kind].Cmd != "" {
+		return c.Config.Topology.Kinds[kind].Cmd
+	}
+	return defCmd
+}
+
+func (c *cLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
+	if nodeCfg.Position != "" {
+		return nodeCfg.Position
+	} else if c.Config.Topology.Kinds[kind].Position != "" {
+		return c.Config.Topology.Kinds[kind].Position
+	}
+	return c.Config.Topology.Defaults.Position
 }
 
 // NewNode initializes a new node object
-func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
+func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
 	node := new(Node)
-	node.ShortName = dutName
-	node.LongName = prefix + "-" + c.Conf.Prefix + "-" + dutName
-	node.Fqdn = dutName + "." + c.Conf.Prefix + ".io"
-	node.LabDir = c.Dir.Lab + "/" + dutName
-	// node.CertDir = c.Dir.LabCA + "/" + dutName
+	node.ShortName = nodeName
+	node.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
+	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
+	node.LabDir = c.Dir.Lab + "/" + nodeName
 	node.Index = idx
 
 	// initialize the node with global parameters
-	// Kind initialization is either coming from dut_specific or from global
+	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
-	node.Kind = strings.ToLower(c.kindInitialization(&dut))
+	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+	node.Binds = c.bindsInit(&nodeCfg)
+
+	pb, err := c.portsInit(&nodeCfg)
+	if err != nil {
+		return err
+	}
+	node.PortBindings = pb
+
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&dut, node.Kind)
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
 		//node.License = t.SRLLicense
-		node.Image = c.imageInitialization(&dut, node.Kind)
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		//node.NodeType = "ixr6"
-		node.Position = c.positionInitialization(&dut, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		// initialize specifc container information
 		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker"
@@ -283,9 +333,9 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
 			"INTFTYPE=eth"}
 		node.User = "root"
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.NodeType = dut.Type
-		node.Config = dut.Config
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.NodeType = nodeCfg.Type
+		node.Config = nodeCfg.Config
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
@@ -297,12 +347,18 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&dut, node.Kind)
-		node.License = c.licenseInitialization(&dut, node.Kind)
-		node.Image = c.imageInitialization(&dut, node.Kind)
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.NodeType = c.typeInitialization(&dut, node.Kind)
-		node.Position = c.positionInitialization(&dut, node.Kind)
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+
+		lp, err := c.licenseInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
+		node.License = lp
+
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		if filename, found := srlTypes[node.NodeType]; found {
 			node.Topology = baseConfigDir + filename
@@ -327,74 +383,47 @@ func (c *cLab) NewNode(dutName string, dut dutInfo, idx int) {
 		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
 		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
 
-		node.Mounts = make(map[string]volume)
-		var v volume
-		v.Source = c.Dir.Lab + "/" + "license.key"
-		v.Destination = "/opt/srlinux/etc/license.key"
-		v.ReadOnly = true
-		log.Debug("License key: ", v.Source)
-		node.Mounts["license"] = v
+		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+		// in (c *cLab) CreateNodeDirStructure
+		node.Binds = append(node.Binds, fmt.Sprint(filepath.Join(node.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 
-		v.Source = node.LabDir + "/" + "config/"
-		v.Destination = "/etc/opt/srlinux/"
-		v.ReadOnly = false
-		log.Debug("Config: ", v.Source)
-		node.Mounts["config"] = v
+		// mount config directory
+		cfgPath := filepath.Join(node.LabDir, "config")
+		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
-		v.Source = node.LabDir + "/" + "srlinux.conf"
-		v.Destination = "/home/admin/.srlinux.conf"
-		v.ReadOnly = false
-		log.Debug("Env Config: ", v.Source)
-		node.Mounts["envConf"] = v
+		// mount srlinux.conf
+		srlconfPath := filepath.Join(node.LabDir, "srlinux.conf")
+		node.Binds = append(node.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
 
-		v.Source = node.LabDir + "/" + "topology.yml"
-		v.Destination = "/tmp/topology.yml"
-		v.ReadOnly = true
-		log.Debug("Topology File: ", v.Source)
-		node.Mounts["topology"] = v
-
-		node.Volumes = make(map[string]struct{})
-		node.Volumes = map[string]struct{}{
-			node.Mounts["license"].Destination:  {},
-			node.Mounts["config"].Destination:   {},
-			node.Mounts["envConf"].Destination:  {},
-			node.Mounts["topology"].Destination: {},
-		}
-
-		bindLicense := node.Mounts["license"].Source + ":" + node.Mounts["license"].Destination + ":" + "ro"
-		bindConfig := node.Mounts["config"].Source + ":" + node.Mounts["config"].Destination + ":" + "rw"
-		bindEnvConf := node.Mounts["envConf"].Source + ":" + node.Mounts["envConf"].Destination + ":" + "rw"
-		bindTopology := node.Mounts["topology"].Source + ":" + node.Mounts["topology"].Destination + ":" + "ro"
-
-		node.Binds = append(node.Binds, bindLicense)
-		node.Binds = append(node.Binds, bindConfig)
-		node.Binds = append(node.Binds, bindEnvConf)
-		node.Binds = append(node.Binds, bindTopology)
+		// mount srlinux topology
+		topoPath := filepath.Join(node.LabDir, "topology.yml")
+		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "alpine", "linux":
-		node.Config = c.configInitialization(&dut, node.Kind)
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
 		node.License = ""
-		node.Image = c.imageInitialization(&dut, node.Kind)
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.NodeType = c.typeInitialization(&dut, node.Kind)
-		node.Position = c.positionInitialization(&dut, node.Kind)
-		node.Cmd = c.cmdInitialization(&dut, node.Kind, "/bin/sh")
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.Cmd = c.cmdInitialization(&nodeCfg, node.Kind, "/bin/sh")
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
 
 	case "bridge":
-		node.Group = c.groupInitialization(&dut, node.Kind)
-		node.Position = c.positionInitialization(&dut, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 	default:
-		panic("Node Kind, OS is not properly initialized; should be provided in Duts.dut_specifics.kind parameters or Duts.global_defaults.kind")
+		return fmt.Errorf("Node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
 	}
-	c.Nodes[dutName] = node
+	c.Nodes[nodeName] = node
+	return nil
 }
 
 // NewLink initializes a new link object
-func (c *cLab) NewLink(l link) *Link {
+func (c *cLab) NewLink(l LinkConfig) *Link {
 	// initialize a new link
 	link := new(Link)
 	link.Labels = l.Labels
@@ -431,15 +460,12 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		}
 	}
 	if endpoint.Node == nil {
-		log.Fatalf("Not all nodes are specified in the duts section or the names don't match in the duts/endpoint section: %s", nName)
+		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName)
 	}
 
 	// initialize the endpoint name based on the split function
 	if c.Nodes[nName].Kind == "bridge" {
-		if _, err := netlink.LinkByName(nName); err != nil {
-			log.Fatalf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", nName)
-		}
-		endpoint.EndpointName = c.Conf.Prefix + epName
+		endpoint.EndpointName = c.Config.Name + epName
 	} else {
 		endpoint.EndpointName = epName
 	}
@@ -447,4 +473,16 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
 	return endpoint
+}
+
+// VerifyBridgeExists verifies if every node of kind=bridge exists on the lab host
+func (c *cLab) VerifyBridgesExist() error {
+	for name, node := range c.Nodes {
+		if node.Kind == "bridge" {
+			if _, err := netlink.LinkByName(name); err != nil {
+				return fmt.Errorf("Bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
+			}
+		}
+	}
+	return nil
 }

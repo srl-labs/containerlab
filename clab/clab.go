@@ -6,21 +6,23 @@ import (
 	"time"
 
 	docker "github.com/docker/docker/client"
+	log "github.com/sirupsen/logrus"
 )
 
 // var debug bool
 
 type cLab struct {
-	Conf         *Conf
-	FileInfo     *File
+	Config       *Config
+	TopoFile     *TopoFile
 	m            *sync.RWMutex
 	Nodes        map[string]*Node
 	Links        map[int]*Link
 	DockerClient *docker.Client
 	Dir          *cLabDirectory
 
-	debug   bool
-	timeout time.Duration
+	debug            bool
+	timeout          time.Duration
+	gracefulShutdown bool
 }
 
 type cLabDirectory struct {
@@ -30,22 +32,60 @@ type cLabDirectory struct {
 	LabGraph  string
 }
 
-// NewContainerLab function defines a new container lab
-func NewContainerLab(d bool) *cLab {
-	return &cLab{
-		Conf:     new(Conf),
-		FileInfo: new(File),
-		m:        new(sync.RWMutex),
-		Nodes:    make(map[string]*Node),
-		Links:    make(map[int]*Link),
-		debug:    d,
+type ClabOption func(c *cLab)
+
+func WithDebug(d bool) ClabOption {
+	return func(c *cLab) {
+		c.debug = d
 	}
 }
 
-func (c *cLab) Init(timeout time.Duration) (err error) {
-	c.DockerClient, err = docker.NewEnvClient()
-	c.timeout = timeout
-	return
+func WithTimeout(dur time.Duration) ClabOption {
+	return func(c *cLab) {
+		c.timeout = dur
+	}
+}
+
+func WithEnvDockerClient() ClabOption {
+	return func(c *cLab) {
+		var err error
+		c.DockerClient, err = docker.NewEnvClient()
+		if err != nil {
+			log.Fatalf("failed to create docker client: %v", err)
+		}
+	}
+}
+
+func WithTopoFile(file string) ClabOption {
+	return func(c *cLab) {
+		if file == "" {
+			return
+		}
+		if err := c.GetTopology(file); err != nil {
+			log.Fatalf("failed to read topology file: %v", err)
+		}
+	}
+}
+
+func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
+	return func(c *cLab) {
+		c.gracefulShutdown = gracefulShutdown
+	}
+}
+
+// NewContainerLab function defines a new container lab
+func NewContainerLab(opts ...ClabOption) *cLab {
+	c := &cLab{
+		Config:   new(Config),
+		TopoFile: new(TopoFile),
+		m:        new(sync.RWMutex),
+		Nodes:    make(map[string]*Node),
+		Links:    make(map[int]*Link),
+	}
+	for _, o := range opts {
+		o(c)
+	}
+	return c
 }
 
 func (c *cLab) CreateNode(ctx context.Context, node *Node, certs *certificates) error {

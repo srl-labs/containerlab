@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -13,26 +14,27 @@ import (
 var saveCmd = &cobra.Command{
 	Use:   "save",
 	Short: "save containers configuration",
+	Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
+Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the exact command used per node's kind`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if prefix == "" && topo == "" {
-			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
+		if name == "" && topo == "" {
+			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
 			return
 		}
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			log.Fatal(err)
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
-		if prefix == "" {
-			if err = c.GetTopology(&topo); err != nil {
-				log.Fatal(err)
-			}
-			prefix = c.Conf.Prefix
+		c := clab.NewContainerLab(opts...)
+		if name == "" {
+			name = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		containers, err := c.ListContainers(ctx, []string{"containerlab=lab-" + prefix, "kind=srl"})
+		containers, err := c.ListContainers(ctx, []string{"containerlab=lab-" + name, "kind=srl"})
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
 		}
@@ -42,6 +44,9 @@ var saveCmd = &cobra.Command{
 		}
 		var saveCmd []string
 		for _, cont := range containers {
+			if cont.State != "running" {
+				continue
+			}
 			log.Debugf("container: %+v", cont)
 			if k, ok := cont.Labels["kind"]; ok {
 				switch k {
@@ -59,10 +64,10 @@ var saveCmd = &cobra.Command{
 				continue
 			}
 			if len(stdout) > 0 {
-				log.Infof("%s: stdout: %s", cont.Names, string(stdout))
+				log.Infof("%s output: %s", strings.TrimLeft(cont.Names[0], "/"), string(stdout))
 			}
 			if len(stderr) > 0 {
-				log.Infof("%s: stderr: %s", cont.Names, string(stderr))
+				log.Infof("%s errors: %s", strings.TrimLeft(cont.Names[0], "/"), string(stderr))
 			}
 		}
 	},

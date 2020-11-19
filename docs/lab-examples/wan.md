@@ -4,7 +4,7 @@
 | **Components**                | [Nokia SR Linux][srl]                                                |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 3 GB |
 | **Topology file**             | [srl03.yml][topofile]                                                |
-| **Prefix**                    | srl03                                                                |
+| **Name**                      | srl03                                                                |
 
 ## Description
 Nokia SR Linux while focusing on the data center deployments in the first releases, will also be suitable for WAN deployments. In this lab users presented with a small WAN topology of four interconnected SR Linux nodes with multiple p2p interfaces between them.
