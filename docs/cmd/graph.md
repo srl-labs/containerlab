@@ -49,11 +49,11 @@ The HTML based graph is created by rendering a [Go HTML](https://golang.org/pkg/
 }
 ```
 
-Within the template Javascript libraries such as  [**d3js directed force graph**](https://observablehq.com/collection/@d3/d3-force) or [**vis.js network**](https://visjs.github.io/vis-network/docs/network/) can be used to generate custom topology graphs.
+Within the template, Javascript libraries such as [**d3js directed force graph**](https://observablehq.com/collection/@d3/d3-force) or [**vis.js network**](https://visjs.github.io/vis-network/docs/network/) can be used to generate custom topology graphs.
 
 `containerlab` comes with a (minimalistic) default template using [d3js](https://github.com/d3/d3-force).
 
-After the graph generation, its possible to freely move the nodes to a desired position and export the graph in PNG format.
+After the graph generation, it's possible to move the nodes to a desired position and export the graph in PNG format.
 
 ![default_graph](https://gitlab.com/rdodin/pics/-/wikis/uploads/5f3ade3559a5f044d4786bfd0e278b65/image.png)
 
