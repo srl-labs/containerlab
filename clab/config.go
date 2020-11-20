@@ -124,12 +124,12 @@ func (c *cLab) parseIPInfo() error {
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
-	if c.Config.Mgmt.Ipv4Subnet == "" && c.Config.Mgmt.Ipv6Subnet == "" {
-		if c.Config.Mgmt.Ipv4Subnet == "" {
-			c.Config.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
+	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
+		if c.Config.Mgmt.IPv4Subnet == "" {
+			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
 		}
-		if c.Config.Mgmt.Ipv6Subnet == "" {
-			c.Config.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
+		if c.Config.Mgmt.IPv6Subnet == "" {
+			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
 		}
 	}
 	return nil
