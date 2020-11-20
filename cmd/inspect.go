@@ -182,10 +182,16 @@ func getContainerIPv6(container types.Container, bridgeName string) string {
 	}
 	if bridgeName != "" {
 		if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
+			if br.GlobalIPv6Address == "" {
+				return "NA"
+			}
 			return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
 		}
 	}
 	for _, br := range container.NetworkSettings.Networks {
+		if br.GlobalIPv6Address == "" {
+			return "NA"
+		}
 		return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
 	}
 	return ""
