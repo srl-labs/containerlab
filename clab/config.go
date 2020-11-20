@@ -121,15 +121,16 @@ type Endpoint struct {
 
 // ParseIPInfo parses IP information
 func (c *cLab) parseIPInfo() error {
-	// DockerInfo = t.DockerInfo
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
-	if c.Config.Mgmt.Ipv4Subnet == "" {
-		c.Config.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
-	}
-	if c.Config.Mgmt.Ipv6Subnet == "" {
-		c.Config.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
+	if c.Config.Mgmt.Ipv4Subnet == "" && c.Config.Mgmt.Ipv6Subnet == "" {
+		if c.Config.Mgmt.Ipv4Subnet == "" {
+			c.Config.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
+		}
+		if c.Config.Mgmt.Ipv6Subnet == "" {
+			c.Config.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
+		}
 	}
 	return nil
 }
