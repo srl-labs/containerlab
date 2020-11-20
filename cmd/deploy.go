@@ -179,10 +179,10 @@ func setFlags(conf *clab.Config) {
 		conf.Mgmt.Network = mgmtNetName
 	}
 	if mgmtIPv4Subnet.String() != "<nil>" {
-		conf.Mgmt.Ipv4Subnet = mgmtIPv4Subnet.String()
+		conf.Mgmt.IPv4Subnet = mgmtIPv4Subnet.String()
 	}
 	if mgmtIPv6Subnet.String() != "<nil>" {
-		conf.Mgmt.Ipv6Subnet = mgmtIPv6Subnet.String()
+		conf.Mgmt.IPv6Subnet = mgmtIPv6Subnet.String()
 	}
 }
 
