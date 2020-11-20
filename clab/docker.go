@@ -24,16 +24,21 @@ const sysctlBase = "/proc/sys"
 // CreateBridge creates a docker bridge
 func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Info("Creating docker bridge")
+	log.Debugf("Creating docker bridge: Name: %s, IPv4Subnet: '%s', IPv6Subnet: '%s", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
 
-	ipamIPv4Config := network.IPAMConfig{
-		Subnet: c.Config.Mgmt.Ipv4Subnet,
-	}
-	ipamIPv6Config := network.IPAMConfig{
-		Subnet: c.Config.Mgmt.Ipv6Subnet,
-	}
+	enableIPv6 := false
 	var ipamConfig []network.IPAMConfig
-	ipamConfig = append(ipamConfig, ipamIPv4Config)
-	ipamConfig = append(ipamConfig, ipamIPv6Config)
+	if c.Config.Mgmt.IPv4Subnet != "" {
+		ipamConfig = append(ipamConfig, network.IPAMConfig{
+			Subnet: c.Config.Mgmt.IPv4Subnet,
+		})
+	}
+	if c.Config.Mgmt.IPv6Subnet != "" {
+		ipamConfig = append(ipamConfig, network.IPAMConfig{
+			Subnet: c.Config.Mgmt.IPv6Subnet,
+		})
+		enableIPv6 = true
+	}
 
 	ipam := &network.IPAM{
 		Driver: "default",
@@ -44,7 +49,7 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 		CheckDuplicate: true,
 		Driver:         "bridge",
 		//Scope:          "local",
-		EnableIPv6: true,
+		EnableIPv6: enableIPv6,
 		IPAM:       ipam,
 		Internal:   false,
 		Attachable: false,
