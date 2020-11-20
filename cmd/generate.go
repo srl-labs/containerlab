@@ -144,10 +144,10 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 	}
 	config.Mgmt.Network = network
 	if ipv4range != "<nil>" {
-		config.Mgmt.Ipv4Subnet = ipv4range
+		config.Mgmt.IPv4Subnet = ipv4range
 	}
 	if ipv6range != "<nil>" {
-		config.Mgmt.Ipv6Subnet = ipv6range
+		config.Mgmt.IPv6Subnet = ipv6range
 	}
 	for k, img := range images {
 		config.Topology.Kinds[k] = clab.NodeConfig{Image: img}

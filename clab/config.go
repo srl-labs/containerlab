@@ -38,8 +38,8 @@ var srlTypes = map[string]string{
 // it is provided via docker network object
 type mgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
-	Ipv4Subnet string `yaml:"ipv4_subnet,omitempty"`
-	Ipv6Subnet string `yaml:"ipv6_subnet,omitempty"`
+	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
+	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 }
 
 // NodeConfig represents a configuration a given node can have in the lab definition file
@@ -52,8 +52,8 @@ type NodeConfig struct {
 	License  string   `yaml:"license,omitempty"`
 	Position string   `yaml:"position,omitempty"`
 	Cmd      string   `yaml:"cmd,omitempty"`
-	Binds    []string `yaml:"binds,omitempty" json:"binds,omitempty"` // list of bind mount compatible strings
-	Ports    []string `yaml:"ports,omitempty"`                        // list of port bindings
+	Binds    []string `yaml:"binds,omitempty"` // list of bind mount compatible strings
+	Ports    []string `yaml:"ports,omitempty"` // list of port bindings
 }
 
 // Topology represents a lab topology
@@ -121,15 +121,16 @@ type Endpoint struct {
 
 // ParseIPInfo parses IP information
 func (c *cLab) parseIPInfo() error {
-	// DockerInfo = t.DockerInfo
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
-	if c.Config.Mgmt.Ipv4Subnet == "" {
-		c.Config.Mgmt.Ipv4Subnet = dockerNetIPv4Addr
-	}
-	if c.Config.Mgmt.Ipv6Subnet == "" {
-		c.Config.Mgmt.Ipv6Subnet = dockerNetIPv6Addr
+	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
+		if c.Config.Mgmt.IPv4Subnet == "" {
+			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
+		}
+		if c.Config.Mgmt.IPv6Subnet == "" {
+			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
+		}
 	}
 	return nil
 }
