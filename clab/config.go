@@ -315,9 +315,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
-		//node.License = t.SRLLicense
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		//node.NodeType = "ixr6"
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		// initialize specifc container information
