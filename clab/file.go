@@ -136,14 +136,15 @@ func CreateDirectory(path string, perm os.FileMode) {
 func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
+
+	// create node directory in the lab directory
+	CreateDirectory(node.LabDir, 0777)
+
 	switch node.Kind {
 	case "srl":
 		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
 		var src string
 		var dst string
-
-		// create node directory in lab
-		CreateDirectory(node.LabDir, 0777)
 
 		// copy license file to node specific directory in lab
 		src = node.License
