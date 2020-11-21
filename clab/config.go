@@ -333,7 +333,6 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.User = "root"
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = nodeCfg.Type
-		node.Config = nodeCfg.Config
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
