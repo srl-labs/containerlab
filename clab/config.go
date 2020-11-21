@@ -19,12 +19,15 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
-
-	defaultConfigTemplate = "/etc/containerlab/templates/srl/srlconfig.tpl"
 )
 
 // supported kinds
 var kinds = []string{"srl", "ceos", "linux", "alpine", "bridge"}
+
+var defaultConfigTemplates = map[string]string{
+	"srl":  "/etc/containerlab/templates/srl/srlconfig.tpl",
+	"ceos": "/etc/containerlab/templates/arista/ceos.cfg.tpl",
+}
 
 var srlTypes = map[string]string{
 	"ixr6":  "topology-7250IXR6.yml",
@@ -229,7 +232,7 @@ func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
 	if c.Config.Topology.Defaults.Config != "" {
 		return c.Config.Topology.Defaults.Config
 	}
-	return defaultConfigTemplate
+	return defaultConfigTemplates[kind]
 }
 
 func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
