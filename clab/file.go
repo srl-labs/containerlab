@@ -181,7 +181,6 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
 
-	case "alpine":
 	case "linux":
 	case "ceos":
 	case "bridge":
