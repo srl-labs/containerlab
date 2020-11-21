@@ -183,6 +183,17 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 
 	case "linux":
 	case "ceos":
+		// generate config directory
+		CreateDirectory(path.Join(node.LabDir, "config"), 0777)
+		cfg := path.Join(node.LabDir, "config", "startup-config")
+		if !fileExists(cfg) {
+			err = node.generateConfig(cfg)
+			if err != nil {
+				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+			}
+		} else {
+			log.Debugf("Config file exists for node %s", node.ShortName)
+		}
 	case "bridge":
 	default:
 	}
@@ -192,6 +203,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 
 // GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
+	log.Debugf("generating config for node %s from file %s", node.ShortName, node.Config)
 	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
 	if err != nil {
 		return err
