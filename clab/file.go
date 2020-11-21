@@ -132,7 +132,7 @@ func CreateDirectory(path string, perm os.FileMode) {
 	}
 }
 
-// CreateNodeDirStructure create the directory structure and files for the clab
+// CreateNodeDirStructure create the directory structure and files for the lab nodes
 func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
