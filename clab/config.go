@@ -319,15 +319,17 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		// initialize specifc container information
-		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker"
-		//node.Cmd = "/sbin/init"
+		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0"
+
 		node.Env = []string{
 			"CEOS=1",
 			"EOS_PLATFORM=ceoslab",
 			"container=docker",
 			"ETBA=1",
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
-			"INTFTYPE=eth"}
+			"INTFTYPE=eth",
+			"MAPETH0=1",
+			"MGMT_INTF=eth0"}
 		node.User = "root"
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = nodeCfg.Type
