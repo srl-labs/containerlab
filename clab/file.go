@@ -138,7 +138,9 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	defer c.m.RUnlock()
 
 	// create node directory in the lab directory
-	CreateDirectory(node.LabDir, 0777)
+	if node.Kind != "linux" && node.Kind != "bridge" {
+		CreateDirectory(node.LabDir, 0777)
+	}
 
 	switch node.Kind {
 	case "srl":
