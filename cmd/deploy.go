@@ -113,7 +113,7 @@ var deployCmd = &cobra.Command{
 							log.Debugf("Worker %d terminating...", i)
 							return
 						}
-						log.Debugf("Worker %d received node: %+v", node)
+						log.Debugf("Worker %d received node: %+v", i, node)
 						if node.Kind == "bridge" {
 							return
 						}
@@ -166,7 +166,7 @@ var deployCmd = &cobra.Command{
 							log.Debugf("Worker %d terminating...", i)
 							return
 						}
-						log.Debugf("Worker %d received link: %+v", link)
+						log.Debugf("Worker %d received link: %+v", i, link)
 						if err = c.CreateVirtualWiring(link); err != nil {
 							log.Error(err)
 						}
