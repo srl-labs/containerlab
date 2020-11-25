@@ -14,6 +14,7 @@ nav:
       - inspect: cmd/inspect.md
       - save: cmd/save.md
       - generate: cmd/generate.md
+      - graph: cmd/graph.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
