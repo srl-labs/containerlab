@@ -195,13 +195,15 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
+	log.Debugf("Container started: %s", node.LongName)
 	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
 	defer cancelFn()
-	cJson, err := c.DockerClient.ContainerInspect(nctx, cont.ID)
+	cJSON, err := c.DockerClient.ContainerInspect(nctx, cont.ID)
 	if err != nil {
 		return err
 	}
-	return linkContainerNS(cJson.State.Pid, node.LongName)
+	node.Container = cJSON
+	return linkContainerNS(cJSON.State.Pid, node.LongName)
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error {
