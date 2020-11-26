@@ -342,9 +342,9 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
 		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
 
-		// mount config file
-		cfgPath := filepath.Join(node.LabDir, "config", "startup-config")
-		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/startup-config"))
+		// mount config dir
+		cfgPath := filepath.Join(node.LabDir, "flash")
+		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
