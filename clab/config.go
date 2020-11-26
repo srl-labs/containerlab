@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -100,8 +101,9 @@ type Node struct {
 	User         string
 	Cmd          string
 	Env          []string
-	Binds        []string    // Bind mounts strings (src:dest:options)
-	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
+	Binds        []string            // Bind mounts strings (src:dest:options)
+	PortBindings nat.PortMap         // PortBindings define the bindings between the container ports and host ports
+	Container    types.ContainerJSON // container information retrieved with inspection
 
 	TLSCert   string
 	TLSKey    string
