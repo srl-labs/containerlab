@@ -188,6 +188,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		// generate config directory
 		CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 		cfg := path.Join(node.LabDir, "flash", "startup-config")
+		node.ResConfig = cfg
 		if !fileExists(cfg) {
 			err = node.generateConfig(cfg)
 			if err != nil {

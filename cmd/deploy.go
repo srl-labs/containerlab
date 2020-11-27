@@ -134,6 +134,7 @@ var deployCmd = &cobra.Command{
 			}(link)
 		}
 		wg.Wait()
+
 		// generate graph of the lab topology
 		if graph {
 			if err = c.GenerateGraph(topo); err != nil {
@@ -151,6 +152,24 @@ var deployCmd = &cobra.Command{
 		if len(containers) == 0 {
 			return fmt.Errorf("no containers found")
 		}
+
+		log.Debug("enriching nodes with IP information...")
+		enrichNodes(containers, c.Nodes, c.Config.Mgmt.Network)
+
+		wg = new(sync.WaitGroup)
+		wg.Add(len(c.Nodes))
+		for _, node := range c.Nodes {
+			go func(node *clab.Node) {
+				defer wg.Done()
+				err := c.ExecPostDeployTasks(ctx, node)
+				if err != nil {
+					log.Errorf("failed to run postdeploy task for node %s: %v", node.ShortName, err)
+				}
+			}(node)
+
+		}
+		wg.Wait()
+
 		log.Info("Writing /etc/hosts file")
 		err = createHostsFile(containers, c.Config.Mgmt.Network)
 		if err != nil {
@@ -235,4 +254,21 @@ func hostsEntries(containers []types.Container, bridgeName string) []byte {
 		}
 	}
 	return buff.Bytes()
+}
+
+func enrichNodes(containers []types.Container, nodes map[string]*clab.Node, mgmtNet string) {
+	for _, c := range containers {
+		name = strings.Split(c.Names[0], "-")[2]
+		if node, ok := nodes[name]; ok {
+			// add network information
+			node.MgmtNet = mgmtNet
+			node.MgmtIPv4Address = c.NetworkSettings.Networks[mgmtNet].IPAddress
+			node.MgmtIPv4PrefixLength = c.NetworkSettings.Networks[mgmtNet].IPPrefixLen
+			node.MgmtIPv6Address = c.NetworkSettings.Networks[mgmtNet].GlobalIPv6Address
+			node.MgmtIPv6PrefixLength = c.NetworkSettings.Networks[mgmtNet].GlobalIPv6PrefixLen
+
+			node.ContainerID = c.ID
+		}
+
+	}
 }

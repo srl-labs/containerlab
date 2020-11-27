@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -83,27 +82,33 @@ type Config struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	ShortName    string
-	LongName     string
-	Fqdn         string
-	LabDir       string
-	Index        int
-	Group        string
-	Kind         string
-	Config       string
-	NodeType     string
-	Position     string
-	License      string
-	Image        string
-	Topology     string
-	EnvConf      string
-	Sysctls      map[string]string
-	User         string
-	Cmd          string
-	Env          []string
-	Binds        []string            // Bind mounts strings (src:dest:options)
-	PortBindings nat.PortMap         // PortBindings define the bindings between the container ports and host ports
-	Container    types.ContainerJSON // container information retrieved with inspection
+	ShortName            string
+	LongName             string
+	Fqdn                 string
+	LabDir               string
+	Index                int
+	Group                string
+	Kind                 string
+	Config               string // path to config template file that is used for config generation
+	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
+	NodeType             string
+	Position             string
+	License              string
+	Image                string
+	Topology             string
+	EnvConf              string
+	Sysctls              map[string]string
+	User                 string
+	Cmd                  string
+	Env                  []string
+	Binds                []string    // Bind mounts strings (src:dest:options)
+	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
+	MgmtNet              string      // name of the docker network this node is connected to with its first interface
+	MgmtIPv4Address      string
+	MgmtIPv4PrefixLength int
+	MgmtIPv6Address      string
+	MgmtIPv6PrefixLength int
+	ContainerID          string
 
 	TLSCert   string
 	TLSKey    string
