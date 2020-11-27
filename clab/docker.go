@@ -202,7 +202,6 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
-	node.Container = cJSON
 	return linkContainerNS(cJSON.State.Pid, node.LongName)
 }
 
