@@ -146,6 +146,11 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	log.Infof("Create container: %s", node.ShortName)
 
+	err = c.PullImageIfRequired(ctx, node.Image)
+	if err != nil {
+		return err
+	}
+
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{
@@ -160,11 +165,6 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	}
 	if node.Group != "" {
 		labels["group"] = node.Group
-	}
-
-	err = c.PullImageIfRequired(nctx, node.Image)
-	if err != nil {
-		return err
 	}
 
 	cont, err := c.DockerClient.ContainerCreate(nctx,
