@@ -27,6 +27,9 @@ var mgmtIPv6Subnet net.IPNet
 // reconfigure flag
 var reconfigure bool
 
+// max-workers flag
+var maxWorkers uint
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -89,51 +92,109 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
 		}
-		// create directory structure and container per node
-		wg := new(sync.WaitGroup)
-		wg.Add(len(c.Nodes))
-		for _, node := range c.Nodes {
-			go func(node *clab.Node) {
-				defer wg.Done()
-				if node.Kind == "bridge" {
-					return
-				}
-				// create CERT
-				nodeCerts, err := c.GenerateCert(
-					path.Join(c.Dir.LabCARoot, "root-ca.pem"),
-					path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
-					certTpl,
-					node,
-				)
-				if err != nil {
-					log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
-				}
-				log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
-				log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
-				log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
-				err = c.CreateNode(ctx, node, nodeCerts)
-				if err != nil {
-					log.Errorf("failed to create node %s: %v", node.ShortName, err)
-				}
-			}(node)
+
+		numNodes := uint(len(c.Nodes))
+		numLinks := uint(len(c.Links))
+		nodesMaxWorkers := maxWorkers
+		linksMaxWorkers := maxWorkers
+
+		if maxWorkers == 0 {
+			nodesMaxWorkers = numNodes
+			linksMaxWorkers = numLinks
 		}
+
+		if nodesMaxWorkers > numNodes {
+			nodesMaxWorkers = numNodes
+		}
+		if linksMaxWorkers > numLinks {
+			linksMaxWorkers = numLinks
+		}
+
+		wg := new(sync.WaitGroup)
+		wg.Add(int(nodesMaxWorkers))
+		nodesChan := make(chan *clab.Node)
+		// start workers
+		for i := uint(0); i < nodesMaxWorkers; i++ {
+			go func(i uint) {
+				defer wg.Done()
+				for {
+					select {
+					case node := <-nodesChan:
+						if node == nil {
+							log.Debugf("Worker %d terminating...", i)
+							return
+						}
+						log.Debugf("Worker %d received node: %+v", i, node)
+						if node.Kind == "bridge" {
+							return
+						}
+						// create CERT
+						nodeCerts, err := c.GenerateCert(
+							path.Join(c.Dir.LabCARoot, "root-ca.pem"),
+							path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
+							certTpl,
+							node,
+						)
+						if err != nil {
+							log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+						}
+						log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
+						log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
+						log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
+						err = c.CreateNode(ctx, node, nodeCerts)
+						if err != nil {
+							log.Errorf("failed to create node %s: %v", node.ShortName, err)
+						}
+					case <-ctx.Done():
+						return
+					}
+				}
+			}(i)
+		}
+		for _, n := range c.Nodes {
+			nodesChan <- n
+		}
+		// close channel to terminate the workers
+		close(nodesChan)
+		// wait for all workers to finish
 		wg.Wait()
+
 		// cleanup hanging resources if a deployment failed before
 		log.Debug("cleaning up interfaces...")
 		c.InitVirtualWiring()
 		wg = new(sync.WaitGroup)
-		wg.Add(len(c.Links))
+		wg.Add(int(linksMaxWorkers))
+		linksChan := make(chan *clab.Link)
 		log.Debug("creating links...")
 		// wire the links between the nodes based on cabling plan
-		for _, link := range c.Links {
-			go func(link *clab.Link) {
+		for i := uint(0); i < linksMaxWorkers; i++ {
+			go func(i uint) {
 				defer wg.Done()
-				if err = c.CreateVirtualWiring(link); err != nil {
-					log.Error(err)
+				for {
+					select {
+					case link := <-linksChan:
+						if link == nil {
+							log.Debugf("Worker %d terminating...", i)
+							return
+						}
+						log.Debugf("Worker %d received link: %+v", i, link)
+						if err = c.CreateVirtualWiring(link); err != nil {
+							log.Error(err)
+						}
+					case <-ctx.Done():
+						return
+					}
 				}
-			}(link)
+			}(i)
 		}
+		for _, link := range c.Links {
+			linksChan <- link
+		}
+		// close channel to terminate the workers
+		close(linksChan)
+		// wait for all workers to finish
 		wg.Wait()
+
 		// generate graph of the lab topology
 		if graph {
 			if err = c.GenerateGraph(topo); err != nil {
@@ -141,8 +202,8 @@ var deployCmd = &cobra.Command{
 			}
 		}
 		log.Debug("containers created, retrieving state and IP addresses...")
-		// show topology output
 
+		// show topology output
 		labels = append(labels, "containerlab=lab-"+c.Config.Name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
@@ -169,6 +230,7 @@ func init() {
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
+	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 }
 
 func setFlags(conf *clab.Config) {
