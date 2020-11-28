@@ -93,12 +93,23 @@ var deployCmd = &cobra.Command{
 			return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
 		}
 
+		numNodes := uint(len(c.Nodes))
+		numLinks := uint(len(c.Links))
 		nodesMaxWorkers := maxWorkers
 		linksMaxWorkers := maxWorkers
+
 		if maxWorkers == 0 {
-			nodesMaxWorkers = uint(len(c.Nodes))
-			linksMaxWorkers = uint(len(c.Links))
+			nodesMaxWorkers = numNodes
+			linksMaxWorkers = numLinks
 		}
+
+		if nodesMaxWorkers > numNodes {
+			nodesMaxWorkers = numNodes
+		}
+		if linksMaxWorkers > numLinks {
+			linksMaxWorkers = numLinks
+		}
+
 		wg := new(sync.WaitGroup)
 		wg.Add(int(nodesMaxWorkers))
 		nodesChan := make(chan *clab.Node)
