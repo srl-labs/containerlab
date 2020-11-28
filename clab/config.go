@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -244,6 +245,10 @@ func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 
 func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 	if nodeCfg.License != "" {
+		// resolve ~/ path
+		if nodeCfg.License[0] == '~' {
+			return homedir.Expand(nodeCfg.License)
+		}
 		lp, err := filepath.Abs(nodeCfg.License)
 		if err != nil {
 			return "", err
@@ -251,6 +256,10 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 		return lp, nil
 	}
 	if c.Config.Topology.Kinds[kind].License != "" {
+		// resolve ~/ path
+		if c.Config.Topology.Kinds[kind].License[0] == '~' {
+			return homedir.Expand(c.Config.Topology.Kinds[kind].License)
+		}
 		lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
 		if err != nil {
 			return "", err
@@ -258,6 +267,10 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 		return lp, nil
 	}
 	if c.Config.Topology.Defaults.License != "" {
+		// resolve ~/ path
+		if c.Config.Topology.Defaults.License[0] == '~' {
+			return homedir.Expand(c.Config.Topology.Defaults.License)
+		}
 		lp, err := filepath.Abs(c.Config.Topology.Defaults.License)
 		if err != nil {
 			return "", err
