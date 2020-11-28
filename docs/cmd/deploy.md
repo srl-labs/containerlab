@@ -28,6 +28,9 @@ Without this flag present, containerlab will reuse the available configuration a
 
 Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get more information on the lab directory contents.
 
+#### max-workers
+With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.
+
 ### Examples
 
 ```bash
