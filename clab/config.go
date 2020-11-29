@@ -256,7 +256,6 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 		return lp, nil
 	}
 	if c.Config.Topology.Kinds[kind].License != "" {
-		// resolve ~/ path
 		if c.Config.Topology.Kinds[kind].License[0] == '~' {
 			return homedir.Expand(c.Config.Topology.Kinds[kind].License)
 		}
@@ -267,7 +266,6 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
 		return lp, nil
 	}
 	if c.Config.Topology.Defaults.License != "" {
-		// resolve ~/ path
 		if c.Config.Topology.Defaults.License[0] == '~' {
 			return homedir.Expand(c.Config.Topology.Defaults.License)
 		}
