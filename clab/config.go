@@ -337,18 +337,9 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		if err != nil {
 			return err
 		}
-		switch {
-		// resolve ~/ path
-		case lp[0] == '~':
-			lp, err = homedir.Expand(lp)
-			if err != nil {
-				return err
-			}
-		default:
-			lp, err = filepath.Abs(lp)
-			if err != nil {
-				return err
-			}
+		lp, err = resolvePath(lp)
+		if err != nil {
+			return err
 		}
 
 		node.License = lp
@@ -483,4 +474,23 @@ func (c *cLab) VerifyBridgesExist() error {
 		}
 	}
 	return nil
+}
+
+//resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
+func resolvePath(p string) (string, error) {
+	var err error
+	switch {
+	// resolve ~/ path
+	case p[0] == '~':
+		p, err = homedir.Expand(p)
+		if err != nil {
+			return "", err
+		}
+	default:
+		p, err = filepath.Abs(p)
+		if err != nil {
+			return "", err
+		}
+	}
+	return p, nil
 }
