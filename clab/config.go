@@ -183,11 +183,26 @@ func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
 	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
-	if len(nodeCfg.Binds) != 0 {
-		return nodeCfg.Binds
+func (c *cLab) bindsInit(nodeCfg *NodeConfig) ([]string, error) {
+
+	switch {
+	case len(nodeCfg.Binds) != 0:
+		err := resolveBindPaths(nodeCfg.Binds)
+		if err != nil {
+			return nodeCfg.Binds, err
+		}
+	case len(c.Config.Topology.Kinds[nodeCfg.Kind].Binds) != 0:
+		err := resolveBindPaths(c.Config.Topology.Kinds[nodeCfg.Kind].Binds)
+		if err != nil {
+			return c.Config.Topology.Kinds[nodeCfg.Kind].Binds, err
+		}
+	case len(c.Config.Topology.Defaults.Binds) != 0:
+		err := resolveBindPaths(c.Config.Topology.Defaults.Binds)
+		if err != nil {
+			return c.Config.Topology.Defaults.Binds, err
+		}
 	}
-	return c.Config.Topology.Kinds[nodeCfg.Kind].Binds
+	return nil, nil
 }
 
 // portsInit produces the nat.PortMap out of the slice of string representation of port bindings
@@ -289,7 +304,11 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
-	node.Binds = c.bindsInit(&nodeCfg)
+	binds, err := c.bindsInit(&nodeCfg)
+	if err != nil {
+		return err
+	}
+	node.Binds = binds
 
 	pb, err := c.portsInit(&nodeCfg)
 	if err != nil {
@@ -493,4 +512,20 @@ func resolvePath(p string) (string, error) {
 		}
 	}
 	return p, nil
+}
+
+// resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
+// it allows host path to have `~` and returns absolute path for a relative path
+func resolveBindPaths(binds []string) error {
+	for i := range binds {
+		// host path is a first element in a /hostpath:/remotepath(:options) string
+		elems := strings.Split(binds[i], ":")
+		hp, err := resolvePath(elems[0])
+		if err != nil {
+			return err
+		}
+		elems[0] = hp
+		binds[i] = strings.Join(elems, ":")
+	}
+	return nil
 }
