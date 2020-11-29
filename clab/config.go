@@ -243,39 +243,17 @@ func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Image
 }
 
-func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
-	if nodeCfg.License != "" {
-		// resolve ~/ path
-		if nodeCfg.License[0] == '~' {
-			return homedir.Expand(nodeCfg.License)
-		}
-		lp, err := filepath.Abs(nodeCfg.License)
-		if err != nil {
-			return "", err
-		}
-		return lp, nil
+func (c *cLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+	switch {
+	case nodeCfg.License != "":
+		return nodeCfg.License, nil
+	case c.Config.Topology.Kinds[node.Kind].License != "":
+		return c.Config.Topology.Kinds[node.Kind].License, nil
+	case c.Config.Topology.Defaults.License != "":
+		return c.Config.Topology.Defaults.License, nil
+	default:
+		return "", fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
 	}
-	if c.Config.Topology.Kinds[kind].License != "" {
-		if c.Config.Topology.Kinds[kind].License[0] == '~' {
-			return homedir.Expand(c.Config.Topology.Kinds[kind].License)
-		}
-		lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
-		if err != nil {
-			return "", err
-		}
-		return lp, nil
-	}
-	if c.Config.Topology.Defaults.License != "" {
-		if c.Config.Topology.Defaults.License[0] == '~' {
-			return homedir.Expand(c.Config.Topology.Defaults.License)
-		}
-		lp, err := filepath.Abs(c.Config.Topology.Defaults.License)
-		if err != nil {
-			return "", err
-		}
-		return lp, nil
-	}
-	return "", fmt.Errorf("no license found for node(s) of kind %s", nodeCfg.Kind)
 }
 
 func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
@@ -355,10 +333,24 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		// initialize the global parameters with defaults, can be overwritten later
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
 
-		lp, err := c.licenseInit(&nodeCfg, node.Kind)
+		lp, err := c.licenseInit(&nodeCfg, node)
 		if err != nil {
 			return err
 		}
+		switch {
+		// resolve ~/ path
+		case lp[0] == '~':
+			lp, err = homedir.Expand(lp)
+			if err != nil {
+				return err
+			}
+		default:
+			lp, err = filepath.Abs(lp)
+			if err != nil {
+				return err
+			}
+		}
+
 		node.License = lp
 
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
