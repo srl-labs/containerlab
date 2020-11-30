@@ -183,26 +183,16 @@ func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
 	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *cLab) bindsInit(nodeCfg *NodeConfig) ([]string, error) {
-
+func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
 	switch {
 	case len(nodeCfg.Binds) != 0:
-		err := resolveBindPaths(nodeCfg.Binds)
-		if err != nil {
-			return nodeCfg.Binds, err
-		}
+		return nodeCfg.Binds
 	case len(c.Config.Topology.Kinds[nodeCfg.Kind].Binds) != 0:
-		err := resolveBindPaths(c.Config.Topology.Kinds[nodeCfg.Kind].Binds)
-		if err != nil {
-			return c.Config.Topology.Kinds[nodeCfg.Kind].Binds, err
-		}
+		return c.Config.Topology.Kinds[nodeCfg.Kind].Binds
 	case len(c.Config.Topology.Defaults.Binds) != 0:
-		err := resolveBindPaths(c.Config.Topology.Defaults.Binds)
-		if err != nil {
-			return c.Config.Topology.Defaults.Binds, err
-		}
+		return c.Config.Topology.Defaults.Binds
 	}
-	return nil, nil
+	return nil
 }
 
 // portsInit produces the nat.PortMap out of the slice of string representation of port bindings
@@ -304,7 +294,10 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
-	binds, err := c.bindsInit(&nodeCfg)
+
+	// initialize bind mounts
+	binds := c.bindsInit(&nodeCfg)
+	err := resolveBindPaths(binds)
 	if err != nil {
 		return err
 	}
