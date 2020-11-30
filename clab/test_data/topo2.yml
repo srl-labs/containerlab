@@ -1,0 +1,9 @@
+name: topo2
+topology:
+  kinds:
+    srl:
+      license: kind.lic
+  nodes:
+    node1:
+      kind: srl
+      type: ixr6
