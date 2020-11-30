@@ -7,3 +7,6 @@ topology:
     node1:
       kind: srl
       type: ixr6
+      binds:
+        - /node/src1:/dst1
+        - /node/src2:/dst2

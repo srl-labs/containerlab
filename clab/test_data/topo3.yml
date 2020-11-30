@@ -2,6 +2,8 @@ name: topo3
 topology:
   defaults:
     license: default.lic
+    binds:
+      - /default/src:/dst
   nodes:
     node1:
       kind: srl
