@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 )
@@ -98,4 +99,26 @@ func (c *cLab) CreateNode(ctx context.Context, node *Node, certs *certificates) 
 		return err
 	}
 	return c.CreateContainer(ctx, node)
+}
+
+// ExecPostDeployTasks executes tasks that some nodes might require to boot properly after start
+func (c *cLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
+	switch node.Kind {
+	case "ceos":
+		log.Infof("Running postdeploy actions for '%s' node", node.ShortName)
+		// regenerate ceos config since it is now known which IP address docker assigned to this container
+		err := node.generateConfig(node.ResConfig)
+		if err != nil {
+			return err
+		}
+		log.Infof("Restarting '%s' node", node.ShortName)
+		// force stopping and start is faster than ContainerRestart
+		var timeout time.Duration = 1
+		err = c.DockerClient.ContainerStop(ctx, node.ContainerID, &timeout)
+		if err != nil {
+			return err
+		}
+		err = c.DockerClient.ContainerStart(ctx, node.ContainerID, types.ContainerStartOptions{})
+	}
+	return nil
 }
