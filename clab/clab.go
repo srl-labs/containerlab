@@ -119,6 +119,9 @@ func (c *cLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
 			return err
 		}
 		err = c.DockerClient.ContainerStart(ctx, node.ContainerID, types.ContainerStartOptions{})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
