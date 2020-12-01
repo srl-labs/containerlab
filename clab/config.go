@@ -192,11 +192,11 @@ func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
 // portsInit produces the nat.PortMap out of the slice of string representation of port bindings
 func (c *cLab) portsInit(nodeCfg *NodeConfig) (nat.PortMap, error) {
 	if len(nodeCfg.Ports) != 0 {
-		_, pm, err := nat.ParsePortSpecs(nodeCfg.Ports)
+		_, pb, err := nat.ParsePortSpecs(nodeCfg.Ports)
 		if err != nil {
 			return nil, err
 		}
-		return pm, nil
+		return pb, nil
 	}
 	return nil, nil
 }
