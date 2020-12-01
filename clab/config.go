@@ -99,6 +99,7 @@ type Node struct {
 	Env          []string
 	Binds        []string    // Bind mounts strings (src:dest:options)
 	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
+	PortSet      nat.PortSet // PortSet define the ports that should be exposed on a container
 
 	TLSCert   string
 	TLSKey    string
@@ -190,15 +191,15 @@ func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
 }
 
 // portsInit produces the nat.PortMap out of the slice of string representation of port bindings
-func (c *cLab) portsInit(nodeCfg *NodeConfig) (nat.PortMap, error) {
+func (c *cLab) portsInit(nodeCfg *NodeConfig) (nat.PortSet, nat.PortMap, error) {
 	if len(nodeCfg.Ports) != 0 {
-		_, pb, err := nat.ParsePortSpecs(nodeCfg.Ports)
+		ps, pb, err := nat.ParsePortSpecs(nodeCfg.Ports)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return pb, nil
+		return ps, pb, nil
 	}
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -302,11 +303,12 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 	node.Binds = c.bindsInit(&nodeCfg)
 
-	pb, err := c.portsInit(&nodeCfg)
+	ps, pb, err := c.portsInit(&nodeCfg)
 	if err != nil {
 		return err
 	}
 	node.PortBindings = pb
+	node.PortSet = ps
 
 	switch node.Kind {
 	case "ceos":
