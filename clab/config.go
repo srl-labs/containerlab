@@ -19,12 +19,15 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
-
-	defaultConfigTemplate = "/etc/containerlab/templates/srl/srlconfig.tpl"
 )
 
 // supported kinds
 var kinds = []string{"srl", "ceos", "linux", "alpine", "bridge"}
+
+var defaultConfigTemplates = map[string]string{
+	"srl":  "/etc/containerlab/templates/srl/srlconfig.tpl",
+	"ceos": "/etc/containerlab/templates/arista/ceos.cfg.tpl",
+}
 
 var srlTypes = map[string]string{
 	"ixr6":  "topology-7250IXR6.yml",
@@ -79,31 +82,37 @@ type Config struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	ShortName    string
-	LongName     string
-	Fqdn         string
-	LabDir       string
-	Index        int
-	Group        string
-	Kind         string
-	Config       string
-	NodeType     string
-	Position     string
-	License      string
-	Image        string
-	Topology     string
-	EnvConf      string
-	Sysctls      map[string]string
-	User         string
-	Cmd          string
-	Env          []string
-	Binds        []string    // Bind mounts strings (src:dest:options)
-	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet      nat.PortSet // PortSet define the ports that should be exposed on a container
-
-	TLSCert   string
-	TLSKey    string
-	TLSAnchor string
+	ShortName            string
+	LongName             string
+	Fqdn                 string
+	LabDir               string
+	Index                int
+	Group                string
+	Kind                 string
+	Config               string // path to config template file that is used for config generation
+	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
+	NodeType             string
+	Position             string
+	License              string
+	Image                string
+	Topology             string
+	EnvConf              string
+	Sysctls              map[string]string
+	User                 string
+	Cmd                  string
+	Env                  []string
+	Binds                []string    // Bind mounts strings (src:dest:options)
+	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
+	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
+	MgmtNet              string      // name of the docker network this node is connected to with its first interface
+	MgmtIPv4Address      string
+	MgmtIPv4PrefixLength int
+	MgmtIPv6Address      string
+	MgmtIPv6PrefixLength int
+	ContainerID          string
+	TLSCert              string
+	TLSKey               string
+	TLSAnchor            string
 }
 
 // Link is a struct that contains the information of a link between 2 containers
@@ -230,7 +239,7 @@ func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
 	if c.Config.Topology.Defaults.Config != "" {
 		return c.Config.Topology.Defaults.Config
 	}
-	return defaultConfigTemplate
+	return defaultConfigTemplates[kind]
 }
 
 func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -314,25 +323,24 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
-		//node.License = t.SRLLicense
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		//node.NodeType = "ixr6"
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		// initialize specifc container information
-		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker"
-		//node.Cmd = "/sbin/init"
+		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0"
+
 		node.Env = []string{
 			"CEOS=1",
 			"EOS_PLATFORM=ceoslab",
 			"container=docker",
 			"ETBA=1",
 			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
-			"INTFTYPE=eth"}
+			"INTFTYPE=eth",
+			"MAPETH0=1",
+			"MGMT_INTF=eth0"}
 		node.User = "root"
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = nodeCfg.Type
-		node.Config = nodeCfg.Config
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
@@ -341,6 +349,10 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Sysctls["net.ipv6.conf.default.accept_dad"] = "0"
 		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
 		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
+
+		// mount config dir
+		cfgPath := filepath.Join(node.LabDir, "flash")
+		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later

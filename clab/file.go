@@ -132,18 +132,21 @@ func CreateDirectory(path string, perm os.FileMode) {
 	}
 }
 
-// CreateNodeDirStructure create the directory structure and files for the clab
+// CreateNodeDirStructure create the directory structure and files for the lab nodes
 func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
+
+	// create node directory in the lab directory
+	if node.Kind != "linux" && node.Kind != "bridge" {
+		CreateDirectory(node.LabDir, 0777)
+	}
+
 	switch node.Kind {
 	case "srl":
 		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
 		var src string
 		var dst string
-
-		// create node directory in lab
-		CreateDirectory(node.LabDir, 0777)
 
 		// copy license file to node specific directory in lab
 		src = node.License
@@ -180,9 +183,20 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
 
-	case "alpine":
 	case "linux":
 	case "ceos":
+		// generate config directory
+		CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
+		cfg := path.Join(node.LabDir, "flash", "startup-config")
+		node.ResConfig = cfg
+		if !fileExists(cfg) {
+			err = node.generateConfig(cfg)
+			if err != nil {
+				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+			}
+		} else {
+			log.Debugf("Config file exists for node %s", node.ShortName)
+		}
 	case "bridge":
 	default:
 	}
@@ -192,6 +206,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 
 // GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
+	log.Debugf("generating config for node %s from file %s", node.ShortName, node.Config)
 	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
 	if err != nil {
 		return err
