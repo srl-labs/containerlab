@@ -8,6 +8,7 @@ nav:
       - Nodes: manual/nodes.md
       - Kinds: manual/kinds.md
       - Configuration artifacts: manual/conf-artifacts.md
+      - Network wiring concepts: manual/network.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
