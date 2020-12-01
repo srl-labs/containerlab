@@ -1,0 +1,8 @@
+name: topo3
+topology:
+  defaults:
+    license: default.lic
+  nodes:
+    node1:
+      kind: srl
+      type: ixr6

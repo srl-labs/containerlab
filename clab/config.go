@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -252,29 +253,17 @@ func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Image
 }
 
-func (c *cLab) licenseInit(nodeCfg *NodeConfig, kind string) (string, error) {
-	if nodeCfg.License != "" {
-		lp, err := filepath.Abs(nodeCfg.License)
-		if err != nil {
-			return "", err
-		}
-		return lp, nil
+func (c *cLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+	switch {
+	case nodeCfg.License != "":
+		return nodeCfg.License, nil
+	case c.Config.Topology.Kinds[node.Kind].License != "":
+		return c.Config.Topology.Kinds[node.Kind].License, nil
+	case c.Config.Topology.Defaults.License != "":
+		return c.Config.Topology.Defaults.License, nil
+	default:
+		return "", fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
 	}
-	if c.Config.Topology.Kinds[kind].License != "" {
-		lp, err := filepath.Abs(c.Config.Topology.Kinds[kind].License)
-		if err != nil {
-			return "", err
-		}
-		return lp, nil
-	}
-	if c.Config.Topology.Defaults.License != "" {
-		lp, err := filepath.Abs(c.Config.Topology.Defaults.License)
-		if err != nil {
-			return "", err
-		}
-		return lp, nil
-	}
-	return "", fmt.Errorf("no license found for node(s) of kind %s", nodeCfg.Kind)
 }
 
 func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
@@ -358,10 +347,15 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		// initialize the global parameters with defaults, can be overwritten later
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
 
-		lp, err := c.licenseInit(&nodeCfg, node.Kind)
+		lp, err := c.licenseInit(&nodeCfg, node)
 		if err != nil {
 			return err
 		}
+		lp, err = resolvePath(lp)
+		if err != nil {
+			return err
+		}
+
 		node.License = lp
 
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
@@ -494,4 +488,23 @@ func (c *cLab) VerifyBridgesExist() error {
 		}
 	}
 	return nil
+}
+
+//resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
+func resolvePath(p string) (string, error) {
+	var err error
+	switch {
+	// resolve ~/ path
+	case p[0] == '~':
+		p, err = homedir.Expand(p)
+		if err != nil {
+			return "", err
+		}
+	default:
+		p, err = filepath.Abs(p)
+		if err != nil {
+			return "", err
+		}
+	}
+	return p, nil
 }
