@@ -1,7 +1,6 @@
 package clab
 
 import (
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -53,11 +52,6 @@ func TestLicenseInit(t *testing.T) {
 			}
 		})
 	}
-}
-
-func abspath(s string) string {
-	p, _ := filepath.Abs(s)
-	return p
 }
 
 func TestBindsInit(t *testing.T) {

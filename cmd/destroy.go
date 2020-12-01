@@ -63,7 +63,7 @@ var destroyCmd = &cobra.Command{
 					name = strings.TrimLeft(cont.Names[0], "/")
 				}
 				log.Infof("Stopping container: %s", name)
-				err = c.DeleteContainer(ctx, name)
+				err := c.DeleteContainer(ctx, name)
 				if err != nil {
 					log.Errorf("could not remove container '%s': %v", name, err)
 				}
