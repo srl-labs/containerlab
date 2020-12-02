@@ -52,7 +52,7 @@ The addressing information that containerlab will use on this network:
 * IPv4: subnet 172.20.20.0/24, gateway 172.20.20.1
 * IPv6: subnet 2001:172:20:20::/80, gateway 2001:172:20:20::1
 
-With these defaults in place, the two containers from this lab will get connected to that management network and will be able to communicate using the IP addresses allocated by docker daemon. The addresses that docker carves out for each container are presented to a user upon the lab deployment finishes or can be queried any time after:
+With these defaults in place, the two containers from this lab will get connected to that management network and will be able to communicate using the IP addresses allocated by docker daemon. The addresses that docker carves out for each container are presented to a user once the lab deployment finishes or can be queried any time after:
 
 ```bash
 # addressing information is available once the lab deployment completes
@@ -87,7 +87,7 @@ The output above shows that srl1 container has been assigned `172.20.20.3/24 / 2
        valid_lft forever preferred_lft forever
 ```
 
-Now its possible to reach the assigned IP address from the lab host as well as from other containers connected to this management network.
+Now it's possible to reach the assigned IP address from the lab host as well as from other containers connected to this management network.
 ```bash
 # ping srl1 management interface from srl2
 ❯ docker exec -it clab-srl02-srl2 sr_cli "ping 172.20.20.3 network-instance mgmt"
@@ -144,7 +144,7 @@ br-d2169a14e334		8000.0242fe382b74	no		      vetha57b950
 							                          vethe9da10a
 ```
 
-As explained in the beginning of this article, containers will connect to this docker network. This connection is carried out by the `veth` devices created and attached with one end to bridge interface in the lab host and the other end in the container namespace. This is illustrated by the bridge output above and the diagram above in the beginning of the article.
+As explained in the beginning of this article, containers will connect to this docker network. This connection is carried out by the `veth` devices created and attached with one end to bridge interface in the lab host and the other end in the container namespace. This is illustrated by the bridge output above and the diagram at the beginning the of the article.
 
 ## Point-to-point links
 Management network is used to provide management access to the NOS containers, it does not carry control or dataplane traffic. In containerlab we create additional point-to-point links between the containers to provide the datapath between the lab nodes.
