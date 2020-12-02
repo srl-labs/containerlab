@@ -29,6 +29,8 @@ sudo curl -sL https://get-clab.srlinux.dev | sudo bash -s -- -v 0.6.0
     yum install https://github.com/srl-wim/container-lab/releases/download/v0.7.0/containerlab_0.7.0_linux_386.rpm
     ```
 
+The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
+
 ### Upgrade
 To upgrade `containerlab` to the latest available version issue the following command:
 
