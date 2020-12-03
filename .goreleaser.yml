@@ -25,6 +25,7 @@ nfpms:
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     package_name: containerlab
     maintainer: Wim Henderickx <wim.henderickx@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>, Roman Dodin <dodin.roman@gmail.com>
+    homepage: https://containerlab.srlinux.dev
     description: |
       containerlab written in go
     vendor: Nokia
@@ -36,3 +37,5 @@ nfpms:
     files:
       ./lab-examples/**/*: /etc/containerlab/lab-examples
       ./templates/**/*: /etc/containerlab/templates
+    symlinks:
+      /usr/bin/clab: /usr/bin/containerlab
