@@ -4,7 +4,7 @@ Containerlab launches, wires up and manages container based labs. The steps requ
 
 Things like required syscalls, mounted directories, entrypoints and commands to execute are all different for the containerized NOS'es. To let containerlab to understand which launching sequence to use the notion of a `kind` was introduced. Essentially we remove the need to understand certain setup peculiarities of different NOS'es by abstracting them with `kinds`.
 
-Given the following [topology definition file](topo-def-file.md), containerlab is able to know how to launch `node1` as SR Linux container and `node2` as a cEOS one because they are associated with the kinds:
+Given the following [topology definition file](../topo-def-file.md), containerlab is able to know how to launch `node1` as SR Linux container and `node2` as a cEOS one because they are associated with the kinds:
 
 ```yaml
 name: srlceos01

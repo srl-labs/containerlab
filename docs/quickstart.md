@@ -55,7 +55,7 @@ topology:
 * Each lab/topology has a `name`.
 * The lab topology is defined under the `topology` element.
 * Topology is a set of [`nodes`](manual/nodes.md) and [`links`](manual/topo-def-file.md#links) between them.
-* The nodes are always of a certain [`kind`](manual/kinds.md). The `kind` defines the node configuration and behavior.
+* The nodes are always of a certain [`kind`]manual/kinds/kinds.md). The `kind` defines the node configuration and behavior.
 * Containerlab supports a fixed number of `kinds`. In the example above, the `srl` kind is one of the supported kinds and it has been provided with a few additional options in the `topology.kinds.srl` element.
 * `nodes` are interconnected with `links`. Each `link` is [defined](manual/topo-def-file.md#links) by a set of `endpoints`.
 

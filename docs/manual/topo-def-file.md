@@ -109,7 +109,7 @@ endpoints: ["srl:e1-1", "ceos:eth1"]
 translates to an intent of creation a p2p link between the node named `srl` and its `e1-1` interface and the node named `ceos` and its `eth1` interface. The p2p link is realized with a veth pair.
 
 #### Kinds
-Kinds define the flavor of the node, it says if the node is a specific containerized Network OS or something else. We go into details of kinds in its own [document section](kinds.md), but for the sake of the topology container, we must discuss what happens when `kinds` section appears in the topology definition:
+Kinds define the flavor of the node, it says if the node is a specific containerized Network OS or something else. We go into details of kinds in its own [document section](kinds/kinds.md), but for the sake of the topology container, we must discuss what happens when `kinds` section appears in the topology definition:
 
 
 ```yaml

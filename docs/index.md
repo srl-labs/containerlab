@@ -28,7 +28,7 @@ But, of course, containerlab is perfectly capable of wiring up arbitrary contain
 * **IaaC approach**  
     Declarative way of defining the labs by means of the [topology definition files](manual/topo-def-file.md).
 * **Network Operating Systems centric**  
-    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](manual/kinds.md) which allows the user to focus on the use cases, rather than infrastructure.
+    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](manual/kinds/kinds.md) which allows the user to focus on the use cases, rather than infrastructure.
 * **Simplicity and convenience are keys**  
     One-click [installation](install.md) and upgrade capabilities.
 * **Fast**  

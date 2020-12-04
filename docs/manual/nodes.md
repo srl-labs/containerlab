@@ -22,7 +22,7 @@ topology:
 ```
 
 ### kind
-The `kind` property selects which kind this node is of. Kinds are essentially a way of telling containerlab how to treat the nodes properties considering the specific flavor of the node. We dedicated a [separate section](kinds.md) to discuss kinds in details.
+The `kind` property selects which kind this node is of. Kinds are essentially a way of telling containerlab how to treat the nodes properties considering the specific flavor of the node. We dedicated a [separate section](kinds/kinds.md) to discuss kinds in details.
 
 !!!note
     Kind **must** be defined either by setting the kind for a node specifically (as in the example above), or by setting the default kind:
