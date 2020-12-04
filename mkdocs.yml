@@ -6,7 +6,9 @@ nav:
   - User manual:
       - Topology definition: manual/topo-def-file.md
       - Nodes: manual/nodes.md
-      - Kinds: manual/kinds.md
+      - Kinds:
+          - About: manual/kinds/kinds.md
+          - srl - Nokia SR Linux: manual/kinds/srl.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
   - Command reference:
