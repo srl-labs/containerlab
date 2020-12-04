@@ -5,7 +5,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [srl02.yml][topofile]                                                |
 | **Name**                      | srl02                                                                |
-| **Validated versions**[^2]    | `srlinux:20.6.2-332`                                                 |
+| **Validated versions**[^2]    | `containerlab v0.8.2`,`srlinux:20.6.2-332`                           |
 
 ## Description
 A lab consists of two SR Linux nodes connected with each other via a point-to-point link over `e1-1` interfaces. Both nodes are also connected with their management interfaces to the `clab` docker network.
