@@ -271,14 +271,18 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
 	}
 }
 
-func (c *cLab) cmdInitialization(nodeCfg *NodeConfig, kind string, defCmd string) string {
-	if nodeCfg.Cmd != "" {
+func (c *cLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
+	switch {
+	case nodeCfg.Cmd != "":
 		return nodeCfg.Cmd
-	}
-	if c.Config.Topology.Kinds[kind].Cmd != "" {
+
+	case c.Config.Topology.Kinds[kind].Cmd != "":
 		return c.Config.Topology.Kinds[kind].Cmd
+
+	case c.Config.Topology.Defaults.Cmd != "":
+		return c.Config.Topology.Defaults.Cmd
 	}
-	return defCmd
+	return ""
 }
 
 func (c *cLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -421,7 +425,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.Cmd = c.cmdInitialization(&nodeCfg, node.Kind, "/bin/sh")
+		node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
