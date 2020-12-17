@@ -185,6 +185,12 @@ func (c *cLab) setLinkAttributes(namespaceName string, cnamespace netns.NsHandle
 		if err != nil {
 			return err
 		}
+
+		log.Debugf("setting root-ns interface %s MTU to %d", la.Name, la.MTU)
+		netlink.LinkSetMTU(rootNSvethLink, la.MTU)
+		if err != nil {
+			return err
+		}
 		runtime.UnlockOSThread()
 		netns.Set(cnamespace)
 		runtime.LockOSThread()
