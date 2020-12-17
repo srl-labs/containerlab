@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -58,20 +59,28 @@ func (c *cLab) createAToBveth(l *Link) error {
 		return err
 	}
 
-	la := c.newLinkAttributes()
-	la.Name = l.A.EndpointName
-	err = c.configVeth(interfaceA, la, l.A.Node.LongName)
-	if err != nil {
-		log.Fatalf("failed to config interface '%s' in container %s: %v", l.A.EndpointName, l.A.Node.LongName, err)
-	}
+	wg := new(sync.WaitGroup)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		la := c.newLinkAttributes()
+		la.Name = l.A.EndpointName
+		err = c.configVeth(interfaceA, la, l.A.Node.LongName)
+		if err != nil {
+			log.Fatalf("failed to config interface '%s' in container %s: %v", l.A.EndpointName, l.A.Node.LongName, err)
+		}
+	}()
+	go func() {
+		defer wg.Done()
 
-	la = c.newLinkAttributes()
-	la.Name = l.B.EndpointName
-	err = c.configVeth(interfaceB, la, l.B.Node.LongName)
-	if err != nil {
-		log.Fatalf("failed to config interface '%s' in container %s: %v", l.B.EndpointName, l.B.Node.LongName, err)
-	}
-
+		la := c.newLinkAttributes()
+		la.Name = l.B.EndpointName
+		err = c.configVeth(interfaceB, la, l.B.Node.LongName)
+		if err != nil {
+			log.Fatalf("failed to config interface '%s' in container %s: %v", l.B.EndpointName, l.B.Node.LongName, err)
+		}
+	}()
+	wg.Wait()
 	return nil
 }
 
