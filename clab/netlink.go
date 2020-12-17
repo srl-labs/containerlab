@@ -75,7 +75,7 @@ func (c *cLab) createAToBveth(l *Link) error {
 	return nil
 }
 
-// Type for the adjustment of the Link Attributes
+// LinkAttributes Type for the adjustment of the Link Attributes
 type LinkAttributes struct {
 	Name   string
 	MTU    int
@@ -148,22 +148,44 @@ func (c *cLab) setLinkAttributes(namespaceName string, cnamespace netns.NsHandle
 		// if interface should be attached to a bridge, the Master is set to bridge name
 		log.Debugf("attache interface %s to bridge %s", la.Name, la.Master)
 
+		parentIndex := link.Attrs().ParentIndex
+
+		runtime.UnlockOSThread()
+		netns.Set(hostNetNs)
+		runtime.LockOSThread()
+
 		// get handleto master link
-		master, err := netlink.LinkByName(la.Master)
+		rootNSvethLink, err := netlink.LinkByIndex(parentIndex)
 		if err != nil {
 			return err
 		}
+
+		bridgeIf, err := netlink.LinkByName(la.Master)
+		if err != nil {
+			return err
+		}
+
 		// assigne master for link
-		err = netlink.LinkSetMaster(link, master)
+		err = netlink.LinkSetMaster(rootNSvethLink, bridgeIf)
 		if err != nil {
 			return err
 		}
+
+		// Finally set rootNSvethLink interface up
+		err = netlink.LinkSetUp(rootNSvethLink)
+		if err != nil {
+			return err
+		}
+		runtime.UnlockOSThread()
+		netns.Set(cnamespace)
+		runtime.LockOSThread()
 	}
 	log.Debugf("setting interface %s MTU to %d", la.Name, la.MTU)
 	netlink.LinkSetMTU(link, la.MTU)
 	if err != nil {
 		return err
 	}
+	runtime.UnlockOSThread()
 	netns.Set(hostNetNs)
 	return nil
 }
@@ -188,7 +210,7 @@ func (c *cLab) createvethToBridge(l *Link) error {
 	}
 
 	log.Debugf("create dummy veth pair '%s'<-->'%s'", dummyIface, bridgeIfname)
-	nllA := &netlink.Veth{PeerName: bridgeIfname, LinkAttrs: netlink.LinkAttrs{Name: dummyIface}}
+	nllA := &netlink.Veth{PeerName: bridgeIfname, LinkAttrs: netlink.LinkAttrs{Name: dummyIface, OperState: netlink.OperUp}}
 
 	err = netlink.LinkAdd(nllA)
 	if err != nil {
