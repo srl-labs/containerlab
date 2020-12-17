@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/google/uuid"
@@ -80,21 +80,24 @@ type LinkAttributes struct {
 	Name   string
 	MTU    int
 	LinkUp bool
+	// Master is just used for interfaces meant to be attached to bridges
+	Master string
 }
 
+// Initialize and instantiate a new LinkAttributes with default values
 func (c *cLab) newLinkAttributes() LinkAttributes {
-	return LinkAttributes{Name: "", MTU: 1500, LinkUp: true}
+	return LinkAttributes{Name: "", MTU: 1500, LinkUp: true, Master: ""}
 }
 
 func (c *cLab) configVeth(dummyInterface string, la LinkAttributes, ns string) error {
 
-	log.Debugf("Disabling TX checksum offloading for the %s interface...", dummyInterface)
-	err := EthtoolTXOff(dummyInterface)
+	netNS, err := netns.GetFromName(ns)
 	if err != nil {
 		return err
 	}
 
-	netNS, err := netns.GetFromName(ns)
+	log.Debugf("Disabling TX checksum offloading for the %s interface...", dummyInterface)
+	err = EthtoolTXOff(dummyInterface)
 	if err != nil {
 		return err
 	}
@@ -114,13 +117,15 @@ func (c *cLab) configVeth(dummyInterface string, la LinkAttributes, ns string) e
 	if err != nil {
 		return err
 	}
-
 	return nil
+
 }
 
 func (c *cLab) setLinkAttributes(namespaceName string, cnamespace netns.NsHandle, oldLinkName string, la LinkAttributes) error {
 	hostNetNs, _ := netns.Get()
 	netns.Set(cnamespace)
+	runtime.LockOSThread()
+
 	link, err := netlink.LinkByName(oldLinkName)
 	if err != nil {
 		return err
@@ -139,6 +144,21 @@ func (c *cLab) setLinkAttributes(namespaceName string, cnamespace netns.NsHandle
 			return err
 		}
 	}
+	if la.Master != "" {
+		// if interface should be attached to a bridge, the Master is set to bridge name
+		log.Debugf("attache interface %s to bridge %s", la.Name, la.Master)
+
+		// get handleto master link
+		master, err := netlink.LinkByName(la.Master)
+		if err != nil {
+			return err
+		}
+		// assigne master for link
+		err = netlink.LinkSetMaster(link, master)
+		if err != nil {
+			return err
+		}
+	}
 	log.Debugf("setting interface %s MTU to %d", la.Name, la.MTU)
 	netlink.LinkSetMTU(link, la.MTU)
 	if err != nil {
@@ -149,7 +169,6 @@ func (c *cLab) setLinkAttributes(namespaceName string, cnamespace netns.NsHandle
 }
 
 func (c *cLab) createvethToBridge(l *Link) error {
-	var cmd *exec.Cmd
 	var err error
 	log.Debugf("Create veth to bridge wire: %s <--> %s", l.A.EndpointName, l.B.EndpointName)
 	dummyIface := fmt.Sprintf("clab-%s", genIfName())
@@ -169,30 +188,21 @@ func (c *cLab) createvethToBridge(l *Link) error {
 	}
 
 	log.Debugf("create dummy veth pair '%s'<-->'%s'", dummyIface, bridgeIfname)
-	cmd = exec.Command("sudo", "ip", "link", "add", dummyIface, "type", "veth", "peer", "name", bridgeIfname)
-	err = runCmd(cmd)
+	nllA := &netlink.Veth{PeerName: bridgeIfname, LinkAttrs: netlink.LinkAttrs{Name: dummyIface}}
+
+	err = netlink.LinkAdd(nllA)
 	if err != nil {
 		return err
 	}
 
 	la := c.newLinkAttributes()
 	la.Name = containerIfName
+	la.Master = bridgeName
 	err = c.configVeth(dummyIface, la, containerNS)
 	if err != nil {
 		return err
 	}
-	log.Debugf("map veth pair %s to bridge %s", bridgeIfname, bridgeName)
-	cmd = exec.Command("sudo", "ip", "link", "set", bridgeIfname, "master", bridgeName)
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	log.Debugf("set interface '%s' state to up", bridgeIfname)
-	cmd = exec.Command("sudo", "ip", "link", "set", bridgeIfname, "up")
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
+
 	log.Debugf("Disabling TX checksum offloading for the %s interface...", bridgeIfname)
 	err = EthtoolTXOff(bridgeIfname)
 	if err != nil {
@@ -213,17 +223,6 @@ func (c *cLab) DeleteNetnsSymlinks() (err error) {
 
 	}
 
-	return nil
-}
-
-func runCmd(cmd *exec.Cmd) error {
-	b, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Debugf("'%s' failed with: %v", cmd.String(), err)
-		log.Debugf("'%s' failed output: %v", cmd.String(), string(b))
-		return err
-	}
-	log.Debugf("'%s' output: %v", cmd.String(), string(b))
 	return nil
 }
 
