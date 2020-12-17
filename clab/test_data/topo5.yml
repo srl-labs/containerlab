@@ -1,0 +1,11 @@
+name: topo5
+topology:
+  kinds:
+    srl:
+      binds:
+        - /kind/src:/dst
+  nodes:
+    node1:
+      kind: srl
+      type: ixr6
+      license: node1.lic

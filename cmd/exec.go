@@ -18,8 +18,8 @@ var execCmd = &cobra.Command{
 	Short: "execute a command on one or multiple containers",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if prefix == "" && topo == "" {
-			fmt.Println("provide either lab prefix (--prefix) or topology file path (--topo)")
+		if name == "" && topo == "" {
+			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
 			return
 		}
 		log.Debugf("raw command: %v", args)
@@ -27,20 +27,20 @@ var execCmd = &cobra.Command{
 			fmt.Println("provide command to execute")
 			return
 		}
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			log.Fatal(err)
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
-		if prefix == "" {
-			if err = c.GetTopology(topo); err != nil {
-				log.Fatal(err)
-			}
-			prefix = c.Config.Name
+		c := clab.NewContainerLab(opts...)
+
+		if name == "" {
+			name = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		labels = append(labels, "containerlab=lab-"+prefix)
+		labels = append(labels, "containerlab=lab-"+name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
@@ -54,6 +54,9 @@ var execCmd = &cobra.Command{
 			cmds = append(cmds, strings.Split(a, " ")...)
 		}
 		for _, cont := range containers {
+			if cont.State != "running" {
+				continue
+			}
 			stdout, stderr, err := c.Exec(ctx, cont.ID, cmds)
 			if err != nil {
 				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)

@@ -2,7 +2,22 @@ site_name: containerlab
 nav:
   - Home: index.md
   - Installation: install.md
-  - Usage: usage.md
+  - Quick start: quickstart.md
+  - User manual:
+      - Topology definition: manual/topo-def-file.md
+      - Nodes: manual/nodes.md
+      - Kinds:
+          - About: manual/kinds/kinds.md
+          - srl - Nokia SR Linux: manual/kinds/srl.md
+      - Configuration artifacts: manual/conf-artifacts.md
+      - Network wiring concepts: manual/network.md
+  - Command reference:
+      - deploy: cmd/deploy.md
+      - destroy: cmd/destroy.md
+      - inspect: cmd/inspect.md
+      - save: cmd/save.md
+      - generate: cmd/generate.md
+      - graph: cmd/graph.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
@@ -34,8 +49,8 @@ theme:
   language: en
   palette:
     scheme: preference
-    primary: black
-    accent: pink
+    primary: white
+    accent: cyan
   font:
     text: Manrope
     code: Fira Mono
@@ -92,3 +107,7 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
+
+google_analytics:
+  - UA-101537614-3
+  - auto

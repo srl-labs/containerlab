@@ -10,7 +10,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -25,16 +24,21 @@ const sysctlBase = "/proc/sys"
 // CreateBridge creates a docker bridge
 func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Info("Creating docker bridge")
+	log.Debugf("Creating docker bridge: Name: %s, IPv4Subnet: '%s', IPv6Subnet: '%s", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
 
-	ipamIPv4Config := network.IPAMConfig{
-		Subnet: c.Config.Mgmt.Ipv4Subnet,
-	}
-	ipamIPv6Config := network.IPAMConfig{
-		Subnet: c.Config.Mgmt.Ipv6Subnet,
-	}
+	enableIPv6 := false
 	var ipamConfig []network.IPAMConfig
-	ipamConfig = append(ipamConfig, ipamIPv4Config)
-	ipamConfig = append(ipamConfig, ipamIPv6Config)
+	if c.Config.Mgmt.IPv4Subnet != "" {
+		ipamConfig = append(ipamConfig, network.IPAMConfig{
+			Subnet: c.Config.Mgmt.IPv4Subnet,
+		})
+	}
+	if c.Config.Mgmt.IPv6Subnet != "" {
+		ipamConfig = append(ipamConfig, network.IPAMConfig{
+			Subnet: c.Config.Mgmt.IPv6Subnet,
+		})
+		enableIPv6 = true
+	}
 
 	ipam := &network.IPAM{
 		Driver: "default",
@@ -45,12 +49,15 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 		CheckDuplicate: true,
 		Driver:         "bridge",
 		//Scope:          "local",
-		EnableIPv6: true,
+		EnableIPv6: enableIPv6,
 		IPAM:       ipam,
 		Internal:   false,
 		Attachable: false,
 		//Ingress:        false,
 		//ConfigOnly:     false,
+		Labels: map[string]string{
+			"containerlab": "",
+		},
 	}
 
 	var bridgeName string
@@ -105,7 +112,7 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", bridgeName)
 	err = EthtoolTXOff(bridgeName)
 	if err != nil {
-		return fmt.Errorf("Failed to disable TX checksum offloading for the %s bridge interface: %v", bridgeName, err)
+		return fmt.Errorf("failed to disable TX checksum offloading for the %s bridge interface: %v", bridgeName, err)
 	}
 	return nil
 }
@@ -139,6 +146,11 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	log.Infof("Create container: %s", node.ShortName)
 
+	err = c.PullImageIfRequired(ctx, node.Image)
+	if err != nil {
+		return err
+	}
+
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{
@@ -155,11 +167,6 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		labels["group"] = node.Group
 	}
 
-	err = c.PullImageIfRequired(nctx, node.Image)
-	if err != nil {
-		return err
-	}
-
 	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{
 			Image:        node.Image,
@@ -168,15 +175,16 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 			AttachStdout: true,
 			AttachStderr: true,
 			Hostname:     node.ShortName,
-			Volumes:      node.Volumes,
 			Tty:          true,
 			User:         node.User,
 			Labels:       labels,
+			ExposedPorts: node.PortSet,
 		}, &container.HostConfig{
-			Binds:       node.Binds,
-			Sysctls:     node.Sysctls,
-			Privileged:  true,
-			NetworkMode: container.NetworkMode(c.Config.Mgmt.Network),
+			Binds:        node.Binds,
+			PortBindings: node.PortBindings,
+			Sysctls:      node.Sysctls,
+			Privileged:   true,
+			NetworkMode:  container.NetworkMode(c.Config.Mgmt.Network),
 		}, nil, node.LongName)
 	if err != nil {
 		return err
@@ -188,13 +196,14 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
+	log.Debugf("Container started: %s", node.LongName)
 	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
 	defer cancelFn()
-	cJson, err := c.DockerClient.ContainerInspect(nctx, cont.ID)
+	cJSON, err := c.DockerClient.ContainerInspect(nctx, cont.ID)
 	if err != nil {
 		return err
 	}
-	return linkContainerNS(cJson.State.Pid, node.LongName)
+	return linkContainerNS(cJSON.State.Pid, node.LongName)
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error {
@@ -268,6 +277,7 @@ func (c *cLab) ListContainers(ctx context.Context, labels []string) ([]types.Con
 		filter.Add("label", l)
 	}
 	return c.DockerClient.ContainerList(ctx, types.ContainerListOptions{
+		All:     true,
 		Filters: filter,
 	})
 }
@@ -322,12 +332,15 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *cLab) DeleteContainer(ctx context.Context, name string, timeout time.Duration) error {
-	force := false
-	err := c.DockerClient.ContainerStop(ctx, name, &timeout)
-	if err != nil {
-		log.Errorf("could not stop container '%s': %v", name, err)
-		force = true
+func (c *cLab) DeleteContainer(ctx context.Context, name string) error {
+	var err error
+	force := !c.gracefulShutdown
+	if c.gracefulShutdown {
+		err = c.DockerClient.ContainerStop(ctx, name, &c.timeout)
+		if err != nil {
+			log.Errorf("could not stop container '%s': %v", name, err)
+			force = true
+		}
 	}
 	log.Infof("Removing container: %s", name)
 	err = c.DockerClient.ContainerRemove(ctx, name, types.ContainerRemoveOptions{Force: force})

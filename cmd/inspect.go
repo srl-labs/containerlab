@@ -17,9 +17,12 @@ import (
 
 var format string
 var details bool
+var all bool
 
 type containerDetails struct {
+	LabName     string `json:"lab_name,omitempty"`
 	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
 	Image       string `json:"image,omitempty"`
 	Kind        string `json:"kind,omitempty"`
 	Group       string `json:"group,omitempty"`
@@ -35,24 +38,27 @@ var inspectCmd = &cobra.Command{
 	Short: "inspect lab details",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if prefix == "" && topo == "" {
-			fmt.Println("provide either a lab prefix (--prefix) or a topology file path (--topo)")
+		if name == "" && topo == "" && !all {
+			fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
 			return
 		}
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			log.Fatal(err)
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
 		}
-		if prefix == "" {
-			if err = c.GetTopology(topo); err != nil {
-				log.Fatal(err)
-			}
-			prefix = c.Config.Name
+		c := clab.NewContainerLab(opts...)
+		if name == "" {
+			name = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		labels = append(labels, "containerlab=lab-"+prefix)
+		if all {
+			labels = append(labels, "containerlab")
+		} else {
+			labels = append(labels, "containerlab=lab-"+name)
+		}
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
@@ -77,15 +83,19 @@ func init() {
 	rootCmd.AddCommand(inspectCmd)
 
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
-	inspectCmd.Flags().StringVarP(&format, "format", "f", "", "lab name prefix")
+	inspectCmd.Flags().StringVarP(&format, "format", "f", "table", "output format. One of [table, json]")
+	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 }
 
 func toTableData(det []containerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
-	for _, d := range det {
-		tabData = append(tabData, []string{d.Name, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+	for i, d := range det {
+		if all {
+			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+			continue
+		}
+		tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 	}
-	sort.Slice(tabData, func(i, j int) bool { return tabData[i][0] < tabData[j][0] })
 	return tabData
 }
 
@@ -93,8 +103,14 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	contDetails := make([]containerDetails, 0, len(containers))
 	for _, cont := range containers {
 		cdet := containerDetails{
-			Image: cont.Image,
-			State: cont.State,
+			LabName:     strings.TrimPrefix(cont.Labels["containerlab"], "lab-"),
+			Image:       cont.Image,
+			State:       cont.State,
+			IPv4Address: getContainerIPv4(cont, bridgeName),
+			IPv6Address: getContainerIPv6(cont, bridgeName),
+		}
+		if len(cont.ID) > 11 {
+			cdet.ContainerID = cont.ID[:12]
 		}
 		if len(cont.Names) > 0 {
 			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
@@ -105,23 +121,14 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		if group, ok := cont.Labels["group"]; ok {
 			cdet.Group = group
 		}
-		if cont.NetworkSettings != nil {
-			if bridgeName != "" {
-				if br, ok := cont.NetworkSettings.Networks[bridgeName]; ok {
-					cdet.IPv4Address = fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
-					cdet.IPv6Address = fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
-				}
-			}
-			if cdet.IPv4Address == "" && cdet.IPv6Address == "" {
-				for _, br := range cont.NetworkSettings.Networks {
-					cdet.IPv4Address = fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
-					cdet.IPv6Address = fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
-					break
-				}
-			}
-		}
 		contDetails = append(contDetails, cdet)
 	}
+	sort.Slice(contDetails, func(i, j int) bool {
+		if contDetails[i].LabName == contDetails[j].LabName {
+			return contDetails[i].Name < contDetails[j].Name
+		}
+		return contDetails[i].LabName < contDetails[j].LabName
+	})
 	if format == "json" {
 		b, err := json.MarshalIndent(contDetails, "", "  ")
 		if err != nil {
@@ -132,17 +139,60 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	}
 	tabData := toTableData(contDetails)
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{
+	header := []string{
+		"Lab Name",
 		"Name",
+		"Container ID",
 		"Image",
 		"Kind",
 		"Group",
 		"State",
 		"IPv4 Address",
 		"IPv6 Address",
-	})
+	}
+	if all {
+		table.SetHeader(append([]string{"#"}, header...))
+	} else {
+		table.SetHeader(append([]string{"#"}, header[1:]...))
+	}
 	table.SetAutoFormatHeaders(false)
 	table.SetAutoWrapText(false)
 	table.AppendBulk(tabData)
 	table.Render()
+}
+
+func getContainerIPv4(container types.Container, bridgeName string) string {
+	if container.NetworkSettings == nil {
+		return ""
+	}
+	if bridgeName != "" {
+		if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
+			return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
+		}
+	}
+	for _, br := range container.NetworkSettings.Networks {
+		return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
+	}
+	return ""
+}
+
+func getContainerIPv6(container types.Container, bridgeName string) string {
+	if container.NetworkSettings == nil {
+		return ""
+	}
+	if bridgeName != "" {
+		if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
+			if br.GlobalIPv6Address == "" {
+				return "NA"
+			}
+			return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
+		}
+	}
+	for _, br := range container.NetworkSettings.Networks {
+		if br.GlobalIPv6Address == "" {
+			return "NA"
+		}
+		return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
+	}
+	return ""
 }

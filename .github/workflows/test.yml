@@ -5,6 +5,11 @@ on:
     branches:
       - "*"
       - "!releases/**"
+    paths-ignore:
+      - "docs/**"
+      - "lab-examples/**"
+      - "mkdocs.yml"
+      - "README.md"
 
 jobs:
   test:
@@ -17,9 +22,3 @@ jobs:
       - run: go test -cover ./...
         env:
           CGO_ENABLED: 0
-
-# enable staticcheck when we reach maturity
-#      - name: Staticcheck
-#        run: |
-#          go get -u honnef.co/go/tools/cmd/staticcheck
-#          staticcheck ./...

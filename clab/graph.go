@@ -13,7 +13,7 @@ var g *gographviz.Graph
 
 // GenerateGraph generates a graph of the lab topology
 func (c *cLab) GenerateGraph(topo string) error {
-	log.Info("Generating lab graph ...")
+	log.Info("Generating lab graph...")
 	g = gographviz.NewGraph()
 	if err := g.SetName(c.TopoFile.name); err != nil {
 		return err
@@ -33,18 +33,18 @@ func (c *cLab) GenerateGraph(topo string) error {
 
 		attr["label"] = nodeName
 		attr["xlabel"] = node.Kind
-		attr["group"] = node.Group
-
-		if strings.Contains(node.Group, "bb") {
-			attr["fillcolor"] = "blue"
-			attr["color"] = "blue"
-			attr["fontcolor"] = "white"
-		} else if strings.Contains(node.Kind, "srl") {
-			attr["fillcolor"] = "green"
-			attr["color"] = "green"
-			attr["fontcolor"] = "black"
+		if len(strings.TrimSpace(node.Group)) != 0 {
+			attr["group"] = node.Group
+			if strings.Contains(node.Group, "bb") {
+				attr["fillcolor"] = "blue"
+				attr["color"] = "blue"
+				attr["fontcolor"] = "white"
+			} else if strings.Contains(node.Kind, "srl") {
+				attr["fillcolor"] = "green"
+				attr["color"] = "green"
+				attr["fontcolor"] = "black"
+			}
 		}
-
 		if err := g.AddNode(c.TopoFile.name, node.ShortName, attr); err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (c *cLab) GenerateGraph(topo string) error {
 	// create graph filename
 	dotfile := c.Dir.LabGraph + "/" + c.TopoFile.name + ".dot"
 	createFile(dotfile, g.String())
-	log.Info("Created", dotfile, "!")
+	log.Infof("Created %s", dotfile)
 
 	pngfile := c.Dir.LabGraph + "/" + c.TopoFile.name + ".png"
 
@@ -81,7 +81,6 @@ func (c *cLab) GenerateGraph(topo string) error {
 		generatePngFromDot(dotfile, pngfile)
 		log.Info("Created ", pngfile)
 	}
-	log.Info("Done generating lab graph!")
 	return nil
 }
 

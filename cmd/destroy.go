@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
@@ -16,28 +15,38 @@ import (
 	"github.com/srl-wim/container-lab/clab"
 )
 
+var cleanup bool
+var graceful bool
+
 // destroyCmd represents the destroy command
 var destroyCmd = &cobra.Command{
 	Use:     "destroy",
 	Short:   "destroy a lab",
 	Aliases: []string{"des"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := clab.NewContainerLab(debug)
-		err := c.Init(timeout)
-		if err != nil {
-			return err
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo),
+			clab.WithEnvDockerClient(),
+			clab.WithGracefulShutdown(graceful),
 		}
+		c := clab.NewContainerLab(opts...)
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		if err = c.GetTopology(topo); err != nil {
-			return err
-		}
-
+		var err error
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
 			return err
 		}
 
+		if cleanup {
+			err = os.RemoveAll(c.Dir.Lab)
+			if err != nil {
+				log.Errorf("error deleting lab directory: %v", err)
+			}
+		}
 		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
@@ -54,7 +63,7 @@ var destroyCmd = &cobra.Command{
 					name = strings.TrimLeft(cont.Names[0], "/")
 				}
 				log.Infof("Stopping container: %s", name)
-				err = c.DeleteContainer(ctx, name, 30*time.Second)
+				err := c.DeleteContainer(ctx, name)
 				if err != nil {
 					log.Errorf("could not remove container '%s': %v", name, err)
 				}
@@ -81,6 +90,8 @@ var destroyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(destroyCmd)
+	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
+	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
 }
 
 func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string) error {

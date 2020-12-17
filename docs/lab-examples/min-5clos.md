@@ -4,12 +4,12 @@
 | **Components**                | [Nokia SR Linux][srl]                                                |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 4 <br/>:fontawesome-solid-memory: 8 GB |
 | **Topology file**             | [clos02.yml][topofile]                                               |
-| **Prefix**                    | clos02                                                               |
+| **Name**                      | clos02                                                               |
 
 ## Description
 This labs provides a lightweight folded 5-stage CLOS fabric with Super Spine level bridging two PODs.
 
-<center><div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="{&quot;page&quot;:8,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div></center>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:7,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div>
 
 The topology is additionally equipped with the Linux containers connected to leaves to facilitate use cases which require access side emulation.
 
