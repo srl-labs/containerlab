@@ -48,15 +48,15 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 	networkOptions := types.NetworkCreate{
 		CheckDuplicate: true,
 		Driver:         "bridge",
-		//Scope:          "local",
-		EnableIPv6: enableIPv6,
-		IPAM:       ipam,
-		Internal:   false,
-		Attachable: false,
-		//Ingress:        false,
-		//ConfigOnly:     false,
+		EnableIPv6:     enableIPv6,
+		IPAM:           ipam,
+		Internal:       false,
+		Attachable:     false,
 		Labels: map[string]string{
 			"containerlab": "",
+		},
+		Options: map[string]string{
+			"com.docker.network.driver.mtu": c.Config.Mgmt.MTU,
 		},
 	}
 
