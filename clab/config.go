@@ -56,8 +56,10 @@ type NodeConfig struct {
 	License  string   `yaml:"license,omitempty"`
 	Position string   `yaml:"position,omitempty"`
 	Cmd      string   `yaml:"cmd,omitempty"`
-	Binds    []string `yaml:"binds,omitempty"` // list of bind mount compatible strings
-	Ports    []string `yaml:"ports,omitempty"` // list of port bindings
+	Binds    []string `yaml:"binds,omitempty"`     // list of bind mount compatible strings
+	Ports    []string `yaml:"ports,omitempty"`     // list of port bindings
+	MgmtIPv4 string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
+	MgmtIPv6 string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
 }
 
 // Topology represents a lab topology
@@ -303,6 +305,9 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
 	node.LabDir = c.Dir.Lab + "/" + nodeName
 	node.Index = idx
+
+	node.MgmtIPv4Address = nodeCfg.MgmtIPv4
+	node.MgmtIPv6Address = nodeCfg.MgmtIPv6
 
 	// initialize the node with global parameters
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
