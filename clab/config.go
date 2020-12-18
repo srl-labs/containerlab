@@ -20,6 +20,7 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
+	dockerNetMTU      = "1450"
 )
 
 // supported kinds
@@ -44,6 +45,7 @@ type mgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
+	MTU        string `yaml:"mtu,omitempty"`
 }
 
 // NodeConfig represents a configuration a given node can have in the lab definition file
@@ -142,6 +144,10 @@ func (c *cLab) parseIPInfo() error {
 		if c.Config.Mgmt.IPv6Subnet == "" {
 			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
 		}
+	}
+	// init docker network mtu
+	if c.Config.Mgmt.MTU == "" {
+		c.Config.Mgmt.MTU = dockerNetMTU
 	}
 	return nil
 }
