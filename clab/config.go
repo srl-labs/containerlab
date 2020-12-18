@@ -377,6 +377,12 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
+		if node.NodeType == "" {
+			// take first entry as default
+			for node.NodeType = range srlTypes {
+				break
+			}
+		}
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		if filename, found := srlTypes[node.NodeType]; found {
