@@ -20,6 +20,8 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
+
+	srlDefaultType = "ixr6"
 )
 
 // supported kinds
@@ -239,7 +241,7 @@ func (c *cLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	// default type if not defined
 	switch nodeCfg.Kind {
 	case "srl":
-		return "ixr6"
+		return srlDefaultType
 	}
 	return ""
 }
