@@ -34,8 +34,10 @@ type BridgeDetails struct{}
 
 // inspectCmd represents the inspect command
 var inspectCmd = &cobra.Command{
-	Use:   "inspect",
-	Short: "inspect lab details",
+	Use:     "inspect",
+	Short:   "inspect lab details",
+	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.srlinux.dev/cmd/inspect/",
+	Aliases: []string{"ins", "i"},
 
 	Run: func(cmd *cobra.Command, args []string) {
 		if name == "" && topo == "" && !all {
