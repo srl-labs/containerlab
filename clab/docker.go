@@ -185,7 +185,16 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 			Sysctls:      node.Sysctls,
 			Privileged:   true,
 			NetworkMode:  container.NetworkMode(c.Config.Mgmt.Network),
-		}, nil, node.LongName)
+		}, &network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				c.Config.Mgmt.Network: {
+					IPAMConfig: &network.EndpointIPAMConfig{
+						IPv4Address: node.MgmtIPv4Address,
+						IPv6Address: node.MgmtIPv6Address,
+					},
+				},
+			},
+		}, node.LongName)
 	if err != nil {
 		return err
 	}
