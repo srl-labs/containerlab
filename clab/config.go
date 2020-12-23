@@ -20,6 +20,8 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
+
+	srlDefaultType = "ixr6"
 )
 
 // supported kinds
@@ -228,11 +230,22 @@ func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Group
 }
 
-func (c *cLab) typeInitialization(nodeCfg *NodeConfig, kind string) string {
-	if nodeCfg.Type != "" {
+// initialize SRL HW type
+func (c *cLab) typeInit(nodeCfg *NodeConfig, kind string) string {
+	switch {
+	case nodeCfg.Type != "":
 		return nodeCfg.Type
+	case c.Config.Topology.Kinds[nodeCfg.Kind].Type != "":
+		return c.Config.Topology.Kinds[nodeCfg.Kind].Type
+	case c.Config.Topology.Defaults.Type != "":
+		return c.Config.Topology.Defaults.Type
 	}
-	return c.Config.Topology.Kinds[kind].Type
+	// default type if not defined
+	switch nodeCfg.Kind {
+	case "srl":
+		return srlDefaultType
+	}
+	return ""
 }
 
 func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -381,7 +394,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
+		node.NodeType = c.typeInit(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 		if filename, found := srlTypes[node.NodeType]; found {
@@ -428,7 +441,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.License = ""
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.NodeType = c.typeInitialization(&nodeCfg, node.Kind)
+		node.NodeType = c.typeInit(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 		node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
 
