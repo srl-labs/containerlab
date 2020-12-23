@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -57,4 +58,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 30*time.Second, "timeout for docker requests, e.g: 30s, 1m, 2m30s")
 
+}
+
+// returns an error if topo path is not provided
+func topoSet() error {
+	if topo == "" {
+		return errors.New("path to the topology definition file must be provided with --topo/-t flag")
+	}
+	return nil
 }

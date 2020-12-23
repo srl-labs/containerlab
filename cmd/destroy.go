@@ -22,8 +22,13 @@ var graceful bool
 var destroyCmd = &cobra.Command{
 	Use:     "destroy",
 	Short:   "destroy a lab",
+	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/destroy/",
 	Aliases: []string{"des"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var err error
+		if err = topoSet(); err != nil {
+			return err
+		}
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
@@ -35,7 +40,6 @@ var destroyCmd = &cobra.Command{
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		var err error
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
 			return err
