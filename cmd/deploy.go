@@ -11,6 +11,7 @@ import (
 	"sync"
 	"text/template"
 
+	cfssllog "github.com/cloudflare/cfssl/log"
 	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -34,9 +35,14 @@ var maxWorkers uint
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
 	Short:        "deploy a lab",
+	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var err error
+		if err = topoSet(); err != nil {
+			return err
+		}
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
@@ -45,7 +51,6 @@ var deployCmd = &cobra.Command{
 		}
 		c := clab.NewContainerLab(opts...)
 
-		var err error
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
@@ -70,6 +75,10 @@ var deployCmd = &cobra.Command{
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
 		// create root CA
+		cfssllog.Level = cfssllog.LevelError
+		if debug {
+			cfssllog.Level = cfssllog.LevelDebug
+		}
 		tpl, err := template.ParseFiles(rootCaCsrTemplate)
 		if err != nil {
 			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)

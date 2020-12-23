@@ -4,7 +4,10 @@ topology:
     license: default.lic
     binds:
       - /default/src:/dst
+    type: ixrd2
   nodes:
     node1:
       kind: srl
       type: ixr6
+    node2:
+      kind: srl
