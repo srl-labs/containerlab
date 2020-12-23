@@ -35,9 +35,14 @@ var maxWorkers uint
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
 	Short:        "deploy a lab",
+	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var err error
+		if err = topoSet(); err != nil {
+			return err
+		}
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
@@ -46,7 +51,6 @@ var deployCmd = &cobra.Command{
 		}
 		c := clab.NewContainerLab(opts...)
 
-		var err error
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
