@@ -102,3 +102,53 @@ func TestBindsInit(t *testing.T) {
 		})
 	}
 }
+
+func TestTypeInit(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		node string
+		want string
+	}{
+		"undefined_type_returns_default": {
+			got:  "test_data/topo1.yml",
+			node: "node2",
+			want: "ixr6",
+		},
+		"node_type_override_kind_type": {
+			got:  "test_data/topo2.yml",
+			node: "node2",
+			want: "ixr10",
+		},
+		"node_inherits_kind_type": {
+			got:  "test_data/topo2.yml",
+			node: "node1",
+			want: "ixrd2",
+		},
+		"node_inherits_default_type": {
+			got:  "test_data/topo3.yml",
+			node: "node2",
+			want: "ixrd2",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoFile(tc.got),
+			}
+			c := NewContainerLab(opts...)
+			if err := c.ParseTopology(); err != nil {
+				t.Fatal(err)
+			}
+
+			nodeCfg := c.Config.Topology.Nodes[tc.node]
+			node := Node{}
+			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+
+			ntype := c.typeInit(&nodeCfg, node.Kind)
+			if !reflect.DeepEqual(ntype, tc.want) {
+				t.Fatalf("wanted %q got %q", tc.want, ntype)
+			}
+		})
+	}
+}
