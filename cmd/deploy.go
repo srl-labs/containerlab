@@ -11,6 +11,7 @@ import (
 	"sync"
 	"text/template"
 
+	cfssllog "github.com/cloudflare/cfssl/log"
 	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -70,6 +71,10 @@ var deployCmd = &cobra.Command{
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
 		// create root CA
+		cfssllog.Level = cfssllog.LevelError
+		if debug {
+			cfssllog.Level = cfssllog.LevelDebug
+		}
 		tpl, err := template.ParseFiles(rootCaCsrTemplate)
 		if err != nil {
 			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
