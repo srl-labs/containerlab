@@ -4,153 +4,184 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
-	"strings"
-	"sync"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
 
-func (c *cLab) InitVirtualWiring() {
-	// list interfaces
-	log.Debug("listing system interfaces...")
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		log.Warnf("failed to get system interfaces:%v", err)
-		return
-	}
-	log.Debugf("found %d interfaces", len(interfaces))
-	for i := range interfaces {
-		if strings.HasPrefix(interfaces[i].Name, "clab-") {
-			log.Debugf("deleting interface %s", interfaces[i].Name)
-			l, err := netlink.LinkByName(interfaces[i].Name)
-			if err != nil {
-				log.Debugf("failed to find interface for deletion by name: %v", interfaces[i].Name)
-				continue
-			}
-			err = netlink.LinkDel(l)
-			if err != nil {
-				log.Debugf("failed to delete interface %s: %v", interfaces[i].Name, err)
-			}
-		}
-	}
+type vEthEndpoint struct {
+	Link     *netlink.Link
+	LinkName string
+	NSName   string // netns name
+	NSPath   string // netns path
+	Bridge   string // bridge name of veth is connected to it
+	MTU      int    // endpoint MTU
 }
 
 // CreateVirtualWiring provides the virtual topology between the containers
 func (c *cLab) CreateVirtualWiring(link *Link) (err error) {
-	log.Infof("Create virtual wire : %s:%s <--> %s:%s", link.A.Node.LongName, link.A.EndpointName, link.B.Node.LongName, link.B.EndpointName)
-	if link.A.Node.Kind != "bridge" && link.B.Node.Kind != "bridge" {
-		return c.createAToBveth(link)
-	}
-	return c.createvethToBridge(link)
+	log.Infof("Create virtual wire: %s:%s <--> %s:%s", link.A.Node.LongName, link.A.EndpointName, link.B.Node.LongName, link.B.EndpointName)
+	return c.createVethWiring(link)
 }
 
-func (c *cLab) createAToBveth(l *Link) error {
-	interfaceA := fmt.Sprintf("clab-%s", genIfName())
-	interfaceB := fmt.Sprintf("clab-%s", genIfName())
+// createVethWiring connects containers (or container and bridge) using veth pair
+// using information contained within l Link
+func (c *cLab) createVethWiring(l *Link) error {
+	// veth side A
+	vA := vEthEndpoint{
+		LinkName: l.A.EndpointName,
+		NSName:   l.A.Node.LongName,
+		MTU:      1500,
+		NSPath:   l.A.Node.NSPath,
+	}
+	// veth side B
+	vB := vEthEndpoint{
+		LinkName: l.B.EndpointName,
+		NSName:   l.B.Node.LongName,
+		MTU:      1500,
+		NSPath:   l.B.Node.NSPath,
+	}
 
-	cmd := exec.Command("sudo", "ip", "link", "add", interfaceA, "type", "veth", "peer", "name", interfaceB)
-	err := runCmd(cmd)
+	// get random names for veth sides as they will be created in root netns first
+	ARndmName := fmt.Sprintf("clab-%s", genIfName())
+	BRndmName := fmt.Sprintf("clab-%s", genIfName())
+
+	// set bridge name for endpoint that should be connect to linux bridge
+	switch {
+	case l.A.Node.Kind == "bridge":
+		vA.Bridge = l.A.Node.ShortName
+		// veth endpoint destined to connect to the bridge in the host netns
+		// will not have a random name
+		ARndmName = l.A.EndpointName
+	case l.B.Node.Kind == "bridge":
+		vB.Bridge = l.B.Node.ShortName
+		BRndmName = l.B.EndpointName
+	}
+
+	// create veth pair in the root netns
+	linkA, linkB, err := CreateVethIface(ARndmName, BRndmName, l.MTU)
 	if err != nil {
 		return err
 	}
-	wg := new(sync.WaitGroup)
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		err := c.configVeth(interfaceA, l.A.EndpointName, l.A.Node.LongName)
-		if err != nil {
-			log.Fatalf("failed to config interface '%s' in container %s: %v", l.A.EndpointName, l.A.Node.LongName, err)
+	vA.Link = &linkA
+	vB.Link = &linkB
+	// once veth pair is created, disable tx offload for veth pair
+	if err := EthtoolTXOff(ARndmName); err != nil {
+		return err
+	}
+	if err := EthtoolTXOff(BRndmName); err != nil {
+		return err
+	}
+
+	if err = vA.SetVethLink(); err != nil {
+		netlink.LinkDel(linkA)
+		return err
+	}
+	if err = vB.SetVethLink(); err != nil {
+		netlink.LinkDel(linkB)
+	}
+	return err
+}
+
+// CreateVethIface takes two veth endpoint structs and create a veth pair and return
+// veth interface links.
+func CreateVethIface(ifName, peerName string, mtu int) (linkA netlink.Link, linkB netlink.Link, err error) {
+	linkA = &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:  ifName,
+			Flags: net.FlagUp,
+			MTU:   mtu,
+		},
+		PeerName: peerName,
+	}
+
+	if err := netlink.LinkAdd(linkA); err != nil {
+		return nil, nil, err
+	}
+
+	if linkB, err = netlink.LinkByName(peerName); err != nil {
+		err = fmt.Errorf("failed to lookup %q: %v", peerName, err)
+	}
+
+	return
+}
+
+// SetVethLink sets the veth link endpoints to the relevant namespaces and/or connects one end to the bridge
+func (veth *vEthEndpoint) SetVethLink() error {
+	// if veth is destined to connect to a linux bridge in the host netns
+	if veth.Bridge != "" {
+		if err := vethToBridge(veth); err != nil {
+			return err
 		}
-	}()
-	go func() {
-		defer wg.Done()
-		err = c.configVeth(interfaceB, l.B.EndpointName, l.B.Node.LongName)
-		if err != nil {
-			log.Fatalf("failed to config interface '%s' in container %s: %v", l.B.EndpointName, l.B.Node.LongName, err)
-		}
-	}()
-	wg.Wait()
+		return nil
+	}
+	// otherwise it needs to be put into a netns
+	if err := vethToNS(veth); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (c *cLab) configVeth(dummyInterface, endpointName, ns string) error {
-	var cmd *exec.Cmd
-	log.Debugf("Disabling TX checksum offloading for the %s interface...", dummyInterface)
-	err := EthtoolTXOff(dummyInterface)
-	if err != nil {
-		return err
-	}
-	log.Debugf("map dummy interface '%s' to container %s", dummyInterface, ns)
-	cmd = exec.Command("sudo", "ip", "link", "set", dummyInterface, "netns", ns)
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	log.Debugf("rename interface %s to %s", dummyInterface, endpointName)
-	cmd = exec.Command("sudo", "ip", "netns", "exec", ns, "ip", "link", "set", dummyInterface, "name", endpointName)
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	log.Debugf("set interface %s state to up in NS %s", endpointName, ns)
-	cmd = exec.Command("sudo", "ip", "netns", "exec", ns, "ip", "link", "set", endpointName, "up")
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *cLab) createvethToBridge(l *Link) error {
-	var cmd *exec.Cmd
+// vethToNS puts a veth endpoint to a given netns and renames its random name to a desired name
+func vethToNS(veth *vEthEndpoint) error {
+	var vethNS ns.NetNS
 	var err error
-	log.Debugf("Create veth to bridge wire: %s <--> %s", l.A.EndpointName, l.B.EndpointName)
-	dummyIface := fmt.Sprintf("clab-%s", genIfName())
-	// assume A is a bridge
-	bridgeName := l.A.Node.ShortName
-	bridgeIfname := l.A.EndpointName
+	if vethNS, err = ns.GetNS(veth.NSPath); err != nil {
+		return err
+	}
+	// move veth endpoint to namespace
+	if err = netlink.LinkSetNsFd(*veth.Link, int(vethNS.Fd())); err != nil {
+		return err
+	}
+	err = vethNS.Do(func(_ ns.NetNS) error {
+		if err = netlink.LinkSetName(*veth.Link, veth.LinkName); err != nil {
+			return fmt.Errorf(
+				"failed to rename link: %v", err)
+		}
 
-	containerIfName := l.B.EndpointName
-	containerNS := l.B.Node.LongName
+		if err = netlink.LinkSetUp(*veth.Link); err != nil {
+			return fmt.Errorf("failed to set %q up: %v",
+				veth.LinkName, err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
-	if l.A.Node.Kind != "bridge" { // change var values if A is not a bridge
-		bridgeName = l.B.Node.ShortName
-		bridgeIfname = l.B.EndpointName
+	return nil
+}
 
-		containerIfName = l.A.EndpointName
-		containerNS = l.A.Node.LongName
+func vethToBridge(veth *vEthEndpoint) error {
+	var vethNS ns.NetNS
+	var err error
+	// bride is in the host netns, thus we need to get current netns
+	if vethNS, err = ns.GetCurrentNS(); err != nil {
+		return err
+	}
+	err = vethNS.Do(func(_ ns.NetNS) error {
+		br, err := bridgeByName(veth.Bridge)
+		if err != nil {
+			return err
+		}
+
+		// connect host veth end to the bridge
+		if err := netlink.LinkSetMaster(*veth.Link, br); err != nil {
+			return fmt.Errorf("failed to connect %q to bridge %v: %v", veth.LinkName, veth.Bridge, err)
+		}
+
+		if err = netlink.LinkSetUp(*veth.Link); err != nil {
+			return fmt.Errorf("failed to set %q up: %v", veth.LinkName, err)
+		}
+		log.Warn("here13")
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	log.Debugf("create dummy veth pair '%s'<-->'%s'", dummyIface, bridgeIfname)
-	cmd = exec.Command("sudo", "ip", "link", "add", dummyIface, "type", "veth", "peer", "name", bridgeIfname)
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	err = c.configVeth(dummyIface, containerIfName, containerNS)
-	if err != nil {
-		return err
-	}
-	log.Debugf("map veth pair %s to bridge %s", bridgeIfname, bridgeName)
-	cmd = exec.Command("sudo", "ip", "link", "set", bridgeIfname, "master", bridgeName)
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	log.Debugf("set interface '%s' state to up", bridgeIfname)
-	cmd = exec.Command("sudo", "ip", "link", "set", bridgeIfname, "up")
-	err = runCmd(cmd)
-	if err != nil {
-		return err
-	}
-	log.Debugf("Disabling TX checksum offloading for the %s interface...", bridgeIfname)
-	err = EthtoolTXOff(bridgeIfname)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -169,17 +200,6 @@ func (c *cLab) DeleteNetnsSymlinks() (err error) {
 	return nil
 }
 
-func runCmd(cmd *exec.Cmd) error {
-	b, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Debugf("'%s' failed with: %v", cmd.String(), err)
-		log.Debugf("'%s' failed output: %v", cmd.String(), string(b))
-		return err
-	}
-	log.Debugf("'%s' output: %v", cmd.String(), string(b))
-	return nil
-}
-
 func genIfName() string {
 	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
 	return string(s[:8])
@@ -194,4 +214,17 @@ func deleteNetnsSymlink(n string) error {
 		log.Debug("Failed to delete netns symlink by path:", sl)
 	}
 	return nil
+}
+
+func bridgeByName(name string) (*netlink.Bridge, error) {
+	l, err := netlink.LinkByName(name)
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
+	}
+	br, ok := l.(*netlink.Bridge)
+	if !ok {
+		return nil, fmt.Errorf("%q already exists but is not a bridge", name)
+	}
+	log.Warn("here12")
+	return br, nil
 }

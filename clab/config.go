@@ -21,7 +21,7 @@ const (
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
 	dockerNetMTU      = "1450"
-	srlDefaultType = "ixr6"
+	srlDefaultType    = "ixr6"
 )
 
 // supported kinds
@@ -119,12 +119,14 @@ type Node struct {
 	TLSCert              string
 	TLSKey               string
 	TLSAnchor            string
+	NSPath               string // network namespace path for this node
 }
 
 // Link is a struct that contains the information of a link between 2 containers
 type Link struct {
 	A      *Endpoint
 	B      *Endpoint
+	MTU    int
 	Labels map[string]string
 }
 
@@ -469,6 +471,10 @@ func (c *cLab) NewLink(l LinkConfig) *Link {
 	// initialize a new link
 	link := new(Link)
 	link.Labels = l.Labels
+
+	if link.MTU == 0 {
+		link.MTU = 1500
+	}
 
 	for i, d := range l.Endpoints {
 		// i indicates the number and d presents the string, which need to be

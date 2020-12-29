@@ -87,7 +87,6 @@ var destroyCmd = &cobra.Command{
 		}
 		// delete container network namespaces symlinks
 		c.DeleteNetnsSymlinks()
-		c.InitVirtualWiring()
 		return nil
 	},
 }
