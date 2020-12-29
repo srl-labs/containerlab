@@ -214,7 +214,7 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	}
 	nspath := "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net"
 	node.NSPath = nspath
-	return linkContainerNS(cJSON.State.Pid, node.LongName)
+	return linkContainerNS(nspath, node.LongName)
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error {
@@ -364,11 +364,10 @@ func (c *cLab) DeleteContainer(ctx context.Context, name string) error {
 
 // linkContainerNS creates a symlink for containers network namespace
 // so that it can be managed by iproute2 utility
-func linkContainerNS(pid int, containerName string) error {
+func linkContainerNS(nspath string, containerName string) error {
 	CreateDirectory("/run/netns/", 0755)
-	src := "/proc/" + strconv.Itoa(pid) + "/ns/net"
 	dst := "/run/netns/" + containerName
-	err := os.Symlink(src, dst)
+	err := os.Symlink(nspath, dst)
 	if err != nil {
 		return err
 	}
