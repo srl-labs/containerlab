@@ -212,6 +212,8 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
+	nspath := "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net"
+	node.NSPath = nspath
 	return linkContainerNS(cJSON.State.Pid, node.LongName)
 }
 
