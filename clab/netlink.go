@@ -175,7 +175,6 @@ func vethToBridge(veth *vEthEndpoint) error {
 		if err = netlink.LinkSetUp(*veth.Link); err != nil {
 			return fmt.Errorf("failed to set %q up: %v", veth.LinkName, err)
 		}
-		log.Warn("here13")
 		return nil
 	})
 	if err != nil {
@@ -225,6 +224,5 @@ func bridgeByName(name string) (*netlink.Bridge, error) {
 	if !ok {
 		return nil, fmt.Errorf("%q already exists but is not a bridge", name)
 	}
-	log.Warn("here12")
 	return br, nil
 }
