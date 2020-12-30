@@ -472,7 +472,7 @@ func (c *cLab) NewLink(l LinkConfig) *Link {
 	link := new(Link)
 	link.Labels = l.Labels
 
-	if link.MTU == 0 {
+	if link.MTU <= 0 {
 		link.MTU = 1500
 	}
 

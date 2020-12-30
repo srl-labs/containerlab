@@ -212,9 +212,8 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if err != nil {
 		return err
 	}
-	nspath := "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net"
-	node.NSPath = nspath
-	return linkContainerNS(nspath, node.LongName)
+	node.NSPath = "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net"
+	return linkContainerNS(node.NSPath, node.LongName)
 }
 
 func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error {
