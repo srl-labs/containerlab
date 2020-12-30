@@ -12,12 +12,11 @@ import (
 )
 
 type vEthEndpoint struct {
-	Link     *netlink.Link
+	Link     netlink.Link
 	LinkName string
 	NSName   string // netns name
 	NSPath   string // netns path
 	Bridge   string // bridge name of veth is connected to it
-	MTU      int    // endpoint MTU
 }
 
 // CreateVirtualWiring provides the virtual topology between the containers
@@ -33,14 +32,12 @@ func (c *cLab) createVethWiring(l *Link) error {
 	vA := vEthEndpoint{
 		LinkName: l.A.EndpointName,
 		NSName:   l.A.Node.LongName,
-		MTU:      1500,
 		NSPath:   l.A.Node.NSPath,
 	}
 	// veth side B
 	vB := vEthEndpoint{
 		LinkName: l.B.EndpointName,
 		NSName:   l.B.Node.LongName,
-		MTU:      1500,
 		NSPath:   l.B.Node.NSPath,
 	}
 
@@ -61,12 +58,12 @@ func (c *cLab) createVethWiring(l *Link) error {
 	}
 
 	// create veth pair in the root netns
-	linkA, linkB, err := CreateVethIface(ARndmName, BRndmName, l.MTU)
+	linkA, linkB, err := createVethIface(ARndmName, BRndmName, l.MTU)
 	if err != nil {
 		return err
 	}
-	vA.Link = &linkA
-	vB.Link = &linkB
+	vA.Link = linkA
+	vB.Link = linkB
 	// once veth pair is created, disable tx offload for veth pair
 	if err := EthtoolTXOff(ARndmName); err != nil {
 		return err
@@ -75,19 +72,19 @@ func (c *cLab) createVethWiring(l *Link) error {
 		return err
 	}
 
-	if err = vA.SetVethLink(); err != nil {
+	if err = vA.setVethLink(); err != nil {
 		netlink.LinkDel(linkA)
 		return err
 	}
-	if err = vB.SetVethLink(); err != nil {
+	if err = vB.setVethLink(); err != nil {
 		netlink.LinkDel(linkB)
 	}
 	return err
 }
 
-// CreateVethIface takes two veth endpoint structs and create a veth pair and return
+// createVethIface takes two veth endpoint structs and create a veth pair and return
 // veth interface links.
-func CreateVethIface(ifName, peerName string, mtu int) (linkA netlink.Link, linkB netlink.Link, err error) {
+func createVethIface(ifName, peerName string, mtu int) (linkA netlink.Link, linkB netlink.Link, err error) {
 	linkA = &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:  ifName,
@@ -108,53 +105,43 @@ func CreateVethIface(ifName, peerName string, mtu int) (linkA netlink.Link, link
 	return
 }
 
-// SetVethLink sets the veth link endpoints to the relevant namespaces and/or connects one end to the bridge
-func (veth *vEthEndpoint) SetVethLink() error {
+// setVethLink sets the veth link endpoints to the relevant namespaces and/or connects one end to the bridge
+func (veth *vEthEndpoint) setVethLink() error {
 	// if veth is destined to connect to a linux bridge in the host netns
 	if veth.Bridge != "" {
-		if err := vethToBridge(veth); err != nil {
-			return err
-		}
-		return nil
+		return veth.toBridge()
 	}
 	// otherwise it needs to be put into a netns
-	if err := vethToNS(veth); err != nil {
-		return err
-	}
-	return nil
+	return veth.toNS()
 }
 
 // vethToNS puts a veth endpoint to a given netns and renames its random name to a desired name
-func vethToNS(veth *vEthEndpoint) error {
+func (veth *vEthEndpoint) toNS() error {
 	var vethNS ns.NetNS
 	var err error
 	if vethNS, err = ns.GetNS(veth.NSPath); err != nil {
 		return err
 	}
 	// move veth endpoint to namespace
-	if err = netlink.LinkSetNsFd(*veth.Link, int(vethNS.Fd())); err != nil {
+	if err = netlink.LinkSetNsFd(veth.Link, int(vethNS.Fd())); err != nil {
 		return err
 	}
 	err = vethNS.Do(func(_ ns.NetNS) error {
-		if err = netlink.LinkSetName(*veth.Link, veth.LinkName); err != nil {
+		if err = netlink.LinkSetName(veth.Link, veth.LinkName); err != nil {
 			return fmt.Errorf(
 				"failed to rename link: %v", err)
 		}
 
-		if err = netlink.LinkSetUp(*veth.Link); err != nil {
+		if err = netlink.LinkSetUp(veth.Link); err != nil {
 			return fmt.Errorf("failed to set %q up: %v",
 				veth.LinkName, err)
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-func vethToBridge(veth *vEthEndpoint) error {
+func (veth *vEthEndpoint) toBridge() error {
 	var vethNS ns.NetNS
 	var err error
 	// bride is in the host netns, thus we need to get current netns
@@ -168,20 +155,16 @@ func vethToBridge(veth *vEthEndpoint) error {
 		}
 
 		// connect host veth end to the bridge
-		if err := netlink.LinkSetMaster(*veth.Link, br); err != nil {
+		if err := netlink.LinkSetMaster(veth.Link, br); err != nil {
 			return fmt.Errorf("failed to connect %q to bridge %v: %v", veth.LinkName, veth.Bridge, err)
 		}
 
-		if err = netlink.LinkSetUp(*veth.Link); err != nil {
+		if err = netlink.LinkSetUp(veth.Link); err != nil {
 			return fmt.Errorf("failed to set %q up: %v", veth.LinkName, err)
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // DeleteNetnsSymlinks deletes the symlink file created for each container netns
