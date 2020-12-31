@@ -16,18 +16,15 @@ type vEthEndpoint struct {
 	LinkName string
 	NSName   string // netns name
 	NSPath   string // netns path
-	Bridge   string // bridge name of veth is connected to it
+	Bridge   string // bridge name a veth is destined to be connected to
 }
 
 // CreateVirtualWiring provides the virtual topology between the containers
-func (c *cLab) CreateVirtualWiring(link *Link) (err error) {
-	log.Infof("Create virtual wire: %s:%s <--> %s:%s", link.A.Node.LongName, link.A.EndpointName, link.B.Node.LongName, link.B.EndpointName)
-	return c.createVethWiring(link)
-}
+func (c *cLab) CreateVirtualWiring(l *Link) (err error) {
+	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
-// createVethWiring connects containers (or container and bridge) using veth pair
-// using information contained within l Link
-func (c *cLab) createVethWiring(l *Link) error {
+	// connect containers (or container and a bridge) using veth pair
+	// based on the link configuration contained within *Link struct
 	// veth side A
 	vA := vEthEndpoint{
 		LinkName: l.A.EndpointName,
@@ -58,12 +55,11 @@ func (c *cLab) createVethWiring(l *Link) error {
 	}
 
 	// create veth pair in the root netns
-	linkA, linkB, err := createVethIface(ARndmName, BRndmName, l.MTU)
+	vA.Link, vB.Link, err = createVethIface(ARndmName, BRndmName, l.MTU)
 	if err != nil {
 		return err
 	}
-	vA.Link = linkA
-	vB.Link = linkB
+
 	// once veth pair is created, disable tx offload for veth pair
 	if err := EthtoolTXOff(ARndmName); err != nil {
 		return err
@@ -73,13 +69,14 @@ func (c *cLab) createVethWiring(l *Link) error {
 	}
 
 	if err = vA.setVethLink(); err != nil {
-		netlink.LinkDel(linkA)
+		netlink.LinkDel(vA.Link)
 		return err
 	}
 	if err = vB.setVethLink(); err != nil {
-		netlink.LinkDel(linkB)
+		netlink.LinkDel(vB.Link)
 	}
 	return err
+
 }
 
 // createVethIface takes two veth endpoint structs and create a veth pair and return
@@ -171,7 +168,7 @@ func (veth *vEthEndpoint) toBridge() error {
 func (c *cLab) DeleteNetnsSymlinks() (err error) {
 	for _, node := range c.Nodes {
 		if node.Kind != "bridge" {
-			log.Infof("Deleting %s network namespace", node.LongName)
+			log.Debugf("Deleting %s network namespace", node.LongName)
 			if err := deleteNetnsSymlink(node.LongName); err != nil {
 				return err
 			}
