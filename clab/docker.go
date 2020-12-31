@@ -23,8 +23,7 @@ const sysctlBase = "/proc/sys"
 
 // CreateBridge creates a docker bridge
 func (c *cLab) CreateBridge(ctx context.Context) (err error) {
-	log.Info("Creating docker bridge")
-	log.Debugf("Creating docker bridge: Name: %s, IPv4Subnet: '%s', IPv6Subnet: '%s", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
+	log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s'", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
 
 	enableIPv6 := false
 	var ipamConfig []network.IPAMConfig
@@ -144,7 +143,7 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 
 // CreateContainer creates a docker container
 func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
-	log.Infof("Create container: %s", node.ShortName)
+	log.Infof("Creating container: %s", node.ShortName)
 
 	err = c.PullImageIfRequired(ctx, node.Image)
 	if err != nil {
@@ -346,13 +345,14 @@ func (c *cLab) DeleteContainer(ctx context.Context, name string) error {
 	var err error
 	force := !c.gracefulShutdown
 	if c.gracefulShutdown {
+		log.Infof("Stopping container: %s", name)
 		err = c.DockerClient.ContainerStop(ctx, name, &c.timeout)
 		if err != nil {
 			log.Errorf("could not stop container '%s': %v", name, err)
 			force = true
 		}
 	}
-	log.Infof("Removing container: %s", name)
+	log.Debugf("Removing container: %s", name)
 	err = c.DockerClient.ContainerRemove(ctx, name, types.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err

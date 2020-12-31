@@ -66,7 +66,6 @@ var destroyCmd = &cobra.Command{
 				if len(cont.Names) > 0 {
 					name = strings.TrimLeft(cont.Names[0], "/")
 				}
-				log.Infof("Stopping container: %s", name)
 				err := c.DeleteContainer(ctx, name)
 				if err != nil {
 					log.Errorf("could not remove container '%s': %v", name, err)
@@ -80,8 +79,8 @@ var destroyCmd = &cobra.Command{
 			return err
 		}
 
-		// delete container management bridge
-		log.Info("Deleting docker bridge ...")
+		// delete lab management network
+		log.Infof("Deleting docker network '%s'...", c.Config.Mgmt.Network)
 		if err = c.DeleteBridge(ctx); err != nil {
 			log.Error(err)
 		}
