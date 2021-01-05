@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
@@ -105,7 +106,7 @@ func (c *cLab) CreateNode(ctx context.Context, node *Node, certs *certificates) 
 func (c *cLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
 	switch node.Kind {
 	case "ceos":
-		log.Infof("Running postdeploy actions for '%s' node", node.ShortName)
+		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
 		// regenerate ceos config since it is now known which IP address docker assigned to this container
 		err := node.generateConfig(node.ResConfig)
 		if err != nil {
@@ -122,6 +123,24 @@ func (c *cLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
 		if err != nil {
 			return err
 		}
+
+	case "linux":
+		log.Debugf("Running postdeploy actions for Linux '%s' node", node.ShortName)
+		// disable tx checksum offload for linux containers on lo and eth0 interfaces
+		nodeNS, err := ns.GetNS(node.NSPath)
+		if err != nil {
+			return err
+		}
+		err = nodeNS.Do(func(_ ns.NetNS) error {
+			// disabling offload on lo0 interface
+			err = EthtoolTXOff("eth0")
+			if err != nil {
+				log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", node.ShortName, err)
+			}
+			return nil
+		})
+		return err
+
 	}
 	return nil
 }
