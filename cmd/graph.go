@@ -73,6 +73,9 @@ var graphCmd = &cobra.Command{
 			log.Errorf("could not list containers: %v", err)
 		}
 		log.Debugf("found %d containers", len(containers))
+		if len(containers) == 0 {
+			return fmt.Errorf("no containers found, is the lab deployed?")
+		}
 		for _, cont := range containers {
 			var name string
 			if len(cont.Names) > 0 {
