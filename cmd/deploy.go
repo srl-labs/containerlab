@@ -168,9 +168,6 @@ var deployCmd = &cobra.Command{
 		// wait for all workers to finish
 		wg.Wait()
 
-		// cleanup hanging resources if a deployment failed before
-		log.Debug("cleaning up interfaces...")
-		c.InitVirtualWiring()
 		wg = new(sync.WaitGroup)
 		wg.Add(int(linksMaxWorkers))
 		linksChan := make(chan *clab.Link)
@@ -187,7 +184,7 @@ var deployCmd = &cobra.Command{
 							return
 						}
 						log.Debugf("Worker %d received link: %+v", i, link)
-						if err = c.CreateVirtualWiring(link); err != nil {
+						if err := c.CreateVirtualWiring(link); err != nil {
 							log.Error(err)
 						}
 					case <-ctx.Done():
