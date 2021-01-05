@@ -242,13 +242,13 @@ func (c *cLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	switch {
 	case nodeCfg.Type != "":
 		return nodeCfg.Type
-	case c.Config.Topology.Kinds[nodeCfg.Kind].Type != "":
-		return c.Config.Topology.Kinds[nodeCfg.Kind].Type
+	case c.Config.Topology.Kinds[kind].Type != "":
+		return c.Config.Topology.Kinds[kind].Type
 	case c.Config.Topology.Defaults.Type != "":
 		return c.Config.Topology.Defaults.Type
 	}
 	// default type if not defined
-	switch nodeCfg.Kind {
+	switch kind {
 	case "srl":
 		return srlDefaultType
 	}
