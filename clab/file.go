@@ -144,7 +144,7 @@ func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
 
 	switch node.Kind {
 	case "srl":
-		log.Infof("Create directory structure for SRL container: %s", node.ShortName)
+		log.Debugf("Creating directory structure for SRL container: %s", node.ShortName)
 		var src string
 		var dst string
 
