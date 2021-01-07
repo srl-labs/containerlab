@@ -7,6 +7,9 @@ topology:
       license: node1.lic
       binds:
         - /node/src:/dst
+      env:
+        env1: val1
+        env2: val2
     node2:
       kind: srl
       license: node1.lic
