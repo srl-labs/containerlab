@@ -63,6 +63,8 @@ type NodeConfig struct {
 	Ports    []string `yaml:"ports,omitempty"`     // list of port bindings
 	MgmtIPv4 string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
 	MgmtIPv6 string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
+
+	Env map[string]string `yaml:"env,omitempty"` // environment variables
 }
 
 // Topology represents a lab topology
@@ -102,11 +104,10 @@ type Node struct {
 	License              string
 	Image                string
 	Topology             string
-	EnvConf              string
 	Sysctls              map[string]string
 	User                 string
 	Cmd                  string
-	Env                  []string
+	Env                  map[string]string
 	Binds                []string    // Bind mounts strings (src:dest:options)
 	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
 	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
@@ -307,6 +308,21 @@ func (c *cLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
+// initialize environment variables
+func (c *cLab) envInit(nodeCfg *NodeConfig, kind string) map[string]string {
+	switch {
+	case nodeCfg.Env != nil:
+		return nodeCfg.Env
+
+	case c.Config.Topology.Kinds[kind].Env != nil:
+		return c.Config.Topology.Kinds[kind].Env
+
+	case c.Config.Topology.Defaults.Env != nil:
+		return c.Config.Topology.Defaults.Env
+	}
+	return nil
+}
+
 func (c *cLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Position != "" {
 		return nodeCfg.Position
@@ -349,6 +365,9 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.PortBindings = pb
 	node.PortSet = ps
 
+	// initialize passed env variables which will be merged with kind specific ones
+	envs := c.envInit(&nodeCfg, node.Kind)
+
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
@@ -359,15 +378,18 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		// initialize specifc container information
 		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0"
 
-		node.Env = []string{
-			"CEOS=1",
-			"EOS_PLATFORM=ceoslab",
-			"container=docker",
-			"ETBA=1",
-			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1",
-			"INTFTYPE=eth",
-			"MAPETH0=1",
-			"MGMT_INTF=eth0"}
+		// defined env vars for the ceos
+		kindEnv := map[string]string{
+			"CEOS":                                "1",
+			"EOS_PLATFORM":                        "ceoslab",
+			"container":                           "docker",
+			"ETBA":                                "1",
+			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
+			"INTFTYPE":                            "eth",
+			"MAPETH0":                             "1",
+			"MGMT_INTF":                           "eth0"}
+		node.Env = mergeStringMaps(kindEnv, envs)
+
 		node.User = "root"
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = nodeCfg.Type
@@ -416,7 +438,9 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// initialize specifc container information
 		node.Cmd = "sudo bash -c /opt/srlinux/bin/sr_linux"
-		node.Env = []string{"SRLINUX=1"}
+		kindEnv := map[string]string{"SRLINUX": "1"}
+		node.Env = mergeStringMaps(kindEnv, envs)
+
 		node.User = "root"
 
 		node.Sysctls = make(map[string]string)
@@ -454,6 +478,8 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+
+		node.Env = envs
 
 	case "bridge":
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
@@ -568,4 +594,33 @@ func resolveBindPaths(binds []string) error {
 		binds[i] = strings.Join(elems, ":")
 	}
 	return nil
+}
+
+// convertEnvs convert env variables passed as a map to a list of them
+func convertEnvs(m map[string]string) []string {
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		s = append(s, k+"="+v)
+	}
+	return s
+}
+
+// merge maps m1, m2 and return a resulting map
+func mergeStringMaps(m1, m2 map[string]string) map[string]string {
+	if m1 == nil {
+		return m2
+	}
+	if m2 == nil {
+		return m1
+	}
+	// make a copy of a map
+	m := make(map[string]string)
+	for k, v := range m1 {
+		m[k] = v
+	}
+
+	for k, v := range m2 {
+		m[k] = v
+	}
+	return m
 }

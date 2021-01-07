@@ -86,3 +86,21 @@ ports:
 The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--export` flag](https://docs.docker.com/engine/reference/commandline/run/#publish-or-expose-port--p---expose).
 
 This option is only configurable under the node level.
+
+### env
+To add environment variables to a node use the `env` container that can be added at `defaults`, `kind` and `node` levels.
+
+```yaml
+topology:
+  defaults:
+    env:
+      env1: 3 # env1=3 will be set if its not set on kind or node level
+  kinds:
+    srl:
+      env:
+        env1: 2 # env1=2 will be set to if its not set on node level
+  nodes:
+    node1:
+      env:
+        env1: 1 # env1=1 will be set for node1
+```

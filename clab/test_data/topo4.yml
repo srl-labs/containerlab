@@ -9,6 +9,8 @@ topology:
       license: kind.lic
       binds:
         - /kind/src:/dst
+      env:
+        env1: global
   nodes:
     node1:
       kind: srl
@@ -16,3 +18,5 @@ topology:
       license: node1.lic
       binds:
         - /node/src:/dst
+      env:
+        env1: val1
