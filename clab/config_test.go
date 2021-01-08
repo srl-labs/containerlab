@@ -181,7 +181,7 @@ func TestEnvInit(t *testing.T) {
 				"env1": "val1",
 			},
 		},
-		"env_defined_at_node_and_kind_level": {
+		"env_defined_at_node_and_kind_and_default_level": {
 			got:  "test_data/topo4.yml",
 			node: "node1",
 			want: map[string]string{
