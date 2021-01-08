@@ -108,3 +108,18 @@ topology:
       env:
         ENV1: 1 # ENV1=1 will be set for node1
 ```
+
+### user
+To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.
+
+```yaml
+topology:
+  defaults:
+    user: alice # alice user will be used for all nodes unless set on kind or node levels
+  kinds:
+    srl:
+      user: bob # bob user will be used for nodes of kind srl unless it is set on node level
+  nodes:
+    node1:
+      user: clab # clab user will be used for node1
+```
