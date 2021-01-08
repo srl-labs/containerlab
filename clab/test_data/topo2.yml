@@ -6,6 +6,7 @@ topology:
       type: ixrd2
       env:
         env1: val1
+      user: customkind
   nodes:
     node1:
       kind: srl
