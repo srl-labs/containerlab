@@ -310,17 +310,10 @@ func (c *cLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
 
 // initialize environment variables
 func (c *cLab) envInit(nodeCfg *NodeConfig, kind string) map[string]string {
-	switch {
-	case nodeCfg.Env != nil:
-		return nodeCfg.Env
-
-	case c.Config.Topology.Kinds[kind].Env != nil:
-		return c.Config.Topology.Kinds[kind].Env
-
-	case c.Config.Topology.Defaults.Env != nil:
-		return c.Config.Topology.Defaults.Env
-	}
-	return nil
+	// merge global envs into kind envs
+	m := mergeStringMaps(c.Config.Topology.Defaults.Env, c.Config.Topology.Kinds[kind].Env)
+	// merge result of previous merge into node envs
+	return mergeStringMaps(m, nodeCfg.Env)
 }
 
 func (c *cLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -605,7 +598,8 @@ func convertEnvs(m map[string]string) []string {
 	return s
 }
 
-// merge maps m1, m2 and return a resulting map
+// mergeStringMaps merges map m1 into m2 and return a resulting map as a new map
+// maps that are passed for merging will not be changed
 func mergeStringMaps(m1, m2 map[string]string) map[string]string {
 	if m1 == nil {
 		return m2

@@ -185,7 +185,11 @@ func TestEnvInit(t *testing.T) {
 			got:  "test_data/topo4.yml",
 			node: "node1",
 			want: map[string]string{
-				"env1": "val1",
+				"env1": "node",
+				"env2": "kind",
+				"env3": "global",
+				"env4": "kind",
+				"env5": "node",
 			},
 		},
 	}
