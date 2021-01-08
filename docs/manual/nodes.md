@@ -90,17 +90,21 @@ This option is only configurable under the node level.
 ### env
 To add environment variables to a node use the `env` container that can be added at `defaults`, `kind` and `node` levels.
 
+The variables values are merged when the same vars are defined on multiple levels with nodes level being the most specific.
+
 ```yaml
 topology:
   defaults:
     env:
-      env1: 3 # env1=3 will be set if its not set on kind or node level
+      ENV1: 3 # ENV1=3 will be set if its not set on kind or node level
+      ENV2: glob # ENV2=glob will be set for all nodes
   kinds:
     srl:
       env:
-        env1: 2 # env1=2 will be set to if its not set on node level
+        ENV1: 2 # ENV1=2 will be set to if its not set on node level
+        ENV3: kind # ENV3=kind will be set for all nodes of srl kind
   nodes:
     node1:
       env:
-        env1: 1 # env1=1 will be set for node1
+        ENV1: 1 # ENV1=1 will be set for node1
 ```

@@ -4,13 +4,18 @@ topology:
     license: default.lic
     binds:
       - /default/src:/dst
+    env:
+      env1: global
+      env2: global
+      env3: global
   kinds:
     srl:
       license: kind.lic
       binds:
         - /kind/src:/dst
       env:
-        env1: global
+        env2: kind
+        env4: kind
   nodes:
     node1:
       kind: srl
@@ -19,4 +24,5 @@ topology:
       binds:
         - /node/src:/dst
       env:
-        env1: val1
+        env1: node
+        env5: node
