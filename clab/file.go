@@ -23,7 +23,7 @@ type TopoFile struct {
 
 // GetTopology parses the topology file into c.Conf structure
 // as well as populates the TopoFile structure with the topology file related information
-func (c *cLab) GetTopology(topo string) error {
+func (c *CLab) GetTopology(topo string) error {
 	log.Infof("Getting topology information from %s file...", topo)
 
 	yamlFile, err := ioutil.ReadFile(topo)
@@ -133,7 +133,7 @@ func CreateDirectory(path string, perm os.FileMode) {
 }
 
 // CreateNodeDirStructure create the directory structure and files for the lab nodes
-func (c *cLab) CreateNodeDirStructure(node *Node) (err error) {
+func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 

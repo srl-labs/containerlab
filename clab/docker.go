@@ -22,7 +22,7 @@ import (
 const sysctlBase = "/proc/sys"
 
 // CreateBridge creates a docker bridge
-func (c *cLab) CreateBridge(ctx context.Context) (err error) {
+func (c *CLab) CreateBridge(ctx context.Context) (err error) {
 	log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s'", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
 
 	enableIPv6 := false
@@ -117,7 +117,7 @@ func (c *cLab) CreateBridge(ctx context.Context) (err error) {
 }
 
 // DeleteBridge deletes a docker bridge
-func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
+func (c *CLab) DeleteBridge(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	nres, err := c.DockerClient.NetworkInspect(ctx, c.Config.Mgmt.Network)
@@ -142,7 +142,7 @@ func (c *cLab) DeleteBridge(ctx context.Context) (err error) {
 }
 
 // CreateContainer creates a docker container
-func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
+func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
 	err = c.PullImageIfRequired(ctx, node.Image)
@@ -215,7 +215,7 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	return linkContainerNS(node.NSPath, node.LongName)
 }
 
-func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error {
+func (c *CLab) PullImageIfRequired(ctx context.Context, imageName string) error {
 	filter := filters.NewArgs()
 	filter.Add("reference", imageName)
 
@@ -265,7 +265,7 @@ func (c *cLab) PullImageIfRequired(ctx context.Context, imageName string) error 
 }
 
 // StartContainer starts a docker container
-func (c *cLab) StartContainer(ctx context.Context, id string) error {
+func (c *CLab) StartContainer(ctx context.Context, id string) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return c.DockerClient.ContainerStart(nctx,
@@ -278,7 +278,7 @@ func (c *cLab) StartContainer(ctx context.Context, id string) error {
 }
 
 // ListContainers lists all containers with labels []string
-func (c *cLab) ListContainers(ctx context.Context, labels []string) ([]types.Container, error) {
+func (c *CLab) ListContainers(ctx context.Context, labels []string) ([]types.Container, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	filter := filters.NewArgs()
@@ -292,7 +292,7 @@ func (c *cLab) ListContainers(ctx context.Context, labels []string) ([]types.Con
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error
-func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byte, error) {
+func (c *CLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byte, error) {
 	cont, err := c.DockerClient.ContainerInspect(ctx, id)
 	if err != nil {
 		return nil, nil, err
@@ -341,7 +341,7 @@ func (c *cLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *cLab) DeleteContainer(ctx context.Context, name string) error {
+func (c *CLab) DeleteContainer(ctx context.Context, name string) error {
 	var err error
 	force := !c.gracefulShutdown
 	if c.gracefulShutdown {

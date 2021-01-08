@@ -51,6 +51,9 @@ var deployCmd = &cobra.Command{
 		}
 		c := clab.NewContainerLab(opts...)
 
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
@@ -58,17 +61,18 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 		if reconfigure {
+			log.Infof("Removing %s directory...", c.Dir.Lab)
 			err = os.RemoveAll(c.Dir.Lab)
 			if err != nil {
 				return err
 			}
+			log.Info("Destroying lab...")
+			destroyLab(ctx, c)
+
 		}
 		if err = c.VerifyBridgesExist(); err != nil {
 			return err
 		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
 
 		// create lab directory
 		log.Info("Creating lab directory: ", c.Dir.Lab)

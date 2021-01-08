@@ -12,7 +12,7 @@ import (
 var g *gographviz.Graph
 
 // GenerateGraph generates a graph of the lab topology
-func (c *cLab) GenerateGraph(topo string) error {
+func (c *CLab) GenerateGraph(topo string) error {
 	log.Info("Generating lab graph...")
 	g = gographviz.NewGraph()
 	if err := g.SetName(c.TopoFile.name); err != nil {
