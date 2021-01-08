@@ -213,3 +213,51 @@ func TestEnvInit(t *testing.T) {
 		})
 	}
 }
+
+func TestUserInit(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		node string
+		want string
+	}{
+		"user_defined_at_node_level": {
+			got:  "test_data/topo1.yml",
+			node: "node2",
+			want: "custom",
+		},
+		"user_defined_at_kind_level": {
+			got:  "test_data/topo2.yml",
+			node: "node2",
+			want: "customkind",
+		},
+		"user_defined_at_defaults_level": {
+			got:  "test_data/topo3.yml",
+			node: "node1",
+			want: "customglobal",
+		},
+		"user_defined_at_node_and_kind_and_default_level": {
+			got:  "test_data/topo4.yml",
+			node: "node1",
+			want: "customnode",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoFile(tc.got),
+			}
+			c := NewContainerLab(opts...)
+			if err := c.ParseTopology(); err != nil {
+				t.Fatal(err)
+			}
+
+			nodeCfg := c.Config.Topology.Nodes[tc.node]
+			kind := strings.ToLower(c.kindInitialization(&nodeCfg))
+			user := c.userInit(&nodeCfg, kind)
+			if user != tc.want {
+				t.Fatalf("wanted %q got %q", tc.want, user)
+			}
+		})
+	}
+}
