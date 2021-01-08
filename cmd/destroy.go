@@ -44,49 +44,7 @@ var destroyCmd = &cobra.Command{
 		if err = c.ParseTopology(); err != nil {
 			return err
 		}
-
-		if cleanup {
-			err = os.RemoveAll(c.Dir.Lab)
-			if err != nil {
-				log.Errorf("error deleting lab directory: %v", err)
-			}
-		}
-		containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
-		if err != nil {
-			return fmt.Errorf("could not list containers: %v", err)
-		}
-
-		log.Infof("Destroying container lab: %s", topo)
-		wg := new(sync.WaitGroup)
-		wg.Add(len(containers))
-		for _, cont := range containers {
-			go func(cont types.Container) {
-				defer wg.Done()
-				name := cont.ID
-				if len(cont.Names) > 0 {
-					name = strings.TrimLeft(cont.Names[0], "/")
-				}
-				err := c.DeleteContainer(ctx, name)
-				if err != nil {
-					log.Errorf("could not remove container '%s': %v", name, err)
-				}
-			}(cont)
-		}
-		wg.Wait()
-		log.Info("Removing container entries from /etc/hosts file")
-		err = deleteEntriesFromHostsFile(containers, c.Config.Mgmt.Network)
-		if err != nil {
-			return err
-		}
-
-		// delete lab management network
-		log.Infof("Deleting docker network '%s'...", c.Config.Mgmt.Network)
-		if err = c.DeleteBridge(ctx); err != nil {
-			log.Error(err)
-		}
-		// delete container network namespaces symlinks
-		c.DeleteNetnsSymlinks()
-		return nil
+		return destroyLab(ctx, c)
 	},
 }
 
@@ -142,5 +100,50 @@ func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string)
 		f.Write(l)
 		f.Write([]byte("\n"))
 	}
+	return nil
+}
+
+func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
+	if cleanup {
+		err = os.RemoveAll(c.Dir.Lab)
+		if err != nil {
+			log.Errorf("error deleting lab directory: %v", err)
+		}
+	}
+	containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
+	if err != nil {
+		return fmt.Errorf("could not list containers: %v", err)
+	}
+
+	log.Infof("Destroying container lab: %s", topo)
+	wg := new(sync.WaitGroup)
+	wg.Add(len(containers))
+	for _, cont := range containers {
+		go func(cont types.Container) {
+			defer wg.Done()
+			name := cont.ID
+			if len(cont.Names) > 0 {
+				name = strings.TrimLeft(cont.Names[0], "/")
+			}
+			err := c.DeleteContainer(ctx, name)
+			if err != nil {
+				log.Errorf("could not remove container '%s': %v", name, err)
+			}
+		}(cont)
+	}
+	wg.Wait()
+	log.Info("Removing container entries from /etc/hosts file")
+	err = deleteEntriesFromHostsFile(containers, c.Config.Mgmt.Network)
+	if err != nil {
+		return err
+	}
+
+	// delete lab management network
+	log.Infof("Deleting docker network '%s'...", c.Config.Mgmt.Network)
+	if err = c.DeleteBridge(ctx); err != nil {
+		log.Error(err)
+	}
+	// delete container network namespaces symlinks
+	c.DeleteNetnsSymlinks()
 	return nil
 }

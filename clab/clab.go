@@ -13,7 +13,7 @@ import (
 
 // var debug bool
 
-type cLab struct {
+type CLab struct {
 	Config       *Config
 	TopoFile     *TopoFile
 	m            *sync.RWMutex
@@ -34,22 +34,22 @@ type cLabDirectory struct {
 	LabGraph  string
 }
 
-type ClabOption func(c *cLab)
+type ClabOption func(c *CLab)
 
 func WithDebug(d bool) ClabOption {
-	return func(c *cLab) {
+	return func(c *CLab) {
 		c.debug = d
 	}
 }
 
 func WithTimeout(dur time.Duration) ClabOption {
-	return func(c *cLab) {
+	return func(c *CLab) {
 		c.timeout = dur
 	}
 }
 
 func WithEnvDockerClient() ClabOption {
-	return func(c *cLab) {
+	return func(c *CLab) {
 		var err error
 		c.DockerClient, err = docker.NewEnvClient()
 		if err != nil {
@@ -59,7 +59,7 @@ func WithEnvDockerClient() ClabOption {
 }
 
 func WithTopoFile(file string) ClabOption {
-	return func(c *cLab) {
+	return func(c *CLab) {
 		if file == "" {
 			return
 		}
@@ -70,14 +70,14 @@ func WithTopoFile(file string) ClabOption {
 }
 
 func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
-	return func(c *cLab) {
+	return func(c *CLab) {
 		c.gracefulShutdown = gracefulShutdown
 	}
 }
 
 // NewContainerLab function defines a new container lab
-func NewContainerLab(opts ...ClabOption) *cLab {
-	c := &cLab{
+func NewContainerLab(opts ...ClabOption) *CLab {
+	c := &CLab{
 		Config:   new(Config),
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
@@ -90,7 +90,7 @@ func NewContainerLab(opts ...ClabOption) *cLab {
 	return c
 }
 
-func (c *cLab) CreateNode(ctx context.Context, node *Node, certs *certificates) error {
+func (c *CLab) CreateNode(ctx context.Context, node *Node, certs *certificates) error {
 	c.m.Lock()
 	node.TLSCert = string(certs.Cert)
 	node.TLSKey = string(certs.Key)
@@ -103,7 +103,7 @@ func (c *cLab) CreateNode(ctx context.Context, node *Node, certs *certificates) 
 }
 
 // ExecPostDeployTasks executes tasks that some nodes might require to boot properly after start
-func (c *cLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
+func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
 	switch node.Kind {
 	case "ceos":
 		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
