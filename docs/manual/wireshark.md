@@ -110,3 +110,12 @@ In the examples below the wireshark will be used as a sniffing tool and the foll
     ssh $clab_host "tcpdump -U -nni brXXXXXX -w -" | wireshark -k -i -
     ```
     Note that in this case you do not need to drill into the network namespace, since management bridge is in the default netns.
+
+To simplify wireshark remote capturing process users can create a tiny bash script that will save some typing:
+
+```bash
+#!/bin/sh
+# call this script as `bash script_name.sh <container-name> <interface-name>`
+ssh <containerlab_address> "ip netns exec $1 tcpdump -U -nni $2 -w -" | wireshark -k -i -
+
+```
