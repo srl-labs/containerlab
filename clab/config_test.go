@@ -152,3 +152,64 @@ func TestTypeInit(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvInit(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		node string
+		want map[string]string
+	}{
+		"env_defined_at_node_level": {
+			got:  "test_data/topo1.yml",
+			node: "node1",
+			want: map[string]string{
+				"env1": "val1",
+				"env2": "val2",
+			},
+		},
+		"env_defined_at_kind_level": {
+			got:  "test_data/topo2.yml",
+			node: "node2",
+			want: map[string]string{
+				"env1": "val1",
+			},
+		},
+		"env_defined_at_defaults_level": {
+			got:  "test_data/topo3.yml",
+			node: "node1",
+			want: map[string]string{
+				"env1": "val1",
+			},
+		},
+		"env_defined_at_node_and_kind_and_default_level": {
+			got:  "test_data/topo4.yml",
+			node: "node1",
+			want: map[string]string{
+				"env1": "node",
+				"env2": "kind",
+				"env3": "global",
+				"env4": "kind",
+				"env5": "node",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoFile(tc.got),
+			}
+			c := NewContainerLab(opts...)
+			if err := c.ParseTopology(); err != nil {
+				t.Fatal(err)
+			}
+
+			nodeCfg := c.Config.Topology.Nodes[tc.node]
+			kind := strings.ToLower(c.kindInitialization(&nodeCfg))
+			env := c.envInit(&nodeCfg, kind)
+			if !reflect.DeepEqual(env, tc.want) {
+				t.Fatalf("wanted %q got %q", tc.want, env)
+			}
+		})
+	}
+}

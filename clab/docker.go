@@ -170,7 +170,7 @@ func (c *cLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		&container.Config{
 			Image:        node.Image,
 			Cmd:          strings.Fields(node.Cmd),
-			Env:          node.Env,
+			Env:          convertEnvs(node.Env),
 			AttachStdout: true,
 			AttachStderr: true,
 			Hostname:     node.ShortName,
