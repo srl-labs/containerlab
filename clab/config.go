@@ -478,12 +478,12 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		topoPath := filepath.Join(node.LabDir, "topology.yml")
 		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
+	case "crpd":
+
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
-		node.License = ""
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.NodeType = c.typeInit(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 		node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
 		node.User = user
