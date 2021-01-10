@@ -66,7 +66,6 @@ var deployCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			log.Info("Destroying lab...")
 			destroyLab(ctx, c)
 
 		}

@@ -141,7 +141,11 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	// delete lab management network
 	log.Infof("Deleting docker network '%s'...", c.Config.Mgmt.Network)
 	if err = c.DeleteBridge(ctx); err != nil {
-		log.Error(err)
+		// do not log error message if deletion error simply says that such network doesn't exist
+		if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
+			log.Error(err)
+		}
+
 	}
 	// delete container network namespaces symlinks
 	c.DeleteNetnsSymlinks()
