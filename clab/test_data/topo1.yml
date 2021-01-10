@@ -13,3 +13,4 @@ topology:
     node2:
       kind: srl
       license: node1.lic
+      user: custom

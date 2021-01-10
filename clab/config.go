@@ -64,7 +64,8 @@ type NodeConfig struct {
 	MgmtIPv4 string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
 	MgmtIPv6 string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
 
-	Env map[string]string `yaml:"env,omitempty"` // environment variables
+	Env  map[string]string `yaml:"env,omitempty"`  // environment variables
+	User string            `yaml:"user,omitempty"` // linux user used in a container
 }
 
 // Topology represents a lab topology
@@ -325,6 +326,20 @@ func (c *cLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Position
 }
 
+func (c *cLab) userInit(nodeCfg *NodeConfig, kind string) string {
+	switch {
+	case nodeCfg.User != "":
+		return nodeCfg.User
+
+	case c.Config.Topology.Kinds[kind].User != "":
+		return c.Config.Topology.Kinds[kind].User
+
+	case c.Config.Topology.Defaults.User != "":
+		return c.Config.Topology.Defaults.User
+	}
+	return ""
+}
+
 // NewNode initializes a new node object
 func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
@@ -361,6 +376,8 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize passed env variables which will be merged with kind specific ones
 	envs := c.envInit(&nodeCfg, node.Kind)
 
+	user := c.userInit(&nodeCfg, node.Kind)
+
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
@@ -383,7 +400,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 			"MGMT_INTF":                           "eth0"}
 		node.Env = mergeStringMaps(kindEnv, envs)
 
-		node.User = "root"
+		node.User = user
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = nodeCfg.Type
 
@@ -431,10 +448,11 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// initialize specifc container information
 		node.Cmd = "sudo bash -c /opt/srlinux/bin/sr_linux"
+
 		kindEnv := map[string]string{"SRLINUX": "1"}
 		node.Env = mergeStringMaps(kindEnv, envs)
 
-		node.User = "root"
+		node.User = user
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv4.ip_forward"] = "0"
@@ -468,6 +486,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.NodeType = c.typeInit(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 		node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
+		node.User = user
 
 		node.Sysctls = make(map[string]string)
 		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
