@@ -4,6 +4,8 @@ topology:
     srl:
       license: kind.lic
       type: ixrd2
+      env:
+        env1: val1
   nodes:
     node1:
       kind: srl
