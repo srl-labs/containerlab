@@ -326,7 +326,7 @@ func (c *CLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Position
 }
 
-func (c *cLab) userInit(nodeCfg *NodeConfig, kind string) string {
+func (c *CLab) userInit(nodeCfg *NodeConfig, kind string) string {
 	switch {
 	case nodeCfg.User != "":
 		return nodeCfg.User
