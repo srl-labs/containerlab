@@ -19,6 +19,10 @@ topology:
       - 80:8080
       - 55555:43555/udp
       - 55554:43554/tcp
+      user: test
+      env:
+        ENV1: VAL1
+      cmd: /bin/bash script.sh
 ```
 
 ### kind
@@ -107,4 +111,34 @@ topology:
     node1:
       env:
         ENV1: 1 # ENV1=1 will be set for node1
+```
+
+### user
+To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.
+
+```yaml
+topology:
+  defaults:
+    user: alice # alice user will be used for all nodes unless set on kind or node levels
+  kinds:
+    srl:
+      user: bob # bob user will be used for nodes of kind srl unless it is set on node level
+  nodes:
+    node1:
+      user: clab # clab user will be used for node1
+```
+
+### cmd
+It is possible to set/override the command of the container image with `cmd` configuration option. It accepts the "shell" form and can be set on all levels.
+
+```yaml
+topology:
+  defaults:
+    cmd: bash cmd.sh
+  kinds:
+    srl:
+      cmd: bash cmd2.sh
+  nodes:
+    node1:
+      cmd: bash cmd3.sh
 ```

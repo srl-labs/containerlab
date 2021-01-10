@@ -8,6 +8,7 @@ topology:
       env1: global
       env2: global
       env3: global
+    user: customglobal
   kinds:
     srl:
       license: kind.lic
@@ -16,6 +17,7 @@ topology:
       env:
         env2: kind
         env4: kind
+      user: customkind
   nodes:
     node1:
       kind: srl
@@ -26,3 +28,4 @@ topology:
       env:
         env1: node
         env5: node
+      user: customnode
