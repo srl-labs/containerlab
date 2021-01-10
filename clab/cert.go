@@ -37,7 +37,7 @@ type CaRootInput struct {
 }
 
 // GenerateRootCa function
-func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*certificates, error) {
+func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*certificates, error) {
 	log.Info("Creating root CA")
 	//create root CA diretcory
 	CreateDirectory(c.Dir.LabCA, 0755)
@@ -72,7 +72,7 @@ func (c *cLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 	return certs, nil
 }
 
-func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*certificates, error) {
+func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*certificates, error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	input := CertInput{
@@ -141,7 +141,7 @@ func (c *cLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	return certs, nil
 }
 
-func (c *cLab) writeCertFiles(certs *certificates, filesPrefix string) {
+func (c *CLab) writeCertFiles(certs *certificates, filesPrefix string) {
 	createFile(filesPrefix+".pem", string(certs.Cert))
 	createFile(filesPrefix+"-key.pem", string(certs.Key))
 	createFile(filesPrefix+".csr", string(certs.Csr))

@@ -140,7 +140,7 @@ type Endpoint struct {
 }
 
 // ParseIPInfo parses IP information
-func (c *cLab) parseIPInfo() error {
+func (c *CLab) parseIPInfo() error {
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
@@ -160,7 +160,7 @@ func (c *cLab) parseIPInfo() error {
 }
 
 // ParseTopology parses the lab topology
-func (c *cLab) ParseTopology() error {
+func (c *CLab) ParseTopology() error {
 	log.Info("Parsing topology information ...")
 	log.Debugf("Lab name: %s", c.Config.Name)
 	// initialize DockerInfo
@@ -199,14 +199,14 @@ func (c *cLab) ParseTopology() error {
 	return nil
 }
 
-func (c *cLab) kindInitialization(nodeCfg *NodeConfig) string {
+func (c *CLab) kindInitialization(nodeCfg *NodeConfig) string {
 	if nodeCfg.Kind != "" {
 		return nodeCfg.Kind
 	}
 	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
+func (c *CLab) bindsInit(nodeCfg *NodeConfig) []string {
 	switch {
 	case len(nodeCfg.Binds) != 0:
 		return nodeCfg.Binds
@@ -219,7 +219,7 @@ func (c *cLab) bindsInit(nodeCfg *NodeConfig) []string {
 }
 
 // portsInit produces the nat.PortMap out of the slice of string representation of port bindings
-func (c *cLab) portsInit(nodeCfg *NodeConfig) (nat.PortSet, nat.PortMap, error) {
+func (c *CLab) portsInit(nodeCfg *NodeConfig) (nat.PortSet, nat.PortMap, error) {
 	if len(nodeCfg.Ports) != 0 {
 		ps, pb, err := nat.ParsePortSpecs(nodeCfg.Ports)
 		if err != nil {
@@ -230,7 +230,7 @@ func (c *cLab) portsInit(nodeCfg *NodeConfig) (nat.PortSet, nat.PortMap, error) 
 	return nil, nil, nil
 }
 
-func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
+func (c *CLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Group != "" {
 		return nodeCfg.Group
 	} else if c.Config.Topology.Kinds[kind].Group != "" {
@@ -240,7 +240,7 @@ func (c *cLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
 }
 
 // initialize SRL HW type
-func (c *cLab) typeInit(nodeCfg *NodeConfig, kind string) string {
+func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	switch {
 	case nodeCfg.Type != "":
 		return nodeCfg.Type
@@ -257,7 +257,7 @@ func (c *cLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
+func (c *CLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Config != "" {
 		return nodeCfg.Config
 	}
@@ -272,7 +272,7 @@ func (c *cLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
 	return defaultConfigTemplates[kind]
 }
 
-func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
+func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Image != "" {
 		return nodeCfg.Image
 	}
@@ -282,7 +282,7 @@ func (c *cLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Image
 }
 
-func (c *cLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
 	switch {
 	case nodeCfg.License != "":
 		return nodeCfg.License, nil
@@ -295,7 +295,7 @@ func (c *cLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
 	}
 }
 
-func (c *cLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
+func (c *CLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
 	switch {
 	case nodeCfg.Cmd != "":
 		return nodeCfg.Cmd
@@ -310,14 +310,14 @@ func (c *cLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
 }
 
 // initialize environment variables
-func (c *cLab) envInit(nodeCfg *NodeConfig, kind string) map[string]string {
+func (c *CLab) envInit(nodeCfg *NodeConfig, kind string) map[string]string {
 	// merge global envs into kind envs
 	m := mergeStringMaps(c.Config.Topology.Defaults.Env, c.Config.Topology.Kinds[kind].Env)
 	// merge result of previous merge into node envs
 	return mergeStringMaps(m, nodeCfg.Env)
 }
 
-func (c *cLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
+func (c *CLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
 	if nodeCfg.Position != "" {
 		return nodeCfg.Position
 	} else if c.Config.Topology.Kinds[kind].Position != "" {
@@ -341,7 +341,7 @@ func (c *cLab) userInit(nodeCfg *NodeConfig, kind string) string {
 }
 
 // NewNode initializes a new node object
-func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
+func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
 	node := new(Node)
 	node.ShortName = nodeName
@@ -505,7 +505,7 @@ func (c *cLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 }
 
 // NewLink initializes a new link object
-func (c *cLab) NewLink(l LinkConfig) *Link {
+func (c *CLab) NewLink(l LinkConfig) *Link {
 	// initialize a new link
 	link := new(Link)
 	link.Labels = l.Labels
@@ -527,7 +527,7 @@ func (c *cLab) NewLink(l LinkConfig) *Link {
 }
 
 // NewEndpoint initializes a new endpoint object
-func (c *cLab) NewEndpoint(e string) *Endpoint {
+func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// initialize a new endpoint
 	endpoint := new(Endpoint)
 
@@ -562,7 +562,7 @@ func (c *cLab) NewEndpoint(e string) *Endpoint {
 }
 
 // VerifyBridgeExists verifies if every node of kind=bridge exists on the lab host
-func (c *cLab) VerifyBridgesExist() error {
+func (c *CLab) VerifyBridgesExist() error {
 	for name, node := range c.Nodes {
 		if node.Kind == "bridge" {
 			if _, err := netlink.LinkByName(name); err != nil {

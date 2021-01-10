@@ -20,7 +20,7 @@ type vEthEndpoint struct {
 }
 
 // CreateVirtualWiring provides the virtual topology between the containers
-func (c *cLab) CreateVirtualWiring(l *Link) (err error) {
+func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
 	// connect containers (or container and a bridge) using veth pair
@@ -165,7 +165,7 @@ func (veth *vEthEndpoint) toBridge() error {
 }
 
 // DeleteNetnsSymlinks deletes the symlink file created for each container netns
-func (c *cLab) DeleteNetnsSymlinks() (err error) {
+func (c *CLab) DeleteNetnsSymlinks() (err error) {
 	for _, node := range c.Nodes {
 		if node.Kind != "bridge" {
 			log.Debugf("Deleting %s network namespace", node.LongName)
