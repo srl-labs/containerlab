@@ -218,7 +218,7 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 			log.Debugf("Config file exists for node %s", node.ShortName)
 		}
 		// copy crpd sshd conf file to crpd node dir
-		src := "/etc/containerlab/templates/juniper/sshd_config"
+		src := "/etc/containerlab/templates/crpd/sshd_config"
 		dst := node.LabDir + "/config/sshd_config"
 		err = copyFile(src, dst)
 		if err != nil {
