@@ -31,7 +31,7 @@ var kinds = []string{"srl", "ceos", "linux", "alpine", "bridge"}
 var defaultConfigTemplates = map[string]string{
 	"srl":  "/etc/containerlab/templates/srl/srlconfig.tpl",
 	"ceos": "/etc/containerlab/templates/arista/ceos.cfg.tpl",
-	"crpd": "/etc/containerlab/templates/juniper/juniper.conf",
+	"crpd": "/etc/containerlab/templates/crpd/juniper.conf",
 }
 
 var srlTypes = map[string]string{
