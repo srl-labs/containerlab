@@ -54,7 +54,7 @@ topology:
       license: lic.key
 ```
 
-The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config iill be `clab-srl_lab/srl1/config/config.json`.
+The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
 
 #### User defined config
 It is possible to make SR Linux nodes to boot up with a user-defined config instead of a built-in one. With a [`config`](../nodes.md#config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
