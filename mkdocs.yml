@@ -9,6 +9,7 @@ nav:
       - Kinds:
           - About: manual/kinds/kinds.md
           - srl - Nokia SR Linux: manual/kinds/srl.md
+          - crpd - Juniper cRPD: manual/kinds/crpd.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
