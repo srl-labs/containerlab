@@ -26,6 +26,71 @@ Juniper cRPD node launched with containerlab can be managed via the following in
 !!!info
     Default user credentials: `root:clab123`
 
+## Interfaces mapping
+cRPD container uses the following mapping for its linux interfaces:
+
+* `eth0` - management interface connected to the containerlab management network
+* `eth1` - first data interface
+
+When containerlab launches cRPD node, it will assign IPv4/6 address to the `eth0` interface. Data interface `eth1` needs to be configured with IP addressing manually.
+
+???note "cRPD interfaces output"
+    This output demonstrates the IP addressing of the linux interfaces of cRPD node.
+    ```
+    ❯ docker exec -it clab-crpd-crpd bash
+
+    ===>
+            Containerized Routing Protocols Daemon (CRPD)
+    Copyright (C) 2020, Juniper Networks, Inc. All rights reserved.
+                                                                        <===
+
+    root@crpd:/# ip a
+    1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+        link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+        inet 127.0.0.1/8 scope host lo
+        valid_lft forever preferred_lft forever
+        inet6 ::1/128 scope host
+        valid_lft forever preferred_lft forever
+
+    <SNIP>
+
+    5767: eth0@if5768: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default
+        link/ether 02:42:ac:14:14:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+        inet 172.20.20.3/24 brd 172.20.20.255 scope global eth0
+        valid_lft forever preferred_lft forever
+        inet6 2001:172:20:20::3/80 scope global nodad
+        valid_lft forever preferred_lft forever
+        inet6 fe80::42:acff:fe14:1403/64 scope link
+        valid_lft forever preferred_lft forever
+    5770: eth1@if5769: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+        link/ether b6:d3:63:f1:cb:7b brd ff:ff:ff:ff:ff:ff link-netnsid 1
+        inet6 fe80::b4d3:63ff:fef1:cb7b/64 scope link
+        valid_lft forever preferred_lft forever
+    ```
+    This output shows how the linux interfaces are mapped into the cRPD OS.
+    ```
+    root@crpd> show interfaces routing
+    Interface        State Addresses
+    lsi              Up
+    tunl0            Up    ISO   enabled
+    sit0             Up    ISO   enabled
+                        INET6 ::172.20.20.3
+                        INET6 ::127.0.0.1
+    lo.0             Up    ISO   enabled
+                        INET6 fe80::1
+    ip6tnl0          Up    ISO   enabled
+                        INET6 fe80::42a:e9ff:fede:a0e3
+    gretap0          Down  ISO   enabled
+    gre0             Up    ISO   enabled
+    eth1             Up    ISO   enabled
+                        INET6 fe80::b4d3:63ff:fef1:cb7b
+    eth0             Up    ISO   enabled
+                        INET  172.20.20.3
+                        INET6 2001:172:20:20::3
+                        INET6 fe80::42:acff:fe14:1403
+    ```
+    As you see, the management interface `eth0` inherits the IP address that docker assigned to cRPD container.
+
 ## Features and options
 ### Node configuration
 cRPD nodes have a dedicated [`config`](#config-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `crpd` kind with a basic "empty" config or to provide a custom config file that will be used as a startup config instead.
