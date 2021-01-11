@@ -2,6 +2,7 @@ package clab
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -120,6 +121,17 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
 			return err
 		}
 		err = c.DockerClient.ContainerStart(ctx, node.ContainerID, types.ContainerStartOptions{})
+		if err != nil {
+			return err
+		}
+	case "crpd":
+		// exec `service ssh restart` to start ssh service and take into account mounted sshd_config
+		execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("service ssh restart")}
+		respID, err := c.DockerClient.ContainerExecCreate(context.Background(), node.ContainerID, execConfig)
+		if err != nil {
+			return err
+		}
+		_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
 		if err != nil {
 			return err
 		}

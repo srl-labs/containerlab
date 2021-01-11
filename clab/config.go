@@ -3,6 +3,7 @@ package clab
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -30,6 +31,7 @@ var kinds = []string{"srl", "ceos", "linux", "alpine", "bridge"}
 var defaultConfigTemplates = map[string]string{
 	"srl":  "/etc/containerlab/templates/srl/srlconfig.tpl",
 	"ceos": "/etc/containerlab/templates/arista/ceos.cfg.tpl",
+	"crpd": "/etc/containerlab/templates/juniper/juniper.conf",
 }
 
 var srlTypes = map[string]string{
@@ -94,7 +96,7 @@ type Node struct {
 	ShortName            string
 	LongName             string
 	Fqdn                 string
-	LabDir               string
+	LabDir               string // LabDir is a directory related to the node, it contains config items and/or other persistent state
 	Index                int
 	Group                string
 	Kind                 string
@@ -479,6 +481,17 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "crpd":
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.User = user
+
+		// mount config and log dirs
+		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config"), ":/config"))
+		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "log"), ":/var/log"))
+		// mount sshd_config
+		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
 
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
