@@ -293,7 +293,10 @@ func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
 	case c.Config.Topology.Defaults.License != "":
 		return c.Config.Topology.Defaults.License, nil
 	default:
-		return "", fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
+		if node.Kind == "srl" {
+			return "", fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
+		}
+		return "", nil
 	}
 }
 
@@ -599,6 +602,9 @@ func (c *CLab) VerifyBridgesExist() error {
 
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
 func resolvePath(p string) (string, error) {
+	if p == "" {
+		return "", nil
+	}
 	var err error
 	switch {
 	// resolve ~/ path

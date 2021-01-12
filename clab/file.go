@@ -226,13 +226,15 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
 
-		// copy license file to node specific lab directory
-		src = node.License
-		dst = path.Join(node.LabDir, "/config/license.conf")
-		if err = copyFile(src, dst); err != nil {
-			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
+		if node.License != "" {
+			// copy license file to node specific lab directory
+			src = node.License
+			dst = path.Join(node.LabDir, "/config/license.conf")
+			if err = copyFile(src, dst); err != nil {
+				return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
+			}
+			log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
 	case "bridge":
 	default:
