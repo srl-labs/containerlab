@@ -430,6 +430,44 @@
           },
           {
             "sequence-id": 290,
+            "description": "Accept incoming OSPF messages",
+            "action": {
+              "accept": {
+              }
+            },
+            "match": {
+              "protocol": 89
+            }
+          },
+          {
+            "sequence-id": 300,
+            "description": "Accept incoming DHCP relay messages targeted for BOOTP/DHCP server",
+            "action": {
+              "accept": {
+              }
+            },
+            "match": {
+              "protocol": "udp",
+              "destination-port": {
+                "operator": "eq",
+                "value": 67
+              }
+            }
+          },
+          {
+            "sequence-id": 310,
+            "description": "Accept ICMP fragment packets",
+            "action": {
+              "accept": {
+              }
+            },
+            "match": {
+              "fragment": true,
+              "protocol": "icmp"
+            }
+          },
+          {
+            "sequence-id": 320,
             "description": "Drop all else",
             "action": {
               "drop": {
@@ -933,6 +971,32 @@
           },
           {
             "sequence-id": 340,
+            "description": "Accept incoming OSPF messages",
+            "action": {
+              "accept": {
+              }
+            },
+            "match": {
+              "next-header": 89
+            }
+          },
+          {
+            "sequence-id": 350,
+            "description": "Accept incoming DHCPv6 relay messages",
+            "action": {
+              "accept": {
+              }
+            },
+            "match": {
+              "next-header": "udp",
+              "destination-port": {
+                "operator": "eq",
+                "value": 547
+              }
+            }
+          },
+          {
+            "sequence-id": 360,
             "description": "Drop all else",
             "action": {
               "drop": {
