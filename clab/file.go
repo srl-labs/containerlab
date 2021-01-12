@@ -222,7 +222,7 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 		dst := node.LabDir + "/config/sshd_config"
 		err = copyFile(src, dst)
 		if err != nil {
-			return fmt.Errorf("File copy [src %s -> dst %s] failed %v", src, dst, err)
+			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
 
@@ -230,7 +230,7 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 		src = node.License
 		dst = path.Join(node.LabDir, "/config/license.conf")
 		if err = copyFile(src, dst); err != nil {
-			return fmt.Errorf("File copy [src %s -> dst %s] failed %v", src, dst, err)
+			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
