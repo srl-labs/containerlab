@@ -487,6 +487,17 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 		node.User = user
 
+		// initialize license file
+		lp, err := c.licenseInit(&nodeCfg, node)
+		if err != nil {
+			return err
+		}
+		lp, err = resolvePath(lp)
+		if err != nil {
+			return err
+		}
+		node.License = lp
+
 		// mount config and log dirs
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config"), ":/config"))
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "log"), ":/var/log"))
