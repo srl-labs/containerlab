@@ -96,6 +96,7 @@ After the configuration is done on both nodes, verify the control plane by check
 ### IS-IS
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlcrpd01&quot;}"></div>
 
+#### Configuration
 Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration and enable IS-IS on both nodes.
 
 === "srl"
@@ -117,13 +118,10 @@ Once the lab is deployed with containerlab, use the following configuration inst
     set / network-instance default interface ethernet-1/1.0
     set / network-instance default interface lo0.0
     set / network-instance default protocols isis instance main admin-state enable
-    set / network-instance default protocols isis instance main level-capability L1
     set / network-instance default protocols isis instance main net [ 49.0001.0100.1001.0001.00 ]
     set / network-instance default protocols isis instance main interface ethernet-1/1.0 admin-state enable
     set / network-instance default protocols isis instance main interface ethernet-1/1.0 circuit-type point-to-point
-    set / network-instance default protocols isis instance main interface ethernet-1/1.0 level 1
-    set / network-instance default protocols isis instance main interface ethernet-1/1.0 level 2 disable true
-    set / network-instance default protocols isis instance main level 1 metric-style wide
+    set / network-instance default protocols isis instance main interface lo0.0
 
     # commit config
     commit now
@@ -143,8 +141,7 @@ Once the lab is deployed with containerlab, use the following configuration inst
     set interfaces lo0 unit 0 family iso address 49.0001.0100.1001.0002.00
     set routing-options router-id 10.10.10.2
 
-    set protocols isis interface eth1 point-to-point
-    set protocols isis interface eth1 level 2 disable
+    set protocols isis interface all point-to-point
     set protocols isis interface lo0.0
     set protocols isis level 1 wide-metrics-only
     set protocols isis level 2 wide-metrics-only
@@ -152,6 +149,28 @@ Once the lab is deployed with containerlab, use the following configuration inst
     
     # commit configuration
     commit
+    ```
+
+#### Verification
+=== "srl"
+    ```bash
+    # control plane verification
+    A:srl# / show network-instance default route-table ipv4-unicast summary | grep isis
+    | 10.10.10.2/32                 | 0     | true       | isis            | 10      | 18    | 192.168.1.2 (direct)                     | ethernet-1/1.0    |
+    | 172.20.20.0/24                | 0     | true       | isis            | 110     | 18    | 192.168.1.2 (direct)                     | ethernet-1/1.0    |
+    ```
+    ```
+    # data plane verification
+    A:srl# ping 10.10.10.2 network-instance default
+    Using network instance default
+    PING 10.10.10.2 (10.10.10.2) 56(84) bytes of data.
+    64 bytes from 10.10.10.2: icmp_seq=1 ttl=64 time=1.15 ms
+    ```
+=== "crpd"
+    ```bash
+    # control plane verification
+    root@crpd> show route table inet.0 | match IS-IS
+    10.10.10.1/32      *[IS-IS/18] 00:00:13, metric 100
     ```
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
