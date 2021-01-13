@@ -115,13 +115,11 @@ The generated config will be saved by the path `clab-<lab_name>/<node-name>/conf
 It is possible to make cRPD nodes to boot up with a user-defined config instead of a built-in one. With a [`config`](../nodes.md#config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
 
 ```yaml
-name: srl_lab
+name: crpd_lab
 topology:
   nodes:
-    srl1:
-      kind: srl
-      type: ixr6
-      license: lic.key
+    crpd:
+      kind: crpd
       config: myconfig.conf
 ```
 
