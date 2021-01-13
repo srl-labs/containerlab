@@ -9,6 +9,7 @@ nav:
       - Kinds:
           - About: manual/kinds/kinds.md
           - srl - Nokia SR Linux: manual/kinds/srl.md
+          - crpd - Juniper cRPD: manual/kinds/crpd.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
@@ -26,6 +27,7 @@ nav:
       - 3-nodes CLOS: lab-examples/min-clos.md
       - 5-stage CLOS: lab-examples/min-5clos.md
       - Nokia SR Linux and Arista cEOS: lab-examples/srl-ceos.md
+      - Nokia SR Linux and Juniper cRPD: lab-examples/srl-crpd.md
       - External bridge capability: lab-examples/ext-bridge.md
       - WAN topology: lab-examples/wan.md
 

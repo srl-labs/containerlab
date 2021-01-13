@@ -1,0 +1,14 @@
+# topology documentation: http://containerlab.srlinux.dev/lab-examples/srl-crpd/
+name: srlcrpd01
+topology:
+  nodes:
+    crpd:
+      kind: crpd
+      image: crpd:20.2R1.10
+    srl:
+      kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
+
+  links:
+    - endpoints: ["srl:e1-1", "crpd:eth1"]

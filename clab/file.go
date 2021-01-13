@@ -138,6 +138,8 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 	defer c.m.RUnlock()
 
 	// create node directory in the lab directory
+	// skip creation of node directory for linux/bridge kinds
+	// since they don't keep any state normally
 	if node.Kind != "linux" && node.Kind != "bridge" {
 		CreateDirectory(node.LabDir, 0777)
 	}
@@ -163,6 +165,8 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 		}
 
 		// generate a config file if the destination does not exist
+		// if the node has a `config:` statement, the file specified in that section
+		// will be used as a template in nodeGenerateConfig()
 		CreateDirectory(path.Join(node.LabDir, "config"), 0777)
 		dst = path.Join(node.LabDir, "config", "config.json")
 		if !fileExists(dst) {
@@ -197,6 +201,41 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 		} else {
 			log.Debugf("Config file exists for node %s", node.ShortName)
 		}
+
+	case "crpd":
+		// create config and logs directory that will be bind mounted to crpd
+		CreateDirectory(path.Join(node.LabDir, "config"), 0777)
+		CreateDirectory(path.Join(node.LabDir, "log"), 0777)
+
+		// copy crpd config from default template or user-provided conf file
+		cfg := path.Join(node.LabDir, "/config/juniper.conf")
+		if !fileExists(cfg) {
+			err = node.generateConfig(cfg)
+			if err != nil {
+				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+			}
+		} else {
+			log.Debugf("Config file exists for node %s", node.ShortName)
+		}
+		// copy crpd sshd conf file to crpd node dir
+		src := "/etc/containerlab/templates/crpd/sshd_config"
+		dst := node.LabDir + "/config/sshd_config"
+		err = copyFile(src, dst)
+		if err != nil {
+			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
+		}
+		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
+
+		if node.License != "" {
+			// copy license file to node specific lab directory
+			src = node.License
+			dst = path.Join(node.LabDir, "/config/license.conf")
+			if err = copyFile(src, dst); err != nil {
+				return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
+			}
+			log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+		}
+
 	case "bridge":
 	default:
 	}
