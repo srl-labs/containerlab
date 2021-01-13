@@ -15,7 +15,7 @@ import (
 
 var saveCommand = map[string][]string{
 	"srl":  {"sr_cli", "-d", "tools", "system", "configuration", "generate-checkpoint"},
-	"ceos": {""},
+	"ceos": {"Cli", "-p", "15", "-c", "copy running flash:conf-saved.conf"},
 	"crpd": {"cli", "show", "conf"},
 }
 
@@ -73,6 +73,7 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 						confPath := cont.Labels["clab-node-dir"] + "/config/checkpoint/checkpoint-0.json"
 						log.Infof("saved SR Linux configuration from %s node to %s\noutput:\n%s", strings.TrimLeft(cont.Names[0], "/"), confPath, string(stdout))
 					}
+
 				case kind == "crpd":
 					// path by which to save a config
 					confPath := cont.Labels["clab-node-dir"] + "/config/conf-saved.conf"
@@ -81,6 +82,11 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 						log.Errorf("failed to write config by %s path from %s container: %v", confPath, strings.TrimLeft(cont.Names[0], "/"), err)
 					}
 					log.Infof("saved cRPD configuration from %s node to %s", strings.TrimLeft(cont.Names[0], "/"), confPath)
+
+				case kind == "ceos":
+					// path by which a config was saved
+					confPath := cont.Labels["clab-node-dir"] + "/flash/conf-saved.conf"
+					log.Infof("saved cEOS configuration from %s node to %s", strings.TrimLeft(cont.Names[0], "/"), confPath)
 				}
 			}(cont)
 		}
