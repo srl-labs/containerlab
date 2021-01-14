@@ -165,6 +165,9 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if node.Group != "" {
 		labels["group"] = node.Group
 	}
+	if node.LabDir != "" {
+		labels["clab-node-dir"] = node.LabDir
+	}
 
 	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{
