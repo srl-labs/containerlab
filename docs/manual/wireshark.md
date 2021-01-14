@@ -16,7 +16,7 @@ Since containerlab leverages linux network devices, users are free to use whatev
 ## Packet capture, namespaces and interfaces
 Capturing the packets from an interface requires having that interface name and it's network namespace (netns). And that's it.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:2,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/containerlab.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlceos01.drawio&quot;}"></div>
 
 Keep in mind, that containers employ network isolation by the means of network namespaces. As depicted above, each container has its own network namespace which is named exactly the same. This makes it trivial to pinpoint which namespace to use.
 
