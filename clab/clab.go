@@ -2,6 +2,7 @@ package clab
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -104,7 +105,7 @@ func (c *CLab) CreateNode(ctx context.Context, node *Node, certs *certificates) 
 }
 
 // ExecPostDeployTasks executes tasks that some nodes might require to boot properly after start
-func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
+func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uint) error {
 	switch node.Kind {
 	case "ceos":
 		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
@@ -120,10 +121,40 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
 		if err != nil {
 			return err
 		}
+		// remove the netns symlink created during original start
+		// we will re-symlink it later
+		if err := deleteNetnsSymlink(node.LongName); err != nil {
+			return err
+		}
 		err = c.DockerClient.ContainerStart(ctx, node.ContainerID, types.ContainerStartOptions{})
 		if err != nil {
 			return err
 		}
+		// since container has been restarted, we need to get its new NSPath and link netns
+		cont, err := c.DockerClient.ContainerInspect(ctx, node.ContainerID)
+		if err != nil {
+			return err
+		}
+		log.Debugf("node %s new pid %v", node.LongName, cont.State.Pid)
+		node.NSPath = "/proc/" + strconv.Itoa(cont.State.Pid) + "/ns/net"
+		err = linkContainerNS(node.NSPath, node.LongName)
+		if err != nil {
+			return err
+		}
+		// now its time to create the links which has one end in ceos node
+		wg := new(sync.WaitGroup)
+		wg.Add(int(lworkers))
+		linksChan := make(chan *Link)
+		c.CreateLinks(ctx, lworkers, linksChan, wg)
+		for _, link := range c.Links {
+			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
+				linksChan <- link
+			}
+		}
+		// close channel to terminate the workers
+		close(linksChan)
+		// wait for all workers to finish
+		wg.Wait()
 	case "crpd":
 		// exec `service ssh restart` to start ssh service and take into account mounted sshd_config
 		execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("service ssh restart")}
@@ -155,4 +186,30 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node) error {
 
 	}
 	return nil
+}
+
+// CreateLinks creates links that are passed to it over linksChan using the number of workers
+func (c *CLab) CreateLinks(ctx context.Context, workers uint, linksChan chan *Link, wg *sync.WaitGroup) {
+	log.Debug("creating links...")
+	// wire the links between the nodes based on cabling plan
+	for i := uint(0); i < workers; i++ {
+		go func(i uint) {
+			defer wg.Done()
+			for {
+				select {
+				case link := <-linksChan:
+					if link == nil {
+						log.Debugf("Worker %d terminating...", i)
+						return
+					}
+					log.Debugf("Worker %d received link: %+v", i, link)
+					if err := c.CreateVirtualWiring(link); err != nil {
+						log.Error(err)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}(i)
+	}
 }
