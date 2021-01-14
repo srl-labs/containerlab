@@ -173,29 +173,14 @@ var deployCmd = &cobra.Command{
 		wg = new(sync.WaitGroup)
 		wg.Add(int(linksMaxWorkers))
 		linksChan := make(chan *clab.Link)
-		log.Debug("creating links...")
-		// wire the links between the nodes based on cabling plan
-		for i := uint(0); i < linksMaxWorkers; i++ {
-			go func(i uint) {
-				defer wg.Done()
-				for {
-					select {
-					case link := <-linksChan:
-						if link == nil {
-							log.Debugf("Worker %d terminating...", i)
-							return
-						}
-						log.Debugf("Worker %d received link: %+v", i, link)
-						if err := c.CreateVirtualWiring(link); err != nil {
-							log.Error(err)
-						}
-					case <-ctx.Done():
-						return
-					}
-				}
-			}(i)
-		}
+		c.CreateLinks(ctx, linksMaxWorkers, linksChan, wg)
 		for _, link := range c.Links {
+			// skip the links of ceos kind is on one end
+			// ceos containers need to be restarted, thus their data links
+			// will get recreated after post-deploy stage
+			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
+				continue
+			}
 			linksChan <- link
 		}
 		// close channel to terminate the workers
@@ -229,7 +214,7 @@ var deployCmd = &cobra.Command{
 		for _, node := range c.Nodes {
 			go func(node *clab.Node) {
 				defer wg.Done()
-				err := c.ExecPostDeployTasks(ctx, node)
+				err := c.ExecPostDeployTasks(ctx, node, linksMaxWorkers)
 				if err != nil {
 					log.Errorf("failed to run postdeploy task for node %s: %v", node.ShortName, err)
 				}
