@@ -409,14 +409,6 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.NodeType = nodeCfg.Type
 
-		node.Sysctls = make(map[string]string)
-		node.Sysctls["net.ipv4.ip_forward"] = "0"
-		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
-		node.Sysctls["net.ipv6.conf.all.accept_dad"] = "0"
-		node.Sysctls["net.ipv6.conf.default.accept_dad"] = "0"
-		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
-		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
-
 		// mount config dir
 		cfgPath := filepath.Join(node.LabDir, "flash")
 		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))

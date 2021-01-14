@@ -115,20 +115,18 @@ The generated config will be saved by the path `clab-<lab_name>/<node-name>/conf
 It is possible to make cRPD nodes to boot up with a user-defined config instead of a built-in one. With a [`config`](../nodes.md#config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
 
 ```yaml
-name: srl_lab
+name: crpd_lab
 topology:
   nodes:
-    srl1:
-      kind: srl
-      type: ixr6
-      license: lic.key
+    crpd:
+      kind: crpd
       config: myconfig.conf
 ```
 
 With such topology file containerlab is instructed to take a file `myconfig.conf` from the current working directory, copy it to the lab directory for that specific node under the `/config/juniper.conf` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
 
 #### Saving configuration
-Saving configuration with `containerlab save` command is not yet supported for cRPD nodes. Saving configuration via CLI command is still possible, of course.
+With [`containerlab save`](../../cmd/save.md) command it's possible to save running cEOS configuration into a file. The configuration will be saved by `conf-saved.conf` path in the relevant node directory.
 
 ### License
 cRPD containers require a license file to have some features to be activated. With a [`license`](../nodes.md#license) directive it's possible to provide a path to a license file that will be copied over to the nodes configuration directory by the `/config/license.conf` path.
@@ -162,3 +160,8 @@ clab-crpd/crpd
 
 4 directories, 9 files
 ```
+
+## Lab examples
+The following labs feature cRPD node:
+
+- [SR Linux and cRPD](../../lab-examples/srl-crpd.md)
