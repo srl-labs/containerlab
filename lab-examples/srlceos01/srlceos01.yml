@@ -5,12 +5,11 @@ topology:
   nodes:
     srl:
       kind: srl
-      type: ixrd2
-      image: srlinux
+      image: srlinux:20.6.3-145
       license: license.key
     ceos:
       kind: ceos
-      image: ceos
+      image: ceos:4.25.0F
 
   links:
     - endpoints: ["srl:e1-1", "ceos:eth1"]
