@@ -15,7 +15,6 @@ A lab consists of an SR Linux node connected with Juniper cRPD via a point-to-po
 ## Use cases
 This lab allows users to launch basic interoperability scenarios between Nokia SR Linux and Juniper cRPD network operating systems.
 
-Below you will find configuration instructions to setup IS-IS routing protocol on both nodes and verify the successful control and data plane operation.
 ### OSPF
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:2,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlcrpd01&quot;}"></div>
 
