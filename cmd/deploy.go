@@ -61,13 +61,12 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 		if reconfigure {
-			log.Infof("Removing %s directory...", c.Dir.Lab)
-			err = os.RemoveAll(c.Dir.Lab)
 			if err != nil {
 				return err
 			}
 			destroyLab(ctx, c)
-
+			log.Infof("Removing %s directory...", c.Dir.Lab)
+			err = os.RemoveAll(c.Dir.Lab)
 		}
 		if err = c.VerifyBridgesExist(); err != nil {
 			return err
