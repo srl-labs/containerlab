@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2021-01-19T19:46:13.070Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36" etag="8OyKSwoCLv-3dGJmHS4p" version="14.2.5" type="github" pages="2">
+<mxfile host="app.diagrams.net" modified="2021-01-19T19:48:31.490Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36" etag="JwUw5ryPMbMe5vPqFX9q" version="14.2.5" type="github" pages="2">
   <diagram id="IwGoDYMSzOG72_LcMlLt" name="[0] lab topo">
     <mxGraphModel dx="977" dy="547" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
@@ -49,8 +49,8 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="R_7rHsUDPeeVJnZ3GjBs-8" value="&lt;font&gt;container&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" vertex="1" parent="1">
-          <mxGeometry x="349" y="424" width="73" height="22" as="geometry" />
+        <mxCell id="R_7rHsUDPeeVJnZ3GjBs-8" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;container&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="358" y="424" width="56" height="17" as="geometry" />
         </mxCell>
         <mxCell id="R_7rHsUDPeeVJnZ3GjBs-9" value="" style="endArrow=none;html=1;shadow=0;strokeWidth=4;fillColor=#666666;fontFamily=nasa;fontSize=18;fontColor=#FFFFFF;strokeColor=#98A2AE;" edge="1" parent="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
@@ -109,8 +109,8 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="R_7rHsUDPeeVJnZ3GjBs-19" value="&lt;font&gt;container&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" vertex="1" parent="1">
-          <mxGeometry x="484" y="424" width="73" height="22" as="geometry" />
+        <mxCell id="R_7rHsUDPeeVJnZ3GjBs-19" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;container&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="493" y="424" width="56" height="17" as="geometry" />
         </mxCell>
         <mxCell id="R_7rHsUDPeeVJnZ3GjBs-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Manrope;fontSize=12;fontColor=#FFFFFF;endArrow=oval;endFill=1;startArrow=oval;startFill=1;strokeColor=#98A2AE;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
@@ -118,8 +118,8 @@
             <mxPoint x="519.7600000000002" y="375" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="R_7rHsUDPeeVJnZ3GjBs-28" value="&lt;font&gt;VM&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" vertex="1" parent="1">
-          <mxGeometry x="437" y="201" width="31" height="22" as="geometry" />
+        <mxCell id="R_7rHsUDPeeVJnZ3GjBs-28" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;VM&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="440" y="204" width="25" height="17" as="geometry" />
         </mxCell>
         <mxCell id="R_7rHsUDPeeVJnZ3GjBs-30" value="&lt;span style=&quot;font-size: 12px&quot;&gt;Linux bridge&lt;/span&gt;" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Manrope;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="281" y="327" width="78" height="17" as="geometry" />
@@ -171,6 +171,9 @@
             <mxPoint x="395" y="345" as="sourcePoint" />
             <mxPoint x="455" y="335" as="targetPoint" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="R_7rHsUDPeeVJnZ3GjBs-32" value="&lt;font&gt;Using bridge kind to add VM-based products to a topology&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="252" y="458" width="383" height="22" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
