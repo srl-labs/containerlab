@@ -23,6 +23,7 @@ const (
 	dockerNetIPv6Addr = "2001:172:20:20::/80"
 	dockerNetMTU      = "1450"
 	srlDefaultType    = "ixr6"
+	vrsrosDefaultType = "sr-1"
 )
 
 // supported kinds
@@ -255,6 +256,9 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	switch kind {
 	case "srl":
 		return srlDefaultType
+
+	case "vr-sros":
+		return vrsrosDefaultType
 	}
 	return ""
 }
@@ -498,6 +502,38 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "log"), ":/var/log"))
 		// mount sshd_config
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
+
+	case "vr-sros":
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.User = user
+
+		// vr-sros types set the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
+		node.NodeType = c.typeInit(&nodeCfg, node.Kind)
+
+		// initialize license file
+		lp, err := c.licenseInit(&nodeCfg, node)
+		if err != nil {
+			return err
+		}
+		lp, err = resolvePath(lp)
+		if err != nil {
+			return err
+		}
+		node.License = lp
+
+		// env vars are used to set launch.py arguments in vrnetlab container
+		defEnv := map[string]string{
+			"NUM_NICS":        "5",
+			"CONNECTION_MODE": "bridge"}
+		node.Env = mergeStringMaps(defEnv, envs)
+
+		// mount tftpboot dir
+		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "tftpboot"), ":/tftpboot"))
+
+		node.Cmd = fmt.Sprintf("--num-nics %s --connection-mode %s --hostname %s --variant %s", node.Env["NUM_NICS"], node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
 
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
