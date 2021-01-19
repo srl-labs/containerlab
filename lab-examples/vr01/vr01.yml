@@ -1,0 +1,16 @@
+name: vr01
+
+topology:
+  nodes:
+    srl:
+      kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
+    sros:
+      kind: vr-sros
+      image: vr-sros:20.10.R1
+      type: sr-1
+      license: license-sros20.txt
+
+  links:
+    - endpoints: ["srl:e1-1", "sros:eth1"]
