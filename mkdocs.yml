@@ -11,9 +11,11 @@ nav:
           - srl - Nokia SR Linux: manual/kinds/srl.md
           - crpd - Juniper cRPD: manual/kinds/crpd.md
           - ceos - Arista cEOS: manual/kinds/ceos.md
+          - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
+      - VM based routers integration: manual/vrnetlab.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
@@ -31,6 +33,7 @@ nav:
       - Nokia SR Linux and Juniper cRPD: lab-examples/srl-crpd.md
       - External bridge capability: lab-examples/ext-bridge.md
       - WAN topology: lab-examples/wan.md
+      - SR Linux and Nokia SR OS: lab-examples/vr-sros.md
 
 site_author: Roman Dodin
 site_description: >-
