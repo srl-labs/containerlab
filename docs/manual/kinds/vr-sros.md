@@ -5,6 +5,11 @@
 vr-sros nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## Managing vr-sros nodes
+
+!!!note
+    Containers with SR OS inside will take ~3min to fully boot.  
+    You can monitor the progress with `watch docker ps` waiting till the status will change to `healthy`.
+
 Nokia SR OS node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
