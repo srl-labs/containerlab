@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2021-01-20T09:56:59.767Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36" etag="OydKSSi2okqrPMIAjaNe" version="14.2.5" type="github" pages="3">
+<mxfile host="app.diagrams.net" modified="2021-01-21T08:59:52.183Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36" etag="T25IFQK7zuhRdpwd1mfc" version="14.2.5" type="github" pages="3">
   <diagram id="IwGoDYMSzOG72_LcMlLt" name="[0] bridge">
     <mxGraphModel dx="2052" dy="1149" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
@@ -179,7 +179,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="[1] vrnetlab" id="ERHm4omkb7seleAT47LG">
-    <mxGraphModel dx="2052" dy="1149" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
+    <mxGraphModel dx="1173" dy="657" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="TkcjntRwO2dvcu2u7_sm-0" />
         <mxCell id="TkcjntRwO2dvcu2u7_sm-1" parent="TkcjntRwO2dvcu2u7_sm-0" />
@@ -331,7 +331,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="TkcjntRwO2dvcu2u7_sm-30" value="Vrnetlab puts VMs inside containers&amp;nbsp;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" parent="TkcjntRwO2dvcu2u7_sm-1" vertex="1">
-          <mxGeometry x="326" y="458" width="245" height="22" as="geometry" />
+          <mxGeometry x="361" y="464" width="245" height="22" as="geometry" />
         </mxCell>
         <mxCell id="TkcjntRwO2dvcu2u7_sm-11" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Manrope;fontSize=12;fontColor=#FFFFFF;endArrow=oval;endFill=1;startArrow=oval;startFill=1;strokeColor=#98A2AE;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" parent="TkcjntRwO2dvcu2u7_sm-1" source="TkcjntRwO2dvcu2u7_sm-24" target="TkcjntRwO2dvcu2u7_sm-4" edge="1">
           <mxGeometry relative="1" as="geometry">
@@ -362,7 +362,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="[2] docker ux" id="VEvRKLfo7zoAhyE10KFq">
-    <mxGraphModel dx="977" dy="520" grid="0" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
+    <mxGraphModel dx="977" dy="547" grid="0" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="dT_LzbfVHICbEvJNRPNC-0" />
         <mxCell id="dT_LzbfVHICbEvJNRPNC-1" parent="dT_LzbfVHICbEvJNRPNC-0" />
