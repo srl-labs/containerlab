@@ -9,8 +9,6 @@ topology:
     vmx:
       kind: vr-vmx
       image: vrnetlab/vr-vmx:20.2R1.10
-      env:
-        CONNECTION_MODE: vrxcon
 
   links:
     - endpoints: ["srl:e1-1", "vmx:eth1"]
