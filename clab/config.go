@@ -535,6 +535,22 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		node.Cmd = fmt.Sprintf("--num-nics %s --connection-mode %s --hostname %s --variant %s", node.Env["NUM_NICS"], node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
 
+	case "vr-vmx":
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.User = user
+
+		// env vars are used to set launch.py arguments in vrnetlab container
+		defEnv := map[string]string{
+			"USERNAME":        "admin",
+			"PASSWORD":        "admin@123",
+			"CONNECTION_MODE": "bridge",
+		}
+		node.Env = mergeStringMaps(defEnv, envs)
+
+		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
+
 	case "alpine", "linux":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
