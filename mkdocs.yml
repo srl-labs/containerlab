@@ -13,6 +13,7 @@ nav:
           - ceos - Arista cEOS: manual/kinds/ceos.md
           - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
+          - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
@@ -36,6 +37,7 @@ nav:
       - WAN topology: lab-examples/wan.md
       - SR Linux and Nokia SR OS: lab-examples/vr-sros.md
       - SR Linux and Juniper vMX: lab-examples/vr-vmx.md
+      - SR Linux and Cisco XRv: lab-examples/vr-xrv.md
 
 site_author: Roman Dodin
 site_description: >-

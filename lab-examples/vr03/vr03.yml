@@ -1,0 +1,14 @@
+name: vr03
+
+topology:
+  nodes:
+    srl:
+      kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
+    xrv:
+      kind: vr-xrv
+      image: vrnetlab/vr-xrv:6.1.2
+
+  links:
+    - endpoints: ["srl:e1-1", "xrv:eth1"]
