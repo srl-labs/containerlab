@@ -12,6 +12,7 @@ nav:
           - crpd - Juniper cRPD: manual/kinds/crpd.md
           - ceos - Arista cEOS: manual/kinds/ceos.md
           - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
+          - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
@@ -34,6 +35,7 @@ nav:
       - External bridge capability: lab-examples/ext-bridge.md
       - WAN topology: lab-examples/wan.md
       - SR Linux and Nokia SR OS: lab-examples/vr-sros.md
+      - SR Linux and Juniper vMX: lab-examples/vr-vmx.md
 
 site_author: Roman Dodin
 site_description: >-
@@ -76,6 +78,8 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/hellt
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/ntdvps
 
 # Extensions
 markdown_extensions:
