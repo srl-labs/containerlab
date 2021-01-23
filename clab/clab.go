@@ -184,6 +184,28 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 		})
 		return err
 
+	case "sonic-vs":
+		log.Debugf("Running postdeploy actions for sonic-vs '%s' node", node.ShortName)
+		// exec `supervisord` to start sonic services
+		execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("supervisord")}
+		respID, err := c.DockerClient.ContainerExecCreate(context.Background(), node.ContainerID, execConfig)
+		if err != nil {
+			return err
+		}
+		_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
+		if err != nil {
+			return err
+		}
+		// exec `/usr/lib/frr/bgpd` to start BGP service
+		execConfig = types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("/usr/lib/frr/bgpd")}
+		respID, err = c.DockerClient.ContainerExecCreate(context.Background(), node.ContainerID, execConfig)
+		if err != nil {
+			return err
+		}
+		_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
