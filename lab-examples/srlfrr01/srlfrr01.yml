@@ -1,0 +1,14 @@
+name: srlfrr01
+
+topology:
+  nodes:
+    srl:
+      kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
+    frr:
+      kind: linux
+      image: frrouting/frr:latest
+
+  links:
+    - endpoints: ["srl:e1-1", "frr:eth1"]
