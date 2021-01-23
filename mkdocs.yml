@@ -11,6 +11,7 @@ nav:
           - srl - Nokia SR Linux: manual/kinds/srl.md
           - crpd - Juniper cRPD: manual/kinds/crpd.md
           - ceos - Arista cEOS: manual/kinds/ceos.md
+          - sonic-vs - SONiC: manual/kinds/sonic-vs.md
           - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
@@ -33,6 +34,7 @@ nav:
       - 5-stage CLOS: lab-examples/min-5clos.md
       - Nokia SR Linux and Arista cEOS: lab-examples/srl-ceos.md
       - Nokia SR Linux and Juniper cRPD: lab-examples/srl-crpd.md
+      - Nokia SR Linux and SONiC: lab-examples/srl-sonic.md
       - External bridge capability: lab-examples/ext-bridge.md
       - WAN topology: lab-examples/wan.md
       - SR Linux and Nokia SR OS: lab-examples/vr-sros.md

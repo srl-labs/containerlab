@@ -27,7 +27,7 @@ const (
 )
 
 // supported kinds
-var kinds = []string{"srl", "ceos", "crpd", "vr-sros", "vr-vmx", "vr-xrv", "linux", "bridge"}
+var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "linux", "bridge"}
 
 var defaultConfigTemplates = map[string]string{
 	"srl":  "/etc/containerlab/templates/srl/srlconfig.tpl",
@@ -110,6 +110,7 @@ type Node struct {
 	Topology             string
 	Sysctls              map[string]string
 	User                 string
+	Entrypoint           string
 	Cmd                  string
 	Env                  map[string]string
 	Binds                []string    // Bind mounts strings (src:dest:options)
@@ -502,6 +503,16 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "log"), ":/var/log"))
 		// mount sshd_config
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
+
+	case "sonic-vs":
+		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.User = user
+
+		// rewrite entrypoint so sonic won't start supervisord before we attach veth interfaces
+		node.Entrypoint = "/bin/bash"
 
 	case "vr-sros":
 		node.Config = c.configInitialization(&nodeCfg, node.Kind)
