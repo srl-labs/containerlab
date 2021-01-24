@@ -9,6 +9,8 @@ topology:
     frr:
       kind: linux
       image: frrouting/frr:latest
+      binds:
+        - daemons:/etc/frr/daemons
 
   links:
     - endpoints: ["srl:e1-1", "frr:eth1"]
