@@ -2,7 +2,7 @@
 
 ### Description
 
-The `graph` command generates graphical representaitons of the deployed topology.
+The `graph` command generates graphical representations of the topology.
 
 Two graphing options are available:
 
@@ -11,43 +11,46 @@ Two graphing options are available:
 
 #### HTML
 
-The HTML based graph is created by rendering a [Go HTML](https://golang.org/pkg/html/template/) template against a `struct` containing the topology name as well as a `json` string where 2 lists are present: `nodes` and `links` .
+The HTML based graph is the default graphing option. The topology will be graphed and served online using the embedded web server.
+
+The graph is created by rendering a [Go HTML](https://golang.org/pkg/html/template/) template against a data structure containing the topology name as well as a `json` string where 2 lists are present: `nodes` and `links` .
 
 `nodes` contains data about the lab nodes, such as name, kind, type, image, state, IP addresses,...
 
 `links` contains the list of links defined by source node and target node, as well as the endpoint names
 
-```json
-{
-  "nodes": [
+???info "example of the json string"
+    ```json
     {
-      "name": "node1-1",
-      "image": "srlinux:20.6.1-286",
-      "kind": "srl",
-      "group": "tier-1",
-      "state": "running/Up 21 seconds",
-      "ipv4_address": "172.23.23.3/24",
-      "ipv6_address": "2001:172:23:23::3/80"
-    },
-    // omitted rest of nodes
-  ],
-  "links": [
-    {
-      "source": "node1-2",
-      "source_endpoint": "e1-1",
-      "target": "node2-1",
-      "target_endpoint": "e1-2"
-    },
-    {
-      "source": "node2-1",
-      "source_endpoint": "e1-4",
-      "target": "node3-1",
-      "target_endpoint": "e1-1"
-    },
-    // omitted rest of links 
-  ]
-}
-```
+      "nodes": [
+        {
+          "name": "node1-1",
+          "image": "srlinux:20.6.1-286",
+          "kind": "srl",
+          "group": "tier-1",
+          "state": "running/Up 21 seconds",
+          "ipv4_address": "172.23.23.3/24",
+          "ipv6_address": "2001:172:23:23::3/80"
+        },
+        // omitted rest of nodes
+      ],
+      "links": [
+        {
+          "source": "node1-2",
+          "source_endpoint": "e1-1",
+          "target": "node2-1",
+          "target_endpoint": "e1-2"
+        },
+        {
+          "source": "node2-1",
+          "source_endpoint": "e1-4",
+          "target": "node3-1",
+          "target_endpoint": "e1-1"
+        },
+        // the rest is omitted
+      ]
+    }
+    ```
 
 Within the template, Javascript libraries such as [**d3js directed force graph**](https://observablehq.com/collection/@d3/d3-force) or [**vis.js network**](https://visjs.github.io/vis-network/docs/network/) can be used to generate custom topology graphs.
 
@@ -63,19 +66,25 @@ When `graph` command is called without the `--srv` flag, containerlab will gener
 
 The dot file can be used to view the graphical representation of the topology either by rendering the dot file into a PNG file or using [online dot viewer](https://dreampuf.github.io/GraphvizOnline/).
 
+### Online vs offline graphing
+When HTML graph option is used, containerlab will try to build the topology graph by inspecting the running containers which are part of the lab. This essentially means, that the lab must be running. Although this method provides some additional details (like IP addresses), it is not always convenient to run a lab to see its graph.
+
+The other option is to use the topology file solely to build the graph. This is done by adding `--offline` flag.
+
+If `--offline` flag was not provided and no containers were found matching the lab name, containerlab will use the topo file only (as if offline mode was set).
 ### Usage
 
 `containerlab [global-flags] graph [local-flags]`
 
 ### Flags
 
-#### name
+#### topology
 
-With the global `--name | -n` flag a user sets the name of the lab that will be graphed.
+With the global `--topo | -t` flag a user sets the path to the topology file that will be used to get the .
 
 #### srv
 
-The `--srv` flag enables the HTML graph representation if present, it specifies an address a HTTP server will listen to.
+The `--srv` flag allows a user to customize the HTTP address and port for the web server. Default value is `:50080`.
 
 A single path `/` is served, where the graph is generated based on either a default template or on the template supplied using `--template`.
 
@@ -83,16 +92,16 @@ A single path `/` is served, where the graph is generated based on either a defa
 
 The `--template` flag allows to customize the HTML based graph by supplying a user defined template that will be rendered and exposed on the address specified by `--srv`.
 
+#### dot
+With `--dot` flag provided containerlab will generate the `dot` file instead of serving the topology with embedded HTTP server.
 
 ### Examples
 
 ```bash
 
-# generate a graph description file in dot format for topo1 topology
+# render a graph from running lab or topo file if lab is not running#
+# using HTML graph option with default server address :50080
 containerlab graph --topo /path/to/topo1.yaml
-
-# start an http server on :3002 where topo1 graph will be rendered using the default template
-containerlab graph --topo /path/to/topo1.yaml --srv ":3002"
 
 # start an http server on :3002 where topo1 graph will be rendered using a custom template my_template.html
 containerlab graph --topo /path/to/topo1.yaml --srv ":3002" --template my_template.html
