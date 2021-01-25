@@ -1,5 +1,5 @@
 # About lab examples
-<center><div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="{&quot;page&quot;:4,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/containerlab.drawio&quot;}"></div></center>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:4,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/containerlab.drawio&quot;}"></div>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
 `containerlab` aims to provide a simple, intuitive and yet customizable way to run container based labs. To help our users to have a running and functional lab as quickly as possible, we ship some essential lab topologies within the `containerlab` package.
@@ -7,11 +7,11 @@
 These lab examples are meant to be used as-is or as a base layer to a more customized or elaborated lab scenarios. Once `containerlab` is installed, you will find the lab examples directories by the `/etc/containerlab/lab-examples` path.  Copy those directories over to your working directory to start using the provided labs.
 
 !!!note "Container images versions"
-    The provided lab examples use the images without a tag, i.e. `image: srlinux`. This means that the image with a `latest` tag must exist. A user needs to tag the image themselves if the `latest` tag is missing.
+    Some lab examples may use the images without a tag, i.e. `image: srlinux`. This means that the image with a `latest` tag must exist. A user needs to tag the image themselves if the `latest` tag is missing.
 
     For example: `docker tag srlinux:20.6.1-286 srlinux:latest`
 
-The source code of the lab examples is contained within the [containerlab repo](https://github.com/srl-wim/container-lab/tree/master/lab-examples); any questions, issues or contributions related to the provided examples can be addressed via [Github issues](https://github.com/srl-wim/container-lab/issues).
+The source code of the lab examples is contained within the [containerlab repo](https://github.com/srl-wim/container-lab/tree/master/lab-examples) unless mentioned otherwise; any questions, issues or contributions related to the provided examples can be addressed via [Github issues](https://github.com/srl-wim/container-lab/issues).
 
 Each lab comes with a definitive description that can be found in this documentation section.
 
@@ -26,7 +26,10 @@ First, you need to copy the lab catalog to your working directory, to ensure tha
 cp -a /etc/containerlab/lab-examples/* .
 ```
 
-as a result of this command you will get several dire
+as a result of this command you will get several directories copied to the current working directory.
+
+!!!note Labs stored outside of containerlab
+    Big labs or community provided labs are typically stored in a separate git repository. To fetch those labs you will need to clone the lab' repo instead of copying the directories from `/etc/containerlab/lab-examples`.
 
 #### Get the lab name
 Every lab in the catalog has a unique short name. For example [this lab](two-srls.md) states in the summary table its name is `srl02`. You will find a folder matching this name in your working directory, change into it:
