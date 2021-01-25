@@ -27,7 +27,7 @@ nfpms:
     maintainer: Wim Henderickx <wim.henderickx@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>, Roman Dodin <dodin.roman@gmail.com>
     homepage: https://containerlab.srlinux.dev
     description: |
-      containerlab written in go
+      containerlab deploys containerized networking topologies
     vendor: Nokia
     license: GNU GPLv3
     formats:
