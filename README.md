@@ -58,5 +58,14 @@ And, of course, containerlab is perfectly capable of wiring up arbitrary linux c
 * **Lab catalog**  
    The "most-wanted" lab topologies are [documented and included](https://containerlab.srlinux.dev/lab-examples/lab-examples/) with containerlab installation. Based on this cherry-picked selection you can start crafting the labs answering your needs.
 
+## Use cases
+* **Labs and Demos**  
+    Containerlab was meant to be a tool for provisioning networking labs built with containers. It is free, open and ubiquitous. No software apart from Docker is required!  
+    As with any lab environment it allows the users to validate features, topologies, perform interop testing, datapath testing, etc.  
+    It is also a perfect companion for your next demo. Deploy the lab fast, with all its configuration stored as a code -> destroy when done. If needed, repeat.
+* **Testing and CI**  
+    Because of the containerlab's single-binary packaging and code-based lab definition files, it was never that easy to spin up a test bed for CI.
+* **Telemetry validation**
+    By coupling with modern telemetry stacks containerlab labs make a perfect fit for Telemetry use cases validation. Spin up a lab with containerized network functions with a telemetry on the side, and validate/demonstrate comprehensive telemetry use cases.
 
 Containerlab documentation is provided at https://containerlab.srlinux.dev.
