@@ -167,4 +167,4 @@ containerlab destroy --topo srl02.yml
 ## What next?
 To get a broader view on the containerlab features and components, refer to the **User manual** section.
 
-Do not forget to check out the **Lab examples** section where we provide complete and ready-to-run topology definition files. This is a great starting point to explore containerlab by doing.
+Do not forget to check out the [Lab examples](lab-examples/lab-examples.md) section where we provide complete and ready-to-run topology definition files. This is a great starting point to explore containerlab by doing.
