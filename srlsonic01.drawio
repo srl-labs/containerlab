@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2021-01-24T20:41:34.612Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36" etag="FDIEVG4WM8O7q512EQ8-" version="14.2.7" type="github" pages="4">
+<mxfile host="app.diagrams.net" modified="2021-01-25T08:33:24.893Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36" etag="O4qx2l3xxZ_Vyyt0uU2k" version="14.2.7" type="github" pages="4">
   <diagram id="IwGoDYMSzOG72_LcMlLt" name="[0] lab topo">
-    <mxGraphModel dx="1173" dy="657" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
+    <mxGraphModel dx="2052" dy="1149" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -248,7 +248,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="[1] bgp" id="VE4x6YazyZ2CrUnz0_BO">
-    <mxGraphModel dx="684" dy="383" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
+    <mxGraphModel dx="2052" dy="1149" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="YSi4LTzmmD1kewjckfzm-0" />
         <mxCell id="YSi4LTzmmD1kewjckfzm-1" parent="YSi4LTzmmD1kewjckfzm-0" />
