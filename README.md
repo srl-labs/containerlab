@@ -10,29 +10,45 @@
 
 ## Description
 
-Containerlab provides a framework for setting up networking labs with containers. It starts the containers and builds a virtual wiring between them to create lab topologies of users choice.
+With the growing number of containerized Network Operating Systems grows the demand to easily run them in the user-defined, versatile lab topologies.
 
-![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/8244ceb188abd3831e3715c42d4fa38f/image.png)
+Unfortunately, container orchestration tools like docker/podman/etc are not a good fit for that purpose, as they do not allow a user to easily create p2p connections between the containers.
+
+Containerlab provides a framework for orchestrating networking labs with containers. It starts the containers, builds a virtual wiring between them to create lab topologies of users choice and manages labs lifecycle.
+
+![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/01fcdc212ee1c7de70ef5d2a8d109044/image.png)
 Containerlab focuses on containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
 * [Nokia SR-Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/)
 * [Arista cEOS](https://www.arista.com/en/products/software-controlled-container-networking)
-* [SONiC](https://azure.github.io/SONiC/)
+* [Azure SONiC](https://azure.github.io/SONiC/)
 * [Juniper cRPD](https://www.juniper.net/documentation/en_US/crpd/topics/concept/understanding-crpd.html)
 
-But, of course, containerlab is perfectly capable of wiring up arbitrary containers which can host your network applications, virtual router or simply be a test client.
+In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](manual/vrnetlab.md):
+
+* Nokia virtual SR OS (vSim/VSR)
+* Juniper vMX
+* Cisco IOS XRv
+
+And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 
 <p align="center">
-<img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/e9222468fe580bc57a9ff2da03cca1cb/image.png" width="40%">
+<img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/bb8d9163f265dc827428097e6726d949/image.png" width="80%">
 </p>
 
 ## Features
 * **IaaC approach**  
     Declarative way of defining the labs by means of the [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/).
 * **Network Operating Systems centric**  
-    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.srlinux.dev/manual/kinds/) which allows the user to focus on the use cases, rather than infrastructure.
+    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.srlinux.dev/manual/kinds/kinds/) which allows the user to focus on the use cases, rather than infrastructure.
+* **Multi-vendor, multi-platform**  
+    With the [vrnetlab integration](https://containerlab.srlinux.dev/manual/vrnetlab) it is possible to get the best of two worlds - running virtualized and containerized nodes alike with the same IaaC approach and workflows.
+* **Lab orchestration**  
+    Starting the containers and interconnecting them alone is already good, but containerlab packages even more features like managing lab lifecycle: [deploy](https://containerlab.srlinux.dev/cmd/deploy), [destroy](https://containerlab.srlinux.dev/cmd/destroy), [save](https://containerlab.srlinux.dev/cmd/save), [inspect](https://containerlab.srlinux.dev/cmd/inspect), [graph](https://containerlab.srlinux.dev/cmd/graph) operations.
+* **Scaled labs generator**  
+    With [`generate`](https://containerlab.srlinux.dev/cmd/generate) command containerlab makes it possible to define/launch CLOS-based topologies of arbitrary scale. Just say how many tiers you need and how big each tier is, the rest will be done in a split second.
 * **Simplicity and convenience are keys**  
-    One-click [installation](https://containerlab.srlinux.dev/install/) and upgrade capabilities.
+    Starting from frictionless [installation](https://containerlab.srlinux.dev/install/) and [upgrade](https://containerlab.srlinux.dev/install#upgrade) capabilities and ranging to the behind-the-scenes [link wiring machinery](https://containerlab.srlinux.dev/manual/network), containerlab does its best for you to focus on the use cases, rather than infrastructure setup.
 * **Fast**  
     Blazing fast way to create container based labs on any Debian or RHEL system.
 * **Automated TLS certificates provisioning**  

@@ -38,7 +38,9 @@ And, of course, containerlab is perfectly capable of wiring up arbitrary linux c
 * **Multi-vendor, multi-platform**  
     With the [vrnetlab integration](manual/vrnetlab.md) it is possible to get the best of two worlds - running virtualized and containerized nodes alike with the same IaaC approach and workflows.
 * **Lab orchestration**  
-    Starting the containers and interconnecting them alone is already good, but containerlab packages even more features like managing lab lifecycle: [deploy](cmd/deploy.md), [destroy](cmd/destroy.md), [save](cmd/save.md), [graph](cmd/graph.md) operations.
+    Starting the containers and interconnecting them alone is already good, but containerlab packages even more features like managing lab lifecycle: [deploy](cmd/deploy.md), [destroy](cmd/destroy.md), [save](cmd/save.md), [inspect](cmd/inspect.md), [graph](cmd/graph.md) operations.
+* **Scaled labs generator**  
+    With [`generate`](cmd/generate.md) command containerlab makes it possible to define/launch CLOS-based topologies of arbitrary scale. Just say how many tiers you need and how big each tier is, the rest will be done in a split second.
 * **Simplicity and convenience are keys**  
     Starting from frictionless [installation](install.md) and [upgrade](install.md#upgrade) capabilities and ranging to the behind-the-scenes [link wiring machinery](manual/network.md), containerlab does its best for you to focus on the use cases, rather than infrastructure setup.
 * **Fast**  
