@@ -25,7 +25,10 @@ To make this work, vrnetlab provides a set of scripts that will build the contai
 #### Nokia SR OS
 Nokia's virtualized SR OS, aka VSR/VSim has been added to containerlab supported kinds under the [vr-sros](kinds/vr-sros.md) kind. A [demo lab](../lab-examples/vr-sros.md) explains the way this kind can be used.
 
-To build a container image with SR OS inside users should follow [the instructions](https://github.com/hellt/vrnetlab/tree/master/sros#building-the-docker-image) provided and using the code of the forked version of a vrnetlab project.
+To build a container image with SR OS inside users should follow [the provided build instructions](https://github.com/hellt/vrnetlab/tree/master/sros#building-the-docker-image) and using the code of the forked version of a vrnetlab project.
+
+!!!warning
+    When building SR OS vrnetlab image for use with containerlab, **do not** provide the license during the image build process. The license shall be provided in the containerlab topology definition file[^1].
 
 #### Juniper vMX
 Juniper's virtualized MX router - vMX - has been added to containerlab supported kinds under the [vr-vmx](kinds/vr-vmx.md) kind. A [demo lab](../lab-examples/vr-vmx.md) explains the way this kind can be used.
@@ -42,3 +45,5 @@ To build a container image with XRv inside users should follow [the instructions
 
 ### Limitations
 * LACP and BPDU packets can not be delivered to/from VM's running inside the containers when launched with containerlab.
+
+[^1]: see this example lab with a license path provided in the topology definition file
