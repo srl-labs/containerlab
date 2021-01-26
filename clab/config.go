@@ -449,11 +449,15 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		}
 
 		// initialize specifc container information
-		node.Cmd = "sudo bash -c /opt/srlinux/bin/sr_linux"
+		node.Cmd = "sudo sr_linux"
 
 		kindEnv := map[string]string{"SRLINUX": "1"}
 		node.Env = mergeStringMaps(kindEnv, envs)
 
+		// if user was not initialized to a value, use root
+		if user == "" {
+			user = "0:0"
+		}
 		node.User = user
 
 		node.Sysctls = make(map[string]string)
