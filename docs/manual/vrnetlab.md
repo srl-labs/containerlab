@@ -46,4 +46,4 @@ To build a container image with XRv inside users should follow [the instructions
 ### Limitations
 * LACP and BPDU packets can not be delivered to/from VM's running inside the containers when launched with containerlab.
 
-[^1]: see this example lab with a license path provided in the topology definition file
+[^1]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
