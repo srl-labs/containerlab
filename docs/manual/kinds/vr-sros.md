@@ -54,6 +54,20 @@ Data interfaces `eth1+` needs to be configured with IP addressing manually using
 ### Node configuration
 vr-sros nodes come up with a basic "blank" configuration where only the card/mda are provisioned, as well as the management interfaces such as Netconf, SNMP, gNMI.
 
+#### User defined config
+It is possible to make SR OS nodes to boot up with a user-defined config instead of a built-in one. With a [`config`](../nodes.md#config) property of the node/kind a user sets the path to the config file that will be mounted to a container and used as a startup config:
+
+```yaml
+name: sros_lab
+topology:
+  nodes:
+    sros:
+      kind: vr-sros
+      config: myconfig.txt
+```
+
+With such topology file containerlab is instructed to take a file `myconfig.txt` from the current working directory, copy it to the lab directory for that specific node under the `/tftpboot/config.txt` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
+
 ### License
 Path to a valid license must be provided for all vr-sros nodes with a [`license`](../nodes.md#license) directive.
 
