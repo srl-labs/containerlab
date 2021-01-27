@@ -34,8 +34,11 @@ nfpms:
       - rpm
       - deb
     bindir: /usr/bin
-    files:
-      ./lab-examples/**/*: /etc/containerlab/lab-examples
-      ./templates/**/*: /etc/containerlab/templates
-    symlinks:
-      /usr/bin/clab: /usr/bin/containerlab
+    contents:
+      - src: ./lab-examples/**/*
+        dst: /etc/containerlab/lab-examples
+      - src: ./templates/**/*
+        dst: /etc/containerlab/templates
+      - src: /usr/bin/containerlab
+        dst: /usr/bin/clab
+        type: symlink
