@@ -247,6 +247,16 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 				return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 			}
 			log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+
+			cfg := path.Join(node.LabDir, "tftpboot", "config.txt")
+			if node.Config != "" {
+				err = node.generateConfig(cfg)
+				if err != nil {
+					log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+				}
+			} else {
+				log.Debugf("Config file exists for node %s", node.ShortName)
+			}
 		}
 	case "bridge":
 	default:

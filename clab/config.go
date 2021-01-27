@@ -30,9 +30,10 @@ const (
 var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "linux", "bridge"}
 
 var defaultConfigTemplates = map[string]string{
-	"srl":  "/etc/containerlab/templates/srl/srlconfig.tpl",
-	"ceos": "/etc/containerlab/templates/arista/ceos.cfg.tpl",
-	"crpd": "/etc/containerlab/templates/crpd/juniper.conf",
+	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
+	"ceos":    "/etc/containerlab/templates/arista/ceos.cfg.tpl",
+	"crpd":    "/etc/containerlab/templates/crpd/juniper.conf",
+	"vr-sros": "",
 }
 
 var srlTypes = map[string]string{
@@ -264,19 +265,17 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-func (c *CLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
-	if nodeCfg.Config != "" {
+func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) string {
+	switch {
+	case nodeCfg.Config != "":
 		return nodeCfg.Config
-	}
-	if kindConfig, ok := c.Config.Topology.Kinds[kind]; ok {
-		if kindConfig.Config != "" {
-			return kindConfig.Config
-		}
-	}
-	if c.Config.Topology.Defaults.Config != "" {
+	case c.Config.Topology.Kinds[kind].Config != "":
+		return c.Config.Topology.Kinds[kind].Config
+	case c.Config.Topology.Defaults.Config != "":
 		return c.Config.Topology.Defaults.Config
+	default:
+		return defaultConfigTemplates[kind]
 	}
-	return defaultConfigTemplates[kind]
 }
 
 func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -391,7 +390,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config = c.configInit(&nodeCfg, node.Kind)
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
@@ -420,7 +419,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config = c.configInit(&nodeCfg, node.Kind)
 
 		lp, err := c.licenseInit(&nodeCfg, node)
 		if err != nil {
@@ -485,7 +484,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "crpd":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config = c.configInit(&nodeCfg, node.Kind)
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -509,7 +508,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
 
 	case "sonic-vs":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config = c.configInit(&nodeCfg, node.Kind)
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -519,7 +518,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Entrypoint = "/bin/bash"
 
 	case "vr-sros":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config = c.configInit(&nodeCfg, node.Kind)
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -548,7 +547,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		// mount tftpboot dir
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "tftpboot"), ":/tftpboot"))
 
-		node.Cmd = fmt.Sprintf("--num-nics %s --connection-mode %s --hostname %s --variant %s", node.Env["NUM_NICS"], node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
+		node.Cmd = fmt.Sprintf("--trace --num-nics %s --connection-mode %s --hostname %s --variant %s", node.Env["NUM_NICS"], node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
 
 	case "vr-vmx":
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
@@ -583,7 +582,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
 
 	case "alpine", "linux":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config = c.configInit(&nodeCfg, node.Kind)
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
