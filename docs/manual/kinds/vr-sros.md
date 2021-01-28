@@ -45,6 +45,16 @@ vr-sros container uses the following mapping for its interfaces:
 * `eth1` - first data interface, mapped to first data port of SR OS line card
 * `eth2+` - second and subsequent data interface
 
+???warning "data interfaces need to be defined consequently"
+    Note, that data interfaces need to be defined in the topology file in a consequent fashion. Meaning that no gaps are allowed between the interfaces definition:
+    ```yaml
+    links:
+      - endpoints: ["srl:e1-1", "sros:eth1"]
+      # this is not allowed by vr-sros kind.
+      # if eth5 is needed, define eth2-4 as well
+      - endpoints: ["srl:e1-5", "sros:eth5"]
+    ```
+
 When containerlab launches vr-sros node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
 
 Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
