@@ -540,14 +540,13 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"NUM_NICS":        "5",
 			"CONNECTION_MODE": "bridge"}
 		node.Env = mergeStringMaps(defEnv, envs)
 
 		// mount tftpboot dir
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "tftpboot"), ":/tftpboot"))
 
-		node.Cmd = fmt.Sprintf("--trace --num-nics %s --connection-mode %s --hostname %s --variant %s", node.Env["NUM_NICS"], node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
+		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant %s", node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
 
 	case "vr-vmx":
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
