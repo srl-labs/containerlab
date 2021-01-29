@@ -34,6 +34,7 @@ Arista cEOS node launched with containerlab can be managed via the following int
     gnmic -a <container-name/node-mgmt-address>:6030 --insecure \
     -u admin -p admin \
     capabilities
+    ```
 
 !!!info
     Default user credentials: `admin:admin`
