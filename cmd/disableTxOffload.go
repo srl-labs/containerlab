@@ -43,7 +43,7 @@ var disableTxOffloadCmd = &cobra.Command{
 			// disabling offload on lo0 interface
 			err = clab.EthtoolTXOff("eth0")
 			if err != nil {
-				log.Infof("Failed to disable TX checksum offload for 'eth0' interface for '%s' container", c)
+				log.Infof("Failed to disable TX checksum offload for 'eth0' interface for '%s' container", cntName)
 			}
 			return nil
 		})
