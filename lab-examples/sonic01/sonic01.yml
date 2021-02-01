@@ -1,0 +1,14 @@
+name: sonic01
+
+topology:
+  nodes:
+    srl:
+      kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
+    sonic:
+      kind: sonic-vs
+      image: docker-sonic-vs:2020-11-12
+
+  links:
+    - endpoints: ["srl:e1-1", "sonic:eth1"]
