@@ -24,7 +24,7 @@ Cisco XRv9k node launched with containerlab can be managed via the following int
 === "NETCONF"
     NETCONF server is running over port 830
     ```bash
-    ssh admin@<container-name> -p 830 -s netconf
+    ssh clab@<container-name> -p 830 -s netconf
     ```
 === "gNMI"
     using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
@@ -56,7 +56,7 @@ vr-xrv9k nodes come up with a basic configuration where only the control plane a
 ## Lab examples
 The following labs feature vr-xrv9k node:
 
-- [SR Linux and Cisco XRv](../../lab-examples/vr-xrv9k.md)
+- [SR Linux and Cisco XRv9k](../../lab-examples/vr-xrv9k.md)
 
 ## Known issues and limitations
 * LACP and BPDU packets are not propagated to/from vrnetlab based routers launched with containerlab.
