@@ -27,7 +27,7 @@ const (
 )
 
 // supported kinds
-var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "linux", "bridge"}
+var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge"}
 
 var defaultConfigTemplates = map[string]string{
 	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
@@ -579,6 +579,24 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Env = mergeStringMaps(defEnv, envs)
 
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
+
+	case "vr-xrv9k":
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.User = user
+
+		// env vars are used to set launch.py arguments in vrnetlab container
+		defEnv := map[string]string{
+			"USERNAME":        "clab",
+			"PASSWORD":        "clab@123",
+			"CONNECTION_MODE": "bridge",
+			"VCPU":            "2",
+			"RAM":             "12288",
+		}
+		node.Env = mergeStringMaps(defEnv, envs)
+
+		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"], node.Env["VCPU"], node.Env["RAM"])
 
 	case "alpine", "linux":
 		node.Config = c.configInit(&nodeCfg, node.Kind)

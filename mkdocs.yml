@@ -14,6 +14,7 @@ nav:
           - sonic-vs - SONiC: manual/kinds/sonic-vs.md
           - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
+          - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
@@ -41,6 +42,7 @@ nav:
       - WAN topology: lab-examples/wan.md
       - Nokia SR Linux and Nokia SR OS: lab-examples/vr-sros.md
       - Nokia SR Linux and Juniper vMX: lab-examples/vr-vmx.md
+      - Nokia SR Linux and Cisco XRv9k: lab-examples/vr-xrv9k.md
       - Nokia SR Linux and Cisco XRv: lab-examples/vr-xrv.md
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
 

@@ -1,0 +1,14 @@
+name: vr04
+
+topology:
+  nodes:
+    srl:
+      kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
+    xrv9k:
+      kind: vr-xrv9k
+      image: vr-xrv:7.2.1 # do not forget to re-tag the image if needed
+
+  links:
+    - endpoints: ["srl:e1-1", "xrv9k:eth1"]
