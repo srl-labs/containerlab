@@ -1,8 +1,11 @@
 # Cisco XRv
 
-[Cisco XRv](https://www.juniper.net/us/en/products-services/routing/mx-series/XRv/) virtualized router is identified with `vr-xrv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+Cisco XRv virtualized router is identified with `vr-xrv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-xrv nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
+vr-xrv nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
+
+!!!warning
+    XRv image is discontinued by Cisco and supreceded by XRv 9000 image. It was added to containerlab because the image is lightweight, compared to XRv9k. If recent features are needed, use [vr-xrv9k](vr-xrv9k.md) kind.
 
 ## Managing vr-xrv nodes
 
@@ -20,12 +23,12 @@ Cisco XRv node launched with containerlab can be managed via the following inter
 === "CLI via SSH"
     to connect to the XRv CLI
     ```bash
-    ssh admin@<container-name/id>
+    ssh clab@<container-name/id>
     ```
 === "NETCONF"
     NETCONF server is running over port 830
     ```bash
-    ssh admin@<container-name> -p 830 -s netconf
+    ssh clab@<container-name> -p 830 -s netconf
     ```
 === "gNMI"
     using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:

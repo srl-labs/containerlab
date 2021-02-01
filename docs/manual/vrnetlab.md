@@ -33,12 +33,11 @@ Juniper's virtualized MX router - vMX - has been added to containerlab supported
 To build a container image with vMX inside users should follow [the instructions](https://github.com/hellt/vrnetlab/tree/master/vmx#building-the-docker-image) provided and using the code of the forked version of a vrnetlab project.
 
 #### Cisco XRv
-Cisco's virtualized XR router (demo) - XRv - has been added to containerlab supported kinds under the [vr-xrv](kinds/vr-xrv.md) kind. A [demo lab](../lab-examples/vr-xrv.md) explains the way this kind can be used.
+Cisco's virtualized XR router (demo) - XRv - has been added to containerlab supported kinds under the [vr-xrv9k](kinds/vr-xrv9k.md) and [vr-xrv](kinds/vr-xrv.md) kinds. The `xr-xrv` kind is added for XRv images which are supreceded by XRv9k images. The reason we keep `vr-xrv` is that it is much more lightweight and can be used for basic control plane interops on a resource constrained hosts.
 
-!!!note
-    `vr-xrv` kind is not suitable for XRv 9000 images.
+The [demo lab for xrv9k](../lab-examples/vr-xrv9k.md) and [demo lab for xrv](../lab-examples/vr-xrv.md) explain the way this kinds can be used.
 
-To build a container image with XRv inside users should follow [the instructions](https://github.com/hellt/vrnetlab/tree/master/xrv#building-the-docker-image) provided and using the code of the forked version of a vrnetlab project.
+To build a container image with XRv9k/XRv inside users should follow [the instructions](https://github.com/hellt/vrnetlab) provided in the relevant folders and using the code of the forked version of a vrnetlab project.
 
 ### Limitations
 * LACP and BPDU packets can not be delivered to/from VM's running inside the containers when launched with containerlab.
