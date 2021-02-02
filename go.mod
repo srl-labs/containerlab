@@ -15,7 +15,7 @@ require (
 	github.com/google/go-cmp v0.3.1
 	github.com/google/uuid v1.1.2
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/olekukonko/tablewriter v0.0.4
+	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
