@@ -168,6 +168,7 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if node.LabDir != "" {
 		labels["clab-node-dir"] = node.LabDir
 	}
+	labels["clab-topo-file"] = c.TopoFile.path
 
 	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{

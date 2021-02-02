@@ -17,6 +17,7 @@ import (
 
 // TopoFile type is a struct which defines parameters of the topology file
 type TopoFile struct {
+	path     string // topo file path
 	fullName string // file name with extension
 	name     string // file name without extension
 }
@@ -37,10 +38,16 @@ func (c *CLab) GetTopology(topo string) error {
 		return err
 	}
 
+	path, _ := filepath.Abs(topo)
+	if err != nil {
+		return err
+	}
+
 	s := strings.Split(topo, "/")
 	file := s[len(s)-1]
 	filename := strings.Split(file, ".")
 	c.TopoFile = &TopoFile{
+		path:     path,
 		fullName: file,
 		name:     filename[0],
 	}
