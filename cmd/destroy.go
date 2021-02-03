@@ -71,7 +71,7 @@ var destroyCmd = &cobra.Command{
 			for _, cont := range containers {
 				topos[cont.Labels["clab-topo-file"]] = struct{}{}
 			}
-			for topo, _ := range topos {
+			for topo := range topos {
 				opts := []clab.ClabOption{
 					clab.WithDebug(debug),
 					clab.WithTimeout(timeout),
