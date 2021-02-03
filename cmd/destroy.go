@@ -26,25 +26,79 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"des"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
-		if err = topoSet(); err != nil {
-			return err
-		}
-		opts := []clab.ClabOption{
-			clab.WithDebug(debug),
-			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
-			clab.WithEnvDockerClient(),
-			clab.WithGracefulShutdown(graceful),
-		}
-		c := clab.NewContainerLab(opts...)
-
+		var labs []*clab.CLab
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		// Parse topology information
-		if err = c.ParseTopology(); err != nil {
-			return err
+
+		switch {
+		case !all:
+			// stop if not topo file provided and not all labs are requested
+			// to be deleted
+			if err = topoSet(); err != nil {
+				return err
+			}
+			opts := []clab.ClabOption{
+				clab.WithDebug(debug),
+				clab.WithTimeout(timeout),
+				clab.WithTopoFile(topo),
+				clab.WithEnvDockerClient(),
+				clab.WithGracefulShutdown(graceful),
+			}
+			c := clab.NewContainerLab(opts...)
+
+			// Parse topology information
+			if err = c.ParseTopology(); err != nil {
+				return err
+			}
+			labs = append(labs, c)
+		case all:
+			opts := []clab.ClabOption{
+				clab.WithDebug(debug),
+				clab.WithTimeout(timeout),
+				clab.WithEnvDockerClient(),
+			}
+			c := clab.NewContainerLab(opts...)
+			// list all containerlab containers
+			containers, err := c.ListContainers(ctx, []string{"containerlab"})
+			if err != nil {
+				return fmt.Errorf("could not list containers: %v", err)
+			}
+			if len(containers) == 0 {
+				return fmt.Errorf("no containerlab labs were found")
+			}
+			// get unique topo files from all labs
+			topos := map[string]struct{}{}
+			for _, cont := range containers {
+				topos[cont.Labels["clab-topo-file"]] = struct{}{}
+			}
+			for topo := range topos {
+				opts := []clab.ClabOption{
+					clab.WithDebug(debug),
+					clab.WithTimeout(timeout),
+					clab.WithTopoFile(topo),
+					clab.WithEnvDockerClient(),
+					clab.WithGracefulShutdown(graceful),
+				}
+				c = clab.NewContainerLab(opts...)
+				// Parse topology information
+				if err = c.ParseTopology(); err != nil {
+					return err
+				}
+				labs = append(labs, c)
+			}
 		}
-		return destroyLab(ctx, c)
+		var errs []error
+		for _, clab := range labs {
+			err = destroyLab(ctx, clab)
+			if err != nil {
+				log.Errorf("Error occured during the %s lab deletion %v", clab.Config.Name, err)
+				errs = append(errs, err)
+			}
+		}
+		if len(errs) != 0 {
+			return fmt.Errorf("error(s) occured during the deletion. Check log messages")
+		}
+		return nil
 	},
 }
 
@@ -52,6 +106,7 @@ func init() {
 	rootCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
 	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
+	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
 }
 
 func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string) error {
