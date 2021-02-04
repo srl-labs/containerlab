@@ -179,7 +179,7 @@ func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeNam
 	table.AppendBulk(tabData)
 	table.Render()
 
-	if printMysocket == false {
+	if !printMysocket {
 		return
 	}
 	stdout, stderr, err := c.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})

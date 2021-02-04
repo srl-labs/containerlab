@@ -249,5 +249,5 @@ func disableTxOffload(n *Node) error {
 		}
 		return err
 	})
-	return nil
+	return err
 }
