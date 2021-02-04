@@ -20,6 +20,7 @@ nav:
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
+      - Share lab access: manual/shared-sockets.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md

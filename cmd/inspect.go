@@ -79,7 +79,7 @@ var inspectCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return
 		}
-		printContainerInspect(containers, c.Config.Mgmt.Network, format)
+		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
 	},
 }
 
@@ -103,8 +103,12 @@ func toTableData(det []containerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(containers []types.Container, bridgeName string, format string) {
+func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeName string, format string) {
 	contDetails := make([]containerDetails, 0, len(containers))
+	// do not print shared sockets unless mysocketio kind is found
+	printMysocket := false
+	var mysocketCID string
+
 	for _, cont := range containers {
 		// get topo file path relative of the cwd
 		cwd, _ := os.Getwd()
@@ -126,6 +130,10 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		}
 		if kind, ok := cont.Labels["kind"]; ok {
 			cdet.Kind = kind
+			if kind == "mysocketio" {
+				printMysocket = true
+				mysocketCID = cont.ID
+			}
 		}
 		if group, ok := cont.Labels["group"]; ok {
 			cdet.Group = group
@@ -170,6 +178,20 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 	table.SetAutoMergeCellsByColumnIndex([]int{1, 2})
 	table.AppendBulk(tabData)
 	table.Render()
+
+	if printMysocket == false {
+		return
+	}
+	stdout, stderr, err := c.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
+	if err != nil {
+		log.Errorf("failed to execute cmd: %v", err)
+
+	}
+	if len(stderr) > 0 {
+		log.Infof("errors during listing mysocketio sockets: %s", string(stderr))
+	}
+	fmt.Println("Shared sockets:")
+	fmt.Println(string(stdout))
 }
 
 func getContainerIPv4(container types.Container, bridgeName string) string {

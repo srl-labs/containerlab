@@ -232,7 +232,7 @@ var deployCmd = &cobra.Command{
 			log.Errorf("failed to create hosts file: %v", err)
 		}
 		// print table summary
-		printContainerInspect(containers, c.Config.Mgmt.Network, format)
+		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
 		return nil
 	},
 }
