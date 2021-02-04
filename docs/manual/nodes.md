@@ -142,3 +142,19 @@ topology:
     node1:
       cmd: bash cmd3.sh
 ```
+
+### share
+Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for sockets of containerlab nodes. This enables effortless access sharing with cusomters/partners/colleagues.
+
+This integration is extensively described on [Share lab access](shared-sockets.md) page.
+
+```yaml
+name: demo
+topology:
+  nodes:
+    r1:
+      kind: srl
+      share:
+        - tcp/22     # tcp port 22 will be exposed
+        - tcp/57400  # tcp port 57400 will be exposed
+```
