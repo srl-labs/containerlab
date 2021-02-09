@@ -47,6 +47,7 @@ Once the lab is deployed with containerlab, use the following configuration inst
     set / network-instance default protocols bgp group ibgp export-policy export-lo
     set / network-instance default protocols bgp neighbor 192.168.1.2 admin-state enable
     set / network-instance default protocols bgp neighbor 192.168.1.2 peer-group ibgp
+    set / network-instance default protocols bgp neighbor 192.168.1.2 peer-as 65001
 
     # create export policy
     set / routing-policy policy export-lo statement 10 match protocol local
