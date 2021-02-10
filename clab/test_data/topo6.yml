@@ -1,0 +1,15 @@
+name: 2l
+
+topology:
+  nodes:
+    lin1:
+      kind: linux
+      image: alpine:3
+    lin2:
+      kind: linux
+      image: alpine:3
+
+  links:
+    - endpoints: ["lin1:eth1", lin2:eth1]
+    - endpoints: ["lin1:eth1", lin2:eth2]
+    - endpoints: ["lin1:eth3", lin2:eth2]
