@@ -54,6 +54,10 @@ var deployCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		if err = c.CheckTopologyDefinition(); err != nil {
+			return err
+		}
+
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
@@ -70,9 +74,6 @@ var deployCmd = &cobra.Command{
 				return err
 			}
 
-		}
-		if err = c.VerifyBridgesExist(); err != nil {
-			return err
 		}
 
 		// create lab directory

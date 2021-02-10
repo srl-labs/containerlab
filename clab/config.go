@@ -679,14 +679,44 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	return endpoint
 }
 
+// CheckTopologyDefinition runs topology checks and returns any errors found
+func (c *CLab) CheckTopologyDefinition() error {
+	err := c.verifyBridgesExist()
+	if err != nil {
+		return err
+	}
+	err = c.verifyLinks()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // VerifyBridgeExists verifies if every node of kind=bridge exists on the lab host
-func (c *CLab) VerifyBridgesExist() error {
+func (c *CLab) verifyBridgesExist() error {
 	for name, node := range c.Nodes {
 		if node.Kind == "bridge" {
 			if _, err := netlink.LinkByName(name); err != nil {
 				return fmt.Errorf("bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
 			}
 		}
+	}
+	return nil
+}
+
+func (c *CLab) verifyLinks() error {
+	endpoints := map[string]struct{}{}
+	dups := []string{}
+	for _, lc := range c.Config.Topology.Links {
+		for _, e := range lc.Endpoints {
+			if _, ok := endpoints[e]; ok {
+				dups = append(dups, e)
+			}
+			endpoints[e] = struct{}{}
+		}
+	}
+	if len(dups) != 0 {
+		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
 	return nil
 }

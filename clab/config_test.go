@@ -261,3 +261,37 @@ func TestUserInit(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyLinks(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		want string
+	}{
+		"two_duplicated_links": {
+			got:  "test_data/topo6.yml",
+			want: "endpoints [\"lin1:eth1\" \"lin2:eth2\"] appeared more than once in the links section of the topology file",
+		},
+		"no_duplicated_links": {
+			got:  "test_data/topo1.yml",
+			want: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoFile(tc.got),
+			}
+			c := NewContainerLab(opts...)
+
+			err := c.verifyLinks()
+			if err != nil && err.Error() != tc.want {
+				t.Fatalf("wanted %q got %q", tc.want, err.Error())
+			}
+			if err == nil && tc.want != "" {
+				t.Fatalf("wanted %q got %q", tc.want, err.Error())
+			}
+		})
+	}
+
+}
