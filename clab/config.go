@@ -144,8 +144,8 @@ type Endpoint struct {
 	EndpointName string
 }
 
-// ParseIPInfo parses IP information
-func (c *CLab) parseIPInfo() error {
+// initMgmtNetwork sets management network config
+func (c *CLab) initMgmtNetwork() error {
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
@@ -168,8 +168,8 @@ func (c *CLab) parseIPInfo() error {
 func (c *CLab) ParseTopology() error {
 	log.Info("Parsing topology information ...")
 	log.Debugf("Lab name: %s", c.Config.Name)
-	// initialize DockerInfo
-	err := c.parseIPInfo()
+	// initialize Management network config
+	err := c.initMgmtNetwork()
 	if err != nil {
 		return err
 	}
