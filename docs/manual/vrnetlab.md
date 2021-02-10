@@ -9,7 +9,7 @@ Keeping this requirement in mind from the very beginning, we added a kind [`brid
 Although this approach has many pros, it doesn't allow users to define the VM based nodes in the same topology file. But not anymore, with [`vrnetlab`](https://github.com/plajjan/vrnetlab) integration containerlab became capable of launching topologies with VM-based routers.
 
 ## Vrnetlab
-Vrnetlab essentially allows to package a regular VM inside a container and makes it runnable and accessible as if it was a container image all way long.
+Vrnetlab essentially allows to package a regular VM inside a container and makes it runnable and accessible as if it was a container image.
 
 To make this work, vrnetlab provides a set of scripts that will build the container image taking a user provided qcow file as an input. This enables containerlab to build topologies which consist both of native containerized NOSes and the VMs:
 
@@ -18,6 +18,8 @@ To make this work, vrnetlab provides a set of scripts that will build the contai
 !!!info
     Although multiple vendors are supported in vrnetlab, to make these images work with container-based networking, we needed to [fork](https://github.com/hellt/vrnetlab) the project and provide the necessary improvements.  
     Thus, the VM based products will appear in the supported list gradually.
+
+Make sure, that the VM that containerlab runs on have [Nested virtualization enabled](https://stafwag.github.io/blog/blog/2018/06/04/nested-virtualization-in-kvm/) to support vrnetlab based containers.
 
 ### Supported VM products
 
