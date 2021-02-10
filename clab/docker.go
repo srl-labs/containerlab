@@ -145,11 +145,6 @@ func (c *CLab) DeleteBridge(ctx context.Context) (err error) {
 func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
-	err = c.PullImageIfRequired(ctx, node.Image)
-	if err != nil {
-		return err
-	}
-
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{

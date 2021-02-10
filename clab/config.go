@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -717,6 +718,24 @@ func (c *CLab) verifyLinks() error {
 	}
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
+	}
+	return nil
+}
+
+// VerifyImages will check if image referred in the node config
+// either pullable or present or is available in the local registry
+// if it is not available it will emit an error
+func (c *CLab) VerifyImages(ctx context.Context) error {
+	images := map[string]struct{}{}
+	for _, node := range c.Nodes {
+		images[node.Image] = struct{}{}
+	}
+
+	for image := range images {
+		err := c.PullImageIfRequired(ctx, image)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

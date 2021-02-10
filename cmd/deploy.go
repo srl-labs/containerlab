@@ -64,6 +64,11 @@ var deployCmd = &cobra.Command{
 		if err = c.ParseTopology(); err != nil {
 			return err
 		}
+
+		if err = c.VerifyImages(ctx); err != nil {
+			return err
+		}
+
 		if reconfigure {
 			if err != nil {
 				return err
