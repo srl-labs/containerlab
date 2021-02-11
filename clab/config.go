@@ -285,6 +285,9 @@ func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
 	}
 	if cfg != "" {
 		cfg, err = resolvePath(cfg)
+		if err != nil {
+			return "", err
+		}
 		_, err = os.Stat(cfg)
 	}
 	return cfg, err
@@ -316,6 +319,9 @@ func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
 	}
 	if lic != "" {
 		lic, err = resolvePath(lic)
+		if err != nil {
+			return "", err
+		}
 		_, err = os.Stat(lic)
 	}
 	return lic, err
