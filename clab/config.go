@@ -576,7 +576,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		// mount tftpboot dir
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "tftpboot"), ":/tftpboot"))
 
-		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant %s", node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
+		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
 
 	case "vr-vmx":
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
