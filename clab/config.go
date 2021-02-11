@@ -790,6 +790,7 @@ func resolvePath(p string) (string, error) {
 
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
 // it allows host path to have `~` and returns absolute path for a relative path
+// if the host path doesn't exist, the error will be returned
 func resolveBindPaths(binds []string) error {
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
@@ -797,6 +798,10 @@ func resolveBindPaths(binds []string) error {
 		hp, err := resolvePath(elems[0])
 		if err != nil {
 			return err
+		}
+		_, err = os.Stat(hp)
+		if err != nil {
+			return fmt.Errorf("failed to verify bind path: %v", err)
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
