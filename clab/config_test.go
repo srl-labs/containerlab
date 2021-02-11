@@ -1,11 +1,25 @@
 package clab
 
 import (
+	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+func init() {
+
+	// create default config file for srl to let parse topology func to pass
+	if _, err := os.Stat(defaultConfigTemplates["srl"]); err != nil {
+		ferr := ioutil.WriteFile(defaultConfigTemplates["srl"], []byte("testing file"), 0600)
+		if ferr != nil {
+			log.Fatal(err)
+		}
+	}
+}
 
 func TestLicenseInit(t *testing.T) {
 	tests := map[string]struct {
@@ -40,16 +54,8 @@ func TestLicenseInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			nodeCfg := c.Config.Topology.Nodes["node1"]
-			node := Node{}
-			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
-
-			lic, err := c.licenseInit(&nodeCfg, &node)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if filepath.Base(lic) != tc.want {
-				t.Fatalf("wanted '%s' got '%s'", tc.want, lic)
+			if filepath.Base(c.Nodes["node1"].License) != tc.want {
+				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].License)
 			}
 		})
 	}
@@ -147,13 +153,13 @@ func TestTypeInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			nodeCfg := c.Config.Topology.Nodes[tc.node]
-			node := Node{}
-			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+			// nodeCfg := c.Config.Topology.Nodes[tc.node]
+			// node := Node{}
+			// node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 
-			ntype := c.typeInit(&nodeCfg, node.Kind)
-			if !reflect.DeepEqual(ntype, tc.want) {
-				t.Fatalf("wanted %q got %q", tc.want, ntype)
+			// ntype := c.typeInit(&nodeCfg, node.Kind)
+			if !reflect.DeepEqual(c.Nodes[tc.node].NodeType, tc.want) {
+				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].NodeType)
 			}
 		})
 	}
