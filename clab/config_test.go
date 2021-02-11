@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -47,7 +48,7 @@ func TestLicenseInit(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if lic != tc.want {
+			if filepath.Base(lic) != tc.want {
 				t.Fatalf("wanted '%s' got '%s'", tc.want, lic)
 			}
 		})
@@ -61,23 +62,23 @@ func TestBindsInit(t *testing.T) {
 	}{
 		"node_sing_bind": {
 			got:  "test_data/topo1.yml",
-			want: []string{"/node/src:/dst"},
+			want: []string{"test_data/node1.lic:/dst"},
 		},
 		"node_many_binds": {
 			got:  "test_data/topo2.yml",
-			want: []string{"/node/src1:/dst1", "/node/src2:/dst2"},
+			want: []string{"test_data/node1.lic:/dst1", "test_data/kind.lic:/dst2"},
 		},
 		"kind_binds": {
 			got:  "test_data/topo5.yml",
-			want: []string{"/kind/src:/dst"},
+			want: []string{"test_data/kind.lic:/dst"},
 		},
 		"default_binds": {
 			got:  "test_data/topo3.yml",
-			want: []string{"/default/src:/dst"},
+			want: []string{"test_data/default.lic:/dst"},
 		},
 		"node_binds_override": {
 			got:  "test_data/topo4.yml",
-			want: []string{"/node/src:/dst"},
+			want: []string{"test_data/node1.lic:/dst"},
 		},
 	}
 
@@ -96,6 +97,11 @@ func TestBindsInit(t *testing.T) {
 			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 
 			binds := c.bindsInit(&nodeCfg)
+			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
+			err := resolveBindPaths(tc.want)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if !reflect.DeepEqual(binds, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, binds)
 			}

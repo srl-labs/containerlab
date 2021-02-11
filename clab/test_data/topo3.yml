@@ -1,9 +1,9 @@
 name: topo3
 topology:
   defaults:
-    license: default.lic
+    license: test_data/default.lic
     binds:
-      - /default/src:/dst
+      - test_data/default.lic:/dst
     type: ixrd2
     env:
       env1: val1
