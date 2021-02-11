@@ -96,14 +96,15 @@ type Config struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	ShortName            string
-	LongName             string
-	Fqdn                 string
-	LabDir               string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index                int
-	Group                string
-	Kind                 string
-	Config               string // path to config template file that is used for config generation
+	ShortName string
+	LongName  string
+	Fqdn      string
+	LabDir    string // LabDir is a directory related to the node, it contains config items and/or other persistent state
+	Index     int
+	Group     string
+	Kind      string
+	// path to config template file that is used for config generation
+	Config               string
 	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType             string
 	Position             string
@@ -266,17 +267,30 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) string {
+//configInit processes the path to a config file that can be provided on
+// multiple configuration levels
+// returns an errof if the reference path doesn't exist
+func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
+	var cfg string
+	var err error
 	switch {
 	case nodeCfg.Config != "":
-		return nodeCfg.Config
+		cfg = nodeCfg.Config
 	case c.Config.Topology.Kinds[kind].Config != "":
-		return c.Config.Topology.Kinds[kind].Config
+		cfg = c.Config.Topology.Kinds[kind].Config
 	case c.Config.Topology.Defaults.Config != "":
-		return c.Config.Topology.Defaults.Config
+		cfg = c.Config.Topology.Defaults.Config
 	default:
-		return defaultConfigTemplates[kind]
+		cfg = defaultConfigTemplates[kind]
 	}
+	if cfg != "" {
+		cfg, err = resolvePath(cfg)
+		if err != nil {
+			return "", err
+		}
+		_, err = os.Stat(cfg)
+	}
+	return cfg, err
 }
 
 func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -290,19 +304,27 @@ func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 }
 
 func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+	// path to license file
+	var lic string
+	var err error
 	switch {
 	case nodeCfg.License != "":
-		return nodeCfg.License, nil
+		lic = nodeCfg.License
 	case c.Config.Topology.Kinds[node.Kind].License != "":
-		return c.Config.Topology.Kinds[node.Kind].License, nil
+		lic = c.Config.Topology.Kinds[node.Kind].License
 	case c.Config.Topology.Defaults.License != "":
-		return c.Config.Topology.Defaults.License, nil
+		lic = c.Config.Topology.Defaults.License
 	default:
-		if node.Kind == "srl" {
-			return "", fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
-		}
-		return "", nil
+		lic = ""
 	}
+	if lic != "" {
+		lic, err = resolvePath(lic)
+		if err != nil {
+			return "", err
+		}
+		_, err = os.Stat(lic)
+	}
+	return lic, err
 }
 
 func (c *CLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
@@ -391,7 +413,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInit(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
@@ -420,15 +445,18 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInit(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 
 		lp, err := c.licenseInit(&nodeCfg, node)
 		if err != nil {
 			return err
 		}
-		lp, err = resolvePath(lp)
-		if err != nil {
-			return err
+
+		if lp == "" {
+			return fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
 		}
 
 		node.License = lp
@@ -485,7 +513,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "crpd":
-		node.Config = c.configInit(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -493,10 +524,6 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// initialize license file
 		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-		lp, err = resolvePath(lp)
 		if err != nil {
 			return err
 		}
@@ -509,7 +536,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
 
 	case "sonic-vs":
-		node.Config = c.configInit(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -519,7 +549,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Entrypoint = "/bin/bash"
 
 	case "vr-sros":
-		node.Config = c.configInit(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -530,10 +563,6 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// initialize license file
 		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-		lp, err = resolvePath(lp)
 		if err != nil {
 			return err
 		}
@@ -600,7 +629,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"], node.Env["VCPU"], node.Env["RAM"])
 
 	case "alpine", "linux":
-		node.Config = c.configInit(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -764,6 +796,7 @@ func resolvePath(p string) (string, error) {
 
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
 // it allows host path to have `~` and returns absolute path for a relative path
+// if the host path doesn't exist, the error will be returned
 func resolveBindPaths(binds []string) error {
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
@@ -771,6 +804,10 @@ func resolveBindPaths(binds []string) error {
 		hp, err := resolvePath(elems[0])
 		if err != nil {
 			return err
+		}
+		_, err = os.Stat(hp)
+		if err != nil {
+			return fmt.Errorf("failed to verify bind path: %v", err)
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
