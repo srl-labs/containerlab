@@ -14,9 +14,13 @@ func init() {
 
 	// create default config file for srl to let parse topology func to pass
 	if _, err := os.Stat(defaultConfigTemplates["srl"]); err != nil {
-		ferr := ioutil.WriteFile(defaultConfigTemplates["srl"], []byte("testing file"), 0600)
-		if ferr != nil {
-			log.Fatal(ferr)
+		err2 := os.MkdirAll("/etc/containerlab/templates/srl", 0600)
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+		err2 = ioutil.WriteFile(defaultConfigTemplates["srl"], []byte("testing file"), 0600)
+		if err2 != nil {
+			log.Fatal(err2)
 		}
 	}
 }
