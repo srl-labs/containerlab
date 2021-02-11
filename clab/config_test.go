@@ -16,7 +16,7 @@ func init() {
 	if _, err := os.Stat(defaultConfigTemplates["srl"]); err != nil {
 		ferr := ioutil.WriteFile(defaultConfigTemplates["srl"], []byte("testing file"), 0600)
 		if ferr != nil {
-			log.Fatal(err)
+			log.Fatal(ferr)
 		}
 	}
 }
