@@ -301,19 +301,24 @@ func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 }
 
 func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+	// path to license file
+	var lic string
+	var err error
 	switch {
 	case nodeCfg.License != "":
-		return nodeCfg.License, nil
+		lic = nodeCfg.License
 	case c.Config.Topology.Kinds[node.Kind].License != "":
-		return c.Config.Topology.Kinds[node.Kind].License, nil
+		lic = c.Config.Topology.Kinds[node.Kind].License
 	case c.Config.Topology.Defaults.License != "":
-		return c.Config.Topology.Defaults.License, nil
+		lic = c.Config.Topology.Defaults.License
 	default:
-		if node.Kind == "srl" {
-			return "", fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
-		}
-		return "", nil
+		lic = ""
 	}
+	if lic != "" {
+		lic, err = resolvePath(lic)
+		_, err = os.Stat(lic)
+	}
+	return lic, err
 }
 
 func (c *CLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
@@ -443,9 +448,9 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		if err != nil {
 			return err
 		}
-		lp, err = resolvePath(lp)
-		if err != nil {
-			return err
+
+		if lp == "" {
+			return fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
 		}
 
 		node.License = lp
@@ -516,10 +521,6 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		if err != nil {
 			return err
 		}
-		lp, err = resolvePath(lp)
-		if err != nil {
-			return err
-		}
 		node.License = lp
 
 		// mount config and log dirs
@@ -556,10 +557,6 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// initialize license file
 		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-		lp, err = resolvePath(lp)
 		if err != nil {
 			return err
 		}
