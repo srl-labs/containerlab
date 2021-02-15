@@ -1,9 +1,9 @@
 name: topo4
 topology:
   defaults:
-    license: default.lic
+    license: test_data/default.lic
     binds:
-      - /default/src:/dst
+      - test_data/default.lic:/dst
     env:
       env1: global
       env2: global
@@ -11,9 +11,9 @@ topology:
     user: customglobal
   kinds:
     srl:
-      license: kind.lic
+      license: test_data/kind.lic
       binds:
-        - /kind/src:/dst
+        - test_data/kind.lic:/dst
       env:
         env2: kind
         env4: kind
@@ -22,9 +22,9 @@ topology:
     node1:
       kind: srl
       type: ixr6
-      license: node1.lic
+      license: test_data/node1.lic
       binds:
-        - /node/src:/dst
+        - test_data/node1.lic:/dst
       env:
         env1: node
         env5: node

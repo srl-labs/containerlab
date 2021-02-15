@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -39,16 +40,8 @@ func TestLicenseInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			nodeCfg := c.Config.Topology.Nodes["node1"]
-			node := Node{}
-			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
-
-			lic, err := c.licenseInit(&nodeCfg, &node)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if lic != tc.want {
-				t.Fatalf("wanted '%s' got '%s'", tc.want, lic)
+			if filepath.Base(c.Nodes["node1"].License) != tc.want {
+				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].License)
 			}
 		})
 	}
@@ -61,23 +54,23 @@ func TestBindsInit(t *testing.T) {
 	}{
 		"node_sing_bind": {
 			got:  "test_data/topo1.yml",
-			want: []string{"/node/src:/dst"},
+			want: []string{"test_data/node1.lic:/dst"},
 		},
 		"node_many_binds": {
 			got:  "test_data/topo2.yml",
-			want: []string{"/node/src1:/dst1", "/node/src2:/dst2"},
+			want: []string{"test_data/node1.lic:/dst1", "test_data/kind.lic:/dst2"},
 		},
 		"kind_binds": {
 			got:  "test_data/topo5.yml",
-			want: []string{"/kind/src:/dst"},
+			want: []string{"test_data/kind.lic:/dst"},
 		},
 		"default_binds": {
 			got:  "test_data/topo3.yml",
-			want: []string{"/default/src:/dst"},
+			want: []string{"test_data/default.lic:/dst"},
 		},
 		"node_binds_override": {
 			got:  "test_data/topo4.yml",
-			want: []string{"/node/src:/dst"},
+			want: []string{"test_data/node1.lic:/dst"},
 		},
 	}
 
@@ -96,6 +89,11 @@ func TestBindsInit(t *testing.T) {
 			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 
 			binds := c.bindsInit(&nodeCfg)
+			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
+			err := resolveBindPaths(tc.want)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if !reflect.DeepEqual(binds, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, binds)
 			}
@@ -141,13 +139,13 @@ func TestTypeInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			nodeCfg := c.Config.Topology.Nodes[tc.node]
-			node := Node{}
-			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+			// nodeCfg := c.Config.Topology.Nodes[tc.node]
+			// node := Node{}
+			// node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 
-			ntype := c.typeInit(&nodeCfg, node.Kind)
-			if !reflect.DeepEqual(ntype, tc.want) {
-				t.Fatalf("wanted %q got %q", tc.want, ntype)
+			// ntype := c.typeInit(&nodeCfg, node.Kind)
+			if !reflect.DeepEqual(c.Nodes[tc.node].NodeType, tc.want) {
+				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].NodeType)
 			}
 		})
 	}
@@ -260,4 +258,38 @@ func TestUserInit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVerifyLinks(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		want string
+	}{
+		"two_duplicated_links": {
+			got:  "test_data/topo6.yml",
+			want: "endpoints [\"lin1:eth1\" \"lin2:eth2\"] appeared more than once in the links section of the topology file",
+		},
+		"no_duplicated_links": {
+			got:  "test_data/topo1.yml",
+			want: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoFile(tc.got),
+			}
+			c := NewContainerLab(opts...)
+
+			err := c.verifyLinks()
+			if err != nil && err.Error() != tc.want {
+				t.Fatalf("wanted %q got %q", tc.want, err.Error())
+			}
+			if err == nil && tc.want != "" {
+				t.Fatalf("wanted %q got %q", tc.want, err.Error())
+			}
+		})
+	}
+
 }

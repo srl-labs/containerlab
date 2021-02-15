@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -145,11 +146,6 @@ func (c *CLab) DeleteBridge(ctx context.Context) (err error) {
 func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
-	err = c.PullImageIfRequired(ctx, node.Image)
-	if err != nil {
-		return err
-	}
-
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{
@@ -170,10 +166,15 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	}
 	labels["clab-topo-file"] = c.TopoFile.path
 
+	cmd, err := shlex.Split(node.Cmd)
+	if err != nil {
+		return err
+	}
+
 	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{
 			Image:        node.Image,
-			Cmd:          strings.Fields(node.Cmd),
+			Cmd:          cmd,
 			Env:          convertEnvs(node.Env),
 			AttachStdout: true,
 			AttachStderr: true,
