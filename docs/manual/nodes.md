@@ -146,7 +146,7 @@ topology:
 ### share
 Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for sockets of containerlab nodes. This enables effortless access sharing with cusomters/partners/colleagues.
 
-This integration is extensively described on [Share lab access](shared-sockets.md) page.
+This integration is extensively described on [Share lab access](published-ports.md) page.
 
 ```yaml
 name: demo
