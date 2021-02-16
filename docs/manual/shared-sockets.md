@@ -1,13 +1,13 @@
-Containerlab labs are typically deployed in the isolated environments, such as you company internal network, cloud instance or even a laptop. The nodes deployed in a lab can happily talk to each other and, if needed, can reach Internet in the outbound direction.
+Containerlab labs are typically deployed in the isolated environments, such as company's internal network, cloud instance or even a laptop. The nodes deployed in a lab can happily talk to each other and, if needed, can reach Internet in the outbound direction.
 
-But sometimes it is really needed to let your lab nodes be reachable over Internet securely and privately in the incoming direction. The are many use cases for such exposure, some of the most notable are:
+But sometimes it is really needed to let your lab nodes be reachable over Internet securely and privately in the incoming direction. There are many use cases that warrant such _exposure_, some of the most notable are:
 
 * create a lab in your environment and share it with a customer/colleague on-demand in no time
-* make an interactive demo/training where certain nodes' are shared with your audience (grafana, prometheus DB, SSH interfaces)
-* share a lab with someone
-* expose management interfaces (gNMI, NETCONF, SNMP) to test integration with collectors deployed outside of your lab
+* make an interactive demo/training where certain nodes' are shared with an audience for hand-on experience
+* share a private lab with someone to collaborate
+* expose management interfaces (gNMI, NETCONF, SNMP) to test integration with collectors deployed outside of your lab environment
 
-Containerlab made all of these use cases possible by integrating the uprising service [mysocket.io](https://mysocket.io). Mysocket.io provides personal tunnels for https/https/tls/tcp sockets over global anycast[^1] network spanning US, Europe and Asia.
+Containerlab made all of these use cases possible by integrating with [mysocket.io](https://mysocket.io) service. Mysocket.io provides personal tunnels for https/https/tls/tcp sockets over global anycast[^1] network spanning US, Europe and Asia.
 
 To make a certain port of a certain node available via mysocket.io tunnel a single line in the topology definition file is all that's needed:
 
@@ -20,7 +20,7 @@ topology:
       share:
         - tcp/22     # tcp port 22 will be exposed
         - tcp/57400  # tcp port 57400 will be exposed
-        - http/10200 # http service will be exposed over 10200 port
+        - http/10200 # http service running over 10200 will be exposed
 ```
 
 <video width="100%" controls>
@@ -28,9 +28,9 @@ topology:
 </video>
 
 ## Registration
-Tunnels set up by mysocket.io are personal, thus users are required to create a personal account within the service. Luckily, the [registration](https://mysocket.readthedocs.io/en/latest/mysocketctl/mysocket.html#creating-an-account) is trivial, all you need to provide is an email and the public SSH key that will be used to set up tunnels.
+Tunnels set up by mysocket.io are associated with a user who set them, thus users are required to register within the service. Luckily, the [registration](https://mysocket.readthedocs.io/en/latest/mysocketctl/mysocket.html#creating-an-account) is trivial, all you need to provide is an email and a public SSH key that will be used to set up tunnels.
 
-For convenience, containerlab comes with a script to create mysocket.io account:
+For convenience, containerlab comes with a script to create mysocket.io account in one go:
 
 ```bash
 # create mysocket.io account
@@ -39,10 +39,10 @@ For convenience, containerlab comes with a script to create mysocket.io account:
 /etc/containerlab/tools/mysocket-user myemail@gmail.com mypassword /root/.ssh/mykey.pub
 ```
 
-A confirmation email will arrive shortly to finish account setup.
+A confirmation email will arrive shortly to finish account setup procedure.
 
-## Acquiring token
-Before launching the lab with shared sockets, a user need to acquire/refresh the web token that is used to authenticate the API calls towards mysocket.io API. Containerlab users can leverage another convenience script:
+## Acquiring a token
+To authenticate with mysocket.io service a user needs to acquire/refresh the token. Containerlab users can leverage another convenience script that eases this step:
 
 ```bash
 # get/refresh mysocketio token
@@ -51,13 +51,13 @@ Before launching the lab with shared sockets, a user need to acquire/refresh the
 /etc/containerlab/tools/mysocket-token.sh myemail@gmail.com mypassword
 ```
 
-The script will get the token and save it in the current directory.
+The script will get the token and save it in the current directory under `mysocket_token` name.
 
 !!!info
-    The token is valid for 5 hours, once the token expires, the already established tunnels will continue to work, but for new tunnels a new token must be provided.
+    The token is valid for 5 hours, once the token expires, the already established tunnels will continue to work, but to establish new tunnels a new token must be provided.
 
 ## Specify what to share
-To indicate which ports to share the users need to add `share` section under node/kind or default level of the [topology definition file](topo-def-file.md). In the example below, two we decide to share SSH and gNMI services of `r1` node:
+To indicate which ports to share the users need to add `share` section under node/kind or default level of the [topology definition file](topo-def-file.md). In the example below, we decide to share SSH and gNMI services of `r1` node:
 
 ```yaml
 name: demo
@@ -70,15 +70,16 @@ topology:
         - tcp/57400  # tcp port 57400 will be exposed
 ```
 
-The `share` section holds a list of `<type>/<port-number>` pairs, where `type` must be one of the supported mysocket.io socket type[^2] - http/https/tls/tcp. Every type/port combination will be exposed via its own private tunnel.
+The `share` section holds a list of `<type>/<port-number>` strings, where `type` must be one of the supported mysocket.io socket type[^2] - http/https/tls/tcp. Every type/port combination will be exposed via its own private tunnel.
 
 !!!note
     For a single account the following maximum number of tunnels is set:  
       * tcp based tunnels - 5  
-      * http based tunnels - 10
+      * http based tunnels - 10  
+    If >5 tcp tunnels is required users should launch a VM in a lab, expose it's SSH service and use this VM as a jumpbox for other TCP services.
 
 ## Add mysocketio node
-Containerlab integrates with mysocket.io service by leveraging its client, packaged in a container format. In order for the sockets indicated in `share` block to be exposed, a user needs to add a node of `mysocketio` kind to the topology. Considering the example above, the full topology will look like:
+Containerlab integrates with mysocket.io service by leveraging it's client application packaged in a container format. In order for the sockets indicated in the `share` block to be exposed, a user needs to add a node of `mysocketio` kind to the topology. Augmenting the topology we used above, the full topology file will look like:
 
 ```yaml
 name: demo
@@ -90,20 +91,20 @@ topology:
         - tcp/22     # tcp port 22 will be exposed
         - tcp/57400  # tcp port 57400 will be exposed
 
-    # adding mysocketio linux container 
+    # adding mysocketio linux container
     mysocketio:
       kind: mysocketio
       image: ghcr.io/hellt/mysocketctl:0.1.0
       binds:
-        - ~/.ssh/privkey:/root/.ssh/id_rsa         # private key
-        - mysocketio_token:/root/.mysocketio_token # API token
+        - ~/.ssh/privkey:/root/.ssh/id_rsa         # bind mount your private key
+        - mysocketio_token:/root/.mysocketio_token # bind mount API token
 ```
 
-The `mysocketio` node is a simple linux container with mysocketctl client installed inside. Containerlab uses this node to create the sockets and start tunnels as defined in the `share` block of the lab nodes.
+The `mysocketio` node is a simple linux container with mysocketctl client installed. Containerlab uses this node to create the sockets and start tunnels as defined in the `share` block.
 
 Pay specific attention to `binds` defined for mysocketio node. With this section we provide the two crucial artifacts:
 * path to the private key, that matches the public key used during the registration
-* path to the API token that we acquired before
+* path to the API token that we acquired before launching the lab
 
 And that is all that is needed to expose the sockets in an automated way.
 
