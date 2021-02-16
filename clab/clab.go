@@ -2,6 +2,7 @@ package clab
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -169,23 +170,11 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 
 	case "linux":
 		log.Debugf("Running postdeploy actions for Linux '%s' node", node.ShortName)
-		// disable tx checksum offload for linux containers on lo and eth0 interfaces
-		nodeNS, err := ns.GetNS(node.NSPath)
-		if err != nil {
-			return err
-		}
-		err = nodeNS.Do(func(_ ns.NetNS) error {
-			// disabling offload on lo0 interface
-			err = EthtoolTXOff("eth0")
-			if err != nil {
-				log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", node.ShortName, err)
-			}
-			return nil
-		})
-		return err
+		return disableTxOffload(node)
 
 	case "sonic-vs":
 		log.Debugf("Running postdeploy actions for sonic-vs '%s' node", node.ShortName)
+		// TODO: change this calls to c.ExecNotWait
 		// exec `supervisord` to start sonic services
 		execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("supervisord")}
 		respID, err := c.DockerClient.ContainerExecCreate(context.Background(), node.ContainerID, execConfig)
@@ -206,6 +195,16 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 		if err != nil {
 			return err
 		}
+	case "mysocketio":
+		log.Debugf("Running postdeploy actions for mysocketio '%s' node", node.ShortName)
+		err := disableTxOffload(node)
+		if err != nil {
+			return fmt.Errorf("failed to disable tx checksum offload for mysocketio kind: %v", err)
+		}
+
+		log.Infof("Creating mysocketio tunnels...")
+		err = createMysocketTunnels(ctx, c, node)
+		return err
 	}
 	return nil
 }
@@ -234,4 +233,21 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, linksChan chan *Li
 			}
 		}(i)
 	}
+}
+
+func disableTxOffload(n *Node) error {
+	// disable tx checksum offload for linux containers on eth0 interfaces
+	nodeNS, err := ns.GetNS(n.NSPath)
+	if err != nil {
+		return err
+	}
+	err = nodeNS.Do(func(_ ns.NetNS) error {
+		// disabling offload on lo0 interface
+		err := EthtoolTXOff("eth0")
+		if err != nil {
+			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
+		}
+		return err
+	})
+	return err
 }

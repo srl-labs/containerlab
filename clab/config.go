@@ -28,7 +28,7 @@ const (
 )
 
 // supported kinds
-var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge"}
+var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge", "mysocketio"}
 
 var defaultConfigTemplates = map[string]string{
 	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
@@ -68,6 +68,7 @@ type NodeConfig struct {
 	Ports    []string `yaml:"ports,omitempty"`     // list of port bindings
 	MgmtIPv4 string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
 	MgmtIPv6 string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
+	Publish  []string `yaml:"publish,omitempty"`   // list of ports to publish with mysocketctl
 
 	Env  map[string]string `yaml:"env,omitempty"`  // environment variables
 	User string            `yaml:"user,omitempty"` // linux user used in a container
@@ -128,7 +129,8 @@ type Node struct {
 	TLSCert              string
 	TLSKey               string
 	TLSAnchor            string
-	NSPath               string // network namespace path for this node
+	NSPath               string   // network namespace path for this node
+	Publish              []string //list of ports to publish with mysocketctl
 }
 
 // Link is a struct that contains the information of a link between 2 containers
@@ -372,6 +374,18 @@ func (c *CLab) userInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
+func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
+	switch {
+	case len(nodeCfg.Publish) != 0:
+		return nodeCfg.Publish
+	case len(c.Config.Topology.Kinds[kind].Publish) != 0:
+		return c.Config.Topology.Kinds[kind].Publish
+	case len(c.Config.Topology.Defaults.Publish) != 0:
+		return c.Config.Topology.Defaults.Publish
+	}
+	return nil
+}
+
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
@@ -409,6 +423,8 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	envs := c.envInit(&nodeCfg, node.Kind)
 
 	user := c.userInit(&nodeCfg, node.Kind)
+
+	node.Publish = c.publishInit(&nodeCfg, node.Kind)
 
 	switch node.Kind {
 	case "ceos":
@@ -647,7 +663,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"], node.Env["VCPU"], node.Env["RAM"])
 
-	case "alpine", "linux":
+	case "alpine", "linux", "mysocketio":
 		node.Config, err = c.configInit(&nodeCfg, node.Kind)
 		if err != nil {
 			return err

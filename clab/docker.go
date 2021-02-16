@@ -345,6 +345,20 @@ func (c *CLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 	return outBuf.Bytes(), errBuf.Bytes(), nil
 }
 
+// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
+func (c *CLab) ExecNotWait(ctx context.Context, id string, cmd []string) error {
+	execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: cmd}
+	respID, err := c.DockerClient.ContainerExecCreate(context.Background(), id, execConfig)
+	if err != nil {
+		return err
+	}
+	_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // DeleteContainer tries to stop a container then remove it
 func (c *CLab) DeleteContainer(ctx context.Context, name string) error {
 	var err error
