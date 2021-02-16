@@ -19,13 +19,13 @@ func createMysocketTunnels(ctx context.Context, c *CLab, node *Node) error {
 	}
 
 	for _, n := range c.Nodes {
-		if len(n.Share) == 0 {
+		if len(n.Publish) == 0 {
 			continue
 		}
-		for _, socket := range n.Share {
+		for _, socket := range n.Publish {
 			split := strings.Split(socket, "/")
 			if len(split) > 2 {
-				log.Warnf("wrong mysocketio share definition %s. should be type/port-number, i.e. tcp/22", socket)
+				log.Warnf("wrong mysocketio publish section %s. should be type/port-number, i.e. tcp/22", socket)
 			}
 			t := split[0] // type
 			p := split[1] // port

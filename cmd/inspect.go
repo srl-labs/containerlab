@@ -105,7 +105,7 @@ func toTableData(det []containerDetails) [][]string {
 
 func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeName string, format string) {
 	contDetails := make([]containerDetails, 0, len(containers))
-	// do not print shared sockets unless mysocketio kind is found
+	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
 	var mysocketCID string
 
@@ -190,7 +190,7 @@ func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeNam
 	if len(stderr) > 0 {
 		log.Infof("errors during listing mysocketio sockets: %s", string(stderr))
 	}
-	fmt.Println("Shared sockets:")
+	fmt.Println("Published ports:")
 	fmt.Println(string(stdout))
 }
 

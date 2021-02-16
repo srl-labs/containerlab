@@ -68,7 +68,7 @@ type NodeConfig struct {
 	Ports    []string `yaml:"ports,omitempty"`     // list of port bindings
 	MgmtIPv4 string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
 	MgmtIPv6 string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
-	Share    []string `yaml:"share,omitempty"`     // list of ports to share with mysocketctl
+	Publish  []string `yaml:"publish,omitempty"`   // list of ports to publish with mysocketctl
 
 	Env  map[string]string `yaml:"env,omitempty"`  // environment variables
 	User string            `yaml:"user,omitempty"` // linux user used in a container
@@ -130,7 +130,7 @@ type Node struct {
 	TLSKey               string
 	TLSAnchor            string
 	NSPath               string   // network namespace path for this node
-	Share                []string //list of ports to share with mysocketctl
+	Publish              []string //list of ports to publish with mysocketctl
 }
 
 // Link is a struct that contains the information of a link between 2 containers
@@ -374,14 +374,14 @@ func (c *CLab) userInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-func (c *CLab) shareInit(nodeCfg *NodeConfig, kind string) []string {
+func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
 	switch {
-	case len(nodeCfg.Share) != 0:
-		return nodeCfg.Share
-	case len(c.Config.Topology.Kinds[kind].Share) != 0:
-		return c.Config.Topology.Kinds[kind].Share
-	case len(c.Config.Topology.Defaults.Share) != 0:
-		return c.Config.Topology.Defaults.Share
+	case len(nodeCfg.Publish) != 0:
+		return nodeCfg.Publish
+	case len(c.Config.Topology.Kinds[kind].Publish) != 0:
+		return c.Config.Topology.Kinds[kind].Publish
+	case len(c.Config.Topology.Defaults.Publish) != 0:
+		return c.Config.Topology.Defaults.Publish
 	}
 	return nil
 }
@@ -424,7 +424,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	user := c.userInit(&nodeCfg, node.Kind)
 
-	node.Share = c.shareInit(&nodeCfg, node.Kind)
+	node.Publish = c.publishInit(&nodeCfg, node.Kind)
 
 	switch node.Kind {
 	case "ceos":
