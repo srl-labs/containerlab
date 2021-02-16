@@ -570,11 +570,15 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"CONNECTION_MODE": "bridge"}
+			"CONNECTION_MODE": "ovs"}
 		node.Env = mergeStringMaps(defEnv, envs)
 
 		// mount tftpboot dir
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "tftpboot"), ":/tftpboot"))
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
 
 		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
 
@@ -588,9 +592,14 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "admin",
 			"PASSWORD":        "admin@123",
-			"CONNECTION_MODE": "bridge",
+			"CONNECTION_MODE": "ovs",
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
+
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
 
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
 
@@ -604,9 +613,14 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "clab",
 			"PASSWORD":        "clab@123",
-			"CONNECTION_MODE": "bridge",
+			"CONNECTION_MODE": "ovs",
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
+
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
 
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
 
@@ -620,11 +634,16 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "clab",
 			"PASSWORD":        "clab@123",
-			"CONNECTION_MODE": "bridge",
+			"CONNECTION_MODE": "ovs",
 			"VCPU":            "2",
 			"RAM":             "12288",
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
+
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
 
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"], node.Env["VCPU"], node.Env["RAM"])
 
