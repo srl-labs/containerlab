@@ -35,11 +35,11 @@ nfpms:
       - deb
     bindir: /usr/bin
     contents:
-      - src: ./lab-examples/**/*
+      - src: ./lab-examples
         dst: /etc/containerlab/lab-examples
-      - src: ./templates/**/*
+      - src: ./templates
         dst: /etc/containerlab/templates
-      - src: ./tools/**/*
+      - src: ./tools
         dst: /etc/containerlab/tools
       - src: /usr/bin/containerlab
         dst: /usr/bin/clab
