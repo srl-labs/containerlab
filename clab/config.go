@@ -795,7 +795,12 @@ func (c *CLab) verifyLinks() error {
 func (c *CLab) VerifyImages(ctx context.Context) error {
 	images := map[string]struct{}{}
 	for _, node := range c.Nodes {
-		images[node.Image] = struct{}{}
+		if node.Image == "" && node.Kind != "bridge" {
+			return fmt.Errorf("missing required image for node %s", node.ShortName)
+		}
+		if node.Image != "" {
+			images[node.Image] = struct{}{}
+		}
 	}
 
 	for image := range images {
