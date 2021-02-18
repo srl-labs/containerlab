@@ -54,12 +54,21 @@ var deployCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		if err = c.CheckTopologyDefinition(); err != nil {
+			return err
+		}
+
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
 			return err
 		}
+
+		if err = c.VerifyImages(ctx); err != nil {
+			return err
+		}
+
 		if reconfigure {
 			if err != nil {
 				return err
@@ -70,9 +79,6 @@ var deployCmd = &cobra.Command{
 				return err
 			}
 
-		}
-		if err = c.VerifyBridgesExist(); err != nil {
-			return err
 		}
 
 		// create lab directory
@@ -232,7 +238,7 @@ var deployCmd = &cobra.Command{
 			log.Errorf("failed to create hosts file: %v", err)
 		}
 		// print table summary
-		printContainerInspect(containers, c.Config.Mgmt.Network, format)
+		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
 		return nil
 	},
 }

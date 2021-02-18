@@ -4,13 +4,13 @@ topology:
     node1:
       kind: srl
       type: ixr6
-      license: node1.lic
+      license: test_data/node1.lic
       binds:
-        - /node/src:/dst
+        - test_data/node1.lic:/dst
       env:
         env1: val1
         env2: val2
     node2:
       kind: srl
-      license: node1.lic
+      license: test_data/node1.lic
       user: custom

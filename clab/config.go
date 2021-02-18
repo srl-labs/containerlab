@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -27,12 +28,13 @@ const (
 )
 
 // supported kinds
-var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "linux", "bridge"}
+var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge", "mysocketio"}
 
 var defaultConfigTemplates = map[string]string{
-	"srl":  "/etc/containerlab/templates/srl/srlconfig.tpl",
-	"ceos": "/etc/containerlab/templates/arista/ceos.cfg.tpl",
-	"crpd": "/etc/containerlab/templates/crpd/juniper.conf",
+	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
+	"ceos":    "/etc/containerlab/templates/arista/ceos.cfg.tpl",
+	"crpd":    "/etc/containerlab/templates/crpd/juniper.conf",
+	"vr-sros": "",
 }
 
 var srlTypes = map[string]string{
@@ -66,6 +68,7 @@ type NodeConfig struct {
 	Ports    []string `yaml:"ports,omitempty"`     // list of port bindings
 	MgmtIPv4 string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
 	MgmtIPv6 string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
+	Publish  []string `yaml:"publish,omitempty"`   // list of ports to publish with mysocketctl
 
 	Env  map[string]string `yaml:"env,omitempty"`  // environment variables
 	User string            `yaml:"user,omitempty"` // linux user used in a container
@@ -94,14 +97,15 @@ type Config struct {
 
 // Node is a struct that contains the information of a container element
 type Node struct {
-	ShortName            string
-	LongName             string
-	Fqdn                 string
-	LabDir               string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index                int
-	Group                string
-	Kind                 string
-	Config               string // path to config template file that is used for config generation
+	ShortName string
+	LongName  string
+	Fqdn      string
+	LabDir    string // LabDir is a directory related to the node, it contains config items and/or other persistent state
+	Index     int
+	Group     string
+	Kind      string
+	// path to config template file that is used for config generation
+	Config               string
 	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType             string
 	Position             string
@@ -125,7 +129,8 @@ type Node struct {
 	TLSCert              string
 	TLSKey               string
 	TLSAnchor            string
-	NSPath               string // network namespace path for this node
+	NSPath               string   // network namespace path for this node
+	Publish              []string //list of ports to publish with mysocketctl
 }
 
 // Link is a struct that contains the information of a link between 2 containers
@@ -143,8 +148,8 @@ type Endpoint struct {
 	EndpointName string
 }
 
-// ParseIPInfo parses IP information
-func (c *CLab) parseIPInfo() error {
+// initMgmtNetwork sets management network config
+func (c *CLab) initMgmtNetwork() error {
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
@@ -167,8 +172,8 @@ func (c *CLab) parseIPInfo() error {
 func (c *CLab) ParseTopology() error {
 	log.Info("Parsing topology information ...")
 	log.Debugf("Lab name: %s", c.Config.Name)
-	// initialize DockerInfo
-	err := c.parseIPInfo()
+	// initialize Management network config
+	err := c.initMgmtNetwork()
 	if err != nil {
 		return err
 	}
@@ -264,19 +269,30 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-func (c *CLab) configInitialization(nodeCfg *NodeConfig, kind string) string {
-	if nodeCfg.Config != "" {
-		return nodeCfg.Config
+//configInit processes the path to a config file that can be provided on
+// multiple configuration levels
+// returns an errof if the reference path doesn't exist
+func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
+	var cfg string
+	var err error
+	switch {
+	case nodeCfg.Config != "":
+		cfg = nodeCfg.Config
+	case c.Config.Topology.Kinds[kind].Config != "":
+		cfg = c.Config.Topology.Kinds[kind].Config
+	case c.Config.Topology.Defaults.Config != "":
+		cfg = c.Config.Topology.Defaults.Config
+	default:
+		cfg = defaultConfigTemplates[kind]
 	}
-	if kindConfig, ok := c.Config.Topology.Kinds[kind]; ok {
-		if kindConfig.Config != "" {
-			return kindConfig.Config
+	if cfg != "" {
+		cfg, err = resolvePath(cfg)
+		if err != nil {
+			return "", err
 		}
+		_, err = os.Stat(cfg)
 	}
-	if c.Config.Topology.Defaults.Config != "" {
-		return c.Config.Topology.Defaults.Config
-	}
-	return defaultConfigTemplates[kind]
+	return cfg, err
 }
 
 func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
@@ -290,19 +306,27 @@ func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 }
 
 func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+	// path to license file
+	var lic string
+	var err error
 	switch {
 	case nodeCfg.License != "":
-		return nodeCfg.License, nil
+		lic = nodeCfg.License
 	case c.Config.Topology.Kinds[node.Kind].License != "":
-		return c.Config.Topology.Kinds[node.Kind].License, nil
+		lic = c.Config.Topology.Kinds[node.Kind].License
 	case c.Config.Topology.Defaults.License != "":
-		return c.Config.Topology.Defaults.License, nil
+		lic = c.Config.Topology.Defaults.License
 	default:
-		if node.Kind == "srl" {
-			return "", fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
-		}
-		return "", nil
+		lic = ""
 	}
+	if lic != "" {
+		lic, err = resolvePath(lic)
+		if err != nil {
+			return "", err
+		}
+		_, err = os.Stat(lic)
+	}
+	return lic, err
 }
 
 func (c *CLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
@@ -350,6 +374,18 @@ func (c *CLab) userInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
+func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
+	switch {
+	case len(nodeCfg.Publish) != 0:
+		return nodeCfg.Publish
+	case len(c.Config.Topology.Kinds[kind].Publish) != 0:
+		return c.Config.Topology.Kinds[kind].Publish
+	case len(c.Config.Topology.Defaults.Publish) != 0:
+		return c.Config.Topology.Defaults.Publish
+	}
+	return nil
+}
+
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
@@ -388,10 +424,15 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	user := c.userInit(&nodeCfg, node.Kind)
 
+	node.Publish = c.publishInit(&nodeCfg, node.Kind)
+
 	switch node.Kind {
 	case "ceos":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
@@ -420,15 +461,18 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	case "srl":
 		// initialize the global parameters with defaults, can be overwritten later
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 
 		lp, err := c.licenseInit(&nodeCfg, node)
 		if err != nil {
 			return err
 		}
-		lp, err = resolvePath(lp)
-		if err != nil {
-			return err
+
+		if lp == "" {
+			return fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
 		}
 
 		node.License = lp
@@ -449,11 +493,15 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		}
 
 		// initialize specifc container information
-		node.Cmd = "sudo bash -c /opt/srlinux/bin/sr_linux"
+		node.Cmd = "sudo sr_linux"
 
 		kindEnv := map[string]string{"SRLINUX": "1"}
 		node.Env = mergeStringMaps(kindEnv, envs)
 
+		// if user was not initialized to a value, use root
+		if user == "" {
+			user = "0:0"
+		}
 		node.User = user
 
 		node.Sysctls = make(map[string]string)
@@ -481,7 +529,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	case "crpd":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -489,10 +540,6 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// initialize license file
 		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-		lp, err = resolvePath(lp)
 		if err != nil {
 			return err
 		}
@@ -505,7 +552,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
 
 	case "sonic-vs":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -515,7 +565,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Entrypoint = "/bin/bash"
 
 	case "vr-sros":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -529,22 +582,21 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		if err != nil {
 			return err
 		}
-		lp, err = resolvePath(lp)
-		if err != nil {
-			return err
-		}
 		node.License = lp
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"NUM_NICS":        "5",
-			"CONNECTION_MODE": "bridge"}
+			"CONNECTION_MODE": "ovs"}
 		node.Env = mergeStringMaps(defEnv, envs)
 
 		// mount tftpboot dir
 		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "tftpboot"), ":/tftpboot"))
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
 
-		node.Cmd = fmt.Sprintf("--num-nics %s --connection-mode %s --hostname %s --variant %s", node.Env["NUM_NICS"], node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
+		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
 
 	case "vr-vmx":
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
@@ -556,9 +608,14 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "admin",
 			"PASSWORD":        "admin@123",
-			"CONNECTION_MODE": "bridge",
+			"CONNECTION_MODE": "ovs",
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
+
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
 
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
 
@@ -572,14 +629,45 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "clab",
 			"PASSWORD":        "clab@123",
-			"CONNECTION_MODE": "bridge",
+			"CONNECTION_MODE": "ovs",
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
 
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
+
 		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
 
-	case "alpine", "linux":
-		node.Config = c.configInitialization(&nodeCfg, node.Kind)
+	case "vr-xrv9k":
+		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		node.User = user
+
+		// env vars are used to set launch.py arguments in vrnetlab container
+		defEnv := map[string]string{
+			"USERNAME":        "clab",
+			"PASSWORD":        "clab@123",
+			"CONNECTION_MODE": "ovs",
+			"VCPU":            "2",
+			"RAM":             "12288",
+		}
+		node.Env = mergeStringMaps(defEnv, envs)
+
+		if node.Env["CONNECTION_MODE"] == "macvtap" {
+			// mount dev dir to enable macvtap
+			node.Binds = append(node.Binds, "/dev:/dev")
+		}
+
+		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"], node.Env["VCPU"], node.Env["RAM"])
+
+	case "alpine", "linux", "mysocketio":
+		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		if err != nil {
+			return err
+		}
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
@@ -659,13 +747,66 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	return endpoint
 }
 
+// CheckTopologyDefinition runs topology checks and returns any errors found
+func (c *CLab) CheckTopologyDefinition() error {
+	err := c.verifyBridgesExist()
+	if err != nil {
+		return err
+	}
+	err = c.verifyLinks()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // VerifyBridgeExists verifies if every node of kind=bridge exists on the lab host
-func (c *CLab) VerifyBridgesExist() error {
+func (c *CLab) verifyBridgesExist() error {
 	for name, node := range c.Nodes {
 		if node.Kind == "bridge" {
 			if _, err := netlink.LinkByName(name); err != nil {
 				return fmt.Errorf("bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
 			}
+		}
+	}
+	return nil
+}
+
+func (c *CLab) verifyLinks() error {
+	endpoints := map[string]struct{}{}
+	dups := []string{}
+	for _, lc := range c.Config.Topology.Links {
+		for _, e := range lc.Endpoints {
+			if _, ok := endpoints[e]; ok {
+				dups = append(dups, e)
+			}
+			endpoints[e] = struct{}{}
+		}
+	}
+	if len(dups) != 0 {
+		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
+	}
+	return nil
+}
+
+// VerifyImages will check if image referred in the node config
+// either pullable or present or is available in the local registry
+// if it is not available it will emit an error
+func (c *CLab) VerifyImages(ctx context.Context) error {
+	images := map[string]struct{}{}
+	for _, node := range c.Nodes {
+		if node.Image == "" && node.Kind != "bridge" {
+			return fmt.Errorf("missing required image for node %s", node.ShortName)
+		}
+		if node.Image != "" {
+			images[node.Image] = struct{}{}
+		}
+	}
+
+	for image := range images {
+		err := c.PullImageIfRequired(ctx, image)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -695,6 +836,7 @@ func resolvePath(p string) (string, error) {
 
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
 // it allows host path to have `~` and returns absolute path for a relative path
+// if the host path doesn't exist, the error will be returned
 func resolveBindPaths(binds []string) error {
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
@@ -702,6 +844,10 @@ func resolveBindPaths(binds []string) error {
 		hp, err := resolvePath(elems[0])
 		if err != nil {
 			return err
+		}
+		_, err = os.Stat(hp)
+		if err != nil {
+			return fmt.Errorf("failed to verify bind path: %v", err)
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")

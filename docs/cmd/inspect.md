@@ -11,7 +11,9 @@ The `inspect` command provides the information about the deployed labs.
 ### Flags
 
 #### all
-With the local `--all` flag its possible to list all deployed labs in a single table.
+With the local `--all` flag its possible to list all deployed labs in a single table. The output will also show the relative path to the topology file that was used to spawn this lab.
+
+The lab name and path values will be set for the first node of such lab, to reduce the clutter. Refer to the [examples](#examples) section for more details.
 
 #### topology | name
 
@@ -33,13 +35,14 @@ With this flag inspect command will output every bit of information about the ru
 ```bash
 # list all running labs on the host
 containerlab inspect --all
-+---+-----------+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| # | Lab Name  |        Name         | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+-----------+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| 1 | srl01     | clab-srl01-srl      | 37156faa5444 | srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
-| 2 | srlceos01 | clab-srlceos01-ceos | 90bebb1e2c5f | ceos    | ceos |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
-| 3 | srlceos01 | clab-srlceos01-srl  | 82e9aa3c7e6b | srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
-+---+-----------+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
++---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
+| # | Topo Path  | Lab Name |      Name       | Container ID |       Image        | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
++---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
+| 1 | newlab.yml | newlab   | clab-newlab-n1  | 3c8262034088 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
+| 2 |            |          | clab-newlab-n2  | 79c562b71997 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.5/24 | 2001:172:20:20::5/80 |
+| 3 | srl02.yml  | srl01    | clab-srl01-srl  | 13c9e7543771 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
+| 4 |            |          | clab-srl01-srl2 | 8cfca93b7b6f | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
++---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
 
 # provide information about the running lab named srl02
 containerlab inspect --name srlceos01

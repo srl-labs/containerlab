@@ -17,6 +17,7 @@ import (
 
 // TopoFile type is a struct which defines parameters of the topology file
 type TopoFile struct {
+	path     string // topo file path
 	fullName string // file name with extension
 	name     string // file name without extension
 }
@@ -32,7 +33,12 @@ func (c *CLab) GetTopology(topo string) error {
 	}
 	log.Debug(fmt.Sprintf("Topology file contents:\n%s\n", yamlFile))
 
-	err = yaml.Unmarshal(yamlFile, c.Config)
+	err = yaml.UnmarshalStrict(yamlFile, c.Config)
+	if err != nil {
+		return err
+	}
+
+	path, _ := filepath.Abs(topo)
 	if err != nil {
 		return err
 	}
@@ -41,6 +47,7 @@ func (c *CLab) GetTopology(topo string) error {
 	file := s[len(s)-1]
 	filename := strings.Split(file, ".")
 	c.TopoFile = &TopoFile{
+		path:     path,
 		fullName: file,
 		name:     filename[0],
 	}
@@ -247,6 +254,16 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 				return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 			}
 			log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+
+			cfg := path.Join(node.LabDir, "tftpboot", "config.txt")
+			if node.Config != "" {
+				err = node.generateConfig(cfg)
+				if err != nil {
+					log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+				}
+			} else {
+				log.Debugf("Config file exists for node %s", node.ShortName)
+			}
 		}
 	case "bridge":
 	default:

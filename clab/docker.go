@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -145,11 +146,6 @@ func (c *CLab) DeleteBridge(ctx context.Context) (err error) {
 func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
-	err = c.PullImageIfRequired(ctx, node.Image)
-	if err != nil {
-		return err
-	}
-
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	labels := map[string]string{
@@ -168,11 +164,17 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	if node.LabDir != "" {
 		labels["clab-node-dir"] = node.LabDir
 	}
+	labels["clab-topo-file"] = c.TopoFile.path
+
+	cmd, err := shlex.Split(node.Cmd)
+	if err != nil {
+		return err
+	}
 
 	cont, err := c.DockerClient.ContainerCreate(nctx,
 		&container.Config{
 			Image:        node.Image,
-			Cmd:          strings.Fields(node.Cmd),
+			Cmd:          cmd,
 			Env:          convertEnvs(node.Env),
 			AttachStdout: true,
 			AttachStderr: true,
@@ -341,6 +343,20 @@ func (c *CLab) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byt
 		return nil, nil, ctx.Err()
 	}
 	return outBuf.Bytes(), errBuf.Bytes(), nil
+}
+
+// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
+func (c *CLab) ExecNotWait(ctx context.Context, id string, cmd []string) error {
+	execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: cmd}
+	respID, err := c.DockerClient.ContainerExecCreate(context.Background(), id, execConfig)
+	if err != nil {
+		return err
+	}
+	_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // DeleteContainer tries to stop a container then remove it

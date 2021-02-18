@@ -27,6 +27,9 @@ Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get 
 #### graceful
 To make containerlab attempt a graceful shutdown of the running containers, add the `--graceful` flag to destroy cmd. Without it, containers will be removed forcefully without even attempting to stop them.
 
+#### all
+Destroy command provided with `--all | -a` flag will perform the deletion of all the labs running on the container host. It will not touch containers launched manually.
+
 ### Examples
 
 ```bash
@@ -35,4 +38,8 @@ containerlab destroy -t mylab.yml
 
 # destroy a lab and also remove the Lab Directory
 containerlab destroy -t mylab.yml --cleanup
+
+# destroy all labs deployed with containerlab
+# using shortcut names
+clab des -a
 ```

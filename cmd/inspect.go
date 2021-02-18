@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -21,6 +22,7 @@ var all bool
 
 type containerDetails struct {
 	LabName     string `json:"lab_name,omitempty"`
+	LabPath     string `json:"labPath,omitempty"`
 	Name        string `json:"name,omitempty"`
 	ContainerID string `json:"container_id,omitempty"`
 	Image       string `json:"image,omitempty"`
@@ -77,7 +79,7 @@ var inspectCmd = &cobra.Command{
 			fmt.Println(string(b))
 			return
 		}
-		printContainerInspect(containers, c.Config.Mgmt.Network, format)
+		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
 	},
 }
 
@@ -93,7 +95,7 @@ func toTableData(det []containerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
 	for i, d := range det {
 		if all {
-			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabPath, d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
 			continue
 		}
 		tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
@@ -101,11 +103,20 @@ func toTableData(det []containerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(containers []types.Container, bridgeName string, format string) {
+func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeName string, format string) {
 	contDetails := make([]containerDetails, 0, len(containers))
+	// do not print published ports unless mysocketio kind is found
+	printMysocket := false
+	var mysocketCID string
+
 	for _, cont := range containers {
+		// get topo file path relative of the cwd
+		cwd, _ := os.Getwd()
+		path, _ := filepath.Rel(cwd, cont.Labels["clab-topo-file"])
+
 		cdet := containerDetails{
 			LabName:     strings.TrimPrefix(cont.Labels["containerlab"], "lab-"),
+			LabPath:     path,
 			Image:       cont.Image,
 			State:       cont.State,
 			IPv4Address: getContainerIPv4(cont, bridgeName),
@@ -119,6 +130,10 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		}
 		if kind, ok := cont.Labels["kind"]; ok {
 			cdet.Kind = kind
+			if kind == "mysocketio" {
+				printMysocket = true
+				mysocketCID = cont.ID
+			}
 		}
 		if group, ok := cont.Labels["group"]; ok {
 			cdet.Group = group
@@ -153,14 +168,30 @@ func printContainerInspect(containers []types.Container, bridgeName string, form
 		"IPv6 Address",
 	}
 	if all {
-		table.SetHeader(append([]string{"#"}, header...))
+		table.SetHeader(append([]string{"#", "Topo Path"}, header...))
 	} else {
 		table.SetHeader(append([]string{"#"}, header[1:]...))
 	}
 	table.SetAutoFormatHeaders(false)
 	table.SetAutoWrapText(false)
+	// merge cells with lab name and topo file path
+	table.SetAutoMergeCellsByColumnIndex([]int{1, 2})
 	table.AppendBulk(tabData)
 	table.Render()
+
+	if !printMysocket {
+		return
+	}
+	stdout, stderr, err := c.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
+	if err != nil {
+		log.Errorf("failed to execute cmd: %v", err)
+
+	}
+	if len(stderr) > 0 {
+		log.Infof("errors during listing mysocketio sockets: %s", string(stderr))
+	}
+	fmt.Println("Published ports:")
+	fmt.Println(string(stdout))
 }
 
 func getContainerIPv4(container types.Container, bridgeName string) string {
