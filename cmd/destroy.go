@@ -177,7 +177,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
 
-	log.Infof("Destroying container lab: %s", topo)
+	log.Infof("Destroying container lab: %s", c.Config.Name)
 	wg := new(sync.WaitGroup)
 	wg.Add(len(containers))
 	for _, cont := range containers {
