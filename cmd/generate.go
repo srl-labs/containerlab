@@ -121,6 +121,7 @@ func init() {
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
 	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false, "deploy a fabric based on the generated topology file")
+	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string, images map[string]string, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
