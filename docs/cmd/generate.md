@@ -70,6 +70,11 @@ When `--deploy` flag is present, the lab deployment process starts using the gen
 
 The generated definition file is first saved by the path set with `--file` or, if file path is not set, by the default path of `<lab-name>.yml`. Then the equivalent of the `deploy -t <file> --reconfigure` command is executed.
 
+#### max-workers
+With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.
+
+If during the deployment of a large scaled lab you see errors about max number of opened files reached, limit the max workers with this flag.
+
 #### file
 With `--file` flag its possible to save the generated topology definition in a file by a given path.
 
