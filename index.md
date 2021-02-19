@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2021-01-26T19:14:10.527Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36" etag="Mp_-DQhRiZ8JozKiP7ug" version="14.2.7" type="github" pages="2">
+<mxfile host="app.diagrams.net" modified="2021-02-19T14:05:00.987Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36" etag="3s_-CVJynVIx7AAW15LV" version="14.3.1" type="github" pages="2">
   <diagram id="IwGoDYMSzOG72_LcMlLt" name="[0] lab topo">
-    <mxGraphModel dx="1173" dy="657" grid="0" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
+    <mxGraphModel dx="821" dy="460" grid="0" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -515,7 +515,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="PsoP77SgcHK2ghwCifCZ-79" value="CLOS topologies" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=16;fontFamily=Manrope;rotation=0;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DManrope;fontStyle=1;fontColor=#FFFFFF;" parent="1" vertex="1">
-          <mxGeometry x="173" y="811" width="134" height="24" as="geometry" />
+          <mxGeometry x="217.5" y="811" width="134" height="24" as="geometry" />
         </mxCell>
         <mxCell id="PsoP77SgcHK2ghwCifCZ-80" value="" style="group;fontFamily=Manrope;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DManrope;" parent="1" vertex="1" connectable="0">
           <mxGeometry x="635" y="671" width="30" height="30" as="geometry" />
