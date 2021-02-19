@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
@@ -22,74 +23,76 @@ import (
 
 const sysctlBase = "/proc/sys"
 
-// CreateBridge creates a docker bridge
-func (c *CLab) CreateBridge(ctx context.Context) (err error) {
-	log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s'", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
-
-	enableIPv6 := false
-	var ipamConfig []network.IPAMConfig
-	if c.Config.Mgmt.IPv4Subnet != "" {
-		ipamConfig = append(ipamConfig, network.IPAMConfig{
-			Subnet: c.Config.Mgmt.IPv4Subnet,
-		})
-	}
-	if c.Config.Mgmt.IPv6Subnet != "" {
-		ipamConfig = append(ipamConfig, network.IPAMConfig{
-			Subnet: c.Config.Mgmt.IPv6Subnet,
-		})
-		enableIPv6 = true
-	}
-
-	ipam := &network.IPAM{
-		Driver: "default",
-		Config: ipamConfig,
-	}
-
-	networkOptions := types.NetworkCreate{
-		CheckDuplicate: true,
-		Driver:         "bridge",
-		EnableIPv6:     enableIPv6,
-		IPAM:           ipam,
-		Internal:       false,
-		Attachable:     false,
-		Labels: map[string]string{
-			"containerlab": "",
-		},
-		Options: map[string]string{
-			"com.docker.network.driver.mtu": c.Config.Mgmt.MTU,
-		},
-	}
-
-	var bridgeName string
-	var netCreateResponse types.NetworkCreateResponse
+// CreateDockerNet creates a docker network or reusing if it exists
+func (c *CLab) CreateDockerNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	netCreateResponse, err = c.DockerClient.NetworkCreate(nctx, c.Config.Mgmt.Network, networkOptions)
-	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			log.Debugf("Container network %s already exists", c.Config.Mgmt.Network)
-			nctx, cancel := context.WithTimeout(ctx, c.timeout)
-			defer cancel()
-			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Config.Mgmt.Network) //, types.NetworkInspectOptions{})
-			if err != nil {
-				return err
-			}
-			log.Debugf("container network: %+v", netResource)
-			if len(netResource.ID) < 12 {
-				return fmt.Errorf("could not get bridge ID")
-			}
-			bridgeName = "br-" + netResource.ID[:12]
-		} else {
+
+	// linux bridge name that is used by docker network
+	var bridgeName string
+
+	log.Debugf("Checking if docker network '%s' exists", c.Config.Mgmt.Network)
+	netResource, err := c.DockerClient.NetworkInspect(nctx, c.Config.Mgmt.Network)
+	switch {
+	case client.IsErrNetworkNotFound(err):
+		log.Debugf("Network '%s' does not exist", c.Config.Mgmt.Network)
+		log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s'", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
+
+		enableIPv6 := false
+		var ipamConfig []network.IPAMConfig
+		if c.Config.Mgmt.IPv4Subnet != "" {
+			ipamConfig = append(ipamConfig, network.IPAMConfig{
+				Subnet: c.Config.Mgmt.IPv4Subnet,
+			})
+		}
+		if c.Config.Mgmt.IPv6Subnet != "" {
+			ipamConfig = append(ipamConfig, network.IPAMConfig{
+				Subnet: c.Config.Mgmt.IPv6Subnet,
+			})
+			enableIPv6 = true
+		}
+
+		ipam := &network.IPAM{
+			Driver: "default",
+			Config: ipamConfig,
+		}
+
+		networkOptions := types.NetworkCreate{
+			CheckDuplicate: true,
+			Driver:         "bridge",
+			EnableIPv6:     enableIPv6,
+			IPAM:           ipam,
+			Internal:       false,
+			Attachable:     false,
+			Labels: map[string]string{
+				"containerlab": "",
+			},
+			Options: map[string]string{
+				"com.docker.network.driver.mtu": c.Config.Mgmt.MTU,
+			},
+		}
+
+		netCreateResponse, err := c.DockerClient.NetworkCreate(nctx, c.Config.Mgmt.Network, networkOptions)
+		if err != nil {
 			return err
 		}
-	}
-	if len(bridgeName) == 0 {
+
 		if len(netCreateResponse.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
 		bridgeName = "br-" + netCreateResponse.ID[:12]
+
+	case err == nil:
+		log.Debugf("network '%s' was found. Reusing it...", c.Config.Mgmt.Network)
+		if len(netResource.ID) < 12 {
+			return fmt.Errorf("could not get bridge ID")
+		}
+		bridgeName = "br-" + netResource.ID[:12]
+	default:
+		return err
 	}
-	log.Debugf("container network %s : bridge name: %s", c.Config.Mgmt.Network, bridgeName)
+
+	log.Debugf("Docker network '%s', bridge name '%s'", c.Config.Mgmt.Network, bridgeName)
 
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
@@ -101,7 +104,7 @@ func (c *CLab) CreateBridge(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to disable RP filter on docker host for the 'default' scope: %v", err)
 	}
 
-	log.Debugf("Enable LLDP on the docker bridge %s", bridgeName)
+	log.Debugf("Enable LLDP on the linux bridge %s", bridgeName)
 	file := "/sys/class/net/" + bridgeName + "/bridge/group_fwd_mask"
 
 	err = ioutil.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
