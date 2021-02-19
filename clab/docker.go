@@ -22,8 +22,8 @@ import (
 
 const sysctlBase = "/proc/sys"
 
-// CreateBridge creates a docker bridge
-func (c *CLab) CreateBridge(ctx context.Context) (err error) {
+// CreateDockerNet creates a docker network or reusing if it exists
+func (c *CLab) CreateDockerNet(ctx context.Context) (err error) {
 	log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s'", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
 
 	enableIPv6 := false
@@ -70,7 +70,7 @@ func (c *CLab) CreateBridge(ctx context.Context) (err error) {
 			log.Debugf("Container network %s already exists", c.Config.Mgmt.Network)
 			nctx, cancel := context.WithTimeout(ctx, c.timeout)
 			defer cancel()
-			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Config.Mgmt.Network) //, types.NetworkInspectOptions{})
+			netResource, err := c.DockerClient.NetworkInspect(nctx, c.Config.Mgmt.Network)
 			if err != nil {
 				return err
 			}
