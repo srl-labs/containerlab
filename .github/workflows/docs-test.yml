@@ -1,5 +1,5 @@
 ---
-name: Test
+name: Docs test
 on:
   push:
     branches:
