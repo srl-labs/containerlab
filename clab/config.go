@@ -25,6 +25,8 @@ const (
 	dockerNetMTU      = "1450"
 	srlDefaultType    = "ixr6"
 	vrsrosDefaultType = "sr-1"
+	// default connection mode for vrnetlab based containers
+	vrDefConnMode = "tc"
 )
 
 // supported kinds
@@ -586,7 +588,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"CONNECTION_MODE": "ovs"}
+			"CONNECTION_MODE": vrDefConnMode}
 		node.Env = mergeStringMaps(defEnv, envs)
 
 		// mount tftpboot dir
@@ -608,7 +610,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "admin",
 			"PASSWORD":        "admin@123",
-			"CONNECTION_MODE": "ovs",
+			"CONNECTION_MODE": vrDefConnMode,
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
 
@@ -629,7 +631,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "clab",
 			"PASSWORD":        "clab@123",
-			"CONNECTION_MODE": "ovs",
+			"CONNECTION_MODE": vrDefConnMode,
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
 
@@ -650,7 +652,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		defEnv := map[string]string{
 			"USERNAME":        "clab",
 			"PASSWORD":        "clab@123",
-			"CONNECTION_MODE": "ovs",
+			"CONNECTION_MODE": vrDefConnMode,
 			"VCPU":            "2",
 			"RAM":             "12288",
 		}
