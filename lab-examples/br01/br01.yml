@@ -4,7 +4,7 @@ name: br01
 topology:
   kinds:
     srl:
-      type: ixrd1
+      type: ixrd2
       image: srlinux
       license: license.key
   nodes:
