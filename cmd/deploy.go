@@ -103,9 +103,9 @@ var deployCmd = &cobra.Command{
 		log.Debugf("root Cert: %s", string(rootCerts.Cert))
 		log.Debugf("root Key: %s", string(rootCerts.Key))
 
-		// create bridge
-		if err = c.CreateBridge(ctx); err != nil {
-			log.Error(err)
+		// create docker network or use existing one
+		if err = c.CreateDockerNet(ctx); err != nil {
+			return err
 		}
 
 		certTpl, err := template.ParseFiles(certCsrTemplate)

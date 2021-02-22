@@ -1,4 +1,4 @@
-name: manual docs publish
+name: Manual docs publish
 on:
   workflow_dispatch:
 

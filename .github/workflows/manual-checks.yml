@@ -1,4 +1,4 @@
-name: manual code checks
+name: Manual code checks
 on:
   workflow_dispatch:
 

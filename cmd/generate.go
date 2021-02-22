@@ -1,18 +1,3 @@
-/*
-Copyright © 2020 NAME HERE <EMAIL ADDRESS>
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package cmd
 
 import (
@@ -30,12 +15,17 @@ import (
 )
 
 var interfaceFormat = map[string]string{
-	"srl":    "e1-%d",
-	"ceos":   "eth%d",
-	"linux":  "eth$d",
-	"bridge": "veth%d",
+	"srl":      "e1-%d",
+	"ceos":     "eth%d",
+	"crpd":     "eth%d",
+	"sonic-vs": "eth%d",
+	"linux":    "eth%d",
+	"bridge":   "veth%d",
+	"vr-sros":  "eth%d",
+	"vr-vmx":   "eth%d",
+	"vr-xrv9k": "eth%d",
 }
-var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic", "crpd"}
+var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-xrv9k"}
 
 const (
 	defaultSRLType     = "ixr6"
@@ -131,6 +121,7 @@ func init() {
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
 	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false, "deploy a fabric based on the generated topology file")
+	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string, images map[string]string, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {

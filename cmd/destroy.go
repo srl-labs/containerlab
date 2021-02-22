@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -80,6 +81,12 @@ var destroyCmd = &cobra.Command{
 					clab.WithGracefulShutdown(graceful),
 				}
 				c = clab.NewContainerLab(opts...)
+				// change to the dir where topo file is located
+				// to resolve relative paths of license/configs in ParseTopology
+				if err = os.Chdir(filepath.Dir(topo)); err != nil {
+					return err
+				}
+
 				// Parse topology information
 				if err = c.ParseTopology(); err != nil {
 					return err
@@ -170,7 +177,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
 
-	log.Infof("Destroying container lab: %s", topo)
+	log.Infof("Destroying container lab: %s", c.Config.Name)
 	wg := new(sync.WaitGroup)
 	wg.Add(len(containers))
 	for _, cont := range containers {

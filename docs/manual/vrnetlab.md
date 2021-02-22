@@ -46,30 +46,26 @@ To build a container image with XRv9k/XRv inside users should follow [the instru
 
 
 ### Connection modes
-Containerlab offers several ways VM based routers can be connected with the rest of the docker workloads. By default, vrnetlab integrated routers will use **Openvswitch** backend, which assumes that openvswitch is installed on the containerlab host. OVS backend allows vrnetlab based routers to use LACP/STP/LLDP protocols without restrictions.
+Containerlab offers several ways VM based routers can be connected with the rest of the docker workloads. By default, vrnetlab integrated routers will use **tc** backend[^2] which doesn't require any additional packages to be installed on the containerhost and supoprts transparent passage of LACP frames.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:4,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/vrnetlab.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/vrnetlab.drawio&quot;}"></div>
 
-??? "How to install openvswitch?"
-    Debian based systems (i.e. Ubuntu) can install ovs with `apt install openvswitch-switch` command.  
-    Centos users can follow [this installation manual](https://gist.github.com/umardx/a31bf6a13600a55c0d07d4ca33133834).
+??? "Any other datapaths?"
+    Althout `tc` based datapath should cover all the needed connectivity requirements, if other, bridge-like, datapaths are needed, Containerlab offers OpenvSwitch and Linux bridge modes.  
+    Users can plug in those datapaths by specifying `CONNECTION_MODE` env variable:
+    ```yaml
+    # the env variable can also be set in the defaults section
+    name: myTopo
 
-If OVS can't be installed on containerlab host, it is possible to use **Linux Bridge** backend. Linux bridges won't pass LACP frames, but they will pass LLDP and don't require any packages to be installed on the containerlab hostgo. To use Linux Bridge backend, the users should set an environment variable like so:
+    topology:
+      nodes:
+        sr1:
+          kind: vr-sros
+          image: vrnetlab/vr-sros:20.10.R1
+          env:
+            CONNECTION_MODE: bridge # use `ovs` for openvswitch datapath
+    ```
 
-```yaml
-# the env variable can also be set in the defaults section
-name: myTopo
-
-topology:
-  nodes:
-    sr1:
-      kind: vr-sros
-      image: vrnetlab/vr-sros:20.10.R1
-      env:
-        CONNECTION_MODE: bridge
-```
-
-### Limitations and known issues
-* When Linux Bridge connection mode is used LACP and BPDU packets can not be delivered to/from VM's running inside the containers. By default containerlab uses OVS backend, where LACP and BPDU work.
 
 [^1]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
+[^2]: pros and cons of different datapaths were examined [here](https://netdevops.me/2021/transparently-redirecting-packets/frames-between-interfaces/)
