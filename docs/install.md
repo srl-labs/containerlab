@@ -14,18 +14,29 @@ Containerlab package can be installed using the [installation script](https://gi
     Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives are supported.
 
 ```bash
-# download and install the latest release
-sudo curl -sL https://get-clab.srlinux.dev | sudo bash
+# download and install the latest release (may require sudo)
+bash -c "$(curl -sL https://get-clab.srlinux.dev)"
 
-# download a specific version - 0.6.0
-sudo curl -sL https://get-clab.srlinux.dev | sudo bash -s -- -v 0.6.0
+# download a specific version - 0.10.3 (may require sudo)
+bash -c "$(curl -sL https://get-clab.srlinux.dev)" -- -v 0.10.3
+
+# with wget
+bash -c "$(wget -qO - https://get-clab.srlinux.dev)"
 ```
 
-!!!note "Manual installation"
+???note "Manual installation"
     If the usage of piped bash scripts is discouraged or restricted, the users can manually download the package from the [Github releases](https://github.com/srl-wim/container-lab/releases) page.
 
     example:
-    ```
+    ```bash
+    # manually install latest release with package managers
+    LATEST=$(curl -s https://github.com/srl-wim/container-lab/releases/latest | sed -e 's/.*tag\/v\(.*\)\".*/\1/')
+    # with yum
+    yum install "https://github.com/srl-wim/container-lab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.rpm"
+    # with dpkg
+    curl -sL -o /tmp/clab.deb "https://github.com/srl-wim/container-lab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.deb" && dpkg -i /tmp/clab.deb
+
+    # install specific release with yum
     yum install https://github.com/srl-wim/container-lab/releases/download/v0.7.0/containerlab_0.7.0_linux_386.rpm
     ```
 
