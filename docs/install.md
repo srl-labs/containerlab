@@ -69,4 +69,4 @@ containerlab version upgrade
 
 This command will fetch the installation script and will upgrade the tool to its most recent version.
 
-or leverate `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
+or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
