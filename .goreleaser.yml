@@ -13,6 +13,12 @@ checksum:
   name_template: checksums.txt
 snapshot:
   name_template: "{{ .Tag }}-next"
+publishers:
+  - name: fury.io deb/rpm packages
+    ids:
+      - containerlab # this id belongs to nfpm section and is used to only upload artifacts from nfmp
+    dir: "{{ dir .ArtifactPath }}"
+    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/netdevops/
 changelog:
   sort: asc
   filters:
