@@ -7,8 +7,8 @@ The following requirements must be satisfied in order to let containerlab tool r
 * [Docker](https://docs.docker.com/engine/install/) must be installed.
 * Import container images (e.g. Nokia SR Linux, Arista cEOS) which are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
-### Package installation
-Containerlab package can be installed using the [installation script](https://github.com/srl-wim/container-lab/blob/master/get.sh) which detects the operating system type and installs the relevant package:
+### Install script
+Containerlab can be installed using the [installation script](https://github.com/srl-wim/container-lab/blob/master/get.sh) which detects the operating system type and installs the relevant package:
 
 !!! note
     Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives are supported.
@@ -24,8 +24,26 @@ bash -c "$(curl -sL https://get-clab.srlinux.dev)" -- -v 0.10.3
 bash -c "$(wget -qO - https://get-clab.srlinux.dev)"
 ```
 
-???note "Manual installation"
-    If the usage of piped bash scripts is discouraged or restricted, the users can manually download the package from the [Github releases](https://github.com/srl-wim/container-lab/releases) page.
+### Package managers
+It is possible to install official containerlab releases via public APT/YUM repository.
+
+=== "APT"
+    ```bash
+    echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
+    sudo tee -a /etc/apt/sources.list.d/netdevops.list
+
+    apt update && apt install containerlab
+    ```
+=== "YUM"
+    ```
+    yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
+    echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
+
+    yum install containerlab
+    ```
+
+???note "Alternative installation options"
+    Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-wim/container-lab/releases) page.
 
     example:
     ```bash
@@ -50,3 +68,5 @@ containerlab version upgrade
 ```
 
 This command will fetch the installation script and will upgrade the tool to its most recent version.
+
+or leverate `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
