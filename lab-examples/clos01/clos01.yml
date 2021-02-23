@@ -11,10 +11,10 @@ topology:
   nodes:
     leaf1:
       kind: srl
-      type: ixrd1
+      type: ixrd2
     leaf2:
       kind: srl
-      type: ixrd1
+      type: ixrd2
     spine:
       kind: srl
       type: ixr6
