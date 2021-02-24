@@ -27,13 +27,17 @@ topology:
 Containerlab supports a fixed number of kinds. Within each predefined kind we store the necessary information that is used to launch the container successfully. The following kinds are supported or in the roadmap of containerlab:
 
 
-| Name                | Kind            | Status    |
-| ------------------- | --------------- | --------- |
-| **Nokia SR Linux**  | [`srl`](srl.md) | supported |
-| **Arista cEOS**     | `ceos`          | supported |
-| **Linux container** | `linux`         | supported |
-| **Linux bridge**    | `bridge`        | supported |
-| **SONiC**           | `sonic`         | planned   |
-| **Juniper cRPD**    | `crpd`          | planned   |
+| Name                | Kind                      | Status    |
+| ------------------- | ------------------------- | --------- |
+| **Nokia SR Linux**  | [`srl`](srl.md)           | supported |
+| **Juniper cRPD**    | [`crpd`](crpd.md)         | supported |
+| **Arista cEOS**     | [`ceos`](ceos.md)         | supported |
+| **SONiC**           | [`sonic`](sonic-vs.md)    | supported |
+| **Nokia SR OS**     | [`vr-sros`](vr-sros.md)   | supported |
+| **Juniper vMX**     | [`vr-vmx`](vr-vmx.md)     | supported |
+| **Cisco XRv9k**     | [`vr-xrv9k`](vr-xrv9k.md) | supported |
+| **Cisco XRv**       | [`vr-xrv`](vr-xrv.md)     | supported |
+| **Linux container** | `linux`                   | supported |
+| **Linux bridge**    | [`bridge`](bridge.md)     | supported |
 
 Refer to a specific kind documentation article to see the details about it.
