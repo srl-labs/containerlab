@@ -37,7 +37,7 @@ Containerlab supports a fixed number of kinds. Within each predefined kind we st
 | **Juniper vMX**     | [`vr-vmx`](vr-vmx.md)     | supported |
 | **Cisco XRv9k**     | [`vr-xrv9k`](vr-xrv9k.md) | supported |
 | **Cisco XRv**       | [`vr-xrv`](vr-xrv.md)     | supported |
-| **Linux container** | `linux`                   | supported |
+| **Linux container** | [`linux`](linux.md)       | supported |
 | **Linux bridge**    | [`bridge`](bridge.md)     | supported |
 
 Refer to a specific kind documentation article to see the details about it.
