@@ -1,6 +1,6 @@
 # SONiC
 
-[SONiC](https://www.juniper.net/documentation/us/en/software/sonic-vs/sonic-vs-deployment/topics/concept/understanding-sonic-vs.html) is identified with `sonic-vs` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vs` node.
+[SONiC](https://azure.github.io/SONiC/) is identified with `sonic-vs` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vs` node.
 
 !!!info
     `vs` in the name of a kind refers to a SONiC platform type.

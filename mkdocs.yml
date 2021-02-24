@@ -16,6 +16,8 @@ nav:
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
           - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
+          - linux - Linux container: manual/kinds/linux.md
+          - bridge - Linux bridge: manual/kinds/bridge.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md

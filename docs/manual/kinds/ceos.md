@@ -85,7 +85,7 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
 
 ## Features and options
 ### Node configuration
-cEOS nodes have a dedicated [`config`](#config-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-wim/container-lab/blob/master/templates/arista/ceos.cfg.tpl) and copy it to the config directory of the node.
