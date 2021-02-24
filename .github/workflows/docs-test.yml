@@ -13,4 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:6.2.4 build --clean --strict --site-dir /tmp/mkdocs-test
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:6.2.4 build --clean --strict
+      - name: htmltest
+        run: |
+          curl https://htmltest.wjdp.uk | bash
+          ./bin/htmltest -c docs/htmltest.yml
