@@ -1,0 +1,8 @@
+# adopted from https://github.com/goreleaser/goreleaser/blob/5adf43295767b5be05fa38a01ffb3ad25bd21797/www/htmltest.yml
+# using https://github.com/wjdp/htmltest
+DirectoryPath: ./site
+IgnoreURLs:
+  - fonts.gstatic.com
+IgnoreDirectoryMissingTrailingSlash: true
+IgnoreAltMissing: true
+IgnoreSSLVerify: true
