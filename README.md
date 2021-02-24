@@ -26,9 +26,9 @@ Containerlab focuses on containerized Network Operating Systems which are typica
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](manual/vrnetlab.md):
 
-* Nokia virtual SR OS (vSim/VSR)
-* Juniper vMX
-* Cisco IOS XRv
+* [Nokia virtual SR OS (vSim/VSR)](docs/manual/kinds/vr-sros.md)
+* [Juniper vMX](docs/manual/kinds/vr-vmx.md)
+* [Cisco IOS XRv9k](docs/manual/kinds/vr-xrv9k.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 
