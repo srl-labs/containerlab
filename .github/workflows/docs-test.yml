@@ -5,6 +5,7 @@ on:
     branches:
       - "*"
       - "!releases/**"
+      - "!docs-publish"
     paths:
       - "docs/**"
 
