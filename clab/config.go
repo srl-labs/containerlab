@@ -30,7 +30,7 @@ const (
 )
 
 // supported kinds
-var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge", "mysocketio"}
+var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge", "ovs-bridge", "mysocketio"}
 
 var defaultConfigTemplates = map[string]string{
 	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
@@ -681,7 +681,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		node.Env = envs
 
-	case "bridge":
+	case "bridge", "ovs-bridge":
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
@@ -738,11 +738,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	}
 
 	// initialize the endpoint name based on the split function
-	if c.Nodes[nName].Kind == "bridge" {
-		endpoint.EndpointName = c.Config.Name + epName
-	} else {
-		endpoint.EndpointName = epName
-	}
+	endpoint.EndpointName = epName
 	if len(endpoint.EndpointName) > 15 {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
@@ -750,7 +746,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 }
 
 // CheckTopologyDefinition runs topology checks and returns any errors found
-func (c *CLab) CheckTopologyDefinition() error {
+func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	err := c.verifyBridgesExist()
 	if err != nil {
 		return err
@@ -759,13 +755,16 @@ func (c *CLab) CheckTopologyDefinition() error {
 	if err != nil {
 		return err
 	}
+	if err = c.VerifyImages(ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
-// VerifyBridgeExists verifies if every node of kind=bridge exists on the lab host
+// VerifyBridgeExists verifies if every node of kind=bridge/ovs-bridge exists on the lab host
 func (c *CLab) verifyBridgesExist() error {
 	for name, node := range c.Nodes {
-		if node.Kind == "bridge" {
+		if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
 			if _, err := netlink.LinkByName(name); err != nil {
 				return fmt.Errorf("bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
 			}
@@ -797,7 +796,11 @@ func (c *CLab) verifyLinks() error {
 func (c *CLab) VerifyImages(ctx context.Context) error {
 	images := map[string]struct{}{}
 	for _, node := range c.Nodes {
-		if node.Image == "" && node.Kind != "bridge" {
+		// skip image verification for bridge kinds
+		if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
+			return nil
+		}
+		if node.Image == "" {
 			return fmt.Errorf("missing required image for node %s", node.ShortName)
 		}
 		if node.Image != "" {

@@ -12,14 +12,15 @@ import (
 )
 
 type vEthEndpoint struct {
-	Link     netlink.Link
-	LinkName string
-	NSName   string // netns name
-	NSPath   string // netns path
-	Bridge   string // bridge name a veth is destined to be connected to
+	Link      netlink.Link
+	LinkName  string
+	NSName    string // netns name
+	NSPath    string // netns path
+	Bridge    string // bridge name a veth is destined to be connected to
+	OvsBridge string // ovs-bridge name a veth is destined to be connected to
 }
 
-// CreateVirtualWiring provides the virtual topology between the containers
+// CreateVirtualWiring creates the virtual topology between the containers
 func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
@@ -51,6 +52,12 @@ func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 		ARndmName = l.A.EndpointName
 	case l.B.Node.Kind == "bridge":
 		vB.Bridge = l.B.Node.ShortName
+		BRndmName = l.B.EndpointName
+	case l.A.Node.Kind == "ovs-bridge":
+		vA.OvsBridge = l.A.Node.ShortName
+		ARndmName = l.A.EndpointName
+	case l.B.Node.Kind == "ovs-bridge":
+		vB.OvsBridge = l.B.Node.ShortName
 		BRndmName = l.B.EndpointName
 	}
 
@@ -108,6 +115,9 @@ func (veth *vEthEndpoint) setVethLink() error {
 	if veth.Bridge != "" {
 		return veth.toBridge()
 	}
+	if veth.OvsBridge != "" {
+		return veth.toOvsBridge()
+	}
 	// otherwise it needs to be put into a netns
 	return veth.toNS()
 }
@@ -141,7 +151,7 @@ func (veth *vEthEndpoint) toNS() error {
 func (veth *vEthEndpoint) toBridge() error {
 	var vethNS ns.NetNS
 	var err error
-	// bride is in the host netns, thus we need to get current netns
+	// bridge is in the host netns, thus we need to get current netns
 	if vethNS, err = ns.GetCurrentNS(); err != nil {
 		return err
 	}

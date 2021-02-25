@@ -54,10 +54,6 @@ var deployCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		if err = c.CheckTopologyDefinition(); err != nil {
-			return err
-		}
-
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
 		// Parse topology information
@@ -65,7 +61,7 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		if err = c.VerifyImages(ctx); err != nil {
+		if err = c.CheckTopologyDefinition(ctx); err != nil {
 			return err
 		}
 
@@ -145,7 +141,7 @@ var deployCmd = &cobra.Command{
 							return
 						}
 						log.Debugf("Worker %d received node: %+v", i, node)
-						if node.Kind == "bridge" {
+						if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
 							return
 						}
 						// create CERT
