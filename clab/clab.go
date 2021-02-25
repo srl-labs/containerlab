@@ -220,10 +220,10 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, linksChan chan *Li
 				select {
 				case link := <-linksChan:
 					if link == nil {
-						log.Debugf("Worker %d terminating...", i)
+						log.Debugf("Link worker %d terminating...", i)
 						return
 					}
-					log.Debugf("Worker %d received link: %+v", i, link)
+					log.Debugf("Link worker %d received link: %+v", i, link)
 					if err := c.CreateVirtualWiring(link); err != nil {
 						log.Error(err)
 					}

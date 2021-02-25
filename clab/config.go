@@ -27,10 +27,26 @@ const (
 	vrsrosDefaultType = "sr-1"
 	// default connection mode for vrnetlab based containers
 	vrDefConnMode = "tc"
+	// NSPath value assigned to host interfaces
+	hostNSPath = "__host"
 )
 
 // supported kinds
-var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge", "ovs-bridge", "mysocketio"}
+var kinds = []string{
+	"srl",
+	"ceos",
+	"crpd",
+	"sonic-vs",
+	"vr-sros",
+	"vr-vmx",
+	"vr-xrv",
+	"vr-xrv9k",
+	"linux",
+	"bridge",
+	"ovs-bridge",
+	"mysocketio",
+	"host",
+}
 
 var defaultConfigTemplates = map[string]string{
 	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
@@ -726,14 +742,27 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	}
 	nName := split[0]  // node name
 	epName := split[1] // endpoint name
-	// search the node pointer based in the name of the split function
-	for name, n := range c.Nodes {
-		if name == split[0] {
-			endpoint.Node = n
-			break
+	// search the node pointer for a node name referenced in endpoint section
+	// if node name is not "host", since "host" is a special reference to host namespace
+	// for which we create an special Node with kind "host"
+	if nName == "host" {
+		endpoint.Node = &Node{
+			Kind:      "host",
+			ShortName: "host",
+			NSPath:    hostNSPath,
+		}
+	} else {
+		for name, n := range c.Nodes {
+			if name == split[0] {
+				endpoint.Node = n
+				break
+			}
 		}
 	}
-	if endpoint.Node == nil {
+
+	// stop the deployment if the matching node element was not found
+	// "host" node name is an exception, it may exist without a matching node
+	if endpoint.Node == nil && nName != "host" {
 		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName)
 	}
 

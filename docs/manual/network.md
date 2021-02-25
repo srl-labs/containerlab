@@ -193,3 +193,31 @@ Management network is used to provide management access to the NOS containers, i
 The above diagram shows how links are created in the topology definition file. In this example, the datapath consists of the two virtual point-to-point wires between SR Linux and cEOS containers. These links are created on-demand by containerlab itself.
 
 The p2p links are provided by the `veth` device pairs where each end of the `veth` pair is attached to a respective container.
+
+### host links
+It is also possible to interconnect container' data inteface not with other container or add it to a [bridge](kinds/bridge.md), but to attach it to a host's root namespace. This is, for example, needed to create a L2 connectivity between containerlab nodes running on different VMs (aka multi-node labs).
+
+This "host-connectivity" is achieved by using a reserved node name - `host` - referenced in the endpoints section. Consider the following example where an SR Linux container has its only data interface connected to a hosts root namespace via veth interface:
+
+```yaml
+name: host
+
+topology:
+  nodes:
+    srl:
+      kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
+      config: test-srl-config.json
+  links:
+    - endpoints: ["srl:e1-1", "host:srl_e1-1"]
+```
+
+With this topology definition, we will have a veth interface with its one end in the container' namespace and its other end in the host namespace. The host will have the interface named `srl_e1-1` once the lab deployed:
+
+```bash
+ip link
+# SNIP
+433: srl_e1-1@if434: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether b2:80:e9:60:c7:9d brd ff:ff:ff:ff:ff:ff link-netns clab-srl01-srl
+```
