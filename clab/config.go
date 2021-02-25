@@ -762,7 +762,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 
 	// stop the deployment if the matching node element was not found
 	// "host" node name is an exception, it may exist without a matching node
-	if endpoint.Node == nil && nName != "host" {
+	if endpoint.Node == nil {
 		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName)
 	}
 
