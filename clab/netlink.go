@@ -59,6 +59,11 @@ func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 	case l.B.Node.Kind == "ovs-bridge":
 		vB.OvsBridge = l.B.Node.ShortName
 		BRndmName = l.B.EndpointName
+	// for host connections random names shouldn't be used
+	case l.A.Node.Kind == "host":
+		ARndmName = l.A.EndpointName
+	case l.B.Node.Kind == "host":
+		BRndmName = l.B.EndpointName
 	}
 
 	// create veth pair in the root netns
@@ -117,6 +122,15 @@ func (veth *vEthEndpoint) setVethLink() error {
 	}
 	if veth.OvsBridge != "" {
 		return veth.toOvsBridge()
+	}
+	// host endpoints have a special NSPath value
+	// the host portion of veth doesn't need to be additionally processed
+	if veth.NSPath == hostNSPath {
+		if err := netlink.LinkSetUp(veth.Link); err != nil {
+			return fmt.Errorf("failed to set %q up: %v",
+				veth.LinkName, err)
+		}
+		return nil
 	}
 	// otherwise it needs to be put into a netns
 	return veth.toNS()
