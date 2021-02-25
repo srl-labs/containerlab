@@ -30,7 +30,7 @@ const (
 )
 
 // supported kinds
-var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge", "mysocketio"}
+var kinds = []string{"srl", "ceos", "crpd", "sonic-vs", "vr-sros", "vr-vmx", "vr-xrv", "vr-xrv9k", "linux", "bridge", "ovs-bridge", "mysocketio"}
 
 var defaultConfigTemplates = map[string]string{
 	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
@@ -681,7 +681,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		node.Env = envs
 
-	case "bridge":
+	case "bridge", "ovs-bridge":
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
@@ -738,11 +738,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	}
 
 	// initialize the endpoint name based on the split function
-	if c.Nodes[nName].Kind == "bridge" {
-		endpoint.EndpointName = c.Config.Name + epName
-	} else {
-		endpoint.EndpointName = epName
-	}
+	endpoint.EndpointName = epName
 	if len(endpoint.EndpointName) > 15 {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}

@@ -46,6 +46,19 @@ topology:
 
 In the example above, node `br-clab` of kind `bridge` tells containerlab to identify it as a linux bridge and look for a bridge named `br-clab`.
 
-When connecting other nodes to a bridge, the bridge endpoint must be present in the `links` section. It doesn't really matter how you name the interfaces of this bridge. In the example above we named them `eth1`, `eth2`, `eth3` accordingly.
+When connecting other nodes to a bridge, the bridge endpoint must be present in the `links` section.
+
+!!!note
+    When choosing names of the interfaces that need to be connected to the bridge make sure that these names are not clashing with existing interfaces.  
+    In the example above we named interfaces `eth1`, `eth2`, `eth3` accordingly and ensured that none of these interfaces existed before in the root netns.  
+
+As a result of such topology definition, you will see bridge `br-clab` with three interfaces attached to it:
+
+```
+bridge name     bridge id               STP enabled     interfaces
+br-clab         8000.6281eb7133d2       no              eth1
+                                                        eth2
+                                                        eth3
+```
 
 Chec out ["External bridge"](../../lab-examples/ext-bridge.md) lab for a ready-made example on how to use bridges.
