@@ -18,6 +18,7 @@ nav:
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
           - linux - Linux container: manual/kinds/linux.md
           - bridge - Linux bridge: manual/kinds/bridge.md
+          - ovs-bridge - Openvswitch bridge: manual/kinds/ovs-bridge.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md

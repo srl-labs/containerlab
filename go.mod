@@ -7,6 +7,7 @@ require (
 	github.com/awalterschulze/gographviz v2.0.1+incompatible
 	github.com/cloudflare/cfssl v1.4.1
 	github.com/containernetworking/plugins v0.0.0-20180803153142-19f2f28178aa
+	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0
