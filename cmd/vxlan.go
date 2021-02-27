@@ -58,9 +58,9 @@ var vxlanCreateCmd = &cobra.Command{
 				log.Fatal("can't establish netlink connection: ", err)
 			}
 			defer conn.Close()
-			r, err := conn.RouteGet(net.ParseIP("10.0.0.20"))
+			r, err := conn.RouteGet(net.ParseIP(vxlanRemote))
 			if err != nil {
-				return fmt.Errorf("failed to find a route to VxLAN remote address")
+				return fmt.Errorf("failed to find a route to VxLAN remote address %s", vxlanRemote)
 			}
 			parentDev = r.Interface.Name
 		}
