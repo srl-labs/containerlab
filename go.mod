@@ -13,9 +13,10 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/google/go-cmp v0.3.1
+	github.com/google/go-cmp v0.5.4
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.1.2
+	github.com/jsimonetti/rtnetlink v0.0.0-20210226120601-1b79e63a70a0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/onsi/ginkgo v1.10.2 // indirect
@@ -28,6 +29,5 @@ require (
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
-	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )

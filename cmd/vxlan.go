@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"fmt"
 	"net"
 
+	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-wim/container-lab/clab"
@@ -23,11 +25,10 @@ func init() {
 
 	vxlanCreateCmd.Flags().IntVarP(&vxlanID, "id", "i", 10, "VxLAN ID (VNI)")
 	vxlanCreateCmd.Flags().StringVarP(&vxlanRemote, "remote", "r", "", "address of the remote VTEP")
-	vxlanCreateCmd.Flags().StringVarP(&parentDev, "dev", "", "eth0", "parent (source) interface name for VxLAN")
+	vxlanCreateCmd.Flags().StringVarP(&parentDev, "dev", "", "", "parent (source) interface name for VxLAN")
 	vxlanCreateCmd.Flags().StringVarP(&cntLink, "link", "l", "", "link to which 'attach' vxlan tunnel with tc redirect")
 	vxlanCreateCmd.Flags().IntVarP(&vxlanMTU, "mtu", "m", 1554, "VxLAN MTU")
 
-	vxlanCreateCmd.MarkFlagRequired("dev")
 	vxlanCreateCmd.MarkFlagRequired("remote")
 	vxlanCreateCmd.MarkFlagRequired("id")
 	vxlanCreateCmd.MarkFlagRequired("link")
@@ -45,6 +46,25 @@ var vxlanCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create vxlan interface",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if _, err := netlink.LinkByName(cntLink); err != nil {
+			return fmt.Errorf("failed to lookup link %q: %v",
+				cntLink, err)
+		}
+		// if vxlan device was not set specifically, we will use
+		// the device that is reported by `ip route get $remote`
+		if parentDev == "" {
+			conn, err := rtnl.Dial(nil)
+			if err != nil {
+				log.Fatal("can't establish netlink connection: ", err)
+			}
+			defer conn.Close()
+			r, err := conn.RouteGet(net.ParseIP("10.0.0.20"))
+			if err != nil {
+				return fmt.Errorf("failed to find a route to VxLAN remote address")
+			}
+			parentDev = r.Interface.Name
+		}
+
 		vxlanCfg := clab.VxLAN{
 			Name:     "vx-" + cntLink,
 			ID:       vxlanID,
