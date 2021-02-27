@@ -33,7 +33,7 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 		}
 	}
 	if vxlanIf != nil {
-		return fmt.Errorf("VxLAN interface %s already exists!", vxlan.Name)
+		return fmt.Errorf("interface %s already exists", vxlan.Name)
 	}
 
 	if parentIf, err = netlink.LinkByName(vxlan.ParentIf); err != nil {
@@ -63,7 +63,7 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 	err = netlink.LinkAdd(&vxlanconf)
 
 	if err != nil {
-		return fmt.Errorf("Failed to add VxLAN interface %s: %v", vxlan.Name, err)
+		return fmt.Errorf("failed to add VxLAN interface %s: %v", vxlan.Name, err)
 	}
 
 	if err := netlink.LinkSetUp(&vxlanconf); err != nil {
