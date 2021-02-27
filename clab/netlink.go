@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
@@ -229,4 +230,27 @@ func bridgeByName(name string) (*netlink.Bridge, error) {
 		return nil, fmt.Errorf("%q already exists but is not a bridge", name)
 	}
 	return br, nil
+}
+
+// GetLiknsByNamePrefix returns a list of links whose name matches a prefix
+func GetLiknsByNamePrefix(prefix string) ([]netlink.Link, error) {
+	// filtered list of interfaces
+	if prefix == "" {
+		return nil, fmt.Errorf("prefix is not specified")
+	}
+	var fls []netlink.Link
+
+	ls, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range ls {
+		if strings.HasPrefix(l.Attrs().Name, prefix) {
+			fls = append(fls, l)
+		}
+	}
+	if len(fls) == 0 {
+		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
+	}
+	return fls, nil
 }
