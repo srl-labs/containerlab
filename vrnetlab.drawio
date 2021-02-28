@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2021-02-28T14:53:03.043Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36" etag="ZtblPCP1Ll9cRpssJhgA" version="14.4.2" type="github" pages="11">
+<mxfile host="app.diagrams.net" modified="2021-02-28T14:53:13.371Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36" etag="Tet7h_VDEa0PFGHAA-O-" version="14.4.2" type="github" pages="11">
   <diagram id="IwGoDYMSzOG72_LcMlLt" name="[0] bridge">
     <mxGraphModel dx="2052" dy="1149" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
@@ -2259,7 +2259,7 @@
           <mxGeometry x="416" y="415" width="130" height="103" as="geometry" />
         </mxCell>
         <mxCell id="HrWerAt_x2Q_pO3LeKzP-2" value="&lt;font style=&quot;font-size: 10px&quot;&gt;VM2 &lt;span style=&quot;font-weight: normal&quot;&gt;(10.0.0.20)&lt;/span&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Manrope;fontStyle=1;" vertex="1" parent="P6DsuElLFwTPUxt64TZc-1">
-          <mxGeometry x="445.5" y="396" width="82" height="16" as="geometry" />
+          <mxGeometry x="440" y="395.5" width="82" height="16" as="geometry" />
         </mxCell>
         <mxCell id="HrWerAt_x2Q_pO3LeKzP-3" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;align=center;strokeColor=none;fontFamily=Manrope;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DManrope;fontColor=#DDE9F5;allowArrows=0;editable=0;connectable=0;fillColor=#BEC8D2;" vertex="1" parent="P6DsuElLFwTPUxt64TZc-1">
           <mxGeometry x="164" y="392" width="137" height="23" as="geometry" />
