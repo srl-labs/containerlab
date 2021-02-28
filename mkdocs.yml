@@ -33,6 +33,9 @@ nav:
       - graph: cmd/graph.md
       - tools:
           - disable-tx-offload: cmd/tools/disable-tx-offload.md
+          - vxlan:
+              - create: cmd/tools/vxlan/create.md
+              - delete: cmd/tools/vxlan/delete.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
