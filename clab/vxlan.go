@@ -23,7 +23,7 @@ type VxLAN struct {
 func AddVxLanInterface(vxlan VxLAN) (err error) {
 	var parentIf netlink.Link
 	var vxlanIf netlink.Link
-	log.Infof("Adding VxLAN link %s under %s to remote address %s with VNI %v", vxlan.Name, vxlan.ParentIf, vxlan.Remote, vxlan.ID)
+	log.Infof("Adding VxLAN link %s to remote address %s via %s with VNI %v", vxlan.Name, vxlan.Remote, vxlan.ParentIf, vxlan.ID)
 	UDPPort := 4789
 
 	// before creating vxlan interface, check if it doesn't exist already
