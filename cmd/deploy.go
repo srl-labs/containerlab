@@ -191,23 +191,7 @@ var deployCmd = &cobra.Command{
 		// wait for all workers to finish
 		wg.Wait()
 
-		wg = new(sync.WaitGroup)
-		wg.Add(int(linksMaxWorkers))
-		linksChan := make(chan *clab.Link)
-		c.CreateLinks(ctx, linksMaxWorkers, linksChan, wg)
-		for _, link := range c.Links {
-			// skip the links of ceos kind is on one end
-			// ceos containers need to be restarted, thus their data links
-			// will get recreated after post-deploy stage
-			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
-				continue
-			}
-			linksChan <- link
-		}
-		// close channel to terminate the workers
-		close(linksChan)
-		// wait for all workers to finish
-		wg.Wait()
+		c.CreateLinks(ctx, linksMaxWorkers, false)
 
 		// generate graph of the lab topology
 		if graph {
@@ -243,6 +227,9 @@ var deployCmd = &cobra.Command{
 
 		}
 		wg.Wait()
+
+		// run links postdeploy creation (ceos links creation)
+		c.CreateLinks(ctx, linksMaxWorkers, true)
 
 		log.Info("Writing /etc/hosts file")
 		err = createHostsFile(containers, c.Config.Mgmt.Network)
