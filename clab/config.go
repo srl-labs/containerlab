@@ -784,6 +784,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err = c.VerifyContainersUniqueness(ctx); err != nil {
+		return err
+	}
 	if err = c.VerifyImages(ctx); err != nil {
 		return err
 	}
@@ -844,6 +847,34 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// VerifyContainersUniqueness ensures that nodes defined in the topology do not have names of the existing containers
+func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
+	nctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	var labels []string
+	containers, err := c.ListContainers(nctx, labels)
+	if err != nil {
+		return fmt.Errorf("could not list containers: %v", err)
+	}
+	if len(containers) == 0 {
+		return nil
+	}
+
+	dups := []string{}
+	for _, n := range c.Nodes {
+		for _, cnt := range containers {
+			if "/"+n.LongName == cnt.Names[0] {
+				dups = append(dups, n.LongName)
+			}
+		}
+	}
+	if len(dups) != 0 {
+		return fmt.Errorf("containers %q already exist. Add '--reconfigure' flag to the deploy command to first remove the containers and then deploy the lab", dups)
+	}
+	return err
 }
 
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
