@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type certificates struct {
+type Certificates struct {
 	Key  []byte
 	Csr  []byte
 	Cert []byte
@@ -37,7 +37,7 @@ type CaRootInput struct {
 }
 
 // GenerateRootCa function
-func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*certificates, error) {
+func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
 	log.Info("Creating root CA")
 	//create root CA diretcory
 	CreateDirectory(c.Dir.LabCA, 0755)
@@ -63,7 +63,7 @@ func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 	if err != nil {
 		return nil, err
 	}
-	certs := &certificates{
+	certs := &Certificates{
 		Key:  key,
 		Csr:  csrPEM,
 		Cert: cert,
@@ -72,7 +72,7 @@ func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 	return certs, nil
 }
 
-func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*certificates, error) {
+func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*Certificates, error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	input := CertInput{
@@ -131,7 +131,7 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	if len(signReq.Hosts) == 0 && len(req.Hosts) == 0 {
 		log.Warning(generator.CSRNoHostMessage)
 	}
-	certs := &certificates{
+	certs := &Certificates{
 		Key:  key,
 		Csr:  csrBytes,
 		Cert: cert,
@@ -141,7 +141,7 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	return certs, nil
 }
 
-func (c *CLab) writeCertFiles(certs *certificates, filesPrefix string) {
+func (c *CLab) writeCertFiles(certs *Certificates, filesPrefix string) {
 	createFile(filesPrefix+".pem", string(certs.Cert))
 	createFile(filesPrefix+"-key.pem", string(certs.Key))
 	createFile(filesPrefix+".csr", string(certs.Csr))
