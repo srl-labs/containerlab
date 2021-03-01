@@ -1,11 +1,10 @@
 package clab
 
 import (
+	"crypto/rand"
 	"fmt"
 	"os"
 	"path"
-	"strconv"
-	"strings"
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
@@ -22,9 +21,15 @@ func generateSRLTopologyFile(src, labDir string, index int) error {
 		return err
 	}
 
-	x := strconv.FormatInt(int64(index), 16)
-	d2 := fmt.Sprintf("%02s", x)
-	m := "00:01:" + strings.ToUpper(d2) + ":00:00:00"
+	// generate random bytes to use in the 2-3rd bytes of a base mac
+	// this ensures that different srl nodes will have different macs for their ports
+	buf := make([]byte, 2)
+	_, err = rand.Read(buf)
+	if err != nil {
+		return err
+	}
+	m := fmt.Sprintf("02:%02x:%02x:00:00:00", buf[0], buf[1])
+
 	mac := mac{
 		MAC: m,
 	}
