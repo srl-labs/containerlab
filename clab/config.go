@@ -787,6 +787,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
+	if err = c.verifyHostIfaces(); err != nil {
+		return err
+	}
 	if err = c.VerifyImages(ctx); err != nil {
 		return err
 	}
@@ -875,6 +878,24 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 		return fmt.Errorf("containers %q already exist. Add '--reconfigure' flag to the deploy command to first remove the containers and then deploy the lab", dups)
 	}
 	return err
+}
+
+// verifyHostIfaces ensures that host interfaces referenced in the topology
+// do not exist already in the root namespace
+func (c *CLab) verifyHostIfaces() error {
+	for _, l := range c.Links {
+		if l.A.Node.ShortName == "host" {
+			if nl, _ := netlink.LinkByName(l.A.EndpointName); nl != nil {
+				return fmt.Errorf("host interface %s referenced in topology already exists", l.A.EndpointName)
+			}
+		}
+		if l.B.Node.ShortName == "host" {
+			if nl, _ := netlink.LinkByName(l.B.EndpointName); nl != nil {
+				return fmt.Errorf("host interface %s referenced in topology already exists", l.B.EndpointName)
+			}
+		}
+	}
+	return nil
 }
 
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
