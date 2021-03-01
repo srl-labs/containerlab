@@ -81,32 +81,43 @@ var deployCmd = &cobra.Command{
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
-		// create root CA
-		cfssllog.Level = cfssllog.LevelError
-		if debug {
-			cfssllog.Level = cfssllog.LevelDebug
+		rootCANeeded := false
+		var certTpl *template.Template
+		// check if srl kinds defined in topo
+		// for them we need to create rootCA and certs
+		for _, n := range c.Nodes {
+			if n.Kind == "srl" {
+				rootCANeeded = true
+			}
 		}
-		tpl, err := template.ParseFiles(rootCaCsrTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
-		}
-		rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Config.Name})
-		if err != nil {
-			return fmt.Errorf("failed to generate rootCa: %v", err)
-		}
+		if rootCANeeded {
+			// create root CA if SRL nodes exist in the topology
+			cfssllog.Level = cfssllog.LevelError
+			if debug {
+				cfssllog.Level = cfssllog.LevelDebug
+			}
+			tpl, err := template.ParseFiles(rootCaCsrTemplate)
+			if err != nil {
+				return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
+			}
+			rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Config.Name})
+			if err != nil {
+				return fmt.Errorf("failed to generate rootCa: %v", err)
+			}
 
-		log.Debugf("root CSR: %s", string(rootCerts.Csr))
-		log.Debugf("root Cert: %s", string(rootCerts.Cert))
-		log.Debugf("root Key: %s", string(rootCerts.Key))
+			log.Debugf("root CSR: %s", string(rootCerts.Csr))
+			log.Debugf("root Cert: %s", string(rootCerts.Cert))
+			log.Debugf("root Key: %s", string(rootCerts.Key))
+
+			certTpl, err = template.ParseFiles(certCsrTemplate)
+			if err != nil {
+				return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
+			}
+		}
 
 		// create docker network or use existing one
 		if err = c.CreateDockerNet(ctx); err != nil {
 			return err
-		}
-
-		certTpl, err := template.ParseFiles(certCsrTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
 		}
 
 		numNodes := uint(len(c.Nodes))
@@ -144,19 +155,24 @@ var deployCmd = &cobra.Command{
 						if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
 							return
 						}
-						// create CERT
-						nodeCerts, err := c.GenerateCert(
-							path.Join(c.Dir.LabCARoot, "root-ca.pem"),
-							path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
-							certTpl,
-							node,
-						)
-						if err != nil {
-							log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+
+						var nodeCerts *clab.Certificates
+						if node.Kind == "srl" {
+							var err error
+							// create CERT
+							nodeCerts, err = c.GenerateCert(
+								path.Join(c.Dir.LabCARoot, "root-ca.pem"),
+								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
+								certTpl,
+								node,
+							)
+							if err != nil {
+								log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+							}
+							log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
+							log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
+							log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 						}
-						log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
-						log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
-						log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 						err = c.CreateNode(ctx, node, nodeCerts)
 						if err != nil {
 							log.Errorf("failed to create node %s: %v", node.ShortName, err)

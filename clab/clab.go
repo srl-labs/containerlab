@@ -93,11 +93,13 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 	return c
 }
 
-func (c *CLab) CreateNode(ctx context.Context, node *Node, certs *certificates) error {
-	c.m.Lock()
-	node.TLSCert = string(certs.Cert)
-	node.TLSKey = string(certs.Key)
-	c.m.Unlock()
+func (c *CLab) CreateNode(ctx context.Context, node *Node, certs *Certificates) error {
+	if certs != nil {
+		c.m.Lock()
+		node.TLSCert = string(certs.Cert)
+		node.TLSKey = string(certs.Key)
+		c.m.Unlock()
+	}
 	err := c.CreateNodeDirStructure(node)
 	if err != nil {
 		return err
