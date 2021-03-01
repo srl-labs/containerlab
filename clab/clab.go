@@ -3,7 +3,6 @@ package clab
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -112,52 +111,7 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 	switch node.Kind {
 	case "ceos":
 		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
-		// regenerate ceos config since it is now known which IP address docker assigned to this container
-		err := node.generateConfig(node.ResConfig)
-		if err != nil {
-			return err
-		}
-		log.Infof("Restarting '%s' node", node.ShortName)
-		// force stopping and start is faster than ContainerRestart
-		var timeout time.Duration = 1
-		err = c.DockerClient.ContainerStop(ctx, node.ContainerID, &timeout)
-		if err != nil {
-			return err
-		}
-		// remove the netns symlink created during original start
-		// we will re-symlink it later
-		if err := deleteNetnsSymlink(node.LongName); err != nil {
-			return err
-		}
-		err = c.DockerClient.ContainerStart(ctx, node.ContainerID, types.ContainerStartOptions{})
-		if err != nil {
-			return err
-		}
-		// since container has been restarted, we need to get its new NSPath and link netns
-		cont, err := c.DockerClient.ContainerInspect(ctx, node.ContainerID)
-		if err != nil {
-			return err
-		}
-		log.Debugf("node %s new pid %v", node.LongName, cont.State.Pid)
-		node.NSPath = "/proc/" + strconv.Itoa(cont.State.Pid) + "/ns/net"
-		err = linkContainerNS(node.NSPath, node.LongName)
-		if err != nil {
-			return err
-		}
-		// now its time to create the links which has one end in ceos node
-		wg := new(sync.WaitGroup)
-		wg.Add(int(lworkers))
-		linksChan := make(chan *Link)
-		c.CreateLinks(ctx, lworkers, linksChan, wg)
-		for _, link := range c.Links {
-			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
-				linksChan <- link
-			}
-		}
-		// close channel to terminate the workers
-		close(linksChan)
-		// wait for all workers to finish
-		wg.Wait()
+		return ceosPostDeploy(ctx, c, node, lworkers)
 	case "crpd":
 		// exec `service ssh restart` to start ssh service and take into account mounted sshd_config
 		execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("service ssh restart")}
@@ -211,8 +165,14 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 	return nil
 }
 
-// CreateLinks creates links that are passed to it over linksChan using the number of workers
-func (c *CLab) CreateLinks(ctx context.Context, workers uint, linksChan chan *Link, wg *sync.WaitGroup) {
+// CreateLinks creates links using the specified number of workers
+// `postdeploy` indicates the stage of links creation.
+// `postdeploy=true` means the links routine is called after nodes postdeploy tasks
+func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
+	wg := new(sync.WaitGroup)
+	wg.Add(int(workers))
+	linksChan := make(chan *Link)
+
 	log.Debug("creating links...")
 	// wire the links between the nodes based on cabling plan
 	for i := uint(0); i < workers; i++ {
@@ -235,6 +195,28 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, linksChan chan *Li
 			}
 		}(i)
 	}
+
+	for _, link := range c.Links {
+		// skip the links of ceos kind
+		// ceos containers need to be restarted in the postdeploy stage, thus their data links
+		// will get recreated after post-deploy stage
+		if !postdeploy {
+			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
+				continue
+			}
+			linksChan <- link
+		} else {
+			// postdeploy stage
+			// create ceos links that were skipped during original links creation
+			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
+				linksChan <- link
+			}
+		}
+	}
+	// close channel to terminate the workers
+	close(linksChan)
+	// wait for all workers to finish
+	wg.Wait()
 }
 
 func disableTxOffload(n *Node) error {
