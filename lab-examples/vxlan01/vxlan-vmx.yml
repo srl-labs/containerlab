@@ -1,0 +1,16 @@
+name: vxlan
+
+topology:
+  nodes:
+    vmx:
+      kind: vr-sros
+      image: vrnetlab/vr-vmx:20.4R1.12
+    # sros node is defined in a `vxlan-sros.yml` topo file
+    # that is launched on another VM
+
+  links:
+    # we expose two sros container interfaces
+    # to host namespace by using host interfaces style
+    # docs: https://containerlab.srlinux.dev/manual/network/#host-links
+    - endpoints: ["vmx:eth1", "host:vmx-eth1"]
+    - endpoints: ["vmx:eth2", "host:vmx-eth2"]

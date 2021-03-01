@@ -24,6 +24,7 @@ nav:
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
       - Publish ports: manual/published-ports.md
+      - Multi-node labs: manual/multi-node.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
@@ -53,6 +54,7 @@ nav:
       - Nokia SR Linux and Cisco XRv: lab-examples/vr-xrv.md
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
+      - Multi-node labs: lab-examples/multinode.md
 
 site_author: Roman Dodin
 site_description: >-
