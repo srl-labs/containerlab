@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -787,6 +788,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
+	if err = c.verifyVirtSupport(); err != nil {
+		return err
+	}
 	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
@@ -896,6 +900,39 @@ func (c *CLab) verifyHostIfaces() error {
 		}
 	}
 	return nil
+}
+
+// verifyVirtSupport checks if virtualization supported by vcpu if vrnetlab nodes are used
+func (c *CLab) verifyVirtSupport() error {
+	virtNeeded := false
+	for _, n := range c.Nodes {
+		if strings.HasPrefix(n.Kind, "vr-") {
+			virtNeeded = true
+			break
+		}
+	}
+	if !virtNeeded {
+		return nil
+	}
+	f, err := os.Open("/proc/cpuinfo")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "vmx") || strings.Contains(scanner.Text(), "svm") {
+			return nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return fmt.Errorf("virtualization seems to be not supported and it is required by vrnetlab routers. Check if virtualization can been enabled")
 }
 
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
