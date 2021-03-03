@@ -61,10 +61,6 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		if err = c.CheckTopologyDefinition(ctx); err != nil {
-			return err
-		}
-
 		if reconfigure {
 			if err != nil {
 				return err
@@ -74,7 +70,10 @@ var deployCmd = &cobra.Command{
 			if err := os.RemoveAll(c.Dir.Lab); err != nil {
 				return err
 			}
+		}
 
+		if err = c.CheckTopologyDefinition(ctx); err != nil {
+			return err
 		}
 
 		// create lab directory
