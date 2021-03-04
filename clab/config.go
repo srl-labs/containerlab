@@ -605,7 +605,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"CONNECTION_MODE": vrDefConnMode}
+			"CONNECTION_MODE":    vrDefConnMode,
+			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
+			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
+		}
 		node.Env = mergeStringMaps(defEnv, envs)
 
 		// mount tftpboot dir
@@ -615,7 +618,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 			node.Binds = append(node.Binds, "/dev:/dev")
 		}
 
-		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", node.Env["CONNECTION_MODE"], node.ShortName, node.NodeType)
+		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", node.Env["CONNECTION_MODE"],
+			node.ShortName,
+			node.NodeType,
+		)
 
 	case "vr-vmx":
 		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
@@ -625,9 +631,11 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"USERNAME":        "admin",
-			"PASSWORD":        "admin@123",
-			"CONNECTION_MODE": vrDefConnMode,
+			"USERNAME":           "admin",
+			"PASSWORD":           "admin@123",
+			"CONNECTION_MODE":    vrDefConnMode,
+			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
+			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
 
@@ -646,9 +654,11 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"USERNAME":        "clab",
-			"PASSWORD":        "clab@123",
-			"CONNECTION_MODE": vrDefConnMode,
+			"USERNAME":           "clab",
+			"PASSWORD":           "clab@123",
+			"CONNECTION_MODE":    vrDefConnMode,
+			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
+			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
 
@@ -667,11 +677,13 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 		// env vars are used to set launch.py arguments in vrnetlab container
 		defEnv := map[string]string{
-			"USERNAME":        "clab",
-			"PASSWORD":        "clab@123",
-			"CONNECTION_MODE": vrDefConnMode,
-			"VCPU":            "2",
-			"RAM":             "12288",
+			"USERNAME":           "clab",
+			"PASSWORD":           "clab@123",
+			"CONNECTION_MODE":    vrDefConnMode,
+			"VCPU":               "2",
+			"RAM":                "12288",
+			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
+			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
 		}
 		node.Env = mergeStringMaps(defEnv, envs)
 
