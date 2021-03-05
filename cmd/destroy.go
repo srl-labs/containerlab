@@ -166,12 +166,6 @@ func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string)
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	if cleanup {
-		err = os.RemoveAll(c.Dir.Lab)
-		if err != nil {
-			log.Errorf("error deleting lab directory: %v", err)
-		}
-	}
 	containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
@@ -194,6 +188,15 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		}(cont)
 	}
 	wg.Wait()
+
+	// remove the lab directories
+	if cleanup {
+		err = os.RemoveAll(c.Dir.Lab)
+		if err != nil {
+			log.Errorf("error deleting lab directory: %v", err)
+		}
+	}
+
 	log.Info("Removing container entries from /etc/hosts file")
 	err = deleteEntriesFromHostsFile(containers, c.Config.Mgmt.Network)
 	if err != nil {

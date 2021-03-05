@@ -2,6 +2,8 @@ package clab
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -42,6 +44,43 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *Node, lworkers uint) err
 	if err != nil {
 		return err
 	}
+
+	return err
+}
+
+func initCeosNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[string]string) error {
+	var err error
+
+	// initialize the global parameters with defaults, can be overwritten later
+	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	if err != nil {
+		return err
+	}
+	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+
+	// initialize specific container information
+	node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0"
+
+	// defined env vars for the ceos
+	kindEnv := map[string]string{
+		"CEOS":                                "1",
+		"EOS_PLATFORM":                        "ceoslab",
+		"container":                           "docker",
+		"ETBA":                                "1",
+		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
+		"INTFTYPE":                            "eth",
+		"MAPETH0":                             "1",
+		"MGMT_INTF":                           "eth0"}
+	node.Env = mergeStringMaps(kindEnv, envs)
+
+	node.User = user
+	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+	node.NodeType = nodeCfg.Type
+
+	// mount config dir
+	cfgPath := filepath.Join(node.LabDir, "flash")
+	node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
 
 	return err
 }

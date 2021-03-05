@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -189,7 +188,7 @@ func (c *CLab) initMgmtNetwork() error {
 
 // ParseTopology parses the lab topology
 func (c *CLab) ParseTopology() error {
-	log.Info("Parsing topology information ...")
+	log.Info("Parsing topology information...")
 	log.Debugf("Lab name: %s", c.Config.Name)
 	// initialize Management network config
 	err := c.initMgmtNetwork()
@@ -288,7 +287,7 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-//configInit processes the path to a config file that can be provided on
+// configInit processes the path to a config file that can be provided on
 // multiple configuration levels
 // returns an errof if the reference path doesn't exist
 func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
@@ -447,268 +446,51 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	switch node.Kind {
 	case "ceos":
-		// initialize the global parameters with defaults, can be overwritten later
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initCeosNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-
-		// initialize specifc container information
-		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0"
-
-		// defined env vars for the ceos
-		kindEnv := map[string]string{
-			"CEOS":                                "1",
-			"EOS_PLATFORM":                        "ceoslab",
-			"container":                           "docker",
-			"ETBA":                                "1",
-			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
-			"INTFTYPE":                            "eth",
-			"MAPETH0":                             "1",
-			"MGMT_INTF":                           "eth0"}
-		node.Env = mergeStringMaps(kindEnv, envs)
-
-		node.User = user
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.NodeType = nodeCfg.Type
-
-		// mount config dir
-		cfgPath := filepath.Join(node.LabDir, "flash")
-		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
 
 	case "srl":
-		// initialize the global parameters with defaults, can be overwritten later
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initSRLNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-
-		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-
-		if lp == "" {
-			return fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
-		}
-
-		node.License = lp
-
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.NodeType = c.typeInit(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-
-		if filename, found := srlTypes[node.NodeType]; found {
-			node.Topology = baseConfigDir + filename
-		} else {
-			keys := make([]string, 0, len(srlTypes))
-			for key := range srlTypes {
-				keys = append(keys, key)
-			}
-			log.Fatalf("wrong node type. '%s' doesn't exist. should be any of %s", node.NodeType, strings.Join(keys, ", "))
-		}
-
-		// initialize specifc container information
-		node.Cmd = "sudo sr_linux"
-
-		kindEnv := map[string]string{"SRLINUX": "1"}
-		node.Env = mergeStringMaps(kindEnv, envs)
-
-		// if user was not initialized to a value, use root
-		if user == "" {
-			user = "0:0"
-		}
-		node.User = user
-
-		node.Sysctls = make(map[string]string)
-		node.Sysctls["net.ipv4.ip_forward"] = "0"
-		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
-		node.Sysctls["net.ipv6.conf.all.accept_dad"] = "0"
-		node.Sysctls["net.ipv6.conf.default.accept_dad"] = "0"
-		node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
-		node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
-
-		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-		// in (c *cLab) CreateNodeDirStructure
-		node.Binds = append(node.Binds, fmt.Sprint(filepath.Join(node.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
-
-		// mount config directory
-		cfgPath := filepath.Join(node.LabDir, "config")
-		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
-
-		// mount srlinux.conf
-		srlconfPath := filepath.Join(node.LabDir, "srlinux.conf")
-		node.Binds = append(node.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
-
-		// mount srlinux topology
-		topoPath := filepath.Join(node.LabDir, "topology.yml")
-		node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
-
 	case "crpd":
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initCrpdNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// initialize license file
-		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-		node.License = lp
-
-		// mount config and log dirs
-		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config"), ":/config"))
-		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "log"), ":/var/log"))
-		// mount sshd_config
-		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
-
 	case "sonic-vs":
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initSonicNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// rewrite entrypoint so sonic won't start supervisord before we attach veth interfaces
-		node.Entrypoint = "/bin/bash"
-
 	case "vr-sros":
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initSROSNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// vr-sros types set the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
-		node.NodeType = c.typeInit(&nodeCfg, node.Kind)
-
-		// initialize license file
-		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-		node.License = lp
-
-		// env vars are used to set launch.py arguments in vrnetlab container
-		defEnv := map[string]string{
-			"CONNECTION_MODE":    vrDefConnMode,
-			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
-			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
-		}
-		node.Env = mergeStringMaps(defEnv, envs)
-
-		// mount tftpboot dir
-		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "tftpboot"), ":/tftpboot"))
-		if node.Env["CONNECTION_MODE"] == "macvtap" {
-			// mount dev dir to enable macvtap
-			node.Binds = append(node.Binds, "/dev:/dev")
-		}
-
-		node.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", node.Env["CONNECTION_MODE"],
-			node.ShortName,
-			node.NodeType,
-		)
-
 	case "vr-vmx":
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// env vars are used to set launch.py arguments in vrnetlab container
-		defEnv := map[string]string{
-			"USERNAME":           "admin",
-			"PASSWORD":           "admin@123",
-			"CONNECTION_MODE":    vrDefConnMode,
-			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
-			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
-		}
-		node.Env = mergeStringMaps(defEnv, envs)
-
-		if node.Env["CONNECTION_MODE"] == "macvtap" {
-			// mount dev dir to enable macvtap
-			node.Binds = append(node.Binds, "/dev:/dev")
-		}
-
-		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
-
-	case "vr-xrv":
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// env vars are used to set launch.py arguments in vrnetlab container
-		defEnv := map[string]string{
-			"USERNAME":           "clab",
-			"PASSWORD":           "clab@123",
-			"CONNECTION_MODE":    vrDefConnMode,
-			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
-			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
-		}
-		node.Env = mergeStringMaps(defEnv, envs)
-
-		if node.Env["CONNECTION_MODE"] == "macvtap" {
-			// mount dev dir to enable macvtap
-			node.Binds = append(node.Binds, "/dev:/dev")
-		}
-
-		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
-
-	case "vr-xrv9k":
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// env vars are used to set launch.py arguments in vrnetlab container
-		defEnv := map[string]string{
-			"USERNAME":           "clab",
-			"PASSWORD":           "clab@123",
-			"CONNECTION_MODE":    vrDefConnMode,
-			"VCPU":               "2",
-			"RAM":                "12288",
-			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
-			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
-		}
-		node.Env = mergeStringMaps(defEnv, envs)
-
-		if node.Env["CONNECTION_MODE"] == "macvtap" {
-			// mount dev dir to enable macvtap
-			node.Binds = append(node.Binds, "/dev:/dev")
-		}
-
-		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"], node.Env["VCPU"], node.Env["RAM"])
-
-	case "alpine", "linux", "mysocketio":
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initVrVMXNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
-		node.User = user
-
-		node.Sysctls = make(map[string]string)
-		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
-
-		node.Env = envs
+	case "vr-xrv":
+		err = initVrXRVNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
+	case "vr-xrv9k":
+		err = initVrXRV9kNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
+	case "alpine", "linux", "mysocketio":
+		err = initLinuxNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
 
 	case "bridge", "ovs-bridge":
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
