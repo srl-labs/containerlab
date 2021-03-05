@@ -189,7 +189,7 @@ func (c *CLab) initMgmtNetwork() error {
 
 // ParseTopology parses the lab topology
 func (c *CLab) ParseTopology() error {
-	log.Info("Parsing topology information ...")
+	log.Info("Parsing topology information...")
 	log.Debugf("Lab name: %s", c.Config.Name)
 	// initialize Management network config
 	err := c.initMgmtNetwork()
@@ -447,36 +447,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	switch node.Kind {
 	case "ceos":
-		// initialize the global parameters with defaults, can be overwritten later
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initCeosNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-
-		// initialize specifc container information
-		node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0"
-
-		// defined env vars for the ceos
-		kindEnv := map[string]string{
-			"CEOS":                                "1",
-			"EOS_PLATFORM":                        "ceoslab",
-			"container":                           "docker",
-			"ETBA":                                "1",
-			"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
-			"INTFTYPE":                            "eth",
-			"MAPETH0":                             "1",
-			"MGMT_INTF":                           "eth0"}
-		node.Env = mergeStringMaps(kindEnv, envs)
-
-		node.User = user
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.NodeType = nodeCfg.Type
-
-		// mount config dir
-		cfgPath := filepath.Join(node.LabDir, "flash")
-		node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
 
 	case "srl":
 		err = initSRLNode(c, nodeCfg, node, user, envs)
