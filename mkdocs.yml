@@ -37,6 +37,7 @@ nav:
           - vxlan:
               - create: cmd/tools/vxlan/create.md
               - delete: cmd/tools/vxlan/delete.md
+      - completions: cmd/completion.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
