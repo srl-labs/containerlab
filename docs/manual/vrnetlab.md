@@ -23,7 +23,6 @@ Make sure, that the VM that containerlab runs on have [Nested virtualization ena
 
 ### Supported VM products
 
-
 #### Nokia SR OS
 Nokia's virtualized SR OS, aka VSR/VSim has been added to containerlab supported kinds under the [vr-sros](kinds/vr-sros.md) kind. A [demo lab](../lab-examples/vr-sros.md) explains the way this kind can be used.
 
@@ -66,6 +65,29 @@ Containerlab offers several ways VM based routers can be connected with the rest
             CONNECTION_MODE: bridge # use `ovs` for openvswitch datapath
     ```
 
+### Boot delay
+Simultaneous boot of many qemu nodes may stress the underlying system, which sometimes render in a boot loop or system halt. If the container host doesn't have enough capacity to bear the simultaneous boot of many qemu nodes it is still possible to successfully run them by scheduling their boot time.
+
+Delaying the boot process of certain nodes by a user defined time will allow nodes to boot successfully while "gradually" load the system. The boot delay can be set with `BOOT_DELAY` environment varialbe that supported `vr-xxxx` kinds will recognize.
+
+Consider the following example where the first SR OS nodes will boot immediately, whereas the second node will sleep for 30 seconds and then start the boot process:
+
+```yaml
+name: bootdelay
+topology:
+  nodes:
+    sr1:
+      kind: vr-sros
+      image: vr-sros:21.2.R1
+      license: license-sros21.txt
+    sr2:
+      kind: vr-sros
+      image: vr-sros:21.2.R1
+      license: license-sros21.txt
+      env:
+        # boot delay in seconds
+        BOOT_DELAY: 30
+```
 
 [^1]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
 [^2]: pros and cons of different datapaths were examined [here](https://netdevops.me/2021/transparently-redirecting-packets/frames-between-interfaces/)
