@@ -2,7 +2,7 @@
 | ----------------------------- | -------------------------------------------------------------------- |
 | **Description**               | Two Nokia SR Linux nodes                                             |
 | **Components**                | [Nokia SR Linux][srl]                                                |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [srl02.yml][topofile]                                                |
 | **Name**                      | srl02                                                                |
 | **Validated versions**[^2]    | `containerlab v0.8.2`,`srlinux:20.6.2-332`                           |

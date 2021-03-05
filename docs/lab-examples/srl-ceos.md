@@ -2,7 +2,7 @@
 | ----------------------------- | -------------------------------------------------------------------------------- |
 | **Description**               | A Nokia SR Linux connected back-to-back with Arista cEOS                         |
 | **Components**                | [Nokia SR Linux][srl], [Arista cEOS][ceos]                                       |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB             |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB             |
 | **Topology file**             | [srlceos01.yml][topofile]                                                        |
 | **Name**                      | srlceos01                                                                        |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `ceos:4.25.0F`, `docker-ce:19.03.13` |

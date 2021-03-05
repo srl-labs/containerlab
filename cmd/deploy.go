@@ -76,6 +76,10 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
+		if err = c.CheckResources(); err != nil {
+			return err
+		}
+
 		// create lab directory
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)

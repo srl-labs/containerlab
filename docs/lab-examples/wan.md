@@ -2,7 +2,7 @@
 | ----------------------------- | -------------------------------------------------------------------- |
 | **Description**               | WAN emulating topology                                               |
 | **Components**                | [Nokia SR Linux][srl]                                                |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 3 GB |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 3 GB |
 | **Topology file**             | [srl03.yml][topofile]                                                |
 | **Name**                      | srl03                                                                |
 
