@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/docker/go-connections/nat"
@@ -800,4 +801,15 @@ func mergeStringMaps(m1, m2 map[string]string) map[string]string {
 		m[k] = v
 	}
 	return m
+}
+
+// CheckResources runs container host resources check
+func (c *CLab) CheckResources() error {
+	vcpu := runtime.NumCPU()
+	log.Debugf("Number of vcpu: %d", vcpu)
+	if vcpu < 2 {
+
+		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
+	}
+	return nil
 }
