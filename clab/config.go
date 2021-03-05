@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -458,28 +457,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 			return err
 		}
 	case "crpd":
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initCrpdNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// initialize license file
-		lp, err := c.licenseInit(&nodeCfg, node)
-		if err != nil {
-			return err
-		}
-		node.License = lp
-
-		// mount config and log dirs
-		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config"), ":/config"))
-		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "log"), ":/var/log"))
-		// mount sshd_config
-		node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
-
 	case "sonic-vs":
 		node.Config, err = c.configInit(&nodeCfg, node.Kind)
 		if err != nil {
