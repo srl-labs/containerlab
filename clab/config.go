@@ -287,7 +287,7 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-//configInit processes the path to a config file that can be provided on
+// configInit processes the path to a config file that can be provided on
 // multiple configuration levels
 // returns an errof if the reference path doesn't exist
 func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
@@ -472,91 +472,25 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 			return err
 		}
 	case "vr-vmx":
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// env vars are used to set launch.py arguments in vrnetlab container
-		defEnv := map[string]string{
-			"USERNAME":           "admin",
-			"PASSWORD":           "admin@123",
-			"CONNECTION_MODE":    vrDefConnMode,
-			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
-			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
-		}
-		node.Env = mergeStringMaps(defEnv, envs)
-
-		if node.Env["CONNECTION_MODE"] == "macvtap" {
-			// mount dev dir to enable macvtap
-			node.Binds = append(node.Binds, "/dev:/dev")
-		}
-
-		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
-
-	case "vr-xrv":
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// env vars are used to set launch.py arguments in vrnetlab container
-		defEnv := map[string]string{
-			"USERNAME":           "clab",
-			"PASSWORD":           "clab@123",
-			"CONNECTION_MODE":    vrDefConnMode,
-			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
-			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
-		}
-		node.Env = mergeStringMaps(defEnv, envs)
-
-		if node.Env["CONNECTION_MODE"] == "macvtap" {
-			// mount dev dir to enable macvtap
-			node.Binds = append(node.Binds, "/dev:/dev")
-		}
-
-		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"])
-
-	case "vr-xrv9k":
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.User = user
-
-		// env vars are used to set launch.py arguments in vrnetlab container
-		defEnv := map[string]string{
-			"USERNAME":           "clab",
-			"PASSWORD":           "clab@123",
-			"CONNECTION_MODE":    vrDefConnMode,
-			"VCPU":               "2",
-			"RAM":                "12288",
-			"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
-			"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
-		}
-		node.Env = mergeStringMaps(defEnv, envs)
-
-		if node.Env["CONNECTION_MODE"] == "macvtap" {
-			// mount dev dir to enable macvtap
-			node.Binds = append(node.Binds, "/dev:/dev")
-		}
-
-		node.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace", node.Env["USERNAME"], node.Env["PASSWORD"], node.ShortName, node.Env["CONNECTION_MODE"], node.Env["VCPU"], node.Env["RAM"])
-
-	case "alpine", "linux", "mysocketio":
-		node.Config, err = c.configInit(&nodeCfg, node.Kind)
+		err = initVrVMXNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
-		node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-		node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
-		node.User = user
-
-		node.Sysctls = make(map[string]string)
-		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
-
-		node.Env = envs
+	case "vr-xrv":
+		err = initVrXRVNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
+	case "vr-xrv9k":
+		err = initVrXRV9kNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
+	case "alpine", "linux", "mysocketio":
+		err = initLinuxNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
 
 	case "bridge", "ovs-bridge":
 		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
