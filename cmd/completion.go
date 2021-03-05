@@ -14,13 +14,13 @@ var completionCmd = &cobra.Command{
 
 Bash:
 
-  $ source <(yourprogram completion bash)
+  $ source <(containerlab completion bash)
 
   # To load completions for each session, execute once:
   # Linux:
-  $ yourprogram completion bash > /etc/bash_completion.d/yourprogram
+  $ containerlab completion bash > /etc/bash_completion.d/containerlab
   # macOS:
-  $ yourprogram completion bash > /usr/local/etc/bash_completion.d/yourprogram
+  $ containerlab completion bash > /usr/local/etc/bash_completion.d/containerlab
 
 Zsh:
 
@@ -30,23 +30,23 @@ Zsh:
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
   # To load completions for each session, execute once:
-  $ yourprogram completion zsh > "${fpath[1]}/_yourprogram"
+  $ containerlab completion zsh > "${fpath[1]}/_containerlab"
 
   # You will need to start a new shell for this setup to take effect.
 
 fish:
 
-  $ yourprogram completion fish | source
+  $ containerlab completion fish | source
 
   # To load completions for each session, execute once:
-  $ yourprogram completion fish > ~/.config/fish/completions/yourprogram.fish
+  $ containerlab completion fish > ~/.config/fish/completions/containerlab.fish
 
 PowerShell:
 
-  PS> yourprogram completion powershell | Out-String | Invoke-Expression
+  PS> containerlab completion powershell | Out-String | Invoke-Expression
 
   # To load completions for every new session, run:
-  PS> yourprogram completion powershell > yourprogram.ps1
+  PS> containerlab completion powershell > containerlab.ps1
   # and source this file from your PowerShell profile.
 `,
 	DisableFlagsInUseLine: true,
