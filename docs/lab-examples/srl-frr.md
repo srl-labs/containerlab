@@ -2,7 +2,7 @@
 | ----------------------------- | ---------------------------------------------------------------------------------------- |
 | **Description**               | A Nokia SR Linux connected back-to-back FRR router                                       |
 | **Components**                | [Nokia SR Linux][srl], [FRR](http://docs.frrouting.org/en/latest/overview.html)          |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB                     |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                     |
 | **Topology file**             | [srlfrr01.yml][topofile]                                                                 |
 | **Name**                      | srlfrr01                                                                                 |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `frrouting/frr:v7.5.0`, `docker-ce:19.03.13` |

@@ -1,10 +1,10 @@
-|                               |                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------- |
-| **Description**               | A minimal CLOS topology with two leafs and a spine                     |
-| **Components**                | [Nokia SR Linux][srl]                                                  |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1.5 <br/>:fontawesome-solid-memory: 3 GB |
-| **Topology file**             | [clos01.yml][topofile]                                                 |
-| **Name**                      | clos01                                                                 |
+|                               |                                                                      |
+| ----------------------------- | -------------------------------------------------------------------- |
+| **Description**               | A minimal CLOS topology with two leafs and a spine                   |
+| **Components**                | [Nokia SR Linux][srl]                                                |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 3 GB |
+| **Topology file**             | [clos01.yml][topofile]                                               |
+| **Name**                      | clos01                                                               |
 
 ## Description
 This labs provides a lightweight folded CLOS fabric topology using a minimal set of nodes: two leaves and a single spine.

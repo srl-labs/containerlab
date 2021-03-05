@@ -2,7 +2,7 @@
 | ----------------------------- | -------------------------------------------------------------------- |
 | **Description**               | Connecting nodes via linux bridges                                   |
 | **Components**                | [Nokia SR Linux][srl]                                                |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [br01.yml][topofile]                                                 |
 | **Name**                      | br01                                                                 |
 

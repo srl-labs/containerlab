@@ -2,7 +2,7 @@
 | ----------------------------- | ------------------------------------------------------------------------------------------ |
 | **Description**               | A Nokia SR Linux connected back-to-back with SONiC-VS                                      |
 | **Components**                | [Nokia SR Linux][srl], [SONiC][sonic]                                                      |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB                       |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                       |
 | **Topology file**             | [sonic01.yml][topofile]                                                                    |
 | **Name**                      | sonic01                                                                                    |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `docker-sonic-vs:202012`, `docker-ce:19.03.13` |
