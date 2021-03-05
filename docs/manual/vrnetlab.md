@@ -89,5 +89,10 @@ topology:
         BOOT_DELAY: 30
 ```
 
+### Memory optimization
+Typically a lab consists of a few types of VMs which are spawned and inteconnected with each other. Consider a fictious lab that consists of 5 interconnected routers, 1 router uses VM image X and 4 routers are using VM image Y.
+
+Effectively we run just two types of VMs in that lab, and thus we can implement memory deduplication technique that drastically reduces the memory footprint of a lab. In Linux this can be achieved with technologies like UKSM/KSM. Refer to [this article](https://netdevops.me/2021/how-to-patch-ubuntu-20.04-focal-fossa-with-uksm/) that explains the methodology and provides steps to get UKSM working on Ubuntu/Fedora systems.
+
 [^1]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
 [^2]: pros and cons of different datapaths were examined [here](https://netdevops.me/2021/transparently-redirecting-packets/frames-between-interfaces/)
