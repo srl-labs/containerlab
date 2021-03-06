@@ -9,6 +9,9 @@ builds:
 archives:
   - replacements:
       linux: Linux
+    files:
+      - templates/**/*
+      - lab-examples/**/*
 checksum:
   name_template: checksums.txt
 snapshot:

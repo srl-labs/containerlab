@@ -5,13 +5,14 @@ The following requirements must be satisfied in order to let containerlab tool r
 
 * A user should have `sudo` privileges to run containerlab.
 * [Docker](https://docs.docker.com/engine/install/) must be installed.
-* Import container images (e.g. Nokia SR Linux, Arista cEOS) which are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
+* Load container images (e.g. Nokia SR Linux, Arista cEOS) which are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
 ### Install script
 Containerlab can be installed using the [installation script](https://github.com/srl-wim/container-lab/blob/master/get.sh) which detects the operating system type and installs the relevant package:
 
 !!! note
-    Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives are supported.
+    Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.  
+    Other systems can follow the [manual installation](#manual-installation) procedure.
 
 ```bash
 # download and install the latest release (may require sudo)
@@ -42,7 +43,7 @@ It is possible to install official containerlab releases via public APT/YUM repo
     yum install containerlab
     ```
 
-???note "Alternative installation options"
+??? "Manual package installation"
     Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-wim/container-lab/releases) page.
 
     example:
@@ -60,8 +61,29 @@ It is possible to install official containerlab releases via public APT/YUM repo
 
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
 
+### Manual installation
+If the linux distributive can't install deb/rpm packages, containerlab can be installed from the archive:
+
+```bash
+# get the latest available tag
+LATEST=$(curl -s https://github.com/srl-wim/container-lab/releases/latest | \
+       sed -e 's/.*tag\/v\(.*\)\".*/\1/')
+
+# download tar.gz archive
+curl -L -o /tmp/clab.tar.gz "https://github.com/srl-wim/container-lab/releases/download/v${LATEST}/containerlab_${LATEST}_Linux_amd64.tar.gz"
+
+# create containerlab directory
+mkdir -p /etc/containerlab
+
+# extract downloaded archive into the containerlab directory
+tar -zxvf /tmp/clab.tar.gz -C /etc/containerlab
+
+# (optional) move containerlab binary somewhere in the $PATH
+mv /etc/containerlab/containerlab /usr/bin && chmod a+x /usr/bin/containerlab
+```
+
 ### Upgrade
-To upgrade `containerlab` to the latest available version issue the following command:
+To upgrade `containerlab` to the latest available version issue the following command[^1]:
 
 ```
 containerlab version upgrade
@@ -70,3 +92,5 @@ containerlab version upgrade
 This command will fetch the installation script and will upgrade the tool to its most recent version.
 
 or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
+
+[^1]: only available if installed from packages
