@@ -6,3 +6,5 @@ IgnoreURLs:
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
+IgnoreDirs:
+  - overrides
