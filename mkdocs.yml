@@ -66,6 +66,7 @@ repo_url: https://github.com/srl-wim/container-lab
 edit_uri: ""
 theme:
   name: material
+  custom_dir: docs/overrides
 
   # 404 page
   static_templates:
@@ -100,6 +101,9 @@ extra:
       link: https://github.com/hellt
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/ntdvps
+
+extra_css:
+  - stylesheets/extra.css
 
 # Extensions
 markdown_extensions:
