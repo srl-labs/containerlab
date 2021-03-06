@@ -24,6 +24,7 @@ var interfaceFormat = map[string]string{
 	"vr-sros":  "eth%d",
 	"vr-vmx":   "eth%d",
 	"vr-xrv9k": "eth%d",
+	"vr-veos":  "eth%d",
 }
 var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-xrv9k"}
 
