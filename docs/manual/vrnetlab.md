@@ -43,6 +43,11 @@ The [demo lab for xrv9k](../lab-examples/vr-xrv9k.md) and [demo lab for xrv](../
 
 To build a container image with XRv9k/XRv inside users should follow [the instructions](https://github.com/hellt/vrnetlab) provided in the relevant folders and using the code of the forked version of a vrnetlab project.
 
+#### Arista vEOS
+Arista's virtualized EOS - vEOS - has been added to containerlab supported kinds under the [vr-veos](kinds/vr-veos.md) 
+
+To build a container image with vEOS inside users should follow [the instructions](https://github.com/hellt/vrnetlab) provided in the relevant folders and using the code of the forked version of a vrnetlab project.
+
 
 ### Connection modes
 Containerlab offers several ways VM based routers can be connected with the rest of the docker workloads. By default, vrnetlab integrated routers will use **tc** backend[^2] which doesn't require any additional packages to be installed on the containerhost and supoprts transparent passage of LACP frames.
