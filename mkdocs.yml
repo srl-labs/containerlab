@@ -16,6 +16,7 @@ nav:
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
           - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
+          - vr-veos - Arista vEOS: manual/kinds/vr-veos.md
           - linux - Linux container: manual/kinds/linux.md
           - bridge - Linux bridge: manual/kinds/bridge.md
           - ovs-bridge - Openvswitch bridge: manual/kinds/ovs-bridge.md

@@ -42,6 +42,7 @@ var kinds = []string{
 	"vr-vmx",
 	"vr-xrv",
 	"vr-xrv9k",
+	"vr-veos",
 	"linux",
 	"bridge",
 	"ovs-bridge",
@@ -484,6 +485,11 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		}
 	case "vr-xrv9k":
 		err = initVrXRV9kNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
+	case "vr-veos":
+		err = initVrVeosNode(c, nodeCfg, node, user, envs)
 		if err != nil {
 			return err
 		}
