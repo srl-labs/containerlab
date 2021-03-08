@@ -107,7 +107,7 @@ jobs:
         if: always()
         with:
           name: 01-smoke-log
-          path: ./test/out/*.html
+          path: ./tests/out/*.html
       # repository name is needed for posting test report in a next step
       - name: Get Repository Name
         run: |
