@@ -8,7 +8,7 @@ ${lab-name}       2-linux-nodes
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    containerlab deploy -t ${CURDIR}/01-linux-nodes.yml
+    ...    sudo containerlab deploy -t ${CURDIR}/01-linux-nodes.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -44,6 +44,6 @@ Verify links in node l2
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    containerlab destroy -t ${CURDIR}/01-linux-nodes.yml --cleanup
+    ...    sudo containerlab destroy -t ${CURDIR}/01-linux-nodes.yml --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
