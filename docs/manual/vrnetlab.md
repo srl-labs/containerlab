@@ -25,10 +25,10 @@ Containerlab depends on `hellt/vrnetlab` project and sometimes features added in
 
 The following table provides a link between the version combinations that were validated:
 
-| containerlab[^3] | vrnetlab[^4]                                                   | Notes                                                                                                                     |
-| ---------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl) | Initial release. Images: sros, vmx, xrv, xrv9k                                                                            |
-| `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)       | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), sros images have static route to docker network |
+| containerlab[^3] | vrnetlab[^4]                                                   | Notes                                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl) | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                           |
+| `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)       | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances |
 
 ### Building vrnetlab images
 To build a vrnetlab image compatible with containerlab users first need to ensure that the versions of both projects follow [compatibility matrix](#compatibility-matrix).
