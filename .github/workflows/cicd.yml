@@ -75,13 +75,49 @@ jobs:
           curl https://htmltest.wjdp.uk | bash
           ./bin/htmltest -c docs/htmltest.yml
 
-  build-and-release:
+  smoke-tests:
     runs-on: ubuntu-20.04
-    if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - docs-test
       - staticcheck
       - unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+      - name: Build containerlab
+        run: go build -o clab
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Install robotframework
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+      - name: Run smoke tests
+        run: |
+          bash ./tests/rf-run.sh ./tests/01-smoke
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 01-smoke-log
+          path: ./test/out/*.html
+      # repository name is needed for posting test report in a next step
+      - name: Get Repository Name
+        run: |
+          export REPO="$(echo "${{ github.repository }}" | awk -F / '{print $2}' | sed -e "s/:refs//")"
+          echo "::set-env name=REPOSITORY_NAME::$REPO"
+
+  build-and-release:
+    runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - smoke-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v2
