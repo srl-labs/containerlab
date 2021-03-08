@@ -108,11 +108,6 @@ jobs:
         with:
           name: 01-smoke-log
           path: ./tests/out/*.html
-      # repository name is needed for posting test report in a next step
-      - name: Get Repository Name
-        run: |
-          export REPO="$(echo "${{ github.repository }}" | awk -F / '{print $2}' | sed -e "s/:refs//")"
-          echo "::set-env name=REPOSITORY_NAME::$REPO"
 
   build-and-release:
     runs-on: ubuntu-20.04
