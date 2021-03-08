@@ -91,7 +91,7 @@ jobs:
         with:
           go-version: ${{ env.GOVER }}
       - name: Build containerlab
-        run: go build -o containerlab
+        run: sudo go build -o /usr/bin/containerlab
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
@@ -104,6 +104,7 @@ jobs:
           bash ./tests/rf-run.sh ./tests/01-smoke
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v2
+        if: always()
         with:
           name: 01-smoke-log
           path: ./test/out/*.html
