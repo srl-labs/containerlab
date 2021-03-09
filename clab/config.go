@@ -30,6 +30,8 @@ const (
 	vrDefConnMode = "tc"
 	// NSPath value assigned to host interfaces
 	hostNSPath = "__host"
+	// veth link mtu. jacked up to 65k to allow jumbo testing of various sizes
+	defaultVethLinkMTU = 65000
 )
 
 // supported kinds
@@ -517,7 +519,7 @@ func (c *CLab) NewLink(l LinkConfig) *Link {
 	link.Labels = l.Labels
 
 	if link.MTU <= 0 {
-		link.MTU = 1500
+		link.MTU = defaultVethLinkMTU
 	}
 
 	for i, d := range l.Endpoints {
