@@ -1,0 +1,158 @@
+---
+name: CICD
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
+  pull_request:
+
+env:
+  GOVER: 1.15.8
+  CGO_ENABLED: 0
+  MKDOCS_MATERIAL_VER: 6.2.4
+
+jobs:
+  file-changes:
+    runs-on: ubuntu-20.04
+    outputs:
+      go-code: ${{ steps.filter.outputs.go-code }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            go-code:
+              - 'clab/**'
+              - 'cmd/**'
+              - '.github/workflows/cicd.yml'
+            docs:
+              - "docs/**"
+              - "lab-examples/**"
+              - "mkdocs.yml"
+              - "README.md"
+              - '.github/workflows/cicd.yml'
+
+  unit-test:
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.go-code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+      # create fake default config of srl for tests to validate path
+      - run: sudo mkdir -p /etc/containerlab/templates/srl && sudo touch /etc/containerlab/templates/srl/srlconfig.tpl
+      - run: go test -cover ./...
+
+  staticcheck:
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.go-code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+      - name: Staticcheck
+        run: |
+          go get -u honnef.co/go/tools/cmd/staticcheck
+          staticcheck ./...
+
+  docs-test:
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
+      - name: htmltest
+        run: |
+          curl https://htmltest.wjdp.uk | bash
+          ./bin/htmltest -c docs/htmltest.yml
+
+  smoke-tests:
+    runs-on: ubuntu-20.04
+    needs:
+      - docs-test
+      - staticcheck
+      - unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+      - name: Build containerlab
+        run: sudo go build -o /usr/bin/containerlab
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Install robotframework
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+      - name: Run smoke tests
+        run: |
+          bash ./tests/rf-run.sh ./tests/01-smoke
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: 01-smoke-log
+          path: ./tests/out/*.html
+
+  build-and-release:
+    runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - smoke-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: v0.155.0
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
+
+  publish-docs:
+    runs-on: ubuntu-20.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict
+
+  # update docs allows to make the docs changes outside of the release cycle
+  # it skips the code build/release and proceeds with docs publishing
+  # the intended usage is to provide fixes/updates to docs, which do not require code changes
+  update-docs:
+    runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/docs-publish'
+    needs: docs-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict

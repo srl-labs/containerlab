@@ -23,3 +23,5 @@ container-lab
 containerlab
 .vscode/
 .DS_Store
+__rd*
+tests/out
