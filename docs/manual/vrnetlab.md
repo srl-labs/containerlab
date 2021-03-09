@@ -1,53 +1,62 @@
-Containerlab focuses on containers, but there are way more routing products which are only shipped in a virtual machine packaging. Leaving containerlab users without ability to create topologies with both containerized and VM-based routing systems would have been a shame.
+Containerlab focuses on containers, but there are many routing products which are only shipped in a virtual machine packaging. Leaving containerlab users without ability to create topologies with both containerized and VM-based routing systems would have been a shame.
 
-Keeping this requirement in mind from the very beginning, we added a kind [`bridge`](../lab-examples/ext-bridge.md), that allows to, ehm, bridge your containerized topology with other resources available via a bridged network. For example a VM based router.
+Keeping this requirement in mind from the very beginning, we added kinds like [`bridge`](../lab-examples/ext-bridge.md)/[`ovs-bridge`](kinds/ovs-bridge.md), that allows to, ehm, bridge your containerized topology with other resources available via a bridged network. For example, a VM based router:
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/vrnetlab.drawio&quot;}"></div>
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
-Although this approach has many pros, it doesn't allow users to define the VM based nodes in the same topology file. But not anymore, with [`vrnetlab`](https://github.com/plajjan/vrnetlab) integration containerlab became capable of launching topologies with VM-based routers.
+Although this approach has many pros, it doesn't allow users to define the VM based nodes in the same topology file. But not anymore, with [`vrnetlab`](https://github.com/plajjan/vrnetlab) integration containerlab is capable of launching topologies with VM-based routers defined in the same topology file.
 
 ## Vrnetlab
 Vrnetlab essentially allows to package a regular VM inside a container and makes it runnable and accessible as if it was a container image.
 
-To make this work, vrnetlab provides a set of scripts that will build the container image taking a user provided qcow file as an input. This enables containerlab to build topologies which consist both of native containerized NOSes and the VMs:
+To make this work, vrnetlab provides a set of scripts that will build the container image out of a user provided VM disk. This enables containerlab to build topologies which consist both of native containerized NOSes and VMs:
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/vrnetlab.drawio&quot;}"></div>
 
-!!!info
-    Although multiple vendors are supported in vrnetlab, to make these images work with container-based networking, we needed to [fork](https://github.com/hellt/vrnetlab) the project and provide the necessary improvements.  
-    Thus, the VM based products will appear in the supported list gradually.
+!!! warning
+    Make sure, that the VM that containerlab runs on have [Nested virtualization enabled](https://stafwag.github.io/blog/blog/2018/06/04/nested-virtualization-in-kvm/) to support vrnetlab based containers.
 
-Make sure, that the VM that containerlab runs on have [Nested virtualization enabled](https://stafwag.github.io/blog/blog/2018/06/04/nested-virtualization-in-kvm/) to support vrnetlab based containers.
+### Compatibility matrix
+To make vrnetlab images to work with container-based networking in containerlab we needed to [fork](https://github.com/hellt/vrnetlab) vrnetlab project and implement the necessary improvements. This means that VM-based routers that you intend to run with containerlab should be built with [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab) project, and not with the upstream vrnetlab.
+
+Containerlab depends on `hellt/vrnetlab` project and sometimes features added in containerlab must be implemented in `vrnetlab` (and vice-versa). This leads to a cross-dependency between these projects.
+
+The following table provides a link between the version combinations that were validated:
+
+| containerlab[^3] | vrnetlab[^4]                                                   | Notes                                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl) | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                           |
+| `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)       | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances |
+
+### Building vrnetlab images
+To build a vrnetlab image compatible with containerlab users first need to ensure that the versions of both projects follow [compatibility matrix](#compatibility-matrix).
+
+1. Clone [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab) and checkout to a version compatible with containerlab release:
+   ```bash
+   git clone https://github.com/hellt/vrnetlab && cd vrnetlab
+   
+   # assuming we are running containerlab 0.10.4,
+   # the matching vrnetlab version is 0.1.0-cl
+   git checkout 0.1.0-cl
+   ```
+2. Enter the directory for the image of interest
+   ```
+   cd sros
+   ```
+3. Follow the build instructions from the README.md file in the image directory
 
 ### Supported VM products
+The images that work with containerlab will appear in the supported list gradually, as we implement the necessary integration.
 
-#### Nokia SR OS
-Nokia's virtualized SR OS, aka VSR/VSim has been added to containerlab supported kinds under the [vr-sros](kinds/vr-sros.md) kind. A [demo lab](../lab-examples/vr-sros.md) explains the way this kind can be used.
-
-To build a container image with SR OS inside users should follow [the provided build instructions](https://github.com/hellt/vrnetlab/tree/master/sros#building-the-docker-image) and using the code of the forked version of a vrnetlab project.
-
-!!!warning
-    When building SR OS vrnetlab image for use with containerlab, **do not** provide the license during the image build process. The license shall be provided in the containerlab topology definition file[^1].
-
-#### Juniper vMX
-Juniper's virtualized MX router - vMX - has been added to containerlab supported kinds under the [vr-vmx](kinds/vr-vmx.md) kind. A [demo lab](../lab-examples/vr-vmx.md) explains the way this kind can be used.
-
-To build a container image with vMX inside users should follow [the instructions](https://github.com/hellt/vrnetlab/tree/master/vmx#building-the-docker-image) provided and using the code of the forked version of a vrnetlab project.
-
-#### Cisco XRv
-Cisco's virtualized XR router (demo) - XRv - has been added to containerlab supported kinds under the [vr-xrv9k](kinds/vr-xrv9k.md) and [vr-xrv](kinds/vr-xrv.md) kinds. The `xr-xrv` kind is added for XRv images which are supreceded by XRv9k images. The reason we keep `vr-xrv` is that it is much more lightweight and can be used for basic control plane interops on a resource constrained hosts.
-
-The [demo lab for xrv9k](../lab-examples/vr-xrv9k.md) and [demo lab for xrv](../lab-examples/vr-xrv.md) explain the way this kinds can be used.
-
-To build a container image with XRv9k/XRv inside users should follow [the instructions](https://github.com/hellt/vrnetlab) provided in the relevant folders and using the code of the forked version of a vrnetlab project.
-
-#### Arista vEOS
-Arista's virtualized EOS - vEOS - has been added to containerlab supported kinds under the [vr-veos](kinds/vr-veos.md) 
-
-To build a container image with vEOS inside users should follow [the instructions](https://github.com/hellt/vrnetlab) provided in the relevant folders and using the code of the forked version of a vrnetlab project.
-
+| Product     | Kind                          | Demo lab                                   | Notes                                                                                                                                                                                                        |
+| ----------- | ----------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Nokia SR OS | [vr-sros](kinds/vr-sros.md)   | [SRL & SR OS](../lab-examples/vr-sros.md)  | When building SR OS vrnetlab image for use with containerlab, **do not** provide the license during the image build process. The license shall be provided in the containerlab topology definition file[^1]. |
+| Juniper vMX | [vr-vmx](kinds/vr-vmx.md)     | [SRL & vMX](../lab-examples/vr-vmx.md)     |                                                                                                                                                                                                              |
+| Cisco XRv   | [vr-xrv](kinds/vr-xrv.md)     | [SRL & XRv](../lab-examples/vr-xrv.md)     |                                                                                                                                                                                                              |
+| Cisco XRv9k | [vr-xrv9k](kinds/vr-xrv9k.md) | [SRL & XRv9k](../lab-examples/vr-xrv9k.md) |                                                                                                                                                                                                              |
+| Arista vEOS | [vr-veos](kinds/vr-veos.md)   |                                            |                                                                                                                                                                                                              |
 
 ### Connection modes
 Containerlab offers several ways VM based routers can be connected with the rest of the docker workloads. By default, vrnetlab integrated routers will use **tc** backend[^2] which doesn't require any additional packages to be installed on the containerhost and supoprts transparent passage of LACP frames.
@@ -101,3 +110,5 @@ Effectively we run just two types of VMs in that lab, and thus we can implement 
 
 [^1]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
 [^2]: pros and cons of different datapaths were examined [here](https://netdevops.me/2021/transparently-redirecting-packets/frames-between-interfaces/)
+[^3]: to install a certain version of containerlab, use the [instructions](../install.md) from installation doc.
+[^4]: to have a guaranteed compatibility checkout to the mentined tag and build the images.
