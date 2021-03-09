@@ -44,6 +44,8 @@
     
     
     
+      <link rel="stylesheet" href="/stylesheets/extra.css">
+    
     
       
         
@@ -52,6 +54,33 @@
       
     
     
+
+<!-- Determine title -->
+
+
+
+<!-- The image needs to have an absolute URL -->
+
+
+<!-- Open graph meta tags -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="containerlab" />
+<meta property="og:description" content="Containerlab deploys docker based meshed lab topologies" />
+<meta property="og:url" content="" />
+<meta property="og:image" content="images/containerlab_black.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1092" />
+<meta property="og:image:height" content="954" />
+
+<!-- Twitter meta tags -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:site" content="@ntdvps" />
+<meta name="twitter:creator" content="@ntdvps" />
+<meta name="twitter:title" content="containerlab" />
+<meta name="twitter:description" content="Containerlab deploys docker based meshed lab topologies" />
+<meta name="twitter:image" content="images/containerlab_black.png" />
+
+
   </head>
   
   
@@ -434,6 +463,19 @@
 
 
   <li class="md-nav__item">
+    <a href="/manual/kinds/vr-veos/" class="md-nav__link">
+      vr-veos - Arista vEOS
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
     <a href="/manual/kinds/linux/" class="md-nav__link">
       linux - Linux container
     </a>
@@ -449,6 +491,19 @@
   <li class="md-nav__item">
     <a href="/manual/kinds/bridge/" class="md-nav__link">
       bridge - Linux bridge
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="/manual/kinds/ovs-bridge/" class="md-nav__link">
+      ovs-bridge - Openvswitch bridge
     </a>
   </li>
 
@@ -519,6 +574,19 @@
   <li class="md-nav__item">
     <a href="/manual/published-ports/" class="md-nav__link">
       Publish ports
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="/manual/multi-node/" class="md-nav__link">
+      Multi-node labs
     </a>
   </li>
 
@@ -667,8 +735,76 @@
   </li>
 
         
+          
+          
+          
+
+
+
+  
+  <li class="md-nav__item md-nav__item--nested">
+    
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-5-7-2" type="checkbox" id="nav-5-7-2" >
+    
+    <label class="md-nav__link" for="nav-5-7-2">
+      vxlan
+      <span class="md-nav__icon md-icon"></span>
+    </label>
+    <nav class="md-nav" aria-label="vxlan" data-md-level="3">
+      <label class="md-nav__title" for="nav-5-7-2">
+        <span class="md-nav__icon md-icon"></span>
+        vxlan
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="/cmd/tools/vxlan/create/" class="md-nav__link">
+      create
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="/cmd/tools/vxlan/delete/" class="md-nav__link">
+      delete
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="/cmd/completion/" class="md-nav__link">
+      completions
+    </a>
   </li>
 
         
@@ -909,6 +1045,61 @@
   </li>
 
         
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="/lab-examples/multinode/" class="md-nav__link">
+      Multi-node labs
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+
+  
+  <li class="md-nav__item md-nav__item--nested">
+    
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7" >
+    
+    <label class="md-nav__link" for="nav-7">
+      Release notes
+      <span class="md-nav__icon md-icon"></span>
+    </label>
+    <nav class="md-nav" aria-label="Release notes" data-md-level="1">
+      <label class="md-nav__title" for="nav-7">
+        <span class="md-nav__icon md-icon"></span>
+        Release notes
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+
+  <li class="md-nav__item">
+    <a href="/rn/0.11.0/" class="md-nav__link">
+      0.11.0
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -933,19 +1124,51 @@
         </div>
       </main>
       
-        
+        <!--
+  Copyright (c) 2016-2021 Martin Donath <martin.donath@squidfunk.com>
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+
+
+<!-- Application footer -->
 <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-footer-copyright">
-        
-        Made with
-        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
-          Material for MkDocs
-        </a>
-      </div>
-      
+
+    <!-- Link to previous and/or next page -->
+    
+
+    <!-- Further information -->
+    <div class="md-footer-meta md-typeset">
+        <div class="md-footer-meta__inner md-grid">
+
+            <!-- Copyright and theme information -->
+            <div class="md-footer-copyright">
+                
+                Made with
+                <span class="twemoji heart">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 20.408c-.492.308-.903.546-1.192.709-.153.086-.308.17-.463.252h-.002a.75.75 0 01-.686 0 16.709 16.709 0 01-.465-.252 31.147 31.147 0 01-4.803-3.34C3.8 15.572 1 12.331 1 8.513 1 5.052 3.829 2.5 6.736 2.5 9.03 2.5 10.881 3.726 12 5.605 13.12 3.726 14.97 2.5 17.264 2.5 20.17 2.5 23 5.052 23 8.514c0 3.818-2.801 7.06-5.389 9.262A31.146 31.146 0 0114 20.408z"/></svg>
+                </span> by
+                <a href="https://github.com/srl-wim/container-lab/graphs/contributors" target="_blank" rel="noopener">
+                    Containerlab team
+                </a>
+            </div>
+
+            <!-- Social links -->
+            
   <div class="md-footer-social">
     
       
@@ -968,8 +1191,8 @@
     
   </div>
 
+        </div>
     </div>
-  </div>
 </footer>
       
     </div>
