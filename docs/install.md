@@ -94,4 +94,4 @@ This command will fetch the installation script and will upgrade the tool to its
 or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
 
 [^1]: only available if installed from packages
-[^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size.
+[^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
