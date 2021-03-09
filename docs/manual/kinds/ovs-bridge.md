@@ -1,5 +1,3 @@
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
-
 # Openvswitch bridge
 Similar to [linux bridge](bridge.md) capability, containerlab allows to connect nodes to an Openvswitch (Ovs) bridge. Ovs bridges offers even more connectivity options compared to classic Linux bridge, as well as it allows to create stretched L2 domain by means of tunneled interfaces (vxlan).
 

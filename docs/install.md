@@ -4,7 +4,7 @@ Containerlab is distributed as a Linux deb/rpm package and can be installed on a
 The following requirements must be satisfied in order to let containerlab tool run successfully:
 
 * A user should have `sudo` privileges to run containerlab.
-* [Docker](https://docs.docker.com/engine/install/) must be installed.
+* A Linux server/VM[^2] and [Docker](https://docs.docker.com/engine/install/) installed.
 * Load container images (e.g. Nokia SR Linux, Arista cEOS) which are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
 ### Install script
@@ -94,3 +94,4 @@ This command will fetch the installation script and will upgrade the tool to its
 or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
 
 [^1]: only available if installed from packages
+[^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size.
