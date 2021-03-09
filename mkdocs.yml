@@ -57,6 +57,8 @@ nav:
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
+  - Release notes:
+      - 0.11.0: rn/0.11.0.md
 
 site_author: Roman Dodin
 site_description: >-
