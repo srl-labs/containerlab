@@ -32,7 +32,7 @@ topology:
 </video> -->
 
 ## Registration
-Tunnels set up by mysocket.io are associated with a user who set them, thus users are required to register within the service. Luckily, the registration is a split second process carried out via a [web portal]((https://portal.mysocket.io/register)). All it takes is an email and a password.
+Tunnels set up by mysocket.io are associated with a user who set them, thus users are required to register within the service. Luckily, the registration is a split second process carried out via a [web portal](https://portal.mysocket.io/register). All it takes is an email and a password.
 
 ## Acquiring a token
 To authenticate with mysocket.io service a user needs to acquire the token:
