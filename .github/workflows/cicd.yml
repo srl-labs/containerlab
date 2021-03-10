@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - docs-publish
     tags:
       - "v*"
   pull_request:
@@ -66,7 +67,7 @@ jobs:
   docs-test:
     runs-on: ubuntu-20.04
     needs: file-changes
-    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v')
+    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
       - uses: actions/checkout@v2
       - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
