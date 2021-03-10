@@ -49,7 +49,8 @@ func createMysocketTunnels(ctx context.Context, c *CLab, node *Node) error {
 			tunID := strings.TrimSpace(string(stdout))
 
 			// connect tunnel
-			cmd = []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl tunnel connect --host %s -p %s -s %s -t %s > socket-%s-%s-%s.log", n.LongName, p, sockID, tunID, n.ShortName, t, p)}
+			cmd = []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl tunnel connect --host %s -p %s -s %s -t %s > socket-%s-%s-%s.log",
+				n.LongName, p, sockID, tunID, n.ShortName, t, p)}
 			log.Debugf("Running mysocketio command %q", cmd)
 			c.ExecNotWait(ctx, node.ContainerID, cmd)
 		}

@@ -9,7 +9,7 @@ But sometimes it is really needed to let your lab nodes be reachable over Intern
 
 Containerlab made all of these use cases possible by integrating with [mysocket.io](https://mysocket.io) service. Mysocket.io provides personal tunnels for https/https/tls/tcp ports over global anycast[^1] network spanning US, Europe and Asia.
 
-To make a certain port of a certain node available via mysocket.io tunnel a single line in the topology definition file is all that's needed:
+To make a certain port of a node available via mysocket.io tunnel a single line in the topology definition file is all that's needed:
 
 ```yaml
 name: demo
@@ -28,36 +28,28 @@ topology:
 </video> -->
 
 ## Registration
-Tunnels set up by mysocket.io are associated with a user who set them, thus users are required to register within the service. Luckily, the [registration](https://mysocket.readthedocs.io/en/latest/mysocketctl/mysocket.html#creating-an-account) is trivial, all you need to provide is an email and a public SSH key that will be used to set up tunnels.
-
-For convenience, containerlab comes with a script to create mysocket.io account in one go:
-
-```bash
-# create mysocket.io account
-# docker needs to be installed
-# usage: mysocket-user.sh <email> <password> <abs path to public ssh key>
-/etc/containerlab/tools/mysocket-user myemail@gmail.com mypassword /root/.ssh/mykey.pub
-```
-
-A confirmation email will arrive shortly to finish account setup procedure.
+Tunnels set up by mysocket.io are associated with a user who set them, thus users are required to register within the service. Luckily, the registration is a split second process carried out via a [web portal]((https://portal.mysocket.io/register)). All it takes is an email and a password.
 
 ## Acquiring a token
-To authenticate with mysocket.io service a user needs to acquire/refresh the token. Containerlab users can leverage another convenience script that eases this step:
+To authenticate with mysocket.io service a user needs to acquire the token:
 
 ```bash
 # get/refresh mysocketio token
-# the script will save the token under the $(pwd)/mysocket_token file
-# usage: mysocket-token.sh <email> <password>
-/etc/containerlab/tools/mysocket-token.sh myemail@gmail.com mypassword
+# the script will save the token under the $(pwd)/.mysocket_token filename
+# fill in your password and email in the placeholders
+EMAIL=<email> PASSWORD=<password>
+docker run --rm -it -v $(pwd):/clab ghcr.io/hellt/mysocketctl:0.2.0 \
+  ash -c "mysocketctl login -e $EMAIL -p $PASSWORD; \
+          cp ~/.mysocketio_token /clab"
 ```
 
-The script will get the token and save it in the current directory under `mysocket_token` name.
+The acquired tocken will be saved under `.mysocket_token` filename in the current working directory.
 
 !!!info
     The token is valid for 5 hours, once the token expires, the already established tunnels will continue to work, but to establish new tunnels a new token must be provided.
 
 ## Specify what to share
-To indicate which ports to publish the users need to add `publish` section under node/kind or default level of the [topology definition file](topo-def-file.md). In the example below, we decide to publish SSH and gNMI services of `r1` node:
+To indicate which ports to publish a users needs to add the `publish` section under the node/kind or default level of the [topology definition file](topo-def-file.md). In the example below, we are publishing SSH and gNMI services of `r1` node:
 
 ```yaml
 name: demo
@@ -73,40 +65,42 @@ topology:
 The `publish` section holds a list of `<type>/<port-number>` strings, where `type` must be one of the supported mysocket.io socket type[^2] - http/https/tls/tcp. Every type/port combination will be exposed via its own private tunnel.
 
 !!!note
-    For a single account the following maximum number of tunnels is set:  
+    For a regular mysocketio account the maximum number of tunnels is limited to:  
       * tcp based tunnels - 5  
       * http based tunnels - 10  
-    If >5 tcp tunnels is required users should launch a VM in a lab, expose it's SSH service and use this VM as a jumpbox for other TCP services.
+    If >5 tcp tunnels are required users should launch a VM in a lab, expose it's SSH service and use this VM as a jumpbox.
 
 ## Add mysocketio node
-Containerlab integrates with mysocket.io service by leveraging it's client application packaged in a container format. In order for the sockets indicated in the `publish` block to be exposed, a user needs to add a node of `mysocketio` kind to the topology. Augmenting the topology we used above, the full topology file will look like:
+Containerlab integrates with mysocket.io service by leveraging `mysocketctl` application packaged in a container format. In order for the sockets indicated in the `publish` block to be exposed, a user needs to add a node of `mysocketio` kind to the topology. Augmenting the topology we used above, the full topology file will look like:
 
 ```yaml
-name: demo
+name: publish
 topology:
   nodes:
     r1:
       kind: srl
+      image: srlinux:20.6.3-145
+      license: license.key
       publish:
         - tcp/22     # tcp port 22 will be exposed
-        - tcp/57400  # tcp port 57400 will be exposed
 
-    # adding mysocketio linux container
+    grafana:
+      kind: linux
+      image: grafana/grafana:7.4.3
+      publish:
+        - http/3000  # grafana' default http port will be published
+
+    # adding mysocketio container which has mysocketctl client inside
     mysocketio:
       kind: mysocketio
-      image: ghcr.io/hellt/mysocketctl:0.1.0
+      image: ghcr.io/hellt/mysocketctl:0.2.0
       binds:
-        - ~/.ssh/privkey:/root/.ssh/id_rsa         # bind mount your private key
-        - mysocketio_token:/root/.mysocketio_token # bind mount API token
+        - .mysocketio_token:/root/.mysocketio_token # bind mount API token
 ```
 
-The `mysocketio` node is a simple linux container with mysocketctl client installed. Containerlab uses this node to create the sockets and start tunnels as defined in the `publish` block.
+The `mysocketio` node is a tiny linux container with mysocketctl client installed. Containerlab uses this node to create the sockets and start the tunnels as per `publish` block instructions.
 
-Pay specific attention to `binds` defined for mysocketio node. With this section we provide the two crucial artifacts:
-* path to the private key, that matches the public key used during the registration
-* path to the API token that we acquired before launching the lab
-
-And that is all that is needed to expose the sockets in an automated way.
+Pay specific attention to `binds` section defined for mysocketio node. With this section we provide a path to the API token that we acquired before launching the lab. This tocken is used to authenticate with mysocketio API service.
 
 ## Explore published ports
 When a user launches a lab with published ports it will be presented with a summary table after the lab deployment process finishes:
@@ -122,8 +116,8 @@ Published ports:
 ┌──────────────────────────────────────┬──────────────────────────────────────┬─────────┬──────┬────────────┬────────────────────────┐
 │ SOCKET ID                            │ DNS NAME                             │ PORT(S) │ TYPE │ CLOUD AUTH │ NAME                   │
 ├──────────────────────────────────────┼──────────────────────────────────────┼─────────┼──────┼────────────┼────────────────────────┤
-│ 2b2808ae-b05d-4103-9b95-ab473a82658c │ nameless-bird-8969.edge.mysocket.io  │ 16086   │ tcp  │ false      │ clab-tcp-22-r1         │
-│ 8455571c-deea-4b09-bc1d-7a56f41e8c52 │ restless-night-8051.edge.mysocket.io │ 11107   │ tcp  │ false      │ clab-tcp-57400-r1      │
+│ 444ed853-d3b6-448c-8f0a-6854b3578848 │ wild-water-9221.edge.mysocket.io     │ 80, 443 │ http │ false      │ clab-http-3000-grafana │
+│ 287e5962-29ac-4ca1-8e01-e0333d399070 │ falling-wave-5735.edge.mysocket.io   │ 54506   │ tcp  │ false      │ clab-tcp-22-r1         │
 └──────────────────────────────────────┴──────────────────────────────────────┴─────────┴──────┴────────────┴────────────────────────┘
 ```
 The **Published ports** table lists the ports and their corresponding DNS names. Looking at the NAME column users can quickly discover which tunnel corresponds to which node and its published port. The socket name follows the `clab-<type>-<port>-<node-name>` pattern.
