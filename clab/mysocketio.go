@@ -22,8 +22,8 @@ func parseSocketCfg(s string) (mysocket, error) {
 	var err error
 	ms := mysocket{}
 	split := strings.Split(s, "/")
-	if len(split) > 2 {
-		return ms, fmt.Errorf("wrong mysocketio publish section %s. should be type/port-number, i.e. tcp/22", s)
+	if len(split) > 3 {
+		return ms, fmt.Errorf("wrong mysocketio publish section %s. should be <type>/<port-number>[/<allowed-domains>|<email>,], i.e. tcp/22 or tls/22/gmail.com or http/80/user1@mail.com,gmail.com,user2@clab.com", s)
 	}
 
 	if err = checkSockType(split[0]); err != nil {
@@ -39,7 +39,32 @@ func parseSocketCfg(s string) (mysocket, error) {
 	}
 	ms.Port = p
 
+	if len(split) == 3 {
+		ms.AllowedDomains, ms.AllowedEmails, _ = parseAllowedUsers(split[2])
+
+		// identity aware sockets for TCP require TLS type. Force the switch to make it easy on users
+		if (len(ms.AllowedDomains) > 0 || len(ms.AllowedEmails) > 0) && ms.Stype == "tcp" {
+			ms.Stype = "tls"
+		}
+	}
+
 	return ms, err
+}
+
+func parseAllowedUsers(s string) (domains, emails []string, err error) {
+
+	for _, e := range strings.Split(s, ",") {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			continue
+		}
+		if strings.Contains(e, "@") {
+			emails = append(emails, e)
+		} else {
+			domains = append(domains, e)
+		}
+	}
+	return domains, emails, err
 }
 
 func checkSockType(t string) error {
@@ -77,8 +102,8 @@ func createMysocketTunnels(ctx context.Context, c *CLab, node *Node) error {
 			}
 
 			// create socket and get its ID
-			cmd := []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl socket create -t %s -n clab-%s-%d-%s | awk 'NR==4 {print $2}'",
-				ms.Stype, ms.Stype, ms.Port, n.ShortName)}
+			sockCmd := createSockCmd(ms, n.ShortName)
+			cmd := []string{"/bin/sh", "-c", fmt.Sprintf("%s | awk 'NR==4 {print $2}'", sockCmd)}
 			log.Debugf("Running mysocketio command %q", cmd)
 			stdout, _, err := c.Exec(ctx, node.ContainerID, cmd)
 			if err != nil {
@@ -103,4 +128,18 @@ func createMysocketTunnels(ctx context.Context, c *CLab, node *Node) error {
 		}
 	}
 	return nil
+}
+
+func createSockCmd(ms mysocket, n string) string {
+	cmd := fmt.Sprintf("mysocketctl socket create -t %s -n clab-%s-%s-%d", ms.Stype, n, ms.Stype, ms.Port)
+	if len(ms.AllowedDomains) > 0 || len(ms.AllowedEmails) > 0 {
+		cmd = fmt.Sprintf("%s -c", cmd)
+	}
+	if len(ms.AllowedDomains) > 0 {
+		cmd = fmt.Sprintf("%s -d '%s'", cmd, strings.Join(ms.AllowedDomains, ","))
+	}
+	if len(ms.AllowedEmails) > 0 {
+		cmd = fmt.Sprintf("%s -e '%s'", cmd, strings.Join(ms.AllowedEmails, ","))
+	}
+	return cmd
 }

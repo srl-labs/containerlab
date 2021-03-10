@@ -98,8 +98,18 @@ func TestParseSocketCfg(t *testing.T) {
 			want: mysocket{},
 			err:  fmt.Errorf(""),
 		},
+		"with-email-and-domain": {
+			got: "tls/22/a@b.com,c.com",
+			want: mysocket{
+				Stype:          "tls",
+				Port:           22,
+				AllowedDomains: []string{"c.com"},
+				AllowedEmails:  []string{"a@b.com"},
+			},
+			err: nil,
+		},
 		"wrong-num-of-sections": {
-			got:  "tcp/22/2",
+			got:  "tcp/22/a@b.com/test",
 			want: mysocket{},
 			err:  fmt.Errorf(""),
 		},
@@ -123,6 +133,157 @@ func TestParseSocketCfg(t *testing.T) {
 					t.Errorf("expected to have an errorm but got nil instead")
 				}
 
+			}
+
+		})
+	}
+}
+
+func TestParseAllowedUsers(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		want struct {
+			Domains []string
+			Emails  []string
+		}
+	}{
+		"single-email": {
+			got: "a@b.com",
+			want: struct {
+				Domains []string
+				Emails  []string
+			}{
+				Domains: nil,
+				Emails:  []string{"a@b.com"},
+			},
+		},
+		"two-emails": {
+			got: "a@b.com,x@y.com",
+			want: struct {
+				Domains []string
+				Emails  []string
+			}{
+				Domains: nil,
+				Emails:  []string{"a@b.com", "x@y.com"},
+			},
+		},
+		"two-emails-with-spaces": {
+			got: " a@b.com , x@y.com",
+			want: struct {
+				Domains []string
+				Emails  []string
+			}{
+				Domains: nil,
+				Emails:  []string{"a@b.com", "x@y.com"},
+			},
+		},
+		"email-and-domain": {
+			got: "a@b.com,dom.com",
+			want: struct {
+				Domains []string
+				Emails  []string
+			}{
+				Domains: []string{"dom.com"},
+				Emails:  []string{"a@b.com"},
+			},
+		},
+		"many-emails-many-domains": {
+			got: "a@b.com,dom.com,x@y.com,abc.net",
+			want: struct {
+				Domains []string
+				Emails  []string
+			}{
+				Domains: []string{"dom.com", "abc.net"},
+				Emails:  []string{"a@b.com", "x@y.com"},
+			},
+		},
+		"empty-value": {
+			got: "a@b.com,,x@y.com,",
+			want: struct {
+				Domains []string
+				Emails  []string
+			}{
+				Domains: nil,
+				Emails:  []string{"a@b.com", "x@y.com"},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			var got struct {
+				Domains []string
+				Emails  []string
+			}
+			got.Domains, got.Emails, _ = parseAllowedUsers(tc.got)
+
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("parseSocketCfg() mismatch (-want +got):\n%s", diff)
+			}
+
+		})
+	}
+}
+
+func TestCreateSockCmd(t *testing.T) {
+	tests := map[string]struct {
+		got struct {
+			MS   mysocket
+			Name string
+		}
+		want string
+	}{
+		"single-email": {
+			got: struct {
+				MS   mysocket
+				Name string
+			}{
+				MS: mysocket{
+					Stype:         "tls",
+					Port:          22,
+					AllowedEmails: []string{"x@y.com"},
+				},
+				Name: "test",
+			},
+			want: "mysocketctl socket create -t tls -n clab-test-tls-22 -c -e 'x@y.com'",
+		},
+		"single-domain": {
+			got: struct {
+				MS   mysocket
+				Name string
+			}{
+				MS: mysocket{
+					Stype:          "tls",
+					Port:           22,
+					AllowedDomains: []string{"y.com"},
+				},
+				Name: "test",
+			},
+			want: "mysocketctl socket create -t tls -n clab-test-tls-22 -c -d 'y.com'",
+		},
+		"domains-and-emails": {
+			got: struct {
+				MS   mysocket
+				Name string
+			}{
+				MS: mysocket{
+					Stype:          "tls",
+					Port:           22,
+					AllowedDomains: []string{"y.com"},
+					AllowedEmails:  []string{"x@z.com"},
+				},
+				Name: "test",
+			},
+			want: "mysocketctl socket create -t tls -n clab-test-tls-22 -c -d 'y.com' -e 'x@z.com'",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cmd := createSockCmd(tc.got.MS, tc.got.Name)
+
+			if diff := cmp.Diff(tc.want, cmd); diff != "" {
+				t.Errorf("parseSocketCfg() mismatch (-want +got):\n%s", diff)
 			}
 
 		})
