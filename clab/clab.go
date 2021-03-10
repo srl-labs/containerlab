@@ -235,3 +235,12 @@ func disableTxOffload(n *Node) error {
 	})
 	return err
 }
+
+func StringInSlice(slice []string, val string) (int, bool) {
+	for i, item := range slice {
+		if item == val {
+			return i, true
+		}
+	}
+	return -1, false
+}
