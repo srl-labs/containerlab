@@ -1,7 +1,8 @@
 Every lab must have a packet capturing abilities, without it data plane verification becomes unnecessary complicated.
 
-!!!warning
-    Pcap or it didn't happen
+<p align=center>
+<img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/a7bffdae0393c9de41545c627f9b9f30/wsh.png" width="40%"></img>
+</p>
 
 Containerlab is no exception and capturing packets is something you can and should do with the labs launched by containerlab.
 
