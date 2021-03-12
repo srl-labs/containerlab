@@ -38,6 +38,8 @@ nav:
           - vxlan:
               - create: cmd/tools/vxlan/create.md
               - delete: cmd/tools/vxlan/delete.md
+          - mysocketio:
+              - login: cmd/tools/mysocketio/login.md
       - completions: cmd/completion.md
   - Lab examples:
       - About: lab-examples/lab-examples.md

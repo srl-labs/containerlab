@@ -35,19 +35,16 @@ topology:
 Tunnels set up by mysocket.io are associated with a user who set them, thus users are required to register within the service. Luckily, the registration is a split second process carried out via a [web portal](https://portal.mysocket.io/register). All it takes is an email and a password.
 
 ## Acquiring a token
-To authenticate with mysocket.io service a user needs to acquire the token:
+To authenticate with mysocket.io service a user needs to acquire the token by logging into the service. A helper command [`mysocketio login`](../cmd/tools/mysocketio/login.md) has been added to containerlab to help with that:
 
 ```bash
-# get/refresh mysocketio token
-# the script will save the token under the $(pwd)/.mysocket_token filename
-# fill in your password and email in the placeholders
-EMAIL=<email> PASSWORD=<password>
-docker run --rm -it -v $(pwd):/clab ghcr.io/hellt/mysocketctl:0.2.0 \
-  ash -c "mysocketctl login -e $EMAIL -p $PASSWORD; \
-          cp ~/.mysocketio_token /clab"
+# Login with password entered from the prompt
+containerlab tools mysocketio login -e myemail@dot.com
+Password:
+INFO[0000] Written mysocketio token to a file /root/container-lab/.mysocketio_token
 ```
 
-The acquired token will be saved under `.mysocket_token` filename in the current working directory.
+The acquired token will be saved under `.mysocketio_token` filename in the current working directory.
 
 !!!info
     The token is valid for 5 hours, once the token expires, the already established tunnels will continue to work, but to establish new tunnels a new token must be provided.

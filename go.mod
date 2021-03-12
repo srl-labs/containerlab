@@ -29,5 +29,6 @@ require (
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/yaml.v2 v2.3.0
 )
