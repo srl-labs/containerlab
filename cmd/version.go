@@ -80,7 +80,7 @@ func newVerNotification(vc chan string) {
 	select {
 	case ver, ok := <-vc:
 		if ok {
-			log.Infof("🎉 New containerlab version (%s) is available! Release notes: https://containerlab.srlinux.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.srlinux.dev/install/\n", ver, ver)
+			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.srlinux.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.srlinux.dev/install/\n", ver, ver)
 		}
 	default:
 		return
