@@ -1,0 +1,7 @@
+name: single-node
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
