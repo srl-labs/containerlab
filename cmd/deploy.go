@@ -80,9 +80,12 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		// create lab directory
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
+
+		if err := c.GenerateInventories(); err != nil {
+			return err
+		}
 
 		rootCANeeded := false
 		var certTpl *template.Template
