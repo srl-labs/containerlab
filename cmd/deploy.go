@@ -61,6 +61,10 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
+		// latest version channel
+		vCh := make(chan string)
+		go getLatestVersion(vCh)
+
 		if reconfigure {
 			if err != nil {
 				return err
@@ -239,6 +243,10 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
 		}
+
+		// log new version availability info if ready
+		newVerNotification(vCh)
+
 		// print table summary
 		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
 		return nil
