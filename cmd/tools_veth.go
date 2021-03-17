@@ -57,12 +57,14 @@ var vethCreateCmd = &cobra.Command{
 			LongName:  vethAEndpoint.node,
 			ShortName: vethAEndpoint.node,
 			Kind:      vethAEndpoint.kind,
+			NSPath:    "__host", // NSPath defaults to __host to make attachment to host. For attachment to containers the NSPath will be overwritten
 		}
 
 		bNode := &clab.Node{
 			LongName:  vethBEndpoint.node,
 			ShortName: vethBEndpoint.node,
 			Kind:      vethBEndpoint.kind,
+			NSPath:    "__host",
 		}
 
 		if aNode.Kind == "container" {
