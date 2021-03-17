@@ -67,6 +67,14 @@ var srlTypes = map[string]string{
 	"ixrd3": "topology-7220IXRD3.yml",
 }
 
+// Config defines lab configuration as it is provided in the YAML file
+type Config struct {
+	Name       string   `json:"name,omitempty"`
+	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
+	Topology   Topology `json:"topology,omitempty"`
+	ConfigPath string   `yaml:"config_path,omitempty"`
+}
+
 // mgmtNet struct defines the management network options
 // it is provided via docker network object
 type mgmtNet struct {
@@ -74,6 +82,14 @@ type mgmtNet struct {
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
+}
+
+// Topology represents a lab topology
+type Topology struct {
+	Defaults NodeConfig            `yaml:"defaults,omitempty"`
+	Kinds    map[string]NodeConfig `yaml:"kinds,omitempty"`
+	Nodes    map[string]NodeConfig `yaml:"nodes,omitempty"`
+	Links    []LinkConfig          `yaml:"links,omitempty"`
 }
 
 // NodeConfig represents a configuration a given node can have in the lab definition file
@@ -96,25 +112,9 @@ type NodeConfig struct {
 	User string            `yaml:"user,omitempty"` // linux user used in a container
 }
 
-// Topology represents a lab topology
-type Topology struct {
-	Defaults NodeConfig            `yaml:"defaults,omitempty"`
-	Kinds    map[string]NodeConfig `yaml:"kinds,omitempty"`
-	Nodes    map[string]NodeConfig `yaml:"nodes,omitempty"`
-	Links    []LinkConfig          `yaml:"links,omitempty"`
-}
-
 type LinkConfig struct {
 	Endpoints []string
 	Labels    map[string]string `yaml:"labels,omitempty"`
-}
-
-// Config defines lab configuration as it is provided in the YAML file
-type Config struct {
-	Name       string   `json:"name,omitempty"`
-	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
-	Topology   Topology `json:"topology,omitempty"`
-	ConfigPath string   `yaml:"config_path,omitempty"`
 }
 
 // Node is a struct that contains the information of a container element
