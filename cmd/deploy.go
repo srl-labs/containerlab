@@ -84,7 +84,6 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		// create lab directory
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
@@ -220,6 +219,10 @@ var deployCmd = &cobra.Command{
 
 		log.Debug("enriching nodes with IP information...")
 		enrichNodes(containers, c.Nodes, c.Config.Mgmt.Network)
+
+		if err := c.GenerateInventories(); err != nil {
+			return err
+		}
 
 		wg = new(sync.WaitGroup)
 		wg.Add(len(c.Nodes))
