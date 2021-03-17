@@ -113,6 +113,9 @@ func parseVethEndpoint(s string) (*vethEndpoint, error) {
 	switch len(arr) {
 	case 2:
 		ve.kind = "container"
+		if arr[0] == "host" {
+			ve.kind = "host"
+		}
 		ve.node = arr[0]
 		ve.iface = arr[1]
 	case 3:
