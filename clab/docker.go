@@ -151,23 +151,6 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	labels := map[string]string{
-		"containerlab":         "lab-" + c.Config.Name,
-		"lab-" + c.Config.Name: node.ShortName,
-	}
-	if node.Kind != "" {
-		labels["kind"] = node.Kind
-	}
-	if node.NodeType != "" {
-		labels["type"] = node.NodeType
-	}
-	if node.Group != "" {
-		labels["group"] = node.Group
-	}
-	if node.LabDir != "" {
-		labels["clab-node-dir"] = node.LabDir
-	}
-	labels["clab-topo-file"] = c.TopoFile.path
 
 	cmd, err := shlex.Split(node.Cmd)
 	if err != nil {
@@ -184,7 +167,7 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 			Hostname:     node.ShortName,
 			Tty:          true,
 			User:         node.User,
-			Labels:       labels,
+			Labels:       node.Labels,
 			ExposedPorts: node.PortSet,
 		}, &container.HostConfig{
 			Binds:        node.Binds,

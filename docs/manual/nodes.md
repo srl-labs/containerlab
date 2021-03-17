@@ -143,6 +143,37 @@ topology:
       cmd: bash cmd3.sh
 ```
 
+### labels
+To add container labels to a node use the `labels` container that can be added at `defaults`, `kind` and `node` levels.
+
+The label values are merged when the same vars are defined on multiple levels with nodes level being the most specific.
+
+Consider the following example, where labels are defined on different levels to show value propagation.
+```yaml
+topology:
+  defaults:
+    labels:
+      label1: value1
+      label2: value2
+  kinds:
+    srl:
+      env:
+        label1: kind_value1
+        label3: value3
+  nodes:
+    node1:
+      env:
+        label1: node_value1
+```
+
+As a result of such label distribution, node1 will have the following labels:
+
+```bash
+label1: node_value1 # most specific label wins
+label2: value2 # inherited from defaults section
+label2: value3 # inherited from kinds section
+```
+
 ### publish
 Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with cusomters/partners/colleagues.
 
