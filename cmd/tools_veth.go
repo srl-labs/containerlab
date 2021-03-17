@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -12,14 +13,14 @@ import (
 
 var AEnd = ""
 var BEnd = ""
-var Mtu = 1500
+var MTU = 65000
 
 func init() {
 	toolsCmd.AddCommand(vethCmd)
 	vethCmd.AddCommand(vethCreateCmd)
-	vethCreateCmd.Flags().StringVarP(&AEnd, "aend", "a", "", "<name of container1>:<interface name>")
-	vethCreateCmd.Flags().StringVarP(&BEnd, "bend", "b", "", "<name of container2>:<interface name>")
-	vethCreateCmd.Flags().IntVarP(&Mtu, "mtu", "m", Mtu, "MTU of the link")
+	vethCreateCmd.Flags().StringVarP(&AEnd, "a-end", "a", "", "veth endpoint A in the format of <containerA-name>:<interface-name> or <endpointA-type>:<endpoint-name>:<interface-name>")
+	vethCreateCmd.Flags().StringVarP(&BEnd, "b-end", "b", "", "veth endpoint B in the format of <containerB-name>:<interface-name> or <endpointB-type>:<endpoint-name>:<interface-name>")
+	vethCreateCmd.Flags().IntVarP(&MTU, "mtu", "m", MTU, "link MTU")
 }
 
 var vethCmd = &cobra.Command{
@@ -29,7 +30,7 @@ var vethCmd = &cobra.Command{
 
 var vethCreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "On-the-fly create a veth pair and attach it to the specified namespaces",
+	Short: "Create a veth interface and attach its sides to the specified containers",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 		opts := []clab.ClabOption{
@@ -42,71 +43,89 @@ var vethCreateCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		var aEndCif containerInterface
-		var bEndCif containerInterface
+		var vethAEndpoint *vethEndpoint
+		var vethBEndpoint *vethEndpoint
 
-		if aEndCif, err = checkContainerInterfaceRef(AEnd); err != nil {
+		if vethAEndpoint, err = parseVethEndpoint(AEnd); err != nil {
 			return err
 		}
-		if bEndCif, err = checkContainerInterfaceRef(BEnd); err != nil {
-			return err
-		}
-
-		aEndNode := new(clab.Node)
-		aEndNode.LongName = aEndCif.container
-		aEndNode.ShortName = aEndCif.container
-
-		bEndNode := new(clab.Node)
-		bEndNode.LongName = bEndCif.container
-		bEndNode.ShortName = bEndCif.container
-
-		nsPathA, err := c.GetNSPath(ctx, aEndNode.LongName)
-		if err != nil {
-			return err
-		}
-		nsPathB, err := c.GetNSPath(ctx, bEndNode.LongName)
-		if err != nil {
+		if vethBEndpoint, err = parseVethEndpoint(BEnd); err != nil {
 			return err
 		}
 
-		aEndNode.NSPath = nsPathA
-		bEndNode.NSPath = nsPathB
+		aNode := &clab.Node{
+			LongName:  vethAEndpoint.node,
+			ShortName: vethAEndpoint.node,
+			Kind:      vethAEndpoint.kind,
+		}
+
+		bNode := &clab.Node{
+			LongName:  vethBEndpoint.node,
+			ShortName: vethBEndpoint.node,
+			Kind:      vethBEndpoint.kind,
+		}
+
+		if aNode.Kind == "container" {
+			aNode.NSPath, err = c.GetNSPath(ctx, aNode.LongName)
+			if err != nil {
+				return err
+			}
+		}
+		if bNode.Kind == "container" {
+			bNode.NSPath, err = c.GetNSPath(ctx, bNode.LongName)
+			if err != nil {
+				return err
+			}
+		}
 
 		endpointA := clab.Endpoint{
-			Node:         aEndNode,
-			EndpointName: aEndCif.iface,
+			Node:         aNode,
+			EndpointName: vethAEndpoint.iface,
 		}
 		endpointB := clab.Endpoint{
-			Node:         bEndNode,
-			EndpointName: bEndCif.iface,
+			Node:         bNode,
+			EndpointName: vethBEndpoint.iface,
 		}
 
-		link := new(clab.Link)
-		link.A = &endpointA
-		link.B = &endpointB
-		link.MTU = Mtu
+		link := &clab.Link{
+			A:   &endpointA,
+			B:   &endpointB,
+			MTU: MTU,
+		}
 
 		if err := c.CreateVirtualWiring(link); err != nil {
 			return err
 		}
-		log.Info("veth pair successfully created!")
+		log.Info("veth interface successfully created!")
 		return nil
 	},
 }
 
-func checkContainerInterfaceRef(s string) (containerInterface, error) {
-	cif := *new(containerInterface)
+func parseVethEndpoint(s string) (*vethEndpoint, error) {
+	supportedKinds := []string{"ovs-bridge", "bridge", "host"}
+	ve := &vethEndpoint{}
 	arr := strings.Split(s, ":")
-	if len(arr) != 2 {
-		return cif, errors.New("malformed container interface reference")
+	if (len(arr) != 2) && (len(arr) != 3) {
+		return ve, errors.New("malformed veth endpoint reference")
 	}
-	cif.container = arr[0]
-	cif.iface = arr[1]
-
-	return cif, nil
+	switch len(arr) {
+	case 2:
+		ve.kind = "container"
+		ve.node = arr[0]
+		ve.iface = arr[1]
+	case 3:
+		if _, ok := clab.StringInSlice(supportedKinds, arr[0]); !ok {
+			return nil, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
+		}
+		ve.kind = arr[0]
+		ve.node = arr[1]
+		ve.iface = arr[2]
+	}
+	return ve, nil
 }
 
-type containerInterface struct {
-	container string
-	iface     string
+type vethEndpoint struct {
+	kind  string // kind of the node to attach to: ovs-bridge, bridge, host or implicitly container
+	node  string
+	iface string
 }

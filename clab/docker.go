@@ -221,6 +221,7 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	return linkContainerNS(node.NSPath, node.LongName)
 }
 
+// GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container
 func (c *CLab) GetNSPath(ctx context.Context, containerId string) (string, error) {
 	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
 	defer cancelFn()
