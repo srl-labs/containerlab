@@ -213,14 +213,22 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		return err
 	}
 	log.Debugf("Container started: %s", node.LongName)
-	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
-	defer cancelFn()
-	cJSON, err := c.DockerClient.ContainerInspect(nctx, cont.ID)
+
+	node.NSPath, err = c.GetNSPath(ctx, cont.ID)
 	if err != nil {
 		return err
 	}
-	node.NSPath = "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net"
 	return linkContainerNS(node.NSPath, node.LongName)
+}
+
+func (c *CLab) GetNSPath(ctx context.Context, containerId string) (string, error) {
+	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
+	defer cancelFn()
+	cJSON, err := c.DockerClient.ContainerInspect(nctx, containerId)
+	if err != nil {
+		return "", err
+	}
+	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
 }
 
 func (c *CLab) PullImageIfRequired(ctx context.Context, imageName string) error {
