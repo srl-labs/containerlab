@@ -67,6 +67,14 @@ var srlTypes = map[string]string{
 	"ixrd3": "topology-7220IXRD3.yml",
 }
 
+// Config defines lab configuration as it is provided in the YAML file
+type Config struct {
+	Name       string   `json:"name,omitempty"`
+	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
+	Topology   Topology `json:"topology,omitempty"`
+	ConfigPath string   `yaml:"config_path,omitempty"`
+}
+
 // mgmtNet struct defines the management network options
 // it is provided via docker network object
 type mgmtNet struct {
@@ -74,27 +82,6 @@ type mgmtNet struct {
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
-}
-
-// NodeConfig represents a configuration a given node can have in the lab definition file
-type NodeConfig struct {
-	Kind        string   `yaml:"kind,omitempty"`
-	Group       string   `yaml:"group,omitempty"`
-	Type        string   `yaml:"type,omitempty"`
-	Config      string   `yaml:"config,omitempty"`
-	Image       string   `yaml:"image,omitempty"`
-	License     string   `yaml:"license,omitempty"`
-	Position    string   `yaml:"position,omitempty"`
-	Cmd         string   `yaml:"cmd,omitempty"`
-	Binds       []string `yaml:"binds,omitempty"`     // list of bind mount compatible strings
-	Ports       []string `yaml:"ports,omitempty"`     // list of port bindings
-	MgmtIPv4    string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
-	MgmtIPv6    string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
-	Publish     []string `yaml:"publish,omitempty"`   // list of ports to publish with mysocketctl
-	NetworkMode string   `yaml:"network,omitempty"`   // use the host network stack (host networking mode)
-
-	Env  map[string]string `yaml:"env,omitempty"`  // environment variables
-	User string            `yaml:"user,omitempty"` // linux user used in a container
 }
 
 // Topology represents a lab topology
@@ -105,17 +92,39 @@ type Topology struct {
 	Links    []LinkConfig          `yaml:"links,omitempty"`
 }
 
+// NodeConfig represents a configuration a given node can have in the lab definition file
+type NodeConfig struct {
+	Kind     string `yaml:"kind,omitempty"`
+	Group    string `yaml:"group,omitempty"`
+	Type     string `yaml:"type,omitempty"`
+	Config   string `yaml:"config,omitempty"`
+	Image    string `yaml:"image,omitempty"`
+	License  string `yaml:"license,omitempty"`
+	Position string `yaml:"position,omitempty"`
+	Cmd      string `yaml:"cmd,omitempty"`
+	// list of bind mount compatible strings
+	Binds []string `yaml:"binds,omitempty"`
+	// list of port bindings
+	Ports []string `yaml:"ports,omitempty"`
+	// user-defined IPv4 address in the management network
+	MgmtIPv4 string `yaml:"mgmt_ipv4,omitempty"`
+	// user-defined IPv6 address in the management network
+	MgmtIPv6 string `yaml:"mgmt_ipv6,omitempty"`
+	// list of ports to publish with mysocketctl
+	Publish []string `yaml:"publish,omitempty"`
+	// environment variables
+	Env map[string]string `yaml:"env,omitempty"`
+	// linux user used in a container
+	User string `yaml:"user,omitempty"`
+	// container labels
+	Labels map[string]string `yaml:"labels,omitempty"`
+	// container networking mode. if set to `host` the host networking will be used for this node
+	NetworkMode string `yaml:"network-mode,omitempty"`
+}
+
 type LinkConfig struct {
 	Endpoints []string
 	Labels    map[string]string `yaml:"labels,omitempty"`
-}
-
-// Config defines lab configuration as it is provided in the YAML file
-type Config struct {
-	Name       string   `json:"name,omitempty"`
-	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
-	Topology   Topology `json:"topology,omitempty"`
-	ConfigPath string   `yaml:"config_path,omitempty"`
 }
 
 // Node is a struct that contains the information of a container element
@@ -155,6 +164,8 @@ type Node struct {
 	TLSAnchor            string
 	NSPath               string   // network namespace path for this node
 	Publish              []string //list of ports to publish with mysocketctl
+	// container labels
+	Labels map[string]string
 }
 
 // Link is a struct that contains the information of a link between 2 containers
@@ -410,6 +421,23 @@ func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
 	return nil
 }
 
+// initialize container labels
+func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *Node) map[string]string {
+	defaultLabels := map[string]string{
+		"containerlab":      c.Config.Name,
+		"clab-node-kind":    kind,
+		"clab-node-type":    node.NodeType,
+		"clab-node-lab-dir": node.LabDir,
+		"clab-topo-file":    c.TopoFile.path,
+	}
+	// merge global labels into kind envs
+	m := mergeStringMaps(c.Config.Topology.Defaults.Labels, c.Config.Topology.Kinds[kind].Labels)
+	// merge result of previous merge into node envs
+	m2 := mergeStringMaps(m, nodeCfg.Labels)
+	// merge with default labels
+	return mergeStringMaps(m2, defaultLabels)
+}
+
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
@@ -512,6 +540,10 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	default:
 		return fmt.Errorf("Node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
 	}
+
+	// init labels after all node kinds are processed
+	node.Labels = c.labelsInit(&nodeCfg, node.Kind, node)
+
 	c.Nodes[nodeName] = node
 	return nil
 }

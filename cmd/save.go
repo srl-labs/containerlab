@@ -40,7 +40,7 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		containers, err := c.ListContainers(ctx, []string{"containerlab=lab-" + c.Config.Name})
+		containers, err := c.ListContainers(ctx, []string{"containerlab=" + c.Config.Name})
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
 		}

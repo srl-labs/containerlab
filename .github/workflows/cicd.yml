@@ -80,7 +80,6 @@ jobs:
   smoke-tests:
     runs-on: ubuntu-20.04
     needs:
-      - docs-test
       - staticcheck
       - unit-test
     steps:
@@ -115,6 +114,7 @@ jobs:
     runs-on: ubuntu-20.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
+      - docs-test
       - smoke-tests
     steps:
       - name: Checkout

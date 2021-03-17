@@ -98,12 +98,12 @@ var destroyCmd = &cobra.Command{
 		for _, clab := range labs {
 			err = destroyLab(ctx, clab)
 			if err != nil {
-				log.Errorf("Error occured during the %s lab deletion %v", clab.Config.Name, err)
+				log.Errorf("Error occurred during the %s lab deletion %v", clab.Config.Name, err)
 				errs = append(errs, err)
 			}
 		}
 		if len(errs) != 0 {
-			return fmt.Errorf("error(s) occured during the deletion. Check log messages")
+			return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
 		}
 		return nil
 	},
@@ -166,7 +166,7 @@ func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string)
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
+	containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}

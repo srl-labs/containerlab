@@ -7,6 +7,8 @@ topology:
       env:
         env1: val1
       user: customkind
+      labels:
+        kind-label: value
   nodes:
     node1:
       kind: srl

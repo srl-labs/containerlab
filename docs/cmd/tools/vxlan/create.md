@@ -2,7 +2,7 @@
 
 ### Description
 
-The `create` sub-command under the `tools vxlan` command creates a VxLAN inteface and sets `tc` rules to redirect traffic to/from a specified interface available in root namespace of a container host.
+The `create` sub-command under the `tools vxlan` command creates a VxLAN interface and sets `tc` rules to redirect traffic to/from a specified interface available in root namespace of a container host.
 
 This combination of a VxLAN interface and `tc` rules make possible to transparently connect lab nodes running on different VMs/hosts.
 

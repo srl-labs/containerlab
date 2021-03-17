@@ -37,4 +37,4 @@ Containerlab tries to deliver the same level of flexibility in container configu
 * [env](../nodes.md#env) - to set environment variables
 * [user](../nodes.md#user) - to set a user that will be used inside the container system
 * [cmd](../nodes.md#cmd) - to provide a command that will be executed when the container is started
-* [share](../nodes.md#share) - to provide expose container' service via [myscoket.io integration](../published-ports.md)
+* [publish](../nodes.md#publish) - to provide expose container' service via [myscoket.io integration](../published-ports.md)

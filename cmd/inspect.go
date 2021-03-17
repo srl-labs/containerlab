@@ -61,7 +61,7 @@ var inspectCmd = &cobra.Command{
 		if all {
 			labels = append(labels, "containerlab")
 		} else {
-			labels = append(labels, "containerlab=lab-"+name)
+			labels = append(labels, "containerlab="+name)
 		}
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
@@ -115,7 +115,7 @@ func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeNam
 		path, _ := filepath.Rel(cwd, cont.Labels["clab-topo-file"])
 
 		cdet := containerDetails{
-			LabName:     strings.TrimPrefix(cont.Labels["containerlab"], "lab-"),
+			LabName:     cont.Labels["containerlab"],
 			LabPath:     path,
 			Image:       cont.Image,
 			State:       cont.State,

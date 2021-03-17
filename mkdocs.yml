@@ -26,6 +26,7 @@ nav:
       - VM based routers integration: manual/vrnetlab.md
       - Publish ports: manual/published-ports.md
       - Multi-node labs: manual/multi-node.md
+      - Inventory: manual/inventory.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
@@ -35,6 +36,8 @@ nav:
       - graph: cmd/graph.md
       - tools:
           - disable-tx-offload: cmd/tools/disable-tx-offload.md
+          - veth:
+              - create: cmd/tools/veth/create.md
           - vxlan:
               - create: cmd/tools/vxlan/create.md
               - delete: cmd/tools/vxlan/delete.md

@@ -1,4 +1,4 @@
-Node object is one of the pillars of containerlab. Essentially, it is nodes and links what constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
+Node object is one of the containerlab' pillars. Essentially, it is nodes and links what constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
 
 The node configuration is part of the [topology definition file](topo-def-file.md) and **may** consist of the following fields that we explain in details below.
 
@@ -143,10 +143,41 @@ topology:
       cmd: bash cmd3.sh
 ```
 
-### share
-Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for sockets of containerlab nodes. This enables effortless access sharing with cusomters/partners/colleagues.
+### labels
+To add container labels to a node use the `labels` container that can be added at `defaults`, `kind` and `node` levels.
 
-This integration is extensively described on [Share lab access](published-ports.md) page.
+The label values are merged when the same vars are defined on multiple levels with nodes level being the most specific.
+
+Consider the following example, where labels are defined on different levels to show value propagation.
+```yaml
+topology:
+  defaults:
+    labels:
+      label1: value1
+      label2: value2
+  kinds:
+    srl:
+      env:
+        label1: kind_value1
+        label3: value3
+  nodes:
+    node1:
+      env:
+        label1: node_value1
+```
+
+As a result of such label distribution, node1 will have the following labels:
+
+```bash
+label1: node_value1 # most specific label wins
+label2: value2 # inherited from defaults section
+label2: value3 # inherited from kinds section
+```
+
+### publish
+Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with cusomters/partners/colleagues.
+
+This integration is extensively covered on [Publish ports](published-ports.md) page.
 
 ```yaml
 name: demo
@@ -154,7 +185,8 @@ topology:
   nodes:
     r1:
       kind: srl
-      share:
-        - tcp/22     # tcp port 22 will be exposed
-        - tcp/57400  # tcp port 57400 will be exposed
+      publish:
+        - tcp/22     # tcp port 22 will be published
+        - tcp/57400  # tcp port 57400 will be published
+        - http/8080  # http port 8080 will be published
 ```

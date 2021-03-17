@@ -8,6 +8,8 @@ topology:
     env:
       env1: val1
     user: customglobal
+    labels:
+      default-label: value
   nodes:
     node1:
       kind: srl
