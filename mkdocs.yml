@@ -36,6 +36,8 @@ nav:
       - graph: cmd/graph.md
       - tools:
           - disable-tx-offload: cmd/tools/disable-tx-offload.md
+          - veth:
+              - create: cmd/tools/veth/create.md
           - vxlan:
               - create: cmd/tools/vxlan/create.md
               - delete: cmd/tools/vxlan/delete.md
