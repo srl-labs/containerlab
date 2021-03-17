@@ -174,34 +174,45 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		return err
 	}
 
-	cont, err := c.DockerClient.ContainerCreate(nctx,
-		&container.Config{
-			Image:        node.Image,
-			Cmd:          cmd,
-			Env:          convertEnvs(node.Env),
-			AttachStdout: true,
-			AttachStderr: true,
-			Hostname:     node.ShortName,
-			Tty:          true,
-			User:         node.User,
-			Labels:       labels,
-			ExposedPorts: node.PortSet,
-		}, &container.HostConfig{
-			Binds:        node.Binds,
-			PortBindings: node.PortBindings,
-			Sysctls:      node.Sysctls,
-			Privileged:   true,
-			NetworkMode:  container.NetworkMode(c.Config.Mgmt.Network),
-		}, &network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				c.Config.Mgmt.Network: {
-					IPAMConfig: &network.EndpointIPAMConfig{
-						IPv4Address: node.MgmtIPv4Address,
-						IPv6Address: node.MgmtIPv6Address,
-					},
+	containerConfig := &container.Config{
+		Image:        node.Image,
+		Cmd:          cmd,
+		Env:          convertEnvs(node.Env),
+		AttachStdout: true,
+		AttachStderr: true,
+		Hostname:     node.ShortName,
+		Tty:          true,
+		User:         node.User,
+		Labels:       labels,
+		ExposedPorts: node.PortSet,
+	}
+	containerHostConfig := &container.HostConfig{
+		Binds:        node.Binds,
+		PortBindings: node.PortBindings,
+		Sysctls:      node.Sysctls,
+		Privileged:   true,
+		NetworkMode:  container.NetworkMode(c.Config.Mgmt.Network),
+	}
+
+	containerNetworkingConfig := new(network.NetworkingConfig)
+
+	if !node.NetworkModeHost {
+		containerHostConfig.NetworkMode = container.NetworkMode(c.Config.Mgmt.Network)
+
+		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
+			c.Config.Mgmt.Network: {
+				IPAMConfig: &network.EndpointIPAMConfig{
+					IPv4Address: node.MgmtIPv4Address,
+					IPv6Address: node.MgmtIPv6Address,
 				},
 			},
-		}, node.LongName)
+		}
+	} else {
+		containerHostConfig.NetworkMode = container.NetworkMode("host")
+	}
+
+	cont, err := c.DockerClient.ContainerCreate(nctx,
+		containerConfig, containerHostConfig, containerNetworkingConfig, node.LongName)
 	if err != nil {
 		return err
 	}

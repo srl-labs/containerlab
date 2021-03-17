@@ -326,6 +326,9 @@ func enrichNodes(containers []types.Container, nodes map[string]*clab.Node, mgmt
 		name = strings.Split(c.Names[0], "-")[2]
 		if node, ok := nodes[name]; ok {
 			// add network information
+			if node.NetworkModeHost {
+				continue
+			}
 			node.MgmtNet = mgmtNet
 			node.MgmtIPv4Address = c.NetworkSettings.Networks[mgmtNet].IPAddress
 			node.MgmtIPv4PrefixLength = c.NetworkSettings.Networks[mgmtNet].IPPrefixLen

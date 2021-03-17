@@ -78,19 +78,20 @@ type mgmtNet struct {
 
 // NodeConfig represents a configuration a given node can have in the lab definition file
 type NodeConfig struct {
-	Kind     string   `yaml:"kind,omitempty"`
-	Group    string   `yaml:"group,omitempty"`
-	Type     string   `yaml:"type,omitempty"`
-	Config   string   `yaml:"config,omitempty"`
-	Image    string   `yaml:"image,omitempty"`
-	License  string   `yaml:"license,omitempty"`
-	Position string   `yaml:"position,omitempty"`
-	Cmd      string   `yaml:"cmd,omitempty"`
-	Binds    []string `yaml:"binds,omitempty"`     // list of bind mount compatible strings
-	Ports    []string `yaml:"ports,omitempty"`     // list of port bindings
-	MgmtIPv4 string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
-	MgmtIPv6 string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
-	Publish  []string `yaml:"publish,omitempty"`   // list of ports to publish with mysocketctl
+	Kind        string   `yaml:"kind,omitempty"`
+	Group       string   `yaml:"group,omitempty"`
+	Type        string   `yaml:"type,omitempty"`
+	Config      string   `yaml:"config,omitempty"`
+	Image       string   `yaml:"image,omitempty"`
+	License     string   `yaml:"license,omitempty"`
+	Position    string   `yaml:"position,omitempty"`
+	Cmd         string   `yaml:"cmd,omitempty"`
+	Binds       []string `yaml:"binds,omitempty"`     // list of bind mount compatible strings
+	Ports       []string `yaml:"ports,omitempty"`     // list of port bindings
+	MgmtIPv4    string   `yaml:"mgmt_ipv4,omitempty"` // user-defined IPv4 address in the management network
+	MgmtIPv6    string   `yaml:"mgmt_ipv6,omitempty"` // user-defined IPv6 address in the management network
+	Publish     []string `yaml:"publish,omitempty"`   // list of ports to publish with mysocketctl
+	NetworkMode string   `yaml:"network,omitempty"`   // use the host network stack (host networking mode)
 
 	Env  map[string]string `yaml:"env,omitempty"`  // environment variables
 	User string            `yaml:"user,omitempty"` // linux user used in a container
@@ -142,7 +143,8 @@ type Node struct {
 	Binds                []string    // Bind mounts strings (src:dest:options)
 	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
 	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
-	MgmtNet              string      // name of the docker network this node is connected to with its first interface
+	NetworkModeHost      bool
+	MgmtNet              string // name of the docker network this node is connected to with its first interface
 	MgmtIPv4Address      string
 	MgmtIPv4PrefixLength int
 	MgmtIPv6Address      string
@@ -417,6 +419,8 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
 	node.LabDir = c.Dir.Lab + "/" + nodeName
 	node.Index = idx
+
+	node.NetworkModeHost = nodeCfg.NetworkMode == "host"
 
 	node.MgmtIPv4Address = nodeCfg.MgmtIPv4
 	node.MgmtIPv6Address = nodeCfg.MgmtIPv6
