@@ -118,7 +118,7 @@ type NodeConfig struct {
 	User string `yaml:"user,omitempty"`
 	// container labels
 	Labels map[string]string `yaml:"labels,omitempty"`
-	// container networking mode. if set to `host` the host networking will be used for this node
+	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `yaml:"network-mode,omitempty"`
 }
 
@@ -137,22 +137,23 @@ type Node struct {
 	Group     string
 	Kind      string
 	// path to config template file that is used for config generation
-	Config               string
-	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
-	NodeType             string
-	Position             string
-	License              string
-	Image                string
-	Topology             string
-	Sysctls              map[string]string
-	User                 string
-	Entrypoint           string
-	Cmd                  string
-	Env                  map[string]string
-	Binds                []string    // Bind mounts strings (src:dest:options)
-	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
-	NetworkModeHost      bool
+	Config       string
+	ResConfig    string // path to config file that is actually mounted to the container and is a result of templation
+	NodeType     string
+	Position     string
+	License      string
+	Image        string
+	Topology     string
+	Sysctls      map[string]string
+	User         string
+	Entrypoint   string
+	Cmd          string
+	Env          map[string]string
+	Binds        []string    // Bind mounts strings (src:dest:options)
+	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
+	PortSet      nat.PortSet // PortSet define the ports that should be exposed on a container
+	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
+	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface
 	MgmtIPv4Address      string
 	MgmtIPv4PrefixLength int
@@ -448,7 +449,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.LabDir = c.Dir.Lab + "/" + nodeName
 	node.Index = idx
 
-	node.NetworkModeHost = nodeCfg.NetworkMode == "host"
+	node.NetworkMode = strings.ToLower(nodeCfg.NetworkMode)
 
 	node.MgmtIPv4Address = nodeCfg.MgmtIPv4
 	node.MgmtIPv6Address = nodeCfg.MgmtIPv6

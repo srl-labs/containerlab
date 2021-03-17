@@ -177,9 +177,12 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		NetworkMode:  container.NetworkMode(c.Config.Mgmt.Network),
 	}
 
-	containerNetworkingConfig := new(network.NetworkingConfig)
+	containerNetworkingConfig := &network.NetworkingConfig{}
 
-	if !node.NetworkModeHost {
+	switch node.NetworkMode {
+	case "host":
+		containerHostConfig.NetworkMode = container.NetworkMode("host")
+	case "default":
 		containerHostConfig.NetworkMode = container.NetworkMode(c.Config.Mgmt.Network)
 
 		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
@@ -190,8 +193,6 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 				},
 			},
 		}
-	} else {
-		containerHostConfig.NetworkMode = container.NetworkMode("host")
 	}
 
 	cont, err := c.DockerClient.ContainerCreate(nctx,
