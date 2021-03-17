@@ -1,25 +1,28 @@
 package clab
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"text/template"
 )
 
+// GenerateInventories generate various inventory files and writes it to a lab location
 func (c *CLab) GenerateInventories() error {
-	if err := c.GenerateAnsibleInventory(); err != nil {
+	ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
+	f, err := os.Create(ansibleInvFPath)
+	if err != nil {
+		return err
+	}
+	if err := c.generateAnsibleInventory(f); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *CLab) GenerateAnsibleInventory() error {
-
-	invFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
-	f, err := os.Create(invFPath)
-	if err != nil {
-		return err
-	}
+// generateAnsibleInventory generates and writes ansible inventory file to w
+func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 	invT :=
 		`all:
@@ -48,11 +51,18 @@ func (c *CLab) GenerateAnsibleInventory() error {
 		i.Nodes[n.Kind] = append(i.Nodes[n.Kind], n)
 	}
 
+	// sort nodes by name as they are not sorted originally
+	for _, nodes := range i.Nodes {
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].ShortName < nodes[j].ShortName
+		})
+	}
+
 	t, err := template.New("ansible").Parse(invT)
 	if err != nil {
 		return err
 	}
-	err = t.Execute(f, i)
+	err = t.Execute(w, i)
 	if err != nil {
 		return err
 	}
