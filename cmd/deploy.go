@@ -83,10 +83,6 @@ var deployCmd = &cobra.Command{
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
-		if err := c.GenerateInventories(); err != nil {
-			return err
-		}
-
 		rootCANeeded := false
 		var certTpl *template.Template
 		// check if srl kinds defined in topo
@@ -219,6 +215,10 @@ var deployCmd = &cobra.Command{
 
 		log.Debug("enriching nodes with IP information...")
 		enrichNodes(containers, c.Nodes, c.Config.Mgmt.Network)
+
+		if err := c.GenerateInventories(); err != nil {
+			return err
+		}
 
 		wg = new(sync.WaitGroup)
 		wg.Add(len(c.Nodes))
