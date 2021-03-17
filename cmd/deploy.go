@@ -61,6 +61,10 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
+		// latest version channel
+		vCh := make(chan string)
+		go getLatestVersion(vCh)
+
 		if reconfigure {
 			if err != nil {
 				return err
@@ -80,7 +84,6 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		// create lab directory
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
@@ -217,6 +220,10 @@ var deployCmd = &cobra.Command{
 		log.Debug("enriching nodes with IP information...")
 		enrichNodes(containers, c.Nodes, c.Config.Mgmt.Network)
 
+		if err := c.GenerateInventories(); err != nil {
+			return err
+		}
+
 		wg = new(sync.WaitGroup)
 		wg.Add(len(c.Nodes))
 		for _, node := range c.Nodes {
@@ -239,6 +246,10 @@ var deployCmd = &cobra.Command{
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
 		}
+
+		// log new version availability info if ready
+		newVerNotification(vCh)
+
 		// print table summary
 		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
 		return nil

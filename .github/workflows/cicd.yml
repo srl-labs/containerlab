@@ -18,7 +18,7 @@ jobs:
   file-changes:
     runs-on: ubuntu-20.04
     outputs:
-      go-code: ${{ steps.filter.outputs.go-code }}
+      code: ${{ steps.filter.outputs.code }}
       docs: ${{ steps.filter.outputs.docs }}
     steps:
       - uses: actions/checkout@v2
@@ -26,9 +26,10 @@ jobs:
         id: filter
         with:
           filters: |
-            go-code:
+            code:
               - 'clab/**'
               - 'cmd/**'
+              - 'tests/**'
               - '.github/workflows/cicd.yml'
             docs:
               - "docs/**"
@@ -40,7 +41,7 @@ jobs:
   unit-test:
     runs-on: ubuntu-20.04
     needs: file-changes
-    if: needs.file-changes.outputs.go-code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -53,7 +54,7 @@ jobs:
   staticcheck:
     runs-on: ubuntu-20.04
     needs: file-changes
-    if: needs.file-changes.outputs.go-code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
