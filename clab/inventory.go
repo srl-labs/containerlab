@@ -29,6 +29,7 @@ func (c *CLab) GenerateAnsibleInventory() error {
       hosts:
 {{- range $nodes}}
         {{.LongName}}:
+          ansible_host: {{.MgmtIPv4Address}}
 {{- end}}
 {{- end}}
 `
