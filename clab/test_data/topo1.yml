@@ -16,3 +16,5 @@ topology:
       license: test_data/node1.lic
       user: custom
       mgmt_ipv4: 172.100.100.12
+      labels:
+        node-label: value

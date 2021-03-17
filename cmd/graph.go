@@ -78,7 +78,7 @@ var graphCmd = &cobra.Command{
 		// if offline mode is not enforced, list containers matching lab name
 		if !offline {
 			var err error
-			containers, err = c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
+			containers, err = c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
 			if err != nil {
 				log.Errorf("could not list containers: %v", err)
 			}

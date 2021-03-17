@@ -166,7 +166,7 @@ func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string)
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=lab-%s", c.Config.Name)})
+	containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}

@@ -208,7 +208,7 @@ var deployCmd = &cobra.Command{
 		log.Debug("containers created, retrieving state and IP addresses...")
 
 		// show topology output
-		labels = append(labels, "containerlab=lab-"+c.Config.Name)
+		labels = append(labels, "containerlab="+c.Config.Name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)

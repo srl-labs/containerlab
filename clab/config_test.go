@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestLicenseInit(t *testing.T) {
@@ -292,4 +294,81 @@ func TestVerifyLinks(t *testing.T) {
 		})
 	}
 
+}
+
+func TestLablesInit(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		node string
+		want map[string]string
+	}{
+		"only_default_labels": {
+			got:  "test_data/topo1.yml",
+			node: "node1",
+			want: map[string]string{
+				"containerlab":      "topo1",
+				"clab-node-kind":    "srl",
+				"clab-node-type":    "ixr6",
+				"clab-node-lab-dir": "./clab-topo1/node1",
+				"clab-topo-file":    "./test_data/topo1.yml",
+			},
+		},
+		"custom_node_label": {
+			got:  "test_data/topo1.yml",
+			node: "node2",
+			want: map[string]string{
+				"containerlab":      "topo1",
+				"clab-node-kind":    "srl",
+				"clab-node-type":    "ixr6",
+				"clab-node-lab-dir": "./clab-topo1/node2",
+				"clab-topo-file":    "./test_data/topo1.yml",
+				"node-label":        "value",
+			},
+		},
+		"custom_kind_label": {
+			got:  "test_data/topo2.yml",
+			node: "node1",
+			want: map[string]string{
+				"containerlab":      "topo2",
+				"clab-node-kind":    "srl",
+				"clab-node-type":    "ixrd2",
+				"clab-node-lab-dir": "./clab-topo2/node1",
+				"clab-topo-file":    "./test_data/topo2.yml",
+				"kind-label":        "value",
+			},
+		},
+		"custom_default_label": {
+			got:  "test_data/topo3.yml",
+			node: "node2",
+			want: map[string]string{
+				"containerlab":      "topo3",
+				"clab-node-kind":    "srl",
+				"clab-node-type":    "ixrd2",
+				"clab-node-lab-dir": "./clab-topo3/node2",
+				"clab-topo-file":    "./test_data/topo3.yml",
+				"default-label":     "value",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoFile(tc.got),
+			}
+			c := NewContainerLab(opts...)
+			if err := c.ParseTopology(); err != nil {
+				t.Fatal(err)
+			}
+
+			tc.want["clab-node-lab-dir"], _ = resolvePath(tc.want["clab-node-lab-dir"])
+			tc.want["clab-topo-file"], _ = resolvePath(tc.want["clab-topo-file"])
+
+			labels := c.Nodes[tc.node].Labels
+
+			if !cmp.Equal(labels, tc.want) {
+				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, labels)
+			}
+		})
+	}
 }
