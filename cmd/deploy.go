@@ -17,9 +17,6 @@ import (
 	"github.com/srl-wim/container-lab/clab"
 )
 
-const RootCaKey = "root-ca-key.pem"
-const RootCaCert = "root-ca.pem"
-
 // name of the container management network
 var mgmtNetName string
 
@@ -99,8 +96,8 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		var rootCaCertPath = path.Join(c.Dir.LabCARoot, RootCaCert)
-		var rootCaKeyPath = path.Join(c.Dir.LabCARoot, RootCaKey)
+		var rootCaCertPath = path.Join(c.Dir.LabCARoot, "root-ca.pem")
+		var rootCaKeyPath = path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
 
 		var rootCaCertPathExists = false
 		var rootCaKeyPathExists = false
