@@ -190,3 +190,17 @@ topology:
         - tcp/57400  # tcp port 57400 will be published
         - http/8080  # http port 8080 will be published
 ```
+
+### network-mode
+By default containerlab nodes use bridge-mode driver - nodes are created with their first interface connected to a docker network (management network).
+
+It is possible to override this behavior and set the network mode to the value of `host`.
+
+```yaml
+# example node definition with host networking mode
+my-node:
+  image: alpine:3
+  network-mode: host
+```
+
+The `network-mode` configuration option set to `host` will launch the node in the [host networking mode](https://docs.docker.com/network/host/).

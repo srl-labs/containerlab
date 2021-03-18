@@ -157,34 +157,46 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		return err
 	}
 
-	cont, err := c.DockerClient.ContainerCreate(nctx,
-		&container.Config{
-			Image:        node.Image,
-			Cmd:          cmd,
-			Env:          convertEnvs(node.Env),
-			AttachStdout: true,
-			AttachStderr: true,
-			Hostname:     node.ShortName,
-			Tty:          true,
-			User:         node.User,
-			Labels:       node.Labels,
-			ExposedPorts: node.PortSet,
-		}, &container.HostConfig{
-			Binds:        node.Binds,
-			PortBindings: node.PortBindings,
-			Sysctls:      node.Sysctls,
-			Privileged:   true,
-			NetworkMode:  container.NetworkMode(c.Config.Mgmt.Network),
-		}, &network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				c.Config.Mgmt.Network: {
-					IPAMConfig: &network.EndpointIPAMConfig{
-						IPv4Address: node.MgmtIPv4Address,
-						IPv6Address: node.MgmtIPv6Address,
-					},
+	containerConfig := &container.Config{
+		Image:        node.Image,
+		Cmd:          cmd,
+		Env:          convertEnvs(node.Env),
+		AttachStdout: true,
+		AttachStderr: true,
+		Hostname:     node.ShortName,
+		Tty:          true,
+		User:         node.User,
+		Labels:       node.Labels,
+		ExposedPorts: node.PortSet,
+	}
+	containerHostConfig := &container.HostConfig{
+		Binds:        node.Binds,
+		PortBindings: node.PortBindings,
+		Sysctls:      node.Sysctls,
+		Privileged:   true,
+		NetworkMode:  container.NetworkMode(c.Config.Mgmt.Network),
+	}
+
+	containerNetworkingConfig := &network.NetworkingConfig{}
+
+	switch node.NetworkMode {
+	case "host":
+		containerHostConfig.NetworkMode = container.NetworkMode("host")
+	default:
+		containerHostConfig.NetworkMode = container.NetworkMode(c.Config.Mgmt.Network)
+
+		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
+			c.Config.Mgmt.Network: {
+				IPAMConfig: &network.EndpointIPAMConfig{
+					IPv4Address: node.MgmtIPv4Address,
+					IPv6Address: node.MgmtIPv6Address,
 				},
 			},
-		}, node.LongName)
+		}
+	}
+
+	cont, err := c.DockerClient.ContainerCreate(nctx,
+		containerConfig, containerHostConfig, containerNetworkingConfig, node.LongName)
 	if err != nil {
 		return err
 	}
@@ -202,6 +214,7 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		return err
 	}
 	return linkContainerNS(node.NSPath, node.LongName)
+
 }
 
 // GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container

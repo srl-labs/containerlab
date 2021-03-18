@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
 	"strings"
 	"sync"
-	"text/template"
 
 	cfssllog "github.com/cloudflare/cfssl/log"
 	"github.com/docker/docker/api/types"
@@ -91,7 +89,6 @@ var deployCmd = &cobra.Command{
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
 		rootCANeeded := false
-		var certTpl *template.Template
 		// check if srl kinds defined in topo
 		// for them we need to create rootCA and certs
 		for _, n := range c.Nodes {
@@ -121,24 +118,14 @@ var deployCmd = &cobra.Command{
 		}
 
 		if rootCANeeded {
-			// create root CA if SRL nodes exist in the topology
 			cfssllog.Level = cfssllog.LevelError
 			if debug {
 				cfssllog.Level = cfssllog.LevelDebug
 			}
-			tpl, err := template.ParseFiles(rootCaCsrTemplate)
-			if err != nil {
-				return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
-			}
-			rootCerts, err := c.GenerateRootCa(tpl, clab.CaRootInput{Prefix: c.Config.Name})
-			if err != nil {
-				return fmt.Errorf("failed to generate rootCa: %v", err)
-			}
 
-			log.Debugf("root CSR: %s", string(rootCerts.Csr))
-			log.Debugf("root Cert: %s", string(rootCerts.Cert))
-			log.Debugf("root Key: %s", string(rootCerts.Key))
-
+			if err := c.CreateRootCA(); err != nil {
+				return err
+			}
 		}
 		certTpl, err = template.ParseFiles(certCsrTemplate)
 		if err != nil {
@@ -167,64 +154,7 @@ var deployCmd = &cobra.Command{
 			linksMaxWorkers = numLinks
 		}
 
-		wg := new(sync.WaitGroup)
-		wg.Add(int(nodesMaxWorkers))
-		nodesChan := make(chan *clab.Node)
-		// start workers
-		for i := uint(0); i < nodesMaxWorkers; i++ {
-			go func(i uint) {
-				defer wg.Done()
-				for {
-					select {
-					case node := <-nodesChan:
-						if node == nil {
-							log.Debugf("Worker %d terminating...", i)
-							return
-						}
-						log.Debugf("Worker %d received node: %+v", i, node)
-						if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
-							return
-						}
-
-						var nodeCerts *clab.Certificates
-						if node.Kind == "srl" {
-							var err error
-							nodeCerts, err = c.RetrieveNodeCertData(node)
-							// if not available on disk, create cert in next step
-							if err != nil {
-								// create CERT
-								nodeCerts, err = c.GenerateCert(
-									rootCaCertPath,
-									rootCaKeyPath,
-									certTpl,
-									node,
-								)
-								if err != nil {
-									log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
-								}
-								log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
-								log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
-								log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
-							}
-						}
-						err = c.CreateNode(ctx, node, nodeCerts)
-						if err != nil {
-							log.Errorf("failed to create node %s: %v", node.ShortName, err)
-						}
-					case <-ctx.Done():
-						return
-					}
-				}
-			}(i)
-		}
-		for _, n := range c.Nodes {
-			nodesChan <- n
-		}
-		// close channel to terminate the workers
-		close(nodesChan)
-		// wait for all workers to finish
-		wg.Wait()
-
+		c.CreateNodes(ctx, nodesMaxWorkers)
 		c.CreateLinks(ctx, linksMaxWorkers, false)
 
 		// generate graph of the lab topology
@@ -235,7 +165,6 @@ var deployCmd = &cobra.Command{
 		}
 		log.Debug("containers created, retrieving state and IP addresses...")
 
-		// show topology output
 		labels = append(labels, "containerlab="+c.Config.Name)
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
@@ -252,7 +181,7 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		wg = new(sync.WaitGroup)
+		var wg sync.WaitGroup
 		wg.Add(len(c.Nodes))
 		for _, node := range c.Nodes {
 			go func(node *clab.Node) {
@@ -365,6 +294,10 @@ func enrichNodes(containers []types.Container, nodes map[string]*clab.Node, mgmt
 		name = strings.Split(c.Names[0], "-")[2]
 		if node, ok := nodes[name]; ok {
 			// add network information
+			// skipping host networking nodes as they don't have separate addresses
+			if strings.ToLower(node.NetworkMode) == "host" {
+				continue
+			}
 			node.MgmtNet = mgmtNet
 			node.MgmtIPv4Address = c.NetworkSettings.Networks[mgmtNet].IPAddress
 			node.MgmtIPv4PrefixLength = c.NetworkSettings.Networks[mgmtNet].IPPrefixLen

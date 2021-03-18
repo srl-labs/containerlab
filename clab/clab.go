@@ -3,14 +3,21 @@ package clab
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	rootCaCsrTemplate = "/etc/containerlab/templates/ca/csr-root-ca.json"
+	certCsrTemplate   = "/etc/containerlab/templates/ca/csr.json"
 )
 
 // var debug bool
@@ -165,6 +172,67 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 	return nil
 }
 
+func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
+	wg := new(sync.WaitGroup)
+	wg.Add(int(workers))
+	nodesChan := make(chan *Node)
+	// start workers
+	for i := uint(0); i < workers; i++ {
+		go func(i uint) {
+			defer wg.Done()
+			for {
+				select {
+				case node := <-nodesChan:
+					if node == nil {
+						log.Debugf("Worker %d terminating...", i)
+						return
+					}
+					log.Debugf("Worker %d received node: %+v", i, node)
+					if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
+						return
+					}
+
+					var nodeCerts *Certificates
+					var certTpl *template.Template
+					if node.Kind == "srl" {
+						var err error
+						certTpl, err = template.ParseFiles(certCsrTemplate)
+						if err != nil {
+							log.Errorf("failed to parse certCsrTemplate: %v", err)
+						}
+						// create CERT
+						nodeCerts, err = c.GenerateCert(
+							path.Join(c.Dir.LabCARoot, "root-ca.pem"),
+							path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
+							certTpl,
+							node,
+						)
+						if err != nil {
+							log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+						}
+						log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
+						log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
+						log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
+					}
+					err := c.CreateNode(ctx, node, nodeCerts)
+					if err != nil {
+						log.Errorf("failed to create node %s: %v", node.ShortName, err)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}(i)
+	}
+	for _, n := range c.Nodes {
+		nodesChan <- n
+	}
+	// close channel to terminate the workers
+	close(nodesChan)
+	// wait for all workers to finish
+	wg.Wait()
+}
+
 // CreateLinks creates links using the specified number of workers
 // `postdeploy` indicates the stage of links creation.
 // `postdeploy=true` means the links routine is called after nodes postdeploy tasks
@@ -220,6 +288,10 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 }
 
 func disableTxOffload(n *Node) error {
+	// skip this if node runs in host mode
+	if strings.ToLower(n.NetworkMode) == "host" {
+		return nil
+	}
 	// disable tx checksum offload for linux containers on eth0 interfaces
 	nodeNS, err := ns.GetNS(n.NSPath)
 	if err != nil {
