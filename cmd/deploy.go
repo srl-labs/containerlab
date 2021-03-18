@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"strings"
 	"sync"
 
@@ -126,10 +127,6 @@ var deployCmd = &cobra.Command{
 			if err := c.CreateRootCA(); err != nil {
 				return err
 			}
-		}
-		certTpl, err = template.ParseFiles(certCsrTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
 		}
 
 		// create docker network or use existing one

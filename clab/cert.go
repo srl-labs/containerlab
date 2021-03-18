@@ -3,8 +3,8 @@ package clab
 import (
 	"bytes"
 	"encoding/json"
-	"os"
 	"fmt"
+	"os"
 	"path"
 	"text/template"
 
@@ -138,7 +138,6 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		Csr:  csrBytes,
 		Cert: cert,
 	}
-	//
 	c.writeCertFiles(certs, path.Join(c.Dir.LabCA, input.Name, input.Name))
 	return certs, nil
 }

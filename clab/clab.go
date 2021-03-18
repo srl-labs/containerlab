@@ -200,19 +200,23 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 						if err != nil {
 							log.Errorf("failed to parse certCsrTemplate: %v", err)
 						}
-						// create CERT
-						nodeCerts, err = c.GenerateCert(
-							path.Join(c.Dir.LabCARoot, "root-ca.pem"),
-							path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
-							certTpl,
-							node,
-						)
+						nodeCerts, err = c.RetrieveNodeCertData(node)
+						// if not available on disk, create cert in next step
 						if err != nil {
-							log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+							// create CERT
+							nodeCerts, err = c.GenerateCert(
+								path.Join(c.Dir.LabCARoot, "root-ca.pem"),
+								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
+								certTpl,
+								node,
+							)
+							if err != nil {
+								log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+							}
+							log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
+							log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
+							log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 						}
-						log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
-						log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
-						log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 					}
 					err := c.CreateNode(ctx, node, nodeCerts)
 					if err != nil {
