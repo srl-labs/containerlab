@@ -302,6 +302,6 @@ func readFileContent(file string) ([]byte, error) {
 	}
 
 	// read and return file content
-	b, err := os.ReadFile(file)
+	b, err := ioutil.ReadFile(file)
 	return b, err
 }
