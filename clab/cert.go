@@ -3,6 +3,7 @@ package clab
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path"
 	"text/template"
 
@@ -138,6 +139,38 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	}
 	//
 	c.writeCertFiles(certs, path.Join(c.Dir.LabCA, input.Name, input.Name))
+	return certs, nil
+}
+
+func (c *CLab) RetrieveNodeCertData(n *Node) (*Certificates, error) {
+	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
+	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
+	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
+	var nodeCsrFile = path.Join(nodeCertFilesDir, n.ShortName+".csr")
+
+	var certs = new(Certificates)
+
+	var err error
+	stat, err := os.Stat(nodeCertFilesDir)
+	// the directoy for the nodes certificates doesn't exist
+	if err != nil || !stat.IsDir() {
+		return nil, err
+	}
+
+	certs.Cert, err = readFileContent(nodeCertFile)
+	if err != nil {
+		return nil, err
+	}
+
+	certs.Key, err = readFileContent(nodeKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// might be that we get an empty []byte for CSR.
+	// Ignoring that, since the CSR is not really required.
+	certs.Csr, _ = readFileContent(nodeCsrFile)
+
 	return certs, nil
 }
 

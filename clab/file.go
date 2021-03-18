@@ -293,3 +293,15 @@ func (node *Node) generateConfig(dst string) error {
 	_, err = f.Write(dstBytes.Bytes())
 	return err
 }
+
+func readFileContent(file string) ([]byte, error) {
+	// check file exists
+	_, err := os.Stat(file)
+	if err != nil {
+		return nil, err
+	}
+
+	// read and return file content
+	b, err := os.ReadFile(file)
+	return b, err
+}

@@ -18,6 +18,9 @@ import (
 	"github.com/srl-wim/container-lab/clab"
 )
 
+const RootCaKey = "root-ca-key.pem"
+const RootCaCert = "root-ca.pem"
+
 // name of the container management network
 var mgmtNetName string
 
@@ -94,8 +97,29 @@ var deployCmd = &cobra.Command{
 		for _, n := range c.Nodes {
 			if n.Kind == "srl" {
 				rootCANeeded = true
+				break
 			}
 		}
+
+		var rootCaCertPath = path.Join(c.Dir.LabCARoot, RootCaCert)
+		var rootCaKeyPath = path.Join(c.Dir.LabCARoot, RootCaKey)
+
+		var rootCaCertPathExists = false
+		var rootCaKeyPathExists = false
+
+		_, err = os.Stat(rootCaCertPath)
+		if err == nil {
+			rootCaCertPathExists = true
+		}
+		_, err = os.Stat(rootCaKeyPath)
+		if err == nil {
+			rootCaKeyPathExists = true
+		}
+		// if both files exist skip root CA creation
+		if rootCaCertPathExists && rootCaKeyPathExists {
+			rootCANeeded = false
+		}
+
 		if rootCANeeded {
 			// create root CA if SRL nodes exist in the topology
 			cfssllog.Level = cfssllog.LevelError
@@ -115,10 +139,10 @@ var deployCmd = &cobra.Command{
 			log.Debugf("root Cert: %s", string(rootCerts.Cert))
 			log.Debugf("root Key: %s", string(rootCerts.Key))
 
-			certTpl, err = template.ParseFiles(certCsrTemplate)
-			if err != nil {
-				return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
-			}
+		}
+		certTpl, err = template.ParseFiles(certCsrTemplate)
+		if err != nil {
+			return fmt.Errorf("failed to parse certCsrTemplate: %v", err)
 		}
 
 		// create docker network or use existing one
@@ -165,19 +189,23 @@ var deployCmd = &cobra.Command{
 						var nodeCerts *clab.Certificates
 						if node.Kind == "srl" {
 							var err error
-							// create CERT
-							nodeCerts, err = c.GenerateCert(
-								path.Join(c.Dir.LabCARoot, "root-ca.pem"),
-								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
-								certTpl,
-								node,
-							)
+							nodeCerts, err = c.RetrieveNodeCertData(node)
+							// if not available on disk, create cert in next step
 							if err != nil {
-								log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+								// create CERT
+								nodeCerts, err = c.GenerateCert(
+									rootCaCertPath,
+									rootCaKeyPath,
+									certTpl,
+									node,
+								)
+								if err != nil {
+									log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
+								}
+								log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
+								log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
+								log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 							}
-							log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
-							log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
-							log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
 						}
 						err = c.CreateNode(ctx, node, nodeCerts)
 						if err != nil {
