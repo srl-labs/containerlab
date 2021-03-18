@@ -10,11 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	rootCaCsrTemplate = "/etc/containerlab/templates/ca/csr-root-ca.json"
-	certCsrTemplate   = "/etc/containerlab/templates/ca/csr.json"
-)
-
 var debug bool
 var timeout time.Duration
 

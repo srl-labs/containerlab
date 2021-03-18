@@ -428,6 +428,7 @@ func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *Node) map[stri
 		"containerlab":      c.Config.Name,
 		"clab-node-kind":    kind,
 		"clab-node-type":    node.NodeType,
+		"clab-node-group":   node.Group,
 		"clab-node-lab-dir": node.LabDir,
 		"clab-topo-file":    c.TopoFile.path,
 	}

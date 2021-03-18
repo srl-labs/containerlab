@@ -3,6 +3,7 @@ package clab
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"path"
 	"text/template"
 
@@ -145,4 +146,21 @@ func (c *CLab) writeCertFiles(certs *Certificates, filesPrefix string) {
 	createFile(filesPrefix+".pem", string(certs.Cert))
 	createFile(filesPrefix+"-key.pem", string(certs.Key))
 	createFile(filesPrefix+".csr", string(certs.Csr))
+}
+
+func (c *CLab) CreateRootCA() error {
+	// create root CA if SRL nodes exist in the topology
+	tpl, err := template.ParseFiles(rootCaCsrTemplate)
+	if err != nil {
+		return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
+	}
+	rootCerts, err := c.GenerateRootCa(tpl, CaRootInput{Prefix: c.Config.Name})
+	if err != nil {
+		return fmt.Errorf("failed to generate rootCa: %v", err)
+	}
+
+	log.Debugf("root CSR: %s", string(rootCerts.Csr))
+	log.Debugf("root Cert: %s", string(rootCerts.Cert))
+	log.Debugf("root Key: %s", string(rootCerts.Key))
+	return nil
 }
