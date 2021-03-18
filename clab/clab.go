@@ -312,20 +312,3 @@ func StringInSlice(slice []string, val string) (int, bool) {
 	}
 	return -1, false
 }
-
-func (c *CLab) CreateRootCA() error {
-	// create root CA if SRL nodes exist in the topology
-	tpl, err := template.ParseFiles(rootCaCsrTemplate)
-	if err != nil {
-		return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
-	}
-	rootCerts, err := c.GenerateRootCa(tpl, CaRootInput{Prefix: c.Config.Name})
-	if err != nil {
-		return fmt.Errorf("failed to generate rootCa: %v", err)
-	}
-
-	log.Debugf("root CSR: %s", string(rootCerts.Csr))
-	log.Debugf("root Cert: %s", string(rootCerts.Cert))
-	log.Debugf("root Key: %s", string(rootCerts.Key))
-	return nil
-}
