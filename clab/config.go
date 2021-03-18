@@ -118,6 +118,8 @@ type NodeConfig struct {
 	User string `yaml:"user,omitempty"`
 	// container labels
 	Labels map[string]string `yaml:"labels,omitempty"`
+	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
+	NetworkMode string `yaml:"network-mode,omitempty"`
 }
 
 type LinkConfig struct {
@@ -135,22 +137,24 @@ type Node struct {
 	Group     string
 	Kind      string
 	// path to config template file that is used for config generation
-	Config               string
-	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
-	NodeType             string
-	Position             string
-	License              string
-	Image                string
-	Topology             string
-	Sysctls              map[string]string
-	User                 string
-	Entrypoint           string
-	Cmd                  string
-	Env                  map[string]string
-	Binds                []string    // Bind mounts strings (src:dest:options)
-	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
-	MgmtNet              string      // name of the docker network this node is connected to with its first interface
+	Config       string
+	ResConfig    string // path to config file that is actually mounted to the container and is a result of templation
+	NodeType     string
+	Position     string
+	License      string
+	Image        string
+	Topology     string
+	Sysctls      map[string]string
+	User         string
+	Entrypoint   string
+	Cmd          string
+	Env          map[string]string
+	Binds        []string    // Bind mounts strings (src:dest:options)
+	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
+	PortSet      nat.PortSet // PortSet define the ports that should be exposed on a container
+	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
+	NetworkMode          string
+	MgmtNet              string // name of the docker network this node is connected to with its first interface
 	MgmtIPv4Address      string
 	MgmtIPv4PrefixLength int
 	MgmtIPv6Address      string
@@ -445,6 +449,8 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.LabDir = c.Dir.Lab + "/" + nodeName
 	node.Index = idx
 
+	node.NetworkMode = strings.ToLower(nodeCfg.NetworkMode)
+
 	node.MgmtIPv4Address = nodeCfg.MgmtIPv4
 	node.MgmtIPv6Address = nodeCfg.MgmtIPv6
 
@@ -720,6 +726,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 
 // verifyHostIfaces ensures that host interfaces referenced in the topology
 // do not exist already in the root namespace
+// and ensure that nodes that are configured with host networking mode do not have any interfaces defined
 func (c *CLab) verifyHostIfaces() error {
 	for _, l := range c.Links {
 		if l.A.Node.ShortName == "host" {
@@ -727,10 +734,18 @@ func (c *CLab) verifyHostIfaces() error {
 				return fmt.Errorf("host interface %s referenced in topology already exists", l.A.EndpointName)
 			}
 		}
+		if l.A.Node.NetworkMode == "host" {
+			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+				l.A.Node.ShortName, l.A.Node.ShortName)
+		}
 		if l.B.Node.ShortName == "host" {
 			if nl, _ := netlink.LinkByName(l.B.EndpointName); nl != nil {
 				return fmt.Errorf("host interface %s referenced in topology already exists", l.B.EndpointName)
 			}
+		}
+		if l.B.Node.NetworkMode == "host" {
+			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+				l.B.Node.ShortName, l.B.Node.ShortName)
 		}
 	}
 	return nil
