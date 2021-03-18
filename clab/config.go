@@ -637,33 +637,6 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.VerifyImages(ctx); err != nil {
 		return err
 	}
-	if err = c.VerifyHostModeNetworking(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// VerifyHostModeNetworking verifies that a container in host mode networking has no additional interface definitions present in the topology
-func (c *CLab) VerifyHostModeNetworking() error {
-	var hostModeNodes []*Node
-	// collect hostmode nodes
-	for _, node := range c.Nodes {
-		if strings.ToLower(node.NetworkMode) == "host" {
-			hostModeNodes = append(hostModeNodes, node)
-		}
-	}
-	// no need to check for links if there are not even Hostmode nodes defined
-	if len(hostModeNodes) == 0 {
-		return nil
-	}
-	// iterate over links make sure hostmode nodes are not mentioned in links
-	for _, link := range c.Links {
-		for _, node := range hostModeNodes {
-			if link.A.Node == node || link.B.Node == node {
-				return fmt.Errorf("invalid topology definition. HostMode node %s has links defined in topology", node.ShortName)
-			}
-		}
-	}
 	return nil
 }
 
@@ -753,6 +726,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 
 // verifyHostIfaces ensures that host interfaces referenced in the topology
 // do not exist already in the root namespace
+// and ensure that nodes that are configured with host networking mode do not have any interfaces defined
 func (c *CLab) verifyHostIfaces() error {
 	for _, l := range c.Links {
 		if l.A.Node.ShortName == "host" {
@@ -760,10 +734,18 @@ func (c *CLab) verifyHostIfaces() error {
 				return fmt.Errorf("host interface %s referenced in topology already exists", l.A.EndpointName)
 			}
 		}
+		if l.A.Node.NetworkMode == "host" {
+			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+				l.A.Node.ShortName, l.A.Node.ShortName)
+		}
 		if l.B.Node.ShortName == "host" {
 			if nl, _ := netlink.LinkByName(l.B.EndpointName); nl != nil {
 				return fmt.Errorf("host interface %s referenced in topology already exists", l.B.EndpointName)
 			}
+		}
+		if l.B.Node.NetworkMode == "host" {
+			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+				l.B.Node.ShortName, l.B.Node.ShortName)
 		}
 	}
 	return nil
