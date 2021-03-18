@@ -128,14 +128,14 @@ func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeNam
 		if len(cont.Names) > 0 {
 			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
 		}
-		if kind, ok := cont.Labels["kind"]; ok {
+		if kind, ok := cont.Labels["clab-node-kind"]; ok {
 			cdet.Kind = kind
 			if kind == "mysocketio" {
 				printMysocket = true
 				mysocketCID = cont.ID
 			}
 		}
-		if group, ok := cont.Labels["group"]; ok {
+		if group, ok := cont.Labels["clab-node-group"]; ok {
 			cdet.Group = group
 		}
 		contDetails = append(contDetails, cdet)
