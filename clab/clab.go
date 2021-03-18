@@ -220,6 +220,10 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 }
 
 func disableTxOffload(n *Node) error {
+	// skip this if node runs in host mode
+	if strings.ToLower(n.NetworkMode) == "host" {
+		return nil
+	}
 	// disable tx checksum offload for linux containers on eth0 interfaces
 	nodeNS, err := ns.GetNS(n.NSPath)
 	if err != nil {

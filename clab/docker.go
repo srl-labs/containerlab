@@ -182,7 +182,7 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 	switch node.NetworkMode {
 	case "host":
 		containerHostConfig.NetworkMode = container.NetworkMode("host")
-	case "default":
+	default:
 		containerHostConfig.NetworkMode = container.NetworkMode(c.Config.Mgmt.Network)
 
 		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
@@ -214,6 +214,7 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		return err
 	}
 	return linkContainerNS(node.NSPath, node.LongName)
+
 }
 
 // GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container

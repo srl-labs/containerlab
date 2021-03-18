@@ -637,6 +637,33 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.VerifyImages(ctx); err != nil {
 		return err
 	}
+	if err = c.VerifyHostModeNetworking(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// VerifyHostModeNetworking verifies that a container in host mode networking has no additional interface definitions present in the topology
+func (c *CLab) VerifyHostModeNetworking() error {
+	var hostModeNodes []*Node
+	// collect hostmode nodes
+	for _, node := range c.Nodes {
+		if strings.ToLower(node.NetworkMode) == "host" {
+			hostModeNodes = append(hostModeNodes, node)
+		}
+	}
+	// no need to check for links if there are not even Hostmode nodes defined
+	if len(hostModeNodes) == 0 {
+		return nil
+	}
+	// iterate over links make sure hostmode nodes are not mentioned in links
+	for _, link := range c.Links {
+		for _, node := range hostModeNodes {
+			if link.A.Node == node || link.B.Node == node {
+				return fmt.Errorf("invalid topology definition. HostMode node %s has links defined in topology", node.ShortName)
+			}
+		}
+	}
 	return nil
 }
 
