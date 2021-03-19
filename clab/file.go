@@ -55,12 +55,11 @@ func (c *CLab) GetTopology(topo string) error {
 }
 
 func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	log.Debug(info)
+	f, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
 	}
-	return !info.IsDir()
+	return !f.IsDir()
 }
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
@@ -292,4 +291,15 @@ func (node *Node) generateConfig(dst string) error {
 	defer f.Close()
 	_, err = f.Write(dstBytes.Bytes())
 	return err
+}
+
+func readFileContent(file string) ([]byte, error) {
+	// check file exists
+	if !fileExists(file) {
+		return nil, fmt.Errorf("file %s does not exist", file)
+	}
+
+	// read and return file content
+	b, err := ioutil.ReadFile(file)
+	return b, err
 }

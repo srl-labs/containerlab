@@ -85,22 +85,12 @@ var deployCmd = &cobra.Command{
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
-		rootCANeeded := false
-		// check if srl kinds defined in topo
-		// for them we need to create rootCA and certs
-		for _, n := range c.Nodes {
-			if n.Kind == "srl" {
-				rootCANeeded = true
-			}
+		cfssllog.Level = cfssllog.LevelError
+		if debug {
+			cfssllog.Level = cfssllog.LevelDebug
 		}
-		if rootCANeeded {
-			cfssllog.Level = cfssllog.LevelError
-			if debug {
-				cfssllog.Level = cfssllog.LevelDebug
-			}
-			if err := c.CreateRootCA(); err != nil {
-				return err
-			}
+		if err := c.CreateRootCA(); err != nil {
+			return err
 		}
 
 		// create docker network or use existing one

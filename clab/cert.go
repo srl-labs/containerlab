@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path"
 	"text/template"
 
@@ -137,8 +138,36 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		Csr:  csrBytes,
 		Cert: cert,
 	}
-	//
 	c.writeCertFiles(certs, path.Join(c.Dir.LabCA, input.Name, input.Name))
+	return certs, nil
+}
+
+// RetrieveNodeCertData reads the node private key and certificate by the well known paths
+// if either of those files doesn't exist, an error is returned
+func (c *CLab) RetrieveNodeCertData(n *Node) (*Certificates, error) {
+	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
+	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
+	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
+
+	var certs = &Certificates{}
+
+	var err error
+	stat, err := os.Stat(nodeCertFilesDir)
+	// the directory for the nodes certificates doesn't exist
+	if err != nil || !stat.IsDir() {
+		return nil, err
+	}
+
+	certs.Cert, err = readFileContent(nodeCertFile)
+	if err != nil {
+		return nil, err
+	}
+
+	certs.Key, err = readFileContent(nodeKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
 	return certs, nil
 }
 
@@ -148,8 +177,44 @@ func (c *CLab) writeCertFiles(certs *Certificates, filesPrefix string) {
 	createFile(filesPrefix+".csr", string(certs.Csr))
 }
 
+//CreateRootCA creates RootCA key/certificate if it is needed by the topology
 func (c *CLab) CreateRootCA() error {
-	// create root CA if SRL nodes exist in the topology
+	rootCANeeded := false
+	// check if srl kinds defined in topo
+	// for them we need to create rootCA and certs
+	for _, n := range c.Nodes {
+		if n.Kind == "srl" {
+			rootCANeeded = true
+			break
+		}
+	}
+
+	if !rootCANeeded {
+		return nil
+	}
+
+	var rootCaCertPath = path.Join(c.Dir.LabCARoot, "root-ca.pem")
+	var rootCaKeyPath = path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
+
+	var rootCaCertExists = false
+	var rootCaKeyExists = false
+
+	_, err := os.Stat(rootCaCertPath)
+	if err == nil {
+		rootCaCertExists = true
+	}
+	_, err = os.Stat(rootCaKeyPath)
+	if err == nil {
+		rootCaKeyExists = true
+	}
+	// if both files exist skip root CA creation
+	if rootCaCertExists && rootCaKeyExists {
+		rootCANeeded = false
+	}
+	if !rootCANeeded {
+		return nil
+	}
+
 	tpl, err := template.ParseFiles(rootCaCsrTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
