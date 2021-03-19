@@ -108,6 +108,8 @@ The generated TLS files will persist between lab deployments. This means that if
 
 In case a user-provided certificates/keys need to be used, the `root-ca.pem`, `<node-name>.pem` and `<node-name>-key.pem` files must be copied by the paths outlined above for containerlab to take them into account when deploying a lab.
 
+In case only `root-ca.pem`, and `root-ca-key.pem` files are provided, the node certificates will be generated using these CA files.
+
 ### License
 SR Linux containers require a license file to be provided. With a [`license`](../nodes.md#license) directive it's possible to provide a path to a license file that will be used for srl nodes.
 
