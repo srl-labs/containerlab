@@ -36,6 +36,7 @@ var deployCmd = &cobra.Command{
 	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
+	PreRunE:      sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 		if err = topoSet(); err != nil {

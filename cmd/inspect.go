@@ -40,7 +40,7 @@ var inspectCmd = &cobra.Command{
 	Short:   "inspect lab details",
 	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.srlinux.dev/cmd/inspect/",
 	Aliases: []string{"ins", "i"},
-
+	PreRunE: sudoCheck,
 	Run: func(cmd *cobra.Command, args []string) {
 		if name == "" && topo == "" && !all {
 			fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")

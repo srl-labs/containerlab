@@ -25,6 +25,7 @@ var destroyCmd = &cobra.Command{
 	Short:   "destroy a lab",
 	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/destroy/",
 	Aliases: []string{"des"},
+	PreRunE: sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 		var labs []*clab.CLab

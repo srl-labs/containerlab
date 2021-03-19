@@ -14,9 +14,9 @@ var labels []string
 
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
-	Use:   "exec",
-	Short: "execute a command on one or multiple containers",
-
+	Use:     "exec",
+	Short:   "execute a command on one or multiple containers",
+	PreRunE: sudoCheck,
 	Run: func(cmd *cobra.Command, args []string) {
 		if name == "" && topo == "" {
 			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
