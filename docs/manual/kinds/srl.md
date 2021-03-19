@@ -10,11 +10,12 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
     ```bash
     docker exec -it <container-name/id> bash
     ```
-=== "CLI"
+=== "CLI/SSH"
     to connect to the SR Linux CLI
     ```bash
     docker exec -it <container-name/id> sr_cli
-    ```
+    ```  
+    or with SSH `ssh admin@<container-name>`
 === "gNMI"
     using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
     ```bash
@@ -94,6 +95,18 @@ INFO[0001] clab-srl02-srl1 output: /system:
 INFO[0004] clab-srl02-srl2 output: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-12-03T15:12:49.892Z' and comment ''
 ```
+
+### TLS
+By default containerlab will generate TLS certificates and keys for each SR Linux node of a lab. The TLS related files that containerlab creates are located in the so-called CA directory which can be located by the `<lab-directory>/ca/` path. Here is a list of files that containerlab creates relative to the CA directory
+
+1. Root CA certificate - `root/root-ca.pem`
+2. Root CA private key - `root/root-ca-key.pem`
+3. Node certificate - `<node-name>/<node-name>.pem`
+4. Node private key - `<node-name>/<node-name>-key.pem`
+
+The generated TLS files will persist between lab deployments. This means that if you destroyed a lab and deployed it again, the TLS files from initial lab deployment will be used.
+
+In case a user-provided certificates/keys need to be used, the `root-ca.pem`, `<node-name>.pem` and `<node-name>-key.pem` files must be copied by the paths outlined above for containerlab to take them into account when deploying a lab.
 
 ### License
 SR Linux containers require a license file to be provided. With a [`license`](../nodes.md#license) directive it's possible to provide a path to a license file that will be used for srl nodes.
