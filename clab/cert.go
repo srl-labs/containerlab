@@ -146,13 +146,12 @@ func (c *CLab) RetrieveNodeCertData(n *Node) (*Certificates, error) {
 	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
 	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
 	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
-	var nodeCsrFile = path.Join(nodeCertFilesDir, n.ShortName+".csr")
 
-	var certs = new(Certificates)
+	var certs = &Certificates{}
 
 	var err error
 	stat, err := os.Stat(nodeCertFilesDir)
-	// the directoy for the nodes certificates doesn't exist
+	// the directory for the nodes certificates doesn't exist
 	if err != nil || !stat.IsDir() {
 		return nil, err
 	}
