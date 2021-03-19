@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
 	"strings"
 	"sync"
 
@@ -86,44 +85,12 @@ var deployCmd = &cobra.Command{
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		clab.CreateDirectory(c.Dir.Lab, 0755)
 
-		rootCANeeded := false
-		// check if srl kinds defined in topo
-		// for them we need to create rootCA and certs
-		for _, n := range c.Nodes {
-			if n.Kind == "srl" {
-				rootCANeeded = true
-				break
-			}
+		cfssllog.Level = cfssllog.LevelError
+		if debug {
+			cfssllog.Level = cfssllog.LevelDebug
 		}
-
-		var rootCaCertPath = path.Join(c.Dir.LabCARoot, "root-ca.pem")
-		var rootCaKeyPath = path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
-
-		var rootCaCertPathExists = false
-		var rootCaKeyPathExists = false
-
-		_, err = os.Stat(rootCaCertPath)
-		if err == nil {
-			rootCaCertPathExists = true
-		}
-		_, err = os.Stat(rootCaKeyPath)
-		if err == nil {
-			rootCaKeyPathExists = true
-		}
-		// if both files exist skip root CA creation
-		if rootCaCertPathExists && rootCaKeyPathExists {
-			rootCANeeded = false
-		}
-
-		if rootCANeeded {
-			cfssllog.Level = cfssllog.LevelError
-			if debug {
-				cfssllog.Level = cfssllog.LevelDebug
-			}
-
-			if err := c.CreateRootCA(); err != nil {
-				return err
-			}
+		if err := c.CreateRootCA(); err != nil {
+			return err
 		}
 
 		// create docker network or use existing one

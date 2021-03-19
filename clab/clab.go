@@ -196,14 +196,14 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 					var certTpl *template.Template
 					if node.Kind == "srl" {
 						var err error
-						certTpl, err = template.ParseFiles(certCsrTemplate)
-						if err != nil {
-							log.Errorf("failed to parse certCsrTemplate: %v", err)
-						}
 						nodeCerts, err = c.RetrieveNodeCertData(node)
 						// if not available on disk, create cert in next step
 						if err != nil {
 							// create CERT
+							certTpl, err = template.ParseFiles(certCsrTemplate)
+							if err != nil {
+								log.Errorf("failed to parse certCsrTemplate: %v", err)
+							}
 							nodeCerts, err = c.GenerateCert(
 								path.Join(c.Dir.LabCARoot, "root-ca.pem"),
 								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),

@@ -142,6 +142,8 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	return certs, nil
 }
 
+// RetrieveNodeCertData reads the node private key and certificate by the well known paths
+// if either of those files doesn't exist, an error is returned
 func (c *CLab) RetrieveNodeCertData(n *Node) (*Certificates, error) {
 	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
 	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
@@ -166,10 +168,6 @@ func (c *CLab) RetrieveNodeCertData(n *Node) (*Certificates, error) {
 		return nil, err
 	}
 
-	// might be that we get an empty []byte for CSR.
-	// Ignoring that, since the CSR is not really required.
-	certs.Csr, _ = readFileContent(nodeCsrFile)
-
 	return certs, nil
 }
 
@@ -179,8 +177,44 @@ func (c *CLab) writeCertFiles(certs *Certificates, filesPrefix string) {
 	createFile(filesPrefix+".csr", string(certs.Csr))
 }
 
+//CreateRootCA creates RootCA key/certificate if it is needed by the topology
 func (c *CLab) CreateRootCA() error {
-	// create root CA if SRL nodes exist in the topology
+	rootCANeeded := false
+	// check if srl kinds defined in topo
+	// for them we need to create rootCA and certs
+	for _, n := range c.Nodes {
+		if n.Kind == "srl" {
+			rootCANeeded = true
+			break
+		}
+	}
+
+	if !rootCANeeded {
+		return nil
+	}
+
+	var rootCaCertPath = path.Join(c.Dir.LabCARoot, "root-ca.pem")
+	var rootCaKeyPath = path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
+
+	var rootCaCertExists = false
+	var rootCaKeyExists = false
+
+	_, err := os.Stat(rootCaCertPath)
+	if err == nil {
+		rootCaCertExists = true
+	}
+	_, err = os.Stat(rootCaKeyPath)
+	if err == nil {
+		rootCaKeyExists = true
+	}
+	// if both files exist skip root CA creation
+	if rootCaCertExists && rootCaKeyExists {
+		rootCANeeded = false
+	}
+	if !rootCANeeded {
+		return nil
+	}
+
 	tpl, err := template.ParseFiles(rootCaCsrTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
