@@ -15,9 +15,9 @@ var downloadURL = "https://github.com/srl-wim/container-lab/raw/master/get.sh"
 
 // upgradeCmd represents the version command
 var upgradeCmd = &cobra.Command{
-	Use:   "upgrade",
-	Short: "upgrade containerlab to latest available version",
-
+	Use:     "upgrade",
+	Short:   "upgrade containerlab to latest available version",
+	PreRunE: sudoCheck,
 	Run: func(cmd *cobra.Command, args []string) {
 		f, err := ioutil.TempFile("", "containerlab")
 		defer os.Remove(f.Name())

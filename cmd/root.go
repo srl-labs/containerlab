@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -25,11 +24,6 @@ var rootCmd = &cobra.Command{
 	Use:   "containerlab",
 	Short: "deploy container based lab environments with a user-defined interconnections",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		id := os.Geteuid()
-		if id != 0 {
-			fmt.Println("containerlab requires sudo privileges to run!")
-			os.Exit(1)
-		}
 		if debug {
 			log.SetLevel(log.DebugLevel)
 		}
@@ -59,6 +53,14 @@ func init() {
 func topoSet() error {
 	if topo == "" {
 		return errors.New("path to the topology definition file must be provided with --topo/-t flag")
+	}
+	return nil
+}
+
+func sudoCheck(cmd *cobra.Command, args []string) error {
+	id := os.Geteuid()
+	if id != 0 {
+		return errors.New("containerlab requires sudo privileges to run")
 	}
 	return nil
 }
