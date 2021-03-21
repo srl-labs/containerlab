@@ -17,7 +17,7 @@ Nokia SR OS node launched with containerlab can be managed via the following int
     ```bash
     docker exec -it <container-name/id> bash
     ```
-=== "CLI via SSH"
+=== "CLI"
     to connect to the SR OS CLI
     ```bash
     ssh admin@<container-name/id>
@@ -34,6 +34,13 @@ Nokia SR OS node launched with containerlab can be managed via the following int
     -u admin -p admin \
     capabilities
     ```
+=== "Telnet"
+    serial port (console) is exposed over TCP port 5000:
+    ```bash
+    # from container host
+    telnet <node-name> 5000
+    ```  
+    You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
 
 !!!info
     Default user credentials: `admin:admin`
@@ -64,9 +71,9 @@ Data interfaces `eth1+` needs to be configured with IP addressing manually using
 ### Variants
 Virtual SR OS simulator can be run in multiple HW variants as explained in [the vSIM installation guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE15836AAADTQZZA01_V1_vSIM%20Installation%20and%20Setup%20Guide%2020.10.R1.pdf).
 
-`vr-sros` container images come with [pre-packaged SR OS variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. Custom variants, on the other hand, give users the full flexibility in emulated hardware configuration, but cards and mdas would need to be configured manually.
+`vr-sros` container images come with [pre-packaged SR OS variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. Custom variants, on the other hand, give users the full flexibility in emulated hardware configuration, but cards and MDAs would need to be configured manually.
 
-To make vr-sros to boot in one of the pacakged variants use its name like that:
+To make vr-sros to boot in one of the packaged variants use its name like that:
 ```yaml
 topology:
   nodes:
@@ -80,7 +87,7 @@ topology:
 Custom variant can be defined as simple as that:
 ```yaml
 # for distributed chassis CPM and IOM are indicated with markers cp: and lc:
-# notice the delimeter string `___` that MUST be present between CPM and IOM portions
+# notice the delimiter string `___` that MUST be present between CPM and IOM portions
 # max_nics value is provided in `lc` part.
 # mem is provided in GB
 # quote the string value
@@ -90,7 +97,7 @@ type: "cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___ lc: cpu=2 ram=4 m
 ```yaml
 # an integrated custom type definition
 # note, no `cp:` marker is needed
-type: "slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28"
+type: "cpu=2 ram=4 slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28"
 ```
 
 ### Node configuration

@@ -174,6 +174,30 @@ label2: value2 # inherited from defaults section
 label2: value3 # inherited from kinds section
 ```
 
+### mgmt_ipv4
+To make a node to boot with a user-specified management IPv4 address, the `mgmt_ipv4` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
+
+Read more about user-defined management addresses [here](network.md#user-defined-addresses).
+
+```yaml
+nodes:
+    r1:
+      kind: srl
+      mgmt_ipv4: 172.20.20.100
+```
+
+### mgmt_ipv6
+To make a node to boot with a user-specified management IPv4 address, the `mgmt_ipv6` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
+
+Read more about user-defined management addresses [here](network.md#user-defined-addresses).
+
+```yaml
+nodes:
+    r1:
+      kind: srl
+      mgmt_ipv6: 2001:172:20:20::100
+```
+
 ### publish
 Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with cusomters/partners/colleagues.
 
