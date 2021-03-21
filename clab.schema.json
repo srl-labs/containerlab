@@ -1,0 +1,313 @@
+{
+    "$id": "https://containerlab.srlinux.dev/clab.schema.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Containerlab topology definition file",
+    "definitions": {
+        "node-config": {
+            "type": "object",
+            "description": "topology node configuration container",
+            "markdownDescription": "topology [node](https://containerlab.srlinux.dev/manual/nodes/) configuration container",
+            "properties": {
+                "image": {
+                    "type": "string",
+                    "description": "container image to use for this node",
+                    "markdownDescription": "container [image](https://containerlab.srlinux.dev/manual/nodes/#image) to use for this node"
+                },
+                "kind": {
+                    "type": "string",
+                    "description": "kind of this node",
+                    "markdownDescription": "[kind](https://containerlab.srlinux.dev/manual/nodes/#kind) of this node",
+                    "enum": [
+                        "srl",
+                        "ceos",
+                        "crpd",
+                        "sonic-vs",
+                        "vr-sros",
+                        "vr-vmx",
+                        "vr-xrv",
+                        "vr-xrv9k",
+                        "vr-veos",
+                        "linux",
+                        "bridge",
+                        "ovs-bridge",
+                        "mysocketio",
+                        "host"
+                    ]
+                },
+                "type": {
+                    "type": "string",
+                    "description": "type of a node",
+                    "markdownDescription": "node [type](https://containerlab.srlinux.dev/manual/nodes/#type)",
+                    "enum": [
+                        "ixr6",
+                        "ixr10",
+                        "ixrd1",
+                        "ixrd2",
+                        "ixrd3"
+                    ]
+                },
+                "license": {
+                    "type": "string",
+                    "description": "path to a license file",
+                    "markdownDescription": "path to a [license](https://containerlab.srlinux.dev/manual/nodes/#license) file"
+                },
+                "config": {
+                    "type": "string",
+                    "description": "path to a config file (if supported by kind)",
+                    "markdownDescription": "path to a [config file](https://containerlab.srlinux.dev/manual/nodes/#config) (if supported by kind)"
+                },
+                "binds": {
+                    "type": "array",
+                    "description": "list of file/directory bindings",
+                    "markdownDescription": "list of file/directory [bindings](https://containerlab.srlinux.dev/manual/nodes/#binds)",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "ports": {
+                    "type": "array",
+                    "description": "list of port mappings",
+                    "markdownDescription": "list of [port](https://containerlab.srlinux.dev/manual/nodes/#ports) mappings",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^[0-9]+:[0-9]+$"
+                    },
+                    "uniqueItems": true
+                },
+                "env": {
+                    "type": "object",
+                    "description": "environment variables",
+                    "markdownDescription": "[environment variables](https://containerlab.srlinux.dev/manual/nodes/#env)",
+                    "patternProperties": {
+                        ".+": {
+                            "anyOf": [
+                                {
+                                    "type": "string",
+                                    "minItems": 1
+                                },
+                                {
+                                    "type": "number",
+                                    "minItems": 1
+                                }
+                            ]
+                        }
+                    }
+                },
+                "user": {
+                    "description": "user to use within the container",
+                    "markdownDescription": "[user](https://containerlab.srlinux.dev/manual/nodes/#user) to use within the container",
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "minItems": 1
+                        },
+                        {
+                            "type": "number",
+                            "minItems": 1
+                        }
+                    ]
+                },
+                "cmd": {
+                    "type": "string",
+                    "description": "command to launch container with",
+                    "markdownDescription": "[command](https://containerlab.srlinux.dev/manual/nodes/#cmd) to launch container with"
+                },
+                "publish": {
+                    "type": "array",
+                    "description": "list of ports to publish",
+                    "markdownDescription": "list of ports to [publish](https://containerlab.srlinux.dev/manual/nodes/#publish)",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string",
+                        "pattern": "(^http|^https|^tcp|^tls)\/(([0-9]+$)|([0-9]+\/.+$))"
+                    },
+                    "uniqueItems": true
+                },
+                "labels": {
+                    "type": "object",
+                    "description": "container labels",
+                    "markdownDescription": "container [labels](https://containerlab.srlinux.dev/manual/nodes/#labels)",
+                    "patternProperties": {
+                        ".+": {
+                            "anyOf": [
+                                {
+                                    "type": "string",
+                                    "minItems": 1
+                                },
+                                {
+                                    "type": "number",
+                                    "minItems": 1
+                                }
+                            ]
+                        }
+                    }
+                },
+                "mgmt_ipv4": {
+                    "type": "string",
+                    "description": "IPv4 management address of the node (e.g. 172.10.10.11)",
+                    "markdownDescription": "[IPv4 management address](https://containerlab.srlinux.dev/manual/nodes/#mgmt-ipv4) of the node (e.g. 172.10.10.11)",
+                    "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?$"
+                },
+                "mgmt_ipv6": {
+                    "type": "string",
+                    "description": "IPv6 management address of the node (e.g. 172.10.10.11)",
+                    "markdownDescription": "[IPv6 management address](https://containerlab.srlinux.dev/manual/nodes/#mgmt-ipv6) of the node (e.g. 172.10.10.11)",
+                    "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
+                },
+                "network-mode": {
+                    "type": "string",
+                    "description": "node network mode (can only be set host, defaults to bridge)",
+                    "markdownDescription": "node [network mode](https://containerlab.srlinux.dev/manual/nodes/#network-mode) (can only be set host, defaults to bridge)",
+                    "enum": [
+                        "host"
+                    ]
+                }
+            }
+        },
+        "link-config": {
+            "type": "object",
+            "description": "link configuration container",
+            "markdownDescription": "link configuration container",
+            "properties": {
+                "endpoints": {
+                    "type": "array",
+                    "description": "endpoints list",
+                    "markdownDescription": "[endpoints](http://localhost:8000/manual/topo-def-file/#links) list",
+                    "minItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^[\\w\\s-/]+:[\\w\\s-/]+$"
+                    },
+                    "uniqueItems": true
+                }
+            }
+        }
+    },
+    "type": "object",
+    "properties": {
+        "name": {
+            "description": "topology name",
+            "type": "string"
+        },
+        "mgmt": {
+            "description": "configuration container for management network",
+            "markdownDescription": "configuration container for [management network](https://containerlab.srlinux.dev/manual/network/#management-network)",
+            "type": "object",
+            "properties": {
+                "network": {
+                    "description": "management network name",
+                    "type": "string"
+                },
+                "ipv4_subnet": {
+                    "description": "IPv4 range to be used for the custom management network. e.g. 172.100.100.0/24",
+                    "type": "string",
+                    "pattern": "^.+\/[0-9]{1,2}$"
+                },
+                "ipv6_subnet": {
+                    "description": "IPv6 range to be used for the custom management network. e.g. 2001:172:100:100::/80",
+                    "type": "string",
+                    "pattern": "^.+\/[0-9]{1,2}$"
+                },
+                "mtu": {
+                    "description": "MTU for the custom network",
+                    "type": "number",
+                    "maximum": 65535,
+                    "minimum": 1,
+                    "default": 1500
+                }
+            },
+            "required": [
+                "network"
+            ]
+        },
+        "topology": {
+            "description": "topology configuration container",
+            "markdownDescription": "[topology](https://containerlab.srlinux.dev/manual/topo-def-file/) configuration container",
+            "type": "object",
+            "properties": {
+                "nodes": {
+                    "description": "topology nodes configuration container",
+                    "markdownDescription": "topology [nodes](https://containerlab.srlinux.dev/manual/nodes/) configuration container",
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {
+                            "$ref": "#/definitions/node-config"
+                        }
+                    }
+                },
+                "kinds": {
+                    "description": "topology kinds configuration container",
+                    "markdownDescription": "topology [kinds](https://containerlab.srlinux.dev/manual/topo-def-file/#kinds) configuration container",
+                    "type": "object",
+                    "properties": {
+                        "srl": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "ceos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "crpd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "sonic-vs": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-sros": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-vmx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-xrv": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-xrv9k": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-veos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "linux": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "bridge": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "ovs-bridge": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "mysocketio": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "host": {
+                            "$ref": "#/definitions/node-config"
+                        }
+                    }
+                },
+                "defaults": {
+                    "$ref": "#/definitions/node-config"
+                },
+                "links": {
+                    "type": "array",
+                    "description": "topology links section",
+                    "markdownDescription": "[topology links](https://containerlab.srlinux.dev/manual/topo-def-file/#links)",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/link-config"
+                    }
+                }
+            },
+            "required": [
+                "nodes"
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "name",
+        "topology"
+    ]
+}
