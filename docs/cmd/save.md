@@ -25,7 +25,7 @@ With the global `--topo | -t` or `--name | -n` flag a user specifies from which 
 
 ```bash
 # save the configuration of the containers running in lab named srl02
-❯ container-lab save -n srl02
+❯ containerlab save -n srl02
 INFO[0001] clab-srl02-srl1: stdout: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-11-18T09:00:54.998Z' and comment ''
 

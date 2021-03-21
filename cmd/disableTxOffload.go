@@ -7,7 +7,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-wim/container-lab/clab"
+	"github.com/srl-labs/containerlab/clab"
 )
 
 var cntName string

@@ -10,7 +10,7 @@
 ## Description
 A lab consists of two SR Linux nodes connected with each other via a point-to-point link over `e1-1` interfaces. Both nodes are also connected with their management interfaces to the `clab` docker network.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:7,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/containerlab-diagrams/main/srl02.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:7,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srl02.drawio&quot;}"></div>
 
 ## Configuration
 The nodes of this lab have been provided with a startup configuration by means of `config` directive in the topo definition file. The startup configuration adds loopback and interfaces addressing as per the diagram above.
@@ -32,7 +32,7 @@ This lab, besides having the same objectives as [srl01](single-srl.md) lab, also
 * explore SR Linux state datastore for the paths which reflect control plane operation metrics or dataplane counters
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/srl02/srl02.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srl02/srl02.yml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 [^2]: versions of respective container images or software that was used to create the lab.

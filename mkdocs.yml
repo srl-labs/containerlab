@@ -69,8 +69,8 @@ site_author: Roman Dodin
 site_description: >-
   Containerlab deploys docker based meshed lab topologies
 # Repository
-repo_name: srl-wim/container-lab
-repo_url: https://github.com/srl-wim/container-lab
+repo_name: srl-labs/containerlab
+repo_url: https://github.com/srl-labs/containerlab
 edit_uri: ""
 theme:
   name: material

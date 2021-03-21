@@ -96,7 +96,7 @@ When containerlab launches cRPD node, it will assign IPv4/6 address to the `eth0
 cRPD nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `crpd` kind with a basic "empty" config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
-When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-wim/container-lab/blob/master/templates/crpd/juniper.conf) and copy it to the config directory of the node.
+When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/templates/crpd/juniper.conf) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config

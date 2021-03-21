@@ -8,7 +8,7 @@ The following requirements must be satisfied in order to let containerlab tool r
 * Load container images (e.g. Nokia SR Linux, Arista cEOS) which are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
 ### Install script
-Containerlab can be installed using the [installation script](https://github.com/srl-wim/container-lab/blob/master/get.sh) which detects the operating system type and installs the relevant package:
+Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/master/get.sh) which detects the operating system type and installs the relevant package:
 
 !!! note
     Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.  
@@ -44,19 +44,19 @@ It is possible to install official containerlab releases via public APT/YUM repo
     ```
 
 ??? "Manual package installation"
-    Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-wim/container-lab/releases) page.
+    Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-labs/containerlab/releases) page.
 
     example:
     ```bash
     # manually install latest release with package managers
-    LATEST=$(curl -s https://github.com/srl-wim/container-lab/releases/latest | sed -e 's/.*tag\/v\(.*\)\".*/\1/')
+    LATEST=$(curl -s https://github.com/srl-labs/containerlab/releases/latest | sed -e 's/.*tag\/v\(.*\)\".*/\1/')
     # with yum
-    yum install "https://github.com/srl-wim/container-lab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.rpm"
+    yum install "https://github.com/srl-labs/containerlab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.rpm"
     # with dpkg
-    curl -sL -o /tmp/clab.deb "https://github.com/srl-wim/container-lab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.deb" && dpkg -i /tmp/clab.deb
+    curl -sL -o /tmp/clab.deb "https://github.com/srl-labs/containerlab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.deb" && dpkg -i /tmp/clab.deb
 
     # install specific release with yum
-    yum install https://github.com/srl-wim/container-lab/releases/download/v0.7.0/containerlab_0.7.0_linux_386.rpm
+    yum install https://github.com/srl-labs/containerlab/releases/download/v0.7.0/containerlab_0.7.0_linux_386.rpm
     ```
 
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
@@ -66,11 +66,11 @@ If the linux distributive can't install deb/rpm packages, containerlab can be in
 
 ```bash
 # get the latest available tag
-LATEST=$(curl -s https://github.com/srl-wim/container-lab/releases/latest | \
+LATEST=$(curl -s https://github.com/srl-labs/containerlab/releases/latest | \
        sed -e 's/.*tag\/v\(.*\)\".*/\1/')
 
 # download tar.gz archive
-curl -L -o /tmp/clab.tar.gz "https://github.com/srl-wim/container-lab/releases/download/v${LATEST}/containerlab_${LATEST}_Linux_amd64.tar.gz"
+curl -L -o /tmp/clab.tar.gz "https://github.com/srl-labs/containerlab/releases/download/v${LATEST}/containerlab_${LATEST}_Linux_amd64.tar.gz"
 
 # create containerlab directory
 mkdir -p /etc/containerlab

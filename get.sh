@@ -9,7 +9,7 @@
 : ${USE_PKG:="true"} # default --use-pkg flag value. will use package installation by default unless the default is changed to false
 : ${VERIFY_CHECKSUM:="false"}
 : ${BIN_INSTALL_DIR:="/usr/bin"}
-: ${REPO_NAME:="srl-wim/container-lab"}
+: ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
 : ${PROJECT_URL:="https://containerlab.srlinux.dev"}
 

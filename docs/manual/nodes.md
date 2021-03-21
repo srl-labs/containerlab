@@ -61,7 +61,7 @@ Some containerized NOSes require a license to operate. With `license` property a
 ### config
 For the specific kinds its possible to pass a path to a config template file that a node will use.
 
-The template engine is [Go template](https://golang.org/pkg/text/template/). The [srlconfig.tpl](https://github.com/srl-wim/container-lab/blob/master/templates/srl/srlconfig.tpl) template is used by default for Nokia SR Linux nodes and can be used to create configuration templates for SR Linux nodes.
+The template engine is [Go template](https://golang.org/pkg/text/template/). The [srlconfig.tpl](https://github.com/srl-labs/containerlab/blob/master/templates/srl/srlconfig.tpl) template is used by default for Nokia SR Linux nodes and can be used to create configuration templates for SR Linux nodes.
 
 Supported for: Nokia SR Linux.
 

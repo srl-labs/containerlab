@@ -10,13 +10,13 @@
 ## Description
 A lab consists of an SR Linux node connected with Azure SONiC via a point-to-point ethernet link. Both nodes are also connected with their management interfaces to the `containerlab` docker network.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlsonic01.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlsonic01.drawio&quot;}"></div>
 
 ## Use cases
 This lab allows users to launch basic interoperability scenarios between Nokia SR Linux and SONiC operating systems.
 
 ### BGP
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlsonic01.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlsonic01.drawio&quot;}"></div>
 
 This lab demonstrates a simple iBGP peering scenario between Nokia SR Linux and SONiC. Both nodes exchange NLRI with their loopback prefix making it reachable.
 
@@ -116,7 +116,7 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [sonic]: https://azure.github.io/SONiC/
-[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/sonic01/sonic01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/sonic01/sonic01.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

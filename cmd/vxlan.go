@@ -7,7 +7,7 @@ import (
 	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-wim/container-lab/clab"
+	"github.com/srl-labs/containerlab/clab"
 	"github.com/vishvananda/netlink"
 )
 

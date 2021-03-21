@@ -1,7 +1,7 @@
 # About lab examples
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:4,&quot;zoom&quot;:1,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/containerlab.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:4,&quot;zoom&quot;:1,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
 
 `containerlab` aims to provide a simple, intuitive and yet customizable way to run container based labs. To help our users to have a running and functional lab as quickly as possible, we ship some essential lab topologies within the `containerlab` package.
@@ -13,7 +13,7 @@ These lab examples are meant to be used as-is or as a base layer to a more custo
 
     For example: `docker tag srlinux:20.6.1-286 srlinux:latest`
 
-The source code of the lab examples is contained within the [containerlab repo](https://github.com/srl-wim/container-lab/tree/master/lab-examples) unless mentioned otherwise; any questions, issues or contributions related to the provided examples can be addressed via [Github issues](https://github.com/srl-wim/container-lab/issues).
+The source code of the lab examples is contained within the [containerlab repo](https://github.com/srl-labs/containerlab/tree/master/lab-examples) unless mentioned otherwise; any questions, issues or contributions related to the provided examples can be addressed via [Github issues](https://github.com/srl-labs/containerlab/issues).
 
 Each lab comes with a definitive description that can be found in this documentation section.
 
