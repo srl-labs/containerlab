@@ -5,7 +5,7 @@ Labs deployed with containerlab are endlessly flexible, mostly because container
 
 Nowadays more and more workloads are packaged into containers, and containerlab users can nicely integrate them in their labs following a familiar docker' compose-like syntax. As long as the networking domain is considered, the most common use case for bare linux containers is to introduce "clients" or traffic generators which are connected to the network nodes or host telemetry/monitoring stacks.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/index.md&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/index.md&quot;}"></div>
 
 But, of course, you are free to choose which container to add into your lab, there is not restriction to that!
 

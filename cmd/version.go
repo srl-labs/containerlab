@@ -17,7 +17,7 @@ var (
 )
 
 const (
-	repoUrl = "https://github.com/srl-wim/container-lab"
+	repoUrl = "https://github.com/srl-labs/containerlab"
 )
 
 func init() {

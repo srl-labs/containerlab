@@ -32,7 +32,7 @@ This lab, besides having the same objectives as [srl01](single-srl.md) lab, also
 * explore SR Linux state datastore for the paths which reflect control plane operation metrics or dataplane counters
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/srl02/srl02.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srl02/srl02.yml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 [^2]: versions of respective container images or software that was used to create the lab.

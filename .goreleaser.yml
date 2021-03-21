@@ -3,7 +3,7 @@ builds:
   - env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/srl-wim/container-lab/cmd.version={{.Version}} -X github.com/srl-wim/container-lab/cmd.commit={{.ShortCommit}} -X github.com/srl-wim/container-lab/cmd.date={{.Date}}
+      - -s -w -X github.com/srl-labs/containerlab/cmd.version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
     goos:
       - linux
     goarch:

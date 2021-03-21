@@ -10,13 +10,13 @@
 ## Description
 A lab consists of an SR Linux node connected with Juniper cRPD via a point-to-point ethernet link. Both nodes are also connected with their management interfaces to the `clab` docker network.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlcrpd01&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlcrpd01&quot;}"></div>
 
 ## Use cases
 This lab allows users to launch basic interoperability scenarios between Nokia SR Linux and Juniper cRPD network operating systems.
 
 ### OSPF
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:2,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlcrpd01&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:2,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlcrpd01&quot;}"></div>
 
 #### Configuration
 Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration and enable OSPF on both nodes.
@@ -93,7 +93,7 @@ After the configuration is done on both nodes, verify the control plane by check
     ```
 
 ### IS-IS
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/srlcrpd01&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlcrpd01&quot;}"></div>
 
 #### Configuration
 Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration and enable IS-IS on both nodes.
@@ -174,7 +174,7 @@ Once the lab is deployed with containerlab, use the following configuration inst
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [crpd]: https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/concept/understanding-crpd.html
-[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/srlcrpd01/srlcrpd01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlcrpd01/srlcrpd01.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

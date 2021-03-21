@@ -14,14 +14,14 @@ With such approach users are allowed to spread the load between multiple VMs and
 
 For the sake of the demonstration the topology used in this lab consists of just two virtualized routers [packaged in a container format](../manual/vrnetlab.md) - Nokia SR OS and Juniper vMX. Although the routers are running on different VMs, they logically form a back-to-back connection over a pair of interfaces aggregated in a logical bundle.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:7,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/multinode.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:7,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
 Upon succesful lab deployment and configuration, the routers will be able to exchange LACP frames, thus proving a transparent L2 connectivity and will be able to ping each other.
 
 ## Deployment
 
-Since this lab is of a multi-node nature, a user needs to have two machines/VMs and perform lab deployment process on each of them. The [lab directory](https://github.com/srl-wim/container-lab/tree/master/lab-examples/vxlan01/) has topology files named `vxlan-sros.yml` and `vxlan-vmx.yml` which are meant to be deployed on VM1 and VM2 accordingly.
+Since this lab is of a multi-node nature, a user needs to have two machines/VMs and perform lab deployment process on each of them. The [lab directory](https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/) has topology files named `vxlan-sros.yml` and `vxlan-vmx.yml` which are meant to be deployed on VM1 and VM2 accordingly.
 
 The following command will deploy a lab on a specified host:
 
@@ -48,7 +48,7 @@ Both topology files leverage [host link](../manual/network.md#host-links) featur
 
 This will effectively make two veth pairs. Let us consider the first veth pair where one end of a it will be placed inside the container' namespace and named `eth1`, the other end will stay in the container host root namespace and will be named `sros-eth1`.  
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:8,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/multinode.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:8,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
 
 Same picture will be on VM2 with vMX interfaces exposed to a container host.
 
@@ -71,7 +71,7 @@ At this moment there is no connectivity between the routers, as the datapath is 
 
 We do this by provisioning VxLAN tunnels that will _stitch_ the interfaces of our routers.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:9,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/multinode.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:9,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
 
 Logially we make our interface appear to be connected in a point-to-point fashion. To make these tunnels we leverage containerlab' [`tools vxlan create`](../cmd/tools/vxlan/create.md) command, that will create the VxLAN tunnel and the necessary redirection rules to forward traffic back-and-forth to a relevant host interface.
 
@@ -94,7 +94,7 @@ The above set of commands will create the necessary VxLAN tunnels and the datapa
 
 At this moment, the connectivity diagrams becomes complete and can be depicted as follows:
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:10,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/multinode.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:10,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
 
 ## Configuration
 Once the datapath is in place, we proceed with the configuration of a simple LACP use case, where both SR OS and vMX routers have their pair of interfaces aggregated into a LAG and form an LACP neighborship.
@@ -213,8 +213,8 @@ round-trip min = 2.61ms, avg = 8.04ms, max = 13.5ms, stddev = 0.000ms
 
 Great! Additionally users can [capture the traffic](../manual/wireshark.md) from any of the interfaces involved in the datapath. To see the VxLAN encapsulation the VM's outgoing interfaces should be used.
 
-[vmx-topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/vxlan01/vxlan-vmx.yml
-[sros-topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/vxlan01/vxlan-sros.yml
+[vmx-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-vmx.yml
+[sros-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-sros.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

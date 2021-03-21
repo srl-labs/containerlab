@@ -1,4 +1,4 @@
-module github.com/srl-wim/container-lab
+module github.com/srl-labs/containerlab
 
 go 1.15
 

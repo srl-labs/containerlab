@@ -12,16 +12,16 @@ A lab consists of an SR Linux node connected with Nokia SR OS via a point-to-poi
 
 Nokia SR OS VM is launched as a container, using [vrnetlab integration](../manual/vrnetlab.md).
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-wim/container-lab/diagrams/vr01.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vr01.drawio&quot;}"></div>
 
 ## Use cases
 This lab allows users to launch basic interoperability scenarios between Nokia SR Linux and Nokia SR OS network operating systems.
 
-The lab directory [contains](https://github.com/srl-wim/container-lab/tree/master/lab-examples/vr01) files with essential configurations which can be used to jumpstart the interop demonstration.
+The lab directory [contains](https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr01) files with essential configurations which can be used to jumpstart the interop demonstration.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [sros]: https://www.nokia.com/networks/products/service-router-operating-system/
-[topofile]: https://github.com/srl-wim/container-lab/tree/master/lab-examples/vr01/vr01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr01/vr01.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
