@@ -41,7 +41,7 @@ To authenticate with mysocket.io service a user needs to acquire the token by lo
 # Login with password entered from the prompt
 containerlab tools mysocketio login -e myemail@dot.com
 Password:
-INFO[0000] Written mysocketio token to a file /root/container-lab/.mysocketio_token
+INFO[0000] Written mysocketio token to a file /root/containerlab/.mysocketio_token
 ```
 
 The acquired token will be saved under `.mysocketio_token` filename in the current working directory.

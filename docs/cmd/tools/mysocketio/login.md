@@ -24,12 +24,12 @@ The `--password | -p` sets the password for a user. If flag is not set, the prom
 # Login with password entered from the prompt
 containerlab tools mysocketio login -e myemail@dot.com
 Password:
-INFO[0000] Written mysocketio token to a file /root/container-lab/.mysocketio_token
+INFO[0000] Written mysocketio token to a file /root/containerlab/.mysocketio_token
 
 # Login with password passed as a flag
 containerlab tools mysocketio login -e myemail@dot.com -p Pa$$word
 Password:
-INFO[0000] Written mysocketio token to a file /root/container-lab/.mysocketio_token
+INFO[0000] Written mysocketio token to a file /root/containerlab/.mysocketio_token
 ```
 
 [^1]: Authentication token is used to [publish ports](../../../manual/published-ports.md) of a containerlab nodes.
