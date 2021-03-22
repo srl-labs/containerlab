@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2021-03-22T08:14:22.950Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36" etag="00TzB36sebgrhrZs1w_g" version="14.4.9" type="github" pages="14">
+<mxfile host="app.diagrams.net" modified="2021-03-22T08:20:52.727Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36" etag="ywGvvYK__a3eQZtbxqFm" version="14.4.9" type="github" pages="14">
   <diagram id="pqXCdQUKRn2x1dWqDvbr" name="[0] intro topologies">
     <mxGraphModel dx="2066" dy="1163" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -3068,7 +3068,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="KzDWyAbjG5TQ5Q9En8ta" name="[10] two SRLs">
-    <mxGraphModel dx="2052" dy="1149" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="826" dy="465" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="TylJQL6FbQ9dKB25wqrR-0" />
         <mxCell id="TylJQL6FbQ9dKB25wqrR-1" parent="TylJQL6FbQ9dKB25wqrR-0" />
@@ -3117,7 +3117,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="YWLoT3N2c0pSDhRtELLc-7" value="&lt;font color=&quot;#001135&quot;&gt;srl1&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontColor=#FFFFFF;fontStyle=0" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
+        <mxCell id="YWLoT3N2c0pSDhRtELLc-7" value="&lt;font&gt;srl1&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
           <mxGeometry x="338" y="397" width="35" height="25" as="geometry" />
         </mxCell>
         <mxCell id="YWLoT3N2c0pSDhRtELLc-8" value="" style="endArrow=none;html=1;shadow=0;strokeWidth=4;fillColor=#666666;fontFamily=nasa;fontSize=18;fontColor=#FFFFFF;strokeColor=#4BDD33;" parent="TylJQL6FbQ9dKB25wqrR-1" edge="1">
@@ -3126,8 +3126,8 @@
             <mxPoint x="515" y="304" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="YWLoT3N2c0pSDhRtELLc-9" value="&lt;font style=&quot;font-size: 12px&quot; color=&quot;#98a2ae&quot;&gt;docker network:&lt;br&gt;&lt;/font&gt;&lt;span style=&quot;font-size: 12px&quot;&gt;clab&lt;/span&gt;" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Manrope;fontColor=#001135;" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
-          <mxGeometry x="230" y="290" width="100" height="30" as="geometry" />
+        <mxCell id="YWLoT3N2c0pSDhRtELLc-9" value="&lt;font style=&quot;font-size: 12px&quot; color=&quot;#98a2ae&quot;&gt;docker network:&lt;br&gt;&lt;/font&gt;&lt;span style=&quot;font-size: 12px&quot;&gt;&lt;font color=&quot;#ffffff&quot;&gt;clab&lt;/font&gt;&lt;/span&gt;" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Manrope;fontColor=#001135;" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
+          <mxGeometry x="230" y="291" width="100" height="29" as="geometry" />
         </mxCell>
         <mxCell id="YWLoT3N2c0pSDhRtELLc-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Manrope;fontSize=12;fontColor=#FFFFFF;endArrow=oval;endFill=1;startArrow=oval;startFill=1;strokeColor=#4BDD33;" parent="TylJQL6FbQ9dKB25wqrR-1" target="YWLoT3N2c0pSDhRtELLc-2" edge="1">
           <mxGeometry relative="1" as="geometry">
@@ -3180,7 +3180,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="YWLoT3N2c0pSDhRtELLc-18" value="&lt;font color=&quot;#001135&quot;&gt;srl2&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontColor=#FFFFFF;fontStyle=0" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
+        <mxCell id="YWLoT3N2c0pSDhRtELLc-18" value="&lt;font&gt;srl2&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
           <mxGeometry x="473" y="397" width="35" height="25" as="geometry" />
         </mxCell>
         <mxCell id="YWLoT3N2c0pSDhRtELLc-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Manrope;fontSize=12;fontColor=#FFFFFF;endArrow=oval;endFill=1;startArrow=oval;startFill=1;strokeColor=#4BDD33;" parent="TylJQL6FbQ9dKB25wqrR-1" edge="1">
@@ -3201,7 +3201,7 @@
         <mxCell id="YWLoT3N2c0pSDhRtELLc-22" value="e1-1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Manrope;fontSize=12;fontColor=#FFFFFF;align=center;strokeColor=none;rotation=0;horizontal=1;fillColor=#98A2AE;" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
           <mxGeometry x="435" y="360.38" width="30" height="16.25" as="geometry" />
         </mxCell>
-        <mxCell id="7hSv-wmCKR2SHhiSvmrS-0" value="&lt;font color=&quot;#001135&quot;&gt;Lab logical topology&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontColor=#FFFFFF;fontStyle=0" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
+        <mxCell id="7hSv-wmCKR2SHhiSvmrS-0" value="&lt;font&gt;Lab logical topology&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
           <mxGeometry x="357" y="451" width="140" height="20" as="geometry" />
         </mxCell>
       </root>
