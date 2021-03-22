@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2021-03-22T08:20:52.727Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36" etag="ywGvvYK__a3eQZtbxqFm" version="14.4.9" type="github" pages="14">
+<mxfile host="app.diagrams.net" modified="2021-03-22T08:21:59.350Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36" etag="DIKq-R7Fp7yJC1itJtCE" version="14.4.9" type="github" pages="14">
   <diagram id="pqXCdQUKRn2x1dWqDvbr" name="[0] intro topologies">
     <mxGraphModel dx="2066" dy="1163" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -3068,7 +3068,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="KzDWyAbjG5TQ5Q9En8ta" name="[10] two SRLs">
-    <mxGraphModel dx="826" dy="465" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
+    <mxGraphModel dx="1181" dy="665" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="TylJQL6FbQ9dKB25wqrR-0" />
         <mxCell id="TylJQL6FbQ9dKB25wqrR-1" parent="TylJQL6FbQ9dKB25wqrR-0" />
@@ -3202,7 +3202,7 @@
           <mxGeometry x="435" y="360.38" width="30" height="16.25" as="geometry" />
         </mxCell>
         <mxCell id="7hSv-wmCKR2SHhiSvmrS-0" value="&lt;font&gt;Lab logical topology&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;fontFamily=Manrope;fontStyle=0;fontColor=#FFFFFF;" parent="TylJQL6FbQ9dKB25wqrR-1" vertex="1">
-          <mxGeometry x="357" y="451" width="140" height="20" as="geometry" />
+          <mxGeometry x="308" y="451" width="140" height="20" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
