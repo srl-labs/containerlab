@@ -15,7 +15,7 @@ In this quickstart we will be using [one of the provided labs](lab-examples/two-
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:10,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
-The lab topology is defined in the [srl02.yml](https://github.com/srl-labs/containerlab/blob/master/lab-examples/srl02/srl02.yml) file. To make use of this lab example, we first need to copy the corresponding lab files to some directory:
+The lab topology is defined in the [srl02.clab.yml](https://github.com/srl-labs/containerlab/blob/master/lab-examples/srl02/srl02.clab.yml) file. To make use of this lab example, we first need to copy the corresponding lab files to some directory:
 
 ```bash
 # create a directory for the lab
@@ -29,7 +29,7 @@ cp -a /etc/containerlab/lab-examples/srl02/* .
 Let's have a look at how this lab's topology is defined[^2]:
 
 ```yaml
-# contents of srl02.yml file
+# contents of srl02.clab.yml file
 # topology documentation: http://containerlab.srlinux.dev/lab-examples/two-srls/
 name: srl02
 
@@ -94,7 +94,7 @@ Now when we know what a basic topology file consists of, sorted out the containe
 ```bash
 # checking that topology and license files are present in ~/clab-quickstart
 ❯ ls
-license.key  srl02.yml
+license.key  srl02.clab.yml
 
 # checking that srlinux(:latest) image is available
 ❯ docker image ls srlinux:latest
@@ -102,7 +102,7 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 srlinux             latest              79019d14cfc7        3 months ago        1.32GB
 
 # start the lab deployment by referencing the topology file
-containerlab deploy --topo srl02.yml
+containerlab deploy --topo srl02.clab.yml
 ```
 
 After a couple of seconds you will see the summary of the deployed nodes:
@@ -164,7 +164,7 @@ The following tab view aggregates the ways to get CLI access per the lab node:
 To remove the lab, use the [`destroy`](cmd/destroy.md) command that takes a topology file as an argument:
 
 ```
-containerlab destroy --topo srl02.yml
+containerlab destroy --topo srl02.clab.yml
 ```
 
 ## What next?
@@ -173,4 +173,4 @@ To get a broader view on the containerlab features and components, refer to the 
 Do not forget to check out the [Lab examples](lab-examples/lab-examples.md) section where we provide complete and ready-to-run topology definition files. This is a great starting point to explore containerlab by doing.
 
 [^1]: For other installation options such as via package managers, manual binary downloads or instructions to get containerlab for non-RHEL/Debian distros, refer to the [installation guide](install.md).
-[^2]: The [config](https://github.com/srl-labs/containerlab/blob/master/lab-examples/srl02/srl02.yml#L13) parameter that is part of the srl02.yml file is not included in the quickstart tutorial to keep it less busy.
+[^2]: The [config](https://github.com/srl-labs/containerlab/blob/master/lab-examples/srl02/srl02.clab.yml#L13) parameter that is part of the srl02.clab.yml file is not included in the quickstart tutorial to keep it less busy.

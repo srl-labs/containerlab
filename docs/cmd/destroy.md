@@ -33,11 +33,11 @@ Destroy command provided with `--all | -a` flag will perform the deletion of all
 ### Examples
 
 ```bash
-# destroy a lab based on mylab.yml topology file located in the same dir
-containerlab destroy -t mylab.yml
+# destroy a lab based on mylab.clab.yml topology file located in the same dir
+containerlab destroy -t mylab.clab.yml
 
 # destroy a lab and also remove the Lab Directory
-containerlab destroy -t mylab.yml --cleanup
+containerlab destroy -t mylab.clab.yml --cleanup
 
 # destroy all labs deployed with containerlab
 # using shortcut names

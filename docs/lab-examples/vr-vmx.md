@@ -3,7 +3,7 @@
 | **Description**               | A Nokia SR Linux connected back-to-back with Juniper vMX                             |
 | **Components**                | [Nokia SR Linux][srl], [Juniper vMX][vmx]                                            |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 8 GB                 |
-| **Topology file**             | [vr02.yml][topofile]                                                                 |
+| **Topology file**             | [vr02.clab.yml][topofile]                                                            |
 | **Name**                      | vr02                                                                                 |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `vr-vmx:20.2R1.10`, `docker-ce:19.03.13` |
 
@@ -21,7 +21,7 @@ The lab directory [contains](https://github.com/srl-labs/containerlab/tree/maste
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [vmx]: https://www.juniper.net/us/en/products-services/routing/mx-series/vmx/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr02/vr02.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr02/vr02.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

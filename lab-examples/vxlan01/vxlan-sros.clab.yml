@@ -6,7 +6,7 @@ topology:
       kind: vr-sros
       image: vr-sros:21.2.R1
       license: license-sros20.txt
-    # vmx node is defined in a `vxlan-vmx.yml` topo file
+    # vmx node is defined in a `vxlan-vmx.clab.yml` topo file
     # that is launched on another VM
 
   links:

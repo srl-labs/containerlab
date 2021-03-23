@@ -87,8 +87,8 @@ Containerlab allows to perform a bulk configuration-save operation that can be e
 With this command, every node that supports the "save" operation will execute a command to save it's running configuration to a persistent location. For SR Linux nodes the `save` command will trigger the checkpoint generation:
 
 ```
-❯ containerlab save -t srl02.yml
-INFO[0000] Getting topology information from ../srl02.yml file...
+❯ containerlab save -t srl02.clab.yml
+INFO[0000] Getting topology information from ../srl02.clab.yml file...
 INFO[0001] clab-srl02-srl1 output: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-12-03T15:12:46.854Z' and comment ''
 
@@ -139,7 +139,7 @@ When a user starts a lab, containerlab creates a lab directory for storing [conf
 drwxrwxrwx+ 6 1002 1002   87 Dec  1 22:11 config
 -rw-r--r--  1 root root 2.8K Dec  1 22:11 license.key
 -rw-r--r--  1 root root 4.4K Dec  1 22:11 srlinux.conf
--rw-r--r--  1 root root  233 Dec  1 22:11 topology.yml
+-rw-r--r--  1 root root  233 Dec  1 22:11 topology.clab.yml
 ```
 
 The `config` directory is mounted to container's `/etc/opt/srlinux/` in `rw` mode and will effectively contain configuration that SR Linux runs of as well as the files that SR Linux keeps in its `/etc/opt/srlinux/` directory:

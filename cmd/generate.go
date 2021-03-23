@@ -93,7 +93,7 @@ var generateCmd = &cobra.Command{
 		if deploy {
 			reconfigure = true
 			if file == "" {
-				file = fmt.Sprintf("%s.yaml", name)
+				file = fmt.Sprintf("%s.clab.yml", name)
 				err = saveTopoFile(file, b)
 				if err != nil {
 					return err

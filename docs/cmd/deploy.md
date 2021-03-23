@@ -34,9 +34,9 @@ With `--max-workers` flag it is possible to limit the amout of concurrent worker
 ### Examples
 
 ```bash
-# deploy a lab from mylab.yml file located in the same dir
-containerlab deploy -t mylab.yml
+# deploy a lab from mylab.clab.yml file located in the same dir
+containerlab deploy -t mylab.clab.yml
 
-# deploy a lab from mylab.yml file and regenerate all configuration artifacts
-containerlab deploy -t mylab.yml --reconfigure
+# deploy a lab from mylab.clab.yml file and regenerate all configuration artifacts
+containerlab deploy -t mylab.clab.yml --reconfigure
 ```

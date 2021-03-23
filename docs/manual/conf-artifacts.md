@@ -35,7 +35,7 @@ Below is an example of the `srl1` node directory contents. It keeps a directory 
 drwxrwxrwx+ 6 1002 1002   87 Dec  1 22:11 config
 -rw-r--r--  1 root root 2.8K Dec  1 22:11 license.key
 -rw-r--r--  1 root root 4.4K Dec  1 22:11 srlinux.conf
--rw-r--r--  1 root root  233 Dec  1 22:11 topology.yml
+-rw-r--r--  1 root root  233 Dec  1 22:11 topology.clab.yml
 ```
 
 When a user destroys a lab without providing [`--cleanup`](../cmd/destroy.md#cleanup) flag to the `destroy` command, the Lab Directory **does not** get deleted. This means that every configuration artefact will be kept on disk.
