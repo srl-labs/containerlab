@@ -219,9 +219,7 @@
                     "default": 1500
                 }
             },
-            "required": [
-                "network"
-            ]
+            "minProperties": 1
         },
         "topology": {
             "description": "topology configuration container",
