@@ -4,7 +4,7 @@
 | **Components**                | Nokia SR OS, Juniper vMX                                                                            |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 7-10 GB                             |
 | **Lab location**              | :material-github: [hellt/bgp-vpls-lab](https://github.com/hellt/bgp-vpls-lab)                       |
-| **Topology file**             | [vpls.yml][topofile]                                                                                |
+| **Topology file**             | [vpls.clab.yml][topofile]                                                                           |
 | **Version information**[^2]   | `containerlab:0.10.1`, `vr-sros:20.10.R1`, `vr-vmx:20.4R1.12`, `docker-ce:19.03.13`, `vrnetlab`[^3] |
 
 ## Description
@@ -23,9 +23,9 @@ As the article was done before Nokia introduced MD-CLI, the configuration snippe
 2. [Install](../install.md)[^4] containerlab.
 3. Build if needed, vrnetlab container images for the routers used in the lab.
 4. Clone [lab repository](https://github.com/hellt/bgp-vpls-lab).
-5. Deploy the lab topology `clab dep -t vpls.yml`
+5. Deploy the lab topology `clab dep -t vpls.clab.yml`
 
-[topofile]: https://github.com/hellt/bgp-vpls-lab/blob/master/vpls.yml
+[topofile]: https://github.com/hellt/bgp-vpls-lab/blob/master/vpls.clab.yml
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information. Memory deduplication techniques like [UKMS](https://netdevops.me/2021/how-to-patch-ubuntu-20.04-focal-fossa-with-uksm/) might help with RAM consumption.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
 [^3]: Router images are built with vrnetlab [aebe377](https://github.com/hellt/vrnetlab/tree/aebe377f07da9497b1af82c081ca7ff5b072c3f4). To reproduce the image, checkout to this commit and build the relevant images. Note, that you might need to use containerlab of the version that is stated in the description.

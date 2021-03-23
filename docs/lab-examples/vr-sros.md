@@ -3,7 +3,7 @@
 | **Description**               | A Nokia SR Linux connected back-to-back with Nokia SR OS                             |
 | **Components**                | [Nokia SR Linux][srl], [Nokia SR OS][sros]                                           |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 5 GB                 |
-| **Topology file**             | [vr01.yml][topofile]                                                                 |
+| **Topology file**             | [vr01.clab.yml][topofile]                                                            |
 | **Name**                      | vr01                                                                                 |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `vr-sros:20.10.R1`, `docker-ce:19.03.13` |
 
@@ -21,7 +21,7 @@ The lab directory [contains](https://github.com/srl-labs/containerlab/tree/maste
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [sros]: https://www.nokia.com/networks/products/service-router-operating-system/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr01/vr01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr01/vr01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

@@ -3,7 +3,7 @@
 | **Description**               | A Nokia SR Linux connected back-to-back FRR router                                       |
 | **Components**                | [Nokia SR Linux][srl], [FRR](http://docs.frrouting.org/en/latest/overview.html)          |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                     |
-| **Topology file**             | [srlfrr01.yml][topofile]                                                                 |
+| **Topology file**             | [srlfrr01.clab.yml][topofile]                                                            |
 | **Name**                      | srlfrr01                                                                                 |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `frrouting/frr:v7.5.0`, `docker-ce:19.03.13` |
 
@@ -25,7 +25,7 @@ The lab directory [contains](https://github.com/srl-labs/containerlab/tree/maste
 - `srl.cfg`: sr_cli config lines to configure a basic iBGP peering
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlfrr01/srlfrr01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlfrr01/srlfrr01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

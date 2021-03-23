@@ -4,13 +4,13 @@ Library           OperatingSystem
 *** Test Cases ***
 Deploy first lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab deploy -t ${CURDIR}/01-linux-nodes.yml
+    ...    sudo containerlab deploy -t ${CURDIR}/01-linux-nodes.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Deploy second lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab deploy -t ${CURDIR}/01-linux-single-node.yml
+    ...    sudo containerlab deploy -t ${CURDIR}/01-linux-single-node.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 

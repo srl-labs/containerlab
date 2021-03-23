@@ -3,7 +3,7 @@
 | **Description**               | A lab demonstrating multi-node (multi-vm) capabilities                                            |
 | **Components**                | Nokia SR OS, Juniper vMX                                                                          |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 6 GB <br/><small>per node</small> |
-| **Topology file**             | [vxlan-vmx.yml][vmx-topofile], [vxlan-sros.yml][sros-topofile]                                    |
+| **Topology file**             | [vxlan-vmx.clab.yml][vmx-topofile], [vxlan-sros.clab.yml][sros-topofile]                          |
 | **Name**                      | vxlan01                                                                                           |
 | **Version information**[^2]   | `containerlab:0.11.0`, `vr-sros:20.2.R1`, `vr-vmx:20.4R1.12`, `docker-ce:20.10.2`                 |
 
@@ -21,21 +21,21 @@ Upon succesful lab deployment and configuration, the routers will be able to exc
 
 ## Deployment
 
-Since this lab is of a multi-node nature, a user needs to have two machines/VMs and perform lab deployment process on each of them. The [lab directory](https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/) has topology files named `vxlan-sros.yml` and `vxlan-vmx.yml` which are meant to be deployed on VM1 and VM2 accordingly.
+Since this lab is of a multi-node nature, a user needs to have two machines/VMs and perform lab deployment process on each of them. The [lab directory](https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/) has topology files named `vxlan-sros.clab.yml` and `vxlan-vmx.clab.yml` which are meant to be deployed on VM1 and VM2 accordingly.
 
 The following command will deploy a lab on a specified host:
 
 === "VM1 (SROS)"
     ```bash
-    clab dep -t vxlan-sros.yml
+    clab dep -t vxlan-sros.clab.yml
     ```
 === "VM2 (VMX)"
     ```bash
-    clab dep -t vxlan-vmx.yml
+    clab dep -t vxlan-vmx.clab.yml
     ```
 
 ### host links
-Both topology files leverage [host link](../manual/network.md#host-links) feature which allows a container to have its interface to be connected to a container host namespace. Once the topology is created you will have one side of the veth link visible in the root namespace by the names specified in topo file. For example, `vxlan-sros.yml` file has the following `links` section:
+Both topology files leverage [host link](../manual/network.md#host-links) feature which allows a container to have its interface to be connected to a container host namespace. Once the topology is created you will have one side of the veth link visible in the root namespace by the names specified in topo file. For example, `vxlan-sros.clab.yml` file has the following `links` section:
 
 ```yaml
   links:
@@ -73,7 +73,7 @@ We do this by provisioning VxLAN tunnels that will _stitch_ the interfaces of ou
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:9,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
 
-Logially we make our interface appear to be connected in a point-to-point fashion. To make these tunnels we leverage containerlab' [`tools vxlan create`](../cmd/tools/vxlan/create.md) command, that will create the VxLAN tunnel and the necessary redirection rules to forward traffic back-and-forth to a relevant host interface.
+Logically we make our interface appear to be connected in a point-to-point fashion. To make these tunnels we leverage containerlab' [`tools vxlan create`](../cmd/tools/vxlan/create.md) command, that will create the VxLAN tunnel and the necessary redirection rules to forward traffic back-and-forth to a relevant host interface.
 
 All we need is to provide the VMs address and choose VNI numbers. And do this on both hosts.
 
@@ -213,8 +213,8 @@ round-trip min = 2.61ms, avg = 8.04ms, max = 13.5ms, stddev = 0.000ms
 
 Great! Additionally users can [capture the traffic](../manual/wireshark.md) from any of the interfaces involved in the datapath. To see the VxLAN encapsulation the VM's outgoing interfaces should be used.
 
-[vmx-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-vmx.yml
-[sros-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-sros.yml
+[vmx-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-vmx.clab.yml
+[sros-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-sros.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

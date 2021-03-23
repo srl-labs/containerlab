@@ -58,7 +58,7 @@ With these defaults in place, the two containers from this lab will get connecte
 
 ```bash
 # addressing information is available once the lab deployment completes
-❯ containerlab deploy -t srl02.yml
+❯ containerlab deploy -t srl02.clab.yml
 # deployment log omitted for brevity
 +---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
 | # |      Name       | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |

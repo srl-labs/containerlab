@@ -3,7 +3,7 @@
 | **Description**               | A 5-stage CLOS topology based on Nokia SR Linux                      |
 | **Components**                | [Nokia SR Linux][srl]                                                |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 4 <br/>:fontawesome-solid-memory: 8 GB |
-| **Topology file**             | [clos02.yml][topofile]                                               |
+| **Topology file**             | [clos02.clab.yml][topofile]                                          |
 | **Name**                      | clos02                                                               |
 
 ## Description
@@ -20,7 +20,7 @@ With this lightweight CLOS topology a user can exhibit the following scenarios:
 * demonstrate fabric behavior leveraging the user-emulating linux containers attached to the leaves
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos02/clos02.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos02/clos02.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 

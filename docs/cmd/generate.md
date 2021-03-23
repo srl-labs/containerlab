@@ -68,7 +68,7 @@ To set license for multiple kinds repeat the flag: `--license <kind1>=/path1 --i
 #### deploy
 When `--deploy` flag is present, the lab deployment process starts using the generated topology definition file.
 
-The generated definition file is first saved by the path set with `--file` or, if file path is not set, by the default path of `<lab-name>.yml`. Then the equivalent of the `deploy -t <file> --reconfigure` command is executed.
+The generated definition file is first saved by the path set with `--file` or, if file path is not set, by the default path of `<lab-name>.clab.yml`. Then the equivalent of the `deploy -t <file> --reconfigure` command is executed.
 
 #### max-workers
 With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.

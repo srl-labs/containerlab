@@ -5,7 +5,7 @@ topology:
     vmx:
       kind: vr-sros
       image: vrnetlab/vr-vmx:20.4R1.12
-    # sros node is defined in a `vxlan-sros.yml` topo file
+    # sros node is defined in a `vxlan-sros.clab.yml` topo file
     # that is launched on another VM
 
   links:

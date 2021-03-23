@@ -101,8 +101,8 @@ With `--dot` flag provided containerlab will generate the `dot` file instead of 
 
 # render a graph from running lab or topo file if lab is not running#
 # using HTML graph option with default server address :50080
-containerlab graph --topo /path/to/topo1.yaml
+containerlab graph --topo /path/to/topo1.clab.yml
 
 # start an http server on :3002 where topo1 graph will be rendered using a custom template my_template.html
-containerlab graph --topo /path/to/topo1.yaml --srv ":3002" --template my_template.html
+containerlab graph --topo /path/to/topo1.clab.yml --srv ":3002" --template my_template.html
 ```
