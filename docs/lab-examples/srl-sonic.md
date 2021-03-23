@@ -3,7 +3,7 @@
 | **Description**               | A Nokia SR Linux connected back-to-back with SONiC-VS                                      |
 | **Components**                | [Nokia SR Linux][srl], [SONiC][sonic]                                                      |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                       |
-| **Topology file**             | [sonic01.yml][topofile]                                                                    |
+| **Topology file**             | [sonic01.clab.yml][topofile]                                                               |
 | **Name**                      | sonic01                                                                                    |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `docker-sonic-vs:202012`, `docker-ce:19.03.13` |
 
@@ -116,7 +116,7 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [sonic]: https://azure.github.io/SONiC/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/sonic01/sonic01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/sonic01/sonic01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

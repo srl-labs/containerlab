@@ -3,7 +3,7 @@
 | **Description**               | a single Nokia SR Linux node                                         |
 | **Components**                | [Nokia SR Linux][srl]                                                |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB |
-| **Topology file**             | [srl01.yml][topofile]                                                |
+| **Topology file**             | [srl01.clab.yml][topofile]                                           |
 | **Name**                      | srl01                                                                |
 
 ## Description
@@ -23,7 +23,7 @@ This lightweight lab enables the users to perform the following exercises:
 * write/debug/manage custom apps built for SR Linux NDK
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srl01/srl01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srl01/srl01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 [^2]: Check out [gnmic](https://gnmic.kmrd.dev) gNMI client to interact with SR Linux gNMI server.

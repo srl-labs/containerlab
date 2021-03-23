@@ -3,7 +3,7 @@
 | **Description**               | A Nokia SR Linux connected back-to-back with Juniper cRPD                          |
 | **Components**                | [Nokia SR Linux][srl], [Juniper cRPD][crpd]                                        |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB               |
-| **Topology file**             | [srlcrpd01.yml][topofile]                                                          |
+| **Topology file**             | [srlcrpd01.clab.yml][topofile]                                                     |
 | **Name**                      | srlcrpd01                                                                          |
 | **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `crpd:20.2R1.10`, `docker-ce:19.03.13` |
 
@@ -174,7 +174,7 @@ Once the lab is deployed with containerlab, use the following configuration inst
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [crpd]: https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/concept/understanding-crpd.html
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlcrpd01/srlcrpd01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlcrpd01/srlcrpd01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
