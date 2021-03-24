@@ -36,7 +36,8 @@ func (c *CLab) CreateDockerNet(ctx context.Context) (err error) {
 	switch {
 	case client.IsErrNetworkNotFound(err):
 		log.Debugf("Network '%s' does not exist", c.Config.Mgmt.Network)
-		log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s'", c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet)
+		log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s', MTU='%s'",
+			c.Config.Mgmt.Network, c.Config.Mgmt.IPv4Subnet, c.Config.Mgmt.IPv6Subnet, c.Config.Mgmt.MTU)
 
 		enableIPv6 := false
 		var ipamConfig []network.IPAMConfig
@@ -403,4 +404,14 @@ func linkContainerNS(nspath string, containerName string) error {
 // setSysctl writes sysctl data by writing to a specific file
 func setSysctl(sysctl string, newVal int) error {
 	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
+}
+
+// getDefaultDockerMTU gets the MTU of a docker0 bridge interface
+// if fails to get the MTU of docker0, returns "1500"
+func getDefaultDockerMTU() (string, error) {
+	b, err := bridgeByName("docker0")
+	if err != nil {
+		return "1500", err
+	}
+	return fmt.Sprint(b.MTU), nil
 }

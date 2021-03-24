@@ -52,7 +52,7 @@ The addressing information that containerlab will use on this network:
 * IPv4: subnet 172.20.20.0/24, gateway 172.20.20.1
 * IPv6: subnet 2001:172:20:20::/80, gateway 2001:172:20:20::1
 
-This management network will be configured with `1500` MTU. This option is configurable.
+This management network will be configured with MTU value matching the value of a `docker0` host interface to match docker configuration on the system. This option is [configurable](#mtu).
 
 With these defaults in place, the two containers from this lab will get connected to that management network and will be able to communicate using the IP addresses allocated by docker daemon. The addresses that docker carves out for each container are presented to a user once the lab deployment finishes or can be queried any time after:
 
@@ -147,7 +147,7 @@ Users can specify either IPv4 or IPv6 or both addresses, if one of the addresses
     2. IPv4/6 addresses set on a node level must be from the management network range.
 
 #### MTU
-The MTU of the management network can be set to user defined value:
+The MTU of the management network defaults to an MTU value of `docker0` interface, but it can be set to a user defined value:
 
 ```yaml
 mgmt:
