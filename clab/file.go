@@ -25,8 +25,6 @@ type TopoFile struct {
 // GetTopology parses the topology file into c.Conf structure
 // as well as populates the TopoFile structure with the topology file related information
 func (c *CLab) GetTopology(topo string) error {
-	log.Infof("Getting topology information from %s file...", topo)
-
 	yamlFile, err := ioutil.ReadFile(topo)
 	if err != nil {
 		return err

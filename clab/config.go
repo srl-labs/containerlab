@@ -211,7 +211,7 @@ func (c *CLab) initMgmtNetwork() error {
 
 // ParseTopology parses the lab topology
 func (c *CLab) ParseTopology() error {
-	log.Info("Parsing topology information...")
+	log.Info("Parsing & checking topology file: %s", c.TopoFile.fullName)
 	log.Debugf("Lab name: %s", c.Config.Name)
 	// initialize Management network config
 	err := c.initMgmtNetwork()
