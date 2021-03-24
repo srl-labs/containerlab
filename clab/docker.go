@@ -88,7 +88,13 @@ func (c *CLab) CreateDockerNet(ctx context.Context) (err error) {
 		if len(netResource.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
-		bridgeName = "br-" + netResource.ID[:12]
+		switch c.Config.Mgmt.Network {
+		case "bridge":
+			bridgeName = "docker0"
+		default:
+			bridgeName = "br-" + netResource.ID[:12]
+		}
+
 	default:
 		return err
 	}
