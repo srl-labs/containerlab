@@ -116,13 +116,13 @@ func (c *CLab) CreateDockerNet(ctx context.Context) (err error) {
 
 	err = ioutil.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
 	if err != nil {
-		return fmt.Errorf("failed to enable LLDP on docker bridge: %v", err)
+		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}
 
 	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", bridgeName)
 	err = EthtoolTXOff(bridgeName)
 	if err != nil {
-		return fmt.Errorf("failed to disable TX checksum offloading for the %s bridge interface: %v", bridgeName, err)
+		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", bridgeName, err)
 	}
 	return nil
 }
