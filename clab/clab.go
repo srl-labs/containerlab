@@ -29,14 +29,14 @@ type CLab struct {
 	Nodes        map[string]*Node
 	Links        map[int]*Link
 	DockerClient *docker.Client
-	Dir          *cLabDirectory
+	Dir          *Directory
 
 	debug            bool
 	timeout          time.Duration
 	gracefulShutdown bool
 }
 
-type cLabDirectory struct {
+type Directory struct {
 	Lab       string
 	LabCA     string
 	LabCARoot string

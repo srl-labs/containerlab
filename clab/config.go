@@ -231,7 +231,7 @@ func (c *CLab) ParseTopology() error {
 		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 	}
 
-	c.Dir = new(cLabDirectory)
+	c.Dir = new(Directory)
 	c.Dir.Lab = c.Config.ConfigPath + "/" + prefix + "-" + c.Config.Name
 	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
 	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
