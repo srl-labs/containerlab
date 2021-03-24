@@ -199,8 +199,13 @@ func (c *CLab) initMgmtNetwork() error {
 	}
 	// init docker network mtu
 	if c.Config.Mgmt.MTU == "" {
-		c.Config.Mgmt.MTU = dockerNetMTU
+		m, err := getDefaultDockerMTU()
+		if err != nil {
+			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
+		}
+		c.Config.Mgmt.MTU = m
 	}
+
 	return nil
 }
 
