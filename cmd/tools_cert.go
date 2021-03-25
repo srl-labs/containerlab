@@ -14,26 +14,42 @@ import (
 var (
 	commonName       string
 	country          string
-	location         string
+	locality         string
 	organization     string
 	organizationUnit string
 	expiry           string
 	path             string
 	namePrefix       string
+	certHosts        *[]string
+	caCertPath       string
+	caKeyPath        string
 )
 
 func init() {
 	toolsCmd.AddCommand(certCmd)
 	certCmd.AddCommand(CACmd)
+	certCmd.AddCommand(signCertCmd)
 	CACmd.AddCommand(CACreateCmd)
-	CACreateCmd.Flags().StringVarP(&commonName, "cn", "", "CA Containerlab", "Common Name")
-	CACreateCmd.Flags().StringVarP(&country, "c", "", "Belgium", "Country")
-	CACreateCmd.Flags().StringVarP(&location, "l", "", "Antwerp", "Location")
+
+	CACreateCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.srlinux.dev", "Common Name")
+	CACreateCmd.Flags().StringVarP(&country, "c", "", "Internet", "Country")
+	CACreateCmd.Flags().StringVarP(&locality, "l", "", "Server", "Location")
 	CACreateCmd.Flags().StringVarP(&organization, "o", "", "Containerlab", "Organization")
-	CACreateCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Unit", "Organization Unit")
+	CACreateCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
 	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "262800h", "certificate validity period")
 	CACreateCmd.Flags().StringVarP(&path, "path", "p", "", "path to write certificates to. Default is current working directory")
-	CACreateCmd.Flags().StringVarP(&namePrefix, "name", "n", "", "certificate/key filename prefix")
+	CACreateCmd.Flags().StringVarP(&namePrefix, "name", "n", "ca", "certificate/key filename prefix")
+
+	certHosts = signCertCmd.Flags().StringArrayP("hosts", "", []string{}, "comma separate list of hosts of a certificate")
+	signCertCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.srlinux.dev", "Common Name")
+	signCertCmd.Flags().StringVarP(&caCertPath, "ca-cert", "", "", "Path to CA certificate")
+	signCertCmd.Flags().StringVarP(&caKeyPath, "ca-key", "", "", "Path to CA private key")
+	signCertCmd.Flags().StringVarP(&country, "c", "", "Internet", "Country")
+	signCertCmd.Flags().StringVarP(&locality, "l", "", "Server", "Location")
+	signCertCmd.Flags().StringVarP(&organization, "o", "", "Containerlab", "Organization")
+	signCertCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
+	signCertCmd.Flags().StringVarP(&path, "path", "p", "", "path to write certificate and key to. Default is current working directory")
+	signCertCmd.Flags().StringVarP(&namePrefix, "name", "n", "cert", "certificate/key filename prefix")
 }
 
 var certCmd = &cobra.Command{
@@ -52,6 +68,12 @@ var CACreateCmd = &cobra.Command{
 	RunE:  createCA,
 }
 
+var signCertCmd = &cobra.Command{
+	Use:   "sign",
+	Short: "create and sign certificate",
+	RunE:  signCert,
+}
+
 func createCA(cmd *cobra.Command, args []string) error {
 	csr := `{
 	"CN": "{{.CommonName}}",
@@ -61,7 +83,7 @@ func createCA(cmd *cobra.Command, args []string) error {
 	},
 	"names": [{
 		"C": "{{.Country}}",
-		"L": "{{.Location}}",
+		"L": "{{.Locality}}",
 		"O": "{{.Organization}}",
 		"OU": "{{.OrganizationUnit}}"
 	}],
@@ -93,7 +115,7 @@ func createCA(cmd *cobra.Command, args []string) error {
 		LabCARoot: path,
 	}
 
-	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s", commonName, country, location, organization, organizationUnit, expiry)
+	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s", commonName, country, locality, organization, organizationUnit, expiry)
 
 	csrTpl, err := template.New("csr").Parse(csr)
 	if err != nil {
@@ -103,7 +125,7 @@ func createCA(cmd *cobra.Command, args []string) error {
 	_, err = c.GenerateRootCa(csrTpl, clab.CaRootInput{
 		CommonName:       commonName,
 		Country:          country,
-		Location:         location,
+		Locality:         locality,
 		Organization:     organization,
 		OrganizationUnit: organizationUnit,
 		Expiry:           expiry,
@@ -114,4 +136,72 @@ func createCA(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate rootCa: %v", err)
 	}
 	return nil
+}
+
+// create node certificate and sign it with CA
+func signCert(cmd *cobra.Command, args []string) error {
+	csr := `{
+		"CN": "{{.CommonName}}",
+		"hosts": [
+			{{- range $i, $e := .Hosts}}
+			{{- if $i}},{{end}}
+			"{{.}}"
+			{{- end}}
+		],
+		"key": {
+			"algo": "rsa",
+			"size": 2048
+		},
+		"names": [{
+			"C": "{{.Country}}",
+			"L": "{{.Locality}}",
+			"O": "{{.Organization}}",
+			"OU": "{{.OrganizationUnit}}"
+		}]
+	}
+	`
+	var err error
+
+	opts := []clab.ClabOption{
+		clab.WithDebug(debug),
+		clab.WithTimeout(timeout),
+	}
+	c := clab.NewContainerLab(opts...)
+
+	cfssllog.Level = cfssllog.LevelError
+	if debug {
+		cfssllog.Level = cfssllog.LevelDebug
+	}
+
+	if path == "" {
+		path, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s", *certHosts, commonName, country, locality, organization, organizationUnit)
+
+	csrTpl, err := template.New("csr").Parse(csr)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.GenerateCert(caCertPath, caKeyPath, csrTpl, clab.CertInput{
+		Hosts:            *certHosts,
+		CommonName:       commonName,
+		Country:          country,
+		Locality:         locality,
+		Organization:     organization,
+		OrganizationUnit: organizationUnit,
+		Expiry:           expiry,
+		Name:             namePrefix,
+	},
+		path,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to generate and sign certificate: %v", err)
+	}
+
+	return err
 }

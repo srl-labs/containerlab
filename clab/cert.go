@@ -26,6 +26,14 @@ type Certificates struct {
 
 // CertInput struct
 type CertInput struct {
+	Hosts            []string
+	CommonName       string
+	Country          string
+	Locality         string
+	Organization     string
+	OrganizationUnit string
+	Expiry           string
+
 	Name     string
 	LongName string
 	Fqdn     string
@@ -36,7 +44,7 @@ type CertInput struct {
 type CaRootInput struct {
 	CommonName       string
 	Country          string
-	Location         string
+	Locality         string
 	Organization     string
 	OrganizationUnit string
 	Expiry           string
