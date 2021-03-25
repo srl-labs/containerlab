@@ -50,9 +50,6 @@ type CaRootInput struct {
 // GenerateRootCa function
 func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
 	log.Info("Creating root CA")
-	// create root CA directory
-	CreateDirectory(c.Dir.LabCA, 0755)
-
 	// create root CA root directory
 	CreateDirectory(c.Dir.LabCARoot, 0755)
 	var err error

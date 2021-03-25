@@ -132,7 +132,7 @@ func createFile(file, content string) {
 // If directory exists, the function does not do anything.
 func CreateDirectory(path string, perm os.FileMode) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.Mkdir(path, perm)
+		os.MkdirAll(path, perm)
 	}
 }
 
