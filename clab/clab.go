@@ -215,6 +215,7 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
 								certTpl,
 								certInput,
+								path.Join(c.Dir.LabCA, certInput.Name),
 							)
 							if err != nil {
 								log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
