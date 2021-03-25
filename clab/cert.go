@@ -80,11 +80,13 @@ func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 	return certs, nil
 }
 
-func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput) (*Certificates, error) {
+// GenerateCert generates and signs a certificate passed as input and saves the certificate and generated private key by path
+// CA used to sign the cert is passed as ca and caKey file paths
+func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput, targetPath string) (*Certificates, error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	CreateDirectory(path.Join(c.Dir.LabCA, input.Name), 0755)
+	CreateDirectory(targetPath, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
 	err = csrJSONTpl.Execute(csrBuff, input)
@@ -139,7 +141,8 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		Csr:  csrBytes,
 		Cert: cert,
 	}
-	c.writeCertFiles(certs, path.Join(c.Dir.LabCA, input.Name, input.Name))
+
+	c.writeCertFiles(certs, path.Join(targetPath, input.Name))
 	return certs, nil
 }
 
