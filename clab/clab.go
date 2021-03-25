@@ -204,11 +204,17 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 							if err != nil {
 								log.Errorf("failed to parse certCsrTemplate: %v", err)
 							}
+							certInput := CertInput{
+								Name:     node.ShortName,
+								LongName: node.LongName,
+								Fqdn:     node.Fqdn,
+								Prefix:   c.Config.Name,
+							}
 							nodeCerts, err = c.GenerateCert(
 								path.Join(c.Dir.LabCARoot, "root-ca.pem"),
 								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
 								certTpl,
-								node,
+								certInput,
 							)
 							if err != nil {
 								log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
