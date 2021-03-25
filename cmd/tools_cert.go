@@ -36,7 +36,7 @@ func init() {
 	CACreateCmd.Flags().StringVarP(&locality, "l", "", "Server", "Location")
 	CACreateCmd.Flags().StringVarP(&organization, "o", "", "Containerlab", "Organization")
 	CACreateCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
-	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "262800h", "certificate validity period")
+	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "87600h", "certificate validity period")
 	CACreateCmd.Flags().StringVarP(&path, "path", "p", "", "path to write certificates to. Default is current working directory")
 	CACreateCmd.Flags().StringVarP(&namePrefix, "name", "n", "ca", "certificate/key filename prefix")
 
