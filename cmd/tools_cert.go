@@ -19,8 +19,9 @@ var (
 	organizationUnit string
 	expiry           string
 	path             string
-	namePrefix       string
-	certHosts        *[]string
+	caNamePrefix     string
+	certNamePrefix   string
+	certHosts        []string
 	caCertPath       string
 	caKeyPath        string
 )
@@ -38,9 +39,9 @@ func init() {
 	CACreateCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
 	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "87600h", "certificate validity period")
 	CACreateCmd.Flags().StringVarP(&path, "path", "p", "", "path to write certificates to. Default is current working directory")
-	CACreateCmd.Flags().StringVarP(&namePrefix, "name", "n", "ca", "certificate/key filename prefix")
+	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "ca", "certificate/key filename prefix")
 
-	certHosts = signCertCmd.Flags().StringArrayP("hosts", "", []string{}, "comma separate list of hosts of a certificate")
+	signCertCmd.Flags().StringSliceVarP(&certHosts, "hosts", "", []string{}, "comma separate list of hosts of a certificate")
 	signCertCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.srlinux.dev", "Common Name")
 	signCertCmd.Flags().StringVarP(&caCertPath, "ca-cert", "", "", "Path to CA certificate")
 	signCertCmd.Flags().StringVarP(&caKeyPath, "ca-key", "", "", "Path to CA private key")
@@ -49,7 +50,7 @@ func init() {
 	signCertCmd.Flags().StringVarP(&organization, "o", "", "Containerlab", "Organization")
 	signCertCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
 	signCertCmd.Flags().StringVarP(&path, "path", "p", "", "path to write certificate and key to. Default is current working directory")
-	signCertCmd.Flags().StringVarP(&namePrefix, "name", "n", "cert", "certificate/key filename prefix")
+	signCertCmd.Flags().StringVarP(&certNamePrefix, "name", "n", "cert", "certificate/key filename prefix")
 }
 
 var certCmd = &cobra.Command{
@@ -129,7 +130,7 @@ func createCA(cmd *cobra.Command, args []string) error {
 		Organization:     organization,
 		OrganizationUnit: organizationUnit,
 		Expiry:           expiry,
-		NamePrefix:       namePrefix,
+		NamePrefix:       caNamePrefix,
 	},
 	)
 	if err != nil {
@@ -180,7 +181,7 @@ func signCert(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s", *certHosts, commonName, country, locality, organization, organizationUnit)
+	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s", certHosts, commonName, country, locality, organization, organizationUnit)
 
 	csrTpl, err := template.New("csr").Parse(csr)
 	if err != nil {
@@ -188,14 +189,14 @@ func signCert(cmd *cobra.Command, args []string) error {
 	}
 
 	_, err = c.GenerateCert(caCertPath, caKeyPath, csrTpl, clab.CertInput{
-		Hosts:            *certHosts,
+		Hosts:            certHosts,
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,
 		Organization:     organization,
 		OrganizationUnit: organizationUnit,
 		Expiry:           expiry,
-		Name:             namePrefix,
+		Name:             certNamePrefix,
 	},
 		path,
 	)
