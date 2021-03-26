@@ -117,7 +117,7 @@ func netconfSave(cont types.Container) {
 		if host == "" {
 			host = br.IPAddress
 		}
-		fmt.Println("%s: %s/%d", cont.Names[0], br.IPAddress, br.IPPrefixLen)
+		fmt.Printf("%s: %s/%d", cont.Names[0], br.IPAddress, br.IPPrefixLen)
 	}
 
 	config := netconf.SSHConfigPassword("admin", "admin")
