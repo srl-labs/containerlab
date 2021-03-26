@@ -41,6 +41,10 @@ nav:
           - vxlan:
               - create: cmd/tools/vxlan/create.md
               - delete: cmd/tools/vxlan/delete.md
+          - cert:
+              - ca:
+                  - create: cmd/tools/cert/ca/create.md
+              - sign: cmd/tools/cert/sign.md
           - mysocketio:
               - login: cmd/tools/mysocketio/login.md
       - completions: cmd/completion.md
