@@ -26,8 +26,7 @@ To indicate which CA should sign the certificate request, the command takes a pa
 Certificate Common Name (CN) field is set with `--cn` flag. Defaults to `containerlab.srlinux.dev`.
 
 #### Hosts
-To add Subject Alternative Names (SAN) use the `--hosts` flag that takes a comma separate list of SAN values.
-
+To add Subject Alternative Names (SAN) use the `--hosts` flag that takes a comma separate list of SAN values. Users can provide both DNS names and IP address, and the values will be placed into the DSN SAN and IP SAN automatically.
 
 #### Country
 Certificate Country (C) field is set with `--c` flag. Defaults to `Internet`.
