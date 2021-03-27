@@ -34,18 +34,6 @@
                         "host"
                     ]
                 },
-                "type": {
-                    "type": "string",
-                    "description": "type of a node",
-                    "markdownDescription": "node [type](https://containerlab.srlinux.dev/manual/nodes/#type)",
-                    "enum": [
-                        "ixr6",
-                        "ixr10",
-                        "ixrd1",
-                        "ixrd2",
-                        "ixrd3"
-                    ]
-                },
                 "license": {
                     "type": "string",
                     "description": "path to a license file",
@@ -164,6 +152,38 @@
                     "enum": [
                         "host"
                     ]
+                }
+            },
+            "if": {
+                "properties": {
+                    "kind": {
+                        "const": "srl"
+                    }
+                }
+            },
+            "then": {
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "description": "type of a node",
+                        "markdownDescription": "node [type](https://containerlab.srlinux.dev/manual/nodes/#type)",
+                        "enum": [
+                            "ixr6",
+                            "ixr10",
+                            "ixrd1",
+                            "ixrd2",
+                            "ixrd3"
+                        ]
+                    }
+                }
+            },
+            "else": {
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "description": "type of a node",
+                        "markdownDescription": "node [type](https://containerlab.srlinux.dev/manual/nodes/#type)"
+                    }
                 }
             }
         },
