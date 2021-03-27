@@ -26,6 +26,7 @@ nav:
       - VM based routers integration: manual/vrnetlab.md
       - Publish ports: manual/published-ports.md
       - Multi-node labs: manual/multi-node.md
+      - Certificate management: manual/cert.md
       - Inventory: manual/inventory.md
   - Command reference:
       - deploy: cmd/deploy.md
@@ -66,6 +67,7 @@ nav:
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
+      - Securing gNMI with TLS: lab-examples/tls-cert.md
   - Release notes:
       - 0.11.0: rn/0.11.0.md
 

@@ -1,0 +1,7 @@
+name: cert01
+topology:
+  nodes:
+    sr:
+      kind: vr-sros
+      image: vrnetlab/vr-sros:21.2.R1
+      license: license-sros21.txt
