@@ -111,19 +111,14 @@ func init() {
 }
 
 func netconfSave(cont types.Container) {
-	var host string
-	for _, br := range cont.NetworkSettings.Networks {
-		if host == "" {
-			host = br.IPAddress
-		}
-		fmt.Printf("%s: %s/%d", cont.Names[0], br.IPAddress, br.IPPrefixLen)
-	}
+	kind := cont.Labels["clab-node-kind"]
+	config := netconf.SSHConfigPassword(clab.DefaultCredentials[kind][0],
+		clab.DefaultCredentials[kind][1])
 
-	config := netconf.SSHConfigPassword("admin", "admin")
+	host := strings.TrimLeft(cont.Names[0], "/")
+	ncHost := host + ":830"
 
-	host += ":830"
-
-	s, err := netconf.DialSSH(host, config)
+	s, err := netconf.DialSSH(ncHost, config)
 	if err != nil {
 		log.Errorf("%s: Could not connect SSH to %s %s", cont.Names[0], host, err)
 		return
@@ -137,6 +132,6 @@ func netconfSave(cont types.Container) {
 		log.Errorf("%s: Could not send Netconf save to %s %s", cont.Names[0], host, err)
 		return
 	}
-	// fmt.Printf("%s", reply.RawReply)
-	fmt.Println("Saved.")
+
+	log.Infof("saved %s configuration from node %s\n", kind, host)
 }
