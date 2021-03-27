@@ -7,11 +7,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Juniper/go-netconf/netconf"
 	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	"github.com/Juniper/go-netconf/netconf"
 )
 
 var saveCommand = map[string][]string{
@@ -55,14 +55,13 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		for _, cont := range containers {
 			go func(cont types.Container) {
 				defer wg.Done()
-				kind := cont.Labels["kind"]
+				kind := cont.Labels["clab-node-kind"]
 
 				switch kind {
-					case
-						"vr-sros",
-						"vr-vmx":
-						netconfSave(cont)
-						return
+				case "vr-sros",
+					"vr-vmx":
+					netconfSave(cont)
+					return
 				}
 
 				// skip saving if we have no command map

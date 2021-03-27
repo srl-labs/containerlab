@@ -3,7 +3,7 @@ module github.com/srl-labs/containerlab
 go 1.15
 
 require (
-	github.com/Juniper/go-netconf v0.1.1 // indirect
+	github.com/Juniper/go-netconf v0.1.1
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/awalterschulze/gographviz v2.0.1+incompatible
 	github.com/cloudflare/cfssl v1.4.1
