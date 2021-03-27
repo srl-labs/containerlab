@@ -26,6 +26,14 @@ type Certificates struct {
 
 // CertInput struct
 type CertInput struct {
+	Hosts            []string
+	CommonName       string
+	Country          string
+	Locality         string
+	Organization     string
+	OrganizationUnit string
+	Expiry           string
+
 	Name     string
 	LongName string
 	Fqdn     string
@@ -34,17 +42,23 @@ type CertInput struct {
 
 // CaRootInput struct
 type CaRootInput struct {
+	CommonName       string
+	Country          string
+	Locality         string
+	Organization     string
+	OrganizationUnit string
+	Expiry           string
+
 	Prefix string
 	Names  map[string]string // Not used right now
+	// prefix for certificate/key file name
+	NamePrefix string
 }
 
 // GenerateRootCa function
 func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
 	log.Info("Creating root CA")
-	//create root CA diretcory
-	CreateDirectory(c.Dir.LabCA, 0755)
-
-	//create root CA root diretcory
+	// create root CA root directory
 	CreateDirectory(c.Dir.LabCARoot, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
@@ -59,7 +73,7 @@ func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 	if err != nil {
 		return nil, err
 	}
-	//
+
 	var key, csrPEM, cert []byte
 	cert, csrPEM, key, err = initca.New(&req)
 	if err != nil {
@@ -70,20 +84,17 @@ func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 		Csr:  csrPEM,
 		Cert: cert,
 	}
-	c.writeCertFiles(certs, path.Join(c.Dir.LabCARoot, "root-ca"))
+	c.writeCertFiles(certs, path.Join(c.Dir.LabCARoot, input.NamePrefix))
 	return certs, nil
 }
 
-func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, node *Node) (*Certificates, error) {
+// GenerateCert generates and signs a certificate passed as input and saves the certificate and generated private key by path
+// CA used to sign the cert is passed as ca and caKey file paths
+func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput, targetPath string) (*Certificates, error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	input := CertInput{
-		Name:     node.ShortName,
-		LongName: node.LongName,
-		Fqdn:     node.Fqdn,
-		Prefix:   c.Config.Name,
-	}
-	CreateDirectory(path.Join(c.Dir.LabCA, input.Name), 0755)
+
+	CreateDirectory(targetPath, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
 	err = csrJSONTpl.Execute(csrBuff, input)
@@ -138,7 +149,8 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		Csr:  csrBytes,
 		Cert: cert,
 	}
-	c.writeCertFiles(certs, path.Join(c.Dir.LabCA, input.Name, input.Name))
+
+	c.writeCertFiles(certs, path.Join(targetPath, input.Name))
 	return certs, nil
 }
 
@@ -219,7 +231,10 @@ func (c *CLab) CreateRootCA() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
 	}
-	rootCerts, err := c.GenerateRootCa(tpl, CaRootInput{Prefix: c.Config.Name})
+	rootCerts, err := c.GenerateRootCa(tpl, CaRootInput{
+		Prefix:     c.Config.Name,
+		NamePrefix: "root-ca",
+	})
 	if err != nil {
 		return fmt.Errorf("failed to generate rootCa: %v", err)
 	}

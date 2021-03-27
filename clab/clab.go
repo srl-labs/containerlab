@@ -29,14 +29,14 @@ type CLab struct {
 	Nodes        map[string]*Node
 	Links        map[int]*Link
 	DockerClient *docker.Client
-	Dir          *cLabDirectory
+	Dir          *Directory
 
 	debug            bool
 	timeout          time.Duration
 	gracefulShutdown bool
 }
 
-type cLabDirectory struct {
+type Directory struct {
 	Lab       string
 	LabCA     string
 	LabCARoot string
@@ -204,11 +204,18 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 							if err != nil {
 								log.Errorf("failed to parse certCsrTemplate: %v", err)
 							}
+							certInput := CertInput{
+								Name:     node.ShortName,
+								LongName: node.LongName,
+								Fqdn:     node.Fqdn,
+								Prefix:   c.Config.Name,
+							}
 							nodeCerts, err = c.GenerateCert(
 								path.Join(c.Dir.LabCARoot, "root-ca.pem"),
 								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
 								certTpl,
-								node,
+								certInput,
+								path.Join(c.Dir.LabCA, certInput.Name),
 							)
 							if err != nil {
 								log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
