@@ -7,6 +7,15 @@ But sometimes it is really needed to let your lab nodes be reachable over Intern
 * share a private lab with someone to collaborate or troubleshoot
 * expose management interfaces (gNMI, NETCONF, SNMP) to test integration with collectors deployed outside of your lab environment
 
+Check out the short video demonstrating the integration:
+
+<iframe type="text/html"
+    width="100%"
+    height="480"
+    src="https://www.youtube.com/embed/6t0fPJtwaGM"
+    frameborder="0">
+</iframe>
+
 Containerlab made all of these use cases possible by integrating with [mysocket.io](https://mysocket.io) service. Mysocket.io provides personal and secure tunnels for https/https/tls/tcp ports over global anycast[^1] network spanning US, Europe and Asia.
 
 To make a certain port of a node available via mysocket.io tunnel provide a `publish` container under the node/kind/default section of the topology:

@@ -69,6 +69,7 @@ nav:
       - Multi-node labs: lab-examples/multinode.md
       - Securing gNMI with TLS: lab-examples/tls-cert.md
   - Release notes:
+      - 0.12.0: rn/0.12.0.md
       - 0.11.0: rn/0.11.0.md
 
 site_author: Roman Dodin
