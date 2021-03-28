@@ -40,9 +40,10 @@ To build a vrnetlab image compatible with containerlab users first need to ensur
    ```bash
    git clone https://github.com/hellt/vrnetlab && cd vrnetlab
    
-   # assuming we are running containerlab 0.10.4,
-   # the matching vrnetlab version is 0.1.0-cl
-   git checkout 0.1.0-cl
+   # assuming we are running containerlab 0.11.0,
+   # the latest compatible vrnetlab version is 0.2.3
+   # at the moment of this writing
+   git checkout v0.2.3
    ```
 2. Enter the directory for the image of interest
    ```
