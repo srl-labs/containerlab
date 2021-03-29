@@ -23,7 +23,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Azure SONiC](https://azure.github.io/SONiC/)
 * [Juniper cRPD](https://www.juniper.net/documentation/en_US/crpd/topics/concept/understanding-crpd.html)
 
-In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](manual/vrnetlab.md):
+In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](https://containerlab.srlinux.dev/manual/vrnetlab/):
 
 * [Nokia virtual SR OS (vSim/VSR)](https://containerlab.srlinux.dev/manual/kinds/vr-sros/)
 * [Juniper vMX](https://containerlab.srlinux.dev/manual/kinds/vr-vmx/)
@@ -68,7 +68,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **Labs and demos**  
     Containerlab was meant to be a tool for provisioning networking labs built with containers. It is free, open and ubiquitous. No software apart from Docker is required!  
     As with any lab environment it allows the users to validate features, topologies, perform interop testing, datapath testing, etc.  
-    It is also a perfect companion for your next demo. Deploy the lab fast, with all its configuration stored as a code -> destroy when done. Easily and [securely share lab access](https://containerlab.srlinux.dev/manual/published-ports.md) if needed.
+    It is also a perfect companion for your next demo. Deploy the lab fast, with all its configuration stored as a code -> destroy when done. Easily and [securely share lab access](https://containerlab.srlinux.dev/manual/published-ports) if needed.
 * **Testing and CI**  
     Because of the containerlab's single-binary packaging and code-based lab definition files, it was never that easy to spin up a test bed for CI. Gitlab CI, Github Actions and virtually any CI system will be able to spin up containerlab topologies in a single simple command.
 * **Telemetry validation**
