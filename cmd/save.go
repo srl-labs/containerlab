@@ -56,6 +56,7 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 			go func(cont types.Container) {
 				defer wg.Done()
 				kind := cont.Labels["clab-node-kind"]
+				host := strings.TrimLeft(cont.Names[0], "/")
 
 				switch kind {
 				case "vr-sros",
@@ -66,22 +67,23 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 
 				// skip saving if we have no command map
 				if _, ok := saveCommand[kind]; !ok {
+					log.Warningf("%s: No SAVE command implemented for %s\n", host, kind)
 					return
 				}
 				stdout, stderr, err := c.Exec(ctx, cont.ID, saveCommand[kind])
 				if err != nil {
-					log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
+					log.Errorf("%s: failed to execute cmd: %v\n", host, err)
 
 				}
 				if len(stderr) > 0 {
-					log.Infof("%s errors: %s", strings.TrimLeft(cont.Names[0], "/"), string(stderr))
+					log.Infof("%s errors: %s\n", host, string(stderr))
 				}
 				switch {
 				// for srl kinds print the full stdout
 				case kind == "srl":
 					if len(stdout) > 0 {
 						confPath := cont.Labels["clab-node-dir"] + "/config/checkpoint/checkpoint-0.json"
-						log.Infof("saved SR Linux configuration from %s node to %s\noutput:\n%s", strings.TrimLeft(cont.Names[0], "/"), confPath, string(stdout))
+						log.Infof("saved SR Linux configuration from %s node to %s\noutput:\n%s", host, confPath, string(stdout))
 					}
 
 				case kind == "crpd":
@@ -89,14 +91,14 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 					confPath := cont.Labels["clab-node-dir"] + "/config/conf-saved.conf"
 					err := ioutil.WriteFile(confPath, stdout, 0777)
 					if err != nil {
-						log.Errorf("failed to write config by %s path from %s container: %v", confPath, strings.TrimLeft(cont.Names[0], "/"), err)
+						log.Errorf("failed to write config by %s path from %s container: %v\n", confPath, host, err)
 					}
-					log.Infof("saved cRPD configuration from %s node to %s", strings.TrimLeft(cont.Names[0], "/"), confPath)
+					log.Infof("saved cRPD configuration from %s node to %s\n", host, confPath)
 
 				case kind == "ceos":
 					// path by which a config was saved
 					confPath := cont.Labels["clab-node-dir"] + "/flash/conf-saved.conf"
-					log.Infof("saved cEOS configuration from %s node to %s", strings.TrimLeft(cont.Names[0], "/"), confPath)
+					log.Infof("saved cEOS configuration from %s node to %s\n", host, confPath)
 				}
 			}(cont)
 		}
@@ -120,7 +122,7 @@ func netconfSave(cont types.Container) {
 
 	s, err := netconf.DialSSH(ncHost, config)
 	if err != nil {
-		log.Errorf("%s: Could not connect SSH to %s %s", cont.Names[0], host, err)
+		log.Errorf("%s: Could not connect to %s %s\n", host, ncHost, err)
 		return
 	}
 	defer s.Close()
@@ -129,9 +131,9 @@ func netconfSave(cont types.Container) {
 
 	_, err = s.Exec(netconf.RawMethod(save))
 	if err != nil {
-		log.Errorf("%s: Could not send Netconf save to %s %s", cont.Names[0], host, err)
+		log.Errorf("%s: Could not send Netconf save - %s\n", host, err)
 		return
 	}
 
-	log.Infof("saved %s configuration from node %s\n", kind, host)
+	log.Infof("saved %s configuration from %s node\n", kind, host)
 }
