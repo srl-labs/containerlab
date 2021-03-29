@@ -50,8 +50,8 @@ nfpms:
         dst: /etc/containerlab/lab-examples
       - src: ./templates
         dst: /etc/containerlab/templates
-      - src: ./tools
-        dst: /etc/containerlab/tools
+      # - src: ./tools
+      #   dst: /etc/containerlab/tools
       - src: /usr/bin/containerlab
         dst: /usr/bin/clab
         type: symlink
