@@ -17,7 +17,11 @@ scp cert.pem admin@clab-cert01-sr:cf3:/
 </code></pre></div> <h3 id=importing-certificate-and-key>Importing certificate and key<a class=headerlink href=#importing-certificate-and-key title="Permanent link">#</a></h3> <p>SR OS needs the certificates to be imported after they are copied to the flash card. For that we need to switch to use the Classic CLI notation with <code>//</code> command prefix:</p> <div class=highlight><pre><span></span><code>//admin certificate import type cert input cf3:/cert.pem output cert.pem format pem
 //admin certificate import type key input cf3:/cert-key.pem output cert-key.pem format pem
 </code></pre></div> <p>When certificates are imported, they are copied to a system <code>system-pki</code> directory on the flash card:</p> <div class=highlight><pre><span></span><code>[/]
-A:admin@sr# //file dir system-pki
+A:admin@sr# file list system-pki
+
+Volume in drive cf3 on slot A is SROS VM.
+
+Volume in drive cf3 on slot A is formatted as FAT32
 
 Directory of cf3:\system-pki
 
