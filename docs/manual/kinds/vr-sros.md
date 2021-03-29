@@ -117,6 +117,15 @@ topology:
 
 With such topology file containerlab is instructed to take a file `myconfig.txt` from the current working directory, copy it to the lab directory for that specific node under the `/tftpboot/config.txt` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
 
+#### Configuration save
+Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for `vr-sros` nodes via Netconf. The configuration will be saved under `config.txt` file and can be found at the node's directory inside the lab parent directory:
+
+```bash
+# assuming the lab name is "cert01"
+# and node name is "sr"
+cat clab-cert01/sr/tftpboot/config.txt
+```
+
 ### License
 Path to a valid license must be provided for all vr-sros nodes with a [`license`](../nodes.md#license) directive.
 

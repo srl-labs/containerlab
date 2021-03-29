@@ -59,6 +59,13 @@ var defaultConfigTemplates = map[string]string{
 	"vr-sros": "",
 }
 
+// DefaultCredentials holds default username and password per each kind
+var DefaultCredentials = map[string][]string{
+	"vr-sros":  {"admin", "admin"},
+	"vr-vmx":   {"admin", "admin@123"},
+	"vr-xrv9k": {"clab", "clab@123"},
+}
+
 var srlTypes = map[string]string{
 	"ixr6":  "topology-7250IXR6.yml",
 	"ixr10": "topology-7250IXR10.yml",

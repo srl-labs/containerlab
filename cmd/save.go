@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Juniper/go-netconf/netconf"
 	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -54,9 +55,17 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		for _, cont := range containers {
 			go func(cont types.Container) {
 				defer wg.Done()
-				kind := cont.Labels["kind"]
-				// skip saving process for linux containers
-				if kind == "linux" {
+				kind := cont.Labels["clab-node-kind"]
+
+				switch kind {
+				case "vr-sros",
+					"vr-vmx":
+					netconfSave(cont)
+					return
+				}
+
+				// skip saving if we have no command map
+				if _, ok := saveCommand[kind]; !ok {
 					return
 				}
 				stdout, stderr, err := c.Exec(ctx, cont.ID, saveCommand[kind])
@@ -99,4 +108,30 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 
 func init() {
 	rootCmd.AddCommand(saveCmd)
+}
+
+func netconfSave(cont types.Container) {
+	kind := cont.Labels["clab-node-kind"]
+	config := netconf.SSHConfigPassword(clab.DefaultCredentials[kind][0],
+		clab.DefaultCredentials[kind][1])
+
+	host := strings.TrimLeft(cont.Names[0], "/")
+	ncHost := host + ":830"
+
+	s, err := netconf.DialSSH(ncHost, config)
+	if err != nil {
+		log.Errorf("%s: Could not connect SSH to %s %s", cont.Names[0], host, err)
+		return
+	}
+	defer s.Close()
+
+	save := `<copy-config><target><startup/></target><source><running/></source></copy-config>`
+
+	_, err = s.Exec(netconf.RawMethod(save))
+	if err != nil {
+		log.Errorf("%s: Could not send Netconf save to %s %s", cont.Names[0], host, err)
+		return
+	}
+
+	log.Infof("saved %s configuration from node %s\n", kind, host)
 }
