@@ -95,7 +95,11 @@ When certificates are imported, they are copied to a system `system-pki` directo
 
 ```
 [/]
-A:admin@sr# //file dir system-pki
+A:admin@sr# file list system-pki
+
+Volume in drive cf3 on slot A is SROS VM.
+
+Volume in drive cf3 on slot A is formatted as FAT32
 
 Directory of cf3:\system-pki
 
