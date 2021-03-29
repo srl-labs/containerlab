@@ -38,7 +38,8 @@ And, of course, containerlab is perfectly capable of wiring up arbitrary linux c
 
 This short clip briefly demonstrates containerlab features and explains its purpose:
 
-[![vid](https://gitlab.com/rdodin/pics/-/wikis/uploads/6fb7780687e329a830b8da7d115dfa65/image.png)](https://youtu.be/xdi7rwdJgkg)
+
+[![vid](https://gitlab.com/rdodin/pics/-/wikis/uploads/35d954fd81d9594ffa5b6110cbc950f5/clab-clip-stillshot.png)](https://youtu.be/xdi7rwdJgkg)
 
 ## Features
 * **IaaC approach**  
