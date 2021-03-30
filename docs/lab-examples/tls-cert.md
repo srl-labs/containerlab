@@ -134,7 +134,7 @@ Finishing step is configuring the specific SR OS construct called "server-tls-pr
 
 ```
 /configure system security tls server-tls-profile sr-server-tls-prof cert-profile "sr-cert-prof" admin-state enable
-/configure system security tls server-tls-profile sr-server-tls-prof
+/configure system security tls server-tls-profile sr-server-tls-prof cipher-list "ciphers"
 ```
 
 ### Configuring secured gRPC
