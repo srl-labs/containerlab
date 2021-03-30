@@ -12,7 +12,7 @@ on:
 env:
   GOVER: 1.15.8
   CGO_ENABLED: 0
-  MKDOCS_MATERIAL_VER: 6.2.4
+  MKDOCS_MATERIAL_VER: 7.1.0
 
 jobs:
   file-changes:
