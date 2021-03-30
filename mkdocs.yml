@@ -93,6 +93,7 @@ theme:
 
   features:
     - navigation.top
+    - navigation.instant
 
   language: en
   palette:
