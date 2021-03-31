@@ -67,7 +67,6 @@ nav:
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
-      - Securing gNMI with TLS: lab-examples/tls-cert.md
   - Release notes:
       - 0.12.0: rn/0.12.0.md
       - 0.11.0: rn/0.11.0.md
@@ -125,6 +124,9 @@ plugins:
   - search
   - minify:
       minify_html: true
+  - redirects:
+      redirect_maps:
+        lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
 
 # Customization
 extra:
