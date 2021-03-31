@@ -4,7 +4,10 @@
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:4,&quot;zoom&quot;:1,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
 
-`containerlab` aims to provide a simple, intuitive and yet customizable way to run container based labs. To help our users to have a running and functional lab as quickly as possible, we ship some essential lab topologies within the `containerlab` package.
+`containerlab` aims to provide a simple, intuitive and yet customizable way to run container based labs. To help our users get a glimpse on the features containerlab packages, we ship some essential lab topologies within the `containerlab` package.
+
+!!!note
+    The lab examples that you find on this site are merely explain the basics of containerlab. For the real-life labs built with containerlab check the [clabs.netdevops.me](https://clabs.netdevops.me) catalog, where comprehensive labs are posted by the community members.
 
 These lab examples are meant to be used as-is or as a base layer to a more customized or elaborated lab scenarios. Once `containerlab` is installed, you will find the lab examples directories by the `/etc/containerlab/lab-examples` path.  Copy those directories over to your working directory to start using the provided labs.
 
@@ -52,3 +55,10 @@ You are ready to deploy!
 ```bash
 containerlab deploy -t <topo-file>
 ```
+
+## Public clab catalogs
+As mentioned in the introduction of this article, the lab examples shipped with containerlab explain the features containerlab offers. The comprehensive lab examples are not part of containerlab installation as we want the community to own their work.
+
+Some well-known catalogs of clab based labs and/or individual submissions:
+
+* [clabs.netdevops.me](https://clabs.netdevops.me)
