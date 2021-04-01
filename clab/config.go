@@ -438,6 +438,7 @@ func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
 func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *Node) map[string]string {
 	defaultLabels := map[string]string{
 		"containerlab":      c.Config.Name,
+		"clab-node-name":    node.ShortName,
 		"clab-node-kind":    kind,
 		"clab-node-type":    node.NodeType,
 		"clab-node-group":   node.Group,
