@@ -129,7 +129,7 @@ To start an Arista cEOS node containerlab uses the configuration instructions de
     `CEOS:1`  
     `EOS_PLATFORM":ceoslab`  
     `container:docker`  
-    `ETBA:1`  
+    `ETBA:4`  
     `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
     `INTFTYPE:eth`  
     `MAPETH0:1`  

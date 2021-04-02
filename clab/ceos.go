@@ -64,7 +64,7 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map
 
 	// defined env vars for the ceos
 	kindEnv := map[string]string{
-		"CEOS":                                "1",
+		"CEOS":                                "4",
 		"EOS_PLATFORM":                        "ceoslab",
 		"container":                           "docker",
 		"ETBA":                                "1",
