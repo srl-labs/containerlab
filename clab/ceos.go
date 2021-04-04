@@ -78,6 +78,8 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map
 	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
 	node.NodeType = nodeCfg.Type
 
+	node.MacAddress = genMac("00:1c:73")
+
 	// mount config dir
 	cfgPath := filepath.Join(node.LabDir, "flash")
 	node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
