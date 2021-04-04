@@ -8,4 +8,3 @@ IgnoreAltMissing: true
 IgnoreSSLVerify: true
 IgnoreDirs:
   - overrides
-IgnoreInternalEmptyHash: true
