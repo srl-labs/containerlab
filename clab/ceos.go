@@ -3,6 +3,8 @@ package clab
 import (
 	"context"
 	"fmt"
+	"net"
+	"path"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -85,4 +87,28 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map
 	node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
 
 	return err
+}
+
+func (c *CLab) createCEOSFiles(node *Node) error {
+	// generate config directory
+	CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
+	cfg := path.Join(node.LabDir, "flash", "startup-config")
+	node.ResConfig = cfg
+	if !fileExists(cfg) {
+		err := node.generateConfig(cfg)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+		}
+	} else {
+		log.Debugf("Config file exists for node %s", node.ShortName)
+	}
+
+	// sysmac is a system mac that is +1 to Ma0 mac
+	m, err := net.ParseMAC(node.MacAddress)
+	if err != nil {
+		return err
+	}
+	m[5] = m[5] + 1
+	createFile(path.Join(node.LabDir, "flash", "system_mac_address"), m.String())
+	return nil
 }

@@ -193,17 +193,8 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 
 	case "linux":
 	case "ceos":
-		// generate config directory
-		CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
-		cfg := path.Join(node.LabDir, "flash", "startup-config")
-		node.ResConfig = cfg
-		if !fileExists(cfg) {
-			err = node.generateConfig(cfg)
-			if err != nil {
-				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-			}
-		} else {
-			log.Debugf("Config file exists for node %s", node.ShortName)
+		if err := c.createCEOSFiles(node); err != nil {
+			return err
 		}
 
 	case "crpd":
