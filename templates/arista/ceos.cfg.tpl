@@ -1,6 +1,8 @@
 hostname {{ .ShortName }}
 username admin privilege 15 secret admin
 !
+service routing protocols model multi-agent
+!
 interface Management0
 {{ if .MgmtIPv4Address }}ip address {{ .MgmtIPv4Address }}/{{.MgmtIPv4PrefixLength}}{{end}}
 {{ if .MgmtIPv6Address }}ipv6 address {{ .MgmtIPv6Address }}/{{.MgmtIPv6PrefixLength}}{{end}}
