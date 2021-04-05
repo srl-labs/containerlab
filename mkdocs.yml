@@ -67,7 +67,6 @@ nav:
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
-      - Securing gNMI with TLS: lab-examples/tls-cert.md
   - Release notes:
       - 0.12.0: rn/0.12.0.md
       - 0.11.0: rn/0.11.0.md
@@ -91,11 +90,28 @@ theme:
   include_search_page: false
   search_index_only: true
 
+  features:
+    - navigation.top
+    - navigation.instant
+
   language: en
   palette:
-    scheme: preference
-    primary: white
-    accent: cyan
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: cyan
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: cyan
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
   font:
     text: Manrope
     code: Fira Mono
@@ -108,6 +124,9 @@ plugins:
   - search
   - minify:
       minify_html: true
+  - redirects:
+      redirect_maps:
+        lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
 
 # Customization
 extra:

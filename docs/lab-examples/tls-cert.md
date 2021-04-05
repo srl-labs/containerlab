@@ -95,7 +95,11 @@ When certificates are imported, they are copied to a system `system-pki` directo
 
 ```
 [/]
-A:admin@sr# //file dir system-pki
+A:admin@sr# file list system-pki
+
+Volume in drive cf3 on slot A is SROS VM.
+
+Volume in drive cf3 on slot A is formatted as FAT32
 
 Directory of cf3:\system-pki
 
@@ -130,7 +134,7 @@ Finishing step is configuring the specific SR OS construct called "server-tls-pr
 
 ```
 /configure system security tls server-tls-profile sr-server-tls-prof cert-profile "sr-cert-prof" admin-state enable
-/configure system security tls server-tls-profile sr-server-tls-prof
+/configure system security tls server-tls-profile sr-server-tls-prof cipher-list "ciphers"
 ```
 
 ### Configuring secured gRPC
@@ -208,7 +212,7 @@ Those certificates we can now use for any protocol that requires TLS and the cer
 
 [topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cert01/cert01.clab.yml
 
-[^1]: Resource requirements are provisional. Consult with the installation guides for additional information. Memory deduplication techniques like [UKMS](https://netdevops.me/2021/how-to-patch-ubuntu-20.04-focal-fossa-with-uksm/) might help with RAM consumption.
+[^1]: Resource requirements are provisional. Consult with the installation guides for additional information. Memory deduplication techniques like [UKSM](https://netdevops.me/2021/how-to-patch-ubuntu-20.04-focal-fossa-with-uksm/) might help with RAM consumption.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
 [^3]: Version of our fork - [hellt/vrnetlab](https://github.com/hellt/vrnetlab) with which the container image of this VM was generated.
 [^4]: the `/etc/hosts` entry is created by containerlab when it deploys the nodes.
