@@ -150,46 +150,9 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 
 	switch node.Kind {
 	case "srl":
-		log.Debugf("Creating directory structure for SRL container: %s", node.ShortName)
-		var src string
-		var dst string
-
-		// copy license file to node specific directory in lab
-		src = node.License
-		dst = path.Join(node.LabDir, "license.key")
-		if err = copyFile(src, dst); err != nil {
-			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
-		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
-
-		// generate SRL topology file
-		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
-		if err != nil {
+		if err := c.createSRLFiles(node); err != nil {
 			return err
 		}
-
-		// generate a config file if the destination does not exist
-		// if the node has a `config:` statement, the file specified in that section
-		// will be used as a template in nodeGenerateConfig()
-		CreateDirectory(path.Join(node.LabDir, "config"), 0777)
-		dst = path.Join(node.LabDir, "config", "config.json")
-		if !fileExists(dst) {
-			err = node.generateConfig(dst)
-			if err != nil {
-				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-			}
-		} else {
-			log.Debugf("Config File Exists for node %s", node.ShortName)
-		}
-
-		// copy env config to node specific directory in lab
-		src = "/etc/containerlab/templates/srl/srl_env.conf"
-		dst = node.LabDir + "/" + "srlinux.conf"
-		err = copyFile(src, dst)
-		if err != nil {
-			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
-		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
 
 	case "linux":
 	case "ceos":
