@@ -253,7 +253,7 @@ func hostsEntries(containers []types.Container, bridgeName string) []byte {
 
 func enrichNodes(containers []types.Container, nodes map[string]*clab.Node, mgmtNet string) {
 	for _, c := range containers {
-		name = strings.Split(c.Names[0], "-")[2]
+		name = c.Labels["clab-node-name"]
 		if node, ok := nodes[name]; ok {
 			// add network information
 			// skipping host networking nodes as they don't have separate addresses

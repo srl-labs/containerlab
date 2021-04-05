@@ -307,6 +307,7 @@ func TestLablesInit(t *testing.T) {
 			node: "node1",
 			want: map[string]string{
 				"containerlab":      "topo1",
+				"clab-node-name":    "node1",
 				"clab-node-kind":    "srl",
 				"clab-node-type":    "ixr6",
 				"clab-node-group":   "",
@@ -319,6 +320,7 @@ func TestLablesInit(t *testing.T) {
 			node: "node2",
 			want: map[string]string{
 				"containerlab":      "topo1",
+				"clab-node-name":    "node2",
 				"clab-node-kind":    "srl",
 				"clab-node-type":    "ixr6",
 				"clab-node-group":   "",
@@ -332,6 +334,7 @@ func TestLablesInit(t *testing.T) {
 			node: "node1",
 			want: map[string]string{
 				"containerlab":      "topo2",
+				"clab-node-name":    "node1",
 				"clab-node-kind":    "srl",
 				"clab-node-type":    "ixrd2",
 				"clab-node-group":   "",
@@ -345,6 +348,7 @@ func TestLablesInit(t *testing.T) {
 			node: "node2",
 			want: map[string]string{
 				"containerlab":      "topo3",
+				"clab-node-name":    "node2",
 				"clab-node-kind":    "srl",
 				"clab-node-type":    "ixrd2",
 				"clab-node-group":   "",
