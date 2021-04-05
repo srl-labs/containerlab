@@ -52,7 +52,7 @@ topology:
     srl1:
       kind: srl
       type: ixr6
-      license: lic.key
+      image: srlinux:21.3.1-410
 ```
 
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
@@ -67,7 +67,7 @@ topology:
     srl1:
       kind: srl
       type: ixr6
-      license: lic.key
+      image: srlinux:21.3.1-410
       config: myconfig.json
 ```
 

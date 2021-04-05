@@ -14,8 +14,7 @@ topology:
     node1:
       kind: srl              # node1 is of srl kind
       type: ixrd2
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: srlinux:21.3.1-410
     node2:
       kind: ceos             # node2 is of ceos kind
       image: ceos:4.25F

@@ -25,8 +25,7 @@ topology:
   kinds:
     srl:
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: srlinux:21.3.1-410
   nodes:
     srl1:
       kind: srl

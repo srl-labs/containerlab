@@ -22,7 +22,6 @@ topology:
     srl:
       kind: srl
       image: srl:latest
-      license: lic.txt
       ports:
         - 57402:57400
   links:

@@ -93,8 +93,7 @@ topology:
   nodes:
     r1:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: srlinux:21.3.1-410
       publish:
         - tcp/22     # tcp port 22 will be exposed
 

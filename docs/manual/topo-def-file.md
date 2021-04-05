@@ -15,8 +15,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: srlinux:21.3.1-410
     ceos:
       kind: ceos
       image: ceos:4.25.0F
@@ -57,8 +56,7 @@ topology:
     srl:                    # this is a name of the 1st node
       kind: srl
       type: ixrd2
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: srlinux:21.3.1-410
     ceos:                   # this is a name of the 2nd node
       kind: ceos
       image: ceos:4.25.0F
@@ -73,7 +71,6 @@ srl:
   kind: srl
   type: ixrd2
   image: srlinux
-  license: license.key
 ```
 
 Refer to the [node configuration](nodes.md) document to meet all other options a node can have.
@@ -116,8 +113,7 @@ topology:
   kinds:
     srl:
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: srlinux:21.3.1-410
   nodes:
     srl1:
       kind: srl
@@ -127,9 +123,9 @@ topology:
       kind: srl
 ```
 
-In the example above the `topology.kinds` element has `srl` kind referenced. With this, we set some values for the properties of the `srl` kind. A configuration like that says that nodes of `srl` kind will also inherit the properties (type, image, license) defined on the _kind level_.
+In the example above the `topology.kinds` element has `srl` kind referenced. With this, we set some values for the properties of the `srl` kind. A configuration like that says that nodes of `srl` kind will also inherit the properties (type, image) defined on the _kind level_.
 
-Essentially, what `kinds` section allows us to do is to shorten the lab definition in cases when we have a number of nodes of a same kind. All the nodes (`srl1`, `srl2`, `srl3`) will have the same values for their `type`, `image` and `license` properties.
+Essentially, what `kinds` section allows us to do is to shorten the lab definition in cases when we have a number of nodes of a same kind. All the nodes (`srl1`, `srl2`, `srl3`) will have the same values for their `type` and `image` properties.
 
 Consider how the topology would have looked like without setting the `kinds` object:
 
@@ -139,18 +135,15 @@ topology:
     srl1:
       kind: srl
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: srlinux:21.3.1-410
     srl2:
       kind: srl
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: srlinux:21.3.1-410
     srl3:
       kind: srl
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: srlinux:21.3.1-410
 ```
 
 A lot of unnecessary repetition which is eliminated when we set `srl` kind properties on kind level.

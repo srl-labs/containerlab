@@ -7,8 +7,7 @@ topology:
       image: crpd:20.2R1.10
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: srlinux:21.3.1-410
 
   links:
     - endpoints: ["srl:e1-1", "crpd:eth1"]

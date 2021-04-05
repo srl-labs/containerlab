@@ -21,7 +21,6 @@ topology:
     srl:
       type: ixr6
       image: srlinux
-      license: license.key
   nodes:
     srl1:
       kind: srl
@@ -215,8 +214,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: srlinux:21.3.1-410
       config: test-srl-config.json
   links:
     - endpoints: ["srl:e1-1", "host:srl_e1-1"]

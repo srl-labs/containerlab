@@ -4,8 +4,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: srlinux:21.3.1-410
     vmx:
       kind: vr-vmx
       image: vrnetlab/vr-vmx:20.2R1.10

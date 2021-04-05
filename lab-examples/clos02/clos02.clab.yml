@@ -5,7 +5,6 @@ topology:
   kinds:
     srl:
       image: srlinux
-      license: license.key
     linux:
       image: ghcr.io/hellt/network-multitool
   nodes:

@@ -9,8 +9,7 @@ topology:
     node1:  # node name
       kind: srl
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: srlinux:21.3.1-410
       config: /root/mylab/node1.cfg
       binds:
         - /usr/local/bin/gobgp:/root/gobgp
@@ -56,7 +55,7 @@ docker tag srlinux:20.6.1-286 srlinux:latest
 ```
 
 ### license
-Some containerized NOSes require a license to operate. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
+Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
 
 ### config
 For the specific kinds its possible to pass a path to a config template file that a node will use.

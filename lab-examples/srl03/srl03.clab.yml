@@ -4,8 +4,7 @@ topology:
   kinds:
     srl:
       type: ixr6
-      image: srlinux
-      license: license.key
+      image: srlinux:21.3.1-410
     linux:
       image: ghcr.io/hellt/network-multitool
   nodes:
