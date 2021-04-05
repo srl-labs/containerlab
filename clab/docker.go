@@ -175,6 +175,7 @@ func (c *CLab) CreateContainer(ctx context.Context, node *Node) (err error) {
 		User:         node.User,
 		Labels:       node.Labels,
 		ExposedPorts: node.PortSet,
+		MacAddress:   node.MacAddress,
 	}
 	containerHostConfig := &container.HostConfig{
 		Binds:        node.Binds,

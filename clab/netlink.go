@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"crypto/rand"
 	"fmt"
 	"net"
 	"os"
@@ -253,4 +254,11 @@ func GetLiknsByNamePrefix(prefix string) ([]netlink.Link, error) {
 		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
 	}
 	return fls, nil
+}
+
+// genMac generates a random MAC address for a given OUI
+func genMac(oui string) string {
+	buf := make([]byte, 3)
+	_, _ = rand.Read(buf)
+	return fmt.Sprintf("%s:%02x:%02x:%02x", oui, buf[0], buf[1], buf[2])
 }

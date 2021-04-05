@@ -166,6 +166,7 @@ type Node struct {
 	MgmtIPv4PrefixLength int
 	MgmtIPv6Address      string
 	MgmtIPv6PrefixLength int
+	MacAddress           string
 	ContainerID          string
 	TLSCert              string
 	TLSKey               string
