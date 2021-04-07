@@ -33,6 +33,12 @@ To load completions for each session, execute once:
 ```bash
 containerlab completion zsh > "${fpath[1]}/_containerlab"
 ```
+
+!!!info
+    Note: `$fpath[1]` in this command refers to the first path in `$fpath`. Ensure you
+    use the index pointing to the completion folder, find the correct index by inspecting
+    the output of `echo $fpath`
+
 Start a new shell for this setup to take effect.
 
 #### Fish completions
