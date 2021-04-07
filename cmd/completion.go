@@ -45,7 +45,6 @@ fish:
 	ValidArgs:             []string{"bash", "zsh", "fish"},
 	Args:                  cobra.ExactValidArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Root().MarkFlagFilename("topo", "*.yaml", "*.yml")
 		switch args[0] {
 		case "bash":
 			cmd.Root().GenBashCompletion(os.Stdout)
