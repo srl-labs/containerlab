@@ -27,6 +27,7 @@
                         "vr-xrv",
                         "vr-xrv9k",
                         "vr-veos",
+                        "vr-csr",
                         "linux",
                         "bridge",
                         "ovs-bridge",
