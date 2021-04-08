@@ -632,24 +632,22 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 
 // CheckTopologyDefinition runs topology checks and returns any errors found
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
-	err := c.verifyBridgesExist()
-	if err != nil {
+	if err := c.verifyBridgesExist(); err != nil {
 		return err
 	}
-	err = c.verifyLinks()
-	if err != nil {
+	if err := c.verifyLinks(); err != nil {
 		return err
 	}
-	if err = c.VerifyContainersUniqueness(ctx); err != nil {
+	if err := c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
-	if err = c.verifyVirtSupport(); err != nil {
+	if err := c.verifyVirtSupport(); err != nil {
 		return err
 	}
-	if err = c.verifyHostIfaces(); err != nil {
+	if err := c.verifyHostIfaces(); err != nil {
 		return err
 	}
-	if err = c.VerifyImages(ctx); err != nil {
+	if err := c.VerifyImages(ctx); err != nil {
 		return err
 	}
 	return nil
