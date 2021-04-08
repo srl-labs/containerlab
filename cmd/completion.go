@@ -40,14 +40,6 @@ fish:
 
   # To load completions for each session, execute once:
   $ containerlab completion fish > ~/.config/fish/completions/containerlab.fish
-
-PowerShell:
-
-  PS> containerlab completion powershell | Out-String | Invoke-Expression
-
-  # To load completions for every new session, run:
-  PS> containerlab completion powershell > containerlab.ps1
-  # and source this file from your PowerShell profile.
 `,
 	DisableFlagsInUseLine: true,
 	ValidArgs:             []string{"bash", "zsh", "fish"},

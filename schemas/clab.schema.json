@@ -27,6 +27,7 @@
                         "vr-xrv",
                         "vr-xrv9k",
                         "vr-veos",
+                        "vr-ros",
                         "linux",
                         "bridge",
                         "ovs-bridge",
@@ -252,7 +253,10 @@
                     "type": "object",
                     "patternProperties": {
                         ".*": {
-                            "$ref": "#/definitions/node-config"
+                            "oneOf": [
+                                {"type": "null"},
+                                {"$ref": "#/definitions/node-config"}
+                            ]
                         }
                     }
                 },
