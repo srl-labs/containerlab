@@ -32,7 +32,7 @@ The following table provides a link between the version combinations that were v
 | --               | [`0.2.1`](https://github.com/hellt/vrnetlab/tree/v0.2.1)       | added timeout for SR OS images to allow eth interfaces to appear in the container namespace. Other images are not touched.                               |
 | --               | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)       | fixed serial (telnet) access to SR OS nodes                                                                                                              |
 | --               | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)       | set default cpu/ram for SR OS images                                                                                                                     |
-| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)       | added support for routeros via `vr-ros` kind                                                                                                             |
+| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)       | added support for routeros via [`vr-ros`](kinds/vr-ros.md) kind                                                                                          |
 
 ### Building vrnetlab images
 To build a vrnetlab image compatible with containerlab users first need to ensure that the versions of both projects follow [compatibility matrix](#compatibility-matrix).
@@ -65,7 +65,7 @@ The images that work with containerlab will appear in the supported list gradual
 | MikroTik RouterOS | [vr-ros](kinds/vr-ros.md)     |                                            |                                                                                                                                                                                                              |
 
 ### Connection modes
-Containerlab offers several ways VM based routers can be connected with the rest of the docker workloads. By default, vrnetlab integrated routers will use **tc** backend[^2] which doesn't require any additional packages to be installed on the containerhost and supoprts transparent passage of LACP frames.
+Containerlab offers several ways VM based routers can be connected with the rest of the docker workloads. By default, vrnetlab integrated routers will use **tc** backend[^2] which doesn't require any additional packages to be installed on the container host and supports transparent passage of LACP frames.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
 
@@ -88,7 +88,7 @@ Containerlab offers several ways VM based routers can be connected with the rest
 ### Boot delay
 Simultaneous boot of many qemu nodes may stress the underlying system, which sometimes render in a boot loop or system halt. If the container host doesn't have enough capacity to bear the simultaneous boot of many qemu nodes it is still possible to successfully run them by scheduling their boot time.
 
-Delaying the boot process of certain nodes by a user defined time will allow nodes to boot successfully while "gradually" load the system. The boot delay can be set with `BOOT_DELAY` environment varialbe that supported `vr-xxxx` kinds will recognize.
+Delaying the boot process of certain nodes by a user defined time will allow nodes to boot successfully while "gradually" load the system. The boot delay can be set with `BOOT_DELAY` environment variable that supported `vr-xxxx` kinds will recognize.
 
 Consider the following example where the first SR OS nodes will boot immediately, whereas the second node will sleep for 30 seconds and then start the boot process:
 
@@ -110,7 +110,7 @@ topology:
 ```
 
 ### Memory optimization
-Typically a lab consists of a few types of VMs which are spawned and inteconnected with each other. Consider a fictious lab that consists of 5 interconnected routers, 1 router uses VM image X and 4 routers are using VM image Y.
+Typically a lab consists of a few types of VMs which are spawned and interconnected with each other. Consider a lab that consists of 5 interconnected routers, 1 router uses VM image X and 4 routers are using VM image Y.
 
 Effectively we run just two types of VMs in that lab, and thus we can implement memory deduplication technique that drastically reduces the memory footprint of a lab. In Linux this can be achieved with technologies like UKSM/KSM. Refer to [this article](https://netdevops.me/2021/how-to-patch-ubuntu-20.04-focal-fossa-with-uksm/) that explains the methodology and provides steps to get UKSM working on Ubuntu/Fedora systems.
 
