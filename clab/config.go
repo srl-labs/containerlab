@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/mitchellh/go-homedir"
@@ -897,8 +898,32 @@ func (c *CLab) CheckResources() error {
 	vcpu := runtime.NumCPU()
 	log.Debugf("Number of vcpu: %d", vcpu)
 	if vcpu < 2 {
-
 		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
 	}
+	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
+	if freeMemG < 1 {
+		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtimer errors. Consider freeing up more memory.", freeMemG)
+	}
 	return nil
+}
+
+// sysMemory reports on total installed or free memory (in bytes)
+// used from https://github.com/pbnjay/memory
+func sysMemory(v string) uint64 {
+	in := &syscall.Sysinfo_t{}
+	err := syscall.Sysinfo(in)
+	if err != nil {
+		return 0
+	}
+	var m uint64
+	// If this is a 32-bit system, then these fields are
+	// uint32 instead of uint64.
+	// So we always convert to uint64 to match signature.
+	switch v {
+	case "total":
+		m = uint64(in.Totalram) * uint64(in.Unit)
+	case "free":
+		m = uint64(in.Freeram) * uint64(in.Unit)
+	}
+	return m
 }
