@@ -632,24 +632,22 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 
 // CheckTopologyDefinition runs topology checks and returns any errors found
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
-	err := c.verifyBridgesExist()
-	if err != nil {
+	if err := c.verifyBridgesExist(); err != nil {
 		return err
 	}
-	err = c.verifyLinks()
-	if err != nil {
+	if err := c.verifyLinks(); err != nil {
 		return err
 	}
-	if err = c.VerifyContainersUniqueness(ctx); err != nil {
+	if err := c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
-	if err = c.verifyVirtSupport(); err != nil {
+	if err := c.verifyVirtSupport(); err != nil {
 		return err
 	}
-	if err = c.verifyHostIfaces(); err != nil {
+	if err := c.verifyHostIfaces(); err != nil {
 		return err
 	}
-	if err = c.VerifyImages(ctx); err != nil {
+	if err := c.VerifyImages(ctx); err != nil {
 		return err
 	}
 	return nil
@@ -669,9 +667,13 @@ func (c *CLab) verifyBridgesExist() error {
 
 func (c *CLab) verifyLinks() error {
 	endpoints := map[string]struct{}{}
+	// dups accumulates duplicate links
 	dups := []string{}
 	for _, lc := range c.Config.Topology.Links {
 		for _, e := range lc.Endpoints {
+			if err := checkEndpoint(e); err != nil {
+				return err
+			}
 			if _, ok := endpoints[e]; ok {
 				dups = append(dups, e)
 			}
@@ -797,6 +799,18 @@ func (c *CLab) verifyVirtSupport() error {
 	}
 
 	return fmt.Errorf("virtualization seems to be not supported and it is required by vrnetlab routers. Check if virtualization can been enabled")
+}
+
+// checkEndpoint runs checks on the endpoint syntax
+func checkEndpoint(e string) error {
+	split := strings.Split(e, ":")
+	if len(split) != 2 {
+		return fmt.Errorf("malformed endpoint definition: %s", e)
+	}
+	if split[1] == "eth0" {
+		return fmt.Errorf("eth0 interface can't be used in the endpoint definition as it is added by docker automatically: '%s'", e)
+	}
+	return nil
 }
 
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
