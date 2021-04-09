@@ -50,7 +50,7 @@ When no information about the management network is provided within the topo def
 The addressing information that containerlab will use on this network:
 
 * IPv4: subnet 172.20.20.0/24, gateway 172.20.20.1
-* IPv6: subnet 2001:172:20:20::/80, gateway 2001:172:20:20::1
+* IPv6: subnet 2001:172:20:20::/64, gateway 2001:172:20:20::1
 
 This management network will be configured with MTU value matching the value of a `docker0` host interface to match docker configuration on the system. This option is [configurable](#mtu).
 
