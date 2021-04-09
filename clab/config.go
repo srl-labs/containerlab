@@ -547,6 +547,9 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		}
 	case "vr-csr":
 		err = initVrCSRNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
 	case "vr-ros":
 		err = initVrROSNode(c, nodeCfg, node, user, envs)
 		if err != nil {
