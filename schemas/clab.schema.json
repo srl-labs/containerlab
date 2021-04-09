@@ -27,6 +27,7 @@
                         "vr-xrv",
                         "vr-xrv9k",
                         "vr-veos",
+                        "vr-csr",
                         "vr-ros",
                         "linux",
                         "bridge",
@@ -254,8 +255,12 @@
                     "patternProperties": {
                         ".*": {
                             "oneOf": [
-                                {"type": "null"},
-                                {"$ref": "#/definitions/node-config"}
+                                {
+                                    "type": "null"
+                                },
+                                {
+                                    "$ref": "#/definitions/node-config"
+                                }
                             ]
                         }
                     }
