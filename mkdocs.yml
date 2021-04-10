@@ -28,6 +28,7 @@ nav:
       - Multi-node labs: manual/multi-node.md
       - Certificate management: manual/cert.md
       - Inventory: manual/inventory.md
+      - Image management: manual/images.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
