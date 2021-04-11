@@ -323,7 +323,7 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 
 // configInit processes the path to a config file that can be provided on
 // multiple configuration levels
-// returns an errof if the reference path doesn't exist
+// returns an error if the reference path doesn't exist
 func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
 	var cfg string
 	var err error
