@@ -82,6 +82,23 @@ tar -zxvf /tmp/clab.tar.gz -C /etc/containerlab
 mv /etc/containerlab/containerlab /usr/bin && chmod a+x /usr/bin/containerlab
 ```
 
+### Windows Subsystem Linux (WSL)
+Containerlab [runs](https://twitter.com/ntdvps/status/1380915270328401922) on WSL, but you need to [install docker-ce](https://docs.docker.com/engine/install/) inside the WSL2 linux system instead of using Docker Desktop[^3].
+
+If you are running Ubuntu 20.04 as your WSL2 machine, you can run [this script](https://gist.github.com/hellt/e8095c1719a3ea0051165ff282d2b62a) to install docker-ce.
+
+```bash
+curl -L https://gist.githubusercontent.com/hellt/e8095c1719a3ea0051165ff282d2b62a/raw/1dffb71d0495bb2be953c489cd06a25656d974a4/docker-install.sh | \
+bash
+```
+
+Once installed, issue `sudo service docker start` to start the docker service inside WSL2 machine.
+
+??? "Running VM-based routers inside WSL"
+    At the moment of this writing, KVM support was not available out-of-the box with WSL2 VMs. There are [ways](https://www.reddit.com/r/bashonubuntuonwindows/comments/ldbyxa/what_is_the_current_state_of_kvm_acceleration_on/) to enable KVM support, but they were not tested with containerlab. This means that running traditional VM based routers via [vrnetlab integration](manual/vrnetlab.md) is not readily available.
+
+    It appears to be that next versions of WSL2 kernels will support KVM.
+
 ### Upgrade
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
 
@@ -95,3 +112,4 @@ or leverage `apt`/`yum` utilities if containerlab repo was added as explained in
 
 [^1]: only available if installed from packages
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
+[^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
