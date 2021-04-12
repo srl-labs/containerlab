@@ -2,6 +2,7 @@
 stages:
   - code-tests
   - build
+  - smoke-tests
   - integration-tests
 
 variables:
@@ -24,7 +25,7 @@ build-containerlab:
     - sudo go build -o /usr/bin/containerlab
 
 smoke-tests:
-  stage: integration-tests
+  stage: smoke-tests
   tags:
     - containerlab
   script:
@@ -37,8 +38,6 @@ smoke-tests:
 
 srl-tests:
   stage: integration-tests
-  needs:
-    - smoke-tests
   tags:
     - containerlab
   script:
