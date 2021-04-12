@@ -1,6 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
-Suite Teardown    Run Keyword    sudo containerlab destroy -t ${CURDIR}/02-srl02.clab.yml --cleanup
+Suite Teardown    Run    sudo containerlab destroy -t ${CURDIR}/02-srl02.clab.yml --cleanup
 
 *** Variables ***
 ${lab-name}       02-01-two-srls
