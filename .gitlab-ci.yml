@@ -10,3 +10,10 @@ go-tests:
     - containerlab
   script:
     - go test -cover -race ./...
+
+build-containerlab:
+  stage: build
+  tags:
+    - containerlab
+  script:
+    - go build
