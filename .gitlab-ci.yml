@@ -1,0 +1,10 @@
+---
+stages:
+  - code-tests
+  - build
+  - integration-tests
+
+go-tests:
+  stage: code-tests
+  script:
+    - go test -cover -race ./...
