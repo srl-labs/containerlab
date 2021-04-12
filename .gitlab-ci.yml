@@ -28,5 +28,5 @@ smoke-tests:
   tags:
     - containerlab
   script:
-    - source venvs/rf/bin/activate
+    - source ~/venvs/rf/bin/activate
     - bash ./tests/rf-run.sh ./tests/01-smoke
