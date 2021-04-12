@@ -12,7 +12,7 @@ go-tests:
   tags:
     - containerlab
   script:
-    - go test -cover -race ./...
+    - CGO_ENABLED=1 go test -cover -race ./...
 
 build-containerlab:
   stage: build
