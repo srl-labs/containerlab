@@ -4,6 +4,9 @@ stages:
   - build
   - integration-tests
 
+variables:
+  CGO_ENABLED: 0
+
 go-tests:
   stage: code-tests
   tags:
