@@ -6,5 +6,7 @@ stages:
 
 go-tests:
   stage: code-tests
+  tags:
+    - containerlab
   script:
     - go test -cover -race ./...
