@@ -25,5 +25,7 @@ require (
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
 	gopkg.in/yaml.v2 v2.4.0
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	gopkg.in/yaml.v2 v2.3.0
+	inet.af/netaddr v0.0.0-20210403172118-1e1430f727e0 // indirect
 )
-
