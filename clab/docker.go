@@ -98,6 +98,7 @@ func (c *CLab) CreateDockerNet(ctx context.Context) (err error) {
 	default:
 		return err
 	}
+	c.Config.Mgmt.Bridge = bridgeName
 
 	log.Debugf("Docker network '%s', bridge name '%s'", c.Config.Mgmt.Network, bridgeName)
 

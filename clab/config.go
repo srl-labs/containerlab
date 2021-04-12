@@ -89,6 +89,7 @@ type Config struct {
 // it is provided via docker network object
 type mgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
+	Bridge     string // linux bridge backing the docker network
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
@@ -612,15 +613,23 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	nName := split[0]  // node name
 	epName := split[1] // endpoint name
 	// search the node pointer for a node name referenced in endpoint section
-	// if node name is not "host", since "host" is a special reference to host namespace
+	switch nName {
+	// "host" is a special reference to host namespace
 	// for which we create an special Node with kind "host"
-	if nName == "host" {
+	case "host":
 		endpoint.Node = &Node{
 			Kind:      "host",
 			ShortName: "host",
 			NSPath:    hostNSPath,
 		}
-	} else {
+	// mgmt-net is a special reference to a bridge of the docker network
+	// that is used as the management network
+	case "mgmt-net":
+		endpoint.Node = &Node{
+			Kind:      "bridge",
+			ShortName: "mgmt-net",
+		}
+	default:
 		for name, n := range c.Nodes {
 			if name == split[0] {
 				endpoint.Node = n

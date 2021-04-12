@@ -230,3 +230,33 @@ ip link
 433: srl_e1-1@if434: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
     link/ether b2:80:e9:60:c7:9d brd ff:ff:ff:ff:ff:ff link-netns clab-srl01-srl
 ```
+
+### Additional connections to management network
+By default every lab node will be connected to the docker network named `clab` which acts as a management network for the nodes.
+
+In addition to that mandatory connection, users can attach additional interfaces to this management network. This might be needed, for example, when data interface of a node needs to talk to the nodes on the management network.
+
+For such connections a special form of endpoint definition was created - `mgmt-net:$iface-name`.
+
+```yaml
+name: mgmt
+topology:
+  nodes:
+    n1:
+      kind: srl
+      image: srlinux:21.3.1-410
+      license: license.key
+  links:
+    - endpoints:
+        - "n1:e1-1"
+        - "mgmt-net:n1-e1-1"
+
+```
+
+In the above example the node `n1` connects with its `e1-1` interface to the management network. This is done by specifying the endpoint with a reserved name `mgmt-net` and defining the name of the interface that should be used in that bridge (`nq-e1-1`).
+
+By specifying `mgmt-net` name of the node in the endpoint definition we tell containerlab to find out which bridge is used by the management network of our lab and use this bridge as the attachment point for our veth pair.
+
+This is best illustrated with the following diagram:
+
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:14,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
