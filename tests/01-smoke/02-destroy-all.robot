@@ -1,6 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
-Suite Teardown    Run    sudo containerlab destroy --all
+Suite Teardown    Run    sudo containerlab destroy --all --cleanup
 
 *** Test Cases ***
 Deploy first lab
