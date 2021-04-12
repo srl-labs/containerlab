@@ -8,6 +8,10 @@ stages:
 variables:
   CGO_ENABLED: 0
 
+before_script:
+  # clean up state from previous builds
+  - sudo rm -rf builds/*/0/rdodin/containerlab
+
 go-tests:
   stage: code-tests
   tags:
