@@ -15,6 +15,10 @@ func (c *CLab) GenerateInventories() error {
 	if err != nil {
 		return err
 	}
+	err = os.Chmod(ansibleInvFPath, 0777)
+	if err != nil {
+		return err
+	}
 	if err := c.generateAnsibleInventory(f); err != nil {
 		return err
 	}
