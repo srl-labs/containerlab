@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -150,118 +149,31 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 
 	switch node.Kind {
 	case "srl":
-		log.Debugf("Creating directory structure for SRL container: %s", node.ShortName)
-		var src string
-		var dst string
-
-		// copy license file to node specific directory in lab
-		src = node.License
-		dst = path.Join(node.LabDir, "license.key")
-		if err = copyFile(src, dst); err != nil {
-			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
-		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
-
-		// generate SRL topology file
-		err = generateSRLTopologyFile(node.Topology, node.LabDir, node.Index)
-		if err != nil {
+		if err := c.createSRLFiles(node); err != nil {
 			return err
 		}
-
-		// generate a config file if the destination does not exist
-		// if the node has a `config:` statement, the file specified in that section
-		// will be used as a template in nodeGenerateConfig()
-		CreateDirectory(path.Join(node.LabDir, "config"), 0777)
-		dst = path.Join(node.LabDir, "config", "config.json")
-		if !fileExists(dst) {
-			err = node.generateConfig(dst)
-			if err != nil {
-				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-			}
-		} else {
-			log.Debugf("Config File Exists for node %s", node.ShortName)
-		}
-
-		// copy env config to node specific directory in lab
-		src = "/etc/containerlab/templates/srl/srl_env.conf"
-		dst = node.LabDir + "/" + "srlinux.conf"
-		err = copyFile(src, dst)
-		if err != nil {
-			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
-		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
-
-	case "linux":
 	case "ceos":
 		if err := c.createCEOSFiles(node); err != nil {
 			return err
 		}
-
 	case "crpd":
-		// create config and logs directory that will be bind mounted to crpd
-		CreateDirectory(path.Join(node.LabDir, "config"), 0777)
-		CreateDirectory(path.Join(node.LabDir, "log"), 0777)
-
-		// copy crpd config from default template or user-provided conf file
-		cfg := path.Join(node.LabDir, "/config/juniper.conf")
-		if !fileExists(cfg) {
-			err = node.generateConfig(cfg)
-			if err != nil {
-				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-			}
-		} else {
-			log.Debugf("Config file exists for node %s", node.ShortName)
-		}
-		// copy crpd sshd conf file to crpd node dir
-		src := "/etc/containerlab/templates/crpd/sshd_config"
-		dst := node.LabDir + "/config/sshd_config"
-		err = copyFile(src, dst)
-		if err != nil {
-			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
-		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
-
-		if node.License != "" {
-			// copy license file to node specific lab directory
-			src = node.License
-			dst = path.Join(node.LabDir, "/config/license.conf")
-			if err = copyFile(src, dst); err != nil {
-				return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
-			}
-			log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+		if err := c.createCRPDFiles(node); err != nil {
+			return err
 		}
 	case "vr-sros":
-		// create config directory that will be bind mounted to vrnetlab container at / path
-		CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)
-
-		if node.License != "" {
-			// copy license file to node specific lab directory
-			src := node.License
-			dst := path.Join(node.LabDir, "/tftpboot/license.txt")
-			if err = copyFile(src, dst); err != nil {
-				return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
-			}
-			log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
-
-			cfg := path.Join(node.LabDir, "tftpboot", "config.txt")
-			if node.Config != "" {
-				err = node.generateConfig(cfg)
-				if err != nil {
-					log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-				}
-			} else {
-				log.Debugf("Config file exists for node %s", node.ShortName)
-			}
+		if err := c.createVrSROSFiles(node); err != nil {
+			return err
 		}
-	case "bridge":
-	default:
 	}
-
 	return nil
 }
 
 // GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
+	if fileExists(dst) && (node.Config == defaultConfigTemplates[node.Kind]) {
+		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
+		return nil
+	}
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.Config)
 	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
 	if err != nil {

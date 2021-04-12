@@ -3,6 +3,8 @@ package clab
 import (
 	"fmt"
 	"path"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func initSROSNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[string]string) error {
@@ -46,4 +48,30 @@ func initSROSNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map
 		node.NodeType,
 	)
 	return err
+}
+
+func (c *CLab) createVrSROSFiles(node *Node) error {
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)
+
+	if node.License != "" {
+		// copy license file to node specific lab directory
+		src := node.License
+		dst := path.Join(node.LabDir, "/tftpboot/license.txt")
+		if err := copyFile(src, dst); err != nil {
+			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
+		}
+		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+
+		cfg := path.Join(node.LabDir, "tftpboot", "config.txt")
+		if node.Config != "" {
+			err := node.generateConfig(cfg)
+			if err != nil {
+				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+			}
+		} else {
+			log.Debugf("Config file exists for node %s", node.ShortName)
+		}
+	}
+	return nil
 }
