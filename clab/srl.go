@@ -73,7 +73,7 @@ func initSRLNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[
 	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 	if filename, found := srlTypes[node.NodeType]; found {
-		node.Topology = baseConfigDir + filename
+		node.Topology = path.Join(filepath.Dir(defaultConfigTemplates[node.Kind]), filename)
 	} else {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
