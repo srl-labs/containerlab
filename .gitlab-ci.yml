@@ -12,6 +12,8 @@ go-tests:
   tags:
     - containerlab
   script:
+    # create empty files to make clab happy
+    - sudo mkdir -p /etc/containerlab/templates/srl && sudo touch /etc/containerlab/templates/srl/srlconfig.tpl
     - CGO_ENABLED=1 go test -cover -race ./...
 
 build-containerlab:
@@ -19,4 +21,12 @@ build-containerlab:
   tags:
     - containerlab
   script:
-    - go build
+    - sudo go build -o /usr/bin/containerlab
+
+smoke-tests:
+  stage: integration-tests
+  tags:
+    - containerlab
+  script:
+    - source venvs/rf/bin/activate
+    - bash ./tests/rf-run.sh ./tests/01-smoke
