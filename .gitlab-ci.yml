@@ -8,10 +8,6 @@ stages:
 variables:
   CGO_ENABLED: 0
 
-before_script:
-  # clean up state from previous builds
-  - sudo rm -rf builds/*/0/rdodin/containerlab
-
 go-tests:
   stage: code-tests
   tags:
@@ -44,8 +40,6 @@ srl-tests:
   stage: integration-tests
   tags:
     - containerlab
-  before_script:
-    - sudo rm -rf builds/*/0/rdodin/containerlab
   script:
     - source ~/venvs/rf/bin/activate
     - bash ./tests/rf-run.sh ./tests/02-basic-srl
