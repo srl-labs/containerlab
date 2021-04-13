@@ -171,6 +171,15 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
+	if len(containers) == 0 {
+		return nil
+	}
+
+	// get lab directory used by this lab to remove it later if cleanup is used
+	var labDir string
+	if cleanup {
+		labDir = filepath.Dir(containers[0].Labels["clab-node-lab-dir"])
+	}
 
 	log.Infof("Destroying container lab: %s", c.Config.Name)
 	wg := new(sync.WaitGroup)
@@ -192,7 +201,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	// remove the lab directories
 	if cleanup {
-		err = os.RemoveAll(c.Dir.Lab)
+		err = os.RemoveAll(labDir)
 		if err != nil {
 			log.Errorf("error deleting lab directory: %v", err)
 		}
