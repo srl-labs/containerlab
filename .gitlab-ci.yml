@@ -1,4 +1,10 @@
 ---
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: never # Prevent pipeline run for push event
+    - when: always # Run pipeline for all other cases
+
 stages:
   - code-tests
   - build

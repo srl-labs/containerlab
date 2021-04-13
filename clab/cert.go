@@ -55,6 +55,46 @@ type CaRootInput struct {
 	NamePrefix string
 }
 
+var rootCACSRTempl string = `{
+    "CN": "{{.Prefix}} Root CA",
+    "key": {
+       "algo": "rsa",
+       "size": 2048
+    },
+    "names": [{
+       "C": "BE",
+       "L": "Antwerp",
+       "O": "Nokia",
+       "OU": "Container lab"
+    }],
+    "ca": {
+       "expiry": "262800h"
+    }
+}
+`
+
+var nodeCSRTempl string = `{
+    "CN": "{{.Name}}.{{.Prefix}}.io",
+    "key": {
+      "algo": "rsa",
+      "size": 2048
+    },
+    "names": [{
+      "C": "BE",
+      "L": "Antwerp",
+      "O": "Nokia",
+      "OU": "Container lab"
+    }],
+    "hosts": [
+      "{{.Name}}",
+      "{{.LongName}}",
+      "{{.Fqdn}}"
+    ]
+}
+
+
+`
+
 // GenerateRootCa function
 func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
 	log.Info("Creating root CA")
@@ -227,9 +267,9 @@ func (c *CLab) CreateRootCA() error {
 		return nil
 	}
 
-	tpl, err := template.ParseFiles(rootCaCsrTemplate)
+	tpl, err := template.New("ca-csr").Parse(rootCACSRTempl)
 	if err != nil {
-		return fmt.Errorf("failed to parse rootCACsrTemplate: %v", err)
+		return fmt.Errorf("failed to parse Root CA CSR Template: %v", err)
 	}
 	rootCerts, err := c.GenerateRootCa(tpl, CaRootInput{
 		Prefix:     c.Config.Name,
