@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -171,7 +172,20 @@ func (c *ConfigSnippet) String() string {
 	return fmt.Sprintf("%s: %s %d lines of config", c.TargetNode.LongName, c.source, len(c.Config))
 }
 
+func typeof(val interface{}) string {
+	switch val.(type) {
+	case string:
+		return "string"
+	case int:
+		return "int"
+	}
+	return ""
+}
+
 var funcMap = map[string]interface{}{
+	"expect": func(val interface{}, format interface{}) (interface{}, error) {
+		return nil, nil
+	},
 	"require": func(val interface{}) (interface{}, error) {
 		if val == nil {
 			return nil, errors.New("required value not set")
@@ -192,20 +206,79 @@ var funcMap = map[string]interface{}{
 		if def == nil {
 			return nil, fmt.Errorf("default value expected")
 		}
-		switch val.(type) {
+
+		switch v := val.(type) {
 		case string:
-			if val == "" {
+			if v == "" {
 				return def, nil
 			}
-		default:
-			if val == nil {
+		case bool:
+			if !v {
 				return def, nil
 			}
 		}
+		if val == nil {
+			return def, nil
+		}
+
+		// If we have a input value, do some type checking
+		tval, tdef := typeof(val), typeof(def)
+		if tval == "string" && tdef == "int" {
+			if _, err := strconv.Atoi(val.(string)); err == nil {
+				tval = "int"
+			}
+		}
+		if tdef != tval {
+			return val, fmt.Errorf("expected type %v, got %v (value=%v)", tdef, tval, val)
+		}
+
+		// Return the value
 		return val, nil
 	},
 	"contains": func(str interface{}, substr interface{}) (interface{}, error) {
 		return strings.Contains(fmt.Sprintf("%v", str), fmt.Sprintf("%v", substr)), nil
+	},
+	"split": func(val interface{}, sep interface{}) (interface{}, error) {
+		// Start and end values
+		if val == nil {
+			return []interface{}{}, nil
+		}
+		s := fmt.Sprintf("%v", sep)
+		if sep == nil {
+			s = " "
+		}
+
+		v := fmt.Sprintf("%v", val)
+
+		res := strings.Split(v, s)
+		r := make([]interface{}, len(res))
+		for i, p := range res {
+			r[i] = p
+		}
+		return r, nil
+	},
+	"join": func(val interface{}, sep interface{}) (interface{}, error) {
+		s := fmt.Sprintf("%s", sep)
+		if sep == nil {
+			s = " "
+		}
+		// Start and end values
+		switch v := val.(type) {
+		case []interface{}:
+			if val == nil {
+				return "", nil
+			}
+			res := make([]string, len(v))
+			for i, v := range v {
+				res[i] = fmt.Sprintf("%v", v)
+			}
+			return strings.Join(res, s), nil
+		case []string:
+			return strings.Join(v, s), nil
+		case []int, []int16, []int32:
+			return strings.Trim(strings.Replace(fmt.Sprint(v), " ", s, -1), "[]"), nil
+		}
+		return nil, fmt.Errorf("expected array [], got %v", val)
 	},
 	"slice": func(val interface{}, start interface{}, end interface{}) (interface{}, error) {
 		// Start and end values

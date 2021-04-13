@@ -1,3 +1,6 @@
+{{ expect .systemip "ip" }}
+{{ expect .sid_idx "0-1000" }}
+
 /configure system login-control idle-timeout 1440
 
 /configure apply-groups ["baseport"]
@@ -66,13 +69,13 @@
 
 /configure router
     autonomous-system {{ default .as_number "64500" }}
-    mpls-labels sr-labels start {{ default .sid_start "19000" }} end {{ default .sid_end "30000" }}
+    mpls-labels sr-labels start {{ default .sid_start 19000 }} end {{ default .sid_end 30000 }}
 
-/configure router isis {{ default .isis_iid "0" }}
-    area-address 49.0000.000{{ default .isis_iid "0" }}
+/configure router isis {{ default .isis_iid 0 }}
+    area-address 49.0000.000{{ default .isis_iid 0 }}
     level-capability 2
     level 2 wide-metrics-only
-    interface "system" ipv4-node-sid index {{ .sid_idx }}
+    interface "system" ipv4-node-sid index {{ require .sid_idx }}
     #database-export igp-identifier {{ default .isis_iid "0" }} bgp-ls-identifier value {{ default .isis_iid "0" }}
     traffic-engineering
     advertise-router-capability area
