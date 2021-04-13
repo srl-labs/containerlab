@@ -1,6 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
-Suite Teardown    Run    sudo containerlab destroy -t ${CURDIR}/02-srl02.clab.yml --cleanup
+Suite Teardown    Run Keyword    Cleanup
 
 *** Variables ***
 ${lab-name}       02-01-two-srls
@@ -29,3 +29,8 @@ Verify links in node srl2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+
+*** Keywords ***
+Cleanup
+    Run    sudo containerlab destroy -t ${CURDIR}/02-srl02.clab.yml --cleanup
+    Run    rm -rf ${CURDIR}/${lab-name}
