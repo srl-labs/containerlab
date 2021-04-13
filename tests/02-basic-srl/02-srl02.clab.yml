@@ -1,0 +1,15 @@
+name: 02-01-two-srls
+
+topology:
+  kinds:
+    srl:
+      image: srlinux:21.3.1-410
+      license: /home/gitlab-runner/srl-lic.key
+  nodes:
+    srl1:
+      kind: srl
+    srl2:
+      kind: srl
+
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]

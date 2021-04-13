@@ -15,13 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	rootCaCsrTemplate = "/etc/containerlab/templates/ca/csr-root-ca.json"
-	certCsrTemplate   = "/etc/containerlab/templates/ca/csr.json"
-)
-
-// var debug bool
-
 type CLab struct {
 	Config       *Config
 	TopoFile     *TopoFile
@@ -200,9 +193,9 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 						// if not available on disk, create cert in next step
 						if err != nil {
 							// create CERT
-							certTpl, err = template.ParseFiles(certCsrTemplate)
+							certTpl, err = template.New("node-cert").Parse(nodeCSRTempl)
 							if err != nil {
-								log.Errorf("failed to parse certCsrTemplate: %v", err)
+								log.Errorf("failed to parse Node CSR Template: %v", err)
 							}
 							certInput := CertInput{
 								Name:     node.ShortName,

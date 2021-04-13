@@ -1,5 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
+Suite Teardown    Run    sudo containerlab destroy --all --cleanup
 
 *** Test Cases ***
 Deploy first lab
@@ -16,7 +17,7 @@ Deploy second lab
 
 Destroy all labs
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab destroy --all
+    ...    sudo containerlab destroy --all --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 

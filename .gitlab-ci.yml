@@ -1,0 +1,57 @@
+---
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: never # Prevent pipeline run for push event
+    - if: '$CI_PIPELINE_SOURCE == "external_pull_request_event"'
+      when: never # Prevent pipeline run for PRs from github mirror
+    - when: always # Run pipeline for all other cases
+
+stages:
+  - code-tests
+  - build
+  - smoke-tests
+  - integration-tests
+
+variables:
+  CGO_ENABLED: 0
+
+go-tests:
+  stage: code-tests
+  tags:
+    - containerlab
+  script:
+    # create empty files to make clab happy
+    - sudo mkdir -p /etc/containerlab/templates/srl && sudo touch /etc/containerlab/templates/srl/srlconfig.tpl
+    - CGO_ENABLED=1 go test -cover -race ./...
+
+build-containerlab:
+  stage: build
+  tags:
+    - containerlab
+  script:
+    - sudo go build -o /usr/bin/containerlab
+
+smoke-tests:
+  stage: smoke-tests
+  tags:
+    - containerlab
+  script:
+    - source ~/venvs/rf/bin/activate
+    - bash ./tests/rf-run.sh ./tests/01-smoke
+  artifacts:
+    when: always
+    paths:
+      - "./tests/out/*.html"
+
+srl-tests:
+  stage: integration-tests
+  tags:
+    - containerlab
+  script:
+    - source ~/venvs/rf/bin/activate
+    - bash ./tests/rf-run.sh ./tests/02-basic-srl
+  artifacts:
+    when: always
+    paths:
+      - "./tests/out/*.html"

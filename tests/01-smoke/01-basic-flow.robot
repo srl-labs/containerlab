@@ -1,5 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
+Suite Teardown    Run    sudo containerlab destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 *** Variables ***
 ${lab-name}       2-linux-nodes
