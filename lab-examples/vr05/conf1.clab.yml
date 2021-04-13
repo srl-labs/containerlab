@@ -29,10 +29,11 @@ topology:
       labels:
         port: 1/1/c1/1, 1/1/c2/1
         ip: 1.1.1.2/30
-        vlan: 99
+        vlan: "99, 99"
     - endpoints: [sr2:eth1, sr3:eth2]
       labels:
-        port: 1/1/c1/1, 1/1/c2/1
+        port: 1/1/c1/1, 1/1/c2/1ssh
+        vlan: 98
     - endpoints: [sr3:eth1, sr4:eth2]
       labels:
         port: 1/1/c1/1, 1/1/c2/1

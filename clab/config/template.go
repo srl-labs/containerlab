@@ -103,8 +103,7 @@ func RenderLink(link *clab.Link) (*ConfigSnippet, *ConfigSnippet, error) {
 	for k, v := range link.Labels {
 		r := strings.Split(v, ",")
 		switch len(r) {
-		case 1:
-		case 2:
+		case 1, 2:
 			l[k] = r
 		default:
 			log.Warnf("%s: %s contains %d elements: %s", link, k, len(r), v)
@@ -190,8 +189,18 @@ var funcMap = map[string]interface{}{
 		return a[1], nil
 	},
 	"default": func(val interface{}, def interface{}) (interface{}, error) {
-		if val == nil {
-			return def, nil
+		if def == nil {
+			return nil, fmt.Errorf("default value expected")
+		}
+		switch val.(type) {
+		case string:
+			if val == "" {
+				return def, nil
+			}
+		default:
+			if val == nil {
+				return def, nil
+			}
 		}
 		return val, nil
 	},
@@ -199,15 +208,40 @@ var funcMap = map[string]interface{}{
 		return strings.Contains(fmt.Sprintf("%v", str), fmt.Sprintf("%v", substr)), nil
 	},
 	"slice": func(val interface{}, start interface{}, end interface{}) (interface{}, error) {
-		v := fmt.Sprintf("%v", val)
-		s := int(start.(int))
-		e := int(end.(int))
-		if s < 0 {
-			s += len(v)
+		// Start and end values
+		var s, e int
+		switch tmp := start.(type) {
+		case int:
+			s = tmp
+		default:
+			return nil, fmt.Errorf("int expeted for 2nd parameter %v", tmp)
 		}
-		if e < 0 {
-			e += len(v)
+		switch tmp := end.(type) {
+		case int:
+			e = tmp
+		default:
+			return nil, fmt.Errorf("int expeted for 3rd parameter %v", tmp)
 		}
-		return v[s:e], nil
+
+		// string or array
+		switch v := val.(type) {
+		case string:
+			if s < 0 {
+				s += len(v)
+			}
+			if e < 0 {
+				e += len(v)
+			}
+			return v[s:e], nil
+		case []interface{}:
+			if s < 0 {
+				s += len(v)
+			}
+			if e < 0 {
+				e += len(v)
+			}
+			return v[s:e], nil
+		}
+		return nil, fmt.Errorf("not an array")
 	},
 }

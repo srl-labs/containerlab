@@ -16,7 +16,7 @@ type Session struct {
 	Session *ssh.Session
 }
 
-func NewSession(username, password string, host string) (*Session, error) {
+func NewSession(username, password, host string) (*Session, error) {
 
 	sshConfig := &ssh.ClientConfig{
 		User: username,
