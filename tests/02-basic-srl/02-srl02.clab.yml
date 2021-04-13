@@ -4,6 +4,7 @@ topology:
   kinds:
     srl:
       image: srlinux:21.3.1-410
+      license: /home/gitlab-runner/srl-lic.key
   nodes:
     srl1:
       kind: srl
