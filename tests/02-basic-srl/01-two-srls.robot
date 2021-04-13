@@ -9,7 +9,7 @@ ${lab-name}       02-01-two-srls
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab deploy -t ${CURDIR}/02-srl02.clab.yml.yml
+    ...    sudo containerlab deploy -t ${CURDIR}/02-srl02.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
