@@ -98,6 +98,7 @@ func (c *CLab) CreateDockerNet(ctx context.Context) (err error) {
 	default:
 		return err
 	}
+	c.Config.Mgmt.Bridge = bridgeName
 
 	log.Debugf("Docker network '%s', bridge name '%s'", c.Config.Mgmt.Network, bridgeName)
 
@@ -137,8 +138,8 @@ func (c *CLab) DeleteBridge(ctx context.Context) (err error) {
 	}
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
-		log.Warnf("network '%s' has %d active endpoints", c.Config.Mgmt.Network, numEndpoints)
 		if c.debug {
+			log.Debugf("network '%s' has %d active endpoints, deletion skipped", c.Config.Mgmt.Network, numEndpoints)
 			for _, endp := range nres.Containers {
 				log.Debugf("'%s' is connected to %s", endp.Name, c.Config.Mgmt.Network)
 			}

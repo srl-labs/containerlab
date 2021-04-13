@@ -4,7 +4,7 @@ name: srl02
 topology:
   kinds:
     srl:
-      type: ixr6
+      type: ixr6 # See https://www.nokia.com/networks/products/7250-interconnect-router/
       image: srlinux
       license: license.key
   nodes:

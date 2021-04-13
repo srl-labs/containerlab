@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/mitchellh/go-homedir"
@@ -22,7 +23,7 @@ const (
 	// a name of a docker network that nodes management interfaces connect to
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
-	dockerNetIPv6Addr = "2001:172:20:20::/80"
+	dockerNetIPv6Addr = "2001:172:20:20::/64"
 	dockerNetMTU      = "1500"
 	srlDefaultType    = "ixr6"
 	vrsrosDefaultType = "sr-1"
@@ -45,6 +46,7 @@ var kinds = []string{
 	"vr-xrv",
 	"vr-xrv9k",
 	"vr-veos",
+	"vr-csr",
 	"vr-ros",
 	"linux",
 	"bridge",
@@ -87,6 +89,7 @@ type Config struct {
 // it is provided via docker network object
 type mgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
+	Bridge     string // linux bridge backing the docker network
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
@@ -321,7 +324,7 @@ func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
 
 // configInit processes the path to a config file that can be provided on
 // multiple configuration levels
-// returns an errof if the reference path doesn't exist
+// returns an error if the reference path doesn't exist
 func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
 	var cfg string
 	var err error
@@ -544,6 +547,11 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		if err != nil {
 			return err
 		}
+	case "vr-csr":
+		err = initVrCSRNode(c, nodeCfg, node, user, envs)
+		if err != nil {
+			return err
+		}
 	case "vr-ros":
 		err = initVrROSNode(c, nodeCfg, node, user, envs)
 		if err != nil {
@@ -605,15 +613,23 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	nName := split[0]  // node name
 	epName := split[1] // endpoint name
 	// search the node pointer for a node name referenced in endpoint section
-	// if node name is not "host", since "host" is a special reference to host namespace
+	switch nName {
+	// "host" is a special reference to host namespace
 	// for which we create an special Node with kind "host"
-	if nName == "host" {
+	case "host":
 		endpoint.Node = &Node{
 			Kind:      "host",
 			ShortName: "host",
 			NSPath:    hostNSPath,
 		}
-	} else {
+	// mgmt-net is a special reference to a bridge of the docker network
+	// that is used as the management network
+	case "mgmt-net":
+		endpoint.Node = &Node{
+			Kind:      "bridge",
+			ShortName: "mgmt-net",
+		}
+	default:
 		for name, n := range c.Nodes {
 			if name == split[0] {
 				endpoint.Node = n
@@ -897,8 +913,32 @@ func (c *CLab) CheckResources() error {
 	vcpu := runtime.NumCPU()
 	log.Debugf("Number of vcpu: %d", vcpu)
 	if vcpu < 2 {
-
 		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
 	}
+	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
+	if freeMemG < 1 {
+		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtimer errors. Consider freeing up more memory.", freeMemG)
+	}
 	return nil
+}
+
+// sysMemory reports on total installed or free memory (in bytes)
+// used from https://github.com/pbnjay/memory
+func sysMemory(v string) uint64 {
+	in := &syscall.Sysinfo_t{}
+	err := syscall.Sysinfo(in)
+	if err != nil {
+		return 0
+	}
+	var m uint64
+	// If this is a 32-bit system, then these fields are
+	// uint32 instead of uint64.
+	// So we always convert to uint64 to match signature.
+	switch v {
+	case "total":
+		m = uint64(in.Totalram) * uint64(in.Unit)
+	case "free":
+		m = uint64(in.Freeram) * uint64(in.Unit)
+	}
+	return m
 }

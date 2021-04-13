@@ -48,12 +48,23 @@ func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 	// set bridge name for endpoint that should be connect to linux bridge
 	switch {
 	case l.A.Node.Kind == "bridge":
-		vA.Bridge = l.A.Node.ShortName
+
+		// mgmt-net is a reserved node name that means
+		// connect this endpoint to docker management bridged network
+		if l.A.Node.ShortName != "mgmt-net" {
+			vA.Bridge = l.A.Node.ShortName
+		} else {
+			vA.Bridge = c.Config.Mgmt.Bridge
+		}
 		// veth endpoint destined to connect to the bridge in the host netns
 		// will not have a random name
 		ARndmName = l.A.EndpointName
 	case l.B.Node.Kind == "bridge":
-		vB.Bridge = l.B.Node.ShortName
+		if l.B.Node.ShortName != "mgmt-net" {
+			vB.Bridge = l.A.Node.ShortName
+		} else {
+			vB.Bridge = c.Config.Mgmt.Bridge
+		}
 		BRndmName = l.B.EndpointName
 	case l.A.Node.Kind == "ovs-bridge":
 		vA.OvsBridge = l.A.Node.ShortName
