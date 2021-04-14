@@ -84,7 +84,7 @@ docker tag srlinux:20.6.1-286 srlinux:latest
         <span class=nt>label1</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">node_value1</span>
 </code></pre></div></p> <p>As a result of such label distribution, node1 will have the following labels:</p> <div class=highlight><pre><span></span><code>label1: node_value1 <span class=c1># most specific label wins</span>
 label2: value2 <span class=c1># inherited from defaults section</span>
-label2: value3 <span class=c1># inherited from kinds section</span>
+label3: value3 <span class=c1># inherited from kinds section</span>
 </code></pre></div> <h3 id=mgmt_ipv4>mgmt_ipv4<a class=headerlink href=#mgmt_ipv4 title="Permanent link">#</a></h3> <p>To make a node to boot with a user-specified management IPv4 address, the <code>mgmt_ipv4</code> setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.</p> <p>Read more about user-defined management addresses <a href=../network/#user-defined-addresses>here</a>.</p> <div class=highlight><pre><span></span><code><span class=nt>nodes</span><span class=p>:</span>
     <span class=nt>r1</span><span class=p>:</span>
       <span class=nt>kind</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">srl</span>
