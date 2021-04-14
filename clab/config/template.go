@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -14,16 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab"
 )
-
-type labelMap map[string]string
-type ConfigSnippet struct {
-	TargetNode           *clab.Node
-	templateName, source string
-	// All the labels used to render the template
-	templateLabels *labelMap
-	// Lines of config
-	Config []string
-}
 
 // internal template cache
 var templates map[string]*template.Template
@@ -49,7 +38,7 @@ func LoadTemplate(kind string, templatePath string) error {
 	return nil
 }
 
-func RenderTemplate(kind, name string, labels labelMap) (*ConfigSnippet, error) {
+func RenderTemplate(kind, name string, labels stringMap) (*ConfigSnippet, error) {
 	t := templates[kind]
 
 	buf := new(bytes.Buffer)
@@ -62,16 +51,10 @@ func RenderTemplate(kind, name string, labels labelMap) (*ConfigSnippet, error) 
 		return nil, err
 	}
 
-	var res []string
-	s := bufio.NewScanner(buf)
-	for s.Scan() {
-		res = append(res, s.Text())
-	}
-
 	return &ConfigSnippet{
 		templateLabels: &labels,
 		templateName:   name,
-		Config:         res,
+		Data:           buf.Bytes(),
 	}, nil
 }
 
@@ -125,14 +108,14 @@ func RenderLink(link *clab.Link) (*ConfigSnippet, *ConfigSnippet, error) {
 
 	var res, resA *ConfigSnippet
 
-	var curL labelMap
+	var curL stringMap
 	var curN *clab.Node
 
 	for li := 0; li < 2; li++ {
 		if li == 0 {
 			// set current node as A
 			curN = link.A.Node
-			curL = make(labelMap)
+			curL = make(stringMap)
 			for k, v := range l {
 				curL[k] = v[0]
 				if len(v) > 1 {
@@ -141,7 +124,7 @@ func RenderLink(link *clab.Link) (*ConfigSnippet, *ConfigSnippet, error) {
 			}
 		} else {
 			curN = link.B.Node
-			curL = make(labelMap)
+			curL = make(stringMap)
 			for k, v := range l {
 				if len(v) == 1 {
 					curL[k] = v[0]
@@ -169,7 +152,12 @@ func RenderLink(link *clab.Link) (*ConfigSnippet, *ConfigSnippet, error) {
 
 // Implement stringer for conf snippet
 func (c *ConfigSnippet) String() string {
-	return fmt.Sprintf("%s: %s %d lines of config", c.TargetNode.LongName, c.source, len(c.Config))
+	return fmt.Sprintf("%s: %s (%d bytes)", c.TargetNode.LongName, c.source, len(c.Data))
+}
+
+// Return the buffer as strings
+func (c *ConfigSnippet) Lines() []string {
+	return strings.Split(string(c.Data), "\n")
 }
 
 func typeof(val interface{}) string {
@@ -202,12 +190,20 @@ var funcMap = map[string]interface{}{
 		a := strings.Split(s, "/")
 		return a[1], nil
 	},
-	"default": func(val interface{}, def interface{}) (interface{}, error) {
-		if def == nil {
+	"default": func(in ...interface{}) (interface{}, error) {
+		if len(in) < 2 {
 			return nil, fmt.Errorf("default value expected")
 		}
+		if len(in) > 2 {
+			return nil, fmt.Errorf("too many arguments")
+		}
+
+		val := in[0]
+		def := in[1]
 
 		switch v := val.(type) {
+		case nil:
+			return def, nil
 		case string:
 			if v == "" {
 				return def, nil
@@ -217,15 +213,20 @@ var funcMap = map[string]interface{}{
 				return def, nil
 			}
 		}
-		if val == nil {
-			return def, nil
-		}
+		// if val == nil {
+		// 	return def, nil
+		// }
 
 		// If we have a input value, do some type checking
 		tval, tdef := typeof(val), typeof(def)
 		if tval == "string" && tdef == "int" {
 			if _, err := strconv.Atoi(val.(string)); err == nil {
 				tval = "int"
+			}
+			if tdef == "str" {
+				if _, err := strconv.Atoi(def.(string)); err == nil {
+					tdef = "int"
+				}
 			}
 		}
 		if tdef != tval {

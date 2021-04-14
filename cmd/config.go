@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/config"
+	"golang.org/x/crypto/ssh"
 )
 
 // path to additional templates
@@ -85,28 +86,62 @@ var configCmd = &cobra.Command{
 		// Debug log all config to be deployed
 		for _, v := range allConfig {
 			for _, r := range v {
-				log.Infof("%s\n%s", r, r.Config)
+				log.Infof("%s\n%v", r, r.Lines())
 
 			}
 		}
 
 		var wg sync.WaitGroup
 		wg.Add(len(allConfig))
-		for _, cs := range allConfig {
-			go func(configSnippets []*config.ConfigSnippet) {
+		for _, cs_ := range allConfig {
+			go func(cs []*config.ConfigSnippet) {
 				defer wg.Done()
 
-				err := config.SendConfig(configSnippets)
+				var transport config.Transport
+
+				ct, ok := cs[0].TargetNode.Labels["config.transport"]
+				if !ok {
+					ct = "ssh"
+				}
+
+				if ct == "ssh" {
+					transport, _ = newSSHTransport(cs[0].TargetNode)
+					if err != nil {
+						log.Errorf("%s: %s", kind, err)
+					}
+					log.Info(transport.(*config.SshTransport).SshConfig)
+				} else if ct == "grpc" {
+					// newGRPCTransport
+				} else {
+					log.Errorf("Unknown transport: %s", ct)
+					return
+				}
+
+				err := config.WriteConfig(transport, cs)
 				if err != nil {
 					log.Errorf("%s\n", err)
 				}
 
-			}(cs)
+			}(cs_)
 		}
 		wg.Wait()
 
 		return nil
 	},
+}
+
+func newSSHTransport(node *clab.Node) (*config.SshTransport, error) {
+	switch node.Kind {
+	case "vr-sros", "srl":
+		c := &config.SshTransport{}
+		c.SshConfig = &ssh.ClientConfig{}
+		config.SshConfigWithUserNamePassword(
+			c.SshConfig,
+			clab.DefaultCredentials[node.Kind][0],
+			clab.DefaultCredentials[node.Kind][1])
+		return c, nil
+	}
+	return nil, fmt.Errorf("no tranport implemented for kind: %s", kind)
 }
 
 func init() {
