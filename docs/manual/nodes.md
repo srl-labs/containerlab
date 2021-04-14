@@ -171,7 +171,7 @@ As a result of such label distribution, node1 will have the following labels:
 ```bash
 label1: node_value1 # most specific label wins
 label2: value2 # inherited from defaults section
-label2: value3 # inherited from kinds section
+label3: value3 # inherited from kinds section
 ```
 
 ### mgmt_ipv4
