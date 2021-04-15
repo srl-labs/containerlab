@@ -61,7 +61,7 @@ func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 		ARndmName = l.A.EndpointName
 	case l.B.Node.Kind == "bridge":
 		if l.B.Node.ShortName != "mgmt-net" {
-			vB.Bridge = l.A.Node.ShortName
+			vB.Bridge = l.B.Node.ShortName
 		} else {
 			vB.Bridge = c.Config.Mgmt.Bridge
 		}
