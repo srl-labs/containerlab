@@ -13,7 +13,7 @@ ${br-link2-name}    l1-eth2
 *** Test Cases ***
 Create linux bridge
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip link add name ${bridge-name} type bridge && ip link set ${bridge-name} up
+    ...    sudo ip link add name ${bridge-name} type bridge && sudo ip link set ${bridge-name} up
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
