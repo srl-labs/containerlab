@@ -262,6 +262,7 @@ func (c *CLab) PullImageIfRequired(ctx context.Context, imageName string) error 
 	// might need canonical name e.g.
 	//    -> alpine == docker.io/library/alpine
 	//    -> foo/bar == docker.io/foo/bar
+	//    -> foo.bar/baz == foo.bar/bar
 	//    -> docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch
 	canonicalImageName := imageName
 	slashCount := strings.Count(imageName, "/")
@@ -270,7 +271,14 @@ func (c *CLab) PullImageIfRequired(ctx context.Context, imageName string) error 
 	case 0:
 		canonicalImageName = "docker.io/library/" + imageName
 	case 1:
-		canonicalImageName = "docker.io/" + imageName
+		// split on slash to get first element of the name
+		nameSplit := strings.Split(imageName, "/")
+		// case of foo.bar/baz
+		if strings.Contains(nameSplit[0], ".") {
+			canonicalImageName = imageName
+		} else {
+			canonicalImageName = "docker.io/" + imageName
+		}
 	}
 
 	log.Infof("Pulling %s Docker image", canonicalImageName)
