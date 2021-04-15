@@ -1,2 +1,4 @@
-# Do not detect labguages in templates folder
-templates/* -linguist-detectable
+# Do not detect labguages in the following folders
+templates/** -linguist-detectable
+docs/** -linguist-detectable
+lab-examples/** -linguist-detectable
