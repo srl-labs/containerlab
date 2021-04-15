@@ -1,0 +1,13 @@
+name: 03-bridge
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+    br-clab:
+      kind: bridge
+
+  links:
+    - endpoints: ["l1:eth1", "br-clab:l1-eth1"]
+    - endpoints: ["br-clab:l1-eth2", "l1:eth2"]
