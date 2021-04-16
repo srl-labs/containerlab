@@ -32,6 +32,9 @@ type SshTransport struct {
 	// Contains the first read after connecting
 	LoginMessage SshReply
 
+	ConfigStart  func(s *SshTransport)
+	ConfigCommit func(s *SshTransport) SshReply
+
 	// SSH parameters used in connect
 	// defualt: 22
 	Port int
@@ -156,8 +159,10 @@ func (t *SshTransport) Run(command string, timeout int) SshReply {
 // Session NEEDS to be configurable for other kinds
 // Part of the Transport interface
 func (t *SshTransport) Write(snip *ConfigSnippet) error {
-	t.Run("/configure global", 2)
-	t.Run("discard", 2)
+	if t.ConfigStart == nil {
+		return fmt.Errorf("SSH Transport not ready %s", snip.TargetNode.Kind)
+	}
+	t.ConfigStart(t)
 
 	c, b := 0, 0
 	for _, l := range snip.Lines() {
@@ -170,9 +175,8 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 		t.Run(l, 3)
 	}
 
-	// Commit
-	commit := t.Run("commit", 10)
-	//commit += t.Run("", 10)
+	commit := t.ConfigCommit(t)
+
 	log.Infof("COMMIT %s - %d lines %d bytes\n%s", snip, c, b, commit.result)
 	return nil
 }
@@ -277,4 +281,25 @@ func (ses *SshSession) Writeln(command string) (int, error) {
 func (ses *SshSession) Close() {
 	log.Debugf("Closing session")
 	ses.Session.Close()
+}
+
+func (s *SshTransport) SetupKind(kind string) {
+	switch kind {
+	case "srl":
+		s.ConfigStart = func(s *SshTransport) {
+			s.Run("enter candidate", 10)
+		}
+		s.ConfigCommit = func(s *SshTransport) SshReply {
+			return s.Run("commit now", 10)
+		}
+	case "vr-sros":
+		s.ConfigStart = func(s *SshTransport) {
+			s.Run("/configure global", 2)
+			s.Run("discard", 1)
+		}
+		s.ConfigCommit = func(s *SshTransport) SshReply {
+			return s.Run("commit", 10)
+		}
+
+	}
 }

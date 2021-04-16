@@ -1,7 +1,8 @@
-{{ optional .vlan "1-4096" }}
-{{ optional .isis_iid "0-32" }}
 {{ expect .port "^\\d+/\\d/" }}
 {{ expect .name "string" }}
+{{ expect .ip "ip" }}
+{{ optional .vlan "0-4096" }}
+{{ optional .isis_iid "0-32" }}
 
 {{ if contains  "/c" .port }}
 /configure port {{ slice 0 -2 .port }} admin-state enable

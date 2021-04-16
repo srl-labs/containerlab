@@ -145,6 +145,8 @@ func newSSHTransport(node *clab.Node) (*config.SshTransport, error) {
 			c.SshConfig,
 			clab.DefaultCredentials[node.Kind][0],
 			clab.DefaultCredentials[node.Kind][1])
+
+		c.SetupKind(node.Kind)
 		return c, nil
 	}
 	return nil, fmt.Errorf("no tranport implemented for kind: %s", kind)
