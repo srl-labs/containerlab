@@ -16,6 +16,9 @@ type SshSession struct {
 	Session *ssh.Session
 }
 
+// Display the SSH login message
+var LoginMessages bool
+
 // The reply the execute command and the prompt.
 type SshReply struct{ result, prompt string }
 
@@ -27,7 +30,7 @@ type SshTransport struct {
 	// SSH Session
 	ses *SshSession
 	// Contains the first read after connecting
-	BootMsg SshReply
+	LoginMessage SshReply
 
 	// SSH parameters used in connect
 	// defualt: 22
@@ -46,12 +49,17 @@ type SshTransport struct {
 // This is the default prompt parse function used by SSH transport
 func DefaultPrompParse(in *string) *SshReply {
 	n := strings.LastIndex(*in, "\n")
+	if strings.Contains((*in)[n:], " ") {
+		return &SshReply{
+			result: *in,
+			prompt: "",
+		}
+	}
 	res := (*in)[:n]
 	n = strings.LastIndex(res, "\n")
 	if n < 0 {
 		n = 0
 	}
-
 	return &SshReply{
 		result: (*in)[:n],
 		prompt: (*in)[n:] + "#",
@@ -91,9 +99,11 @@ func (t *SshTransport) InChannel() {
 		}
 	}()
 
-	t.BootMsg = t.Run("", 15)
-	log.Infof("%s\n", t.BootMsg.result)
-	log.Debugf("%s\n", t.BootMsg.prompt)
+	t.LoginMessage = t.Run("", 15)
+	if LoginMessages {
+		log.Infof("%s\n", t.LoginMessage.result)
+	}
+	//log.Debugf("%s\n", t.BootMsg.prompt)
 }
 
 // Run a single command and wait for the reply
@@ -102,28 +112,44 @@ func (t *SshTransport) Run(command string, timeout int) SshReply {
 		t.ses.Writeln(command)
 	}
 
-	// Read from the channel with a timeout
-	select {
-	case ret := <-t.in:
-		if ret.result != "" {
+	sHistory := ""
+
+	for {
+		// Read from the channel with a timeout
+		select {
+		case <-time.After(time.Duration(timeout) * time.Second):
+			log.Warnf("timeout waiting for prompt: %s", command)
+			return SshReply{}
+		case ret := <-t.in:
+			if ret.prompt == "" && ret.result != "" {
+				// we should continue reading...
+				sHistory += ret.result
+				timeout = 1 // reduce timeout, node is already sending data
+				continue
+			}
+			if ret.result == "" && ret.prompt == "" {
+				log.Errorf("received zero?")
+				continue
+			}
 			rr := strings.Trim(ret.result, " \n")
+			if sHistory != "" {
+				rr = sHistory + rr
+				sHistory = ""
+			}
 
 			if strings.HasPrefix(rr, command) {
-				rr = rr[len(command):]
-				fmt.Println(rr)
-			} else {
-				log.Errorf("'%s' != '%s'\n--", rr, command)
-				if !strings.Contains(rr, command) {
-					log.Errorln("YY")
-					t.Run("", 10)
-				}
+				rr = strings.Trim(rr[len(command):], " \n\r")
+				// fmt.Print(rr)
+			} else if !strings.Contains(rr, command) {
+				sHistory = rr
+				continue
+			}
+			return SshReply{
+				result: rr,
+				prompt: ret.prompt,
 			}
 		}
-		return ret
-	case <-time.After(time.Duration(timeout) * time.Second):
-		log.Warnf("timeout waiting for prompt: %s", command)
 	}
-	return SshReply{}
 }
 
 // Write a config snippet (a set of commands)
@@ -147,7 +173,7 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 	// Commit
 	commit := t.Run("commit", 10)
 	//commit += t.Run("", 10)
-	log.Infof("COMMIT %s - %d lines %d bytes\n%s", snip, c, b, commit)
+	log.Infof("COMMIT %s - %d lines %d bytes\n%s", snip, c, b, commit.result)
 	return nil
 }
 
@@ -188,11 +214,11 @@ func (t *SshTransport) Connect(host string) error {
 // Close the Session and channels
 // Part of the Transport interface
 func (t *SshTransport) Close() {
-	// if t.in != nil {
-	// 	close(t.in)
-	// 	t.in = nil
-	// }
-	//t.ses.Close()
+	if t.in != nil {
+		close(t.in)
+		t.in = nil
+	}
+	t.ses.Close()
 }
 
 // Add a basic username & password to a config.
@@ -249,6 +275,6 @@ func (ses *SshSession) Writeln(command string) (int, error) {
 }
 
 func (ses *SshSession) Close() {
-	log.Debugf("Closing sesison")
+	log.Debugf("Closing session")
 	ses.Session.Close()
 }

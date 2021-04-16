@@ -14,6 +14,9 @@ import (
 // path to additional templates
 var templatePath string
 
+// Only print config locally, dont send to the node
+var printLines int
+
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:          "config",
@@ -46,7 +49,7 @@ var configCmd = &cobra.Command{
 		}
 
 		// config map per node. each node gets a couple of config snippets []string
-		allConfig := make(map[string][]*config.ConfigSnippet)
+		allConfig := make(map[string][]config.ConfigSnippet)
 
 		renderErr := 0
 
@@ -63,19 +66,21 @@ var configCmd = &cobra.Command{
 				renderErr += 1
 				continue
 			}
-			allConfig[node.LongName] = append(allConfig[node.LongName], res)
+			allConfig[node.LongName] = append(allConfig[node.LongName], res...)
+
 		}
 
 		for lIdx, link := range c.Links {
 
-			resA, resB, err := config.RenderLink(link)
+			res, err := config.RenderLink(link)
 			if err != nil {
 				log.Errorf("%d. %s\n", lIdx, err)
 				renderErr += 1
 				continue
 			}
-			allConfig[link.A.Node.LongName] = append(allConfig[link.A.Node.LongName], resA)
-			allConfig[link.B.Node.LongName] = append(allConfig[link.B.Node.LongName], resB)
+			for _, rr := range res {
+				allConfig[rr.TargetNode.LongName] = append(allConfig[rr.TargetNode.LongName], rr)
+			}
 
 		}
 
@@ -83,18 +88,20 @@ var configCmd = &cobra.Command{
 			return fmt.Errorf("%d render warnings", renderErr)
 		}
 
-		// Debug log all config to be deployed
-		for _, v := range allConfig {
-			for _, r := range v {
-				log.Infof("%s\n%v", r, r.Lines())
-
+		if printLines > 0 {
+			// Debug log all config to be deployed
+			for _, v := range allConfig {
+				for _, r := range v {
+					r.Print(printLines)
+				}
 			}
+			return nil
 		}
 
 		var wg sync.WaitGroup
 		wg.Add(len(allConfig))
 		for _, cs_ := range allConfig {
-			go func(cs []*config.ConfigSnippet) {
+			go func(cs []config.ConfigSnippet) {
 				defer wg.Done()
 
 				var transport config.Transport
@@ -109,7 +116,6 @@ var configCmd = &cobra.Command{
 					if err != nil {
 						log.Errorf("%s: %s", kind, err)
 					}
-					log.Info(transport.(*config.SshTransport).SshConfig)
 				} else if ct == "grpc" {
 					// newGRPCTransport
 				} else {
@@ -147,5 +153,7 @@ func newSSHTransport(node *clab.Node) (*config.SshTransport, error) {
 func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringVarP(&templatePath, "templates", "", "", "specify template path")
+	configCmd.Flags().IntVarP(&printLines, "print-only", "p", 0, "print config, don't send it. Restricted to n lines")
+	configCmd.Flags().BoolVarP(&config.LoginMessages, "login-message", "", false, "show the SSH login message")
 	configCmd.MarkFlagDirname("templates")
 }

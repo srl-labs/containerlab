@@ -2,21 +2,8 @@ package config
 
 import (
 	"fmt"
-
-	"github.com/srl-labs/containerlab/clab"
+	"strings"
 )
-
-type stringMap map[string]string
-
-type ConfigSnippet struct {
-	TargetNode *clab.Node
-	Data       []byte // the Rendered template
-
-	// some info for tracing/debugging
-	templateName, source string
-	// All the variables used to render the template
-	templateLabels *stringMap
-}
 
 type Transport interface {
 	// Connect to the target host
@@ -26,7 +13,7 @@ type Transport interface {
 	Close()
 }
 
-func WriteConfig(transport Transport, snips []*ConfigSnippet) error {
+func WriteConfig(transport Transport, snips []ConfigSnippet) error {
 	host := snips[0].TargetNode.LongName
 
 	// the Kind should configure the transport parameters before
@@ -39,11 +26,36 @@ func WriteConfig(transport Transport, snips []*ConfigSnippet) error {
 	defer transport.Close()
 
 	for _, snip := range snips {
-		err := transport.Write(snip)
+		err := transport.Write(&snip)
 		if err != nil {
-			return fmt.Errorf("could not write config %s: %s", snip, err)
+			return fmt.Errorf("could not write config %s: %s", &snip, err)
 		}
 	}
 
 	return nil
+}
+
+// the new agreed node config
+type nodeConfig struct {
+	Vars      map[string]string
+	Transport string
+	Templates []string
+}
+
+func GetNodeConfigFromLabels(labels map[string]string) nodeConfig {
+	nc := nodeConfig{
+		Vars:      labels,
+		Templates: []string{"base"},
+		Transport: "ssh",
+	}
+	if t, ok := labels["templates"]; ok {
+		nc.Templates = strings.Split(t, ",")
+		for i, v := range nc.Templates {
+			nc.Templates[i] = strings.Trim(v, " \n\t")
+		}
+	}
+	if t, ok := labels["transport"]; ok {
+		nc.Transport = t
+	}
+	return nc
 }

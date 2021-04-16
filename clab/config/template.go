@@ -3,16 +3,24 @@ package config
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab"
 )
+
+type ConfigSnippet struct {
+	TargetNode *clab.Node
+	// the Rendered template
+	Data []byte
+	// some info for tracing/debugging
+	templateName, source string
+	// All the variables used to render the template
+	vars *map[string]string
+}
 
 // internal template cache
 var templates map[string]*template.Template
@@ -38,121 +46,133 @@ func LoadTemplate(kind string, templatePath string) error {
 	return nil
 }
 
-func RenderTemplate(kind, name string, labels stringMap) (*ConfigSnippet, error) {
-	t := templates[kind]
+func (c *ConfigSnippet) Render() error {
+	t := templates[c.TargetNode.Kind]
+	buf := new(strings.Builder)
+	c.Data = nil
 
-	buf := new(bytes.Buffer)
+	varsP, _ := json.MarshalIndent(c.vars, "", "  ")
+	log.Debugf("Render %s vars=%s\n", c.String(), varsP)
 
-	err := t.ExecuteTemplate(buf, name, labels)
+	err := t.ExecuteTemplate(buf, c.templateName, c.vars)
 	if err != nil {
-		log.Errorf("could not render template %s", err)
-		b, _ := json.MarshalIndent(labels, "", "  ")
-		log.Debugf("%s\n", b)
-		return nil, err
+		log.Errorf("could not render template: %s %s vars=%s\n", c.String(), err, varsP)
+		return fmt.Errorf("could not render template: %s %s", c.String(), err)
 	}
 
-	return &ConfigSnippet{
-		templateLabels: &labels,
-		templateName:   name,
-		Data:           buf.Bytes(),
-	}, nil
+	// Strip blank lines
+	res := strings.Trim(buf.String(), "\n")
+	res = strings.ReplaceAll(res, "\n\n\n", "\n\n")
+	c.Data = []byte(res)
+
+	return nil
 }
 
-func RenderNode(node *clab.Node) (*ConfigSnippet, error) {
-	kind := node.Labels["clab-node-kind"]
-	log.Debugf("render node %s [%s]\n", node.LongName, kind)
+func RenderNode(node *clab.Node) ([]ConfigSnippet, error) {
+	snips := []ConfigSnippet{}
+	nc := GetNodeConfigFromLabels(node.Labels)
 
-	res, err := RenderTemplate(kind, "base-node.tmpl", node.Labels)
-	if err != nil {
-		return nil, fmt.Errorf("render node %s [%s]: %s", node.LongName, kind, err)
+	for _, tn := range nc.Templates {
+		tn = fmt.Sprintf("%s-node.tmpl", tn)
+		snip := ConfigSnippet{
+			vars:         &nc.Vars,
+			templateName: tn,
+			TargetNode:   node,
+			source:       "node",
+		}
+
+		err := snip.Render()
+		if err != nil {
+			return nil, err
+		}
+		snips = append(snips, snip)
 	}
-	res.source = "node"
-	res.TargetNode = node
-	return res, nil
+	return snips, nil
 }
 
-func RenderLink(link *clab.Link) (*ConfigSnippet, *ConfigSnippet, error) {
+func RenderLink(link *clab.Link) ([]ConfigSnippet, error) {
 	// Link labels/values are different on node A & B
-	l := make(map[string][]string)
+	vars := make(map[string][]string)
+
+	ncA := GetNodeConfigFromLabels(link.A.Node.Labels)
+	ncB := GetNodeConfigFromLabels(link.B.Node.Labels)
+	linkVars := link.Labels
 
 	// Link IPs
 	ipA, ipB, err := linkIPfromSystemIP(link)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %s", link, err)
+		return nil, fmt.Errorf("%s: %s", link, err)
 	}
-	l["ip"] = []string{ipA.String(), ipB.String()}
-	l["systemip"] = []string{link.A.Node.Labels[systemIP], link.B.Node.Labels[systemIP]}
+	vars["ip"] = []string{ipA.String(), ipB.String()}
+	vars[systemIP] = []string{ncA.Vars[systemIP], ncB.Vars[systemIP]}
 
 	// Split all fields with a comma...
-	for k, v := range link.Labels {
+	for k, v := range linkVars {
 		r := strings.Split(v, ",")
 		switch len(r) {
 		case 1, 2:
-			l[k] = r
+			vars[k] = r
 		default:
-			log.Warnf("%s: %s contains %d elements: %s", link, k, len(r), v)
+			log.Warnf("%s: %s contains %d elements, should be 1 or 2: %s", link.String(), k, len(r), v)
 		}
 	}
 
 	// Set default Link/Interface Names
-	if _, ok := l["name"]; !ok {
-		linkNr := link.Labels["linkNr"]
+	if _, ok := vars["name"]; !ok {
+		linkNr := linkVars["linkNr"]
 		if len(linkNr) > 0 {
 			linkNr = "_" + linkNr
 		}
-		l["name"] = []string{fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNr),
+		vars["name"] = []string{fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNr),
 			fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNr)}
 	}
 
-	log.Debugf("%s: %s\n", link, l)
-
-	var res, resA *ConfigSnippet
-
-	var curL stringMap
-	var curN *clab.Node
+	snips := []ConfigSnippet{}
 
 	for li := 0; li < 2; li++ {
-		if li == 0 {
-			// set current node as A
-			curN = link.A.Node
-			curL = make(stringMap)
-			for k, v := range l {
-				curL[k] = v[0]
-				if len(v) > 1 {
-					curL[k+"_far"] = v[1]
-				}
-			}
-		} else {
-			curN = link.B.Node
-			curL = make(stringMap)
-			for k, v := range l {
-				if len(v) == 1 {
-					curL[k] = v[0]
-				} else {
-					curL[k] = v[1]
-					curL[k+"_far"] = v[0]
-				}
+		// Current Node
+		curNode := link.A.Node
+		if li == 1 {
+			curNode = link.B.Node
+		}
+		// Current Vars
+		curVars := make(map[string]string)
+		for k, v := range vars {
+			if len(v) == 1 {
+				curVars[k] = strings.Trim(v[0], " \n\t")
+			} else {
+				curVars[k] = strings.Trim(v[li], " \n\t")
+				curVars[k+"_far"] = strings.Trim(v[(li+1)%2], " \n\t")
 			}
 		}
-		// Render the links
-		kind := curN.Labels["clab-node-kind"]
-		log.Debugf("render %s on %s (%s) - %s", link, curN.LongName, kind, curL)
-		res, err = RenderTemplate(kind, "base-link.tmpl", curL)
-		if err != nil {
-			return nil, nil, fmt.Errorf("render %s on %s (%s): %s", link, curN.LongName, kind, err)
-		}
-		res.source = link.String()
-		res.TargetNode = curN
-		if li == 0 {
-			resA = res
+
+		curNodeC := GetNodeConfigFromLabels(curNode.Labels)
+
+		for _, tn := range curNodeC.Templates {
+			snip := ConfigSnippet{
+				vars:         &curVars,
+				templateName: fmt.Sprintf("%s-link.tmpl", tn),
+				TargetNode:   curNode,
+				source:       link.String(),
+			}
+			err := snip.Render()
+			//res, err := RenderTemplate(kind, tn, curVars, curNode, link.String())
+			if err != nil {
+				return nil, fmt.Errorf("render %s on %s (%s): %s", link, curNode.LongName, curNode.Kind, err)
+			}
+			snips = append(snips, snip)
 		}
 	}
-	return resA, res, nil
+	return snips, nil
 }
 
 // Implement stringer for conf snippet
 func (c *ConfigSnippet) String() string {
-	return fmt.Sprintf("%s: %s (%d bytes)", c.TargetNode.LongName, c.source, len(c.Data))
+	s := fmt.Sprintf("%s %s using %s/%s", c.TargetNode.ShortName, c.source, c.TargetNode.Kind, c.templateName)
+	if c.Data != nil {
+		s += fmt.Sprintf(" (%d lines)", bytes.Count(c.Data, []byte("\n"))+1)
+	}
+	return s
 }
 
 // Return the buffer as strings
@@ -160,162 +180,19 @@ func (c *ConfigSnippet) Lines() []string {
 	return strings.Split(string(c.Data), "\n")
 }
 
-func typeof(val interface{}) string {
-	switch val.(type) {
-	case string:
-		return "string"
-	case int:
-		return "int"
+// Print the configSnippet
+func (c *ConfigSnippet) Print(printLines int) {
+	vars, _ := json.MarshalIndent(c.vars, "", "  ")
+
+	s := ""
+	if printLines > 0 {
+		cl := strings.SplitN(string(c.Data), "\n", printLines+1)
+		if len(cl) > printLines {
+			cl[printLines] = "..."
+		}
+		s = "\n  | "
+		s += strings.Join(cl, s)
 	}
-	return ""
-}
 
-var funcMap = map[string]interface{}{
-	"expect": func(val interface{}, format interface{}) (interface{}, error) {
-		return nil, nil
-	},
-	"require": func(val interface{}) (interface{}, error) {
-		if val == nil {
-			return nil, errors.New("required value not set")
-		}
-		return val, nil
-	},
-	"ip": func(val interface{}) (interface{}, error) {
-		s := fmt.Sprintf("%v", val)
-		a := strings.Split(s, "/")
-		return a[0], nil
-	},
-	"ipmask": func(val interface{}) (interface{}, error) {
-		s := fmt.Sprintf("%v", val)
-		a := strings.Split(s, "/")
-		return a[1], nil
-	},
-	"default": func(in ...interface{}) (interface{}, error) {
-		if len(in) < 2 {
-			return nil, fmt.Errorf("default value expected")
-		}
-		if len(in) > 2 {
-			return nil, fmt.Errorf("too many arguments")
-		}
-
-		val := in[0]
-		def := in[1]
-
-		switch v := val.(type) {
-		case nil:
-			return def, nil
-		case string:
-			if v == "" {
-				return def, nil
-			}
-		case bool:
-			if !v {
-				return def, nil
-			}
-		}
-		// if val == nil {
-		// 	return def, nil
-		// }
-
-		// If we have a input value, do some type checking
-		tval, tdef := typeof(val), typeof(def)
-		if tval == "string" && tdef == "int" {
-			if _, err := strconv.Atoi(val.(string)); err == nil {
-				tval = "int"
-			}
-			if tdef == "str" {
-				if _, err := strconv.Atoi(def.(string)); err == nil {
-					tdef = "int"
-				}
-			}
-		}
-		if tdef != tval {
-			return val, fmt.Errorf("expected type %v, got %v (value=%v)", tdef, tval, val)
-		}
-
-		// Return the value
-		return val, nil
-	},
-	"contains": func(str interface{}, substr interface{}) (interface{}, error) {
-		return strings.Contains(fmt.Sprintf("%v", str), fmt.Sprintf("%v", substr)), nil
-	},
-	"split": func(val interface{}, sep interface{}) (interface{}, error) {
-		// Start and end values
-		if val == nil {
-			return []interface{}{}, nil
-		}
-		s := fmt.Sprintf("%v", sep)
-		if sep == nil {
-			s = " "
-		}
-
-		v := fmt.Sprintf("%v", val)
-
-		res := strings.Split(v, s)
-		r := make([]interface{}, len(res))
-		for i, p := range res {
-			r[i] = p
-		}
-		return r, nil
-	},
-	"join": func(val interface{}, sep interface{}) (interface{}, error) {
-		s := fmt.Sprintf("%s", sep)
-		if sep == nil {
-			s = " "
-		}
-		// Start and end values
-		switch v := val.(type) {
-		case []interface{}:
-			if val == nil {
-				return "", nil
-			}
-			res := make([]string, len(v))
-			for i, v := range v {
-				res[i] = fmt.Sprintf("%v", v)
-			}
-			return strings.Join(res, s), nil
-		case []string:
-			return strings.Join(v, s), nil
-		case []int, []int16, []int32:
-			return strings.Trim(strings.Replace(fmt.Sprint(v), " ", s, -1), "[]"), nil
-		}
-		return nil, fmt.Errorf("expected array [], got %v", val)
-	},
-	"slice": func(val interface{}, start interface{}, end interface{}) (interface{}, error) {
-		// Start and end values
-		var s, e int
-		switch tmp := start.(type) {
-		case int:
-			s = tmp
-		default:
-			return nil, fmt.Errorf("int expeted for 2nd parameter %v", tmp)
-		}
-		switch tmp := end.(type) {
-		case int:
-			e = tmp
-		default:
-			return nil, fmt.Errorf("int expeted for 3rd parameter %v", tmp)
-		}
-
-		// string or array
-		switch v := val.(type) {
-		case string:
-			if s < 0 {
-				s += len(v)
-			}
-			if e < 0 {
-				e += len(v)
-			}
-			return v[s:e], nil
-		case []interface{}:
-			if s < 0 {
-				s += len(v)
-			}
-			if e < 0 {
-				e += len(v)
-			}
-			return v[s:e], nil
-		}
-		return nil, fmt.Errorf("not an array")
-	},
+	log.Infof("%s %s%s\n", c.String(), vars, s)
 }
