@@ -16,6 +16,9 @@ dist
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# clab directories
+lab-examples/**/clab-*
+
 # ignore the following files/directories
 graph/*
 license.key
