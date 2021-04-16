@@ -25,7 +25,7 @@ type ConfigSnippet struct {
 // internal template cache
 var templates map[string]*template.Template
 
-func LoadTemplate(kind string, templatePath string) error {
+func LoadTemplate(kind, templatePath string) error {
 	if templates == nil {
 		templates = make(map[string]*template.Template)
 	}

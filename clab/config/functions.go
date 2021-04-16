@@ -185,7 +185,7 @@ var funcMap = map[string]interface{}{
 		case []string:
 			return strings.Join(v, sep), nil
 		case []int, []int16, []int32:
-			return strings.Trim(strings.Replace(fmt.Sprint(v), " ", sep, -1), "[]"), nil
+			return strings.Trim(strings.ReplaceAll(fmt.Sprint(v), " ", sep), "[]"), nil
 		}
 		return nil, fmt.Errorf("expected array [], got %v", val)
 	},
