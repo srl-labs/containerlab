@@ -1,14 +1,33 @@
-{{ expect .port "^ethernet-\\d+/\\d+$" }}
+{{ expect .port "^(ethernet-\\d+/|e\\d+-)\\d+$" }}
 {{ expect .name "string" }}
 {{ expect .ip "ip" }}
 {{ optional .vlan "0-4095" }}
+{{ optional .metric "1-10000" }}
 
-#enter candidate
-set / interface {{ .port }} ethernet-1/1
-set / interface {{ .port }} admin-state enable
-set / interface {{ .port }} subinterface 0
-set / interface {{ .port }} subinterface 0 ipv4
-set / interface {{ .port }} subinterface 0 ipv4 address {{ .ip }}
-set / network-instance default
-set / network-instance default interface {{ .port }}.{{ default 0 .vlan }}
-#commit now
+
+/interface {{ .port }} {
+    admin-state enable
+    vlan-tagging true
+    subinterface {{ default 10 .vlan }} {
+        set vlan encap single-tagged vlan-id {{ default 10 .vlan }}
+        set ipv4 address {{ .ip }}
+        set ipv6 address ::FFFF:{{ ip .ip }}/127
+    }
+}
+
+/network-instance default {
+    interface {{ .port }}.{{ default 10 .vlan }} {
+    }
+    protocols {
+        isis {
+            instance default {
+                interface {{ .port }}.{{ default 10 .vlan }} {
+                    circuit-type point-to-point
+                    level 2 {
+                        metric {{ default 10 .metric }}
+                    }
+                }
+            }
+        }
+    }
+}

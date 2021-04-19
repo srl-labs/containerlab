@@ -1,5 +1,6 @@
 {{ expect .systemip "ip" }}
-{{ expect .sid_idx "1-10000" }}
+{{ optional .isis_iid "0-31" }}
+{{ optional .sid_idx "1-10000" }}
 {{ optional .sid_start "19000-30000" }}
 {{ optional .sid_end "19000-30000" }}
 
@@ -12,19 +13,24 @@
 
 /configure router
     autonomous-system {{ default 64500 .as_number }}
+    {{- if .sid_idx }}
     mpls-labels sr-labels start {{ default 19000 .sid_start }} end {{ default 30000 .sid_end }}
+    {{- end }}
 
 /configure router isis {{ default 0 .isis_iid }}
-    area-address 49.0000.000{{ default 0 .isis_iid }}
+    area-address 49.0000.0000.0000.0{{ default 0 .isis_iid }}
     level-capability 2
     level 2 wide-metrics-only
-    interface "system" ipv4-node-sid index {{ .sid_idx }}
     #database-export igp-identifier {{ default 0 .isis_iid }} bgp-ls-identifier value {{ default 0 .isis_iid }}
     traffic-engineering
     advertise-router-capability area
+    admin-state enable
+    interface "system" admin-state enable
+    {{- if .sid_idx }}
+    interface "system" ipv4-node-sid index {{ .sid_idx }}
     segment-routing prefix-sid-range global
     segment-routing admin-state enable
-    admin-state enable
+    {{- end }}
 
 /configure router rsvp
     admin-state enable

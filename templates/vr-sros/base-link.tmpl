@@ -3,21 +3,26 @@
 {{ expect .ip "ip" }}
 {{ optional .vlan "0-4096" }}
 {{ optional .isis_iid "0-32" }}
+{{ optional .metric "1-10000" }}
 
-{{ if contains  "/c" .port }}
+{{- if contains  "/c" .port }}
 /configure port {{ slice 0 -2 .port }} admin-state enable
 /configure port {{ .port | slice 0 -2 }} connector breakout c1-10g
-{{ end }}
+{{- end }}
 
 /configure port {{ .port }} admin-state enable
 
 /configure router interface {{ .name }}
     ipv4 primary address {{ ip .ip }}
     ipv4 primary prefix-length {{ ipmask .ip }}
-    port {{ .port }}:{{ default 1 .vlan }}
+    port {{ .port }}:{{ default 10 .vlan }}
 
 /configure router isis {{ default 0 .isis_iid }}
-    interface {{ .name }}
+    interface {{ .name }} admin-state enable
+    interface {{ .name }} interface-type point-to-point
+    {{- if .metric }}
+    interface {{ .name }} level 2 metric {{ .metric }}
+    {{- end }}
 
 /configure router rsvp
     interface {{ .name }} admin-state enable

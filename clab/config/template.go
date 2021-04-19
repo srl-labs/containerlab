@@ -51,13 +51,15 @@ func (c *ConfigSnippet) Render() error {
 	buf := new(strings.Builder)
 	c.Data = nil
 
-	varsP, _ := json.MarshalIndent(c.vars, "", "  ")
-	log.Debugf("Render %s vars=%s\n", c.String(), varsP)
-
-	err := t.ExecuteTemplate(buf, c.templateName, c.vars)
+	varsP, err := json.MarshalIndent(c.vars, "", "  ")
 	if err != nil {
-		log.Errorf("could not render template: %s %s vars=%s\n", c.String(), err, varsP)
-		return fmt.Errorf("could not render template: %s %s", c.String(), err)
+		varsP = []byte(fmt.Sprintf("%s", c.vars))
+	}
+
+	err = t.ExecuteTemplate(buf, c.templateName, c.vars)
+	if err != nil {
+		log.Errorf("could not render template %s: %s vars=%s\n", c.String(), err, varsP)
+		return fmt.Errorf("could not render template %s: %s", c.String(), err)
 	}
 
 	// Strip blank lines
@@ -182,7 +184,10 @@ func (c *ConfigSnippet) Lines() []string {
 
 // Print the configSnippet
 func (c *ConfigSnippet) Print(printLines int) {
-	vars, _ := json.MarshalIndent(c.vars, "", "  ")
+	vars := []byte{}
+	if log.IsLevelEnabled(log.DebugLevel) {
+		vars, _ = json.MarshalIndent(c.vars, "", "  ")
+	}
 
 	s := ""
 	if printLines > 0 {

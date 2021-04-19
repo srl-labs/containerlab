@@ -35,6 +35,9 @@ func WriteConfig(transport Transport, snips []ConfigSnippet) error {
 	return nil
 }
 
+// templates to execute
+var TemplateOverride string
+
 // the new agreed node config
 type nodeConfig struct {
 	Vars      map[string]string
@@ -42,17 +45,26 @@ type nodeConfig struct {
 	Templates []string
 }
 
+// Split a string on commans and trim each
+func SplitTrim(s string) []string {
+	res := strings.Split(s, ",")
+	for i, v := range res {
+		res[i] = strings.Trim(v, " \n\t")
+	}
+	return res
+}
+
 func GetNodeConfigFromLabels(labels map[string]string) nodeConfig {
 	nc := nodeConfig{
 		Vars:      labels,
-		Templates: []string{"base"},
 		Transport: "ssh",
 	}
-	if t, ok := labels["templates"]; ok {
-		nc.Templates = strings.Split(t, ",")
-		for i, v := range nc.Templates {
-			nc.Templates[i] = strings.Trim(v, " \n\t")
-		}
+	if TemplateOverride != "" {
+		nc.Templates = SplitTrim(TemplateOverride)
+	} else if t, ok := labels["templates"]; ok {
+		nc.Templates = SplitTrim(t)
+	} else {
+		nc.Templates = []string{"base"}
 	}
 	if t, ok := labels["transport"]; ok {
 		nc.Transport = t

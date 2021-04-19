@@ -146,7 +146,12 @@ func newSSHTransport(node *clab.Node) (*config.SshTransport, error) {
 			clab.DefaultCredentials[node.Kind][0],
 			clab.DefaultCredentials[node.Kind][1])
 
-		c.SetupKind(node.Kind)
+		switch node.Kind {
+		case "vr-sros":
+			c.K = &config.VrSrosSshKind{}
+		case "srl":
+			c.K = &config.SrlSshKind{}
+		}
 		return c, nil
 	}
 	return nil, fmt.Errorf("no tranport implemented for kind: %s", kind)
@@ -154,8 +159,9 @@ func newSSHTransport(node *clab.Node) (*config.SshTransport, error) {
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringVarP(&templatePath, "templates", "", "", "specify template path")
+	configCmd.Flags().StringVarP(&templatePath, "path", "", "", "specify template path")
+	configCmd.MarkFlagDirname("path")
+	configCmd.Flags().StringVarP(&config.TemplateOverride, "templates", "", "", "specify a list of template to apply")
 	configCmd.Flags().IntVarP(&printLines, "print-only", "p", 0, "print config, don't send it. Restricted to n lines")
 	configCmd.Flags().BoolVarP(&config.LoginMessages, "login-message", "", false, "show the SSH login message")
-	configCmd.MarkFlagDirname("templates")
 }
