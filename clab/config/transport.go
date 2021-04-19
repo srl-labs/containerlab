@@ -39,7 +39,7 @@ func WriteConfig(transport Transport, snips []ConfigSnippet) error {
 var TemplateOverride string
 
 // the new agreed node config
-type nodeConfig struct {
+type NodeConfig struct {
 	Vars      map[string]string
 	Transport string
 	Templates []string
@@ -54,8 +54,8 @@ func SplitTrim(s string) []string {
 	return res
 }
 
-func GetNodeConfigFromLabels(labels map[string]string) nodeConfig {
-	nc := nodeConfig{
+func GetNodeConfigFromLabels(labels map[string]string) NodeConfig {
+	nc := NodeConfig{
 		Vars:      labels,
 		Transport: "ssh",
 	}
