@@ -180,6 +180,7 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 		r = t.Run(l, 5)
 		if r.result != "" {
 			r.Infof(snip.TargetNode.ShortName)
+			log.Errorf("%s: Aborting deployment...", snip.TargetNode.ShortName)
 		}
 	}
 
@@ -360,7 +361,7 @@ func (sk *VrSrosSshKind) ConfigStart(s *SshTransport, node string, transaction b
 	if transaction {
 		cc := s.Run("/configure global", 5)
 		if cc.result != "" {
-			cc.Infof(node)
+			cc.Infof("%s /config global", node)
 		}
 		cc = s.Run("discard", 1)
 		if cc.result != "" {
