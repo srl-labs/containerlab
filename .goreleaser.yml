@@ -21,9 +21,11 @@ snapshot:
 publishers:
   - name: fury.io deb/rpm packages
     ids:
-      - containerlab # this id belongs to nfpm section and is used to only upload artifacts from nfmp
+      - containerlab # this id belongs to nfpm section and is used to only upload artifacts from nfpm
     dir: "{{ dir .ArtifactPath }}"
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/netdevops/
+release:
+  prerelease: auto
 changelog:
   sort: asc
   filters:
