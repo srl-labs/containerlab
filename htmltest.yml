@@ -3,7 +3,6 @@
 DirectoryPath: ./site
 IgnoreURLs:
   - fonts.gstatic.com
-  - img.shields.io
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
