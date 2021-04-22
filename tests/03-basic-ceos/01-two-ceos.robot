@@ -22,11 +22,11 @@ Deploy ${lab-name} lab
 
 Get nodes mgmt IPs
     ${rc}    ${n1-mgmt-ip} =    Run And Return Rc And Output
-    ...    docker inspect clab-${lab-name}-${node1-name} -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+    ...    sudo docker inspect clab-${lab-name}-${node1-name} -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
     Should Be Equal As Integers    ${rc}    0
     Set Suite Variable    ${n1-mgmt-ip}
     ${rc}    ${inspected-n2-mgmt-ip} =    Run And Return Rc And Output
-    ...    docker inspect clab-${lab-name}-${node2-name} -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+    ...    sudo docker inspect clab-${lab-name}-${node2-name} -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal As Strings    ${inspected-n2-mgmt-ip}    ${n2-mgmt-ip}
 
