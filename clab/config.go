@@ -660,6 +660,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err := c.verifyLinks(); err != nil {
 		return err
 	}
+	if err := c.verifyRootNetnsInterfaceUniqueness(); err != nil {
+		return err
+	}
 	if err := c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
@@ -670,9 +673,6 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 	if err := c.VerifyImages(ctx); err != nil {
-		return err
-	}
-	if err := c.VerifyInterfaceUniqueness(); err != nil {
 		return err
 	}
 	return nil
@@ -793,33 +793,20 @@ func (c *CLab) verifyHostIfaces() error {
 	return nil
 }
 
-func (c *CLab) VerifyInterfaceUniqueness() error {
-	hostInterfaces := make([]string, 0)
-	nodeInterfaces := make(map[string][]string)
-
+// verifyRootNetnsInterfaceUniqueness ensures that interafaces that appear in the root ns (bridge, ovs-bridge and host)
+// are uniquely defined in the topology file
+func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
+	rootNsIfaces := map[string]struct{}{}
 	for _, l := range c.Links {
 		endpoints := [2]*Endpoint{l.A, l.B}
 		for _, e := range endpoints {
-			// Iterate over the two endpoints of the link
-			if e.Node.Kind == "bridge" {
-				// if the interface is a bridge interface check in the hostInterfaces array
-				for _, x := range hostInterfaces {
-					// if the actual endpoint name is already part of the array throw an error
-					if x == e.EndpointName {
-						return fmt.Errorf("duplicate endpoint detected for %s:%s. This is a bridge endpoint end therefore meant to be unique amongst all bridges", e.Node.ShortName, e.EndpointName)
-					}
+			if e.Node.Kind == "bridge" || e.Node.Kind == "ovs-bridge" || e.Node.Kind == "host" {
+				if _, ok := rootNsIfaces[e.EndpointName]; ok {
+					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces. 
+					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
+				} else {
+					rootNsIfaces[e.EndpointName] = struct{}{}
 				}
-				// append to known interfaces for the host node
-				hostInterfaces = append(hostInterfaces, e.EndpointName)
-			} else {
-				// Must be a container interface, so we need to make sure interface names are unique per container
-				for _, x := range nodeInterfaces[e.Node.ShortName] {
-					if x == e.EndpointName {
-						return fmt.Errorf("duplicate endpoint %s detected for node %s", e.EndpointName, e.Node.ShortName)
-					}
-				}
-				// append to known interfaces for the specific node
-				nodeInterfaces[e.Node.ShortName] = append(nodeInterfaces[e.Node.ShortName], e.EndpointName)
 			}
 		}
 	}

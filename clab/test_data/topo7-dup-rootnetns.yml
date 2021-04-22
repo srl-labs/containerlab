@@ -1,0 +1,11 @@
+name: topo7
+
+topology:
+  nodes:
+    br1:
+      kind: bridge
+    br2:
+      kind: bridge
+
+  links:
+    - endpoints: ["br1:eth1", "br2:eth1"]
