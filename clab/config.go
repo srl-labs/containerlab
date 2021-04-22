@@ -672,6 +672,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err := c.VerifyImages(ctx); err != nil {
 		return err
 	}
+	if err := c.VerifyInterfaceUniqueness(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -785,6 +788,39 @@ func (c *CLab) verifyHostIfaces() error {
 		if l.B.Node.NetworkMode == "host" {
 			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
 				l.B.Node.ShortName, l.B.Node.ShortName)
+		}
+	}
+	return nil
+}
+
+func (c *CLab) VerifyInterfaceUniqueness() error {
+	hostInterfaces := make([]string, 0)
+	nodeInterfaces := make(map[string][]string)
+
+	for _, l := range c.Links {
+		endpoints := [2]*Endpoint{l.A, l.B}
+		for _, e := range endpoints {
+			// Iterate over the two endpoints of the link
+			if e.Node.Kind == "bridge" {
+				// if the interface is a bridge interface check in the hostInterfaces array
+				for _, x := range hostInterfaces {
+					// if the actual endpoint name is already part of the array throw an error
+					if x == e.EndpointName {
+						return fmt.Errorf("duplicate endpoint detected for %s:%s. This is a bridge endpoint end therefore meant to be unique amongst all bridges", e.Node.ShortName, e.EndpointName)
+					}
+				}
+				// append to known interfaces for the host node
+				hostInterfaces = append(hostInterfaces, e.EndpointName)
+			} else {
+				// Must be a container interface, so we need to make sure interface names are unique per container
+				for _, x := range nodeInterfaces[e.Node.ShortName] {
+					if x == e.EndpointName {
+						return fmt.Errorf("duplicate endpoint %s detected for node %s", e.EndpointName, e.Node.ShortName)
+					}
+				}
+				// append to known interfaces for the specific node
+				nodeInterfaces[e.Node.ShortName] = append(nodeInterfaces[e.Node.ShortName], e.EndpointName)
+			}
 		}
 	}
 	return nil
