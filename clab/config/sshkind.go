@@ -30,7 +30,7 @@ func (sk *VrSrosSshKind) ConfigStart(s *SshTransport, transaction bool) error {
 	//s.debug = true
 	r := s.Run("/environment more false", 5)
 	if r.result != "" {
-		log.Warn("%s Are you in MD-Mode?", s.Target, r.LogString(s.Target, true, false))
+		log.Warnf("%s Are you in MD-Mode?%s", s.Target, r.LogString(s.Target, true, false))
 	}
 
 	if transaction {
@@ -68,7 +68,7 @@ func (sk *SrlSshKind) ConfigStart(s *SshTransport, transaction bool) error {
 		r0 := s.Run("enter candidate private", 5)
 		r1 := s.Run("discard stay", 2)
 		if !strings.Contains(r1.result, "Nothing to discard") {
-			r0.result += r1.result
+			r0.result += "; " + r1.result
 			r0.command += "; " + r1.command
 		}
 		r0.Info(s.Target)
