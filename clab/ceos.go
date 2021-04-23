@@ -94,14 +94,6 @@ func (c *CLab) createCEOSFiles(node *Node) error {
 	CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := path.Join(node.LabDir, "flash", "startup-config")
 	node.ResConfig = cfg
-	if !fileExists(cfg) {
-		err := node.generateConfig(cfg)
-		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-		}
-	} else {
-		log.Debugf("Config file exists for node %s", node.ShortName)
-	}
 
 	// sysmac is a system mac that is +1 to Ma0 mac
 	m, err := net.ParseMAC(node.MacAddress)

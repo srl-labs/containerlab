@@ -170,7 +170,7 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 
 // GenerateConfig generates configuration for the nodes
 func (node *Node) generateConfig(dst string) error {
-	if fileExists(dst) && (node.Config == defaultConfigTemplates[node.Kind]) && node.Kind != "ceos" {
+	if fileExists(dst) && (node.Config == defaultConfigTemplates[node.Kind]) {
 		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
 		return nil
 	}
