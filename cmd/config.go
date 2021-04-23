@@ -30,6 +30,8 @@ var configCmd = &cobra.Command{
 			return err
 		}
 
+		config.DebugCount = debugCount
+
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
@@ -101,7 +103,7 @@ var configCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		wg.Add(len(allConfig))
 		for _, cs_ := range allConfig {
-			go func(cs []config.ConfigSnippet) {
+			deploy1 := func(cs []config.ConfigSnippet) {
 				defer wg.Done()
 
 				var transport config.Transport
@@ -127,8 +129,14 @@ var configCmd = &cobra.Command{
 				if err != nil {
 					log.Errorf("%s\n", err)
 				}
+			}
 
-			}(cs_)
+			// On debug this will not be executed concurrently
+			if log.IsLevelEnabled(log.DebugLevel) {
+				deploy1(cs_)
+			} else {
+				go deploy1(cs_)
+			}
 		}
 		wg.Wait()
 

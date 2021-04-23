@@ -20,8 +20,11 @@ type SshSession struct {
 // Display the SSH login message
 var LoginMessages bool
 
+// Debug count
+var DebugCount int
+
 // The reply the execute command and the prompt.
-type SshReply struct{ result, prompt string }
+type SshReply struct{ result, prompt, command string }
 
 // SshTransport setting needs to be set before calling Connect()
 // SshTransport implement the Transport interface
@@ -31,12 +34,13 @@ type SshTransport struct {
 	// SSH Session
 	ses *SshSession
 	// Contains the first read after connecting
-	LoginMessage SshReply
+	LoginMessage *SshReply
 	// SSH parameters used in connect
 	// defualt: 22
 	Port int
-	// extra debug print
-	debug bool
+
+	// Keep the target for logging
+	Target string
 
 	// SSH Options
 	// required!
@@ -76,7 +80,13 @@ func (t *SshTransport) InChannel() {
 				parts := strings.Split(tmpS, "#")
 				li := len(parts) - 1
 				for i := 0; i < li; i++ {
-					t.in <- *t.K.PromptParse(t, &parts[i])
+					r := t.K.PromptParse(t, &parts[i])
+					if r == nil {
+						r = &SshReply{
+							result: parts[i],
+						}
+					}
+					t.in <- *r
 				}
 				tmpS = parts[li]
 			}
@@ -93,14 +103,15 @@ func (t *SshTransport) InChannel() {
 	// Save first prompt
 	t.LoginMessage = t.Run("", 15)
 	if LoginMessages {
-		t.LoginMessage.Infof("")
+		t.LoginMessage.Info(t.Target)
 	}
 }
 
 // Run a single command and wait for the reply
-func (t *SshTransport) Run(command string, timeout int) SshReply {
+func (t *SshTransport) Run(command string, timeout int) *SshReply {
 	if command != "" {
 		t.ses.Writeln(command)
+		log.Debugf("--> %s\n", command)
 	}
 
 	sHistory := ""
@@ -112,41 +123,51 @@ func (t *SshTransport) Run(command string, timeout int) SshReply {
 		select {
 		case <-time.After(time.Duration(timeout) * time.Second):
 			log.Warnf("timeout waiting for prompt: %s", command)
-			return SshReply{}
+			return &SshReply{
+				result:  sHistory,
+				command: command,
+			}
 		case ret := <-t.in:
-			if t.debug {
-				ret.Debug()
+			if DebugCount > 1 {
+				ret.Debug(t.Target, command+"<--InChannel--")
+			}
+
+			if ret.result == "" && ret.prompt == "" {
+				log.Fatalf("received zero?")
+				continue
 			}
 
 			if ret.prompt == "" && ret.result != "" {
 				// we should continue reading...
 				sHistory += ret.result
-				timeout = 1 // reduce timeout, node is already sending data
-				continue
-			}
-			if ret.result == "" && ret.prompt == "" {
-				log.Errorf("received zero?")
+				if DebugCount > 1 {
+					log.Debugf("+")
+				}
+				timeout = 2 // reduce timeout, node is already sending data
 				continue
 			}
 
 			if sHistory == "" {
-				rr = strings.Trim(ret.result, " \n\r\t")
+				rr = ret.result
 			} else {
-				rr = strings.Trim(sHistory+ret.result, " \n\r\t")
+				rr = sHistory + "#" + ret.result
 				sHistory = ""
 			}
+			rr = strings.Trim(rr, " \n\r\t")
 
 			if strings.HasPrefix(rr, command) {
 				rr = strings.Trim(rr[len(command):], " \n\r\t")
 			} else if !strings.Contains(rr, command) {
+				log.Debugf("read more %s:%s", command, rr)
 				sHistory = rr
 				continue
 			}
-			res := SshReply{
-				result: rr,
-				prompt: ret.prompt,
+			res := &SshReply{
+				result:  rr,
+				prompt:  ret.prompt,
+				command: command,
 			}
-			res.Debug()
+			res.Debug(t.Target, command+"<--RUN--")
 			return res
 		}
 	}
@@ -162,13 +183,12 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 
 	transaction := !strings.HasPrefix(snip.templateName, "show-")
 
-	err := t.K.ConfigStart(t, snip.TargetNode.ShortName, transaction)
+	err := t.K.ConfigStart(t, transaction)
 	if err != nil {
 		return err
 	}
 
-	c, b := 0, 0
-	var r SshReply
+	c := 0
 
 	for _, l := range snip.Lines() {
 		l = strings.TrimSpace(l)
@@ -176,18 +196,22 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 			continue
 		}
 		c += 1
-		b += len(l)
-		r = t.Run(l, 5)
-		if r.result != "" {
-			r.Infof(snip.TargetNode.ShortName)
-			log.Errorf("%s: Aborting deployment...", snip.TargetNode.ShortName)
-		}
+		t.Run(l, 5).Info(t.Target)
 	}
 
 	if transaction {
-		commit, _ := t.K.ConfigCommit(t)
-
-		commit.Infof("COMMIT %s - %d lines %d bytes", snip, c, b)
+		commit, err := t.K.ConfigCommit(t)
+		msg := snip.String()
+		i := strings.Index(msg, " ")
+		msg = fmt.Sprintf("%s COMMIT%s - %d lines", msg[:i], msg[i:], c)
+		if commit.result != "" {
+			msg += commit.LogString(snip.TargetNode.ShortName, true, false)
+		}
+		if err != nil {
+			log.Error(msg)
+			return err
+		}
+		log.Info(msg)
 	}
 
 	return nil
@@ -211,6 +235,8 @@ func (t *SshTransport) Connect(host string) error {
 	host = fmt.Sprintf("%s:%d", host, t.Port)
 	//sshConfig := &ssh.ClientConfig{}
 	//SshConfigWithUserNamePassword(sshConfig, "admin", "admin")
+
+	t.Target = strings.Split(strings.Split(host, ":")[0], "-")[2]
 
 	ses_, err := NewSshSession(host, t.SshConfig)
 	if err != nil || ses_ == nil {
@@ -306,108 +332,48 @@ func (ses *SshSession) Close() {
 	ses.Session.Close()
 }
 
-// This is a helper funciton to parse the prompt, and can be used by SshKind's ParsePrompt
-// Used in SROS & SRL today
-func promptParseNoSpaces(in *string, promptChar string, lines int) *SshReply {
-	n := strings.LastIndex(*in, "\n")
-	if n < 0 {
-		return &SshReply{
-			result: *in,
-			prompt: "",
+// The LogString will include the entire SshReply
+//   Each field will be prefixed by a character.
+//   # - command sent
+//   | - result recieved
+//   ? - prompt part of the result
+func (r *SshReply) LogString(node string, linefeed, debug bool) string {
+	ind := 12 + len(node)
+	prefix := "\n" + strings.Repeat(" ", ind)
+	s := ""
+	if linefeed {
+		s = "\n" + strings.Repeat(" ", 11)
+	}
+	s += node + " # " + r.command
+	s += prefix + "| "
+	s += strings.Join(strings.Split(r.result, "\n"), prefix+"| ")
+	if debug { // Add the prompt & more
+		s = "" + strings.Repeat(" ", ind) + s
+		s += prefix + "? "
+		s += strings.Join(strings.Split(r.prompt, "\n"), prefix+"? ")
+		if DebugCount > 3 { // add bytestring
+			s += fmt.Sprintf("%s| %v%s ? %v", prefix, []byte(r.result), prefix, []byte(r.prompt))
 		}
 
 	}
-	if strings.Contains((*in)[n:], " ") {
-		return &SshReply{
-			result: *in,
-			prompt: "",
-		}
-	}
-	if lines > 1 {
-		// Add another line to the prompt
-		res := (*in)[:n]
-		n = strings.LastIndex(res, "\n")
-	}
-	if n < 0 {
-		n = 0
-	}
-	return &SshReply{
-		result: (*in)[:n],
-		prompt: (*in)[n:] + promptChar,
-	}
+	return s
 }
 
-// an interface to implement kind specific methods for transactions and prompt checking
-type SshKind interface {
-	// Start a config transaction
-	ConfigStart(s *SshTransport, node string, transaction bool) error
-	// Commit a config transaction
-	ConfigCommit(s *SshTransport) (SshReply, error)
-	// Prompt parsing function.
-	// This function receives string, split by the delimiter and should ensure this is a valid prompt
-	// Valid prompt, strip te prompt from the result and add it to the prompt in SshReply
-	//
-	// A defualt implementation is promptParseNoSpaces, which simply ensures there are
-	// no spaces between the start of the line and the #
-	PromptParse(s *SshTransport, in *string) *SshReply
-}
-
-// implements SShKind
-type VrSrosSshKind struct{}
-
-func (sk *VrSrosSshKind) ConfigStart(s *SshTransport, node string, transaction bool) error {
-	s.PromptChar = "#" // ensure it's '#'
-	//s.debug = true
-	if transaction {
-		cc := s.Run("/configure global", 5)
-		if cc.result != "" {
-			cc.Infof("%s /config global", node)
-		}
-		cc = s.Run("discard", 1)
-		if cc.result != "" {
-			cc.Infof("%s discard", node)
-		}
-	} else {
-		s.Run("/environment more false", 5)
+func (r *SshReply) Info(node string) *SshReply {
+	if r.result == "" {
+		return r
 	}
-	return nil
-}
-func (sk *VrSrosSshKind) ConfigCommit(s *SshTransport) (SshReply, error) {
-	return s.Run("commit", 10), nil
-}
-func (sk *VrSrosSshKind) PromptParse(s *SshTransport, in *string) *SshReply {
-	return promptParseNoSpaces(in, s.PromptChar, 2)
+	log.Info(r.LogString(node, false, false))
+	return r
 }
 
-// implements SShKind
-type SrlSshKind struct{}
-
-func (sk *SrlSshKind) ConfigStart(s *SshTransport, node string, transaction bool) error {
-	s.PromptChar = "#" // ensure it's '#'
-	s.debug = true
-	if transaction {
-		s.Run("enter candidate", 5)
-		s.Run("discard stay", 2)
+func (r *SshReply) Debug(node, message string, t ...interface{}) {
+	msg := message
+	if len(t) > 0 {
+		msg = t[0].(string)
 	}
-	return nil
-}
-func (sk *SrlSshKind) ConfigCommit(s *SshTransport) (SshReply, error) {
-	return s.Run("commit now", 10), nil
-}
-func (sk *SrlSshKind) PromptParse(s *SshTransport, in *string) *SshReply {
-	return promptParseNoSpaces(in, s.PromptChar, 2)
-}
-
-func (r *SshReply) Debug() {
 	_, fn, line, _ := runtime.Caller(1)
-	log.Debugf("(%s line %d) *RESULT: %s.\n | %v\n*PROMPT:%v.\n*PROMPT:%v.\n", fn, line, r.result, []byte(r.result), r.prompt, []byte(r.prompt))
-}
-
-func (r *SshReply) Infof(msg string, args ...interface{}) {
-	var s string
-	if r.result != "" {
-		s = "\n  | "
-		s += strings.Join(strings.Split(r.result, "\n"), s)
-	}
-	log.Infof(msg+s, args...)
+	msg += fmt.Sprintf("(%s line %d)", fn, line)
+	msg += r.LogString(node, true, true)
+	log.Debugf(msg)
 }
