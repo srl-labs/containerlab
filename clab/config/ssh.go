@@ -17,9 +17,6 @@ type SshSession struct {
 	Session *ssh.Session
 }
 
-// Display the SSH login message
-var LoginMessages bool
-
 // Debug count
 var DebugCount int
 
@@ -102,7 +99,7 @@ func (t *SshTransport) InChannel() {
 
 	// Save first prompt
 	t.LoginMessage = t.Run("", 15)
-	if LoginMessages {
+	if DebugCount > 1 {
 		t.LoginMessage.Info(t.Target)
 	}
 }

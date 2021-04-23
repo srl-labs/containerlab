@@ -40,7 +40,7 @@ func LoadTemplate(kind, templatePath string) error {
 	var err error
 	templates[kind], err = ct.ParseGlob(tp)
 	if err != nil {
-		log.Errorf("could not load template %s", err)
+		log.Errorf("Could not load %s %s", tp, err)
 		return err
 	}
 	return nil

@@ -36,7 +36,7 @@ func WriteConfig(transport Transport, snips []ConfigSnippet) error {
 }
 
 // templates to execute
-var TemplateOverride string
+var TemplateOverride []string
 
 // the new agreed node config
 type NodeConfig struct {
@@ -59,8 +59,8 @@ func GetNodeConfigFromLabels(labels map[string]string) NodeConfig {
 		Vars:      labels,
 		Transport: "ssh",
 	}
-	if TemplateOverride != "" {
-		nc.Templates = SplitTrim(TemplateOverride)
+	if len(TemplateOverride) > 0 {
+		nc.Templates = TemplateOverride
 	} else if t, ok := labels["templates"]; ok {
 		nc.Templates = SplitTrim(t)
 	} else {

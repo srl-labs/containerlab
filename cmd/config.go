@@ -44,7 +44,7 @@ var configCmd = &cobra.Command{
 		//defer cancel()
 
 		setFlags(c.Config)
-		log.Debugf("lab Conf: %+v", c.Config)
+		log.Debugf("Topology definition: %+v", c.Config)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
 			return err
@@ -56,8 +56,7 @@ var configCmd = &cobra.Command{
 		renderErr := 0
 
 		for _, node := range c.Nodes {
-			kind := node.Labels["clab-node-kind"]
-			err = config.LoadTemplate(kind, templatePath)
+			err = config.LoadTemplate(node.Kind, templatePath)
 			if err != nil {
 				return err
 			}
@@ -167,9 +166,8 @@ func newSSHTransport(node *clab.Node) (*config.SshTransport, error) {
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringVarP(&templatePath, "path", "", "", "specify template path")
-	configCmd.MarkFlagDirname("path")
-	configCmd.Flags().StringVarP(&config.TemplateOverride, "templates", "", "", "specify a list of template to apply")
-	configCmd.Flags().IntVarP(&printLines, "print-only", "p", 0, "print config, don't send it. Restricted to n lines")
-	configCmd.Flags().BoolVarP(&config.LoginMessages, "login-message", "", false, "show the SSH login message")
+	configCmd.Flags().StringVarP(&templatePath, "template-path", "p", "", "directory with templates used to render config")
+	configCmd.MarkFlagDirname("template-path")
+	configCmd.Flags().StringSliceVarP(&config.TemplateOverride, "template-list", "l", []string{}, "comma separated list of template names to render")
+	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render dry-run & print n lines of config")
 }
