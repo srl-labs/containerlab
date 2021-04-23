@@ -608,7 +608,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
 	if len(split) != 2 {
-		log.Fatalf("endpoint %s has wrong syntax", strings.TrimSpace(e))
+		log.Fatalf("endpoint %s has wrong syntax", strings.TrimSpace(e)) // skipcq: GO-S0904
 	}
 	nName := split[0]  // node name
 	epName := split[1] // endpoint name
@@ -641,7 +641,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// stop the deployment if the matching node element was not found
 	// "host" node name is an exception, it may exist without a matching node
 	if endpoint.Node == nil {
-		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", strings.TrimSpace(nName))
+		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", strings.TrimSpace(nName)) // skipcq: GO-S0904
 	}
 
 	// initialize the endpoint name based on the split function
