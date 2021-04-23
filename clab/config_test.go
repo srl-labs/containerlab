@@ -380,3 +380,22 @@ func TestLablesInit(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyRootNetnsInterfaceUniqueness(t *testing.T) {
+
+	opts := []ClabOption{
+		WithTopoFile("test_data/topo7-dup-rootnetns.yml"),
+	}
+	c := NewContainerLab(opts...)
+
+	if err := c.ParseTopology(); err != nil {
+		t.Fatal(err)
+	}
+
+	err := c.verifyRootNetnsInterfaceUniqueness()
+	if err == nil {
+		t.Fatalf("expected duplicate rootns links error")
+	}
+	t.Logf("error: %v", err)
+
+}

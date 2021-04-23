@@ -608,7 +608,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
 	if len(split) != 2 {
-		log.Fatalf("endpoint %s has wrong syntax", e)
+		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904
 	}
 	nName := split[0]  // node name
 	epName := split[1] // endpoint name
@@ -641,7 +641,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// stop the deployment if the matching node element was not found
 	// "host" node name is an exception, it may exist without a matching node
 	if endpoint.Node == nil {
-		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName)
+		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904
 	}
 
 	// initialize the endpoint name based on the split function
@@ -658,6 +658,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 	if err := c.verifyLinks(); err != nil {
+		return err
+	}
+	if err := c.verifyRootNetnsInterfaceUniqueness(); err != nil {
 		return err
 	}
 	if err := c.VerifyContainersUniqueness(ctx); err != nil {
@@ -785,6 +788,26 @@ func (c *CLab) verifyHostIfaces() error {
 		if l.B.Node.NetworkMode == "host" {
 			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
 				l.B.Node.ShortName, l.B.Node.ShortName)
+		}
+	}
+	return nil
+}
+
+// verifyRootNetnsInterfaceUniqueness ensures that interafaces that appear in the root ns (bridge, ovs-bridge and host)
+// are uniquely defined in the topology file
+func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
+	rootNsIfaces := map[string]struct{}{}
+	for _, l := range c.Links {
+		endpoints := [2]*Endpoint{l.A, l.B}
+		for _, e := range endpoints {
+			if e.Node.Kind == "bridge" || e.Node.Kind == "ovs-bridge" || e.Node.Kind == "host" {
+				if _, ok := rootNsIfaces[e.EndpointName]; ok {
+					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces. 
+					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
+				} else {
+					rootNsIfaces[e.EndpointName] = struct{}{}
+				}
+			}
 		}
 	}
 	return nil
