@@ -124,20 +124,20 @@ With such topology file containerlab is instructed to take a file `myconfig.conf
 
 #### Configuration persistency
 
-It is important to know how configuration persists when a single lab is going through rounds of `deploy->destroy` actions.
+It is important to understand how configuration persistency behaves when a single lab is going through rounds of `deploy->destroy` actions.
 
-When containerlab launches the lab that has cEOS node defined for the first time it will generate cEOS configuration with the IPv4/6 address assigned to `Ma0` management interface to match the IP address that docker assigned to cEOS nodes. This makes it possible to have the cEOS nodes come up with Management interface already correctly addressed.
+When the lab with cEOS nodes gets deployed for the first time the configuration file is generated with the IPv4/6 address assigned to `Ma0` management interface. These management interface addresses match the IP addresses that docker has assigned to cEOS containers. This makes it possible to have the cEOS nodes to start up with Management interface already correctly addressed.
 
-When a user configures the nodes during the lab exercise and saves it with `wr mem` or similar, the changes will be written to `startup-config` file of cEOS.
+When a user later configures the nodes during the lab exercise and saves it with `wr mem` or similar, the changes will be written to `startup-config` file of cEOS.
 
-User then may destroy the lab and the config changes will persist on disk, this is done with `containerlab destroy -t <topo-file>` command. During this operation the containers will be destroyed, but their configuration files will still be kept in the lab directory by the path `clab-$labName`.
+User then may destroy the lab and the config changes will persist on disk, this is done with `destroy` command. During this operation the containers will be destroyed, but their configuration files will still be kept in the lab directory by the path `clab-$labName`.
 
 If a user then desires to start this lab once again it may lead to a problem. Since docker may assign new IP addresses to the cEOS nodes of the lab, the configuration saved on disk may not match those new docker-assigned addresses, and that will result in an incorrect management interface configuration.
 
 To avoid this, and be able to start the nodes with the previously saved configuration, users may do the following:
 
-1. Use static management address addressing via [user defined addresses](../network.md#user-defined-addresses). This will make docker to always assign the addresses to the containers as specified in the clab file.
-2. Leverage [user defined config](#user-defined-config) if all you need is to have a startup config.
+1. Address the nodes explicitly via [user defined addresses](../network.md#user-defined-addresses). This will instruct docker to use the addresses as specified by a user in a clab file.
+2. Leverage [user defined config](#user-defined-config), if all you need is to have a startup config.
 
 #### Saving configuration
 In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a file by `conf-saved.conf` path in the relevant node directory.
