@@ -85,7 +85,8 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
 
 ## Features and options
 ### Node configuration
-cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be 
+used as a startup config instead.
 
 #### Default node configuration
 When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/templates/arista/ceos.cfg.tpl) and copy it to the config directory of the node.
@@ -117,10 +118,29 @@ topology:
       config: myconfig.conf
 ```
 
+When a config file is passed via `config` parameter, it will override any configuration that may have left upon lab destroy.
+
 With such topology file containerlab is instructed to take a file `myconfig.conf` from the current working directory, copy it to the lab directory for that specific node under the `/flash/startup-config` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
 
+#### Configuration persistency
+
+It is important to understand how configuration persistency behaves when a single lab is going through rounds of `deploy->destroy` actions.
+
+When the lab with cEOS nodes gets deployed for the first time the configuration file is generated with the IPv4/6 address assigned to `Ma0` management interface. These management interface addresses match the IP addresses that docker has assigned to cEOS containers. This makes it possible to have the cEOS nodes to start up with Management interface already correctly addressed.
+
+When a user later configures the nodes during the lab exercise and saves it with `wr mem` or similar, the changes will be written to `startup-config` file of cEOS.
+
+User then may destroy the lab and the config changes will persist on disk, this is done with `destroy` command. During this operation the containers will be destroyed, but their configuration files will still be kept in the lab directory by the path `clab-$labName`.
+
+If a user then desires to start this lab once again it may lead to a problem. Since docker may assign new IP addresses to the cEOS nodes of the lab, the configuration saved on disk may not match those new docker-assigned addresses, and that will result in an incorrect management interface configuration.
+
+To avoid this, and be able to start the nodes with the previously saved configuration, users may do the following:
+
+1. Address the nodes explicitly via [user defined addresses](../network.md#user-defined-addresses). This will instruct docker to use the addresses as specified by a user in a clab file.
+2. Leverage [user defined config](#user-defined-config), if all you need is to have a startup config.
+
 #### Saving configuration
-With [`containerlab save`](../../cmd/save.md) command it's possible to save running cEOS configuration into a file. The configuration will be saved by `conf-saved.conf` path in the relevant node directory.
+In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a file by `conf-saved.conf` path in the relevant node directory.
 
 ## Container configuration
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
