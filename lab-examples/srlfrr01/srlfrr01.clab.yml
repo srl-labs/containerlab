@@ -8,7 +8,7 @@ topology:
       license: license.key
     frr:
       kind: linux
-      image: frrouting/frr:latest
+      image: frrouting/frr:v7.5.0
       binds:
         - daemons:/etc/frr/daemons
 
