@@ -136,7 +136,7 @@ If a user then desires to start this lab once again it may lead to a problem. Si
 
 To avoid this, and be able to start the nodes with the previously saved configuration, users may do the following:
 
-1. Use static management address addressing via [user defined addresses](../network.md##user-defined-addresses). This will make docker to always assign the addresses to the containers as specified in the clab file.
+1. Use static management address addressing via [user defined addresses](../network.md#user-defined-addresses). This will make docker to always assign the addresses to the containers as specified in the clab file.
 2. Leverage [user defined config](#user-defined-config) if all you need is to have a startup config.
 
 #### Saving configuration
