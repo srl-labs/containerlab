@@ -3,6 +3,7 @@
 {{ expect .ip "ip" }}
 {{ optional .vlan "0-4096" }}
 {{ optional .isis_iid "0-32" }}
+{{ optional .sid_idx "0-999" }}
 {{ optional .metric "1-10000" }}
 
 {{- if contains  "/c" .port }}
@@ -22,22 +23,19 @@
     area-address 49.0000.0000.0000.0{{ default 0 .isis_iid }}
     level-capability 2
     level 2 wide-metrics-only
-    #database-export igp-identifier {{ default 0 .isis_iid }} bgp-ls-identifier value {{ default 0 .isis_iid }}
     traffic-engineering
     advertise-router-capability area
     admin-state enable
     interface "system" admin-state enable
     {{- if .sid_idx }}
-    interface "system" ipv4-node-sid index {{ .sid_idx }}
+    interface "system" ipv4-node-sid index {{ default 0 .isis_iid }}0{{ .sid_idx }}
     segment-routing prefix-sid-range global
     segment-routing admin-state enable
     {{- end }}
 
     interface {{ .name }} admin-state enable
     interface {{ .name }} interface-type point-to-point
-    {{- if .metric }}
-    interface {{ .name }} level 2 metric {{ .metric }}
-    {{- end }}
+    interface {{ .name }} level 2 metric {{ default 10 .metric }}
 
 
 /configure router isis {{ default 0 .isis_iid }}
