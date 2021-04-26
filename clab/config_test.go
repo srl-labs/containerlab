@@ -1,6 +1,7 @@
 package clab
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -92,12 +93,44 @@ func TestBindsInit(t *testing.T) {
 
 			binds := c.bindsInit(&nodeCfg)
 			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
-			err := resolveBindPaths(tc.want)
+			err := resolveBindPaths(tc.want, node.LabDir)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(binds, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, binds)
+			}
+		})
+	}
+}
+
+func TestBindsInitNodeDir(t *testing.T) {
+	tests := map[string]struct {
+		bind    string
+		nodeDir string
+		want    string
+	}{
+		"node_binds_nodeDir": {
+			bind:    "$nodeDir/nodex/conf:/dst",
+			nodeDir: os.TempDir() + "/clab_test",
+			want:    os.TempDir() + "/clab_test/nodex/conf:/dst",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// extract host filesystem path
+			bind_part := strings.Split(tc.want, ":")
+			// create folder from filesystem path
+			os.MkdirAll(bind_part[0], os.ModePerm)
+
+			binds := []string{tc.bind}
+			err := resolveBindPaths(binds, tc.nodeDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(binds[0], tc.want) {
+				t.Fatalf("wanted %q got %q", tc.want, binds[0])
 			}
 		})
 	}
