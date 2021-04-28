@@ -166,7 +166,7 @@ To start an Arista cEOS node containerlab uses the configuration instructions de
     `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
     `INTFTYPE:et`  
     `MAPETH0:1`  
-    `MGMT_INTF:et0`
+    `MGMT_INTF:eth0`
 
 ### File mounts
 When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `ceos` kind containerlab creates `flash` directory for each ceos node and mounts these folders by `/mnt/flash` paths.
