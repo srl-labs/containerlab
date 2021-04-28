@@ -22,7 +22,7 @@ topology:
       image: ceos:4.25.0F
 
   links:
-    - endpoints: ["srl:e1-1", "ceos:eth1"]
+    - endpoints: ["srl:e1-1", "ceos:et1"]
 ```
 
 This topology results in the two nodes being started up and interconnected with each other using a single point-po-point interface:
@@ -91,8 +91,8 @@ topology:
     ceos:
 
   links:
-    - endpoints: ["srl:e1-1", "ceos:eth1"]
-    - endpoints: ["srl:e1-2", "ceos:eth2"]
+    - endpoints: ["srl:e1-1", "ceos:et1"]
+    - endpoints: ["srl:e1-2", "ceos:et2"]
 ```
 
 As you see, the `topology.links` element is a list of individual links. The link itself is expressed as pair of `endpoints`. This might sound complicated, lets use a graphical explanation:
@@ -102,10 +102,10 @@ As you see, the `topology.links` element is a list of individual links. The link
 As demonstrated on a diagram above, the links between the containers are the point-to-point links which are defined by a pair of interfaces. The link defined as:
 
 ```yaml
-endpoints: ["srl:e1-1", "ceos:eth1"]
+endpoints: ["srl:e1-1", "ceos:et1"]
 ```
 
-will result in a creation of a p2p link between the node named `srl` and its `e1-1` interface and the node named `ceos` and its `eth1` interface. The p2p link is realized with a veth pair.
+will result in a creation of a p2p link between the node named `srl` and its `e1-1` interface and the node named `ceos` and its `et1` interface. The p2p link is realized with a veth pair.
 
 #### Kinds
 Kinds define the behavior and the nature of a node, it says if the node is a specific containerized Network OS, virtualized router or something else. We go into details of kinds in its own [document section](kinds/kinds.md), so here we will discuss what happens when `kinds` section appears in the topology definition:

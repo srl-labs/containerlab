@@ -21,7 +21,7 @@ topology:
       image: ceos:4.25F
 
   links:
-    - endpoints: ["node1:e1-1", "node2:eth1"]
+    - endpoints: ["node1:e1-1", "node2:et1"]
 ```
 
 Containerlab supports a fixed number of kinds. Within each predefined kind we store the necessary information that is used to launch the container successfully. The following kinds are supported or in the roadmap of containerlab:

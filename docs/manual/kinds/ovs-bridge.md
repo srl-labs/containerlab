@@ -17,7 +17,7 @@ topology:
       kind: ceos
       image: ceos:latest
   links:
-    - endpoints: ["myovs:ovsp1", "srl:eth1"]
+    - endpoints: ["myovs:ovsp1", "ceos:et1"]
 
 ```
 

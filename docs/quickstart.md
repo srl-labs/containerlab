@@ -42,7 +42,7 @@ topology:
       image: ceos:4.25.0F
 
   links:
-    - endpoints: ["srl:e1-1", "ceos:eth1"]
+    - endpoints: ["srl:e1-1", "ceos:et1"]
 ```
 
 

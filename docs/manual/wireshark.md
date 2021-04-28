@@ -97,7 +97,7 @@ In the examples below the wireshark will be used as a sniffing tool and the foll
 === "cEOS [2]"
     Similarly to SR Linux example, to capture the data interface of cEOS is no different. Just pick the right interface:
     ```bash
-    ssh $clab_host "ip netns exec $clab-pcap-ceos tcpdump -U -nni eth1 -w -" | wireshark -k -i -
+    ssh $clab_host "ip netns exec $clab-pcap-ceos tcpdump -U -nni et1 -w -" | wireshark -k -i -
     ```
 === "Linux container [3]"
     A bare linux container is no different, its interfaces are named `ethX` where `eth0` is the interface connected to the containerlab management network.  
