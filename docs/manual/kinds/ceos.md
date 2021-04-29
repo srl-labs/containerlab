@@ -56,7 +56,7 @@ ceos container uses the following mapping for its linux interfaces:
 * `eth0` - management interface connected to the containerlab management network
 * `et1` - first data interface
 
-When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `et0` interface and ceos node will boot with that addresses configure. Data interfaces `et1+` need to be configured with IP addressing manually.
+When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ceos node will boot with that addresses configured. Data interfaces `et1+` need to be configured with IP addressing manually.
 
 ???note "ceos interfaces output"
     This output demonstrates the IP addressing of the linux interfaces of ceos node.
