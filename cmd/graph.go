@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -47,6 +48,12 @@ var graphCmd = &cobra.Command{
 	Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.srlinux.dev/cmd/graph/",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+
+		// check if topo file path has been provided
+		if topo == "" {
+			return errors.New("please provide a topology file")
+		}
+
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
