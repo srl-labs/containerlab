@@ -39,13 +39,24 @@ Arista cEOS node launched with containerlab can be managed via the following int
 !!!info
     Default user credentials: `admin:admin`
 
+## Interface naming and link definition
+
+When defining links in the topology, ceos container interfaces should be named `et` as opposed to `eth`.  This provides consistency with the underlying interface mappings and the interactions with some features internally to ceos.  This naming requirement does not apply to the `eth0` interface created by containerlab only to links that are used for interconnection with other elements in a topology.
+
+example:
+```yml
+  links:
+    - endpoints: ["ceos_rtr1:et1", "ceos_rtr2:et1"]
+    - endpoints: ["ceos_rtr1:et2", "ceos_rtr3:et1"]
+```
+
 ## Interfaces mapping
 ceos container uses the following mapping for its linux interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface
+* `et1` - first data interface
 
-When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ceos node will boot with that addresses configure. Data interfaces `eth1+` need to be configured with IP addressing manually.
+When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ceos node will boot with that addresses configured. Data interfaces `et1+` need to be configured with IP addressing manually.
 
 ???note "ceos interfaces output"
     This output demonstrates the IP addressing of the linux interfaces of ceos node.
@@ -146,14 +157,14 @@ In addition to cli commands such as `write memory` user can take advantage of th
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
 
 === "Startup command"
-    `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
+    `/sbin/init systemd.setenv=INTFTYPE=et systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
 === "Environment variables"
     `CEOS:1`  
     `EOS_PLATFORM":ceoslab`  
     `container:docker`  
     `ETBA:4`  
     `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
-    `INTFTYPE:eth`  
+    `INTFTYPE:et`  
     `MAPETH0:1`  
     `MGMT_INTF:eth0`
 
