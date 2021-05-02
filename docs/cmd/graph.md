@@ -80,7 +80,7 @@ If `--offline` flag was not provided and no containers were found matching the l
 
 #### topology
 
-With the global `--topo | -t` flag a user sets the path to the topology file that will be used to get the .
+With the global `--topo | -t` flag a user sets the path to the topology file that will be used to get the nodes of a lab.
 
 #### srv
 
