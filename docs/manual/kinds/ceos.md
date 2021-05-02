@@ -166,14 +166,14 @@ In addition to cli commands such as `write memory` user can take advantage of th
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
 
 === "Startup command"
-    `/sbin/init systemd.setenv=INTFTYPE=et systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
+    `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
 === "Environment variables"
     `CEOS:1`  
     `EOS_PLATFORM":ceoslab`  
     `container:docker`  
     `ETBA:4`  
     `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
-    `INTFTYPE:et`  
+    `INTFTYPE:eth`  
     `MAPETH0:1`  
     `MGMT_INTF:eth0`
 
