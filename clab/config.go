@@ -485,7 +485,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 	default:
-		return fmt.Errorf("Node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
+		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
 	}
 
 	// init labels after all node kinds are processed
@@ -558,7 +558,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// stop the deployment if the matching node element was not found
 	// "host" node name is an exception, it may exist without a matching node
 	if endpoint.Node == nil {
-		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904
+		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904
 	}
 
 	// initialize the endpoint name based on the split function
@@ -694,7 +694,7 @@ func (c *CLab) verifyHostIfaces() error {
 			}
 		}
 		if l.A.Node.NetworkMode == "host" {
-			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
 				l.A.Node.ShortName, l.A.Node.ShortName)
 		}
 		if l.B.Node.ShortName == "host" {
@@ -703,7 +703,7 @@ func (c *CLab) verifyHostIfaces() error {
 			}
 		}
 		if l.B.Node.NetworkMode == "host" {
-			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
 				l.B.Node.ShortName, l.B.Node.ShortName)
 		}
 	}
