@@ -5,9 +5,10 @@ import (
 	"path"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
 )
 
-func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[string]string) error {
+func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
 	var err error
 
 	node.Config, err = c.configInit(&nodeCfg, node.Kind)
@@ -35,7 +36,7 @@ func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map
 	return err
 }
 
-func (c *CLab) createCRPDFiles(node *Node) error {
+func (c *CLab) createCRPDFiles(node *types.Node) error {
 	// create config and logs directory that will be bind mounted to crpd
 	CreateDirectory(path.Join(node.LabDir, "config"), 0777)
 	CreateDirectory(path.Join(node.LabDir, "log"), 0777)
@@ -43,7 +44,7 @@ func (c *CLab) createCRPDFiles(node *Node) error {
 	// copy crpd config from default template or user-provided conf file
 	cfg := path.Join(node.LabDir, "/config/juniper.conf")
 
-	err := node.generateConfig(cfg)
+	err := node.GenerateConfig(cfg, defaultConfigTemplates[node.Kind])
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 	}

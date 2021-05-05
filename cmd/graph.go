@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 )
 
 const (
@@ -51,7 +51,7 @@ var graphCmd = &cobra.Command{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithEnvDockerClient(),
+			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 
@@ -74,11 +74,11 @@ var graphCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		var containers []types.Container
+		var containers []types.GenericContainer
 		// if offline mode is not enforced, list containers matching lab name
 		if !offline {
 			var err error
-			containers, err = c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
+			containers, err = c.Runtime.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
 			if err != nil {
 				log.Errorf("could not list containers: %v", err)
 			}
@@ -142,7 +142,7 @@ func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
 
 }
 
-func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Container) {
+func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.GenericContainer) {
 	for _, cont := range containers {
 		var name string
 		if len(cont.Names) > 0 {

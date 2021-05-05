@@ -10,10 +10,10 @@ import (
 	"sync"
 
 	cfssllog "github.com/cloudflare/cfssl/log"
-	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 )
 
 // name of the container management network
@@ -46,7 +46,7 @@ var deployCmd = &cobra.Command{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithEnvDockerClient(),
+			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 
@@ -95,7 +95,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		// create docker network or use existing one
-		if err = c.CreateDockerNet(ctx); err != nil {
+		if err = c.Runtime.CreateNet(ctx); err != nil {
 			return err
 		}
 
@@ -128,7 +128,7 @@ var deployCmd = &cobra.Command{
 		log.Debug("containers created, retrieving state and IP addresses...")
 
 		labels = append(labels, "containerlab="+c.Config.Name)
-		containers, err := c.ListContainers(ctx, labels)
+		containers, err := c.Runtime.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
 		}
@@ -146,7 +146,7 @@ var deployCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		wg.Add(len(c.Nodes))
 		for _, node := range c.Nodes {
-			go func(node *clab.Node) {
+			go func(node *types.Node) {
 				defer wg.Done()
 				err := c.ExecPostDeployTasks(ctx, node, linksMaxWorkers)
 				if err != nil {
@@ -200,7 +200,7 @@ func setFlags(conf *clab.Config) {
 	}
 }
 
-func createHostsFile(containers []types.Container, bridgeName string) error {
+func createHostsFile(containers []types.GenericContainer, bridgeName string) error {
 	if bridgeName == "" {
 		return fmt.Errorf("missing bridge name")
 	}
@@ -225,33 +225,27 @@ func createHostsFile(containers []types.Container, bridgeName string) error {
 }
 
 // hostEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
-func hostsEntries(containers []types.Container, bridgeName string) []byte {
+func hostsEntries(containers []types.GenericContainer, bridgeName string) []byte {
 	buff := bytes.Buffer{}
 	for _, cont := range containers {
 		if len(cont.Names) == 0 {
 			continue
 		}
-		if cont.NetworkSettings != nil {
-			if br, ok := cont.NetworkSettings.Networks[bridgeName]; ok {
-				if br.IPAddress != "" {
-					buff.WriteString(br.IPAddress)
-					buff.WriteString("\t")
-					buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-					buff.WriteString("\n")
-				}
-				if br.GlobalIPv6Address != "" {
-					buff.WriteString(br.GlobalIPv6Address)
-					buff.WriteString("\t")
-					buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-					buff.WriteString("\n")
-				}
-			}
+		if cont.NetworkSettings.Set {
+			buff.WriteString(cont.NetworkSettings.IPv4addr)
+			buff.WriteString("\t")
+			buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
+			buff.WriteString("\n")
+			buff.WriteString(cont.NetworkSettings.IPv6addr)
+			buff.WriteString("\t")
+			buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
+			buff.WriteString("\n")
 		}
 	}
 	return buff.Bytes()
 }
 
-func enrichNodes(containers []types.Container, nodes map[string]*clab.Node, mgmtNet string) {
+func enrichNodes(containers []types.GenericContainer, nodes map[string]*types.Node, mgmtNet string) {
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
 		if node, ok := nodes[name]; ok {
@@ -260,11 +254,13 @@ func enrichNodes(containers []types.Container, nodes map[string]*clab.Node, mgmt
 			if strings.ToLower(node.NetworkMode) == "host" {
 				continue
 			}
-			node.MgmtNet = mgmtNet
-			node.MgmtIPv4Address = c.NetworkSettings.Networks[mgmtNet].IPAddress
-			node.MgmtIPv4PrefixLength = c.NetworkSettings.Networks[mgmtNet].IPPrefixLen
-			node.MgmtIPv6Address = c.NetworkSettings.Networks[mgmtNet].GlobalIPv6Address
-			node.MgmtIPv6PrefixLength = c.NetworkSettings.Networks[mgmtNet].GlobalIPv6PrefixLen
+
+			if c.NetworkSettings.Set {
+				node.MgmtIPv4Address = c.NetworkSettings.IPv4addr
+				node.MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
+				node.MgmtIPv6Address = c.NetworkSettings.IPv4addr
+				node.MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
+			}
 
 			node.ContainerID = c.ID
 		}

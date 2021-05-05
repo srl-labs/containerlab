@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 )
 
 var AEnd = ""
@@ -36,7 +37,7 @@ var vethCreateCmd = &cobra.Command{
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
-			clab.WithEnvDockerClient(),
+			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 
@@ -53,14 +54,14 @@ var vethCreateCmd = &cobra.Command{
 			return err
 		}
 
-		aNode := &clab.Node{
+		aNode := &types.Node{
 			LongName:  vethAEndpoint.node,
 			ShortName: vethAEndpoint.node,
 			Kind:      vethAEndpoint.kind,
 			NSPath:    "__host", // NSPath defaults to __host to make attachment to host. For attachment to containers the NSPath will be overwritten
 		}
 
-		bNode := &clab.Node{
+		bNode := &types.Node{
 			LongName:  vethBEndpoint.node,
 			ShortName: vethBEndpoint.node,
 			Kind:      vethBEndpoint.kind,
@@ -68,13 +69,13 @@ var vethCreateCmd = &cobra.Command{
 		}
 
 		if aNode.Kind == "container" {
-			aNode.NSPath, err = c.GetNSPath(ctx, aNode.LongName)
+			aNode.NSPath, err = c.Runtime.GetNSPath(ctx, aNode.LongName)
 			if err != nil {
 				return err
 			}
 		}
 		if bNode.Kind == "container" {
-			bNode.NSPath, err = c.GetNSPath(ctx, bNode.LongName)
+			bNode.NSPath, err = c.Runtime.GetNSPath(ctx, bNode.LongName)
 			if err != nil {
 				return err
 			}

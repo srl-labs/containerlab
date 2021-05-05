@@ -16,6 +16,8 @@ import (
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/universal"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 type Certificates struct {
@@ -196,7 +198,7 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 
 // RetrieveNodeCertData reads the node private key and certificate by the well known paths
 // if either of those files doesn't exist, an error is returned
-func (c *CLab) RetrieveNodeCertData(n *Node) (*Certificates, error) {
+func (c *CLab) RetrieveNodeCertData(n *types.Node) (*Certificates, error) {
 	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
 	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
 	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
@@ -210,12 +212,12 @@ func (c *CLab) RetrieveNodeCertData(n *Node) (*Certificates, error) {
 		return nil, err
 	}
 
-	certs.Cert, err = readFileContent(nodeCertFile)
+	certs.Cert, err = utils.ReadFileContent(nodeCertFile)
 	if err != nil {
 		return nil, err
 	}
 
-	certs.Key, err = readFileContent(nodeKeyFile)
+	certs.Key, err = utils.ReadFileContent(nodeKeyFile)
 	if err != nil {
 		return nil, err
 	}

@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 )
 
 var format string
@@ -50,7 +50,7 @@ var inspectCmd = &cobra.Command{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithEnvDockerClient(),
+			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 		if name == "" {
@@ -63,7 +63,7 @@ var inspectCmd = &cobra.Command{
 		} else {
 			labels = append(labels, "containerlab="+name)
 		}
-		containers, err := c.ListContainers(ctx, labels)
+		containers, err := c.Runtime.ListContainers(ctx, labels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
 		}
@@ -103,7 +103,7 @@ func toTableData(det []containerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeName string, format string) {
+func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, bridgeName string, format string) {
 	contDetails := make([]containerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
@@ -182,7 +182,7 @@ func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeNam
 	if !printMysocket {
 		return
 	}
-	stdout, stderr, err := c.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
+	stdout, stderr, err := c.Runtime.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
 	if err != nil {
 		log.Errorf("failed to execute cmd: %v", err)
 
@@ -194,38 +194,18 @@ func printContainerInspect(c *clab.CLab, containers []types.Container, bridgeNam
 	fmt.Println(string(stdout))
 }
 
-func getContainerIPv4(container types.Container, bridgeName string) string {
-	if container.NetworkSettings == nil {
+func getContainerIPv4(ctr types.GenericContainer, bridgeName string) string {
+	if !ctr.NetworkSettings.Set {
 		return ""
 	}
-	if bridgeName != "" {
-		if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
-			return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
-		}
-	}
-	for _, br := range container.NetworkSettings.Networks {
-		return fmt.Sprintf("%s/%d", br.IPAddress, br.IPPrefixLen)
-	}
-	return ""
+
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
+
 }
 
-func getContainerIPv6(container types.Container, bridgeName string) string {
-	if container.NetworkSettings == nil {
+func getContainerIPv6(ctr types.GenericContainer, bridgeName string) string {
+	if !ctr.NetworkSettings.Set {
 		return ""
 	}
-	if bridgeName != "" {
-		if br, ok := container.NetworkSettings.Networks[bridgeName]; ok {
-			if br.GlobalIPv6Address == "" {
-				return "NA"
-			}
-			return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
-		}
-	}
-	for _, br := range container.NetworkSettings.Networks {
-		if br.GlobalIPv6Address == "" {
-			return "NA"
-		}
-		return fmt.Sprintf("%s/%d", br.GlobalIPv6Address, br.GlobalIPv6PrefixLen)
-	}
-	return ""
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
 }

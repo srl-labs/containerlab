@@ -31,7 +31,7 @@ var execCmd = &cobra.Command{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithEnvDockerClient(),
+			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 
@@ -41,7 +41,7 @@ var execCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		labels = append(labels, "containerlab="+name)
-		containers, err := c.ListContainers(ctx, labels)
+		containers, err := c.Runtime.ListContainers(ctx, labels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
 		}
@@ -57,7 +57,7 @@ var execCmd = &cobra.Command{
 			if cont.State != "running" {
 				continue
 			}
-			stdout, stderr, err := c.Exec(ctx, cont.ID, cmds)
+			stdout, stderr, err := c.Runtime.Exec(ctx, cont.ID, cmds)
 			if err != nil {
 				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
 				continue

@@ -13,6 +13,8 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -79,20 +81,10 @@ var srlTypes = map[string]string{
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string   `json:"name,omitempty"`
-	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
-	Topology   Topology `json:"topology,omitempty"`
-	ConfigPath string   `yaml:"config_path,omitempty"`
-}
-
-// mgmtNet struct defines the management network options
-// it is provided via docker network object
-type mgmtNet struct {
-	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string // linux bridge backing the docker network
-	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
-	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
-	MTU        string `yaml:"mtu,omitempty"`
+	Name       string        `json:"name,omitempty"`
+	Mgmt       types.MgmtNet `json:"mgmt,omitempty"`
+	Topology   Topology      `json:"topology,omitempty"`
+	ConfigPath string        `yaml:"config_path,omitempty"`
 }
 
 // Topology represents a lab topology
@@ -138,49 +130,6 @@ type LinkConfig struct {
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
-// Node is a struct that contains the information of a container element
-type Node struct {
-	ShortName string
-	LongName  string
-	Fqdn      string
-	LabDir    string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index     int
-	Group     string
-	Kind      string
-	// path to config template file that is used for config generation
-	Config       string
-	ResConfig    string // path to config file that is actually mounted to the container and is a result of templation
-	NodeType     string
-	Position     string
-	License      string
-	Image        string
-	Topology     string
-	Sysctls      map[string]string
-	User         string
-	Entrypoint   string
-	Cmd          string
-	Env          map[string]string
-	Binds        []string    // Bind mounts strings (src:dest:options)
-	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet      nat.PortSet // PortSet define the ports that should be exposed on a container
-	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
-	NetworkMode          string
-	MgmtNet              string // name of the docker network this node is connected to with its first interface
-	MgmtIPv4Address      string
-	MgmtIPv4PrefixLength int
-	MgmtIPv6Address      string
-	MgmtIPv6PrefixLength int
-	MacAddress           string
-	ContainerID          string
-	TLSCert              string
-	TLSKey               string
-	TLSAnchor            string
-	NSPath               string   // network namespace path for this node
-	Publish              []string //list of ports to publish with mysocketctl
-	// container labels
-	Labels map[string]string
-}
-
 // Link is a struct that contains the information of a link between 2 containers
 type Link struct {
 	A      *Endpoint
@@ -191,7 +140,7 @@ type Link struct {
 
 // Endpoint is a struct that contains information of a link endpoint
 type Endpoint struct {
-	Node *Node
+	Node *types.Node
 	// e1-x, eth, etc
 	EndpointName string
 }
@@ -218,6 +167,8 @@ func (c *CLab) initMgmtNetwork() error {
 		c.Config.Mgmt.MTU = m
 	}
 
+	c.Runtime.SetMgmtNet(c.Config.Mgmt)
+
 	return nil
 }
 
@@ -243,7 +194,7 @@ func (c *CLab) ParseTopology() error {
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
 
 	// initialize Nodes and Links variable
-	c.Nodes = make(map[string]*Node)
+	c.Nodes = make(map[string]*types.Node)
 	c.Links = make(map[int]*Link)
 
 	// initialize the Node information from the topology map
@@ -358,7 +309,7 @@ func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Image
 }
 
-func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *types.Node) (string, error) {
 	// path to license file
 	var lic string
 	var err error
@@ -440,7 +391,7 @@ func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
 }
 
 // initialize container labels
-func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *Node) map[string]string {
+func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *types.Node) map[string]string {
 	defaultLabels := map[string]string{
 		"containerlab":      c.Config.Name,
 		"clab-node-name":    node.ShortName,
@@ -461,7 +412,7 @@ func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *Node) map[stri
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
-	node := new(Node)
+	node := new(types.Node)
 	node.ShortName = nodeName
 	node.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
 	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
@@ -617,7 +568,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// "host" is a special reference to host namespace
 	// for which we create an special Node with kind "host"
 	case "host":
-		endpoint.Node = &Node{
+		endpoint.Node = &types.Node{
 			Kind:      "host",
 			ShortName: "host",
 			NSPath:    hostNSPath,
@@ -625,7 +576,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
-		endpoint.Node = &Node{
+		endpoint.Node = &types.Node{
 			Kind:      "bridge",
 			ShortName: "mgmt-net",
 		}
@@ -730,7 +681,7 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 	}
 
 	for image := range images {
-		err := c.PullImageIfRequired(ctx, image)
+		err := c.Runtime.PullImageIfRequired(ctx, image)
 		if err != nil {
 			return err
 		}
@@ -744,7 +695,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	defer cancel()
 
 	var labels []string
-	containers, err := c.ListContainers(nctx, labels)
+	containers, err := c.Runtime.ListContainers(nctx, labels)
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
@@ -901,15 +852,6 @@ func resolveBindPaths(binds []string) error {
 	return nil
 }
 
-// convertEnvs convert env variables passed as a map to a list of them
-func convertEnvs(m map[string]string) []string {
-	s := make([]string, 0, len(m))
-	for k, v := range m {
-		s = append(s, k+"="+v)
-	}
-	return s
-}
-
 // mergeStringMaps merges map m1 into m2 and return a resulting map as a new map
 // maps that are passed for merging will not be changed
 func mergeStringMaps(m1, m2 map[string]string) map[string]string {
@@ -964,4 +906,14 @@ func sysMemory(v string) uint64 {
 		m = uint64(in.Freeram) * uint64(in.Unit)
 	}
 	return m
+}
+
+// getDefaultDockerMTU gets the MTU of a docker0 bridge interface
+// if fails to get the MTU of docker0, returns "1500"
+func getDefaultDockerMTU() (string, error) {
+	b, err := utils.BridgeByName("docker0")
+	if err != nil {
+		return "1500", err
+	}
+	return fmt.Sprint(b.MTU), nil
 }

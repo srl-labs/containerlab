@@ -1,8 +1,12 @@
 package clab
 
-import "fmt"
+import (
+	"fmt"
 
-func initVrXRVNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[string]string) error {
+	"github.com/srl-labs/containerlab/types"
+)
+
+func initVrXRVNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
 	var err error
 
 	node.Image = c.imageInitialization(&nodeCfg, node.Kind)

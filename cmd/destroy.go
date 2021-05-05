@@ -10,10 +10,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 )
 
 var cleanup bool
@@ -43,7 +43,7 @@ var destroyCmd = &cobra.Command{
 				clab.WithDebug(debug),
 				clab.WithTimeout(timeout),
 				clab.WithTopoFile(topo),
-				clab.WithEnvDockerClient(),
+				clab.WithRuntime(rt, debug, timeout, graceful),
 				clab.WithGracefulShutdown(graceful),
 			}
 			c := clab.NewContainerLab(opts...)
@@ -57,11 +57,11 @@ var destroyCmd = &cobra.Command{
 			opts := []clab.ClabOption{
 				clab.WithDebug(debug),
 				clab.WithTimeout(timeout),
-				clab.WithEnvDockerClient(),
+				clab.WithRuntime(rt, debug, timeout, graceful),
 			}
 			c := clab.NewContainerLab(opts...)
 			// list all containerlab containers
-			containers, err := c.ListContainers(ctx, []string{"containerlab"})
+			containers, err := c.Runtime.ListContainers(ctx, []string{"containerlab"})
 			if err != nil {
 				return fmt.Errorf("could not list containers: %v", err)
 			}
@@ -78,7 +78,7 @@ var destroyCmd = &cobra.Command{
 					clab.WithDebug(debug),
 					clab.WithTimeout(timeout),
 					clab.WithTopoFile(topo),
-					clab.WithEnvDockerClient(),
+					clab.WithRuntime(rt, debug, timeout, graceful),
 					clab.WithGracefulShutdown(graceful),
 				}
 				c = clab.NewContainerLab(opts...)
@@ -117,7 +117,7 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
 }
 
-func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string) error {
+func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName string) error {
 	if bridgeName == "" {
 		return fmt.Errorf("missing bridge name")
 	}
@@ -167,7 +167,7 @@ func deleteEntriesFromHostsFile(containers []types.Container, bridgeName string)
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
+	containers, err := c.Runtime.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
@@ -185,13 +185,13 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	wg := new(sync.WaitGroup)
 	wg.Add(len(containers))
 	for _, cont := range containers {
-		go func(cont types.Container) {
+		go func(cont types.GenericContainer) {
 			defer wg.Done()
 			name := cont.ID
 			if len(cont.Names) > 0 {
 				name = strings.TrimLeft(cont.Names[0], "/")
 			}
-			err := c.DeleteContainer(ctx, name)
+			err := c.Runtime.DeleteContainer(ctx, name)
 			if err != nil {
 				log.Errorf("could not remove container '%s': %v", name, err)
 			}
@@ -215,7 +215,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	// delete lab management network
 	log.Infof("Deleting docker network '%s'...", c.Config.Mgmt.Network)
-	if err = c.DeleteBridge(ctx); err != nil {
+	if err = c.Runtime.DeleteNet(ctx); err != nil {
 		// do not log error message if deletion error simply says that such network doesn't exist
 		if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
 			log.Error(err)

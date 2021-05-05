@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
 )
 
 type mac struct {
@@ -48,7 +49,7 @@ func generateSRLTopologyFile(src, labDir string, index int) error {
 	return nil
 }
 
-func initSRLNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[string]string) error {
+func initSRLNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
 	var err error
 	// initialize the global parameters with defaults, can be overwritten later
 	node.Config, err = c.configInit(&nodeCfg, node.Kind)
@@ -121,7 +122,7 @@ func initSRLNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[
 	return err
 }
 
-func (c *CLab) createSRLFiles(node *Node) error {
+func (c *CLab) createSRLFiles(node *types.Node) error {
 	log.Debugf("Creating directory structure for SRL container: %s", node.ShortName)
 	var src string
 	var dst string
@@ -145,7 +146,7 @@ func (c *CLab) createSRLFiles(node *Node) error {
 	// will be used as a template in nodeGenerateConfig()
 	CreateDirectory(path.Join(node.LabDir, "config"), 0777)
 	dst = path.Join(node.LabDir, "config", "config.json")
-	err = node.generateConfig(dst)
+	err = node.GenerateConfig(dst, defaultConfigTemplates[node.Kind])
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 	}
