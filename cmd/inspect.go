@@ -103,7 +103,7 @@ func toTableData(det []containerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, bridgeName string, format string) {
+func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, bridgeName, format string) {
 	contDetails := make([]containerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false

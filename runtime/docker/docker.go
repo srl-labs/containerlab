@@ -472,7 +472,7 @@ func (c *DockerRuntime) DeleteContainer(ctx context.Context, name string) error 
 
 // linkContainerNS creates a symlink for containers network namespace
 // so that it can be managed by iproute2 utility
-func (c *DockerRuntime) LinkContainerNS(nspath string, containerName string) error {
+func (c *DockerRuntime) LinkContainerNS(nspath, containerName string) error {
 	utils.CreateDirectory("/run/netns/", 0755)
 	dst := "/run/netns/" + containerName
 	err := os.Symlink(nspath, dst)

@@ -144,43 +144,10 @@ type Endpoint struct {
 	EndpointName string
 }
 
-// initMgmtNetwork sets management network config
-func (c *CLab) initMgmtNetwork() error {
-	if c.Config.Mgmt.Network == "" {
-		c.Config.Mgmt.Network = dockerNetName
-	}
-	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
-		if c.Config.Mgmt.IPv4Subnet == "" {
-			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
-		}
-		if c.Config.Mgmt.IPv6Subnet == "" {
-			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
-		}
-	}
-	// init docker network mtu
-	if c.Config.Mgmt.MTU == "" {
-		m, err := getDefaultDockerMTU()
-		if err != nil {
-			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
-		}
-		c.Config.Mgmt.MTU = m
-	}
-
-	c.Runtime.SetMgmtNet(c.Config.Mgmt)
-
-	return nil
-}
-
 // ParseTopology parses the lab topology
 func (c *CLab) ParseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 	log.Debugf("Lab name: %s", c.Config.Name)
-	// initialize Management network config
-	err := c.initMgmtNetwork()
-	if err != nil {
-		return err
-	}
-	log.Debugf("DockerInfo: %v", c.Config.Mgmt)
 
 	if c.Config.ConfigPath == "" {
 		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
@@ -199,7 +166,7 @@ func (c *CLab) ParseTopology() error {
 	// initialize the Node information from the topology map
 	idx := 0
 	for nodeName, node := range c.Config.Topology.Nodes {
-		if err = c.NewNode(nodeName, node, idx); err != nil {
+		if err := c.NewNode(nodeName, node, idx); err != nil {
 			return err
 		}
 		idx++

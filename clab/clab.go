@@ -54,6 +54,7 @@ func WithTimeout(dur time.Duration) ClabOption {
 func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ClabOption {
 	return func(c *CLab) {
 		c.Runtime = runtime.NewRuntime(name, d, dur, gracefulShutdown)
+		c.Runtime.SetMgmtNet(c.Config.Mgmt)
 	}
 }
 
@@ -83,10 +84,42 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 		Nodes:    make(map[string]*types.Node),
 		Links:    make(map[int]*Link),
 	}
+
+	err := c.initMgmtNetwork()
+	if err != nil {
+		log.Fatalf("initMgmtNetwork: %s", err)
+	}
+
 	for _, o := range opts {
 		o(c)
 	}
+
 	return c
+}
+
+// initMgmtNetwork sets management network config
+func (c *CLab) initMgmtNetwork() error {
+	if c.Config.Mgmt.Network == "" {
+		c.Config.Mgmt.Network = dockerNetName
+	}
+	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
+		if c.Config.Mgmt.IPv4Subnet == "" {
+			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
+		}
+		if c.Config.Mgmt.IPv6Subnet == "" {
+			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
+		}
+	}
+	// init docker network mtu
+	if c.Config.Mgmt.MTU == "" {
+		m, err := getDefaultDockerMTU()
+		if err != nil {
+			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
+		}
+		c.Config.Mgmt.MTU = m
+	}
+
+	return nil
 }
 
 func (c *CLab) CreateNode(ctx context.Context, node *types.Node, certs *Certificates) error {
