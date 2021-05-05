@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 func initSROSNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
@@ -53,7 +54,7 @@ func initSROSNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 
 func (c *CLab) createVrSROSFiles(node *types.Node) error {
 	// create config directory that will be bind mounted to vrnetlab container at / path
-	CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)
+	utils.CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)
 
 	if node.License != "" {
 		// copy license file to node specific lab directory

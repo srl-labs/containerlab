@@ -125,7 +125,10 @@ func createMysocketTunnels(ctx context.Context, c *CLab, node *types.Node) error
 			cmd = []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl tunnel connect --host %s -p %d -s %s -t %s > socket-%s-%s-%d.log",
 				n.LongName, ms.Port, sockID, tunID, n.ShortName, ms.Stype, ms.Port)}
 			log.Debugf("Running mysocketio command %q", cmd)
-			c.Runtime.ExecNotWait(ctx, node.ContainerID, cmd)
+			err = c.Runtime.ExecNotWait(ctx, node.ContainerID, cmd)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

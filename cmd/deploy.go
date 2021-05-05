@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // name of the container management network
@@ -68,7 +69,7 @@ var deployCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			destroyLab(ctx, c)
+			_ = destroyLab(ctx, c)
 			log.Infof("Removing %s directory...", c.Dir.Lab)
 			if err := os.RemoveAll(c.Dir.Lab); err != nil {
 				return err
@@ -84,7 +85,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		log.Info("Creating lab directory: ", c.Dir.Lab)
-		clab.CreateDirectory(c.Dir.Lab, 0755)
+		utils.CreateDirectory(c.Dir.Lab, 0755)
 
 		cfssllog.Level = cfssllog.LevelError
 		if debug {

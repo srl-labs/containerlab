@@ -29,7 +29,7 @@ func init() {
 	mysocketioCmd.AddCommand(mysocketioLoginCmd)
 	mysocketioLoginCmd.Flags().StringVarP(&email, "email", "e", "", "Email address")
 	mysocketioLoginCmd.Flags().StringVarP(&password, "password", "p", "", "Password")
-	mysocketioLoginCmd.MarkFlagRequired("email")
+	_ = mysocketioLoginCmd.MarkFlagRequired("email")
 }
 
 // vxlanCmd represents the vxlan command container

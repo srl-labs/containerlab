@@ -319,7 +319,7 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	}
 	defer reader.Close()
 	// must read from reader, otherwise image is not properly pulled
-	io.Copy(ioutil.Discard, reader)
+	_, _ = io.Copy(ioutil.Discard, reader)
 	log.Infof("Done pulling %s", canonicalImageName)
 
 	return nil

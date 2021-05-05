@@ -7,6 +7,7 @@ import (
 
 	"github.com/awalterschulze/gographviz"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var g *gographviz.Graph
@@ -66,8 +67,8 @@ func (c *CLab) GenerateGraph(topo string) error {
 	}
 
 	// create graph directory
-	CreateDirectory(c.Dir.Lab, 0755)
-	CreateDirectory(c.Dir.LabGraph, 0755)
+	utils.CreateDirectory(c.Dir.Lab, 0755)
+	utils.CreateDirectory(c.Dir.LabGraph, 0755)
 
 	// create graph filename
 	dotfile := c.Dir.LabGraph + "/" + c.TopoFile.name + ".dot"
@@ -78,7 +79,10 @@ func (c *CLab) GenerateGraph(topo string) error {
 
 	// Only try to create png
 	if commandExists("dot") {
-		generatePngFromDot(dotfile, pngfile)
+		err := generatePngFromDot(dotfile, pngfile)
+		if err != nil {
+			return err
+		}
 		log.Info("Created ", pngfile)
 	}
 	return nil

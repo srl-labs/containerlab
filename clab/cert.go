@@ -101,7 +101,7 @@ var nodeCSRTempl string = `{
 func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
 	log.Info("Creating root CA")
 	// create root CA root directory
-	CreateDirectory(c.Dir.LabCARoot, 0755)
+	utils.CreateDirectory(c.Dir.LabCARoot, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
 	err = csrRootJsonTpl.Execute(csrBuff, input)
@@ -136,7 +136,7 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	CreateDirectory(targetPath, 0755)
+	utils.CreateDirectory(targetPath, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
 	err = csrJSONTpl.Execute(csrBuff, input)

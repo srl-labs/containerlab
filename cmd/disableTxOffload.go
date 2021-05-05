@@ -59,5 +59,5 @@ var disableTxOffloadCmd = &cobra.Command{
 func init() {
 	toolsCmd.AddCommand(disableTxOffloadCmd)
 	disableTxOffloadCmd.Flags().StringVarP(&cntName, "container", "c", "", "container name to disable offload in")
-	disableTxOffloadCmd.MarkFlagRequired("container")
+	_ = disableTxOffloadCmd.MarkFlagRequired("container")
 }

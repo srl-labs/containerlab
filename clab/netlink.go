@@ -95,11 +95,11 @@ func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 	}
 
 	if err = vA.setVethLink(); err != nil {
-		netlink.LinkDel(vA.Link)
+		_ = netlink.LinkDel(vA.Link)
 		return err
 	}
 	if err = vB.setVethLink(); err != nil {
-		netlink.LinkDel(vB.Link)
+		_ = netlink.LinkDel(vB.Link)
 	}
 	return err
 

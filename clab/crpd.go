@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
@@ -38,8 +39,8 @@ func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 
 func (c *CLab) createCRPDFiles(node *types.Node) error {
 	// create config and logs directory that will be bind mounted to crpd
-	CreateDirectory(path.Join(node.LabDir, "config"), 0777)
-	CreateDirectory(path.Join(node.LabDir, "log"), 0777)
+	utils.CreateDirectory(path.Join(node.LabDir, "config"), 0777)
+	utils.CreateDirectory(path.Join(node.LabDir, "log"), 0777)
 
 	// copy crpd config from default template or user-provided conf file
 	cfg := path.Join(node.LabDir, "/config/juniper.conf")

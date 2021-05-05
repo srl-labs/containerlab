@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uint) error {
@@ -91,7 +92,7 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 
 func (c *CLab) createCEOSFiles(node *types.Node) error {
 	// generate config directory
-	CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
+	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := path.Join(node.LabDir, "flash", "startup-config")
 	node.ResConfig = cfg
 

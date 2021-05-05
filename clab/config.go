@@ -26,7 +26,6 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/64"
-	dockerNetMTU      = "1500"
 	srlDefaultType    = "ixr6"
 	vrsrosDefaultType = "sr-1"
 	// default connection mode for vrnetlab based containers

@@ -29,9 +29,9 @@ func init() {
 	vxlanCreateCmd.Flags().StringVarP(&cntLink, "link", "l", "", "link to which 'attach' vxlan tunnel with tc redirect")
 	vxlanCreateCmd.Flags().IntVarP(&vxlanMTU, "mtu", "m", 1554, "VxLAN MTU")
 
-	vxlanCreateCmd.MarkFlagRequired("remote")
-	vxlanCreateCmd.MarkFlagRequired("id")
-	vxlanCreateCmd.MarkFlagRequired("link")
+	_ = vxlanCreateCmd.MarkFlagRequired("remote")
+	_ = vxlanCreateCmd.MarkFlagRequired("id")
+	_ = vxlanCreateCmd.MarkFlagRequired("link")
 
 	vxlanDeleteCmd.Flags().StringVarP(&delPrefix, "prefix", "p", "vx-", "delete all containerlab created VxLAN interfaces which start with this prefix")
 }

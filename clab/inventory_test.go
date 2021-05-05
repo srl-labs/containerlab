@@ -37,7 +37,10 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 			}
 
 			var s strings.Builder
-			c.generateAnsibleInventory(&s)
+			err := c.generateAnsibleInventory(&s)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			if !cmp.Equal(s.String(), tc.want) {
 				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, s.String())

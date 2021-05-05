@@ -114,7 +114,7 @@ var graphCmd = &cobra.Command{
 		}
 		tmpl := template.Must(template.ParseFiles(tmpl))
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			tmpl.Execute(w, topoD)
+			_ = tmpl.Execute(w, topoD)
 		})
 
 		log.Infof("Listening on %s...", srv)

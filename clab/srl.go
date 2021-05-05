@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 type mac struct {
@@ -144,7 +145,7 @@ func (c *CLab) createSRLFiles(node *types.Node) error {
 	// generate a config file if the destination does not exist
 	// if the node has a `config:` statement, the file specified in that section
 	// will be used as a template in nodeGenerateConfig()
-	CreateDirectory(path.Join(node.LabDir, "config"), 0777)
+	utils.CreateDirectory(path.Join(node.LabDir, "config"), 0777)
 	dst = path.Join(node.LabDir, "config", "config.json")
 	err = node.GenerateConfig(dst, defaultConfigTemplates[node.Kind])
 	if err != nil {

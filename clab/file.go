@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -48,14 +49,6 @@ func (c *CLab) GetTopology(topo string) error {
 		name:     filename[0],
 	}
 	return nil
-}
-
-func fileExists(filename string) bool {
-	f, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !f.IsDir()
 }
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
@@ -126,14 +119,6 @@ func createFile(file, content string) {
 	}
 }
 
-// CreateDirectory creates a directory by a path with a mode/permission specified by perm.
-// If directory exists, the function does not do anything.
-func CreateDirectory(path string, perm os.FileMode) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.MkdirAll(path, perm)
-	}
-}
-
 // CreateNodeDirStructure create the directory structure and files for the lab nodes
 func (c *CLab) CreateNodeDirStructure(node *types.Node) (err error) {
 	c.m.RLock()
@@ -143,7 +128,7 @@ func (c *CLab) CreateNodeDirStructure(node *types.Node) (err error) {
 	// skip creation of node directory for linux/bridge kinds
 	// since they don't keep any state normally
 	if node.Kind != "linux" && node.Kind != "bridge" {
-		CreateDirectory(node.LabDir, 0777)
+		utils.CreateDirectory(node.LabDir, 0777)
 	}
 
 	switch node.Kind {

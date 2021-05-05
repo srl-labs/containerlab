@@ -160,8 +160,8 @@ func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName 
 		return err
 	}
 	for _, l := range remainingLines {
-		f.Write(l)
-		f.Write([]byte("\n"))
+		_, _ = f.Write(l)
+		_, _ = f.Write([]byte("\n"))
 	}
 	return nil
 }
@@ -223,6 +223,5 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	}
 	// delete container network namespaces symlinks
-	c.DeleteNetnsSymlinks()
-	return nil
+	return c.DeleteNetnsSymlinks()
 }
