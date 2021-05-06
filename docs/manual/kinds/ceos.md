@@ -84,11 +84,11 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
     As you see, the management interface `Ma0` inherits the IP address that docker assigned to ceos container management interface.
 
 
-## Additional Interface naming considerations
+## Additional interface naming considerations
 
 While many users will be fine with the default ceos naming of `eth`, some ceos users may find that they need to name their interfaces `et`. Interfaces named `et` provide consistency with the underlying interface mappings within ceos. This enables the correct operation of commands/features which depend on `et` format interface naming.
 
-In order to align interfaces in this manner, the `INTFTYPE` environment variable must be set to `et` in the topology definition file and the links which are defined must be named `et`, as opposed to `eth`. This naming requirement does not apply to the `eth0 interface automatically created by containerlab. This is only required for links that are used for interconnection with other elements in a topology.
+In order to align interfaces in this manner, the `INTFTYPE` environment variable must be set to `et` in the topology definition file and the links which are defined must be named `et`, as opposed to `eth`. This naming requirement does not apply to the `eth0` interface automatically created by containerlab. This is only required for links that are used for interconnection with other elements in a topology.
 
 example:
 ```yml
