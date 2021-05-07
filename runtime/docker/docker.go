@@ -62,9 +62,9 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	var bridgeName string
 
 	log.Debugf("Checking if docker network '%s' exists", c.Mgmt.Network)
-	netResource, err := c.Client.NetworkInspect(nctx, c.Mgmt.Network)
+	netResource, err := c.Client.NetworkInspect(nctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
 	switch {
-	case dockerC.IsErrNetworkNotFound(err):
+	case dockerC.IsErrNotFound(err):
 		log.Debugf("Network '%s' does not exist", c.Mgmt.Network)
 		log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s', MTU='%s'",
 			c.Mgmt.Network, c.Mgmt.IPv4Subnet, c.Mgmt.IPv6Subnet, c.Mgmt.MTU)
@@ -163,7 +163,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	nres, err := c.Client.NetworkInspect(ctx, c.Mgmt.Network)
+	nres, err := c.Client.NetworkInspect(ctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
 	if err != nil {
 		return err
 	}
@@ -235,8 +235,14 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.Node) (
 		}
 	}
 
-	cont, err := c.Client.ContainerCreate(nctx,
-		containerConfig, containerHostConfig, containerNetworkingConfig, node.LongName)
+	cont, err := c.Client.ContainerCreate(
+		nctx,
+		containerConfig,
+		containerHostConfig,
+		containerNetworkingConfig,
+		nil,
+		node.LongName,
+	)
 	if err != nil {
 		return err
 	}
@@ -403,12 +409,8 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 		return nil, nil, err
 	}
 	log.Debugf("%s exec created %v", cont.Name, id)
-	rsp, err := c.Client.ContainerExecAttach(ctx, execID.ID, dockerTypes.ExecConfig{
-		User:         "root",
-		AttachStderr: true,
-		AttachStdout: true,
-		Cmd:          cmd,
-	})
+
+	rsp, err := c.Client.ContainerExecAttach(ctx, execID.ID, dockerTypes.ExecStartCheck{})
 	if err != nil {
 		log.Errorf("failed exec in container %s: %v", cont.Name, err)
 		return nil, nil, err
@@ -442,7 +444,9 @@ func (c *DockerRuntime) ExecNotWait(ctx context.Context, id string, cmd []string
 	if err != nil {
 		return err
 	}
-	_, err = c.Client.ContainerExecAttach(context.Background(), respID.ID, execConfig)
+
+	execStartCheck := dockerTypes.ExecStartCheck{}
+	_, err = c.Client.ContainerExecAttach(context.Background(), respID.ID, execStartCheck)
 	if err != nil {
 		return err
 	}
