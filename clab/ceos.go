@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -62,7 +63,6 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map
 	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 	// initialize specific container information
-	node.Cmd = "/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0"
 
 	// defined env vars for the ceos
 	kindEnv := map[string]string{
@@ -75,6 +75,15 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map
 		"MAPETH0":                             "1",
 		"MGMT_INTF":                           "eth0"}
 	node.Env = mergeStringMaps(kindEnv, envs)
+
+	// the node.Cmd should be aligned with the environment.
+	var envSb strings.Builder
+	envSb.WriteString("/sbin/init ")
+	for k, v := range node.Env {
+		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
+
+	}
+	node.Cmd = envSb.String()
 
 	node.User = user
 	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
