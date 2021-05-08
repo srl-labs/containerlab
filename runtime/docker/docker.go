@@ -34,8 +34,8 @@ type DockerRuntime struct {
 	gracefulShutdown bool
 }
 
-func NewDockerRuntime() *DockerRuntime {
-	c, err := dockerC.NewEnvClient()
+func NewDockerRuntime(d bool, dur time.Duration, gracefulShutdown bool) *DockerRuntime {
+	c, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatalf("failed to create docker client: %v", err)
 	}
@@ -43,9 +43,9 @@ func NewDockerRuntime() *DockerRuntime {
 	return &DockerRuntime{
 		Client: c,
 		// TODO: undo this hard-coding
-		timeout:          10 * time.Second,
-		debug:            false,
-		gracefulShutdown: false,
+		timeout:          dur,
+		debug:            d,
+		gracefulShutdown: gracefulShutdown,
 	}
 }
 

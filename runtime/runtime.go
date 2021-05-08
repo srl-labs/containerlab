@@ -48,7 +48,7 @@ type ContainerRuntime interface {
 func NewRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ContainerRuntime {
 	switch name {
 	case DockerRuntime:
-		return docker.NewDockerRuntime()
+		return docker.NewDockerRuntime(d, dur, gracefulShutdown)
 	case ContainerdRuntime:
 		log.Fatalf("%s runtime is not implemented", ContainerdRuntime)
 	}
