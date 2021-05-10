@@ -199,6 +199,10 @@ func getContainerIPv4(ctr types.GenericContainer, bridgeName string) string {
 		return ""
 	}
 
+	if ctr.NetworkSettings.IPv4addr == "" {
+		return "NA"
+	}
+
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
 
 }
@@ -207,5 +211,10 @@ func getContainerIPv6(ctr types.GenericContainer, bridgeName string) string {
 	if !ctr.NetworkSettings.Set {
 		return ""
 	}
+
+	if ctr.NetworkSettings.IPv6addr == "" {
+		return "NA"
+	}
+
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
 }
