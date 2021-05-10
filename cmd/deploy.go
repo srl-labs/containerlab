@@ -259,7 +259,7 @@ func enrichNodes(containers []types.GenericContainer, nodes map[string]*types.No
 			if c.NetworkSettings.Set {
 				node.MgmtIPv4Address = c.NetworkSettings.IPv4addr
 				node.MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
-				node.MgmtIPv6Address = c.NetworkSettings.IPv4addr
+				node.MgmtIPv6Address = c.NetworkSettings.IPv6addr
 				node.MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
 			}
 

@@ -29,8 +29,6 @@ type ContainerRuntime interface {
 	StartContainer(context.Context, string) error
 	// Stop running container by its name
 	StopContainer(context.Context, string, *time.Duration) error
-	// Create a creates a symlink for containers network namespace so that it can be managed by iproute2 utility
-	LinkContainerNS(string, string) error
 	// List all containers matching labels
 	ListContainers(context.Context, []string) ([]types.GenericContainer, error)
 	// Inspect container (extract its PID)

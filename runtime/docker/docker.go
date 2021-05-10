@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -259,7 +258,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.Node) (
 	if err != nil {
 		return err
 	}
-	return c.LinkContainerNS(node.NSPath, node.LongName)
+	return utils.LinkContainerNS(node.NSPath, node.LongName)
 
 }
 
@@ -471,18 +470,6 @@ func (c *DockerRuntime) DeleteContainer(ctx context.Context, name string) error 
 		return err
 	}
 	log.Infof("Removed container: %s", name)
-	return nil
-}
-
-// linkContainerNS creates a symlink for containers network namespace
-// so that it can be managed by iproute2 utility
-func (c *DockerRuntime) LinkContainerNS(nspath, containerName string) error {
-	utils.CreateDirectory("/run/netns/", 0755)
-	dst := "/run/netns/" + containerName
-	err := os.Symlink(nspath, dst)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 

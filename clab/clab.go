@@ -66,6 +66,12 @@ func WithTopoFile(file string) ClabOption {
 		if err := c.GetTopology(file); err != nil {
 			log.Fatalf("failed to read topology file: %v", err)
 		}
+
+		err := c.initMgmtNetwork()
+		if err != nil {
+			log.Fatalf("initMgmtNetwork: %s", err)
+		}
+
 	}
 }
 
@@ -85,11 +91,6 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 		Links:    make(map[int]*types.Link),
 	}
 
-	err := c.initMgmtNetwork()
-	if err != nil {
-		log.Fatalf("initMgmtNetwork: %s", err)
-	}
-
 	for _, o := range opts {
 		o(c)
 	}
@@ -103,16 +104,13 @@ func (c *CLab) initMgmtNetwork() error {
 		c.Config.Mgmt.Network = dockerNetName
 	}
 	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
-		if c.Config.Mgmt.IPv4Subnet == "" {
-			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
-		}
-		if c.Config.Mgmt.IPv6Subnet == "" {
-			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
-		}
+		c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
+		c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
 	}
+
 	// init docker network mtu
 	if c.Config.Mgmt.MTU == "" {
-		m, err := getDefaultDockerMTU()
+		m, err := utils.DefaultNetMTU()
 		if err != nil {
 			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
 		}

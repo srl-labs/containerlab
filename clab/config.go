@@ -14,7 +14,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -857,14 +856,4 @@ func sysMemory(v string) uint64 {
 		m = uint64(in.Freeram) * uint64(in.Unit)
 	}
 	return m
-}
-
-// getDefaultDockerMTU gets the MTU of a docker0 bridge interface
-// if fails to get the MTU of docker0, returns "1500"
-func getDefaultDockerMTU() (string, error) {
-	b, err := utils.BridgeByName("docker0")
-	if err != nil {
-		return "1500", err
-	}
-	return fmt.Sprint(b.MTU), nil
 }

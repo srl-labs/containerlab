@@ -43,7 +43,7 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uin
 	}
 	log.Debugf("node %s new pid %v", node.LongName, cont.Pid)
 	node.NSPath = "/proc/" + strconv.Itoa(cont.Pid) + "/ns/net"
-	err = c.Runtime.LinkContainerNS(node.NSPath, node.LongName)
+	err = utils.LinkContainerNS(node.NSPath, node.LongName)
 	if err != nil {
 		return err
 	}
