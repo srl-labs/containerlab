@@ -21,7 +21,7 @@ type CLab struct {
 	TopoFile *TopoFile
 	m        *sync.RWMutex
 	Nodes    map[string]*types.Node
-	Links    map[int]*Link
+	Links    map[int]*types.Link
 	Runtime  runtime.ContainerRuntime
 	Dir      *Directory
 
@@ -82,7 +82,7 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]*types.Node),
-		Links:    make(map[int]*Link),
+		Links:    make(map[int]*types.Link),
 	}
 
 	err := c.initMgmtNetwork()
@@ -258,7 +258,7 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
-	linksChan := make(chan *Link)
+	linksChan := make(chan *types.Link)
 
 	log.Debug("creating links...")
 	// wire the links between the nodes based on cabling plan

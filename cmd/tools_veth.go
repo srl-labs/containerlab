@@ -81,16 +81,16 @@ var vethCreateCmd = &cobra.Command{
 			}
 		}
 
-		endpointA := clab.Endpoint{
+		endpointA := types.Endpoint{
 			Node:         aNode,
 			EndpointName: vethAEndpoint.iface,
 		}
-		endpointB := clab.Endpoint{
+		endpointB := types.Endpoint{
 			Node:         bNode,
 			EndpointName: vethBEndpoint.iface,
 		}
 
-		link := &clab.Link{
+		link := &types.Link{
 			A:   &endpointA,
 			B:   &endpointB,
 			MTU: MTU,

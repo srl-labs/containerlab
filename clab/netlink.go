@@ -10,6 +10,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -24,7 +25,7 @@ type vEthEndpoint struct {
 }
 
 // CreateVirtualWiring creates the virtual topology between the containers
-func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
+func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
 	// connect containers (or container and a bridge) using veth pair

@@ -11,6 +11,21 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+// Link is a struct that contains the information of a link between 2 containers
+type Link struct {
+	A      *Endpoint
+	B      *Endpoint
+	MTU    int
+	Labels map[string]string
+}
+
+// Endpoint is a struct that contains information of a link endpoint
+type Endpoint struct {
+	Node *Node
+	// e1-x, eth, etc
+	EndpointName string
+}
+
 // mgmtNet struct defines the management network options
 // it is provided via docker network object
 type MgmtNet struct {

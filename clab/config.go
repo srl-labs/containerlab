@@ -129,21 +129,6 @@ type LinkConfig struct {
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
-// Link is a struct that contains the information of a link between 2 containers
-type Link struct {
-	A      *Endpoint
-	B      *Endpoint
-	MTU    int
-	Labels map[string]string
-}
-
-// Endpoint is a struct that contains information of a link endpoint
-type Endpoint struct {
-	Node *types.Node
-	// e1-x, eth, etc
-	EndpointName string
-}
-
 // ParseTopology parses the lab topology
 func (c *CLab) ParseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
@@ -161,7 +146,7 @@ func (c *CLab) ParseTopology() error {
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]*types.Node)
-	c.Links = make(map[int]*Link)
+	c.Links = make(map[int]*types.Link)
 
 	// initialize the Node information from the topology map
 	idx := 0
@@ -496,9 +481,9 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 }
 
 // NewLink initializes a new link object
-func (c *CLab) NewLink(l LinkConfig) *Link {
+func (c *CLab) NewLink(l LinkConfig) *types.Link {
 	// initialize a new link
-	link := new(Link)
+	link := new(types.Link)
 	link.Labels = l.Labels
 
 	if link.MTU <= 0 {
@@ -518,9 +503,9 @@ func (c *CLab) NewLink(l LinkConfig) *Link {
 }
 
 // NewEndpoint initializes a new endpoint object
-func (c *CLab) NewEndpoint(e string) *Endpoint {
+func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// initialize a new endpoint
-	endpoint := new(Endpoint)
+	endpoint := new(types.Endpoint)
 
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
@@ -715,7 +700,7 @@ func (c *CLab) verifyHostIfaces() error {
 func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	rootNsIfaces := map[string]struct{}{}
 	for _, l := range c.Links {
-		endpoints := [2]*Endpoint{l.A, l.B}
+		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
 			if e.Node.Kind == "bridge" || e.Node.Kind == "ovs-bridge" || e.Node.Kind == "host" {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
