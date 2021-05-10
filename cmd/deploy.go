@@ -233,14 +233,18 @@ func hostsEntries(containers []types.GenericContainer, bridgeName string) []byte
 			continue
 		}
 		if cont.NetworkSettings.Set {
-			buff.WriteString(cont.NetworkSettings.IPv4addr)
-			buff.WriteString("\t")
-			buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-			buff.WriteString("\n")
-			buff.WriteString(cont.NetworkSettings.IPv6addr)
-			buff.WriteString("\t")
-			buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-			buff.WriteString("\n")
+			if cont.NetworkSettings.IPv4addr != "" {
+				buff.WriteString(cont.NetworkSettings.IPv4addr)
+				buff.WriteString("\t")
+				buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
+				buff.WriteString("\n")
+			}
+			if cont.NetworkSettings.IPv6addr != "" {
+				buff.WriteString(cont.NetworkSettings.IPv6addr)
+				buff.WriteString("\t")
+				buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
+				buff.WriteString("\n")
+			}
 		}
 	}
 	return buff.Bytes()
