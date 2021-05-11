@@ -61,7 +61,7 @@ func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) 
 func WithTopoFile(file string) ClabOption {
 	return func(c *CLab) {
 		if file == "" {
-			return
+			log.Fatal("provide a path to the clab toplogy file")
 		}
 		if err := c.GetTopology(file); err != nil {
 			log.Fatalf("failed to read topology file: %v", err)
@@ -69,7 +69,7 @@ func WithTopoFile(file string) ClabOption {
 
 		err := c.initMgmtNetwork()
 		if err != nil {
-			log.Fatalf("initMgmtNetwork: %s", err)
+			log.Fatalf("failed to init the management network: %s", err)
 		}
 
 	}
