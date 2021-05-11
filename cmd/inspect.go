@@ -49,8 +49,10 @@ var inspectCmd = &cobra.Command{
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
 			clab.WithRuntime(rt, debug, timeout, graceful),
+		}
+		if topo != "" {
+			opts = append(opts, clab.WithTopoFile(topo))
 		}
 		c := clab.NewContainerLab(opts...)
 		if name == "" {
