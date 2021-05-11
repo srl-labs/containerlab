@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var cntName string
@@ -21,27 +22,27 @@ var disableTxOffloadCmd = &cobra.Command{
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
-			clab.WithEnvDockerClient(),
+			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		cnt, err := c.DockerClient.ContainerInspect(ctx, cntName)
+		cnt, err := c.Runtime.ContainerInspect(ctx, cntName)
 		if err != nil {
 			return err
 		}
 
 		log.Infof("getting container '%s' information", cntName)
-		NSPath := "/proc/" + strconv.Itoa(cnt.State.Pid) + "/ns/net"
+		NSPath := "/proc/" + strconv.Itoa(cnt.Pid) + "/ns/net"
 		nodeNS, err := ns.GetNS(NSPath)
 		if err != nil {
 			return err
 		}
 		err = nodeNS.Do(func(_ ns.NetNS) error {
 			// disabling offload on lo0 interface
-			err = clab.EthtoolTXOff("eth0")
+			err = utils.EthtoolTXOff("eth0")
 			if err != nil {
 				log.Infof("Failed to disable TX checksum offload for 'eth0' interface for '%s' container", cntName)
 			}
@@ -58,5 +59,5 @@ var disableTxOffloadCmd = &cobra.Command{
 func init() {
 	toolsCmd.AddCommand(disableTxOffloadCmd)
 	disableTxOffloadCmd.Flags().StringVarP(&cntName, "container", "c", "", "container name to disable offload in")
-	disableTxOffloadCmd.MarkFlagRequired("container")
+	_ = disableTxOffloadCmd.MarkFlagRequired("container")
 }

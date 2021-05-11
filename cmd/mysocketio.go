@@ -11,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
+	terminal "golang.org/x/term"
 )
 
 const loginEndpoint = "https://api.mysocket.io/login"
@@ -29,7 +29,7 @@ func init() {
 	mysocketioCmd.AddCommand(mysocketioLoginCmd)
 	mysocketioLoginCmd.Flags().StringVarP(&email, "email", "e", "", "Email address")
 	mysocketioLoginCmd.Flags().StringVarP(&password, "password", "p", "", "Password")
-	mysocketioLoginCmd.MarkFlagRequired("email")
+	_ = mysocketioLoginCmd.MarkFlagRequired("email")
 }
 
 // vxlanCmd represents the vxlan command container

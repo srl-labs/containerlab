@@ -24,7 +24,7 @@ var upgradeCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("Failed to create temp file %s\n", err)
 		}
-		downloadFile(downloadURL, f)
+		_ = downloadFile(downloadURL, f)
 
 		c := exec.Command("bash", f.Name())
 		c.Stdout = os.Stdout

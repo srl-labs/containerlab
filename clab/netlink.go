@@ -10,6 +10,8 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -23,7 +25,7 @@ type vEthEndpoint struct {
 }
 
 // CreateVirtualWiring creates the virtual topology between the containers
-func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
+func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
 	// connect containers (or container and a bridge) using veth pair
@@ -86,19 +88,19 @@ func (c *CLab) CreateVirtualWiring(l *Link) (err error) {
 	}
 
 	// once veth pair is created, disable tx offload for veth pair
-	if err := EthtoolTXOff(ARndmName); err != nil {
+	if err := utils.EthtoolTXOff(ARndmName); err != nil {
 		return err
 	}
-	if err := EthtoolTXOff(BRndmName); err != nil {
+	if err := utils.EthtoolTXOff(BRndmName); err != nil {
 		return err
 	}
 
 	if err = vA.setVethLink(); err != nil {
-		netlink.LinkDel(vA.Link)
+		_ = netlink.LinkDel(vA.Link)
 		return err
 	}
 	if err = vB.setVethLink(); err != nil {
-		netlink.LinkDel(vB.Link)
+		_ = netlink.LinkDel(vB.Link)
 	}
 	return err
 
@@ -183,7 +185,7 @@ func (veth *vEthEndpoint) toBridge() error {
 		return err
 	}
 	err = vethNS.Do(func(_ ns.NetNS) error {
-		br, err := bridgeByName(veth.Bridge)
+		br, err := utils.BridgeByName(veth.Bridge)
 		if err != nil {
 			return err
 		}
@@ -230,18 +232,6 @@ func deleteNetnsSymlink(n string) error {
 		log.Debug("Failed to delete netns symlink by path:", sl)
 	}
 	return nil
-}
-
-func bridgeByName(name string) (*netlink.Bridge, error) {
-	l, err := netlink.LinkByName(name)
-	if err != nil {
-		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
-	}
-	br, ok := l.(*netlink.Bridge)
-	if !ok {
-		return nil, fmt.Errorf("%q already exists but is not a bridge", name)
-	}
-	return br, nil
 }
 
 // GetLiknsByNamePrefix returns a list of links whose name matches a prefix

@@ -1,16 +1,16 @@
 package clab
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -49,14 +49,6 @@ func (c *CLab) GetTopology(topo string) error {
 		name:     filename[0],
 	}
 	return nil
-}
-
-func fileExists(filename string) bool {
-	f, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !f.IsDir()
 }
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
@@ -127,16 +119,8 @@ func createFile(file, content string) {
 	}
 }
 
-// CreateDirectory creates a directory by a path with a mode/permission specified by perm.
-// If directory exists, the function does not do anything.
-func CreateDirectory(path string, perm os.FileMode) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.MkdirAll(path, perm)
-	}
-}
-
 // CreateNodeDirStructure create the directory structure and files for the lab nodes
-func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
+func (c *CLab) CreateNodeDirStructure(node *types.Node) (err error) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -144,7 +128,7 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 	// skip creation of node directory for linux/bridge kinds
 	// since they don't keep any state normally
 	if node.Kind != "linux" && node.Kind != "bridge" {
-		CreateDirectory(node.LabDir, 0777)
+		utils.CreateDirectory(node.LabDir, 0777)
 	}
 
 	switch node.Kind {
@@ -166,41 +150,4 @@ func (c *CLab) CreateNodeDirStructure(node *Node) (err error) {
 		}
 	}
 	return nil
-}
-
-// GenerateConfig generates configuration for the nodes
-func (node *Node) generateConfig(dst string) error {
-	if fileExists(dst) && (node.Config == defaultConfigTemplates[node.Kind]) {
-		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
-		return nil
-	}
-	log.Debugf("generating config for node %s from file %s", node.ShortName, node.Config)
-	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
-	if err != nil {
-		return err
-	}
-	dstBytes := new(bytes.Buffer)
-	err = tpl.Execute(dstBytes, node)
-	if err != nil {
-		return err
-	}
-	log.Debugf("node '%s' generated config: %s", node.ShortName, dstBytes.String())
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.Write(dstBytes.Bytes())
-	return err
-}
-
-func readFileContent(file string) ([]byte, error) {
-	// check file exists
-	if !fileExists(file) {
-		return nil, fmt.Errorf("file %s does not exist", file)
-	}
-
-	// read and return file content
-	b, err := ioutil.ReadFile(file)
-	return b, err
 }

@@ -1,8 +1,12 @@
 package clab
 
-import "strings"
+import (
+	"strings"
 
-func initLinuxNode(c *CLab, nodeCfg NodeConfig, node *Node, user string, envs map[string]string) error {
+	"github.com/srl-labs/containerlab/types"
+)
+
+func initLinuxNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
 	var err error
 
 	node.Config, err = c.configInit(&nodeCfg, node.Kind)

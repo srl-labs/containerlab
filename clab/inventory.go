@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"text/template"
+
+	"github.com/srl-labs/containerlab/types"
 )
 
 // GenerateInventories generate various inventory files and writes it to a lab location
@@ -39,12 +41,12 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 	type inv struct {
 		// clab nodes aggregated by their kind
-		Nodes map[string][]*Node
+		Nodes map[string][]*types.Node
 		Meta  map[string]string
 	}
 
 	i := inv{
-		Nodes: make(map[string][]*Node),
+		Nodes: make(map[string][]*types.Node),
 	}
 
 	for _, n := range c.Nodes {

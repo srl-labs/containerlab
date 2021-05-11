@@ -10,19 +10,20 @@ import (
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/docker/docker/api/types"
-	docker "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 type CLab struct {
-	Config       *Config
-	TopoFile     *TopoFile
-	m            *sync.RWMutex
-	Nodes        map[string]*Node
-	Links        map[int]*Link
-	DockerClient *docker.Client
-	Dir          *Directory
+	Config   *Config
+	TopoFile *TopoFile
+	m        *sync.RWMutex
+	Nodes    map[string]*types.Node
+	Links    map[int]*types.Link
+	Runtime  runtime.ContainerRuntime
+	Dir      *Directory
 
 	debug            bool
 	timeout          time.Duration
@@ -50,13 +51,10 @@ func WithTimeout(dur time.Duration) ClabOption {
 	}
 }
 
-func WithEnvDockerClient() ClabOption {
+func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ClabOption {
 	return func(c *CLab) {
-		var err error
-		c.DockerClient, err = docker.NewEnvClient()
-		if err != nil {
-			log.Fatalf("failed to create docker client: %v", err)
-		}
+		c.Runtime = runtime.NewRuntime(name, d, dur, gracefulShutdown)
+		c.Runtime.SetMgmtNet(c.Config.Mgmt)
 	}
 }
 
@@ -68,6 +66,12 @@ func WithTopoFile(file string) ClabOption {
 		if err := c.GetTopology(file); err != nil {
 			log.Fatalf("failed to read topology file: %v", err)
 		}
+
+		err := c.initMgmtNetwork()
+		if err != nil {
+			log.Fatalf("initMgmtNetwork: %s", err)
+		}
+
 	}
 }
 
@@ -83,16 +87,40 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 		Config:   new(Config),
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
-		Nodes:    make(map[string]*Node),
-		Links:    make(map[int]*Link),
+		Nodes:    make(map[string]*types.Node),
+		Links:    make(map[int]*types.Link),
 	}
+
 	for _, o := range opts {
 		o(c)
 	}
+
 	return c
 }
 
-func (c *CLab) CreateNode(ctx context.Context, node *Node, certs *Certificates) error {
+// initMgmtNetwork sets management network config
+func (c *CLab) initMgmtNetwork() error {
+	if c.Config.Mgmt.Network == "" {
+		c.Config.Mgmt.Network = dockerNetName
+	}
+	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
+		c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
+		c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
+	}
+
+	// init docker network mtu
+	if c.Config.Mgmt.MTU == "" {
+		m, err := utils.DefaultNetMTU()
+		if err != nil {
+			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
+		}
+		c.Config.Mgmt.MTU = m
+	}
+
+	return nil
+}
+
+func (c *CLab) CreateNode(ctx context.Context, node *types.Node, certs *Certificates) error {
 	if certs != nil {
 		c.m.Lock()
 		node.TLSCert = string(certs.Cert)
@@ -103,23 +131,17 @@ func (c *CLab) CreateNode(ctx context.Context, node *Node, certs *Certificates) 
 	if err != nil {
 		return err
 	}
-	return c.CreateContainer(ctx, node)
+	return c.Runtime.CreateContainer(ctx, node)
 }
 
 // ExecPostDeployTasks executes tasks that some nodes might require to boot properly after start
-func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uint) error {
+func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.Node, lworkers uint) error {
 	switch node.Kind {
 	case "ceos":
 		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
 		return ceosPostDeploy(ctx, c, node, lworkers)
 	case "crpd":
-		// exec `service ssh restart` to start ssh service and take into account mounted sshd_config
-		execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("service ssh restart")}
-		respID, err := c.DockerClient.ContainerExecCreate(context.Background(), node.ContainerID, execConfig)
-		if err != nil {
-			return err
-		}
-		_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
+		_, _, err := c.Runtime.Exec(ctx, node.ContainerID, []string{"service ssh restart"})
 		if err != nil {
 			return err
 		}
@@ -132,25 +154,16 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 		log.Debugf("Running postdeploy actions for sonic-vs '%s' node", node.ShortName)
 		// TODO: change this calls to c.ExecNotWait
 		// exec `supervisord` to start sonic services
-		execConfig := types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("supervisord")}
-		respID, err := c.DockerClient.ContainerExecCreate(context.Background(), node.ContainerID, execConfig)
+		_, _, err := c.Runtime.Exec(ctx, node.ContainerID, []string{"supervisord"})
 		if err != nil {
 			return err
 		}
-		_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
+
+		_, _, err = c.Runtime.Exec(ctx, node.ContainerID, []string{"/usr/lib/frr/bgpd"})
 		if err != nil {
 			return err
 		}
-		// exec `/usr/lib/frr/bgpd` to start BGP service
-		execConfig = types.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: strings.Fields("/usr/lib/frr/bgpd")}
-		respID, err = c.DockerClient.ContainerExecCreate(context.Background(), node.ContainerID, execConfig)
-		if err != nil {
-			return err
-		}
-		_, err = c.DockerClient.ContainerExecAttach(context.Background(), respID.ID, execConfig)
-		if err != nil {
-			return err
-		}
+
 	case "mysocketio":
 		log.Debugf("Running postdeploy actions for mysocketio '%s' node", node.ShortName)
 		err := disableTxOffload(node)
@@ -168,7 +181,7 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *Node, lworkers uin
 func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
-	nodesChan := make(chan *Node)
+	nodesChan := make(chan *types.Node)
 	// start workers
 	for i := uint(0); i < workers; i++ {
 		go func(i uint) {
@@ -243,7 +256,7 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
-	linksChan := make(chan *Link)
+	linksChan := make(chan *types.Link)
 
 	log.Debug("creating links...")
 	// wire the links between the nodes based on cabling plan
@@ -291,7 +304,7 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg.Wait()
 }
 
-func disableTxOffload(n *Node) error {
+func disableTxOffload(n *types.Node) error {
 	// skip this if node runs in host mode
 	if strings.ToLower(n.NetworkMode) == "host" {
 		return nil
@@ -303,7 +316,7 @@ func disableTxOffload(n *Node) error {
 	}
 	err = nodeNS.Do(func(_ ns.NetNS) error {
 		// disabling offload on lo0 interface
-		err := EthtoolTXOff("eth0")
+		err := utils.EthtoolTXOff("eth0")
 		if err != nil {
 			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
 		}

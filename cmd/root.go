@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/runtime"
 )
 
 var debug bool
@@ -15,6 +16,7 @@ var timeout time.Duration
 // path to the topology file
 var topo string
 var graph bool
+var rt string
 
 // lab name
 var name string
@@ -43,9 +45,10 @@ func init() {
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "", "path to the file with topology information")
-	rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
+	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 30*time.Second, "timeout for docker requests, e.g: 30s, 1m, 2m30s")
+	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", runtime.DockerRuntime, "container runtime")
 
 }
 

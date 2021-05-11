@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/srl-labs/containerlab/types"
 )
 
 func TestLicenseInit(t *testing.T) {
@@ -87,7 +88,7 @@ func TestBindsInit(t *testing.T) {
 			}
 
 			nodeCfg := c.Config.Topology.Nodes["node1"]
-			node := Node{}
+			node := types.Node{}
 			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 
 			binds := c.bindsInit(&nodeCfg)

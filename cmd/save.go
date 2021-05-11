@@ -8,10 +8,10 @@ import (
 	"sync"
 
 	"github.com/Juniper/go-netconf/netconf"
-	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 )
 
 var saveCommand = map[string][]string{
@@ -35,14 +35,14 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithEnvDockerClient(),
+			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 		c := clab.NewContainerLab(opts...)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		containers, err := c.ListContainers(ctx, []string{"containerlab=" + c.Config.Name})
+		containers, err := c.Runtime.ListContainers(ctx, []string{"containerlab=" + c.Config.Name})
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
 		}
@@ -53,7 +53,7 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		var wg sync.WaitGroup
 		wg.Add(len(containers))
 		for _, cont := range containers {
-			go func(cont types.Container) {
+			go func(cont types.GenericContainer) {
 				defer wg.Done()
 				kind := cont.Labels["clab-node-kind"]
 
@@ -68,7 +68,7 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 				if _, ok := saveCommand[kind]; !ok {
 					return
 				}
-				stdout, stderr, err := c.Exec(ctx, cont.ID, saveCommand[kind])
+				stdout, stderr, err := c.Runtime.Exec(ctx, cont.ID, saveCommand[kind])
 				if err != nil {
 					log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
 
@@ -110,7 +110,7 @@ func init() {
 	rootCmd.AddCommand(saveCmd)
 }
 
-func netconfSave(cont types.Container) {
+func netconfSave(cont types.GenericContainer) {
 	kind := cont.Labels["clab-node-kind"]
 	config := netconf.SSHConfigPassword(clab.DefaultCredentials[kind][0],
 		clab.DefaultCredentials[kind][1])

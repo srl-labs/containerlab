@@ -13,6 +13,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 )
 
@@ -24,7 +25,6 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/64"
-	dockerNetMTU      = "1500"
 	srlDefaultType    = "ixr6"
 	vrsrosDefaultType = "sr-1"
 	// default connection mode for vrnetlab based containers
@@ -79,20 +79,10 @@ var srlTypes = map[string]string{
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string   `json:"name,omitempty"`
-	Mgmt       mgmtNet  `json:"mgmt,omitempty"`
-	Topology   Topology `json:"topology,omitempty"`
-	ConfigPath string   `yaml:"config_path,omitempty"`
-}
-
-// mgmtNet struct defines the management network options
-// it is provided via docker network object
-type mgmtNet struct {
-	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string // linux bridge backing the docker network
-	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
-	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
-	MTU        string `yaml:"mtu,omitempty"`
+	Name       string        `json:"name,omitempty"`
+	Mgmt       types.MgmtNet `json:"mgmt,omitempty"`
+	Topology   Topology      `json:"topology,omitempty"`
+	ConfigPath string        `yaml:"config_path,omitempty"`
 }
 
 // Topology represents a lab topology
@@ -138,99 +128,10 @@ type LinkConfig struct {
 	Labels    map[string]string `yaml:"labels,omitempty"`
 }
 
-// Node is a struct that contains the information of a container element
-type Node struct {
-	ShortName string
-	LongName  string
-	Fqdn      string
-	LabDir    string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index     int
-	Group     string
-	Kind      string
-	// path to config template file that is used for config generation
-	Config       string
-	ResConfig    string // path to config file that is actually mounted to the container and is a result of templation
-	NodeType     string
-	Position     string
-	License      string
-	Image        string
-	Topology     string
-	Sysctls      map[string]string
-	User         string
-	Entrypoint   string
-	Cmd          string
-	Env          map[string]string
-	Binds        []string    // Bind mounts strings (src:dest:options)
-	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet      nat.PortSet // PortSet define the ports that should be exposed on a container
-	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
-	NetworkMode          string
-	MgmtNet              string // name of the docker network this node is connected to with its first interface
-	MgmtIPv4Address      string
-	MgmtIPv4PrefixLength int
-	MgmtIPv6Address      string
-	MgmtIPv6PrefixLength int
-	MacAddress           string
-	ContainerID          string
-	TLSCert              string
-	TLSKey               string
-	TLSAnchor            string
-	NSPath               string   // network namespace path for this node
-	Publish              []string //list of ports to publish with mysocketctl
-	// container labels
-	Labels map[string]string
-}
-
-// Link is a struct that contains the information of a link between 2 containers
-type Link struct {
-	A      *Endpoint
-	B      *Endpoint
-	MTU    int
-	Labels map[string]string
-}
-
-// Endpoint is a struct that contains information of a link endpoint
-type Endpoint struct {
-	Node *Node
-	// e1-x, eth, etc
-	EndpointName string
-}
-
-// initMgmtNetwork sets management network config
-func (c *CLab) initMgmtNetwork() error {
-	if c.Config.Mgmt.Network == "" {
-		c.Config.Mgmt.Network = dockerNetName
-	}
-	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
-		if c.Config.Mgmt.IPv4Subnet == "" {
-			c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
-		}
-		if c.Config.Mgmt.IPv6Subnet == "" {
-			c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
-		}
-	}
-	// init docker network mtu
-	if c.Config.Mgmt.MTU == "" {
-		m, err := getDefaultDockerMTU()
-		if err != nil {
-			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
-		}
-		c.Config.Mgmt.MTU = m
-	}
-
-	return nil
-}
-
 // ParseTopology parses the lab topology
 func (c *CLab) ParseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 	log.Debugf("Lab name: %s", c.Config.Name)
-	// initialize Management network config
-	err := c.initMgmtNetwork()
-	if err != nil {
-		return err
-	}
-	log.Debugf("DockerInfo: %v", c.Config.Mgmt)
 
 	if c.Config.ConfigPath == "" {
 		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
@@ -243,13 +144,13 @@ func (c *CLab) ParseTopology() error {
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
 
 	// initialize Nodes and Links variable
-	c.Nodes = make(map[string]*Node)
-	c.Links = make(map[int]*Link)
+	c.Nodes = make(map[string]*types.Node)
+	c.Links = make(map[int]*types.Link)
 
 	// initialize the Node information from the topology map
 	idx := 0
 	for nodeName, node := range c.Config.Topology.Nodes {
-		if err = c.NewNode(nodeName, node, idx); err != nil {
+		if err := c.NewNode(nodeName, node, idx); err != nil {
 			return err
 		}
 		idx++
@@ -358,7 +259,7 @@ func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Image
 }
 
-func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *Node) (string, error) {
+func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *types.Node) (string, error) {
 	// path to license file
 	var lic string
 	var err error
@@ -440,7 +341,7 @@ func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
 }
 
 // initialize container labels
-func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *Node) map[string]string {
+func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *types.Node) map[string]string {
 	defaultLabels := map[string]string{
 		"containerlab":      c.Config.Name,
 		"clab-node-name":    node.ShortName,
@@ -461,7 +362,7 @@ func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *Node) map[stri
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
-	node := new(Node)
+	node := new(types.Node)
 	node.ShortName = nodeName
 	node.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
 	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
@@ -568,7 +469,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 	default:
-		return fmt.Errorf("Node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
+		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
 	}
 
 	// init labels after all node kinds are processed
@@ -579,9 +480,9 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 }
 
 // NewLink initializes a new link object
-func (c *CLab) NewLink(l LinkConfig) *Link {
+func (c *CLab) NewLink(l LinkConfig) *types.Link {
 	// initialize a new link
-	link := new(Link)
+	link := new(types.Link)
 	link.Labels = l.Labels
 
 	if link.MTU <= 0 {
@@ -601,9 +502,9 @@ func (c *CLab) NewLink(l LinkConfig) *Link {
 }
 
 // NewEndpoint initializes a new endpoint object
-func (c *CLab) NewEndpoint(e string) *Endpoint {
+func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// initialize a new endpoint
-	endpoint := new(Endpoint)
+	endpoint := new(types.Endpoint)
 
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
@@ -617,7 +518,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// "host" is a special reference to host namespace
 	// for which we create an special Node with kind "host"
 	case "host":
-		endpoint.Node = &Node{
+		endpoint.Node = &types.Node{
 			Kind:      "host",
 			ShortName: "host",
 			NSPath:    hostNSPath,
@@ -625,7 +526,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
-		endpoint.Node = &Node{
+		endpoint.Node = &types.Node{
 			Kind:      "bridge",
 			ShortName: "mgmt-net",
 		}
@@ -641,7 +542,7 @@ func (c *CLab) NewEndpoint(e string) *Endpoint {
 	// stop the deployment if the matching node element was not found
 	// "host" node name is an exception, it may exist without a matching node
 	if endpoint.Node == nil {
-		log.Fatalf("Not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904
+		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904
 	}
 
 	// initialize the endpoint name based on the split function
@@ -730,7 +631,7 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 	}
 
 	for image := range images {
-		err := c.PullImageIfRequired(ctx, image)
+		err := c.Runtime.PullImageIfRequired(ctx, image)
 		if err != nil {
 			return err
 		}
@@ -744,7 +645,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	defer cancel()
 
 	var labels []string
-	containers, err := c.ListContainers(nctx, labels)
+	containers, err := c.Runtime.ListContainers(nctx, labels)
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
@@ -777,7 +678,7 @@ func (c *CLab) verifyHostIfaces() error {
 			}
 		}
 		if l.A.Node.NetworkMode == "host" {
-			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
 				l.A.Node.ShortName, l.A.Node.ShortName)
 		}
 		if l.B.Node.ShortName == "host" {
@@ -786,7 +687,7 @@ func (c *CLab) verifyHostIfaces() error {
 			}
 		}
 		if l.B.Node.NetworkMode == "host" {
-			return fmt.Errorf("Node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
 				l.B.Node.ShortName, l.B.Node.ShortName)
 		}
 	}
@@ -798,7 +699,7 @@ func (c *CLab) verifyHostIfaces() error {
 func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	rootNsIfaces := map[string]struct{}{}
 	for _, l := range c.Links {
-		endpoints := [2]*Endpoint{l.A, l.B}
+		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
 			if e.Node.Kind == "bridge" || e.Node.Kind == "ovs-bridge" || e.Node.Kind == "host" {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
@@ -899,15 +800,6 @@ func resolveBindPaths(binds []string) error {
 		binds[i] = strings.Join(elems, ":")
 	}
 	return nil
-}
-
-// convertEnvs convert env variables passed as a map to a list of them
-func convertEnvs(m map[string]string) []string {
-	s := make([]string, 0, len(m))
-	for k, v := range m {
-		s = append(s, k+"="+v)
-	}
-	return s
 }
 
 // mergeStringMaps merges map m1 into m2 and return a resulting map as a new map
