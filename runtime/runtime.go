@@ -37,7 +37,7 @@ type ContainerRuntime interface {
 	GetNSPath(context.Context, string) (string, error)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
 	Exec(context.Context, string, []string) ([]byte, []byte, error)
-	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
+	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
 	ExecNotWait(context.Context, string, []string) error
 	// Delete container by its name
 	DeleteContainer(context.Context, string) error
