@@ -2,6 +2,7 @@ package clab
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -111,14 +112,18 @@ func TestBindsInitNodeDir(t *testing.T) {
 		want    string
 	}{
 		"node_binds_nodeDir": {
-			bind:    "$nodeDir/nodex/conf:/dst",
-			nodeDir: os.TempDir() + "/clab_test",
-			want:    os.TempDir() + "/clab_test/nodex/conf:/dst",
+			bind:    "$nodeDir/conf:/dst",
+			nodeDir: os.TempDir() + "/clab-nodeDirTest/nodeX",
+			want:    os.TempDir() + "/clab-nodeDirTest/nodeX/conf:/dst",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			defer func() {
+				os.RemoveAll(path.Dir(tc.nodeDir))
+			}()
+
 			// extract host filesystem path
 			bind_part := strings.Split(tc.want, ":")
 			// create folder from filesystem path
@@ -129,7 +134,7 @@ func TestBindsInitNodeDir(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(binds[0], tc.want) {
+			if !cmp.Equal(binds[0], tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, binds[0])
 			}
 		})
