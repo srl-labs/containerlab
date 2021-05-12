@@ -78,6 +78,69 @@ binds:
   - /root/files:/root/files:ro
 ```
 
+???info "Bind variables"
+    By default binds are either provided as an absolute, or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
+
+    Consider a two-node lab `mylab.clab.yml` that has node-specific files, such as state information or some additional configuration artifacts. A user could create a directory for such files similar to that:
+
+    ```
+    .
+    ├── cfgs
+    │   ├── n1
+    │   │   └── conf
+    │   └── n2
+    │       └── conf
+    └── mylab.clab.yml
+
+    3 directories, 3 files
+    ```
+
+    Then to mount those files to the nodes, the nodes would have been configured with binds like that:
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        n1:
+          binds:
+            - cfgs/n1/conf:/conf
+        n2:
+          binds:
+            - cfgs/n2/conf:/conf
+    ```
+
+    while this configuration is perfectly fine, it might be considered verbose as the number of nodes grow. To remove this verbosity, the users can leverage a special variable `$nodeDir` in their bind paths. This variable will expand to the node specific directory that containerlab creates for each node.
+
+    What this means is that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
+
+    ```
+    .
+    ├── clab-mylab
+    │   ├── n1
+    │   │   └── conf
+    │   └── n2
+    │       └── conf
+    └── mylab.clab.yml
+
+    3 directories, 3 files
+    ```
+
+    With this structure in place, the clab file can leverage the `$nodeDir` variable:
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        n1:
+          binds:
+            - $nodeDir/conf:/conf
+        n2:
+          binds:
+            - $nodeDir/conf:/conf
+    ```
+
+    Notice how `$nodeDir` hides the directory structure and node names and removes the verbosity of the previous approach.
+
 ### ports
 To bind the ports between the lab host and the containers the users can populate the `ports` object inside the node:
 
