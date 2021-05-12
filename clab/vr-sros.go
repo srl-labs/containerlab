@@ -9,7 +9,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func initSROSNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initSROSNode(c *CLab, nodeCfg NodeConfig, node *types.NodeBase, user string, envs map[string]string) error {
 	var err error
 	node.Config, err = c.configInit(&nodeCfg, node.Kind)
 	if err != nil {
@@ -52,7 +52,7 @@ func initSROSNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 	return err
 }
 
-func (c *CLab) createVrSROSFiles(node *types.Node) error {
+func (c *CLab) createVrSROSFiles(node *types.NodeBase) error {
 	// create config directory that will be bind mounted to vrnetlab container at / path
 	utils.CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)
 

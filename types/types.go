@@ -21,7 +21,7 @@ type Link struct {
 
 // Endpoint is a struct that contains information of a link endpoint
 type Endpoint struct {
-	Node *Node
+	Node Node
 	// e1-x, eth, etc
 	EndpointName string
 }
@@ -36,8 +36,8 @@ type MgmtNet struct {
 	MTU        string `yaml:"mtu,omitempty"`
 }
 
-// Node is a struct that contains the information of a container element
-type Node struct {
+// NodeBase is a struct that contains the information of a container element
+type NodeBase struct {
 	ShortName string
 	LongName  string
 	Fqdn      string
@@ -80,7 +80,7 @@ type Node struct {
 }
 
 // GenerateConfig generates configuration for the nodes
-func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
+func (node *NodeBase) GenerateConfig(dst, defaultTemplatePath string) error {
 	if utils.FileExists(dst) && (node.Config == defaultTemplatePath) {
 		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
 		return nil
@@ -123,4 +123,11 @@ type GenericMgmtIPs struct {
 	IPv4pLen int
 	IPv6addr string
 	IPv6pLen int
+}
+
+type Node interface {
+	Init(node *NodeBase) error
+	Deploy()
+	PostDeploy()
+	Destroy()
 }

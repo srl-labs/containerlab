@@ -41,12 +41,12 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 	type inv struct {
 		// clab nodes aggregated by their kind
-		Nodes map[string][]*types.Node
+		Nodes map[string][]*types.NodeBase
 		Meta  map[string]string
 	}
 
 	i := inv{
-		Nodes: make(map[string][]*types.Node),
+		Nodes: make(map[string][]*types.NodeBase),
 	}
 
 	for _, n := range c.Nodes {

@@ -13,6 +13,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/kind"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 )
@@ -144,7 +145,7 @@ func (c *CLab) ParseTopology() error {
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
 
 	// initialize Nodes and Links variable
-	c.Nodes = make(map[string]*types.Node)
+	c.Nodes = make(map[string]types.Node)
 	c.Links = make(map[int]*types.Link)
 
 	// initialize the Node information from the topology map
@@ -259,7 +260,7 @@ func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
 	return c.Config.Topology.Defaults.Image
 }
 
-func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *types.Node) (string, error) {
+func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *types.NodeBase) (string, error) {
 	// path to license file
 	var lic string
 	var err error
@@ -341,7 +342,7 @@ func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
 }
 
 // initialize container labels
-func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *types.Node) map[string]string {
+func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *types.NodeBase) map[string]string {
 	defaultLabels := map[string]string{
 		"containerlab":      c.Config.Name,
 		"clab-node-name":    node.ShortName,
@@ -362,7 +363,7 @@ func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *types.Node) ma
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// initialize a new node
-	node := new(types.Node)
+	node := new(types.NodeBase)
 	node.ShortName = nodeName
 	node.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
 	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
@@ -395,78 +396,87 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.PortSet = ps
 
 	// initialize passed env variables which will be merged with kind specific ones
-	envs := c.envInit(&nodeCfg, node.Kind)
-
-	user := c.userInit(&nodeCfg, node.Kind)
-
+	node.Env = c.envInit(&nodeCfg, node.Kind)
+	node.User = c.userInit(&nodeCfg, node.Kind)
 	node.Publish = c.publishInit(&nodeCfg, node.Kind)
+	cfg, err := c.configInit(&nodeCfg, node.Kind)
+	if err != nil {
+		return err
+	}
+	node.Config = cfg
+	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
+	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+	node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
+
+	var n types.Node
 
 	switch node.Kind {
-	case "ceos":
-		err = initCeosNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
+	// case "ceos":
+	// 	err = initCeosNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-	case "srl":
-		err = initSRLNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "crpd":
-		err = initCrpdNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "sonic-vs":
-		err = initSonicNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "vr-sros":
-		err = initSROSNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "vr-vmx":
-		err = initVrVMXNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "vr-xrv":
-		err = initVrXRVNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "vr-xrv9k":
-		err = initVrXRV9kNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "vr-veos":
-		err = initVrVeosNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "vr-csr":
-		err = initVrCSRNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
-	case "vr-ros":
-		err = initVrROSNode(c, nodeCfg, node, user, envs)
-		if err != nil {
-			return err
-		}
+	// case "srl":
+	// 	err = initSRLNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "crpd":
+	// 	err = initCrpdNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "sonic-vs":
+	// 	err = initSonicNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "vr-sros":
+	// 	err = initSROSNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "vr-vmx":
+	// 	err = initVrVMXNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "vr-xrv":
+	// 	err = initVrXRVNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "vr-xrv9k":
+	// 	err = initVrXRV9kNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "vr-veos":
+	// 	err = initVrVeosNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "vr-csr":
+	// 	err = initVrCSRNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// case "vr-ros":
+	// 	err = initVrROSNode(c, nodeCfg, node, user, envs)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 	case "alpine", "linux", "mysocketio":
-		err = initLinuxNode(c, nodeCfg, node, user, envs)
+		n, err = kind.NewLinuxKind(node)
 		if err != nil {
 			return err
 		}
 
-	case "bridge", "ovs-bridge":
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+	// case "bridge", "ovs-bridge":
+	// 	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
+	// 	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
 
 	default:
 		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
@@ -475,7 +485,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	// init labels after all node kinds are processed
 	node.Labels = c.labelsInit(&nodeCfg, node.Kind, node)
 
-	c.Nodes[nodeName] = node
+	c.Nodes[nodeName] = n
 	return nil
 }
 
@@ -518,17 +528,21 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// "host" is a special reference to host namespace
 	// for which we create an special Node with kind "host"
 	case "host":
-		endpoint.Node = &types.Node{
-			Kind:      "host",
-			ShortName: "host",
-			NSPath:    hostNSPath,
+		endpoint.Node = &kind.Linux{
+			&types.NodeBase{
+				Kind:      "host",
+				ShortName: "host",
+				NSPath:    hostNSPath,
+			},
 		}
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
-		endpoint.Node = &types.Node{
-			Kind:      "bridge",
-			ShortName: "mgmt-net",
+		endpoint.Node = &kind.Linux{
+			&types.NodeBase{
+				Kind:      "bridge",
+				ShortName: "mgmt-net",
+			},
 		}
 	default:
 		for name, n := range c.Nodes {
@@ -672,7 +686,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 // and ensure that nodes that are configured with host networking mode do not have any interfaces defined
 func (c *CLab) verifyHostIfaces() error {
 	for _, l := range c.Links {
-		if l.A.Node.ShortName == "host" {
+		if l.A.Node.(*kind.Linux).ShortName == "host" {
 			if nl, _ := netlink.LinkByName(l.A.EndpointName); nl != nil {
 				return fmt.Errorf("host interface %s referenced in topology already exists", l.A.EndpointName)
 			}

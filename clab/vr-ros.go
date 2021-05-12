@@ -6,7 +6,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-func initVrROSNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initVrROSNode(c *CLab, nodeCfg NodeConfig, node *types.NodeBase, user string, envs map[string]string) error {
 	var err error
 
 	node.Image = c.imageInitialization(&nodeCfg, node.Kind)

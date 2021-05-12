@@ -147,7 +147,7 @@ var deployCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		wg.Add(len(c.Nodes))
 		for _, node := range c.Nodes {
-			go func(node *types.Node) {
+			go func(node *types.NodeBase) {
 				defer wg.Done()
 				err := c.ExecPostDeployTasks(ctx, node, linksMaxWorkers)
 				if err != nil {
@@ -250,7 +250,7 @@ func hostsEntries(containers []types.GenericContainer, bridgeName string) []byte
 	return buff.Bytes()
 }
 
-func enrichNodes(containers []types.GenericContainer, nodes map[string]*types.Node, mgmtNet string) {
+func enrichNodes(containers []types.GenericContainer, nodes map[string]*types.NodeBase, mgmtNet string) {
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
 		if node, ok := nodes[name]; ok {

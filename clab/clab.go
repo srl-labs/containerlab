@@ -11,6 +11,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/kind"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -20,7 +21,7 @@ type CLab struct {
 	Config   *Config
 	TopoFile *TopoFile
 	m        *sync.RWMutex
-	Nodes    map[string]*types.Node
+	Nodes    map[string]kind.Node
 	Links    map[int]*types.Link
 	Runtime  runtime.ContainerRuntime
 	Dir      *Directory
@@ -87,7 +88,7 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 		Config:   new(Config),
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
-		Nodes:    make(map[string]*types.Node),
+		Nodes:    make(map[string]*types.NodeBase),
 		Links:    make(map[int]*types.Link),
 	}
 
@@ -120,7 +121,7 @@ func (c *CLab) initMgmtNetwork() error {
 	return nil
 }
 
-func (c *CLab) CreateNode(ctx context.Context, node *types.Node, certs *Certificates) error {
+func (c *CLab) CreateNode(ctx context.Context, node *types.NodeBase, certs *Certificates) error {
 	if certs != nil {
 		c.m.Lock()
 		node.TLSCert = string(certs.Cert)
@@ -135,7 +136,7 @@ func (c *CLab) CreateNode(ctx context.Context, node *types.Node, certs *Certific
 }
 
 // ExecPostDeployTasks executes tasks that some nodes might require to boot properly after start
-func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.Node, lworkers uint) error {
+func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.NodeBase, lworkers uint) error {
 	switch node.Kind {
 	case "ceos":
 		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
@@ -181,7 +182,7 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.Node, lworke
 func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
-	nodesChan := make(chan *types.Node)
+	nodesChan := make(chan *types.NodeBase)
 	// start workers
 	for i := uint(0); i < workers; i++ {
 		go func(i uint) {
@@ -304,7 +305,7 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg.Wait()
 }
 
-func disableTxOffload(n *types.Node) error {
+func disableTxOffload(n *types.NodeBase) error {
 	// skip this if node runs in host mode
 	if strings.ToLower(n.NetworkMode) == "host" {
 		return nil

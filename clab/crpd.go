@@ -9,7 +9,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *types.NodeBase, user string, envs map[string]string) error {
 	var err error
 
 	node.Config, err = c.configInit(&nodeCfg, node.Kind)
@@ -37,7 +37,7 @@ func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 	return err
 }
 
-func (c *CLab) createCRPDFiles(node *types.Node) error {
+func (c *CLab) createCRPDFiles(node *types.NodeBase) error {
 	// create config and logs directory that will be bind mounted to crpd
 	utils.CreateDirectory(path.Join(node.LabDir, "config"), 0777)
 	utils.CreateDirectory(path.Join(node.LabDir, "log"), 0777)

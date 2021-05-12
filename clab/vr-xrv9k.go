@@ -6,7 +6,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-func initVrXRV9kNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initVrXRV9kNode(c *CLab, nodeCfg NodeConfig, node *types.NodeBase, user string, envs map[string]string) error {
 	var err error
 
 	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
