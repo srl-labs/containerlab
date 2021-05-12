@@ -66,6 +66,23 @@ When containerlab launches vr-sros node, it will assign IPv4/6 address to the `e
 
 Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
 
+???warning "at least one data interface (`eth1`) needs to be defined"
+    If a user wants to launch a single SR OS node without actually connecting it to anything, they may use [host link](../network.md#host-links) interface:
+
+    ```yaml
+    topology:
+      nodes:
+        sr1:
+          kind: vr-sros
+          image: vrnetlab/vr-sros:20.10.R3
+          license: license-sros20.txt
+      links:
+        - endpoints:
+            - "sr1:eth1"
+            - "host:sr1_eth1"
+    ```
+
+    This links definition will launch the SR OS node with its first port connected to the host OS.
 
 ## Features and options
 ### Variants
