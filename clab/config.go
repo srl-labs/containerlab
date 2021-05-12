@@ -381,7 +381,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 
 	// initialize bind mounts
 	binds := c.bindsInit(&nodeCfg)
-	err := resolveBindPaths(binds)
+	err := resolveBindPaths(binds, node.LabDir)
 	if err != nil {
 		return err
 	}
@@ -784,14 +784,19 @@ func resolvePath(p string) (string, error) {
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
 // it allows host path to have `~` and returns absolute path for a relative path
 // if the host path doesn't exist, the error will be returned
-func resolveBindPaths(binds []string) error {
+func resolveBindPaths(binds []string, nodedir string) error {
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
-		hp, err := resolvePath(elems[0])
+
+		r := strings.NewReplacer("$nodeDir", nodedir)
+		hp := r.Replace(elems[0])
+
+		hp, err := resolvePath(hp)
 		if err != nil {
 			return err
 		}
+
 		_, err = os.Stat(hp)
 		if err != nil {
 			return fmt.Errorf("failed to verify bind path: %v", err)
