@@ -81,8 +81,18 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 		BRndmName = l.B.EndpointName
 	}
 
+	// Generate MAC addresses
+	aMAC, err := net.ParseMAC(l.A.MAC)
+	if err != nil {
+		return err
+	}
+	bMAC, err := net.ParseMAC(l.B.MAC)
+	if err != nil {
+		return err
+	}
+
 	// create veth pair in the root netns
-	vA.Link, vB.Link, err = createVethIface(ARndmName, BRndmName, l.MTU)
+	vA.Link, vB.Link, err = createVethIface(ARndmName, BRndmName, l.MTU, aMAC, bMAC)
 	if err != nil {
 		return err
 	}
@@ -108,14 +118,16 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 
 // createVethIface takes two veth endpoint structs and create a veth pair and return
 // veth interface links.
-func createVethIface(ifName, peerName string, mtu int) (linkA netlink.Link, linkB netlink.Link, err error) {
+func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAddr) (linkA netlink.Link, linkB netlink.Link, err error) {
 	linkA = &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:  ifName,
-			Flags: net.FlagUp,
-			MTU:   mtu,
+			Name:         ifName,
+			HardwareAddr: aMAC,
+			Flags:        net.FlagUp,
+			MTU:          mtu,
 		},
-		PeerName: peerName,
+		PeerName:         peerName,
+		PeerHardwareAddr: bMAC,
 	}
 
 	if err := netlink.LinkAdd(linkA); err != nil {

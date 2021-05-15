@@ -115,6 +115,7 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
 	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
+	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleteing nodes")
 }
 
 func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName string) error {
@@ -181,22 +182,44 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		labDir = filepath.Dir(containers[0].Labels["clab-node-lab-dir"])
 	}
 
-	log.Infof("Destroying container lab: %s", c.Config.Name)
-	wg := new(sync.WaitGroup)
-	wg.Add(len(containers))
-	for _, cont := range containers {
-		go func(cont types.GenericContainer) {
-			defer wg.Done()
-			name := cont.ID
-			if len(cont.Names) > 0 {
-				name = strings.TrimLeft(cont.Names[0], "/")
-			}
-			err := c.Runtime.DeleteContainer(ctx, name)
-			if err != nil {
-				log.Errorf("could not remove container '%s': %v", name, err)
-			}
-		}(cont)
+	if maxWorkers == 0 {
+		maxWorkers = uint(len(containers))
 	}
+
+	log.Infof("Destroying container lab: %s", c.Config.Name)
+	ctrChan := make(chan *types.GenericContainer)
+	wg := new(sync.WaitGroup)
+	wg.Add(int(maxWorkers))
+	for i := uint(0); i < maxWorkers; i++ {
+
+		go func(i uint) {
+			defer wg.Done()
+			for {
+				select {
+				case cont := <-ctrChan:
+					if cont == nil {
+						log.Debugf("Worker %d terminating...", i)
+						return
+					}
+					name := cont.ID
+					if len(cont.Names) > 0 {
+						name = strings.TrimLeft(cont.Names[0], "/")
+					}
+					err := c.Runtime.DeleteContainer(ctx, name)
+					if err != nil {
+						log.Errorf("could not remove container '%s': %v", name, err)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}(i)
+	}
+	for _, ctr := range containers {
+		ctrChan <- &ctr
+	}
+	close(ctrChan)
+
 	wg.Wait()
 
 	// remove the lab directories
