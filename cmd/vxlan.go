@@ -92,7 +92,7 @@ var vxlanDeleteCmd = &cobra.Command{
 		var ls []netlink.Link
 		var err error
 
-		ls, err = clab.GetLiknsByNamePrefix(delPrefix)
+		ls, err = clab.GetLinksByNamePrefix(delPrefix)
 
 		if err != nil {
 			return err

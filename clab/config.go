@@ -33,6 +33,8 @@ const (
 	hostNSPath = "__host"
 	// veth link mtu. jacked up to 65k to allow jumbo testing of various sizes
 	defaultVethLinkMTU = 65000
+	// containerlab's reserved OUI
+	clabOUI = "aa:c1:ab"
 )
 
 // supported kinds
@@ -368,6 +370,7 @@ func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
 	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
 	node.LabDir = c.Dir.Lab + "/" + nodeName
 	node.Index = idx
+	node.Endpoints = []*types.Endpoint{}
 
 	node.NetworkMode = strings.ToLower(nodeCfg.NetworkMode)
 
@@ -513,6 +516,10 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	}
 	nName := split[0]  // node name
 	epName := split[1] // endpoint name
+
+	// generate unqiue MAC
+	endpoint.MAC = genMac(clabOUI)
+
 	// search the node pointer for a node name referenced in endpoint section
 	switch nName {
 	// "host" is a special reference to host namespace
@@ -532,8 +539,9 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 		}
 	default:
 		for name, n := range c.Nodes {
-			if name == split[0] {
+			if name == nName {
 				endpoint.Node = n
+				n.Endpoints = append(n.Endpoints, endpoint)
 				break
 			}
 		}

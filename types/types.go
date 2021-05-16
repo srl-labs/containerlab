@@ -24,6 +24,8 @@ type Endpoint struct {
 	Node *Node
 	// e1-x, eth, etc
 	EndpointName string
+	// mac address
+	MAC string
 }
 
 // mgmtNet struct defines the management network options
@@ -77,6 +79,8 @@ type Node struct {
 	Publish              []string //list of ports to publish with mysocketctl
 	// container labels
 	Labels map[string]string
+	// Slice of pointers to local endpoints
+	Endpoints []*Endpoint
 }
 
 // GenerateConfig generates configuration for the nodes
