@@ -246,8 +246,8 @@ func deleteNetnsSymlink(n string) error {
 	return nil
 }
 
-// GetLiknsByNamePrefix returns a list of links whose name matches a prefix
-func GetLiknsByNamePrefix(prefix string) ([]netlink.Link, error) {
+// GetLinksByNamePrefix returns a list of links whose name matches a prefix
+func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
 	// filtered list of interfaces
 	if prefix == "" {
 		return nil, fmt.Errorf("prefix is not specified")
