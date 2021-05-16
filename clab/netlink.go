@@ -118,7 +118,7 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 
 // createVethIface takes two veth endpoint structs and create a veth pair and return
 // veth interface links.
-func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAddr) (linkA netlink.Link, linkB netlink.Link, err error) {
+func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAddr) (linkA, linkB netlink.Link, err error) {
 	linkA = &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:         ifName,
