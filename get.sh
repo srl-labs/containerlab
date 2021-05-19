@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # The install script is based off of the Apache 2.0 script from Helm,
 # https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
 
