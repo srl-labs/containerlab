@@ -186,8 +186,8 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		maxWorkers = uint(len(containers))
 	}
 
-	log.Infof("Destroying container lab: %s", c.Config.Name)
-	ctrChan := make(chan *types.GenericContainer)
+	log.Infof("Destroying lab: %s", c.Config.Name)
+	ctrChan := make(chan types.GenericContainer)
 	wg := new(sync.WaitGroup)
 	wg.Add(int(maxWorkers))
 	for i := uint(0); i < maxWorkers; i++ {
@@ -197,14 +197,10 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 			for {
 				select {
 				case cont := <-ctrChan:
-					if cont == nil {
-						log.Debugf("Worker %d terminating...", i)
+					if cont.ID == "" {
 						return
 					}
-					name := cont.ID
-					if len(cont.Names) > 0 {
-						name = strings.TrimLeft(cont.Names[0], "/")
-					}
+					name := strings.TrimLeft(cont.Names[0], "/")
 					err := c.Runtime.DeleteContainer(ctx, name)
 					if err != nil {
 						log.Errorf("could not remove container '%s': %v", name, err)
@@ -216,7 +212,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		}(i)
 	}
 	for _, ctr := range containers {
-		ctrChan <- &ctr
+		ctrChan <- ctr
 	}
 	close(ctrChan)
 
