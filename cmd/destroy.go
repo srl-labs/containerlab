@@ -186,7 +186,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		maxWorkers = uint(len(containers))
 	}
 
-	log.Infof("Destroying container lab: %s", c.Config.Name)
+	log.Infof("Destroying lab: %s", c.Config.Name)
 	ctrChan := make(chan *types.GenericContainer)
 	wg := new(sync.WaitGroup)
 	wg.Add(int(maxWorkers))
@@ -216,6 +216,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		}(i)
 	}
 	for _, ctr := range containers {
+		ctr := ctr
 		ctrChan <- &ctr
 	}
 	close(ctrChan)
