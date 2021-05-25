@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/srl-labs/containerlab/runtime/containerd"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -48,7 +49,7 @@ func NewRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) C
 	case DockerRuntime:
 		return docker.NewDockerRuntime(d, dur, gracefulShutdown)
 	case ContainerdRuntime:
-		log.Fatalf("%s runtime is not implemented", ContainerdRuntime)
+		return containerd.NewContainerdRuntime(d, dur, gracefulShutdown)
 	}
 
 	log.Fatalf("Unexpected runtime name: %s", name)
