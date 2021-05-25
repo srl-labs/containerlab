@@ -16,16 +16,16 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-version v1.2.1
 	github.com/jsimonetti/rtnetlink v0.0.0-20210226120601-1b79e63a70a0
+	github.com/kellerza/template v0.0.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
+	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
 	gopkg.in/yaml.v2 v2.4.0
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	gopkg.in/yaml.v2 v2.3.0
-	inet.af/netaddr v0.0.0-20210403172118-1e1430f727e0 // indirect
+	inet.af/netaddr v0.0.0-20210521171555-9ee55bc0c50b
 )

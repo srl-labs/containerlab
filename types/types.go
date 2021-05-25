@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -17,6 +18,11 @@ type Link struct {
 	B      *Endpoint
 	MTU    int
 	Labels map[string]string
+}
+
+func (link *Link) String() string {
+	return fmt.Sprintf("link [%s:%s, %s:%s]", link.A.Node.ShortName,
+		link.A.EndpointName, link.B.Node.ShortName, link.B.EndpointName)
 }
 
 // Endpoint is a struct that contains information of a link endpoint

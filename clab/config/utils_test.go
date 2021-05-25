@@ -46,7 +46,7 @@ func TestIPLastOctect(t *testing.T) {
 
 	for k, v := range lst {
 		n := netaddr.MustParseIPPrefix(k)
-		lo := ipLastOctet(n.IP)
+		lo := ipLastOctet(n.IP())
 		if v != lo {
 			t.Errorf("far end of %s, got %d, expected %d", k, lo, v)
 		}

@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/config"
-	"golang.org/x/crypto/ssh"
+	"github.com/srl-labs/containerlab/clab/config/transport"
 )
 
 // path to additional templates
@@ -30,15 +30,13 @@ var configCmd = &cobra.Command{
 			return err
 		}
 
-		config.DebugCount = debugCount
+		transport.DebugCount = debugCount
 
-		opts := []clab.ClabOption{
+		c := clab.NewContainerLab(
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithEnvDockerClient(),
-		}
-		c := clab.NewContainerLab(opts...)
+		)
 
 		//ctx, cancel := context.WithCancel(context.Background())
 		//defer cancel()
@@ -51,39 +49,14 @@ var configCmd = &cobra.Command{
 		}
 
 		// config map per node. each node gets a couple of config snippets []string
-		allConfig := make(map[string][]config.ConfigSnippet)
+		allConfig, err := config.RenderAll(c.Nodes, c.Links)
+		if err != nil {
+			return err
+		}
+
+		// render them all
 
 		renderErr := 0
-
-		for _, node := range c.Nodes {
-			err = config.LoadTemplate(node.Kind, templatePath)
-			if err != nil {
-				return err
-			}
-
-			res, err := config.RenderNode(node)
-			if err != nil {
-				log.Errorln(err)
-				renderErr += 1
-				continue
-			}
-			allConfig[node.LongName] = append(allConfig[node.LongName], res...)
-
-		}
-
-		for lIdx, link := range c.Links {
-
-			res, err := config.RenderLink(link)
-			if err != nil {
-				log.Errorf("%d. %s\n", lIdx, err)
-				renderErr += 1
-				continue
-			}
-			for _, rr := range res {
-				allConfig[rr.TargetNode.LongName] = append(allConfig[rr.TargetNode.LongName], rr)
-			}
-
-		}
 
 		if renderErr > 0 {
 			return fmt.Errorf("%d render warnings", renderErr)
@@ -91,10 +64,8 @@ var configCmd = &cobra.Command{
 
 		if printLines > 0 {
 			// Debug log all config to be deployed
-			for _, v := range allConfig {
-				for _, r := range v {
-					r.Print(printLines)
-				}
+			for _, c := range allConfig {
+				c.Print(printLines)
 			}
 			return nil
 		}
@@ -102,18 +73,23 @@ var configCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		wg.Add(len(allConfig))
 		for _, cs_ := range allConfig {
-			deploy1 := func(cs []config.ConfigSnippet) {
+			deploy1 := func(cs *config.NodeConfig) {
 				defer wg.Done()
 
-				var transport config.Transport
+				var tx transport.Transport
 
-				ct, ok := cs[0].TargetNode.Labels["config.transport"]
+				ct, ok := cs.TargetNode.Labels["config.transport"]
 				if !ok {
 					ct = "ssh"
 				}
 
 				if ct == "ssh" {
-					transport, _ = newSSHTransport(cs[0].TargetNode)
+					tx, err = transport.NewSSHTransport(
+						cs.TargetNode,
+						transport.WithUserNamePassword(
+							clab.DefaultCredentials[cs.TargetNode.Kind][0],
+							clab.DefaultCredentials[cs.TargetNode.Kind][1]),
+					)
 					if err != nil {
 						log.Errorf("%s: %s", kind, err)
 					}
@@ -124,7 +100,7 @@ var configCmd = &cobra.Command{
 					return
 				}
 
-				err := config.WriteConfig(transport, cs)
+				err := transport.Write(tx, cs.TargetNode.LongName, cs.Data, cs.Info)
 				if err != nil {
 					log.Errorf("%s\n", err)
 				}
@@ -143,31 +119,10 @@ var configCmd = &cobra.Command{
 	},
 }
 
-func newSSHTransport(node *clab.Node) (*config.SshTransport, error) {
-	switch node.Kind {
-	case "vr-sros", "srl":
-		c := &config.SshTransport{}
-		c.SshConfig = &ssh.ClientConfig{}
-		config.SshConfigWithUserNamePassword(
-			c.SshConfig,
-			clab.DefaultCredentials[node.Kind][0],
-			clab.DefaultCredentials[node.Kind][1])
-
-		switch node.Kind {
-		case "vr-sros":
-			c.K = &config.VrSrosSshKind{}
-		case "srl":
-			c.K = &config.SrlSshKind{}
-		}
-		return c, nil
-	}
-	return nil, fmt.Errorf("no tranport implemented for kind: %s", kind)
-}
-
 func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringVarP(&templatePath, "template-path", "p", "", "directory with templates used to render config")
 	configCmd.MarkFlagDirname("template-path")
-	configCmd.Flags().StringSliceVarP(&config.TemplateOverride, "template-list", "l", []string{}, "comma separated list of template names to render")
+	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
 	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render dry-run & print n lines of config")
 }

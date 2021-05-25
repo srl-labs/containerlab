@@ -1,4 +1,4 @@
-package config
+package transport
 
 import (
 	"fmt"
@@ -8,30 +8,30 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
 	"golang.org/x/crypto/ssh"
 )
 
-type SshSession struct {
+type SSHSession struct {
 	In      io.Reader
 	Out     io.WriteCloser
 	Session *ssh.Session
 }
 
-// Debug count
-var DebugCount int
+type SSHOption func(*SSHTransport) error
 
 // The reply the execute command and the prompt.
-type SshReply struct{ result, prompt, command string }
+type SSHReply struct{ result, prompt, command string }
 
-// SshTransport setting needs to be set before calling Connect()
-// SshTransport implement the Transport interface
-type SshTransport struct {
+// SSHTransport setting needs to be set before calling Connect()
+// SSHTransport implements the Transport interface
+type SSHTransport struct {
 	// Channel used to read. Can use Expect to Write & read wit timeout
-	in chan SshReply
+	in chan SSHReply
 	// SSH Session
-	ses *SshSession
+	ses *SSHSession
 	// Contains the first read after connecting
-	LoginMessage *SshReply
+	LoginMessage *SSHReply
 	// SSH parameters used in connect
 	// defualt: 22
 	Port int
@@ -41,14 +41,36 @@ type SshTransport struct {
 
 	// SSH Options
 	// required!
-	SshConfig *ssh.ClientConfig
+	SSHConfig *ssh.ClientConfig
 
 	// Character to split the incoming stream (#/$/>)
 	// default: #
 	PromptChar string
 
 	// Kind specific transactions & prompt checking function
-	K SshKind
+	K SSHKind
+}
+
+func NewSSHTransport(node *types.Node, options ...SSHOption) (*SSHTransport, error) {
+	switch node.Kind {
+	case "vr-sros", "srl":
+		c := &SSHTransport{}
+		c.SSHConfig = &ssh.ClientConfig{}
+
+		// apply options
+		for _, opt := range options {
+			opt(c)
+		}
+
+		switch node.Kind {
+		case "vr-sros":
+			c.K = &VrSrosSSHKind{}
+		case "srl":
+			c.K = &SrlSSHKind{}
+		}
+		return c, nil
+	}
+	return nil, fmt.Errorf("no tranport implemented for kind: %s", node.Kind)
 }
 
 // Creates the channel reading the SSH connection
@@ -56,12 +78,12 @@ type SshTransport struct {
 // The first prompt is saved in LoginMessages
 //
 // - The channel read the SSH session, splits on PromptChar
-// - Uses SshKind's PromptParse to split the received data in *result* and *prompt* parts
+// - Uses SSHKind's PromptParse to split the received data in *result* and *prompt* parts
 //   (if no valid prompt was found, prompt will simply be empty and result contain all the data)
 // - Emit data
-func (t *SshTransport) InChannel() {
+func (t *SSHTransport) InChannel() {
 	// Ensure we have a working channel
-	t.in = make(chan SshReply)
+	t.in = make(chan SSHReply)
 
 	// setup a buffered string channel
 	go func() {
@@ -79,7 +101,7 @@ func (t *SshTransport) InChannel() {
 				for i := 0; i < li; i++ {
 					r := t.K.PromptParse(t, &parts[i])
 					if r == nil {
-						r = &SshReply{
+						r = &SSHReply{
 							result: parts[i],
 						}
 					}
@@ -91,7 +113,7 @@ func (t *SshTransport) InChannel() {
 			tmpS += string(buf[:n])
 		}
 		log.Debugf("In Channel closing: %v", err)
-		t.in <- SshReply{
+		t.in <- SSHReply{
 			result: tmpS,
 			prompt: "",
 		}
@@ -105,7 +127,7 @@ func (t *SshTransport) InChannel() {
 }
 
 // Run a single command and wait for the reply
-func (t *SshTransport) Run(command string, timeout int) *SshReply {
+func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 	if command != "" {
 		t.ses.Writeln(command)
 		log.Debugf("--> %s\n", command)
@@ -120,7 +142,7 @@ func (t *SshTransport) Run(command string, timeout int) *SshReply {
 		select {
 		case <-time.After(time.Duration(timeout) * time.Second):
 			log.Warnf("timeout waiting for prompt: %s", command)
-			return &SshReply{
+			return &SSHReply{
 				result:  sHistory,
 				command: command,
 			}
@@ -159,7 +181,7 @@ func (t *SshTransport) Run(command string, timeout int) *SshReply {
 				sHistory = rr
 				continue
 			}
-			res := &SshReply{
+			res := &SSHReply{
 				result:  rr,
 				prompt:  ret.prompt,
 				command: command,
@@ -173,12 +195,12 @@ func (t *SshTransport) Run(command string, timeout int) *SshReply {
 // Write a config snippet (a set of commands)
 // Session NEEDS to be configurable for other kinds
 // Part of the Transport interface
-func (t *SshTransport) Write(snip *ConfigSnippet) error {
-	if len(snip.Data) == 0 {
+func (t *SSHTransport) Write(data *string, info *string) error {
+	if len(*data) == 0 {
 		return nil
 	}
 
-	transaction := !strings.HasPrefix(snip.templateName, "show-")
+	transaction := !strings.HasPrefix(*info, "show-")
 
 	err := t.K.ConfigStart(t, transaction)
 	if err != nil {
@@ -187,7 +209,7 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 
 	c := 0
 
-	for _, l := range snip.Lines() {
+	for _, l := range strings.Split(*data, "\n") {
 		l = strings.TrimSpace(l)
 		if l == "" || strings.HasPrefix(l, "#") {
 			continue
@@ -198,11 +220,9 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 
 	if transaction {
 		commit, err := t.K.ConfigCommit(t)
-		msg := snip.String()
-		i := strings.Index(msg, " ")
-		msg = fmt.Sprintf("%s COMMIT%s - %d lines", msg[:i], msg[i:], c)
+		msg := fmt.Sprintf("%s COMMIT - %d lines", *info, c)
 		if commit.result != "" {
-			msg += commit.LogString(snip.TargetNode.ShortName, true, false)
+			msg += commit.LogString(t.Target, true, false)
 		}
 		if err != nil {
 			log.Error(msg)
@@ -216,7 +236,7 @@ func (t *SshTransport) Write(snip *ConfigSnippet) error {
 
 // Connect to a host
 // Part of the Transport interface
-func (t *SshTransport) Connect(host string) error {
+func (t *SSHTransport) Connect(host string, options ...func(*Transport)) error {
 	// Assign Default Values
 	if t.PromptChar == "" {
 		t.PromptChar = "#"
@@ -224,18 +244,18 @@ func (t *SshTransport) Connect(host string) error {
 	if t.Port == 0 {
 		t.Port = 22
 	}
-	if t.SshConfig == nil {
-		return fmt.Errorf("require auth credentials in SshConfig")
+	if t.SSHConfig == nil {
+		return fmt.Errorf("require auth credentials in SSHConfig")
 	}
 
 	// Start some client config
 	host = fmt.Sprintf("%s:%d", host, t.Port)
 	//sshConfig := &ssh.ClientConfig{}
-	//SshConfigWithUserNamePassword(sshConfig, "admin", "admin")
+	//SSHConfigWithUserNamePassword(sshConfig, "admin", "admin")
 
 	t.Target = strings.Split(strings.Split(host, ":")[0], "-")[2]
 
-	ses_, err := NewSshSession(host, t.SshConfig)
+	ses_, err := NewSSHSession(host, t.SSHConfig)
 	if err != nil || ses_ == nil {
 		return fmt.Errorf("cannot connect to %s: %s", host, err)
 	}
@@ -249,7 +269,7 @@ func (t *SshTransport) Connect(host string) error {
 
 // Close the Session and channels
 // Part of the Transport interface
-func (t *SshTransport) Close() {
+func (t *SSHTransport) Close() {
 	if t.in != nil {
 		close(t.in)
 		t.in = nil
@@ -259,21 +279,24 @@ func (t *SshTransport) Close() {
 
 // Add a basic username & password to a config.
 // Will initilize the config if required
-func SshConfigWithUserNamePassword(config *ssh.ClientConfig, username, password string) {
-	if config == nil {
-		config = &ssh.ClientConfig{}
+func WithUserNamePassword(username, password string) SSHOption {
+	return func(tx *SSHTransport) error {
+		if tx.SSHConfig == nil {
+			tx.SSHConfig = &ssh.ClientConfig{}
+		}
+		tx.SSHConfig.User = username
+		if tx.SSHConfig.Auth == nil {
+			tx.SSHConfig.Auth = []ssh.AuthMethod{}
+		}
+		tx.SSHConfig.Auth = append(tx.SSHConfig.Auth, ssh.Password(password))
+		tx.SSHConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+		return nil
 	}
-	config.User = username
-	if config.Auth == nil {
-		config.Auth = []ssh.AuthMethod{}
-	}
-	config.Auth = append(config.Auth, ssh.Password(password))
-	config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 }
 
 // Create a new SSH session (Dial, open in/out pipes and start the shell)
 // pass the authntication details in sshConfig
-func NewSshSession(host string, sshConfig *ssh.ClientConfig) (*SshSession, error) {
+func NewSSHSession(host string, sshConfig *ssh.ClientConfig) (*SSHSession, error) {
 	if !strings.Contains(host, ":") {
 		return nil, fmt.Errorf("include the port in the host: %s", host)
 	}
@@ -313,28 +336,28 @@ func NewSshSession(host string, sshConfig *ssh.ClientConfig) (*SshSession, error
 		return nil, fmt.Errorf("session shell: %s", err)
 	}
 
-	return &SshSession{
+	return &SSHSession{
 		Session: session,
 		In:      sshIn,
 		Out:     sshOut,
 	}, nil
 }
 
-func (ses *SshSession) Writeln(command string) (int, error) {
+func (ses *SSHSession) Writeln(command string) (int, error) {
 	return ses.Out.Write([]byte(command + "\r"))
 }
 
-func (ses *SshSession) Close() {
+func (ses *SSHSession) Close() {
 	log.Debugf("Closing session")
 	ses.Session.Close()
 }
 
-// The LogString will include the entire SshReply
+// The LogString will include the entire SSHReply
 //   Each field will be prefixed by a character.
 //   # - command sent
 //   | - result recieved
 //   ? - prompt part of the result
-func (r *SshReply) LogString(node string, linefeed, debug bool) string {
+func (r *SSHReply) LogString(node string, linefeed, debug bool) string {
 	ind := 12 + len(node)
 	prefix := "\n" + strings.Repeat(" ", ind)
 	s := ""
@@ -356,7 +379,7 @@ func (r *SshReply) LogString(node string, linefeed, debug bool) string {
 	return s
 }
 
-func (r *SshReply) Info(node string) *SshReply {
+func (r *SSHReply) Info(node string) *SSHReply {
 	if r.result == "" {
 		return r
 	}
@@ -364,7 +387,7 @@ func (r *SshReply) Info(node string) *SshReply {
 	return r
 }
 
-func (r *SshReply) Debug(node, message string, t ...interface{}) {
+func (r *SSHReply) Debug(node, message string, t ...interface{}) {
 	msg := message
 	if len(t) > 0 {
 		msg = t[0].(string)

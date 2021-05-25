@@ -17,21 +17,6 @@
     mpls-labels sr-labels start {{ default 19000 .sid_start }} end {{ default 30000 .sid_end }}
     {{- end }}
 
-/configure router isis {{ default 0 .isis_iid }}
-    area-address 49.0000.0000.0000.0{{ default 0 .isis_iid }}
-    level-capability 2
-    level 2 wide-metrics-only
-    #database-export igp-identifier {{ default 0 .isis_iid }} bgp-ls-identifier value {{ default 0 .isis_iid }}
-    traffic-engineering
-    advertise-router-capability area
-    admin-state enable
-    interface "system" admin-state enable
-    {{- if .sid_idx }}
-    interface "system" ipv4-node-sid index {{ .sid_idx }}
-    segment-routing prefix-sid-range global
-    segment-routing admin-state enable
-    {{- end }}
-
 /configure router rsvp
     admin-state enable
     interface system admin-state enable
