@@ -4,10 +4,10 @@ name: clos02
 topology:
   kinds:
     srl:
-      image: srlinux
+      image: srlinux:latest
       license: license.key
     linux:
-      image: ghcr.io/hellt/network-multitool
+      image: ghcr.io/hellt/network-multitool:latest
   nodes:
     leaf1:
       kind: srl

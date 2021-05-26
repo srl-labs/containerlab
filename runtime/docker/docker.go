@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	dockerTypes "github.com/docker/docker/api/types"
@@ -295,27 +294,7 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 		return nil
 	}
 
-	// might need canonical name e.g.
-	//    -> alpine == docker.io/library/alpine
-	//    -> foo/bar == docker.io/foo/bar
-	//    -> foo.bar/baz == foo.bar/bar
-	//    -> docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch
-	canonicalImageName := imageName
-	slashCount := strings.Count(imageName, "/")
-
-	switch slashCount {
-	case 0:
-		canonicalImageName = "docker.io/library/" + imageName
-	case 1:
-		// split on slash to get first element of the name
-		nameSplit := strings.Split(imageName, "/")
-		// case of foo.bar/baz
-		if strings.Contains(nameSplit[0], ".") {
-			canonicalImageName = imageName
-		} else {
-			canonicalImageName = "docker.io/" + imageName
-		}
-	}
+	canonicalImageName := utils.GetCanonicalImageName(imageName)
 
 	log.Infof("Pulling %s Docker image", canonicalImageName)
 	reader, err := c.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{})
@@ -344,13 +323,10 @@ func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
 }
 
 // ListContainers lists all containers with labels []string
-func (c *DockerRuntime) ListContainers(ctx context.Context, labels []string) ([]types.GenericContainer, error) {
+func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	filter := filters.NewArgs()
-	for _, l := range labels {
-		filter.Add("label", l)
-	}
+	filter := c.containerFilterBuilder(gfilters)
 	ctrs, err := c.Client.ContainerList(ctx, dockerTypes.ContainerListOptions{
 		All:     true,
 		Filters: filter,
@@ -360,6 +336,19 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, labels []string) ([]
 	}
 
 	return c.produceGenericContainerList(ctrs)
+}
+
+func (c *DockerRuntime) containerFilterBuilder(gfilters []*types.GenericFilter) filters.Args {
+	filter := filters.NewArgs()
+	for _, filterentry := range gfilters {
+		filterstring := filterentry.Field
+		if filterentry.Operator != "exists" {
+			filterstring = filterstring + filterentry.Operator + filterentry.Match
+		}
+		log.Debug("Filterstring: " + filterstring)
+		filter.Add(filterentry.FilterType, filterstring)
+	}
+	return filter
 }
 
 // Transform docker-specific to generic container format
@@ -453,23 +442,23 @@ func (c *DockerRuntime) ExecNotWait(ctx context.Context, id string, cmd []string
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *DockerRuntime) DeleteContainer(ctx context.Context, name string) error {
+func (c *DockerRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
 	var err error
 	force := !c.gracefulShutdown
 	if c.gracefulShutdown {
-		log.Infof("Stopping container: %s", name)
-		err = c.Client.ContainerStop(ctx, name, &c.timeout)
+		log.Infof("Stopping container: %s", container.Names[0])
+		err = c.Client.ContainerStop(ctx, container.ID, &c.timeout)
 		if err != nil {
-			log.Errorf("could not stop container '%s': %v", name, err)
+			log.Errorf("could not stop container '%s': %v", container.Names[0], err)
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", name)
-	err = c.Client.ContainerRemove(ctx, name, dockerTypes.ContainerRemoveOptions{Force: force})
+	log.Debugf("Removing container: %s", container.Names[0])
+	err = c.Client.ContainerRemove(ctx, container.ID, dockerTypes.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", name)
+	log.Infof("Removed container: %s", container.Names[0])
 	return nil
 }
 
@@ -488,6 +477,7 @@ func (c *DockerRuntime) ContainerInspect(ctx context.Context, id string) (*types
 	}, nil
 }
 
-func (c *DockerRuntime) StopContainer(context.Context, string, *time.Duration) error {
+func (c *DockerRuntime) StopContainer(ctx context.Context, name string, dur *time.Duration) error {
+	c.Client.ContainerKill(ctx, name, "kill")
 	return nil
 }

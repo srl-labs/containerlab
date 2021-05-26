@@ -128,7 +128,7 @@ var deployCmd = &cobra.Command{
 		}
 		log.Debug("containers created, retrieving state and IP addresses...")
 
-		labels = append(labels, "containerlab="+c.Config.Name)
+		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
 		containers, err := c.Runtime.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)

@@ -128,3 +128,14 @@ type GenericMgmtIPs struct {
 	IPv6addr string
 	IPv6pLen int
 }
+
+type GenericFilter struct {
+	// defined by now "label"
+	FilterType string
+	// defines e.g. the label name
+	Field string
+	// = | !=
+	Operator string
+	// match
+	Match string
+}

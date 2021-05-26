@@ -3,7 +3,9 @@ package containerd
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/containerd/containerd"
@@ -12,7 +14,10 @@ import (
 	"github.com/docker/go-units"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
+
+const containerdNamespace = "clab"
 
 type ContainerdRuntime struct {
 	client           *containerd.Client
@@ -27,7 +32,6 @@ func NewContainerdRuntime(d bool, dur time.Duration, gracefulShutdown bool) *Con
 	if err != nil {
 		log.Fatalf("failed to create containerd client: %v", err)
 	}
-	//defer c.Close()
 
 	return &ContainerdRuntime{
 		client:           c,
@@ -41,8 +45,9 @@ func (c *ContainerdRuntime) SetMgmtNet(n types.MgmtNet) {
 	c.Mgmt = n
 }
 
-func (c *ContainerdRuntime) CreateNet(context.Context) error {
-	log.Fatalf("CreateNet() - Not implemented yet")
+func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
+	//log.Fatalf("CreateNet() - Not implemented yet")
+	// TODO: need to implement
 	return nil
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
@@ -52,8 +57,10 @@ func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
 
-	log.Debugf("Looking up %s container image", imagename)
-	ctx = namespaces.WithNamespace(ctx, "clab")
+	canonicalimage := utils.GetCanonicalImageName(imagename)
+
+	log.Debugf("Looking up %s container image", canonicalimage)
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 	images, err := c.client.ListImages(ctx)
 	if err != nil {
 		return err
@@ -61,34 +68,76 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 
 	// If Image doesn't exist, we need to pull it
 	if len(images) > 0 {
-		log.Debugf("Image %s present, skip pulling", imagename)
+		log.Debugf("Image %s present, skip pulling", canonicalimage)
 		return nil
 	}
 
-	_, err = c.client.Pull(ctx, imagename+":latest", containerd.WithPullUnpack)
+	_, err = c.client.Pull(ctx, canonicalimage, containerd.WithPullUnpack)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(context.Context, *types.Node) error {
-	log.Fatalf("CreateContainer() - Not implemented yet")
-	return nil
-}
-func (c *ContainerdRuntime) StartContainer(context.Context, string) error {
-	log.Fatalf("StartContainer() - Not implemented yet")
-	return nil
-}
-func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string, duration *time.Duration) error {
-	log.Fatalf("StopContainer() - Not implemented yet")
-	return nil
-}
-func (c *ContainerdRuntime) ListContainers(ctx context.Context, labels []string) ([]types.GenericContainer, error) {
+func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Node) error {
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
+	_, err := c.client.NewContainer(
+		ctx,
+		node.ShortName,
+		containerd.WithAdditionalContainerLabels(node.Labels),
+		containerd.WithImageName(node.Image))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
+	task, err := c.getContainerTask(ctx, containername)
+	if err != nil {
+		return err
+	}
+	err = task.Start(ctx)
+	if err != nil {
+		log.Fatalf("Failed to start container %s", containername)
+		return err
+	}
+	return nil
+}
+func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string, dur *time.Duration) error {
+	task, err := c.getContainerTask(ctx, containername)
+	if err != nil {
+		return err
+	}
+	err = task.Kill(ctx, syscall.SIGTERM)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ContainerdRuntime) getContainerTask(ctx context.Context, containername string) (containerd.Task, error) {
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+	cont, err := c.client.LoadContainer(ctx, containername)
+	if err != nil {
+		return nil, err
+	}
+	task, err := cont.Task(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
+func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]types.GenericContainer, error) {
 	log.Debug("listing containers")
-	ctx = namespaces.WithNamespace(ctx, "clab")
-	containerlist, err := c.client.Containers(ctx)
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+	// TODO add containerlab label as filter criteria
+
+	filterstring := c.filterStringBuilder(filter)
+
+	containerlist, err := c.client.Containers(ctx, filterstring)
 	if err != nil {
 		return nil, err
 	}
@@ -96,20 +145,43 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, labels []string)
 	return c.produceGenericContainerList(ctx, containerlist)
 }
 
+func (c *ContainerdRuntime) filterStringBuilder(filter []*types.GenericFilter) string {
+	filterstring := ""
+	delim := ""
+	for _, filterEntry := range filter {
+		isExistsOperator := false
+
+		operator := filterEntry.Operator
+		switch filterEntry.Operator {
+		case "=":
+			operator = "=="
+		case "exists":
+			operator = ""
+			isExistsOperator = true
+		}
+
+		switch filterEntry.FilterType {
+		case "label":
+			filterstring = filterstring + "labels." + filterEntry.Field
+			if !isExistsOperator {
+				filterstring = filterstring + operator + filterEntry.Match + delim
+			}
+
+		}
+		delim = ","
+	}
+	log.Debug("Filterstring: " + filterstring)
+	return filterstring
+}
+
 // Transform docker-specific to generic container format
 func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, input []containerd.Container) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
-
-	ctx = namespaces.WithNamespace(ctx, "clab")
 
 	for _, i := range input {
 
 		ctr := types.GenericContainer{}
 
-		_, err := i.Image(ctx)
-		if err != nil {
-			return nil, err
-		}
 		info, err := i.Info(ctx)
 		if err != nil {
 			return nil, err
@@ -152,7 +224,7 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 			ctr.Pid = int(task.Pid())
 		} else {
 			ctr.State = strings.Title(string(containerd.Unknown))
-			ctr.Status = "unknown"
+			ctr.Status = "Unknown"
 			ctr.Pid = -1
 		}
 		result = append(result, ctr)
@@ -168,9 +240,13 @@ func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.Ge
 	log.Fatalf("ContainerInspect() - Not implemented yet")
 	return &types.GenericContainer{}, nil
 }
-func (c *ContainerdRuntime) GetNSPath(context.Context, string) (string, error) {
-	log.Fatalf("GetNSPath() - Not implemented yet")
-	return "", nil
+func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string) (string, error) {
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+	task, err := c.getContainerTask(ctx, containername)
+	if err != nil {
+		return "", err
+	}
+	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
 func (c *ContainerdRuntime) Exec(context.Context, string, []string) ([]byte, []byte, error) {
 	log.Fatalf("Exec() - Not implemented yet")
@@ -180,7 +256,19 @@ func (c *ContainerdRuntime) ExecNotWait(context.Context, string, []string) error
 	log.Fatalf("ExecNotWait() - Not implemented yet")
 	return nil
 }
-func (c *ContainerdRuntime) DeleteContainer(context.Context, string) error {
-	log.Fatalf("DeleteContainer() - Not implemented yet")
+func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+	cont, err := c.client.LoadContainer(ctx, container.ID)
+	if err != nil {
+		return err
+	}
+	var delOpts []containerd.DeleteOpts
+	if _, err := cont.Image(ctx); err == nil {
+		delOpts = append(delOpts, containerd.WithSnapshotCleanup)
+	}
+
+	if err := cont.Delete(ctx, delOpts...); err != nil {
+		return err
+	}
 	return nil
 }

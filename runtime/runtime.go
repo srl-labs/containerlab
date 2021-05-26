@@ -31,7 +31,7 @@ type ContainerRuntime interface {
 	// Stop running container by its name
 	StopContainer(context.Context, string, *time.Duration) error
 	// List all containers matching labels
-	ListContainers(context.Context, []string) ([]types.GenericContainer, error)
+	ListContainers(context.Context, []*types.GenericFilter) ([]types.GenericContainer, error)
 	// Inspect container (extract its PID)
 	ContainerInspect(context.Context, string) (*types.GenericContainer, error)
 	// Get a netns path using the pid of a container
@@ -41,7 +41,7 @@ type ContainerRuntime interface {
 	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
 	ExecNotWait(context.Context, string, []string) error
 	// Delete container by its name
-	DeleteContainer(context.Context, string) error
+	DeleteContainer(context.Context, *types.GenericContainer) error
 }
 
 func NewRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ContainerRuntime {

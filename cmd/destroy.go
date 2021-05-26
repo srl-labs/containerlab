@@ -61,7 +61,8 @@ var destroyCmd = &cobra.Command{
 			}
 			c := clab.NewContainerLab(opts...)
 			// list all containerlab containers
-			containers, err := c.Runtime.ListContainers(ctx, []string{"containerlab"})
+			labname := c.Config.Name
+			containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Match: labname, Field: "containerlab", Operator: "="}})
 			if err != nil {
 				return fmt.Errorf("could not list containers: %v", err)
 			}
@@ -168,7 +169,9 @@ func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName 
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.Runtime.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
+
+	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+	containers, err := c.Runtime.ListContainers(ctx, labels)
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
@@ -201,13 +204,12 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 						log.Debugf("Worker %d terminating...", i)
 						return
 					}
-					name := cont.ID
-					if len(cont.Names) > 0 {
-						name = strings.TrimLeft(cont.Names[0], "/")
-					}
-					err := c.Runtime.DeleteContainer(ctx, name)
+					//if len(cont.Names) > 0 {
+					//	name = strings.TrimLeft(cont.Names[0], "/")
+					//}
+					err := c.Runtime.DeleteContainer(ctx, cont)
 					if err != nil {
-						log.Errorf("could not remove container '%s': %v", name, err)
+						log.Errorf("could not remove container: %v", err)
 					}
 				case <-ctx.Done():
 					return
