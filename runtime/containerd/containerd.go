@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/oci"
 	"github.com/docker/go-units"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
@@ -82,28 +84,51 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Node) error {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
-	_, err := c.client.NewContainer(
-		ctx,
-		node.ShortName,
-		containerd.WithAdditionalContainerLabels(node.Labels),
-		containerd.WithImageName(node.Image))
+	img, err := c.client.GetImage(ctx, node.Image)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
-	task, err := c.getContainerTask(ctx, containername)
+	cont, err := c.client.NewContainer(
+		ctx,
+		node.ShortName,
+		containerd.WithNewSnapshot(node.ShortName+"nginx-server-snapshot", img),
+		containerd.WithNewSpec(oci.WithImageConfig(img)),
+		containerd.WithAdditionalContainerLabels(node.Labels),
+	)
 	if err != nil {
 		return err
 	}
-	err = task.Start(ctx)
+	_ = cont
+	log.Debugf("Container '%s' created", node.ShortName)
+	log.Debugf("Start container: %s", node.LongName)
+
+	err = c.StartContainer(ctx, node.ShortName)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Container started: %s", node.LongName)
+
+	node.NSPath, err = c.GetNSPath(ctx, node.ShortName)
+	if err != nil {
+		return err
+	}
+	return utils.LinkContainerNS(node.NSPath, node.LongName)
+}
+
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
+	container, err := c.client.LoadContainer(ctx, containername)
+	if err != nil {
+		return err
+	}
+	task, err := container.NewTask(ctx, cio.NullIO)
 	if err != nil {
 		log.Fatalf("Failed to start container %s", containername)
 		return err
 	}
-	return nil
+	err = task.Start(ctx)
+	return err
 }
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string, dur *time.Duration) error {
 	task, err := c.getContainerTask(ctx, containername)
@@ -257,6 +282,7 @@ func (c *ContainerdRuntime) ExecNotWait(context.Context, string, []string) error
 	return nil
 }
 func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
+	log.Debug("deleting container %s", container.ID)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 	cont, err := c.client.LoadContainer(ctx, container.ID)
 	if err != nil {
@@ -270,5 +296,6 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *type
 	if err := cont.Delete(ctx, delOpts...); err != nil {
 		return err
 	}
+	log.Debug("successfully deleted container %s", container.ID)
 	return nil
 }

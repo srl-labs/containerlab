@@ -30,6 +30,7 @@ func GetCanonicalImageName(imageName string) string {
 	tag := "latest"
 	colonSplit := strings.Split(imageName, ":")
 	if len(colonSplit) == 2 {
+		canonicalImageName = colonSplit[0]
 		tag = colonSplit[1]
 	}
 	return canonicalImageName + ":" + tag

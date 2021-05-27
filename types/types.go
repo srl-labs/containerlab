@@ -132,10 +132,10 @@ type GenericMgmtIPs struct {
 type GenericFilter struct {
 	// defined by now "label"
 	FilterType string
-	// defines e.g. the label name
+	// defines e.g. the label name for FilterType "label"
 	Field string
-	// = | !=
+	// = | != | exists
 	Operator string
-	// match
+	// match value
 	Match string
 }
