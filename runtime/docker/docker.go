@@ -28,7 +28,7 @@ const sysctlBase = "/proc/sys"
 type DockerRuntime struct {
 	Client           *dockerC.Client
 	timeout          time.Duration
-	Mgmt             types.MgmtNet
+	Mgmt             *types.MgmtNet
 	debug            bool
 	gracefulShutdown bool
 }
@@ -41,6 +41,7 @@ func NewDockerRuntime(d bool, dur time.Duration, gracefulShutdown bool) *DockerR
 
 	return &DockerRuntime{
 		Client: c,
+		Mgmt:   new(types.MgmtNet),
 		// TODO: undo this hard-coding
 		timeout:          dur,
 		debug:            d,
@@ -48,7 +49,7 @@ func NewDockerRuntime(d bool, dur time.Duration, gracefulShutdown bool) *DockerR
 	}
 }
 
-func (c *DockerRuntime) SetMgmtNet(n types.MgmtNet) {
+func (c *DockerRuntime) SetMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
 }
 

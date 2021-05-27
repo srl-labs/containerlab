@@ -84,7 +84,9 @@ func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
 // NewContainerLab function defines a new container lab
 func NewContainerLab(opts ...ClabOption) *CLab {
 	c := &CLab{
-		Config:   new(Config),
+		Config: &Config{
+			Mgmt: new(types.MgmtNet),
+		},
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]*types.Node),
