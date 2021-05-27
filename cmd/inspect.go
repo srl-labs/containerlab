@@ -127,6 +127,8 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 		}
 		if len(cont.ID) > 11 {
 			cdet.ContainerID = cont.ID[:12]
+		} else {
+			cdet.ContainerID = cont.ID
 		}
 		if len(cont.Names) > 0 {
 			cdet.Name = strings.TrimLeft(cont.Names[0], "/")

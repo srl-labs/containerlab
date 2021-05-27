@@ -21,6 +21,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
+	github.com/opencontainers/runtime-spec v1.0.3-0.20210303205135-43e4633e40c1 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852

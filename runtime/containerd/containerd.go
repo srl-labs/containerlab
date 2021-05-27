@@ -10,10 +10,14 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	"github.com/docker/go-units"
+	"github.com/google/shlex"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -89,17 +93,40 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		return err
 	}
 
-	cont, err := c.client.NewContainer(
+	cmd, err := shlex.Split(node.Cmd)
+	if err != nil {
+		return err
+	}
+	// TODO: MAC address
+	// TODO: Network interface
+	// TODO: Portbinding
+
+	opts := []oci.SpecOpts{
+		oci.WithImageConfig(img),
+		oci.WithEnv(utils.ConvertEnvs(node.Env)),
+		oci.WithProcessArgs(cmd...),
+		oci.WithHostname(node.ShortName),
+		oci.WithUser(node.User),
+		WithSysctls(node.Sysctls),
+		oci.WithPrivileged,
+	}
+
+	switch node.NetworkMode {
+	case "host":
+		opts = append(opts, oci.WithHostNamespace(specs.NetworkNamespace), oci.WithHostHostsFile, oci.WithHostResolvconf)
+	}
+
+	_, err = c.client.NewContainer(
 		ctx,
 		node.ShortName,
-		containerd.WithNewSnapshot(node.ShortName+"nginx-server-snapshot", img),
-		containerd.WithNewSpec(oci.WithImageConfig(img)),
+		containerd.WithNewSnapshot(node.ShortName+"-snapshot", img),
+		containerd.WithNewSpec(opts...),
 		containerd.WithAdditionalContainerLabels(node.Labels),
 	)
 	if err != nil {
 		return err
 	}
-	_ = cont
+
 	log.Debugf("Container '%s' created", node.ShortName)
 	log.Debugf("Start container: %s", node.LongName)
 
@@ -114,7 +141,22 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	if err != nil {
 		return err
 	}
-	return utils.LinkContainerNS(node.NSPath, node.LongName)
+	return nil
+}
+
+func WithSysctls(sysctls map[string]string) oci.SpecOpts {
+	return func(ctx context.Context, client oci.Client, c *containers.Container, s *runtimespec.Spec) error {
+		if s.Linux == nil {
+			s.Linux = &runtimespec.Linux{}
+		}
+		if s.Linux.Sysctl == nil {
+			s.Linux.Sysctl = make(map[string]string)
+		}
+		for k, v := range sysctls {
+			s.Linux.Sysctl[k] = v
+		}
+		return nil
+	}
 }
 
 func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
@@ -122,7 +164,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername st
 	if err != nil {
 		return err
 	}
-	task, err := container.NewTask(ctx, cio.NullIO)
+	task, err := container.NewTask(ctx, cio.NewCreator(cio.WithStdio))
 	if err != nil {
 		log.Fatalf("Failed to start container %s", containername)
 		return err
@@ -131,14 +173,26 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername st
 	return err
 }
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string, dur *time.Duration) error {
-	task, err := c.getContainerTask(ctx, containername)
+	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
 		return err
 	}
-	err = task.Kill(ctx, syscall.SIGTERM)
+	taskstatus, err := ctask.Status(ctx)
 	if err != nil {
 		return err
 	}
+	switch taskstatus.Status {
+	case "running", "paused":
+		err = ctask.Kill(ctx, syscall.SIGQUIT)
+		if err != nil {
+			return err
+		}
+	}
+	existStatus, err := ctask.Delete(ctx)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Container %s stopped with exit code %d", containername, existStatus.ExitCode())
 	return nil
 }
 
@@ -212,7 +266,7 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 			return nil, err
 		}
 
-		ctr.Names = []string{info.Labels["name"]}
+		ctr.Names = []string{i.ID()}
 		ctr.ID = i.ID()
 		ctr.Image = info.Image
 		ctr.Labels = info.Labels
@@ -282,8 +336,14 @@ func (c *ContainerdRuntime) ExecNotWait(context.Context, string, []string) error
 	return nil
 }
 func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
-	log.Debug("deleting container %s", container.ID)
+	log.Debugf("deleting container %s", container.ID)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+
+	err := c.StopContainer(ctx, container.ID, nil)
+	if err != nil {
+		return err
+	}
+
 	cont, err := c.client.LoadContainer(ctx, container.ID)
 	if err != nil {
 		return err
