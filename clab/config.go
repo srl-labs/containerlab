@@ -845,7 +845,7 @@ func (c *CLab) CheckResources() error {
 	}
 	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
 	if freeMemG < 1 {
-		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtimer errors. Consider freeing up more memory.", freeMemG)
+		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", freeMemG)
 	}
 	return nil
 }
