@@ -41,6 +41,7 @@ func NewDockerRuntime(d bool, dur time.Duration, gracefulShutdown bool) *DockerR
 
 	return &DockerRuntime{
 		Client: c,
+		Mgmt:   new(types.MgmtNet),
 		// TODO: undo this hard-coding
 		timeout:          dur,
 		debug:            d,
@@ -127,7 +128,6 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	default:
 		return err
 	}
-	fmt.Println("bridgeName", bridgeName)
 	c.Mgmt.Bridge = bridgeName
 
 	log.Debugf("Docker network '%s', bridge name '%s'", c.Mgmt.Network, bridgeName)
