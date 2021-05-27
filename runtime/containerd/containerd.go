@@ -361,6 +361,6 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *type
 	if err := cont.Delete(ctx, delOpts...); err != nil {
 		return err
 	}
-	log.Debug("successfully deleted container %s", container.ID)
+	log.Debugf("successfully deleted container %s", container.ID)
 	return nil
 }
