@@ -17,7 +17,6 @@ import (
 	"github.com/docker/go-units"
 	"github.com/google/shlex"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -113,7 +112,13 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 	switch node.NetworkMode {
 	case "host":
-		opts = append(opts, oci.WithHostNamespace(specs.NetworkNamespace), oci.WithHostHostsFile, oci.WithHostResolvconf)
+		opts = append(opts,
+			oci.WithHostNamespace(specs.NetworkNamespace),
+			oci.WithHostHostsFile,
+			oci.WithHostResolvconf)
+	default:
+		// TODO: NETWORK
+
 	}
 
 	_, err = c.client.NewContainer(
@@ -145,9 +150,9 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 }
 
 func WithSysctls(sysctls map[string]string) oci.SpecOpts {
-	return func(ctx context.Context, client oci.Client, c *containers.Container, s *runtimespec.Spec) error {
+	return func(ctx context.Context, client oci.Client, c *containers.Container, s *specs.Spec) error {
 		if s.Linux == nil {
-			s.Linux = &runtimespec.Linux{}
+			s.Linux = &specs.Linux{}
 		}
 		if s.Linux.Sysctl == nil {
 			s.Linux.Sysctl = make(map[string]string)
