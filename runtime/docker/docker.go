@@ -28,7 +28,7 @@ const sysctlBase = "/proc/sys"
 type DockerRuntime struct {
 	Client           *dockerC.Client
 	timeout          time.Duration
-	Mgmt             types.MgmtNet
+	Mgmt             *types.MgmtNet
 	debug            bool
 	gracefulShutdown bool
 }
@@ -48,7 +48,7 @@ func NewDockerRuntime(d bool, dur time.Duration, gracefulShutdown bool) *DockerR
 	}
 }
 
-func (c *DockerRuntime) SetMgmtNet(n types.MgmtNet) {
+func (c *DockerRuntime) SetMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
 }
 
@@ -127,6 +127,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	default:
 		return err
 	}
+	fmt.Println("bridgeName", bridgeName)
 	c.Mgmt.Bridge = bridgeName
 
 	log.Debugf("Docker network '%s', bridge name '%s'", c.Mgmt.Network, bridgeName)

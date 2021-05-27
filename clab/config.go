@@ -82,7 +82,7 @@ var srlTypes = map[string]string{
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
 	Name       string        `json:"name,omitempty"`
-	Mgmt       types.MgmtNet `json:"mgmt,omitempty"`
+	Mgmt       *types.MgmtNet `json:"mgmt,omitempty"`
 	Topology   Topology      `json:"topology,omitempty"`
 	ConfigPath string        `yaml:"config_path,omitempty"`
 }
