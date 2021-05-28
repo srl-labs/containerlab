@@ -102,6 +102,9 @@ PING 172.20.20.3 (172.20.20.3) 56(84) bytes of data.
 !!!note
     If you run multiple labs without changing the default management settings, the containers of those labs will end up connecting to the same management network with their management interface.
 
+### host mode networking
+In addition to the bridge-based management network containerlab supports launching nodes in [host networking mode](https://docs.docker.com/network/host/). In this mode containers are attached to the host network namespace. Host mode is enabled with [network-mode](nodes.md#network-mode) node setting.
+
 ### configuring management network
 Most of the time there is no need to change the defaults for management network configuration, but sometimes it is needed. For example, it might be that the default network ranges are overlapping with existing addressing scheme on the lab host or it might be desirable to have predefined management IP addresses.
 
