@@ -81,10 +81,10 @@ var srlTypes = map[string]string{
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string        `json:"name,omitempty"`
+	Name       string         `json:"name,omitempty"`
 	Mgmt       *types.MgmtNet `json:"mgmt,omitempty"`
-	Topology   Topology      `json:"topology,omitempty"`
-	ConfigPath string        `yaml:"config_path,omitempty"`
+	Topology   Topology       `json:"topology,omitempty"`
+	ConfigPath string         `yaml:"config_path,omitempty"`
 }
 
 // Topology represents a lab topology
@@ -584,6 +584,10 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err := c.VerifyImages(ctx); err != nil {
 		return err
 	}
+	if err := c.VerifyImages(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -648,6 +652,7 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 }
 
 // VerifyContainersUniqueness ensures that nodes defined in the topology do not have names of the existing containers
+// additionally it checks that the lab name is unique and no containers are currently running with the same lab name label
 func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -672,6 +677,16 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	if len(dups) != 0 {
 		return fmt.Errorf("containers %q already exist. Add '--reconfigure' flag to the deploy command to first remove the containers and then deploy the lab", dups)
 	}
+
+	// check that none of the existing containers has a label that matches
+	// the lab name of a currently deploying lab
+	// this ensures lab uniqueness
+	for _, cnt := range containers {
+		if cnt.Labels["containerlab"] == c.Config.Name {
+			return fmt.Errorf("the '%s' lab has already been deployed. Destroy the lab before deploying a lab with the same name", c.Config.Name)
+		}
+	}
+
 	return err
 }
 
