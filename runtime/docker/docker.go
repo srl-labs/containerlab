@@ -379,11 +379,23 @@ func (c *DockerRuntime) produceGenericContainerList(input []dockerTypes.Containe
 				Set: false,
 			},
 		}
-		if ifcfg, ok := i.NetworkSettings.Networks[c.Mgmt.Network]; ok {
-			ctr.NetworkSettings.IPv4addr = ifcfg.IPAddress
-			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
-			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
-			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
+		// mgmt network name is empty when inspect is called with `--all`
+		// in that case we take the addresses from whatever network this container is connected
+		// since clab containers can only be connected to one docker network, which is management net
+		if len(c.Mgmt.Network) == 0 {
+			for _, eps := range i.NetworkSettings.Networks {
+				ctr.NetworkSettings.IPv4addr = eps.IPAddress
+				ctr.NetworkSettings.IPv4pLen = eps.IPPrefixLen
+				ctr.NetworkSettings.IPv6addr = eps.GlobalIPv6Address
+				ctr.NetworkSettings.IPv6pLen = eps.GlobalIPv6PrefixLen
+				ctr.NetworkSettings.Set = true
+			}
+		}
+		if eps, ok := i.NetworkSettings.Networks[c.Mgmt.Network]; ok {
+			ctr.NetworkSettings.IPv4addr = eps.IPAddress
+			ctr.NetworkSettings.IPv4pLen = eps.IPPrefixLen
+			ctr.NetworkSettings.IPv6addr = eps.GlobalIPv6Address
+			ctr.NetworkSettings.IPv6pLen = eps.GlobalIPv6PrefixLen
 			ctr.NetworkSettings.Set = true
 		}
 		result = append(result, ctr)
