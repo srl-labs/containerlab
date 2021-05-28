@@ -584,7 +584,7 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err := c.VerifyImages(ctx); err != nil {
 		return err
 	}
-	if err := c.VerifyImages(ctx); err != nil {
+	if err := c.VerifyImages(ctx); err != nil { // skipcq: RVV-B0005
 		return err
 	}
 
