@@ -98,6 +98,18 @@ setDesiredVersion() {
     else
         TAG=$DESIRED_VERSION
         TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
+
+        if type "curl" &>/dev/null; then
+            if ! curl -s -o /dev/null --fail https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+                echo "release $DESIRED_VERSION not found"
+                exit 1
+            fi
+        elif type "wget" &>/dev/null; then
+            if ! wget -q https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+                echo "release $DESIRED_VERSION not found"
+                exit 1
+            fi
+        fi
     fi
 }
 
