@@ -40,10 +40,11 @@ var versionCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(slug)
-		fmt.Printf("version: %s\n", version)
-		fmt.Printf(" commit: %s\n", commit)
-		fmt.Printf("   date: %s\n", date)
-		fmt.Printf(" source: %s\n", repoUrl)
+		fmt.Printf("    version: %s\n", version)
+		fmt.Printf("     commit: %s\n", commit)
+		fmt.Printf("       date: %s\n", date)
+		fmt.Printf("     source: %s\n", repoUrl)
+		fmt.Printf(" rel. notes: https://containerlab.srlinux.dev/rn/%s\n", version)
 	},
 }
 

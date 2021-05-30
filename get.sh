@@ -122,8 +122,13 @@ checkInstalledVersion() {
             echo "${BINARY_NAME} is already at ${DESIRED_VERSION:-latest ($version)}" version
             return 0
         else
-            echo "${BINARY_NAME} ${TAG_WO_VER} is available. Changing from version ${version}."
-            return 1
+            echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.srlinux.dev/rn/${TAG_WO_VER}"
+            echo "You are running containerlab $version version"
+            read -p "Proceed with upgrade? [Y/n]:" UPGR_NEEDED
+            if [ $UPGR_NEEDED == "Y" ]; then
+                return 1
+            fi
+            return 0
         fi
     else
         return 1
