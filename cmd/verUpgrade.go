@@ -27,6 +27,7 @@ var upgradeCmd = &cobra.Command{
 		_ = downloadFile(downloadURL, f)
 
 		c := exec.Command("bash", f.Name())
+		// c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		err = c.Run()
