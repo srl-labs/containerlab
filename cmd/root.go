@@ -48,7 +48,7 @@ func init() {
 	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 30*time.Second, "timeout for docker requests, e.g: 30s, 1m, 2m30s")
-	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", runtime.DockerRuntime, "container runtime")
+	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "", runtime.DockerRuntime, "container runtime")
 
 }
 
