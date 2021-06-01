@@ -14,6 +14,7 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
+	"github.com/containernetworking/cni/libcni"
 	"github.com/docker/go-units"
 	"github.com/google/shlex"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -22,7 +23,13 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const containerdNamespace = "clab"
+const (
+	containerdNamespace = "clab"
+
+	cniConfigFile = "/opt/cni/conf/clabMgmtNet.conf"
+	cniBin        = "/opt/cni/bin"
+	cniCache      = "/opt/cni/cache"
+)
 
 type ContainerdRuntime struct {
 	client           *containerd.Client
@@ -116,6 +123,8 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 			oci.WithHostNamespace(specs.NetworkNamespace),
 			oci.WithHostHostsFile,
 			oci.WithHostResolvconf)
+	case "none":
+		// Done!
 	default:
 		// TODO: NETWORK
 
@@ -146,7 +155,32 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	if err != nil {
 		return err
 	}
+
+	err = utils.LinkContainerNS(node.NSPath, node.ShortName)
+	if err != nil {
+		return err
+	}
+
+	cnic := libcni.NewCNIConfigWithCacheDir([]string{cniBin}, cniCache, nil)
+
+	cncl, err := libcni.ConfListFromFile(cniConfigFile)
+	if err != nil {
+		return err
+	}
+
+	var rc libcni.RuntimeConf
+	rc.ContainerID = node.LongName
+	rc.IfName = "eth0"
+	rc.NetNS = node.NSPath
+
+	res, err := cnic.AddNetworkList(ctx, cncl, &rc)
+	if err != nil {
+		return err
+	}
+	_ = res
+
 	return nil
+
 }
 
 func WithSysctls(sysctls map[string]string) oci.SpecOpts {
@@ -175,12 +209,16 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername st
 		return err
 	}
 	err = task.Start(ctx)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string, dur *time.Duration) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
-		return err
+		log.Debugf("no task found for container %s", containername)
+		return nil
 	}
 	taskstatus, err := ctask.Status(ctx)
 	if err != nil {
@@ -188,7 +226,7 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 	}
 	switch taskstatus.Status {
 	case "running", "paused":
-		err = ctask.Kill(ctx, syscall.SIGQUIT)
+		err = ctask.Kill(ctx, syscall.SIGTERM, containerd.WithKillAll)
 		if err != nil {
 			return err
 		}
