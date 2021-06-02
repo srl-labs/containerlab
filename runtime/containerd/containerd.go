@@ -103,9 +103,21 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	if err != nil {
 		return err
 	}
-	// TODO: MAC address
-	// TODO: Network interface
-	// TODO: Portbinding
+
+	mounts := make([]specs.Mount, len(node.Binds))
+
+	for _, mount := range node.Binds {
+		s := strings.Split(mount, ":")
+
+		m := specs.Mount{
+			Source:      s[0],
+			Destination: s[1],
+		}
+		if len(mount) == 3 {
+			m.Options = strings.Split(s[2], ",")
+		}
+		mounts = append(mounts, m)
+	}
 
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
@@ -115,7 +127,12 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		oci.WithUser(node.User),
 		WithSysctls(node.Sysctls),
 		oci.WithPrivileged,
+		oci.WithMounts(mounts),
 	}
+
+	var cnic *libcni.CNIConfig
+	var cncl *libcni.NetworkConfigList
+	var cnirc *libcni.RuntimeConf
 
 	switch node.NetworkMode {
 	case "host":
@@ -126,7 +143,45 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	case "none":
 		// Done!
 	default:
-		// TODO: NETWORK
+
+		cnic = libcni.NewCNIConfigWithCacheDir([]string{cniBin}, cniCache, nil)
+
+		cncl, err = libcni.ConfListFromFile(cniConfigFile)
+		if err != nil {
+			return err
+		}
+
+		cnirc = &libcni.RuntimeConf{
+			ContainerID:    node.ShortName,
+			IfName:         "eth0",
+			NetNS:          node.NSPath,
+			CapabilityArgs: make(map[string]interface{}),
+			//"portMappings": []portMapping{
+			//	{HostPort: 8080, ContainerPort: 80, Protocol: "tcp"},
+			//},
+		}
+
+		// set mac if defined in node
+		if node.MacAddress != "" {
+			cnirc.CapabilityArgs["mac"] = node.MacAddress
+		}
+
+		portmappings := []portMapping{}
+
+		for contdatasl, hostdata := range node.PortBindings {
+			//fmt.Printf("%+v", hostdata)
+			//fmt.Printf("%+v", contdatasl)
+			for _, x := range hostdata {
+				hostport, err := strconv.Atoi(x.HostPort)
+				if err != nil {
+					return err
+				}
+				portmappings = append(portmappings, portMapping{HostPort: hostport, ContainerPort: contdatasl.Int(), Protocol: contdatasl.Proto()})
+			}
+		}
+		if len(portmappings) > 0 {
+			cnirc.CapabilityArgs["portMappings"] = portmappings
+		}
 
 	}
 
@@ -156,55 +211,21 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		return err
 	}
 
-	err = utils.LinkContainerNS(node.NSPath, node.ShortName)
+	err = utils.LinkContainerNS(node.NSPath, node.LongName)
 	if err != nil {
 		return err
 	}
 
-	cnic := libcni.NewCNIConfigWithCacheDir([]string{cniBin}, cniCache, nil)
-
-	cncl, err := libcni.ConfListFromFile(cniConfigFile)
-	if err != nil {
-		return err
-	}
-
-	cnirc := &libcni.RuntimeConf{
-		ContainerID:    node.ShortName,
-		IfName:         "eth0",
-		NetNS:          node.NSPath,
-		CapabilityArgs: make(map[string]interface{}),
-		//"portMappings": []portMapping{
-		//	{HostPort: 8080, ContainerPort: 80, Protocol: "tcp"},
-		//},
-	}
-
-	// set mac if defined in node
-	if node.MacAddress != "" {
-		cnirc.CapabilityArgs["mac"] = node.MacAddress
-	}
-
-	portmappings := []portMapping{}
-
-	for contdatasl, hostdata := range node.PortBindings {
-		//fmt.Printf("%+v", hostdata)
-		//fmt.Printf("%+v", contdatasl)
-		for _, x := range hostdata {
-			hostport, err := strconv.Atoi(x.HostPort)
-			if err != nil {
-				return err
-			}
-			portmappings = append(portmappings, portMapping{HostPort: hostport, ContainerPort: contdatasl.Int(), Protocol: contdatasl.Proto()})
+	// if this is not a host network namespace container
+	// we have prepared a lot of stuff further up, which
+	// is now to be applied
+	if cnic != nil {
+		res, err := cnic.AddNetworkList(ctx, cncl, cnirc)
+		if err != nil {
+			return err
 		}
+		_ = res
 	}
-	if len(portmappings) > 0 {
-		cnirc.CapabilityArgs["portMappings"] = portmappings
-	}
-
-	res, err := cnic.AddNetworkList(ctx, cncl, cnirc)
-	if err != nil {
-		return err
-	}
-	_ = res
 
 	return nil
 
