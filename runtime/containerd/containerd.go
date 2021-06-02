@@ -168,12 +168,39 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		return err
 	}
 
-	var rc libcni.RuntimeConf
-	rc.ContainerID = node.LongName
-	rc.IfName = "eth0"
-	rc.NetNS = node.NSPath
+	cnirc := &libcni.RuntimeConf{
+		ContainerID:    node.ShortName,
+		IfName:         "eth0",
+		NetNS:          node.NSPath,
+		CapabilityArgs: make(map[string]interface{}),
+		//"portMappings": []portMapping{
+		//	{HostPort: 8080, ContainerPort: 80, Protocol: "tcp"},
+		//},
+	}
 
-	res, err := cnic.AddNetworkList(ctx, cncl, &rc)
+	// set mac if defined in node
+	if node.MacAddress != "" {
+		cnirc.CapabilityArgs["mac"] = node.MacAddress
+	}
+
+	portmappings := []portMapping{}
+
+	for contdatasl, hostdata := range node.PortBindings {
+		//fmt.Printf("%+v", hostdata)
+		//fmt.Printf("%+v", contdatasl)
+		for _, x := range hostdata {
+			hostport, err := strconv.Atoi(x.HostPort)
+			if err != nil {
+				return err
+			}
+			portmappings = append(portmappings, portMapping{HostPort: hostport, ContainerPort: contdatasl.Int(), Protocol: contdatasl.Proto()})
+		}
+	}
+	if len(portmappings) > 0 {
+		cnirc.CapabilityArgs["portMappings"] = portmappings
+	}
+
+	res, err := cnic.AddNetworkList(ctx, cncl, cnirc)
 	if err != nil {
 		return err
 	}
@@ -181,6 +208,13 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 	return nil
 
+}
+
+type portMapping struct {
+	HostPort      int    `json:"hostPort"`
+	HostIP        string `json:"hostIP,omitempty"`
+	ContainerPort int    `json:"containerPort"`
+	Protocol      string `json:"protocol"`
 }
 
 func WithSysctls(sysctls map[string]string) oci.SpecOpts {
