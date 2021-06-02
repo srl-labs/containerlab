@@ -143,7 +143,6 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	case "none":
 		// Done!
 	default:
-
 		cnic = libcni.NewCNIConfigWithCacheDir([]string{cniBin}, cniCache, nil)
 
 		cncl, err = libcni.ConfListFromFile(cniConfigFile)
@@ -152,13 +151,11 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		}
 
 		cnirc = &libcni.RuntimeConf{
-			ContainerID:    node.ShortName,
-			IfName:         "eth0",
-			NetNS:          node.NSPath,
+			ContainerID: node.LongName,
+			IfName:      "eth0",
+			//// NetNS must be set later, can just be determined after cotnainer start
+			//NetNS:          node.NSPath,
 			CapabilityArgs: make(map[string]interface{}),
-			//"portMappings": []portMapping{
-			//	{HostPort: 8080, ContainerPort: 80, Protocol: "tcp"},
-			//},
 		}
 
 		// set mac if defined in node
@@ -187,8 +184,8 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 	_, err = c.client.NewContainer(
 		ctx,
-		node.ShortName,
-		containerd.WithNewSnapshot(node.ShortName+"-snapshot", img),
+		node.LongName,
+		containerd.WithNewSnapshot(node.LongName+"-snapshot", img),
 		containerd.WithNewSpec(opts...),
 		containerd.WithAdditionalContainerLabels(node.Labels),
 	)
@@ -196,17 +193,17 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		return err
 	}
 
-	log.Debugf("Container '%s' created", node.ShortName)
+	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
 
-	err = c.StartContainer(ctx, node.ShortName)
+	err = c.StartContainer(ctx, node.LongName)
 	if err != nil {
 		return err
 	}
 
 	log.Debugf("Container started: %s", node.LongName)
 
-	node.NSPath, err = c.GetNSPath(ctx, node.ShortName)
+	node.NSPath, err = c.GetNSPath(ctx, node.LongName)
 	if err != nil {
 		return err
 	}
@@ -220,6 +217,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	// we have prepared a lot of stuff further up, which
 	// is now to be applied
 	if cnic != nil {
+		cnirc.NetNS = node.NSPath
 		res, err := cnic.AddNetworkList(ctx, cncl, cnirc)
 		if err != nil {
 			return err
