@@ -106,7 +106,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 	mounts := make([]specs.Mount, len(node.Binds))
 
-	for _, mount := range node.Binds {
+	for idx, mount := range node.Binds {
 		s := strings.Split(mount, ":")
 
 		m := specs.Mount{
@@ -116,7 +116,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		if len(mount) == 3 {
 			m.Options = strings.Split(s[2], ",")
 		}
-		mounts = append(mounts, m)
+		mounts[idx] = m
 	}
 
 	opts := []oci.SpecOpts{
@@ -127,7 +127,9 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		oci.WithUser(node.User),
 		WithSysctls(node.Sysctls),
 		oci.WithPrivileged,
-		oci.WithMounts(mounts),
+	}
+	if len(mounts) > 0 {
+		opts = append(opts, oci.WithMounts(mounts))
 	}
 
 	var cnic *libcni.CNIConfig
@@ -185,6 +187,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	_, err = c.client.NewContainer(
 		ctx,
 		node.LongName,
+		containerd.WithImage(img),
 		containerd.WithNewSnapshot(node.LongName+"-snapshot", img),
 		containerd.WithNewSpec(opts...),
 		containerd.WithAdditionalContainerLabels(node.Labels),
@@ -253,12 +256,15 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 
 func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
 	container, err := c.client.LoadContainer(ctx, containername)
+
 	if err != nil {
 		return err
 	}
 	task, err := container.NewTask(ctx, cio.NewCreator(cio.WithStdio))
 	if err != nil {
+		log.Fatal(err)
 		log.Fatalf("Failed to start container %s", containername)
+
 		return err
 	}
 	err = task.Start(ctx)
@@ -277,19 +283,57 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 	if err != nil {
 		return err
 	}
+
+	paused := false
 	switch taskstatus.Status {
-	case "running", "paused":
-		err = ctask.Kill(ctx, syscall.SIGTERM, containerd.WithKillAll)
-		if err != nil {
-			return err
+	case containerd.Created, containerd.Stopped:
+		return nil
+	case containerd.Paused, containerd.Pausing:
+		paused = true
+	default:
+	}
+
+	// NOTE: ctx is main context so that it's ok to use for task.Wait().
+	exitCh, err := ctask.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
+	// signal will be sent once resume is finished
+	if paused {
+		if err := ctask.Resume(ctx); err != nil {
+			log.Warnf("Cannot unpause container %s: %s", containername, err)
+		} else {
+			// no need to do it again when send sigkill signal
+			paused = false
 		}
 	}
+
+	err = ctask.Kill(ctx, syscall.SIGKILL)
+	if err != nil {
+		return err
+	}
+
+	err = waitContainerStop(ctx, exitCh, containername)
+	if err != nil {
+		return err
+	}
+
 	existStatus, err := ctask.Delete(ctx)
 	if err != nil {
 		return err
 	}
 	log.Debugf("Container %s stopped with exit code %d", containername, existStatus.ExitCode())
 	return nil
+}
+
+func waitContainerStop(ctx context.Context, exitCh <-chan containerd.ExitStatus, id string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case status := <-exitCh:
+		return status.Error()
+	}
 }
 
 func (c *ContainerdRuntime) getContainerTask(ctx context.Context, containername string) (containerd.Task, error) {
@@ -445,13 +489,13 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *type
 		return err
 	}
 	var delOpts []containerd.DeleteOpts
-	if _, err := cont.Image(ctx); err == nil {
-		delOpts = append(delOpts, containerd.WithSnapshotCleanup)
-	}
+	delOpts = append(delOpts, containerd.WithSnapshotCleanup)
 
 	if err := cont.Delete(ctx, delOpts...); err != nil {
 		return err
 	}
+
 	log.Debugf("successfully deleted container %s", container.ID)
+
 	return nil
 }
