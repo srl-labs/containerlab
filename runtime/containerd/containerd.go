@@ -112,22 +112,31 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		m := specs.Mount{
 			Source:      s[0],
 			Destination: s[1],
+			Options:     []string{"rbind", "rprivate"},
 		}
 		if len(mount) == 3 {
-			m.Options = strings.Split(s[2], ",")
+			m.Options = append(m.Options, strings.Split(s[2], ",")...)
 		}
 		mounts[idx] = m
 	}
-
+	_ = cmd
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
 		oci.WithEnv(utils.ConvertEnvs(node.Env)),
-		oci.WithProcessArgs(cmd...),
+		//oci.WithProcessArgs(cmd...),
+		oci.WithProcessArgs("bash"),
 		oci.WithHostname(node.ShortName),
 		oci.WithUser(node.User),
 		WithSysctls(node.Sysctls),
+		oci.WithAllKnownCapabilities,
+		//oci.WithoutRunMount,
+		//oci.WithNoNewPrivileges,
 		oci.WithPrivileged,
+		oci.WithAllDevicesAllowed,
+		//oci.WithHostDevices,
+		oci.WithApparmorProfile("unconfined"),
 	}
+
 	if len(mounts) > 0 {
 		opts = append(opts, oci.WithMounts(mounts))
 	}
@@ -184,13 +193,18 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 	}
 
+	var cOpts []containerd.NewContainerOpts
+	cOpts = append(cOpts,
+		containerd.WithImage(img),
+		containerd.WithNewSnapshot(node.LongName+"-snapshot", img),
+		containerd.WithAdditionalContainerLabels(node.Labels),
+		containerd.WithNewSpec(opts...),
+	)
+
 	_, err = c.client.NewContainer(
 		ctx,
 		node.LongName,
-		containerd.WithImage(img),
-		containerd.WithNewSnapshot(node.LongName+"-snapshot", img),
-		containerd.WithNewSpec(opts...),
-		containerd.WithAdditionalContainerLabels(node.Labels),
+		cOpts...,
 	)
 	if err != nil {
 		return err
@@ -285,38 +299,41 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 	}
 
 	paused := false
+	needsStop := true
 	switch taskstatus.Status {
 	case containerd.Created, containerd.Stopped:
-		return nil
+		needsStop = false
 	case containerd.Paused, containerd.Pausing:
 		paused = true
 	default:
 	}
 
-	// NOTE: ctx is main context so that it's ok to use for task.Wait().
-	exitCh, err := ctask.Wait(ctx)
-	if err != nil {
-		return err
-	}
-
-	// signal will be sent once resume is finished
-	if paused {
-		if err := ctask.Resume(ctx); err != nil {
-			log.Warnf("Cannot unpause container %s: %s", containername, err)
-		} else {
-			// no need to do it again when send sigkill signal
-			paused = false
+	if needsStop {
+		// NOTE: ctx is main context so that it's ok to use for task.Wait().
+		exitCh, err := ctask.Wait(ctx)
+		if err != nil {
+			return err
 		}
-	}
 
-	err = ctask.Kill(ctx, syscall.SIGKILL)
-	if err != nil {
-		return err
-	}
+		// signal will be sent once resume is finished
+		if paused {
+			if err := ctask.Resume(ctx); err != nil {
+				log.Warnf("Cannot unpause container %s: %s", containername, err)
+			} else {
+				// no need to do it again when send sigkill signal
+				paused = false
+			}
+		}
 
-	err = waitContainerStop(ctx, exitCh, containername)
-	if err != nil {
-		return err
+		err = ctask.Kill(ctx, syscall.SIGKILL)
+		if err != nil {
+			return err
+		}
+
+		err = waitContainerStop(ctx, exitCh, containername)
+		if err != nil {
+			return err
+		}
 	}
 
 	existStatus, err := ctask.Delete(ctx)
