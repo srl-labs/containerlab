@@ -14,6 +14,9 @@ import (
 // templates to execute
 var TemplateNames []string
 
+// path to additional templates
+var TemplatePath string
+
 type NodeConfig struct {
 	TargetNode *types.Node
 	// All the variables used to render the template
@@ -23,10 +26,13 @@ type NodeConfig struct {
 	Info []string
 }
 
-var Tmpl *template.Template = template.New("")
-
 func RenderAll(nodes map[string]*types.Node, links map[int]*types.Link) (map[string]*NodeConfig, error) {
 	res := make(map[string]*NodeConfig)
+
+	tmpl, err := template.New("", template.SearchPath(TemplatePath))
+	if err != nil {
+		return nil, err
+	}
 
 	for nodeName, vars := range PrepareVars(nodes, links) {
 		res[nodeName] = &NodeConfig{
@@ -36,7 +42,7 @@ func RenderAll(nodes map[string]*types.Node, links map[int]*types.Link) (map[str
 
 		for _, baseN := range TemplateNames {
 			tmplN := fmt.Sprintf("%s-%s.tmpl", baseN, vars["roles"])
-			data1, err := Tmpl.ExecuteTemplate(tmplN, vars)
+			data1, err := tmpl.ExecuteTemplate(tmplN, vars)
 			if err != nil {
 				log.Errorf("could not render template %s: %s", tmplN, err)
 				//log.Errorf("could not render template %s: %s vars=%s\n", c.String(), err, varsP)

@@ -195,8 +195,8 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 // Write a config snippet (a set of commands)
 // Session NEEDS to be configurable for other kinds
 // Part of the Transport interface
-func (t *SSHTransport) Write(data *string, info *string) error {
-	if len(*data) == 0 {
+func (t *SSHTransport) Write(data, info *string) error {
+	if *data == "" {
 		return nil
 	}
 

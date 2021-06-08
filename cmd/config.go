@@ -11,9 +11,6 @@ import (
 	"github.com/srl-labs/containerlab/clab/config/transport"
 )
 
-// path to additional templates
-var templatePath string
-
 // Only print config locally, dont send to the node
 var printLines int
 
@@ -121,7 +118,7 @@ var configCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringVarP(&templatePath, "template-path", "p", "", "directory with templates used to render config")
+	configCmd.Flags().StringVarP(&config.TemplatePath, "template-path", "p", "", "directory with templates used to render config")
 	configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
 	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render dry-run & print n lines of config")
