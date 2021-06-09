@@ -119,6 +119,9 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		}
 		mounts[idx] = m
 	}
+
+	mounts = append(mounts, specs.Mount{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}})
+
 	_ = cmd
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
@@ -129,10 +132,13 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		oci.WithUser(node.User),
 		WithSysctls(node.Sysctls),
 		oci.WithAllKnownCapabilities,
-		//oci.WithoutRunMount,
+		oci.WithoutRunMount,
 		//oci.WithNoNewPrivileges,
 		oci.WithPrivileged,
+		oci.WithHostLocaltime,
+		oci.WithNamespacedCgroup(),
 		oci.WithAllDevicesAllowed,
+		oci.WithDefaultUnixDevices,
 		//oci.WithHostDevices,
 		oci.WithApparmorProfile("unconfined"),
 	}
@@ -154,19 +160,9 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	case "none":
 		// Done!
 	default:
-		cnic = libcni.NewCNIConfigWithCacheDir([]string{cniBin}, cniCache, nil)
-
-		cncl, err = libcni.ConfListFromFile(cniConfigFile)
+		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0")
 		if err != nil {
 			return err
-		}
-
-		cnirc = &libcni.RuntimeConf{
-			ContainerID: node.LongName,
-			IfName:      "eth0",
-			//// NetNS must be set later, can just be determined after cotnainer start
-			//NetNS:          node.NSPath,
-			CapabilityArgs: make(map[string]interface{}),
 		}
 
 		// set mac if defined in node
@@ -244,6 +240,24 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 	return nil
 
+}
+
+func cniInit(cId string, ifName string) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
+	cnic := libcni.NewCNIConfigWithCacheDir([]string{cniBin}, cniCache, nil)
+
+	cncl, err := libcni.ConfListFromFile(cniConfigFile)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	cnirc := &libcni.RuntimeConf{
+		ContainerID: cId,
+		IfName:      ifName,
+		//// NetNS must be set later, can just be determined after cotnainer start
+		//NetNS:          node.NSPath,
+		CapabilityArgs: make(map[string]interface{}),
+	}
+	return cnic, cncl, cnirc, nil
 }
 
 type portMapping struct {
@@ -497,6 +511,16 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *type
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	err := c.StopContainer(ctx, container.ID, nil)
+	if err != nil {
+		return err
+	}
+
+	cnic, cncl, cnirc, err := cniInit(container.ID, "eth0")
+	if err != nil {
+		return err
+	}
+
+	err = cnic.DelNetworkList(ctx, cncl, cnirc)
 	if err != nil {
 		return err
 	}
