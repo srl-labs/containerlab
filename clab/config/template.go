@@ -58,10 +58,6 @@ func RenderAll(nodes map[string]*types.Node, links map[int]*types.Link) (map[str
 func (c *NodeConfig) String() string {
 
 	s := fmt.Sprintf("%s: %v", c.TargetNode.ShortName, c.Info)
-	// s := fmt.Sprintf("%s %s using %s/%s", c.TargetNode.ShortName, c.source, c.TargetNode.Kind, c.templateName)
-	// if c.Data != nil {
-	// 	s += fmt.Sprintf(" (%d lines)", bytes.Count(c.Data, []byte("\n"))+1)
-	// }
 	return s
 }
 

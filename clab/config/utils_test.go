@@ -43,7 +43,6 @@ func TestIPLastOctect(t *testing.T) {
 		"10.0.0.1/32": 1,
 		"::1/32":      1,
 	}
-
 	for k, v := range lst {
 		n := netaddr.MustParseIPPrefix(k)
 		lo := ipLastOctet(n.IP())

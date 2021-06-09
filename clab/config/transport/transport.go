@@ -17,6 +17,7 @@ type Transport interface {
 	Close()
 }
 
+// Write config to a node
 func Write(tx Transport, host string, data, info []string, options ...TransportOption) error {
 	// the Kind should configure the transport parameters before
 

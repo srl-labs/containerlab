@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// Split a string on commans and trim each
+// Split a string on commas and trim each line
 func SplitTrim(s string) []string {
 	res := strings.Split(s, ",")
 	for i, v := range res {
@@ -13,13 +13,15 @@ func SplitTrim(s string) []string {
 	return res
 }
 
-// the new agreed node config
+// The new agreed node config
 type NodeSettings struct {
 	Vars      map[string]string
 	Transport string
 	Templates []string
 }
 
+// Temporary function to extract NodeSettings from the Labels
+// In the next phase node settings will be added to the clab file
 func GetNodeConfigFromLabels(labels map[string]string) NodeSettings {
 	nc := NodeSettings{
 		Vars:      labels,

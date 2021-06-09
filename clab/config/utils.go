@@ -16,6 +16,7 @@ const (
 
 type Dict map[string]interface{}
 
+// Prepare variables for all nodes. This will also prepare all variables for the links
 func PrepareVars(nodes map[string]*types.Node, links map[int]*types.Link) map[string]Dict {
 
 	res := make(map[string]Dict)
@@ -51,6 +52,7 @@ func PrepareVars(nodes map[string]*types.Node, links map[int]*types.Link) map[st
 	return res
 }
 
+// Prepare variables for a specific link
 func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interface{}) error {
 	ncA := GetNodeConfigFromLabels(link.A.Node.Labels)
 	ncB := GetNodeConfigFromLabels(link.B.Node.Labels)
@@ -110,9 +112,7 @@ func linkIPfromSystemIP(link *types.Link) (netaddr.IPPrefix, netaddr.IPPrefix, e
 			return ipA, ipA, fmt.Errorf("invalid ip %s", link.A.EndpointName)
 		}
 	} else {
-		// caluculate link IP from the system IPs - tbd
-		//var sysA, sysB netaddr.IPPrefix
-
+		// Calculate link IP from the system IPs
 		sysA, err := netaddr.ParseIPPrefix(link.A.Node.Labels[systemIP])
 		if err != nil {
 			return ipA, ipA, fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", systemIP, link.A.Node.ShortName, err)
@@ -141,7 +141,7 @@ func ipLastOctet(in netaddr.IP) int {
 	}
 	res, err := strconv.Atoi(s[i+1:])
 	if err != nil {
-		log.Errorf("last octect %s from IP %s not a string", s[i+1:], s)
+		log.Errorf("last octet %s from IP %s not a string", s[i+1:], s)
 	}
 	return res
 }

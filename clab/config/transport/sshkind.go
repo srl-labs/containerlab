@@ -7,17 +7,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// an interface to implement kind specific methods for transactions and prompt checking
+// An interface to implement kind specific methods for transactions and prompt checking
 type SSHKind interface {
 	// Start a config transaction
 	ConfigStart(s *SSHTransport, transaction bool) error
 	// Commit a config transaction
 	ConfigCommit(s *SSHTransport) (*SSHReply, error)
-	// Prompt parsing function.
-	// This function receives string, split by the delimiter and should ensure this is a valid prompt
-	// Valid prompt, strip te prompt from the result and add it to the prompt in SSHReply
+	// Prompt parsing function
 	//
-	// A defualt implementation is promptParseNoSpaces, which simply ensures there are
+	// This function receives string, split by the delimiter and should ensure this is a valid prompt
+	// Valid prompt, strip the prompt from the result and add it to the prompt in SSHReply
+	//
+	// A default implementation is promptParseNoSpaces, which simply ensures there are
 	// no spaces between the start of the line and the #
 	PromptParse(s *SSHTransport, in *string) *SSHReply
 }
@@ -88,7 +89,7 @@ func (sk *SrlSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 	return promptParseNoSpaces(in, s.PromptChar, 2)
 }
 
-// This is a helper funciton to parse the prompt, and can be used by SSHKind's ParsePrompt
+// This is a helper function to parse the prompt, and can be used by SSHKind's ParsePrompt
 // Used in SRL today
 func promptParseNoSpaces(in *string, promptChar string, lines int) *SSHReply {
 	n := strings.LastIndex(*in, "\n")

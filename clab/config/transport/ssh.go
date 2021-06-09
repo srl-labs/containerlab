@@ -21,20 +21,20 @@ type SSHSession struct {
 
 type SSHTransportOption func(*SSHTransport) error
 
-// The reply the execute command and the prompt.
+// The SSH reply, executed command and the prompt
 type SSHReply struct{ result, prompt, command string }
 
 // SSHTransport setting needs to be set before calling Connect()
 // SSHTransport implements the Transport interface
 type SSHTransport struct {
-	// Channel used to read. Can use Expect to Write & read wit timeout
+	// Channel used to read. Can use Expect to Write & read with timeout
 	in chan SSHReply
 	// SSH Session
 	ses *SSHSession
 	// Contains the first read after connecting
 	LoginMessage *SSHReply
 	// SSH parameters used in connect
-	// defualt: 22
+	// default: 22
 	Port int
 
 	// Keep the target for logging
@@ -64,8 +64,8 @@ func WithUserNamePassword(username, password string) SSHTransportOption {
 	}
 }
 
-// Add a basic username & password to a config.
-// Will initilize the config if required
+// Add a basic username & password to a config
+// Will initialize the config if required
 func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 	return func(tx *SSHTransport) error {
 		tx.SSHConfig.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
@@ -106,7 +106,7 @@ func NewSSHTransport(node *types.Node, options ...SSHTransportOption) (*SSHTrans
 		}
 		return c, nil
 	}
-	return nil, fmt.Errorf("no tranport implemented for kind: %s", node.Kind)
+	return nil, fmt.Errorf("no transport implemented for kind: %s", node.Kind)
 }
 
 // Creates the channel reading the SSH connection
@@ -374,7 +374,7 @@ func (ses *SSHSession) Close() {
 // The LogString will include the entire SSHReply
 //   Each field will be prefixed by a character.
 //   # - command sent
-//   | - result recieved
+//   | - result received
 //   ? - prompt part of the result
 func (r *SSHReply) LogString(node string, linefeed, debug bool) string {
 	ind := 12 + len(node)

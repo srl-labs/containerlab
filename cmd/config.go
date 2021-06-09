@@ -41,7 +41,7 @@ var configCmd = &cobra.Command{
 			return err
 		}
 
-		// config map per node. each node gets a config.NodeConfig
+		// Config map per node. Each node gets a config.NodeConfig
 		allConfig, err := config.RenderAll(c.Nodes, c.Links)
 		if err != nil {
 			return err
@@ -79,7 +79,7 @@ var configCmd = &cobra.Command{
 						log.Errorf("%s: %s", kind, err)
 					}
 				} else if ct == "grpc" {
-					// newGRPCTransport
+					// NewGRPCTransport
 				} else {
 					log.Errorf("Unknown transport: %s", ct)
 					return
