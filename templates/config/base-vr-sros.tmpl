@@ -93,8 +93,6 @@
 
 {{ end }}
 
-
-
 /configure apply-groups ["baseport"]
 /configure router bgp apply-groups ["basebgp"]
 
@@ -124,11 +122,6 @@
                 }
             }
         }
-#        port "<.*c[0-9]+>" {
-#            connector {
-#                breakout c1-10g
-#            }
-#        }
     }
 }
 /configure groups {

@@ -18,7 +18,7 @@ type SSHSession struct {
 	Session *ssh.Session
 }
 
-type SSHOption func(*SSHTransport) error
+type SSHTransportOption func(*SSHTransport) error
 
 // The reply the execute command and the prompt.
 type SSHReply struct{ result, prompt, command string }
@@ -51,7 +51,7 @@ type SSHTransport struct {
 	K SSHKind
 }
 
-func NewSSHTransport(node *types.Node, options ...SSHOption) (*SSHTransport, error) {
+func NewSSHTransport(node *types.Node, options ...SSHTransportOption) (*SSHTransport, error) {
 	switch node.Kind {
 	case "vr-sros", "srl":
 		c := &SSHTransport{}
@@ -236,7 +236,7 @@ func (t *SSHTransport) Write(data, info *string) error {
 
 // Connect to a host
 // Part of the Transport interface
-func (t *SSHTransport) Connect(host string, options ...func(*Transport)) error {
+func (t *SSHTransport) Connect(host string, options ...TransportOption) error {
 	// Assign Default Values
 	if t.PromptChar == "" {
 		t.PromptChar = "#"
@@ -279,7 +279,7 @@ func (t *SSHTransport) Close() {
 
 // Add a basic username & password to a config.
 // Will initilize the config if required
-func WithUserNamePassword(username, password string) SSHOption {
+func WithUserNamePassword(username, password string) SSHTransportOption {
 	return func(tx *SSHTransport) error {
 		if tx.SSHConfig == nil {
 			tx.SSHConfig = &ssh.ClientConfig{}

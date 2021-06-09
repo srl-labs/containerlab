@@ -413,8 +413,8 @@ github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1
 github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/XSXhF0NWZEnDohbsk=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
-github.com/kellerza/template v0.0.3 h1:JWRnuMZnTHO1onmSj3HYQA/CJqn4x+CiKFD+bbD0SNE=
-github.com/kellerza/template v0.0.3/go.mod h1:Og3Jdssypk1J/bNpWIrmymW5FOWI88vsY5Qx/e57V7M=
+github.com/kellerza/template v0.0.4 h1:z/qhD9D50bEhbTu/1JN6ANiTECws8rKQBKmLDdwK6hs=
+github.com/kellerza/template v0.0.4/go.mod h1:Og3Jdssypk1J/bNpWIrmymW5FOWI88vsY5Qx/e57V7M=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=

@@ -26,11 +26,11 @@ func PrepareVars(nodes map[string]*types.Node, links map[int]*types.Link) map[st
 		// Init array for this node
 		res[name] = make(map[string]interface{})
 		nc := GetNodeConfigFromLabels(node.Labels)
-		for _, key := range nc.Vars {
+		for key := range nc.Vars {
 			res[name][key] = nc.Vars[key]
 		}
 		// Create link array
-		res[name]["links"] = make([]interface{}, 2)
+		res[name]["links"] = []interface{}{}
 		// Ensure role or Kind
 		if _, ok := res[name]["role"]; !ok {
 			res[name]["role"] = node.Kind
@@ -61,8 +61,8 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interfa
 		if len(v2) == 0 {
 			varsB[key] = v1
 		} else {
-			varsA[key+"_far"] = v2[1]
-			varsB[key] = v2[1]
+			varsA[key+"_far"] = v2[0]
+			varsB[key] = v2[0]
 			varsB[key+"_far"] = v1
 		}
 	}
@@ -88,18 +88,15 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interfa
 		}
 	}
 
-	//Repeat the following for varsA and varsB
-	for _, vars := range []map[string]interface{}{varsA, varsB} {
-		// Set default Link/Interface Names
-		if _, ok := vars["name"]; !ok {
-			var linkNr string
-			if v, ok := vars["linkNr"]; ok {
-				linkNr = fmt.Sprintf("_%v", v)
-			}
-			vars["name"] = []string{fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNr),
-				fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNr)}
+	if _, ok := varsA["name"]; !ok {
+		var linkNr string
+		if v, ok := varsA["linkNr"]; ok {
+			linkNr = fmt.Sprintf("_%v", v)
 		}
+		addV("name", fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNr),
+			fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNr))
 	}
+
 	return nil
 }
 
@@ -172,3 +169,5 @@ func ipFarEnd(in netaddr.IPPrefix) netaddr.IPPrefix {
 	}
 	return netaddr.IPPrefixFrom(n, in.Bits())
 }
+
+// DictString

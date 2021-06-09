@@ -7,15 +7,17 @@ import (
 // Debug count
 var DebugCount int
 
+type TransportOption func(*Transport)
+
 type Transport interface {
 	// Connect to the target host
-	Connect(host string, options ...func(*Transport)) error
+	Connect(host string, options ...TransportOption) error
 	// Execute some config
 	Write(data *string, info *string) error
 	Close()
 }
 
-func Write(tx Transport, host string, data, info []string, options ...func(*Transport)) error {
+func Write(tx Transport, host string, data, info []string, options ...TransportOption) error {
 	// the Kind should configure the transport parameters before
 
 	err := tx.Connect(host, options...)

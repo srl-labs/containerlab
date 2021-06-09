@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -35,9 +34,6 @@ var configCmd = &cobra.Command{
 			clab.WithTopoFile(topo),
 		)
 
-		//ctx, cancel := context.WithCancel(context.Background())
-		//defer cancel()
-
 		setFlags(c.Config)
 		log.Debugf("Topology definition: %+v", c.Config)
 		// Parse topology information
@@ -45,22 +41,13 @@ var configCmd = &cobra.Command{
 			return err
 		}
 
-		// config map per node. each node gets a couple of config snippets []string
+		// config map per node. each node gets a config.NodeConfig
 		allConfig, err := config.RenderAll(c.Nodes, c.Links)
 		if err != nil {
 			return err
 		}
 
-		// render them all
-
-		renderErr := 0
-
-		if renderErr > 0 {
-			return fmt.Errorf("%d render warnings", renderErr)
-		}
-
 		if printLines > 0 {
-			// Debug log all config to be deployed
 			for _, c := range allConfig {
 				c.Print(printLines)
 			}

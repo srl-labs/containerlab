@@ -41,13 +41,12 @@ func RenderAll(nodes map[string]*types.Node, links map[int]*types.Link) (map[str
 		}
 
 		for _, baseN := range TemplateNames {
-			tmplN := fmt.Sprintf("%s-%s.tmpl", baseN, vars["roles"])
+			tmplN := fmt.Sprintf("%s-%s.tmpl", baseN, vars["role"])
 			data1, err := tmpl.ExecuteTemplate(tmplN, vars)
 			if err != nil {
-				log.Errorf("could not render template %s: %s", tmplN, err)
-				//log.Errorf("could not render template %s: %s vars=%s\n", c.String(), err, varsP)
-				return nil, fmt.Errorf("could not render template %s: %s", tmplN, err)
+				return nil, err
 			}
+			data1 = strings.ReplaceAll(strings.Trim(data1, "\n \t"), "\n\n\n", "\n\n")
 			res[nodeName].Data = append(res[nodeName].Data, data1)
 			res[nodeName].Info = append(res[nodeName].Info, tmplN)
 		}
@@ -73,22 +72,25 @@ func (c *NodeConfig) Print(printLines int) {
 	s.WriteString(c.TargetNode.ShortName)
 
 	if log.IsLevelEnabled(log.DebugLevel) {
-		vars, _ := json.MarshalIndent(c.Vars, "", "  ")
-		s.Write(vars)
+		s.WriteString(" vars = ")
+		vars, _ := json.MarshalIndent(c.Vars, "", "      ")
+		s.Write(vars[0 : len(vars)-1])
+		s.WriteString("  }")
 	}
 
 	if printLines > 0 {
 		for idx, conf := range c.Data {
-			fmt.Fprintf(&s, "%s", c.Info[idx])
+			fmt.Fprintf(&s, "\n  Template %s for %s = [[", c.Info[idx], c.TargetNode.ShortName)
 
 			cl := strings.SplitN(conf, "\n", printLines+1)
 			if len(cl) > printLines {
 				cl[printLines] = "..."
 			}
 			for _, l := range cl {
-				s.WriteString("\n   ")
+				s.WriteString("\n     ")
 				s.WriteString(l)
 			}
+			s.WriteString("\n  ]]")
 		}
 	}
 
