@@ -240,7 +240,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// delete lab management network
-	log.Infof("Deleting docker network '%s'...", c.Config.Mgmt.Network)
+	log.Infof("Deleting network '%s'...", c.Config.Mgmt.Network)
 	if err = c.Runtime.DeleteNet(ctx); err != nil {
 		// do not log error message if deletion error simply says that such network doesn't exist
 		if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {

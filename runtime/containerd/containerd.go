@@ -15,6 +15,7 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	"github.com/containernetworking/cni/libcni"
+	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/docker/go-units"
 	"github.com/google/shlex"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -30,6 +31,8 @@ const (
 	cniBin        = "/opt/cni/bin"
 	cniCache      = "/opt/cni/cache"
 )
+
+var netInfo = map[string]*types.GenericMgmtIPs{}
 
 type ContainerdRuntime struct {
 	client           *containerd.Client
@@ -235,11 +238,25 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		if err != nil {
 			return err
 		}
-		_ = res
+		result, _ := current.NewResultFromResult(res)
+
+		ipv4, ipv6 := "", ""
+		ipv4nm, ipv6nm := 0, 0
+		isSet := false
+		for _, ip := range result.IPs {
+			isSet = true
+			switch ip.Version {
+			case "4":
+				ipv4 = ip.Address.IP.String()
+				ipv4nm, _ = ip.Address.Mask.Size()
+			case "6":
+				ipv6 = ip.Address.IP.String()
+				ipv6nm, _ = ip.Address.Mask.Size()
+			}
+		}
+		netInfo[node.LongName] = &types.GenericMgmtIPs{Set: isSet, IPv4addr: ipv4, IPv4pLen: ipv4nm, IPv6addr: ipv6, IPv6pLen: ipv6nm}
 	}
-
 	return nil
-
 }
 
 func cniInit(cId string, ifName string) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
@@ -441,7 +458,12 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 		ctr.ID = i.ID()
 		ctr.Image = info.Image
 		ctr.Labels = info.Labels
-		ctr.NetworkSettings = &types.GenericMgmtIPs{Set: false}
+		nsetting, exists := netInfo[i.ID()]
+		if exists {
+			ctr.NetworkSettings = nsetting
+		} else {
+			ctr.NetworkSettings = &types.GenericMgmtIPs{Set: false}
+		}
 
 		taskfound := true
 		task, err := i.Task(ctx, nil)
