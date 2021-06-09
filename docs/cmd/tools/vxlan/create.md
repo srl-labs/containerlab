@@ -15,7 +15,7 @@ VxLAN interface name will be a catenation of a prefix `vx-` and the interface na
 ### Flags
 
 #### remote
-VxLAN tunnels set up with this command are unidirectional in nature. To set the remote endpoint address the `--remote | -r` flag should be used.
+VxLAN tunnels set up with this command are unidirectional in nature. To set the remote endpoint address the `--remote` flag should be used.
 
 #### id
 VNI that the VxLAN tunnel will use is set with `--id | -i` flag. Defaults to `10`.
@@ -46,7 +46,7 @@ With `--mtu | -m` flag it is possible to set VxLAN MTU. Max MTU is automatically
     link/ether fa:4c:16:11:11:05 brd ff:ff:ff:ff:ff:ff link-netns clab-vx-srl1
 
 # create a vxlan tunnel to a remote vtep 10.0.0.20 with VNI 10 and redirect traffic to srl_e1-1 interface
-❯ clab tools vxlan create -r 10.0.0.20 -l srl_e1-1 --id 10
+❯ clab tools vxlan create --remote 10.0.0.20 -l srl_e1-1 --id 10
 INFO[0000] Adding VxLAN link vx-srl_e1-1 under ens3 to remote address 10.0.0.20 with VNI 10
 INFO[0000] configuring ingress mirroring with tc in the direction of vx-srl_e1-1 -> srl_e1-1
 INFO[0000] configuring ingress mirroring with tc in the direction of srl_e1-1 -> vx-srl_e1-1

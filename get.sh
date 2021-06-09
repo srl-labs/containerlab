@@ -98,6 +98,18 @@ setDesiredVersion() {
     else
         TAG=$DESIRED_VERSION
         TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
+
+        if type "curl" &>/dev/null; then
+            if ! curl -s -o /dev/null --fail https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+                echo "release $DESIRED_VERSION not found"
+                exit 1
+            fi
+        elif type "wget" &>/dev/null; then
+            if ! wget -q https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+                echo "release $DESIRED_VERSION not found"
+                exit 1
+            fi
+        fi
     fi
 }
 
@@ -110,8 +122,17 @@ checkInstalledVersion() {
             echo "${BINARY_NAME} is already at ${DESIRED_VERSION:-latest ($version)}" version
             return 0
         else
-            echo "${BINARY_NAME} ${TAG_WO_VER} is available. Changing from version ${version}."
-            return 1
+            echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.srlinux.dev/rn/${TAG_WO_VER}"
+            echo "You are running containerlab $version version"
+            UPGR_NEEDED="Y"
+            # check if stdin is open (i.e. capable of getting users input)
+            if [ -t 0 ]; then
+                read -e -p "Proceed with upgrade? [Y/n]: " -i "Y" UPGR_NEEDED
+            fi
+            if [ "$UPGR_NEEDED" == "Y" ]; then
+                return 1
+            fi
+            return 0
         fi
     else
         return 1

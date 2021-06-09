@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 	"gopkg.in/yaml.v2"
 )
 
@@ -129,6 +130,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 	numStages := len(nodes)
 	config := &clab.Config{
 		Name: name,
+		Mgmt: new(types.MgmtNet),
 		Topology: clab.Topology{
 			Kinds: make(map[string]clab.NodeConfig),
 			Nodes: make(map[string]clab.NodeConfig),

@@ -4,6 +4,8 @@ DirectoryPath: ./site
 IgnoreURLs:
   - fonts.gstatic.com
   - img.shields.io
+  - www.reddit.com/r/bashonubuntuonwindows/comments/ldbyxa/what_is_the_current_state_of_kvm_acceleration_on/ # sometimes timeouts for unknown reason
+  - goreleaser.com # doesn't support `range 0` GETs which htmltest uses
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true

@@ -1,5 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
+Library           String
 Suite Teardown    Run    sudo containerlab destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 *** Variables ***
@@ -42,6 +43,22 @@ Verify links in node l2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+
+Ensure "inspect all" outputs IP addresses
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab inspect --all
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    ${line} =    String.Get Line    ${output}    -2
+    Log    ${line}
+    @{data} =    Split String    ${line}    |
+    Log    ${data}
+    # verify ipv4 address
+    ${ipv4} =    String.Strip String    ${data}[10]
+    Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
+    # verify ipv6 address
+    ${ipv6} =    String.Strip String    ${data}[11]
+    Should Match Regexp    ${ipv6}    ^[\\d:]+/\\d{1,2}$
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
