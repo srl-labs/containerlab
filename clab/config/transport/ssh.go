@@ -3,6 +3,7 @@ package transport
 import (
 	"fmt"
 	"io"
+	"net"
 	"runtime"
 	"strings"
 	"time"
@@ -51,6 +52,38 @@ type SSHTransport struct {
 	K SSHKind
 }
 
+// Add username & password authentication
+func WithUserNamePassword(username, password string) SSHTransportOption {
+	return func(tx *SSHTransport) error {
+		tx.SSHConfig.User = username
+		if tx.SSHConfig.Auth == nil {
+			tx.SSHConfig.Auth = []ssh.AuthMethod{}
+		}
+		tx.SSHConfig.Auth = append(tx.SSHConfig.Auth, ssh.Password(password))
+		return nil
+	}
+}
+
+// Add a basic username & password to a config.
+// Will initilize the config if required
+func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
+	return func(tx *SSHTransport) error {
+		tx.SSHConfig.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			if len(callback) == 0 {
+				log.Warnf("Skipping host key verification for %s", hostname)
+				return nil
+			}
+			for _, hkc := range callback {
+				if hkc(hostname, remote, key) == nil {
+					return nil
+				}
+			}
+			return fmt.Errorf("invalid host key %s: %s", hostname, key)
+		}
+		return nil
+	}
+}
+
 func NewSSHTransport(node *types.Node, options ...SSHTransportOption) (*SSHTransport, error) {
 	switch node.Kind {
 	case "vr-sros", "srl":
@@ -59,7 +92,10 @@ func NewSSHTransport(node *types.Node, options ...SSHTransportOption) (*SSHTrans
 
 		// apply options
 		for _, opt := range options {
-			opt(c)
+			err := opt(c)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		switch node.Kind {
@@ -275,23 +311,6 @@ func (t *SSHTransport) Close() {
 		t.in = nil
 	}
 	t.ses.Close()
-}
-
-// Add a basic username & password to a config.
-// Will initilize the config if required
-func WithUserNamePassword(username, password string) SSHTransportOption {
-	return func(tx *SSHTransport) error {
-		if tx.SSHConfig == nil {
-			tx.SSHConfig = &ssh.ClientConfig{}
-		}
-		tx.SSHConfig.User = username
-		if tx.SSHConfig.Auth == nil {
-			tx.SSHConfig.Auth = []ssh.AuthMethod{}
-		}
-		tx.SSHConfig.Auth = append(tx.SSHConfig.Auth, ssh.Password(password))
-		tx.SSHConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
-		return nil
-	}
 }
 
 // Create a new SSH session (Dial, open in/out pipes and start the shell)

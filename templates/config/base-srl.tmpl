@@ -44,7 +44,7 @@
  /system lldp admin-state enable
 
 
-{{ .range links }}
+{{ range .links }}
 /interface {{ .port }} {
     admin-state enable
     vlan-tagging true

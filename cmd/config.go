@@ -73,6 +73,7 @@ var configCmd = &cobra.Command{
 						transport.WithUserNamePassword(
 							clab.DefaultCredentials[cs.TargetNode.Kind][0],
 							clab.DefaultCredentials[cs.TargetNode.Kind][1]),
+						transport.HostKeyCallback(),
 					)
 					if err != nil {
 						log.Errorf("%s: %s", kind, err)
