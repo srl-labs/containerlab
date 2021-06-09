@@ -15,7 +15,7 @@ import (
 var TemplateNames []string
 
 // path to additional templates
-var TemplatePath string
+var TemplatePaths []string
 
 type NodeConfig struct {
 	TargetNode *types.Node
@@ -29,7 +29,14 @@ type NodeConfig struct {
 func RenderAll(nodes map[string]*types.Node, links map[int]*types.Link) (map[string]*NodeConfig, error) {
 	res := make(map[string]*NodeConfig)
 
-	tmpl, err := template.New("", template.SearchPath(TemplatePath))
+	if len(TemplateNames) == 0 {
+		return nil, fmt.Errorf("please specify one of more templates with --template-list")
+	}
+	if len(TemplatePaths) == 0 {
+		return nil, fmt.Errorf("please specify one of more paths with --template-path")
+	}
+
+	tmpl, err := template.New("", template.SearchPath(TemplatePaths...))
 	if err != nil {
 		return nil, err
 	}

@@ -106,7 +106,7 @@ var configCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringVarP(&config.TemplatePath, "template-path", "p", "", "directory with templates used to render config")
+	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
 	configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
 	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render dry-run & print n lines of config")
