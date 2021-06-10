@@ -129,10 +129,8 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
 		oci.WithEnv(utils.ConvertEnvs(node.Env)),
-		oci.WithProcessArgs(cmd...),
 		//oci.WithProcessArgs("bash"),
 		oci.WithHostname(node.ShortName),
-		oci.WithUser(node.User),
 		WithSysctls(node.Sysctls),
 		//oci.WithAllKnownCapabilities,
 		oci.WithoutRunMount,
@@ -143,6 +141,12 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		oci.WithDefaultUnixDevices,
 		//oci.WithHostDevices,
 		oci.WithNewPrivileges,
+	}
+	if len(cmd) > 0 {
+		opts = append(opts, oci.WithProcessArgs(cmd...))
+	}
+	if node.User != "" {
+		opts = append(opts, oci.WithUser(node.User))
 	}
 
 	if len(mounts) > 0 {
