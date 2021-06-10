@@ -123,27 +123,26 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		mounts[idx] = m
 	}
 
-	mounts = append(mounts, specs.Mount{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}})
+	//mounts = append(mounts, specs.Mount{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}})
 
 	_ = cmd
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
 		oci.WithEnv(utils.ConvertEnvs(node.Env)),
-		//oci.WithProcessArgs(cmd...),
-		oci.WithProcessArgs("bash"),
+		oci.WithProcessArgs(cmd...),
+		//oci.WithProcessArgs("bash"),
 		oci.WithHostname(node.ShortName),
 		oci.WithUser(node.User),
 		WithSysctls(node.Sysctls),
-		oci.WithAllKnownCapabilities,
+		//oci.WithAllKnownCapabilities,
 		oci.WithoutRunMount,
-		//oci.WithNoNewPrivileges,
 		oci.WithPrivileged,
 		oci.WithHostLocaltime,
 		oci.WithNamespacedCgroup(),
 		oci.WithAllDevicesAllowed,
 		oci.WithDefaultUnixDevices,
 		//oci.WithHostDevices,
-		oci.WithApparmorProfile("unconfined"),
+		oci.WithNewPrivileges,
 	}
 
 	if len(mounts) > 0 {
@@ -305,7 +304,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername st
 	if err != nil {
 		return err
 	}
-	task, err := container.NewTask(ctx, cio.NewCreator(cio.WithStdio))
+	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+containername+".log"))
 	if err != nil {
 		log.Fatal(err)
 		log.Fatalf("Failed to start container %s", containername)
