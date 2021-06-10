@@ -69,7 +69,6 @@ func (c *ContainerdRuntime) SetMgmtNet(n types.MgmtNet) {
 
 func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
-	// TODO: need to implement
 	return nil
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
@@ -210,7 +209,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		containerd.WithNewSpec(opts...),
 	)
 
-	_, err = c.client.NewContainer(
+	newContainer, err := c.client.NewContainer(
 		ctx,
 		node.LongName,
 		cOpts...,
@@ -265,6 +264,17 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 			}
 		}
 		netInfo[node.LongName] = &types.GenericMgmtIPs{Set: isSet, IPv4addr: ipv4, IPv4pLen: ipv4nm, IPv6addr: ipv6, IPv6pLen: ipv6nm}
+
+		additionalLabels := map[string]string{
+			"clab.ipv4.addr":    ipv4,
+			"clab.ipv4.netmask": strconv.Itoa(ipv4nm),
+			"clab.ipv6.addr":    ipv6,
+			"clab.ipv6.netmask": strconv.Itoa(ipv6nm),
+		}
+		_, err = newContainer.SetLabels(ctx, additionalLabels)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
