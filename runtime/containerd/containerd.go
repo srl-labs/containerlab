@@ -3,6 +3,7 @@ package containerd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,9 +28,8 @@ import (
 const (
 	containerdNamespace = "clab"
 
-	cniConfigFile = "/opt/cni/conf/clabMgmtNet.conf"
-	cniBin        = "/opt/cni/bin"
-	cniCache      = "/opt/cni/cache"
+	cniBin   = "/opt/cni/bin"
+	cniCache = "/opt/cni/cache"
 )
 
 var netInfo = map[string]*types.GenericMgmtIPs{}
@@ -57,16 +57,23 @@ func NewContainerdRuntime(d bool, dur time.Duration, gracefulShutdown bool) *Con
 }
 
 func (c *ContainerdRuntime) SetMgmtNet(n types.MgmtNet) {
+	if n.Bridge == "" {
+		netname := "clab"
+		if n.Network == "" {
+			netname = n.Network
+		}
+		n.Bridge = "br-" + netname
+	}
 	c.Mgmt = n
 }
 
 func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
-	//log.Fatalf("CreateNet() - Not implemented yet")
+	log.Debug("CreateNet() - Not needed with containerd")
 	// TODO: need to implement
 	return nil
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
-	log.Fatalf("DeleteNet() - Not implemented yet")
+	log.Debug("DeleteNet() - Not implemented yet")
 	return nil
 }
 
@@ -166,7 +173,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	case "none":
 		// Done!
 	default:
-		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0")
+		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0", c.Mgmt)
 		if err != nil {
 			return err
 		}
@@ -262,10 +269,61 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	return nil
 }
 
-func cniInit(cId string, ifName string) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
-	cnic := libcni.NewCNIConfigWithCacheDir([]string{cniBin}, cniCache, nil)
+func cniInit(cId string, ifName string, mgmtNet types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
+	// allow overwriting cni plugin binary path via ENV var
+	cniPath, ok := os.LookupEnv("CNI_BIN")
+	if !ok {
+		cniPath = cniBin
+	}
 
-	cncl, err := libcni.ConfListFromFile(cniConfigFile)
+	cnic := libcni.NewCNIConfigWithCacheDir([]string{cniPath}, cniCache, nil)
+
+	cniConfig := fmt.Sprintf(`
+	{
+		"cniVersion": "0.4.0",
+		"name": "clabmgmt",
+		"plugins": [
+		  {
+			"type": "bridge",
+			"bridge": "%s",
+			"isDefaultGateway": true,
+			"forceAddress": false,
+			"ipMasq": true,
+			"hairpinMode": true,
+			"ipam": {
+			  "type": "host-local",
+			  "ranges": [
+				[
+				  {
+					"subnet": "%s"
+				  }
+				],
+				[
+				  {
+					"subnet": "%s"
+				  }
+				]
+			  ]
+			}
+		  },
+		  {
+			"type": "tuning",
+			"mtu": %s,
+			"capabilities": {
+			  "mac": true
+			}
+		  },
+		  {
+			"type": "portmap",
+			"capabilities": {
+			  "portMappings": true
+			}
+		  }
+		]
+	  }
+	`, mgmtNet.Bridge, mgmtNet.IPv4Subnet, mgmtNet.IPv6Subnet, mgmtNet.MTU)
+	//log.Debug(cniConfig)
+	cncl, err := libcni.ConfListFromBytes([]byte(cniConfig))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -540,7 +598,7 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *type
 		return err
 	}
 
-	cnic, cncl, cnirc, err := cniInit(container.ID, "eth0")
+	cnic, cncl, cnirc, err := cniInit(container.ID, "eth0", c.Mgmt)
 	if err != nil {
 		return err
 	}
