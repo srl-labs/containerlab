@@ -111,12 +111,12 @@ docker tag srlinux:20.6.1-286 srlinux:latest
       <span class=nt>label2</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">value2</span>
   <span class=nt>kinds</span><span class=p>:</span>
     <span class=nt>srl</span><span class=p>:</span>
-      <span class=nt>env</span><span class=p>:</span>
+      <span class=nt>labels</span><span class=p>:</span>
         <span class=nt>label1</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">kind_value1</span>
         <span class=nt>label3</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">value3</span>
   <span class=nt>nodes</span><span class=p>:</span>
     <span class=nt>node1</span><span class=p>:</span>
-      <span class=nt>env</span><span class=p>:</span>
+      <span class=nt>labels</span><span class=p>:</span>
         <span class=nt>label1</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">node_value1</span>
 </code></pre></div></p> <p>As a result of such label distribution, node1 will have the following labels:</p> <div class=highlight><pre><span></span><code>label1: node_value1 <span class=c1># most specific label wins</span>
 label2: value2 <span class=c1># inherited from defaults section</span>
