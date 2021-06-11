@@ -68,7 +68,11 @@ var inspectCmd = &cobra.Command{
 		if all {
 			glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
 		} else {
-			glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+			if name != "" {
+				glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
+			} else if topo != "" {
+				glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+			}
 		}
 		containers, err := c.Runtime.ListContainers(ctx, glabels)
 		if err != nil {

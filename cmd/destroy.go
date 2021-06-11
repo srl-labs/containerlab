@@ -65,8 +65,7 @@ var destroyCmd = &cobra.Command{
 			}
 			c := clab.NewContainerLab(opts...)
 			// list all containerlab containers
-			labname := c.Config.Name
-			containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Match: labname, Field: "containerlab", Operator: "="}})
+			containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}})
 			if err != nil {
 				return fmt.Errorf("could not list containers: %v", err)
 			}
