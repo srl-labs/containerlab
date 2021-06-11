@@ -32,8 +32,6 @@ const (
 	cniCache = "/opt/cni/cache"
 )
 
-var netInfo = map[string]*types.GenericMgmtIPs{}
-
 type ContainerdRuntime struct {
 	client           *containerd.Client
 	timeout          time.Duration
@@ -72,7 +70,7 @@ func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
 	return nil
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
-	log.Debug("DeleteNet() - Not implemented yet")
+	log.Debug("DeleteNet() - Not yet required with containerd")
 	return nil
 }
 
@@ -251,9 +249,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 		ipv4, ipv6 := "", ""
 		ipv4nm, ipv6nm := 0, 0
-		isSet := false
 		for _, ip := range result.IPs {
-			isSet = true
 			switch ip.Version {
 			case "4":
 				ipv4 = ip.Address.IP.String()
@@ -263,7 +259,6 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 				ipv6nm, _ = ip.Address.Mask.Size()
 			}
 		}
-		netInfo[node.LongName] = &types.GenericMgmtIPs{Set: isSet, IPv4addr: ipv4, IPv4pLen: ipv4nm, IPv6addr: ipv6, IPv6pLen: ipv6nm}
 
 		additionalLabels := map[string]string{
 			"clab.ipv4.addr":    ipv4,
@@ -529,11 +524,10 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 		ctr.ID = i.ID()
 		ctr.Image = info.Image
 		ctr.Labels = info.Labels
-		nsetting, exists := netInfo[i.ID()]
-		if exists {
-			ctr.NetworkSettings = nsetting
-		} else {
-			ctr.NetworkSettings = &types.GenericMgmtIPs{Set: false}
+
+		ctr.NetworkSettings, err = extractIPInfoFromLabels(ctr.Labels)
+		if err != nil {
+			return nil, err
 		}
 
 		taskfound := true
@@ -573,6 +567,28 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 		result = append(result, ctr)
 	}
 	return result, nil
+}
+
+func extractIPInfoFromLabels(labels map[string]string) (*types.GenericMgmtIPs, error) {
+	var ipv4mask int
+	var ipv6mask int
+	var err error
+	isSet := false
+	if val, exists := labels["clab.ipv4.netmask"]; exists {
+		isSet = true
+		ipv4mask, err = strconv.Atoi(val)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if val, exists := labels["clab.ipv6.netmask"]; exists {
+		isSet = true
+		ipv6mask, err = strconv.Atoi(val)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &types.GenericMgmtIPs{Set: isSet, IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask}, nil
 }
 
 func timeSinceInHuman(since time.Time) string {
