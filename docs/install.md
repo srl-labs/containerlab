@@ -110,6 +110,18 @@ This command will fetch the installation script and will upgrade the tool to its
 
 or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
 
+### From source
+To build containerlab from source:
+
+=== "with go build"
+    To build containerlab from source, clone the repository and issue `go build` at its root.
+=== "with goreleaser"
+    When we release containerlab we use [goreleaser](https://goreleaser.com/) project to build binaries for all supported platforms as well as the deb/rpm packages.  
+    Users can install `goreleaser` and do the same locally by issuing the following command:
+    ```
+    goreleaser --snapshot --skip-publish --rm-dist
+    ```
+
 [^1]: only available if installed from packages
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
 [^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.

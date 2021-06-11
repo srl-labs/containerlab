@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package clab
 
 import (
@@ -84,7 +88,9 @@ func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
 // NewContainerLab function defines a new container lab
 func NewContainerLab(opts ...ClabOption) *CLab {
 	c := &CLab{
-		Config:   new(Config),
+		Config: &Config{
+			Mgmt: new(types.MgmtNet),
+		},
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]*types.Node),

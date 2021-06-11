@@ -28,6 +28,7 @@ jobs:
           filters: |
             code:
               - 'clab/**'
+              - 'runtime/**'
               - 'cmd/**'
               - 'tests/**'
               - '.github/workflows/cicd.yml'
