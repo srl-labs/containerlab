@@ -54,7 +54,7 @@ func NewContainerdRuntime(d bool, dur time.Duration, gracefulShutdown bool) *Con
 	}
 }
 
-func (c *ContainerdRuntime) SetMgmtNet(n types.MgmtNet) {
+func (c *ContainerdRuntime) SetMgmtNet(n *types.MgmtNet) {
 	if n.Bridge == "" {
 		netname := "clab"
 		if n.Network == "" {
@@ -62,7 +62,7 @@ func (c *ContainerdRuntime) SetMgmtNet(n types.MgmtNet) {
 		}
 		n.Bridge = "br-" + netname
 	}
-	c.Mgmt = n
+	c.Mgmt = *n
 }
 
 func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
@@ -72,6 +72,10 @@ func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	log.Debug("DeleteNet() - Not yet required with containerd")
 	return nil
+}
+func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.GenericContainer, error) {
+	log.Fatalf("ContainerInspect() - Not implemented yet")
+	return nil, nil
 }
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
@@ -595,10 +599,6 @@ func timeSinceInHuman(since time.Time) string {
 	return units.HumanDuration(time.Since(since)) + " ago"
 }
 
-func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.GenericContainer, error) {
-	log.Fatalf("ContainerInspect() - Not implemented yet")
-	return &types.GenericContainer{}, nil
-}
 func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string) (string, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 	task, err := c.getContainerTask(ctx, containername)
