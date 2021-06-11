@@ -220,6 +220,9 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		return err
 	}
 
+	//s, _ := newContainer.Spec(ctx)
+	//fmt.Printf("%+v", s.Process)
+
 	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
 
@@ -278,7 +281,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	return nil
 }
 
-func cniInit(cId string, ifName string, mgmtNet types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
+func cniInit(cId, ifName string, mgmtNet types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
 	// allow overwriting cni plugin binary path via ENV var
 	cniPath, ok := os.LookupEnv("CNI_BIN")
 	if !ok {
@@ -497,14 +500,13 @@ func (c *ContainerdRuntime) filterStringBuilder(filter []*types.GenericFilter) s
 			isExistsOperator = true
 		}
 
-		switch filterEntry.FilterType {
-		case "label":
+		if filterEntry.FilterType == "label" {
 			filterstring = filterstring + "labels." + filterEntry.Field
 			if !isExistsOperator {
 				filterstring = filterstring + operator + filterEntry.Match + delim
 			}
 
-		}
+		} // more might be implemented later
 		delim = ","
 	}
 	log.Debug("Filterstring: " + filterstring)
