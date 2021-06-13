@@ -310,6 +310,46 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg.Wait()
 }
 
+func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types.GenericContainer) {
+	wg := new(sync.WaitGroup)
+
+	ctrChan := make(chan *types.GenericContainer)
+	wg.Add(int(workers))
+	for i := uint(0); i < workers; i++ {
+
+		go func(i uint) {
+			defer wg.Done()
+			for {
+				select {
+				case cont := <-ctrChan:
+					if cont == nil {
+						log.Debugf("Worker %d terminating...", i)
+						return
+					}
+					name := cont.ID
+					if len(cont.Names) > 0 {
+						name = strings.TrimLeft(cont.Names[0], "/")
+					}
+					err := c.Runtime.DeleteContainer(ctx, name)
+					if err != nil {
+						log.Errorf("could not remove container '%s': %v", name, err)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}(i)
+	}
+	for _, ctr := range containers {
+		ctr := ctr
+		ctrChan <- &ctr
+	}
+	close(ctrChan)
+
+	wg.Wait()
+
+}
+
 func disableTxOffload(n *types.Node) error {
 	// skip this if node runs in host mode
 	if strings.ToLower(n.NetworkMode) == "host" {
