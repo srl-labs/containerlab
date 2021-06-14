@@ -474,7 +474,7 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 	// TODO add containerlab label as filter criteria
 
-	filterstring := c.filterStringBuilder(filter)
+	filterstring := c.buildFilterString(filter)
 
 	containerlist, err := c.client.Containers(ctx, filterstring)
 	if err != nil {
@@ -484,7 +484,7 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 	return c.produceGenericContainerList(ctx, containerlist)
 }
 
-func (c *ContainerdRuntime) filterStringBuilder(filter []*types.GenericFilter) string {
+func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
 	filterstring := ""
 	delim := ""
 	for _, filterEntry := range filter {

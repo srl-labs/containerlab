@@ -299,7 +299,6 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 		return nil
 	}
 
-
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
 	log.Infof("Pulling %s Docker image", canonicalImageName)
 	reader, err := c.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{})
@@ -331,7 +330,7 @@ func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
 func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	filter := c.containerFilterBuilder(gfilters)
+	filter := c.buildFilterString(gfilters)
 	ctrs, err := c.Client.ContainerList(ctx, dockerTypes.ContainerListOptions{
 		All:     true,
 		Filters: filter,
@@ -356,7 +355,7 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	return c.produceGenericContainerList(ctrs, nr)
 }
 
-func (c *DockerRuntime) containerFilterBuilder(gfilters []*types.GenericFilter) filters.Args {
+func (c *DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters.Args {
 	filter := filters.NewArgs()
 	for _, filterentry := range gfilters {
 		filterstring := filterentry.Field

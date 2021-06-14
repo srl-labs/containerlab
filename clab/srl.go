@@ -107,7 +107,6 @@ func initSRLNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, env
 	node.Sysctls["net.ipv6.conf.default.accept_dad"] = "0"
 	node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
 	node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
-	node.Sysctls["net.ipv4.ip_unprivileged_port_start"] = "0"
 
 	// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
 	// in (c *cLab) CreateNodeDirStructure
