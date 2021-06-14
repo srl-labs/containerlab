@@ -27,11 +27,10 @@ func GetCanonicalImageName(imageName string) string {
 			canonicalImageName = "docker.io/" + imageName
 		}
 	}
-	tag := "latest"
-	colonSplit := strings.Split(imageName, ":")
-	if len(colonSplit) == 2 {
-		canonicalImageName = colonSplit[0]
-		tag = colonSplit[1]
+	// append latest tag if no tag was provided
+	if !strings.Contains(canonicalImageName, ":") {
+		canonicalImageName = canonicalImageName + ":latest"
 	}
-	return canonicalImageName + ":" + tag
+
+	return canonicalImageName
 }

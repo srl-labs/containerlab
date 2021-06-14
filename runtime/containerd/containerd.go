@@ -80,22 +80,15 @@ func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.Ge
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
 
-	canonicalimage := utils.GetCanonicalImageName(imagename)
-
-	log.Debugf("Looking up %s container image", canonicalimage)
+	log.Debugf("Looking up %s container image", imagename)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
-	images, err := c.client.ListImages(ctx)
-	if err != nil {
-		return err
-	}
-
-	// If Image doesn't exist, we need to pull it
-	if len(images) > 0 {
-		log.Debugf("Image %s present, skip pulling", canonicalimage)
+	_, err := c.client.GetImage(ctx, imagename)
+	if err == nil {
+		log.Debugf("Image %s present, skip pulling", imagename)
 		return nil
 	}
-
-	_, err = c.client.Pull(ctx, canonicalimage, containerd.WithPullUnpack)
+	n := utils.GetCanonicalImageName(imagename)
+	_, err = c.client.Pull(ctx, n, containerd.WithPullUnpack)
 	if err != nil {
 		return err
 	}
@@ -105,9 +98,15 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Node) error {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
+	var img containerd.Image
 	img, err := c.client.GetImage(ctx, node.Image)
 	if err != nil {
-		return err
+		// try fetching the image with canonical name
+		// as it might be that we pulled this image with canonical name
+		img, err = c.client.GetImage(ctx, utils.GetCanonicalImageName(node.Image))
+		if err != nil {
+			return err
+		}
 	}
 
 	cmd, err := shlex.Split(node.Cmd)
