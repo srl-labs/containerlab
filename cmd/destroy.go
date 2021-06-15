@@ -126,7 +126,7 @@ func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName 
 	if bridgeName == "" {
 		return fmt.Errorf("missing bridge name")
 	}
-	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644)
+	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
