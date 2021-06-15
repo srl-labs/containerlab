@@ -46,11 +46,14 @@ smoke-tests:
 
 srl-tests:
   stage: integration-tests
+  parallel:
+    matrix:
+      - RUNTIME: [docker, containerd]
   tags:
     - containerlab
   script:
     - source ~/venvs/rf/bin/activate
-    - bash ./tests/rf-run.sh ./tests/02-basic-srl
+    - bash ./tests/rf-run.sh $RUNTIME ./tests/02-basic-srl
   artifacts:
     when: always
     paths:
@@ -58,11 +61,14 @@ srl-tests:
 
 ceos-tests:
   stage: integration-tests
+  parallel:
+    matrix:
+      - RUNTIME: [docker, containerd]
   tags:
     - containerlab
   script:
     - source ~/venvs/rf/bin/activate
-    - bash ./tests/rf-run.sh ./tests/03-basic-ceos
+    - bash ./tests/rf-run.sh $RUNTIME ./tests/02-basic-srl
   artifacts:
     when: always
     paths:
