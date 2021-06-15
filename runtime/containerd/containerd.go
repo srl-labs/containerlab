@@ -49,7 +49,7 @@ func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) {
 	var err error
 	c.client, err = containerd.New("/run/containerd/containerd.sock")
 	if err != nil {
-		log.Fatalf("failed to create docker client: %v", err)
+		log.Fatalf("failed to create containerd client: %v", err)
 	}
 	for _, o := range opts {
 		o(c)
