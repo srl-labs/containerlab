@@ -22,6 +22,7 @@ import (
 	"github.com/google/shlex"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -31,31 +32,48 @@ const (
 
 	cniBin   = "/opt/cni/bin"
 	cniCache = "/opt/cni/cache"
+
+	dockerRuntimeName = "containerd"
+	defaultTimeout    = 30 * time.Second
 )
+
+func init() {
+	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
+		return &ContainerdRuntime{
+			Mgmt: new(types.MgmtNet),
+		}
+	})
+}
+
+func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) {
+	var err error
+	c.client, err = containerd.New("/run/containerd/containerd.sock")
+	if err != nil {
+		log.Fatalf("failed to create docker client: %v", err)
+	}
+	for _, o := range opts {
+		o(c)
+	}
+}
 
 type ContainerdRuntime struct {
 	client           *containerd.Client
 	timeout          time.Duration
-	Mgmt             types.MgmtNet
+	Mgmt             *types.MgmtNet
 	debug            bool
 	gracefulShutdown bool
 }
 
-func NewContainerdRuntime(d bool, dur time.Duration, gracefulShutdown bool) *ContainerdRuntime {
-	c, err := containerd.New("/run/containerd/containerd.sock")
-	if err != nil {
-		log.Fatalf("failed to create containerd client: %v", err)
-	}
-
-	return &ContainerdRuntime{
-		client:           c,
-		debug:            d,
-		timeout:          dur,
-		gracefulShutdown: gracefulShutdown,
+func (c *ContainerdRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
+	c.timeout = cfg.Timeout
+	c.debug = cfg.Debug
+	c.gracefulShutdown = cfg.GracefulShutdown
+	if c.timeout <= 0 {
+		c.timeout = defaultTimeout
 	}
 }
 
-func (c *ContainerdRuntime) SetMgmtNet(n *types.MgmtNet) {
+func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 	if n.Bridge == "" {
 		netname := "clab"
 		if n.Network == "" {
@@ -63,7 +81,7 @@ func (c *ContainerdRuntime) SetMgmtNet(n *types.MgmtNet) {
 		}
 		n.Bridge = "br-" + netname
 	}
-	c.Mgmt = *n
+	c.Mgmt = n
 }
 
 func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
@@ -281,7 +299,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	return nil
 }
 
-func cniInit(cId, ifName string, mgmtNet types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
+func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
 	// allow overwriting cni plugin binary path via ENV var
 	cniPath, ok := os.LookupEnv("CNI_BIN")
 	if !ok {

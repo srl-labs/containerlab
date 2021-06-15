@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -193,40 +192,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
-	ctrChan := make(chan *types.GenericContainer)
-	wg := new(sync.WaitGroup)
-	wg.Add(int(maxWorkers))
-	for i := uint(0); i < maxWorkers; i++ {
-
-		go func(i uint) {
-			defer wg.Done()
-			for {
-				select {
-				case cont := <-ctrChan:
-					if cont == nil {
-						log.Debugf("Worker %d terminating...", i)
-						return
-					}
-					if len(cont.Names) > 0 {
-						name = strings.TrimLeft(cont.Names[0], "/")
-					}
-					err := c.Runtime.DeleteContainer(ctx, cont)
-					if err != nil {
-						log.Errorf("could not remove container %s: %v", name, err)
-					}
-				case <-ctx.Done():
-					return
-				}
-			}
-		}(i)
-	}
-	for _, ctr := range containers {
-		ctr := ctr
-		ctrChan <- &ctr
-	}
-	close(ctrChan)
-
-	wg.Wait()
+	c.DeleteNodes(ctx, maxWorkers, containers)
 
 	// remove the lab directories
 	if cleanup {

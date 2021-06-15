@@ -132,7 +132,7 @@ func TestBindsInitNodeDir(t *testing.T) {
 			// extract host filesystem path
 			bind_part := strings.Split(tc.want, ":")
 			// create folder from filesystem path
-			os.MkdirAll(bind_part[0], os.ModePerm)
+			_ = os.MkdirAll(bind_part[0], os.ModePerm)
 
 			binds := []string{tc.bind}
 			err := resolveBindPaths(binds, tc.nodeDir)
