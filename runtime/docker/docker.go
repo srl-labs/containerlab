@@ -23,11 +23,24 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const sysctlBase = "/proc/sys"
+const (
+	dockerRuntimeName = "docker"
+	sysctlBase        = "/proc/sys"
+	defaultTimeout    = 30 * time.Second
+)
+
+func init() {
+	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
+		return &DockerRuntime{
+			Mgmt: new(types.MgmtNet),
+		}
+	})
+}
 
 type DockerRuntime struct {
 	Client           *dockerC.Client
@@ -37,23 +50,27 @@ type DockerRuntime struct {
 	gracefulShutdown bool
 }
 
-func NewDockerRuntime(d bool, dur time.Duration, gracefulShutdown bool) *DockerRuntime {
-	c, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
+func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) {
+	var err error
+	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatalf("failed to create docker client: %v", err)
 	}
-
-	return &DockerRuntime{
-		Client: c,
-		Mgmt:   new(types.MgmtNet),
-		// TODO: undo this hard-coding
-		timeout:          dur,
-		debug:            d,
-		gracefulShutdown: gracefulShutdown,
+	for _, o := range opts {
+		o(c)
 	}
 }
 
-func (c *DockerRuntime) SetMgmtNet(n *types.MgmtNet) {
+func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
+	c.timeout = cfg.Timeout
+	c.debug = cfg.Debug
+	c.gracefulShutdown = cfg.GracefulShutdown
+	if c.timeout <= 0 {
+		c.timeout = defaultTimeout
+	}
+}
+
+func (c *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
 }
 
