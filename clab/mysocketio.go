@@ -87,7 +87,7 @@ func checkSockPort(p int) error {
 }
 
 // createMysocketTunnels creates internet reachable personal tunnels using mysocket.io
-func createMysocketTunnels(ctx context.Context, c *CLab, node *types.Node) error {
+func createMysocketTunnels(ctx context.Context, c *CLab, node *types.NodeConfig) error {
 	// remove the existing sockets
 	cmd := []string{"/bin/sh", "-c", "mysocketctl socket ls | awk '/clab/ {print $2}' | xargs -n1 mysocketctl socket delete -s"}
 	log.Debugf("Running postdeploy mysocketio command %q", cmd)

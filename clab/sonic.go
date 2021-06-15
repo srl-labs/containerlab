@@ -6,7 +6,7 @@ package clab
 
 import "github.com/srl-labs/containerlab/types"
 
-func initSonicNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initSonicNode(c *CLab, nodeCfg NodeDefinition, node *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 
 	node.Config, err = c.configInit(&nodeCfg, node.Kind)

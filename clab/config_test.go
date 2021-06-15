@@ -94,7 +94,7 @@ func TestBindsInit(t *testing.T) {
 			}
 
 			nodeCfg := c.Config.Topology.Nodes["node1"]
-			node := types.Node{}
+			node := types.NodeConfig{}
 			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
 
 			binds := c.bindsInit(&nodeCfg)

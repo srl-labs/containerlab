@@ -19,7 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uint) error {
+func ceosPostDeploy(ctx context.Context, c *CLab, node *types.NodeConfig, lworkers uint) error {
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
 	err := node.GenerateConfig(node.ResConfig, defaultConfigTemplates[node.Kind])
 	if err != nil {
@@ -56,7 +56,7 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uin
 	return err
 }
 
-func initCeosNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initCeosNode(c *CLab, nodeCfg NodeDefinition, node *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 
 	// initialize the global parameters with defaults, can be overwritten later
@@ -103,7 +103,7 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 	return err
 }
 
-func (c *CLab) createCEOSFiles(node *types.Node) error {
+func (c *CLab) createCEOSFiles(node *types.NodeConfig) error {
 	// generate config directory
 	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := path.Join(node.LabDir, "flash", "startup-config")

@@ -54,7 +54,7 @@ func generateSRLTopologyFile(src, labDir string, index int) error {
 	return nil
 }
 
-func initSRLNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initSRLNode(c *CLab, nodeCfg NodeDefinition, node *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 	// initialize the global parameters with defaults, can be overwritten later
 	node.Config, err = c.configInit(&nodeCfg, node.Kind)
@@ -127,7 +127,7 @@ func initSRLNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, env
 	return err
 }
 
-func (c *CLab) createSRLFiles(node *types.Node) error {
+func (c *CLab) createSRLFiles(node *types.NodeConfig) error {
 	log.Debugf("Creating directory structure for SRL container: %s", node.ShortName)
 	var src string
 	var dst string

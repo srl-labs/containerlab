@@ -202,7 +202,7 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 
 // RetrieveNodeCertData reads the node private key and certificate by the well known paths
 // if either of those files doesn't exist, an error is returned
-func (c *CLab) RetrieveNodeCertData(n *types.Node) (*Certificates, error) {
+func (c *CLab) RetrieveNodeCertData(n *types.NodeConfig) (*Certificates, error) {
 	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
 	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
 	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")

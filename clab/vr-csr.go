@@ -10,7 +10,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-func initVrCSRNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initVrCSRNode(c *CLab, nodeCfg NodeDefinition, node *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 
 	node.Image = c.imageInitialization(&nodeCfg, node.Kind)

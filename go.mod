@@ -16,6 +16,7 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-version v1.2.1
 	github.com/jsimonetti/rtnetlink v0.0.0-20210226120601-1b79e63a70a0
+	github.com/labstack/gommon v0.3.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
@@ -26,4 +27,3 @@ require (
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
 	gopkg.in/yaml.v2 v2.4.0
 )
-

@@ -136,8 +136,8 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 		Name: name,
 		Mgmt: new(types.MgmtNet),
 		Topology: clab.Topology{
-			Kinds: make(map[string]clab.NodeConfig),
-			Nodes: make(map[string]clab.NodeConfig),
+			Kinds: make(map[string]clab.NodeDefinition),
+			Nodes: make(map[string]clab.NodeDefinition),
 		},
 	}
 	config.Mgmt.Network = network
@@ -148,7 +148,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 		config.Mgmt.IPv6Subnet = ipv6range
 	}
 	for k, img := range images {
-		config.Topology.Kinds[k] = clab.NodeConfig{Image: img}
+		config.Topology.Kinds[k] = clab.NodeDefinition{Image: img}
 	}
 	for k, lic := range licenses {
 		if knd, ok := config.Topology.Kinds[k]; ok {
@@ -156,13 +156,13 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 			config.Topology.Kinds[k] = knd
 			continue
 		}
-		config.Topology.Kinds[k] = clab.NodeConfig{License: lic}
+		config.Topology.Kinds[k] = clab.NodeDefinition{License: lic}
 	}
 	if numStages == 1 {
 		for j := uint(0); j < nodes[0].numNodes; j++ {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = clab.NodeConfig{
+				config.Topology.Nodes[node1] = clab.NodeDefinition{
 					Group: fmt.Sprintf("%s-1", groupPrefix),
 					Kind:  nodes[0].kind,
 					Type:  nodes[0].typ,
@@ -178,7 +178,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 		for j := uint(0); j < nodes[i].numNodes; j++ {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = clab.NodeConfig{
+				config.Topology.Nodes[node1] = clab.NodeDefinition{
 					Group: fmt.Sprintf("%s-%d", groupPrefix, i+1),
 					Kind:  nodes[i].kind,
 					Type:  nodes[i].typ,
@@ -187,7 +187,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 			for k := uint(0); k < nodes[i+1].numNodes; k++ {
 				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1)
 				if _, ok := config.Topology.Nodes[node2]; !ok {
-					config.Topology.Nodes[node2] = clab.NodeConfig{
+					config.Topology.Nodes[node2] = clab.NodeDefinition{
 						Group: fmt.Sprintf("%s-%d", groupPrefix, i+2),
 						Kind:  nodes[i+1].kind,
 						Type:  nodes[i+1].typ,
