@@ -24,4 +24,8 @@ Verify nodes
 
 *** Keywords ***
 Cleanup
-    Run    sudo containerlab destroy -t ${CURDIR}/${lab-name}.clab.yml --cleanup
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab destroy -t ${lab-name}.clab.yml --cleanup
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    OperatingSystem.Remove File    ${lab-name}.clab.yml

@@ -117,6 +117,7 @@ func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
 type GenericContainer struct {
 	Names           []string
 	ID              string
+	ShortID         string // trimmed ID for display purposes
 	Image           string
 	State           string
 	Status          string

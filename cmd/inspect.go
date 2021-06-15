@@ -133,7 +133,7 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 			IPv4Address: getContainerIPv4(cont, bridgeName),
 			IPv6Address: getContainerIPv6(cont, bridgeName),
 		}
-		cdet.ContainerID = cont.ID
+		cdet.ContainerID = cont.ShortID
 
 		if len(cont.Names) > 0 {
 			cdet.Name = strings.TrimLeft(cont.Names[0], "/")

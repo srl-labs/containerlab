@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	dockerTypes "github.com/docker/docker/api/types"
@@ -374,12 +375,13 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 
 	for _, i := range inputContainers {
 		ctr := types.GenericContainer{
-			Names:  i.Names,
-			ID:     i.ID,
-			Image:  i.Image,
-			State:  i.State,
-			Status: i.Status,
-			Labels: i.Labels,
+			Names:   i.Names,
+			ID:      i.ID,
+			ShortID: i.ID[:12],
+			Image:   i.Image,
+			State:   i.State,
+			Status:  i.Status,
+			Labels:  i.Labels,
 			NetworkSettings: &types.GenericMgmtIPs{
 				Set: false,
 			},
@@ -480,12 +482,12 @@ func (c *DockerRuntime) DeleteContainer(ctx context.Context, container *types.Ge
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", container.Names[0])
+	log.Debugf("Removing container: %s", strings.TrimLeft(container.Names[0], "/"))
 	err = c.Client.ContainerRemove(ctx, container.ID, dockerTypes.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", container.Names[0])
+	log.Infof("Removed container: %s", strings.TrimLeft(container.Names[0], "/"))
 	return nil
 }
 

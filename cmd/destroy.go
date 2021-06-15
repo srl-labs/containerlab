@@ -126,7 +126,7 @@ func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName 
 	if bridgeName == "" {
 		return fmt.Errorf("missing bridge name")
 	}
-	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644)
+	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
@@ -207,12 +207,12 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 						log.Debugf("Worker %d terminating...", i)
 						return
 					}
-					//if len(cont.Names) > 0 {
-					//	name = strings.TrimLeft(cont.Names[0], "/")
-					//}
+					if len(cont.Names) > 0 {
+						name = strings.TrimLeft(cont.Names[0], "/")
+					}
 					err := c.Runtime.DeleteContainer(ctx, cont)
 					if err != nil {
-						log.Errorf("could not remove container: %v", err)
+						log.Errorf("could not remove container %s: %v", name, err)
 					}
 				case <-ctx.Done():
 					return
