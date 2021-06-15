@@ -1,6 +1,7 @@
 package containerd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -373,7 +374,6 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 
 func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
 	container, err := c.client.LoadContainer(ctx, containername)
-
 	if err != nil {
 		return err
 	}
@@ -608,14 +608,87 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	}
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
-func (c *ContainerdRuntime) Exec(context.Context, string, []string) ([]byte, []byte, error) {
-	log.Fatalf("Exec() - Not implemented yet")
-	return []byte(""), []byte(""), nil
+func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, cmd []string) ([]byte, []byte, error) {
+	return c.exec(ctx, containername, cmd, false)
 }
-func (c *ContainerdRuntime) ExecNotWait(context.Context, string, []string) error {
-	log.Fatalf("ExecNotWait() - Not implemented yet")
-	return nil
+
+func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, cmd []string) error {
+	_, _, err := c.exec(ctx, containername, cmd, true)
+	return err
 }
+
+func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) {
+
+	clabExecId := "clabexec"
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+	container, err := c.client.LoadContainer(ctx, containername)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var stdinbuf, stdoutbuf, stderrbuf bytes.Buffer
+
+	cio_opt := cio.WithStreams(&stdinbuf, &stdoutbuf, &stderrbuf)
+	ioCreator := cio.NewCreator(cio_opt)
+
+	spec, err := container.Spec(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	pspec := spec.Process
+	pspec.Terminal = false
+	pspec.Args = cmd
+	task, err := container.Task(ctx, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	NeedToDelete := true
+	p, err := task.LoadProcess(ctx, clabExecId, nil)
+	if err != nil {
+		NeedToDelete = false
+	}
+
+	if NeedToDelete {
+		log.Debugf("Deleting old process with exec-id %s", clabExecId)
+		_, err := p.Delete(ctx, containerd.WithProcessKill)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	process, err := task.Exec(ctx, clabExecId, pspec, ioCreator)
+	//task, err := container.NewTask(ctx, cio.NewCreator(cio_opt))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var statusC <-chan containerd.ExitStatus
+	if !detach {
+
+		defer process.Delete(ctx)
+
+		statusC, err = process.Wait(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	if err := process.Start(ctx); err != nil {
+		return nil, nil, err
+	}
+	if !detach {
+		status := <-statusC
+		code, _, err := status.Result()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		log.Infof("Exit code: %d", code)
+	}
+	return stdoutbuf.Bytes(), stderrbuf.Bytes(), nil
+}
+
 func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
 	log.Debugf("deleting container %s", container.ID)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
