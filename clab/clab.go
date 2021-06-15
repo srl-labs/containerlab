@@ -169,14 +169,13 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.Node, lworke
 
 	case "sonic-vs":
 		log.Debugf("Running postdeploy actions for sonic-vs '%s' node", node.ShortName)
-		// TODO: change this calls to c.ExecNotWait
 		// exec `supervisord` to start sonic services
-		_, _, err := c.Runtime.Exec(ctx, node.ContainerID, []string{"supervisord"})
+		err := c.Runtime.ExecNotWait(ctx, node.ContainerID, []string{"supervisord"})
 		if err != nil {
 			return err
 		}
 
-		_, _, err = c.Runtime.Exec(ctx, node.ContainerID, []string{"/usr/lib/frr/bgpd"})
+		err = c.Runtime.ExecNotWait(ctx, node.ContainerID, []string{"/usr/lib/frr/bgpd"})
 		if err != nil {
 			return err
 		}
