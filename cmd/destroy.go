@@ -207,12 +207,12 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 						log.Debugf("Worker %d terminating...", i)
 						return
 					}
-					//if len(cont.Names) > 0 {
-					//	name = strings.TrimLeft(cont.Names[0], "/")
-					//}
+					if len(cont.Names) > 0 {
+						name = strings.TrimLeft(cont.Names[0], "/")
+					}
 					err := c.Runtime.DeleteContainer(ctx, cont)
 					if err != nil {
-						log.Errorf("could not remove container: %v", err)
+						log.Errorf("could not remove container %s: %v", name, err)
 					}
 				case <-ctx.Done():
 					return
