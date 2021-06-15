@@ -375,12 +375,13 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 
 	for _, i := range inputContainers {
 		ctr := types.GenericContainer{
-			Names:  i.Names,
-			ID:     i.ID,
-			Image:  i.Image,
-			State:  i.State,
-			Status: i.Status,
-			Labels: i.Labels,
+			Names:   i.Names,
+			ID:      i.ID,
+			ShortID: i.ID[:12],
+			Image:   i.Image,
+			State:   i.State,
+			Status:  i.Status,
+			Labels:  i.Labels,
 			NetworkSettings: &types.GenericMgmtIPs{
 				Set: false,
 			},

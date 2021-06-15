@@ -527,6 +527,7 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 
 		ctr.Names = []string{i.ID()}
 		ctr.ID = i.ID()
+		ctr.ShortID = ctr.ID
 		ctr.Image = info.Image
 		ctr.Labels = info.Labels
 
