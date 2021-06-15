@@ -78,7 +78,7 @@ jobs:
           curl https://htmltest.wjdp.uk | bash
           ./bin/htmltest -c docs/htmltest.yml
 
-  smoke-tests-docker:
+  smoke-tests:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
