@@ -78,8 +78,11 @@ jobs:
           curl https://htmltest.wjdp.uk | bash
           ./bin/htmltest -c docs/htmltest.yml
 
-  smoke-tests:
+  smoke-tests-docker:
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        runtime: ["docker", "containerd"]
     needs:
       - staticcheck
       - unit-test
@@ -103,7 +106,7 @@ jobs:
           pip install -r tests/requirements.txt
       - name: Run smoke tests
         run: |
-          bash ./tests/rf-run.sh ./tests/01-smoke
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v2
         if: always()
