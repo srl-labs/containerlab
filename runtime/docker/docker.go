@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	dockerTypes "github.com/docker/docker/api/types"
@@ -480,12 +481,12 @@ func (c *DockerRuntime) DeleteContainer(ctx context.Context, container *types.Ge
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", container.Names[0])
+	log.Debugf("Removing container: %s", strings.TrimLeft(container.Names[0], "/"))
 	err = c.Client.ContainerRemove(ctx, container.ID, dockerTypes.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", container.Names[0])
+	log.Infof("Removed container: %s", strings.TrimLeft(container.Names[0], "/"))
 	return nil
 }
 
