@@ -16,6 +16,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
+	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -57,8 +58,18 @@ func WithTimeout(dur time.Duration) ClabOption {
 
 func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ClabOption {
 	return func(c *CLab) {
-		c.Runtime = runtime.NewRuntime(name, d, dur, gracefulShutdown)
-		c.Runtime.SetMgmtNet(c.Config.Mgmt)
+		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
+			c.Runtime = rInit()
+			c.Runtime.Init(
+				runtime.WithConfig(&runtime.RuntimeConfig{
+					Timeout: dur,
+					Debug:   d,
+				}),
+				runtime.WithMgmtNet(c.Config.Mgmt),
+			)
+			return
+		}
+		log.Fatalf("unknown container runtime %q", name)
 	}
 }
 
