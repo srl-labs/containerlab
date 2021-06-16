@@ -406,7 +406,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername st
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string, dur *time.Duration) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
-		log.Debugf("no task found for container %s", containername)
+		log.Debugf("container %s: %v", containername, err)
 		return nil
 	}
 	taskstatus, err := ctask.Status(ctx)
@@ -481,10 +481,8 @@ func (c *ContainerdRuntime) getContainerTask(ctx context.Context, containername 
 func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]types.GenericContainer, error) {
 	log.Debug("listing containers")
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
-	// TODO add containerlab label as filter criteria
 
 	filterstring := c.buildFilterString(filter)
-
 	containerlist, err := c.client.Containers(ctx, filterstring)
 	if err != nil {
 		return nil, err

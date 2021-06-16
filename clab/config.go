@@ -661,8 +661,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	labels := []*types.GenericFilter{}
-	containers, err := c.Runtime.ListContainers(nctx, labels)
+	containers, err := c.Runtime.ListContainers(nctx, nil)
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
