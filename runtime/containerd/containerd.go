@@ -110,6 +110,9 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 
 	log.Debugf("Looking up %s container image", imagename)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+	if !strings.Contains(imagename, ":") {
+		imagename = imagename + ":latest"
+	}
 	_, err := c.client.GetImage(ctx, imagename)
 	if err == nil {
 		log.Debugf("Image %s present, skip pulling", imagename)
@@ -127,6 +130,9 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
+	if !strings.Contains(node.Image, ":") {
+		node.Image = node.Image + ":latest"
+	}
 	img, err := c.client.GetImage(ctx, node.Image)
 	if err != nil {
 		// try fetching the image with canonical name
@@ -161,17 +167,14 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
 		oci.WithEnv(utils.ConvertEnvs(node.Env)),
-		//oci.WithProcessArgs("bash"),
 		oci.WithHostname(node.ShortName),
 		WithSysctls(node.Sysctls),
-		//oci.WithAllKnownCapabilities,
 		oci.WithoutRunMount,
 		oci.WithPrivileged,
 		oci.WithHostLocaltime,
 		oci.WithNamespacedCgroup(),
 		oci.WithAllDevicesAllowed,
 		oci.WithDefaultUnixDevices,
-		//oci.WithHostDevices,
 		oci.WithNewPrivileges,
 	}
 	if len(cmd) > 0 {
