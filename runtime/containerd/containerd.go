@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -21,6 +22,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/google/shlex"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -37,6 +39,8 @@ const (
 	defaultTimeout    = 30 * time.Second
 )
 
+var cniPath string
+
 func init() {
 	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
 		return &ContainerdRuntime{
@@ -45,15 +49,27 @@ func init() {
 	})
 }
 
-func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) {
+func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
+	var ok bool
 	c.client, err = containerd.New("/run/containerd/containerd.sock")
 	if err != nil {
-		log.Fatalf("failed to create containerd client: %v", err)
+		return err
+	}
+	if cniPath, ok = os.LookupEnv("CNI_BIN"); !ok {
+		cniPath = cniBin
+	}
+	binaries := []string{"tuning", "bridge", "host-local"}
+	for _, binary := range binaries {
+		binary = path.Join(cniPath, binary)
+		if _, err := os.Stat(binary); err != nil {
+			return errors.WithMessagef(err, "CNI binaries not found. [ %s ] are required.", strings.Join(binaries, ","))
+		}
 	}
 	for _, o := range opts {
 		o(c)
 	}
+	return nil
 }
 
 type ContainerdRuntime struct {
@@ -301,10 +317,6 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
 	// allow overwriting cni plugin binary path via ENV var
-	cniPath, ok := os.LookupEnv("CNI_BIN")
-	if !ok {
-		cniPath = cniBin
-	}
 
 	cnic := libcni.NewCNIConfigWithCacheDir([]string{cniPath}, cniCache, nil)
 

@@ -60,13 +60,16 @@ func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) 
 	return func(c *CLab) {
 		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
 			c.Runtime = rInit()
-			c.Runtime.Init(
+			err := c.Runtime.Init(
 				runtime.WithConfig(&runtime.RuntimeConfig{
 					Timeout: dur,
 					Debug:   d,
 				}),
 				runtime.WithMgmtNet(c.Config.Mgmt),
 			)
+			if err != nil {
+				log.Fatalf("failed to init the container runtime: %s", err)
+			}
 			return
 		}
 		log.Fatalf("unknown container runtime %q", name)

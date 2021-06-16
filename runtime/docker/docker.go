@@ -50,7 +50,7 @@ type DockerRuntime struct {
 	gracefulShutdown bool
 }
 
-func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) {
+func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
 	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
@@ -59,6 +59,7 @@ func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) {
 	for _, o := range opts {
 		o(c)
 	}
+	return nil
 }
 
 func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
