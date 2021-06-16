@@ -54,7 +54,7 @@ func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
 	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
-		log.Fatalf("failed to create docker client: %v", err)
+		return err
 	}
 	for _, o := range opts {
 		o(c)
