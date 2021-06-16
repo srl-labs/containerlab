@@ -1,6 +1,13 @@
 package utils
 
-import "strings"
+import (
+	"os"
+	"strings"
+)
+
+const (
+	cniBin = "/opt/cni/bin"
+)
 
 // produces a canonical image name.
 // returns the canonical image name including the tag
@@ -33,4 +40,13 @@ func GetCanonicalImageName(imageName string) string {
 	}
 
 	return canonicalImageName
+}
+
+func GetCNIBinaryPath() string {
+	var cniPath string
+	var ok bool
+	if cniPath, ok = os.LookupEnv("CNI_BIN"); !ok {
+		cniPath = cniBin
+	}
+	return cniPath
 }

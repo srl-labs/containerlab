@@ -31,15 +31,10 @@ import (
 
 const (
 	containerdNamespace = "clab"
-
-	cniBin   = "/opt/cni/bin"
-	cniCache = "/opt/cni/cache"
-
-	dockerRuntimeName = "containerd"
-	defaultTimeout    = 30 * time.Second
+	cniCache            = "/opt/cni/cache"
+	dockerRuntimeName   = "containerd"
+	defaultTimeout      = 30 * time.Second
 )
-
-var cniPath string
 
 func init() {
 	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
@@ -51,14 +46,11 @@ func init() {
 
 func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
-	var ok bool
 	c.client, err = containerd.New("/run/containerd/containerd.sock")
 	if err != nil {
 		return err
 	}
-	if cniPath, ok = os.LookupEnv("CNI_BIN"); !ok {
-		cniPath = cniBin
-	}
+	cniPath := utils.GetCNIBinaryPath()
 	binaries := []string{"tuning", "bridge", "host-local"}
 	for _, binary := range binaries {
 		binary = path.Join(cniPath, binary)
@@ -318,7 +310,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
 	// allow overwriting cni plugin binary path via ENV var
 
-	cnic := libcni.NewCNIConfigWithCacheDir([]string{cniPath}, cniCache, nil)
+	cnic := libcni.NewCNIConfigWithCacheDir([]string{utils.GetCNIBinaryPath()}, cniCache, nil)
 
 	cniConfig := fmt.Sprintf(`
 	{
