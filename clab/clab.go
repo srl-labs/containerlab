@@ -340,13 +340,9 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types
 						log.Debugf("Worker %d terminating...", i)
 						return
 					}
-					name := cont.ID
-					if len(cont.Names) > 0 {
-						name = strings.TrimLeft(cont.Names[0], "/")
-					}
 					err := c.Runtime.DeleteContainer(ctx, cont)
 					if err != nil {
-						log.Errorf("could not remove container '%s': %v", name, err)
+						log.Errorf("could not remove container '%s': %v", cont.ID, err)
 					}
 				case <-ctx.Done():
 					return

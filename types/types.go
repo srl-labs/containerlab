@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/cloudflare/cfssl/log"
@@ -143,4 +144,26 @@ type GenericFilter struct {
 	Operator string
 	// match value
 	Match string
+}
+
+func FilterFromLabelStrings(labels []string) []*GenericFilter {
+	gfl := []*GenericFilter{}
+	var gf *GenericFilter
+	for _, s := range labels {
+		gf = &GenericFilter{
+			FilterType: "label",
+		}
+		if strings.Contains(s, "=") {
+			gf.Operator = "="
+			subs := strings.Split(s, "=")
+			gf.Field = strings.TrimSpace(subs[0])
+			gf.Match = strings.TrimSpace(subs[1])
+		} else {
+			gf.Match = "exists"
+			gf.Field = strings.TrimSpace(s)
+		}
+
+		gfl = append(gfl, gf)
+	}
+	return gfl
 }

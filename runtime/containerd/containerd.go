@@ -84,7 +84,7 @@ func (c *ContainerdRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 	if n.Bridge == "" {
 		netname := "clab"
-		if n.Network == "" {
+		if n.Network != "" {
 			netname = n.Network
 		}
 		n.Bridge = "br-" + netname
@@ -157,9 +157,6 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		mounts[idx] = m
 	}
 
-	//mounts = append(mounts, specs.Mount{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}})
-
-	_ = cmd
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
 		oci.WithEnv(utils.ConvertEnvs(node.Env)),
@@ -245,9 +242,6 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	if err != nil {
 		return err
 	}
-
-	//s, _ := newContainer.Spec(ctx)
-	//fmt.Printf("%+v", s.Process)
 
 	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
@@ -356,7 +350,7 @@ func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *li
 		]
 	  }
 	`, mgmtNet.Bridge, mgmtNet.IPv4Subnet, mgmtNet.IPv6Subnet, mgmtNet.MTU)
-	//log.Debug(cniConfig)
+
 	cncl, err := libcni.ConfListFromBytes([]byte(cniConfig))
 	if err != nil {
 		return nil, nil, nil, err
@@ -401,9 +395,6 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername st
 	}
 	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+containername+".log"))
 	if err != nil {
-		log.Fatal(err)
-		log.Fatalf("Failed to start container %s", containername)
-
 		return err
 	}
 	err = task.Start(ctx)
@@ -455,7 +446,7 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 			return err
 		}
 
-		err = waitContainerStop(ctx, exitCh, containername)
+		err = waitContainerStop(ctx, exitCh)
 		if err != nil {
 			return err
 		}
@@ -469,7 +460,7 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 	return nil
 }
 
-func waitContainerStop(ctx context.Context, exitCh <-chan containerd.ExitStatus, id string) error {
+func waitContainerStop(ctx context.Context, exitCh <-chan containerd.ExitStatus) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -484,11 +475,7 @@ func (c *ContainerdRuntime) getContainerTask(ctx context.Context, containername 
 	if err != nil {
 		return nil, err
 	}
-	task, err := cont.Task(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	return task, nil
+	return cont.Task(ctx, nil)
 }
 
 func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]types.GenericContainer, error) {
