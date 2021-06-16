@@ -102,8 +102,7 @@ func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	return nil
 }
 func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.GenericContainer, error) {
-	log.Fatalf("ContainerInspect() - Not implemented yet")
-	return nil, nil
+	return nil, errors.New("not implemented")
 }
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
