@@ -46,7 +46,8 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		containers, err := c.Runtime.ListContainers(ctx, []string{"containerlab=" + c.Config.Name})
+		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+		containers, err := c.Runtime.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
 		}

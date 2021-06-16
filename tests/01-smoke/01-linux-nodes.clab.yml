@@ -9,9 +9,11 @@ topology:
     l1:
       kind: linux
       image: alpine:3
+      cmd: ash -c "sleep 9999"
     l2:
       kind: linux
       image: alpine:3
+      cmd: ash -c "sleep 9999"
 
   links:
     - endpoints: ["l1:eth1", "l2:eth1"]

@@ -9,6 +9,7 @@ topology:
     l1:
       kind: linux
       image: alpine:3
+      cmd: ash -c "sleep 9999"
     br-clab:
       kind: bridge
 

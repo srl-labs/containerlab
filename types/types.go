@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/cloudflare/cfssl/log"
@@ -117,6 +118,7 @@ func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
 type GenericContainer struct {
 	Names           []string
 	ID              string
+	ShortID         string // trimmed ID for display purposes
 	Image           string
 	State           string
 	Status          string
@@ -131,4 +133,37 @@ type GenericMgmtIPs struct {
 	IPv4pLen int
 	IPv6addr string
 	IPv6pLen int
+}
+
+type GenericFilter struct {
+	// defined by now "label"
+	FilterType string
+	// defines e.g. the label name for FilterType "label"
+	Field string
+	// = | != | exists
+	Operator string
+	// match value
+	Match string
+}
+
+func FilterFromLabelStrings(labels []string) []*GenericFilter {
+	gfl := []*GenericFilter{}
+	var gf *GenericFilter
+	for _, s := range labels {
+		gf = &GenericFilter{
+			FilterType: "label",
+		}
+		if strings.Contains(s, "=") {
+			gf.Operator = "="
+			subs := strings.Split(s, "=")
+			gf.Field = strings.TrimSpace(subs[0])
+			gf.Match = strings.TrimSpace(subs[1])
+		} else {
+			gf.Match = "exists"
+			gf.Field = strings.TrimSpace(s)
+		}
+
+		gfl = append(gfl, gf)
+	}
+	return gfl
 }

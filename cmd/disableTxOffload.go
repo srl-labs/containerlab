@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
@@ -33,13 +32,12 @@ var disableTxOffloadCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		cnt, err := c.Runtime.ContainerInspect(ctx, cntName)
+		log.Infof("getting container '%s' information", cntName)
+
+		NSPath, err := c.Runtime.GetNSPath(ctx, cntName)
 		if err != nil {
 			return err
 		}
-
-		log.Infof("getting container '%s' information", cntName)
-		NSPath := "/proc/" + strconv.Itoa(cnt.Pid) + "/ns/net"
 		nodeNS, err := ns.GetNS(NSPath)
 		if err != nil {
 			return err

@@ -88,8 +88,8 @@ func initSRLNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, env
 		log.Fatalf("wrong node type. '%s' doesn't exist. should be any of %s", node.NodeType, strings.Join(keys, ", "))
 	}
 
-	// initialize specifc container information
-	node.Cmd = "sudo sr_linux"
+	// the addition touch is needed to support non docker runtimes
+	node.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 
 	kindEnv := map[string]string{"SRLINUX": "1"}
 	node.Env = mergeStringMaps(kindEnv, envs)

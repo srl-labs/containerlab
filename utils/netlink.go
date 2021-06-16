@@ -28,6 +28,9 @@ func BridgeByName(name string) (*netlink.Bridge, error) {
 func LinkContainerNS(nspath, containerName string) error {
 	CreateDirectory("/run/netns/", 0755)
 	dst := "/run/netns/" + containerName
+	if _, err := os.Lstat(dst); err == nil {
+		os.Remove(dst)
+	}
 	err := os.Symlink(nspath, dst)
 	if err != nil {
 		return err

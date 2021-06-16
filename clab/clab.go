@@ -7,6 +7,7 @@ package clab
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -58,15 +59,29 @@ func WithTimeout(dur time.Duration) ClabOption {
 
 func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ClabOption {
 	return func(c *CLab) {
+		// define runtime name.
+		// order of preference: cli flag -> env var -> default value of docker
+		envN := os.Getenv("CLAB_RUNTIME")
+		switch {
+		case name != "":
+		case envN != "":
+			name = envN
+		default:
+			name = runtime.DockerRuntime
+		}
+
 		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
 			c.Runtime = rInit()
-			c.Runtime.Init(
+			err := c.Runtime.Init(
 				runtime.WithConfig(&runtime.RuntimeConfig{
 					Timeout: dur,
 					Debug:   d,
 				}),
 				runtime.WithMgmtNet(c.Config.Mgmt),
 			)
+			if err != nil {
+				log.Fatalf("failed to init the container runtime: %s", err)
+			}
 			return
 		}
 		log.Fatalf("unknown container runtime %q", name)
@@ -337,13 +352,9 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types
 						log.Debugf("Worker %d terminating...", i)
 						return
 					}
-					name := cont.ID
-					if len(cont.Names) > 0 {
-						name = strings.TrimLeft(cont.Names[0], "/")
-					}
-					err := c.Runtime.DeleteContainer(ctx, name)
+					err := c.Runtime.DeleteContainer(ctx, cont)
 					if err != nil {
-						log.Errorf("could not remove container '%s': %v", name, err)
+						log.Errorf("could not remove container '%s': %v", cont.ID, err)
 					}
 				case <-ctx.Done():
 					return

@@ -10,7 +10,6 @@ import (
 	"net"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -41,13 +40,10 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uin
 	if err != nil {
 		return err
 	}
-	// since container has been restarted, we need to get its new NSPath and link netns
-	cont, err := c.Runtime.ContainerInspect(ctx, node.ContainerID)
+	node.NSPath, err = c.Runtime.GetNSPath(ctx, node.ContainerID)
 	if err != nil {
 		return err
 	}
-	log.Debugf("node %s new pid %v", node.LongName, cont.Pid)
-	node.NSPath = "/proc/" + strconv.Itoa(cont.Pid) + "/ns/net"
 	err = utils.LinkContainerNS(node.NSPath, node.LongName)
 	if err != nil {
 		return err

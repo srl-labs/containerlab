@@ -9,6 +9,7 @@ ${lab-file}       03-linux-nodes-to-bridge.clab.yml
 ${bridge-name}    br-clab
 ${br-link1-name}    l1-eth1
 ${br-link2-name}    l1-eth2
+${runtime}        docker
 
 *** Test Cases ***
 Create linux bridge
@@ -19,7 +20,7 @@ Create linux bridge
 
 Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab deploy -t ${CURDIR}/${lab-file}
+    ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -35,5 +36,5 @@ Verify links in bridge
 
 *** Keywords ***
 Cleanup
-    Run    sudo containerlab destroy -t ${CURDIR}/${lab-file} --cleanup
+    Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Run    sudo ip l del ${bridge-name}
