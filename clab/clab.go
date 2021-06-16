@@ -7,6 +7,7 @@ package clab
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -58,6 +59,12 @@ func WithTimeout(dur time.Duration) ClabOption {
 
 func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ClabOption {
 	return func(c *CLab) {
+		if name == "" {
+			name = os.Getenv("CLAB_RUNTIME")
+			if name == "" {
+				name = runtime.DockerRuntime
+			}
+		}
 		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
 			c.Runtime = rInit()
 			err := c.Runtime.Init(
