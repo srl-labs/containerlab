@@ -1,0 +1,15 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: 05-docker-bridge
+# use the default docker network named "bridge"
+mgmt:
+  network: bridge
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      cmd: ash -c "sleep 9999"

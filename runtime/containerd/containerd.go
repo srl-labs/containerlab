@@ -46,7 +46,7 @@ func init() {
 
 func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
-	log.Info("Runtime: containerd")
+	log.Debug("Runtime: containerd")
 	c.client, err = containerd.New("/run/containerd/containerd.sock")
 	if err != nil {
 		return err
