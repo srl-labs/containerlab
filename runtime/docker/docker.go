@@ -52,7 +52,7 @@ type DockerRuntime struct {
 
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
-	log.Info("Runtime: Docker")
+	log.Debug("Runtime: Docker")
 	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
