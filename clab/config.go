@@ -125,27 +125,6 @@ func (c *CLab) ParseTopology() error {
 	return nil
 }
 
-func (c *CLab) kindInitialization(nodeDef *types.NodeDefinition) string {
-	if nodeDef.Kind != "" {
-		return nodeDef.Kind
-	}
-	return c.Config.Topology.Defaults.Kind
-}
-
-func (c *CLab) cmdInit(nodeDef *types.NodeDefinition, kind string) string {
-	switch {
-	case nodeDef.Cmd != "":
-		return nodeDef.Cmd
-
-	case c.Config.Topology.Kinds[kind].Cmd != "":
-		return c.Config.Topology.Kinds[kind].Cmd
-
-	case c.Config.Topology.Defaults.Cmd != "":
-		return c.Config.Topology.Defaults.Cmd
-	}
-	return ""
-}
-
 // initialize container labels
 func (c *CLab) labelsInit(nodeDef *types.NodeDefinition, kind string, node *types.NodeConfig) map[string]string {
 	defaultLabels := map[string]string{
@@ -184,7 +163,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	// initialize the node with global parameters
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
-	nodeCfg.Kind = strings.ToLower(c.kindInitialization(nodeDef))
+	nodeCfg.Kind = strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
 
 	// initialize bind mounts
 	// binds := c.bindsInit(nodeDef)

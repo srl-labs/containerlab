@@ -55,6 +55,16 @@ func (t *Topology) GetKinds() map[string]*NodeDefinition {
 	return t.Kinds
 }
 
+func (t *Topology) GetNodeKind(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetKind() != "" {
+			return ndef.GetKind()
+		}
+		return t.GetDefaults().GetKind()
+	}
+	return ""
+}
+
 func (t *Topology) GetNodeBinds(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if len(ndef.Binds) > 0 {
