@@ -183,6 +183,10 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 // DeleteNet deletes a docker bridge
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
+	if c.Mgmt.Network == "bridge" {
+		log.Debug("Skipping potential deletion of docker default bridge 'bridge'.")
+		return nil
+	}
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
