@@ -515,16 +515,6 @@ func setSysctl(sysctl string, newVal int) error {
 	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
 }
 
-func (c *DockerRuntime) ContainerInspect(ctx context.Context, id string) (*types.GenericContainer, error) {
-	ctr, err := c.Client.ContainerInspect(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return &types.GenericContainer{
-		Pid: ctr.State.Pid,
-	}, nil
-}
-
 func (c *DockerRuntime) StopContainer(ctx context.Context, name string, dur *time.Duration) error {
 	c.Client.ContainerKill(ctx, name, "kill")
 	return nil
