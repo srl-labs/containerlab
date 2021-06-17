@@ -14,10 +14,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -85,53 +85,10 @@ var srlTypes = map[string]string{
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string         `json:"name,omitempty"`
-	Mgmt       *types.MgmtNet `json:"mgmt,omitempty"`
-	Topology   Topology       `json:"topology,omitempty"`
-	ConfigPath string         `yaml:"config_path,omitempty"`
-}
-
-// Topology represents a lab topology
-type Topology struct {
-	Defaults NodeConfig            `yaml:"defaults,omitempty"`
-	Kinds    map[string]NodeConfig `yaml:"kinds,omitempty"`
-	Nodes    map[string]NodeConfig `yaml:"nodes,omitempty"`
-	Links    []LinkConfig          `yaml:"links,omitempty"`
-}
-
-// NodeConfig represents a configuration a given node can have in the lab definition file
-type NodeConfig struct {
-	Kind     string `yaml:"kind,omitempty"`
-	Group    string `yaml:"group,omitempty"`
-	Type     string `yaml:"type,omitempty"`
-	Config   string `yaml:"config,omitempty"`
-	Image    string `yaml:"image,omitempty"`
-	License  string `yaml:"license,omitempty"`
-	Position string `yaml:"position,omitempty"`
-	Cmd      string `yaml:"cmd,omitempty"`
-	// list of bind mount compatible strings
-	Binds []string `yaml:"binds,omitempty"`
-	// list of port bindings
-	Ports []string `yaml:"ports,omitempty"`
-	// user-defined IPv4 address in the management network
-	MgmtIPv4 string `yaml:"mgmt_ipv4,omitempty"`
-	// user-defined IPv6 address in the management network
-	MgmtIPv6 string `yaml:"mgmt_ipv6,omitempty"`
-	// list of ports to publish with mysocketctl
-	Publish []string `yaml:"publish,omitempty"`
-	// environment variables
-	Env map[string]string `yaml:"env,omitempty"`
-	// linux user used in a container
-	User string `yaml:"user,omitempty"`
-	// container labels
-	Labels map[string]string `yaml:"labels,omitempty"`
-	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
-	NetworkMode string `yaml:"network-mode,omitempty"`
-}
-
-type LinkConfig struct {
-	Endpoints []string
-	Labels    map[string]string `yaml:"labels,omitempty"`
+	Name       string          `json:"name,omitempty"`
+	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
+	Topology   *types.Topology `json:"topology,omitempty"`
+	ConfigPath string          `yaml:"config_path,omitempty"`
 }
 
 // ParseTopology parses the lab topology
@@ -150,7 +107,7 @@ func (c *CLab) ParseTopology() error {
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
 
 	// initialize Nodes and Links variable
-	c.Nodes = make(map[string]*types.Node)
+	c.Nodes = make(map[string]*types.NodeConfig)
 	c.Links = make(map[int]*types.Link)
 
 	// initialize the Node information from the topology map
@@ -168,131 +125,17 @@ func (c *CLab) ParseTopology() error {
 	return nil
 }
 
-func (c *CLab) kindInitialization(nodeCfg *NodeConfig) string {
-	if nodeCfg.Kind != "" {
-		return nodeCfg.Kind
+func (c *CLab) kindInitialization(nodeDef *types.NodeDefinition) string {
+	if nodeDef.Kind != "" {
+		return nodeDef.Kind
 	}
 	return c.Config.Topology.Defaults.Kind
 }
 
-func (c *CLab) bindsInit(nodeCfg *NodeConfig) []string {
+func (c *CLab) cmdInit(nodeDef *types.NodeDefinition, kind string) string {
 	switch {
-	case len(nodeCfg.Binds) != 0:
-		return nodeCfg.Binds
-	case len(c.Config.Topology.Kinds[nodeCfg.Kind].Binds) != 0:
-		return c.Config.Topology.Kinds[nodeCfg.Kind].Binds
-	case len(c.Config.Topology.Defaults.Binds) != 0:
-		return c.Config.Topology.Defaults.Binds
-	}
-	return nil
-}
-
-// portsInit produces the nat.PortMap out of the slice of string representation of port bindings
-func (c *CLab) portsInit(nodeCfg *NodeConfig) (nat.PortSet, nat.PortMap, error) {
-	if len(nodeCfg.Ports) != 0 {
-		ps, pb, err := nat.ParsePortSpecs(nodeCfg.Ports)
-		if err != nil {
-			return nil, nil, err
-		}
-		return ps, pb, nil
-	}
-	return nil, nil, nil
-}
-
-func (c *CLab) groupInitialization(nodeCfg *NodeConfig, kind string) string {
-	if nodeCfg.Group != "" {
-		return nodeCfg.Group
-	} else if c.Config.Topology.Kinds[kind].Group != "" {
-		return c.Config.Topology.Kinds[kind].Group
-	}
-	return c.Config.Topology.Defaults.Group
-}
-
-// initialize SRL HW type
-func (c *CLab) typeInit(nodeCfg *NodeConfig, kind string) string {
-	switch {
-	case nodeCfg.Type != "":
-		return nodeCfg.Type
-	case c.Config.Topology.Kinds[kind].Type != "":
-		return c.Config.Topology.Kinds[kind].Type
-	case c.Config.Topology.Defaults.Type != "":
-		return c.Config.Topology.Defaults.Type
-	}
-	// default type if not defined
-	switch kind {
-	case "srl":
-		return srlDefaultType
-
-	case "vr-sros":
-		return vrsrosDefaultType
-	}
-	return ""
-}
-
-// configInit processes the path to a config file that can be provided on
-// multiple configuration levels
-// returns an error if the reference path doesn't exist
-func (c *CLab) configInit(nodeCfg *NodeConfig, kind string) (string, error) {
-	var cfg string
-	var err error
-	switch {
-	case nodeCfg.Config != "":
-		cfg = nodeCfg.Config
-	case c.Config.Topology.Kinds[kind].Config != "":
-		cfg = c.Config.Topology.Kinds[kind].Config
-	case c.Config.Topology.Defaults.Config != "":
-		cfg = c.Config.Topology.Defaults.Config
-	default:
-		cfg = defaultConfigTemplates[kind]
-	}
-	if cfg != "" {
-		cfg, err = resolvePath(cfg)
-		if err != nil {
-			return "", err
-		}
-		_, err = os.Stat(cfg)
-	}
-	return cfg, err
-}
-
-func (c *CLab) imageInitialization(nodeCfg *NodeConfig, kind string) string {
-	if nodeCfg.Image != "" {
-		return nodeCfg.Image
-	}
-	if c.Config.Topology.Kinds[kind].Image != "" {
-		return c.Config.Topology.Kinds[kind].Image
-	}
-	return c.Config.Topology.Defaults.Image
-}
-
-func (c *CLab) licenseInit(nodeCfg *NodeConfig, node *types.Node) (string, error) {
-	// path to license file
-	var lic string
-	var err error
-	switch {
-	case nodeCfg.License != "":
-		lic = nodeCfg.License
-	case c.Config.Topology.Kinds[node.Kind].License != "":
-		lic = c.Config.Topology.Kinds[node.Kind].License
-	case c.Config.Topology.Defaults.License != "":
-		lic = c.Config.Topology.Defaults.License
-	default:
-		lic = ""
-	}
-	if lic != "" {
-		lic, err = resolvePath(lic)
-		if err != nil {
-			return "", err
-		}
-		_, err = os.Stat(lic)
-	}
-	return lic, err
-}
-
-func (c *CLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
-	switch {
-	case nodeCfg.Cmd != "":
-		return nodeCfg.Cmd
+	case nodeDef.Cmd != "":
+		return nodeDef.Cmd
 
 	case c.Config.Topology.Kinds[kind].Cmd != "":
 		return c.Config.Topology.Kinds[kind].Cmd
@@ -303,51 +146,8 @@ func (c *CLab) cmdInit(nodeCfg *NodeConfig, kind string) string {
 	return ""
 }
 
-// initialize environment variables
-func (c *CLab) envInit(nodeCfg *NodeConfig, kind string) map[string]string {
-	// merge global envs into kind envs
-	m := mergeStringMaps(c.Config.Topology.Defaults.Env, c.Config.Topology.Kinds[kind].Env)
-	// merge result of previous merge into node envs
-	return mergeStringMaps(m, nodeCfg.Env)
-}
-
-func (c *CLab) positionInitialization(nodeCfg *NodeConfig, kind string) string {
-	if nodeCfg.Position != "" {
-		return nodeCfg.Position
-	} else if c.Config.Topology.Kinds[kind].Position != "" {
-		return c.Config.Topology.Kinds[kind].Position
-	}
-	return c.Config.Topology.Defaults.Position
-}
-
-func (c *CLab) userInit(nodeCfg *NodeConfig, kind string) string {
-	switch {
-	case nodeCfg.User != "":
-		return nodeCfg.User
-
-	case c.Config.Topology.Kinds[kind].User != "":
-		return c.Config.Topology.Kinds[kind].User
-
-	case c.Config.Topology.Defaults.User != "":
-		return c.Config.Topology.Defaults.User
-	}
-	return ""
-}
-
-func (c *CLab) publishInit(nodeCfg *NodeConfig, kind string) []string {
-	switch {
-	case len(nodeCfg.Publish) != 0:
-		return nodeCfg.Publish
-	case len(c.Config.Topology.Kinds[kind].Publish) != 0:
-		return c.Config.Topology.Kinds[kind].Publish
-	case len(c.Config.Topology.Defaults.Publish) != 0:
-		return c.Config.Topology.Defaults.Publish
-	}
-	return nil
-}
-
 // initialize container labels
-func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *types.Node) map[string]string {
+func (c *CLab) labelsInit(nodeDef *types.NodeDefinition, kind string, node *types.NodeConfig) map[string]string {
 	defaultLabels := map[string]string{
 		"containerlab":      c.Config.Name,
 		"clab-node-name":    node.ShortName,
@@ -358,136 +158,140 @@ func (c *CLab) labelsInit(nodeCfg *NodeConfig, kind string, node *types.Node) ma
 		"clab-topo-file":    c.TopoFile.path,
 	}
 	// merge global labels into kind envs
-	m := mergeStringMaps(c.Config.Topology.Defaults.Labels, c.Config.Topology.Kinds[kind].Labels)
+	m := utils.MergeStringMaps(c.Config.Topology.GetDefaults().GetLabels(), c.Config.Topology.GetKind(kind).GetLabels())
 	// merge result of previous merge into node envs
-	m2 := mergeStringMaps(m, nodeCfg.Labels)
+	m2 := utils.MergeStringMaps(m, nodeDef.GetLabels())
 	// merge with default labels
-	return mergeStringMaps(m2, defaultLabels)
+	return utils.MergeStringMaps(m2, defaultLabels)
 }
 
 // NewNode initializes a new node object
-func (c *CLab) NewNode(nodeName string, nodeCfg NodeConfig, idx int) error {
+func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) error {
 	// initialize a new node
-	node := new(types.Node)
-	node.ShortName = nodeName
-	node.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
-	node.Fqdn = nodeName + "." + c.Config.Name + ".io"
-	node.LabDir = c.Dir.Lab + "/" + nodeName
-	node.Index = idx
-	node.Endpoints = []*types.Endpoint{}
+	nodeCfg := new(types.NodeConfig)
+	nodeCfg.ShortName = nodeName
+	nodeCfg.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
+	nodeCfg.Fqdn = nodeName + "." + c.Config.Name + ".io"
+	nodeCfg.LabDir = c.Dir.Lab + "/" + nodeName
+	nodeCfg.Index = idx
+	nodeCfg.Endpoints = []*types.Endpoint{}
 
-	node.NetworkMode = strings.ToLower(nodeCfg.NetworkMode)
+	nodeCfg.NetworkMode = strings.ToLower(nodeDef.NetworkMode)
 
-	node.MgmtIPv4Address = nodeCfg.MgmtIPv4
-	node.MgmtIPv6Address = nodeCfg.MgmtIPv6
+	nodeCfg.MgmtIPv4Address = nodeDef.MgmtIPv4
+	nodeCfg.MgmtIPv6Address = nodeDef.MgmtIPv6
 
 	// initialize the node with global parameters
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
 	// normalize the data to lower case to compare
-	node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+	nodeCfg.Kind = strings.ToLower(c.kindInitialization(nodeDef))
 
 	// initialize bind mounts
-	binds := c.bindsInit(&nodeCfg)
-	err := resolveBindPaths(binds, node.LabDir)
+	// binds := c.bindsInit(nodeDef)
+	binds := c.Config.Topology.GetNodeBinds(nodeName)
+	err := resolveBindPaths(binds, nodeCfg.LabDir)
 	if err != nil {
 		return err
 	}
-	node.Binds = binds
+	nodeCfg.Binds = binds
 
-	ps, pb, err := c.portsInit(&nodeCfg)
+	//ps, pb, err := c.portsInit(nodeDef)
+	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
 	if err != nil {
 		return err
 	}
-	node.PortBindings = pb
-	node.PortSet = ps
 
 	// initialize passed env variables which will be merged with kind specific ones
-	envs := c.envInit(&nodeCfg, node.Kind)
+	// envs := c.envInit(nodeDef, nodeCfg.Kind)
+	envs := c.Config.Topology.GetNodeEnv(nodeName)
 
-	user := c.userInit(&nodeCfg, node.Kind)
+	// user := c.userInit(nodeDef, nodeCfg.Kind)
+	user := c.Config.Topology.GetNodeUser(nodeName)
 
-	node.Publish = c.publishInit(&nodeCfg, node.Kind)
-
-	switch node.Kind {
+	// nodeCfg.Publish = c.publishInit(nodeDef, nodeCfg.Kind)
+	nodeCfg.Publish = c.Config.Topology.GetNodePublish(nodeName)
+	switch nodeCfg.Kind {
 	case "ceos":
-		err = initCeosNode(c, nodeCfg, node, user, envs)
+		err = initCeosNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 
 	case "srl":
-		err = initSRLNode(c, nodeCfg, node, user, envs)
+		err = initSRLNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "crpd":
-		err = initCrpdNode(c, nodeCfg, node, user, envs)
+		err = initCrpdNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "sonic-vs":
-		err = initSonicNode(c, nodeCfg, node, user, envs)
+		err = initSonicNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "vr-sros":
-		err = initSROSNode(c, nodeCfg, node, user, envs)
+		err = initSROSNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "vr-vmx":
-		err = initVrVMXNode(c, nodeCfg, node, user, envs)
+		err = initVrVMXNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "vr-xrv":
-		err = initVrXRVNode(c, nodeCfg, node, user, envs)
+		err = initVrXRVNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "vr-xrv9k":
-		err = initVrXRV9kNode(c, nodeCfg, node, user, envs)
+		err = initVrXRV9kNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "vr-veos":
-		err = initVrVeosNode(c, nodeCfg, node, user, envs)
+		err = initVrVeosNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "vr-csr":
-		err = initVrCSRNode(c, nodeCfg, node, user, envs)
+		err = initVrCSRNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "vr-ros":
-		err = initVrROSNode(c, nodeCfg, node, user, envs)
+		err = initVrROSNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 	case "alpine", "linux", "mysocketio":
-		err = initLinuxNode(c, nodeCfg, node, user, envs)
+		err = initLinuxNode(c, nodeDef, nodeCfg, user, envs)
 		if err != nil {
 			return err
 		}
 
 	case "bridge", "ovs-bridge":
-		node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-		node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+		// nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
+		nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
+		// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
+		nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 
 	default:
-		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, node.Kind, kinds)
+		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, nodeCfg.Kind, kinds)
 	}
 
 	// init labels after all node kinds are processed
-	node.Labels = c.labelsInit(&nodeCfg, node.Kind, node)
-
-	c.Nodes[nodeName] = node
+	nodeCfg.Labels = c.labelsInit(nodeDef, nodeCfg.Kind, nodeCfg)
+	// nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeName)
+	c.Nodes[nodeName] = nodeCfg
 	return nil
 }
 
 // NewLink initializes a new link object
-func (c *CLab) NewLink(l LinkConfig) *types.Link {
+func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
 	// initialize a new link
 	link := new(types.Link)
 	link.Labels = l.Labels
@@ -529,7 +333,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// "host" is a special reference to host namespace
 	// for which we create an special Node with kind "host"
 	case "host":
-		endpoint.Node = &types.Node{
+		endpoint.Node = &types.NodeConfig{
 			Kind:      "host",
 			ShortName: "host",
 			NSPath:    hostNSPath,
@@ -537,7 +341,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
-		endpoint.Node = &types.Node{
+		endpoint.Node = &types.NodeConfig{
 			Kind:      "bridge",
 			ShortName: "mgmt-net",
 		}
@@ -831,27 +635,6 @@ func resolveBindPaths(binds []string, nodedir string) error {
 		binds[i] = strings.Join(elems, ":")
 	}
 	return nil
-}
-
-// mergeStringMaps merges map m1 into m2 and return a resulting map as a new map
-// maps that are passed for merging will not be changed
-func mergeStringMaps(m1, m2 map[string]string) map[string]string {
-	if m1 == nil {
-		return m2
-	}
-	if m2 == nil {
-		return m1
-	}
-	// make a copy of a map
-	m := make(map[string]string)
-	for k, v := range m1 {
-		m[k] = v
-	}
-
-	for k, v := range m2 {
-		m[k] = v
-	}
-	return m
 }
 
 // CheckResources runs container host resources check

@@ -26,7 +26,7 @@ type CLab struct {
 	Config   *Config
 	TopoFile *TopoFile
 	m        *sync.RWMutex
-	Nodes    map[string]*types.Node
+	Nodes    map[string]*types.NodeConfig
 	Links    map[int]*types.Link
 	Runtime  runtime.ContainerRuntime
 	Dir      *Directory
@@ -115,11 +115,12 @@ func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
 func NewContainerLab(opts ...ClabOption) *CLab {
 	c := &CLab{
 		Config: &Config{
-			Mgmt: new(types.MgmtNet),
+			Mgmt:     new(types.MgmtNet),
+			Topology: types.NewTopology(),
 		},
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
-		Nodes:    make(map[string]*types.Node),
+		Nodes:    make(map[string]*types.NodeConfig),
 		Links:    make(map[int]*types.Link),
 	}
 
@@ -152,7 +153,7 @@ func (c *CLab) initMgmtNetwork() error {
 	return nil
 }
 
-func (c *CLab) CreateNode(ctx context.Context, node *types.Node, certs *Certificates) error {
+func (c *CLab) CreateNode(ctx context.Context, node *types.NodeConfig, certs *Certificates) error {
 	if certs != nil {
 		c.m.Lock()
 		node.TLSCert = string(certs.Cert)
@@ -167,7 +168,7 @@ func (c *CLab) CreateNode(ctx context.Context, node *types.Node, certs *Certific
 }
 
 // ExecPostDeployTasks executes tasks that some nodes might require to boot properly after start
-func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.Node, lworkers uint) error {
+func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.NodeConfig, lworkers uint) error {
 	switch node.Kind {
 	case "ceos":
 		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
@@ -213,7 +214,7 @@ func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.Node, lworke
 func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
-	nodesChan := make(chan *types.Node)
+	nodesChan := make(chan *types.NodeConfig)
 	// start workers
 	for i := uint(0); i < workers; i++ {
 		go func(i uint) {
@@ -372,7 +373,7 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types
 
 }
 
-func disableTxOffload(n *types.Node) error {
+func disableTxOffload(n *types.NodeConfig) error {
 	// skip this if node runs in host mode
 	if strings.ToLower(n.NetworkMode) == "host" {
 		return nil

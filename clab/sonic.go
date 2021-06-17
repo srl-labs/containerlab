@@ -6,20 +6,24 @@ package clab
 
 import "github.com/srl-labs/containerlab/types"
 
-func initSonicNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initSonicNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	// nodeCfg.Config, err = c.configInit(nodeDef, nodeCfg.Kind)
+	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-	node.User = user
+	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
+	// 	nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
+	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
+	nodeCfg.User = user
 
 	// rewrite entrypoint so sonic won't start supervisord before we attach veth interfaces
-	node.Entrypoint = "/bin/bash"
+	nodeCfg.Entrypoint = "/bin/bash"
 
 	return err
 }

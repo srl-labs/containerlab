@@ -13,35 +13,40 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func initCrpdNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initCrpdNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	// node.Config, err = c.configInit(nodeCfg, node.Kind)
+	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-	node.User = user
+	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
+	// nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
+	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
+	nodeCfg.User = user
 
 	// initialize license file
-	lp, err := c.licenseInit(&nodeCfg, node)
+	// lp, err := c.licenseInit(nodeDef, nodeCfg)
+	lp, err := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.License = lp
+	nodeCfg.License = lp
 
 	// mount config and log dirs
-	node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config"), ":/config"))
-	node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "log"), ":/var/log"))
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(path.Join(nodeCfg.LabDir, "config"), ":/config"))
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(path.Join(nodeCfg.LabDir, "log"), ":/var/log"))
 	// mount sshd_config
-	node.Binds = append(node.Binds, fmt.Sprint(path.Join(node.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(path.Join(nodeCfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
 
 	return err
 }
 
-func (c *CLab) createCRPDFiles(node *types.Node) error {
+func (c *CLab) createCRPDFiles(node *types.NodeConfig) error {
 	// create config and logs directory that will be bind mounted to crpd
 	utils.CreateDirectory(path.Join(node.LabDir, "config"), 0777)
 	utils.CreateDirectory(path.Join(node.LabDir, "log"), 0777)

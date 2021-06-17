@@ -18,7 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uint) error {
+func ceosPostDeploy(ctx context.Context, c *CLab, node *types.NodeConfig, lworkers uint) error {
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
 	err := node.GenerateConfig(node.ResConfig, defaultConfigTemplates[node.Kind])
 	if err != nil {
@@ -52,16 +52,19 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uin
 	return err
 }
 
-func initCeosNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initCeosNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 
 	// initialize the global parameters with defaults, can be overwritten later
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	// node.Config, err = c.configInit(nodeCfg, node.Kind)
+	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
+	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
+	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 
 	// initialize specific container information
 
@@ -75,31 +78,32 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 		"INTFTYPE":                            "eth",
 		"MAPETH0":                             "1",
 		"MGMT_INTF":                           "eth0"}
-	node.Env = mergeStringMaps(kindEnv, envs)
+	nodeCfg.Env = utils.MergeStringMaps(kindEnv, envs)
 
 	// the node.Cmd should be aligned with the environment.
 	var envSb strings.Builder
 	envSb.WriteString("/sbin/init ")
-	for k, v := range node.Env {
+	for k, v := range nodeCfg.Env {
 		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
 
 	}
-	node.Cmd = envSb.String()
+	nodeCfg.Cmd = envSb.String()
 
-	node.User = user
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.NodeType = nodeCfg.Type
+	nodeCfg.User = user
+	// 	nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
+	nodeCfg.NodeType = nodeDef.Type
 
-	node.MacAddress = genMac("00:1c:73")
+	nodeCfg.MacAddress = genMac("00:1c:73")
 
 	// mount config dir
-	cfgPath := filepath.Join(node.LabDir, "flash")
-	node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
+	cfgPath := filepath.Join(nodeCfg.LabDir, "flash")
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
 
 	return err
 }
 
-func (c *CLab) createCEOSFiles(node *types.Node) error {
+func (c *CLab) createCEOSFiles(node *types.NodeConfig) error {
 	// generate config directory
 	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := path.Join(node.LabDir, "flash", "startup-config")

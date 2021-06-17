@@ -10,25 +10,30 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-func initLinuxNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initLinuxNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	// nodeCfg.Config, err = c.configInit(nodeDef, nodeCfg.Kind)
+	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-	node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
-	node.User = user
+	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
+	// nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
+	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
+	// nodeCfg.Cmd = c.cmdInit(nodeDef, nodeCfg.Kind)
+	nodeCfg.Cmd = c.Config.Topology.GetNodeCmd(nodeCfg.ShortName)
+	nodeCfg.User = user
 
-	node.Sysctls = make(map[string]string)
-	if strings.ToLower(node.NetworkMode) != "host" {
-		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+	nodeCfg.Sysctls = make(map[string]string)
+	if strings.ToLower(nodeCfg.NetworkMode) != "host" {
+		nodeCfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
 	}
 
-	node.Env = envs
+	nodeCfg.Env = envs
 
 	return err
 }

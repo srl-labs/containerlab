@@ -125,7 +125,7 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Node) error {
+func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) error {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image

@@ -54,80 +54,87 @@ func generateSRLTopologyFile(src, labDir string, index int) error {
 	return nil
 }
 
-func initSRLNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func initSRLNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
 	// initialize the global parameters with defaults, can be overwritten later
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	// nodeCfg.Config, err = c.configInit(nodeDef, nodeCfg.Kind)
+	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
 
-	lp, err := c.licenseInit(&nodeCfg, node)
+	// lp, err := c.licenseInit(nodeDef, nodeCfg)
+	lp, err := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-
 	if lp == "" {
-		return fmt.Errorf("no license found for node '%s' of kind '%s'", node.ShortName, node.Kind)
+		return fmt.Errorf("no license found for node '%s' of kind '%s'", nodeCfg.ShortName, nodeCfg.Kind)
 	}
 
-	node.License = lp
+	nodeCfg.License = lp
 
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.NodeType = c.typeInit(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-
-	if filename, found := srlTypes[node.NodeType]; found {
-		node.Topology = baseConfigDir + filename
+	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
+	// 	nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
+	nodeCfg.NodeType = c.Config.Topology.GetNodeType(nodeCfg.ShortName)
+	if nodeCfg.NodeType == "" {
+		nodeCfg.NodeType = srlDefaultType
+	}
+	// nodeCfg.NodeType = c.typeInit(nodeDef, nodeCfg.Kind)
+	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
+	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
+	if filename, found := srlTypes[nodeCfg.NodeType]; found {
+		nodeCfg.Topology = baseConfigDir + filename
 	} else {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
-		log.Fatalf("wrong node type. '%s' doesn't exist. should be any of %s", node.NodeType, strings.Join(keys, ", "))
+		log.Fatalf("wrong node type. '%s' doesn't exist. should be any of %s", nodeCfg.NodeType, strings.Join(keys, ", "))
 	}
 
 	// the addition touch is needed to support non docker runtimes
-	node.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+	nodeCfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 
 	kindEnv := map[string]string{"SRLINUX": "1"}
-	node.Env = mergeStringMaps(kindEnv, envs)
+	nodeCfg.Env = utils.MergeStringMaps(kindEnv, envs)
 
 	// if user was not initialized to a value, use root
 	if user == "" {
 		user = "0:0"
 	}
-	node.User = user
+	nodeCfg.User = user
 
-	node.Sysctls = make(map[string]string)
-	node.Sysctls["net.ipv4.ip_forward"] = "0"
-	node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
-	node.Sysctls["net.ipv6.conf.all.accept_dad"] = "0"
-	node.Sysctls["net.ipv6.conf.default.accept_dad"] = "0"
-	node.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
-	node.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
+	nodeCfg.Sysctls = make(map[string]string)
+	nodeCfg.Sysctls["net.ipv4.ip_forward"] = "0"
+	nodeCfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+	nodeCfg.Sysctls["net.ipv6.conf.all.accept_dad"] = "0"
+	nodeCfg.Sysctls["net.ipv6.conf.default.accept_dad"] = "0"
+	nodeCfg.Sysctls["net.ipv6.conf.all.autoconf"] = "0"
+	nodeCfg.Sysctls["net.ipv6.conf.default.autoconf"] = "0"
 
 	// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
 	// in (c *cLab) CreateNodeDirStructure
-	node.Binds = append(node.Binds, fmt.Sprint(filepath.Join(node.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(filepath.Join(nodeCfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 
 	// mount config directory
-	cfgPath := filepath.Join(node.LabDir, "config")
-	node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
+	cfgPath := filepath.Join(nodeCfg.LabDir, "config")
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
 	// mount srlinux.conf
-	srlconfPath := filepath.Join(node.LabDir, "srlinux.conf")
-	node.Binds = append(node.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
+	srlconfPath := filepath.Join(nodeCfg.LabDir, "srlinux.conf")
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
 
 	// mount srlinux topology
-	topoPath := filepath.Join(node.LabDir, "topology.yml")
-	node.Binds = append(node.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+	topoPath := filepath.Join(nodeCfg.LabDir, "topology.yml")
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	return err
 }
 
-func (c *CLab) createSRLFiles(node *types.Node) error {
+func (c *CLab) createSRLFiles(node *types.NodeConfig) error {
 	log.Debugf("Creating directory structure for SRL container: %s", node.ShortName)
 	var src string
 	var dst string
