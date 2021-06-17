@@ -360,14 +360,10 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	}
 	var nr []dockerTypes.NetworkResource
 	if c.Mgmt.Network == "" {
-		netFilter := filters.NewArgs()
-		netFilter.Add("label", "containerlab")
 		nctx, cancel := context.WithTimeout(ctx, c.timeout)
 		defer cancel()
 
-		nr, err = c.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
-			Filters: netFilter,
-		})
+		nr, err = c.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{})
 		if err != nil {
 			return nil, err
 		}
