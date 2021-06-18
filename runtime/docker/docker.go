@@ -54,7 +54,6 @@ type DockerRuntime struct {
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
 	log.Debug("Runtime: Docker")
-	c.keepMgmtNet = false
 	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
@@ -191,7 +190,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := c.Mgmt.Network
 	if network == "bridge" || c.keepMgmtNet {
-		log.Infof("Skipping potential deletion of docker default bridge '%s'", network)
+		log.Debugf("Skipping deletion of '%s' network", network)
 		return nil
 	}
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
