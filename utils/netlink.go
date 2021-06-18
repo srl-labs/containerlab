@@ -47,3 +47,31 @@ func DefaultNetMTU() (string, error) {
 	}
 	return fmt.Sprint(b.MTU), nil
 }
+
+func CheckBrInUse(brname string) (bool, error) {
+	InUse := false
+	l, err := netlink.LinkList()
+	if err != nil {
+		return InUse, err
+	}
+	mgmtbr, err := netlink.LinkByName(brname)
+	if err != nil {
+		return InUse, err
+	}
+	mgmtbridx := mgmtbr.Attrs().Index
+	for _, link := range l {
+		if link.Attrs().MasterIndex == mgmtbridx {
+			InUse = true
+			break
+		}
+	}
+	return InUse, nil
+}
+
+func DeleteNetworkInterface(name string) error {
+	l, err := netlink.LinkByName(name)
+	if err != nil {
+		return err
+	}
+	return netlink.LinkDel(l)
+}

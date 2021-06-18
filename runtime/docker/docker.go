@@ -48,11 +48,13 @@ type DockerRuntime struct {
 	Mgmt             *types.MgmtNet
 	debug            bool
 	gracefulShutdown bool
+	keepMgmtNet      bool
 }
 
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
 	log.Info("Runtime: Docker")
+	c.keepMgmtNet = false
 	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
@@ -61,6 +63,10 @@ func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 		o(c)
 	}
 	return nil
+}
+
+func (c *DockerRuntime) WithKeepMgmtNet() {
+	c.keepMgmtNet = true
 }
 
 func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
@@ -183,28 +189,29 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 // DeleteNet deletes a docker bridge
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
-	if c.Mgmt.Network == "bridge" {
-		log.Debug("Skipping potential deletion of docker default bridge 'bridge'.")
+	network := c.Mgmt.Network
+	if network == "bridge" || c.keepMgmtNet {
+		log.Infof("Skipping potential deletion of docker default bridge '%s'", network)
 		return nil
 	}
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	nres, err := c.Client.NetworkInspect(ctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
+	nres, err := c.Client.NetworkInspect(ctx, network, dockerTypes.NetworkInspectOptions{})
 	if err != nil {
 		return err
 	}
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
 		if c.debug {
-			log.Debugf("network '%s' has %d active endpoints, deletion skipped", c.Mgmt.Network, numEndpoints)
+			log.Debugf("network '%s' has %d active endpoints, deletion skipped", network, numEndpoints)
 			for _, endp := range nres.Containers {
-				log.Debugf("'%s' is connected to %s", endp.Name, c.Mgmt.Network)
+				log.Debugf("'%s' is connected to %s", endp.Name, network)
 			}
 		}
 		return nil
 	}
-	err = c.Client.NetworkRemove(nctx, c.Mgmt.Network)
+	err = c.Client.NetworkRemove(nctx, network)
 	if err != nil {
 		return err
 	}

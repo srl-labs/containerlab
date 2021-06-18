@@ -39,14 +39,14 @@ const (
 func init() {
 	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
 		return &ContainerdRuntime{
-			Mgmt: new(types.MgmtNet),
-		}
+			Mgmt: new(types.MgmtNet)}
 	})
 }
 
 func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
 	log.Info("Runtime: containerd")
+	c.keepMgmtNet = false
 	c.client, err = containerd.New("/run/containerd/containerd.sock")
 	if err != nil {
 		return err
@@ -71,6 +71,7 @@ type ContainerdRuntime struct {
 	Mgmt             *types.MgmtNet
 	debug            bool
 	gracefulShutdown bool
+	keepMgmtNet      bool
 }
 
 func (c *ContainerdRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
@@ -93,14 +94,27 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
 }
 
+func (c *ContainerdRuntime) WithKeepMgmtNet() {
+	c.keepMgmtNet = true
+}
+
 func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
 	return nil
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
-	log.Debug("DeleteNet() - Not yet required with containerd")
-	return nil
+	bridgename := c.Mgmt.Bridge
+	brInUse, err := utils.CheckBrInUse(bridgename)
+	if c.keepMgmtNet || brInUse {
+		log.Infof("Skipping deletion of bridge '%s'", bridgename)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return utils.DeleteNetworkInterface(bridgename)
 }
+
 func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.GenericContainer, error) {
 	return nil, errors.New("not implemented")
 }

@@ -32,7 +32,6 @@ var rootCmd = &cobra.Command{
 		if debug {
 			log.SetLevel(log.DebugLevel)
 		}
-
 	},
 }
 
