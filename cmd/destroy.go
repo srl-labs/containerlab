@@ -45,30 +45,20 @@ var destroyCmd = &cobra.Command{
 
 		switch {
 		case !all:
-			{
-				// stop if not topo file provided and not all labs are requested
-				// to be deleted
-				if err = topoSet(); err != nil {
-					return err
-				}
-				topos[topo] = struct{}{}
-			}
+			topos[topo] = struct{}{}
 		case all:
-			{
-				c := clab.NewContainerLab(opts...)
-				// list all containerlab containers
-				containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}})
-				if err != nil {
-					return fmt.Errorf("could not list containers: %v", err)
-				}
-				if len(containers) == 0 {
-					return fmt.Errorf("no containerlab labs were found")
-				}
-				// get unique topo files from all labs
-				for _, cont := range containers {
-					topos[cont.Labels["clab-topo-file"]] = struct{}{}
-				}
-
+			c := clab.NewContainerLab(opts...)
+			// list all containerlab containers
+			containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}})
+			if err != nil {
+				return fmt.Errorf("could not list containers: %v", err)
+			}
+			if len(containers) == 0 {
+				return fmt.Errorf("no containerlab labs were found")
+			}
+			// get unique topo files from all labs
+			for _, cont := range containers {
+				topos[cont.Labels["clab-topo-file"]] = struct{}{}
 			}
 		}
 
