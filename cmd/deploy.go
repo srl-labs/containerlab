@@ -44,9 +44,6 @@ var deployCmd = &cobra.Command{
 	PreRunE:      sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
-		if err = topoSet(); err != nil {
-			return err
-		}
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
