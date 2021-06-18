@@ -9,8 +9,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -111,12 +113,15 @@ func (c *CLab) ParseTopology() error {
 	c.Links = make(map[int]*types.Link)
 
 	// initialize the Node information from the topology map
-	idx := 0
-	for nodeName, node := range c.Config.Topology.Nodes {
-		if err := c.NewNode(nodeName, node, idx); err != nil {
+	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
+	for nodeName := range c.Config.Topology.Nodes {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	sort.Strings(nodeNames)
+	for idx, nodeName := range nodeNames {
+		if err := c.NewNode(nodeName, c.Config.Topology.Nodes[nodeName], idx); err != nil {
 			return err
 		}
-		idx++
 	}
 	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
@@ -125,40 +130,20 @@ func (c *CLab) ParseTopology() error {
 	return nil
 }
 
-// initialize container labels
-func (c *CLab) labelsInit(nodeDef *types.NodeDefinition, kind string, node *types.NodeConfig) map[string]string {
-	defaultLabels := map[string]string{
-		"containerlab":      c.Config.Name,
-		"clab-node-name":    node.ShortName,
-		"clab-node-kind":    kind,
-		"clab-node-type":    node.NodeType,
-		"clab-node-group":   node.Group,
-		"clab-node-lab-dir": node.LabDir,
-		"clab-topo-file":    c.TopoFile.path,
-	}
-	// merge global labels into kind envs
-	m := utils.MergeStringMaps(c.Config.Topology.GetDefaults().GetLabels(), c.Config.Topology.GetKind(kind).GetLabels())
-	// merge result of previous merge into node envs
-	m2 := utils.MergeStringMaps(m, nodeDef.GetLabels())
-	// merge with default labels
-	return utils.MergeStringMaps(m2, defaultLabels)
-}
-
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) error {
-	// initialize a new node
-	nodeCfg := new(types.NodeConfig)
-	nodeCfg.ShortName = nodeName
-	nodeCfg.LongName = prefix + "-" + c.Config.Name + "-" + nodeName
-	nodeCfg.Fqdn = nodeName + "." + c.Config.Name + ".io"
-	nodeCfg.LabDir = c.Dir.Lab + "/" + nodeName
-	nodeCfg.Index = idx
-	nodeCfg.Endpoints = []*types.Endpoint{}
-
-	nodeCfg.NetworkMode = strings.ToLower(nodeDef.NetworkMode)
-
-	nodeCfg.MgmtIPv4Address = nodeDef.MgmtIPv4
-	nodeCfg.MgmtIPv6Address = nodeDef.MgmtIPv6
+	// initialize a new node configuration
+	nodeCfg := &types.NodeConfig{
+		ShortName:       nodeName,
+		LongName:        strings.Join([]string{prefix, c.Config.Name, nodeName}, "-"),
+		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, ".io"}, "."),
+		LabDir:          path.Join(c.Dir.Lab, nodeName),
+		Index:           idx,
+		Endpoints:       make([]*types.Endpoint, 0),
+		NetworkMode:     strings.ToLower(nodeDef.GetNetworkMode()),
+		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
+		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
+	}
 
 	// initialize the node with global parameters
 	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
@@ -166,7 +151,6 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	nodeCfg.Kind = strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
 
 	// initialize bind mounts
-	// binds := c.bindsInit(nodeDef)
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
 	err := resolveBindPaths(binds, nodeCfg.LabDir)
 	if err != nil {
@@ -174,20 +158,15 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	}
 	nodeCfg.Binds = binds
 
-	//ps, pb, err := c.portsInit(nodeDef)
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
 	if err != nil {
 		return err
 	}
 
 	// initialize passed env variables which will be merged with kind specific ones
-	// envs := c.envInit(nodeDef, nodeCfg.Kind)
 	envs := c.Config.Topology.GetNodeEnv(nodeName)
-
-	// user := c.userInit(nodeDef, nodeCfg.Kind)
 	user := c.Config.Topology.GetNodeUser(nodeName)
 
-	// nodeCfg.Publish = c.publishInit(nodeDef, nodeCfg.Kind)
 	nodeCfg.Publish = c.Config.Topology.GetNodePublish(nodeName)
 	switch nodeCfg.Kind {
 	case "ceos":
@@ -253,9 +232,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 		}
 
 	case "bridge", "ovs-bridge":
-		// nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
 		nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-		// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
 		nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 
 	default:
@@ -263,8 +240,16 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	}
 
 	// init labels after all node kinds are processed
-	nodeCfg.Labels = c.labelsInit(nodeDef, nodeCfg.Kind, nodeCfg)
-	// nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeName)
+	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeName)
+	nodeCfg.Labels = utils.MergeStringMaps(nodeCfg.Labels, map[string]string{
+		"containerlab":      c.Config.Name,
+		"clab-node-name":    nodeCfg.ShortName,
+		"clab-node-kind":    nodeCfg.Kind,
+		"clab-node-type":    nodeCfg.NodeType,
+		"clab-node-group":   nodeCfg.Group,
+		"clab-node-lab-dir": nodeCfg.LabDir,
+		"clab-topo-file":    c.TopoFile.path,
+	})
 	c.Nodes[nodeName] = nodeCfg
 	return nil
 }

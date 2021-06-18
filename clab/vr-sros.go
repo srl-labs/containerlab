@@ -15,33 +15,26 @@ import (
 
 func initSROSNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
-	// nodeCfg.Config, err = c.configInit(nodeDef, nodeCfg.Kind)
+
 	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	// 	nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 	nodeCfg.User = user
 
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
 	nodeCfg.NodeType = c.Config.Topology.GetNodeType(nodeCfg.ShortName)
-	//nodeCfg.NodeType = c.typeInit(nodeDef, nodeCfg.Kind)
 	if nodeCfg.NodeType == "" {
 		nodeCfg.NodeType = vrsrosDefaultType
 	}
 	// initialize license file
-	// lp, err := c.licenseInit(nodeDef, nodeCfg)
-	lp, err := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	nodeCfg.License = lp
-
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    vrDefConnMode,

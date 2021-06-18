@@ -13,11 +13,9 @@ import (
 
 func initVrVeosNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
 	var err error
-	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
+
 	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	// 	nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 	nodeCfg.User = user
 

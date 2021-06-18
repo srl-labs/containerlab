@@ -63,30 +63,23 @@ func initSRLNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConf
 		return err
 	}
 
-	// lp, err := c.licenseInit(nodeDef, nodeCfg)
-	lp, err := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	if lp == "" {
+	if nodeCfg.License == "" {
 		return fmt.Errorf("no license found for node '%s' of kind '%s'", nodeCfg.ShortName, nodeCfg.Kind)
 	}
 
-	nodeCfg.License = lp
-
-	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	// 	nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
 	nodeCfg.NodeType = c.Config.Topology.GetNodeType(nodeCfg.ShortName)
 	if nodeCfg.NodeType == "" {
 		nodeCfg.NodeType = srlDefaultType
 	}
-	// nodeCfg.NodeType = c.typeInit(nodeDef, nodeCfg.Kind)
-	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 	if filename, found := srlTypes[nodeCfg.NodeType]; found {
-		nodeCfg.Topology = baseConfigDir + filename
+		nodeCfg.Topology = path.Join(baseConfigDir, filename)
 	} else {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {

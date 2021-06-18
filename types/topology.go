@@ -56,6 +56,9 @@ func (t *Topology) GetKinds() map[string]*NodeDefinition {
 }
 
 func (t *Topology) GetNodeKind(name string) string {
+	if t == nil {
+		return ""
+	}
 	if ndef, ok := t.Nodes[name]; ok {
 		if ndef.GetKind() != "" {
 			return ndef.GetKind()

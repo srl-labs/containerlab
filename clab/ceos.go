@@ -61,9 +61,7 @@ func initCeosNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCon
 	if err != nil {
 		return err
 	}
-	// nodeCfg.Image = c.imageInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	// nodeCfg.Position = c.positionInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 
 	// initialize specific container information
@@ -90,7 +88,6 @@ func initCeosNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCon
 	nodeCfg.Cmd = envSb.String()
 
 	nodeCfg.User = user
-	// 	nodeCfg.Group = c.groupInitialization(nodeDef, nodeCfg.Kind)
 	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
 	nodeCfg.NodeType = nodeDef.Type
 
