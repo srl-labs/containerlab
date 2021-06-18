@@ -53,7 +53,7 @@ type DockerRuntime struct {
 
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
-	log.Info("Runtime: Docker")
+	log.Debug("Runtime: Docker")
 	c.keepMgmtNet = false
 	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
@@ -371,17 +371,31 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	}
 	var nr []dockerTypes.NetworkResource
 	if c.Mgmt.Network == "" {
-		netFilter := filters.NewArgs()
-		netFilter.Add("label", "containerlab")
 		nctx, cancel := context.WithTimeout(ctx, c.timeout)
 		defer cancel()
-
+		// fetch containerlab created networks
+		f := filters.NewArgs()
+		f.Add("label", "containerlab")
 		nr, err = c.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
-			Filters: netFilter,
+			Filters: f,
 		})
+
 		if err != nil {
 			return nil, err
 		}
+
+		// fetch default bridge network
+		f = filters.NewArgs()
+		f.Add("name", "bridge")
+		bridgenet, err := c.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
+			Filters: f,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		nr = append(nr, bridgenet...)
 	}
 	return c.produceGenericContainerList(ctrs, nr)
 }
