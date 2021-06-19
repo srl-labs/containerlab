@@ -11,14 +11,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func initVrROSNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
-	var err error
-
-	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
-	nodeCfg.User = user
-
+func (c *CLab) initVrROSNode(nodeCfg *types.NodeConfig) error {
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    vrDefConnMode,
@@ -27,7 +20,7 @@ func initVrROSNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCo
 		"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
 	}
-	nodeCfg.Env = utils.MergeStringMaps(defEnv, envs)
+	nodeCfg.Env = utils.MergeStringMaps(defEnv, nodeCfg.Env)
 
 	if nodeCfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
@@ -36,5 +29,5 @@ func initVrROSNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCo
 
 	nodeCfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace", nodeCfg.Env["USERNAME"], nodeCfg.Env["PASSWORD"], nodeCfg.ShortName, nodeCfg.Env["CONNECTION_MODE"])
 
-	return err
+	return nil
 }

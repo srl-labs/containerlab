@@ -13,18 +13,16 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func initCrpdNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
+func (c *CLab) initCrpdNode(nodeCfg *types.NodeConfig) error {
 	var err error
 
-	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
-	nodeCfg.User = user
-
+	if nodeCfg.Config == "" {
+		nodeCfg.Config = defaultConfigTemplates[nodeCfg.Kind]
+	}
 	// initialize license file
 	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
@@ -36,8 +34,7 @@ func initCrpdNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCon
 	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(path.Join(nodeCfg.LabDir, "log"), ":/var/log"))
 	// mount sshd_config
 	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(path.Join(nodeCfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
-
-	return err
+	return nil
 }
 
 func (c *CLab) createCRPDFiles(nodeCfg *types.NodeConfig) error {
@@ -55,7 +52,7 @@ func (c *CLab) createCRPDFiles(nodeCfg *types.NodeConfig) error {
 
 	// copy crpd sshd conf file to crpd node dir
 	src := "/etc/containerlab/templates/crpd/sshd_config"
-	dst := nodeCfg.LabDir + "/config/sshd_config"
+	dst := path.Join(nodeCfg.LabDir, "/config/sshd_config")
 	err = copyFile(src, dst)
 	if err != nil {
 		return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
@@ -71,5 +68,5 @@ func (c *CLab) createCRPDFiles(nodeCfg *types.NodeConfig) error {
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
-	return err
+	return nil
 }

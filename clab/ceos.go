@@ -52,19 +52,16 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *types.NodeConfig, lworke
 	return err
 }
 
-func initCeosNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
+func (c *CLab) initCeosNode(nodeCfg *types.NodeConfig) error {
 	var err error
 
-	// initialize the global parameters with defaults, can be overwritten later
-	// node.Config, err = c.configInit(nodeCfg, node.Kind)
 	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
-
-	// initialize specific container information
+	if nodeCfg.Config == "" {
+		nodeCfg.Config = defaultConfigTemplates[nodeCfg.Kind]
+	}
 
 	// defined env vars for the ceos
 	kindEnv := map[string]string{
@@ -75,29 +72,24 @@ func initCeosNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCon
 		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
 		"INTFTYPE":                            "eth",
 		"MAPETH0":                             "1",
-		"MGMT_INTF":                           "eth0"}
-	nodeCfg.Env = utils.MergeStringMaps(kindEnv, envs)
+		"MGMT_INTF":                           "eth0",
+	}
+	nodeCfg.Env = utils.MergeStringMaps(kindEnv, nodeCfg.Env)
 
 	// the node.Cmd should be aligned with the environment.
 	var envSb strings.Builder
 	envSb.WriteString("/sbin/init ")
 	for k, v := range nodeCfg.Env {
 		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
-
 	}
 	nodeCfg.Cmd = envSb.String()
-
-	nodeCfg.User = user
-	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-	nodeCfg.NodeType = nodeDef.Type
-
 	nodeCfg.MacAddress = genMac("00:1c:73")
 
 	// mount config dir
 	cfgPath := filepath.Join(nodeCfg.LabDir, "flash")
-	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
 
-	return err
+	return nil
 }
 
 func (c *CLab) createCEOSFiles(node *types.NodeConfig) error {

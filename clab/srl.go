@@ -54,15 +54,16 @@ func generateSRLTopologyFile(src, labDir string, index int) error {
 	return nil
 }
 
-func initSRLNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
+func (c *CLab) initSRLNode(nodeCfg *types.NodeConfig) error {
 	var err error
 	// initialize the global parameters with defaults, can be overwritten later
-	// nodeCfg.Config, err = c.configInit(nodeDef, nodeCfg.Kind)
-	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-
+	if nodeCfg.Config == "" {
+		nodeCfg.Config = defaultConfigTemplates[nodeCfg.Kind]
+	}
 	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return err
@@ -71,13 +72,9 @@ func initSRLNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConf
 		return fmt.Errorf("no license found for node '%s' of kind '%s'", nodeCfg.ShortName, nodeCfg.Kind)
 	}
 
-	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-	nodeCfg.NodeType = c.Config.Topology.GetNodeType(nodeCfg.ShortName)
 	if nodeCfg.NodeType == "" {
 		nodeCfg.NodeType = srlDefaultType
 	}
-	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
 	if filename, found := srlTypes[nodeCfg.NodeType]; found {
 		nodeCfg.Topology = path.Join(baseConfigDir, filename)
 	} else {
@@ -92,13 +89,12 @@ func initSRLNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConf
 	nodeCfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 
 	kindEnv := map[string]string{"SRLINUX": "1"}
-	nodeCfg.Env = utils.MergeStringMaps(kindEnv, envs)
+	nodeCfg.Env = utils.MergeStringMaps(kindEnv, nodeCfg.Env)
 
 	// if user was not initialized to a value, use root
-	if user == "" {
-		user = "0:0"
+	if nodeCfg.User == "" {
+		nodeCfg.User = "0:0"
 	}
-	nodeCfg.User = user
 
 	nodeCfg.Sysctls = make(map[string]string)
 	nodeCfg.Sysctls["net.ipv4.ip_forward"] = "0"
@@ -124,7 +120,7 @@ func initSRLNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConf
 	topoPath := filepath.Join(nodeCfg.LabDir, "topology.yml")
 	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
-	return err
+	return nil
 }
 
 func (c *CLab) createSRLFiles(node *types.NodeConfig) error {

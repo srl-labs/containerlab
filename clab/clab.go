@@ -224,11 +224,11 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 				case node := <-nodesChan:
 					if node == nil {
 						log.Debugf("Worker %d terminating...", i)
-						return
+						continue
 					}
 					log.Debugf("Worker %d received node: %+v", i, node)
 					if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
-						return
+						continue
 					}
 
 					var nodeCerts *Certificates

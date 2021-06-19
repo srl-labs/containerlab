@@ -132,115 +132,121 @@ func (c *CLab) ParseTopology() error {
 
 // NewNode initializes a new node object
 func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) error {
-	// initialize a new node configuration
+	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
+	if err != nil {
+		return err
+	}
+
+	err = c.initializeNodeCfg(nodeCfg)
+	if err != nil {
+		return err
+	}
+	c.Nodes[nodeName] = nodeCfg
+	return nil
+}
+
+func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx int) (*types.NodeConfig, error) {
 	nodeCfg := &types.NodeConfig{
 		ShortName:       nodeName,
 		LongName:        strings.Join([]string{prefix, c.Config.Name, nodeName}, "-"),
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, ".io"}, "."),
 		LabDir:          path.Join(c.Dir.Lab, nodeName),
 		Index:           idx,
-		Endpoints:       make([]*types.Endpoint, 0),
+		Group:           c.Config.Topology.GetNodeGroup(nodeName),
+		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
+		NodeType:        c.Config.Topology.GetNodeType(nodeName),
+		Position:        c.Config.Topology.GetNodePosition(nodeName),
+		Image:           c.Config.Topology.GetNodeImage(nodeName),
+		User:            c.Config.Topology.GetNodeUser(nodeName),
+		Cmd:             c.Config.Topology.GetNodeCmd(nodeName),
+		Env:             c.Config.Topology.GetNodeEnv(nodeName),
 		NetworkMode:     strings.ToLower(c.Config.Topology.GetNodeNetworkMode(nodeName)),
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
+		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 	}
-
-	// initialize the node with global parameters
-	// Kind initialization is either coming from `topology.nodes` section or from `topology.defaults`
-	// normalize the data to lower case to compare
-	nodeCfg.Kind = strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
 
 	// initialize bind mounts
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
 	err := resolveBindPaths(binds, nodeCfg.LabDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	nodeCfg.Binds = binds
-
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
-	if err != nil {
-		return err
-	}
+	return nodeCfg, err
+}
 
-	// initialize passed env variables which will be merged with kind specific ones
-	envs := c.Config.Topology.GetNodeEnv(nodeName)
-	user := c.Config.Topology.GetNodeUser(nodeName)
-
-	nodeCfg.Publish = c.Config.Topology.GetNodePublish(nodeName)
+func (c *CLab) initializeNodeCfg(nodeCfg *types.NodeConfig) error {
+	var err error
 	switch nodeCfg.Kind {
 	case "ceos":
-		err = initCeosNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initCeosNode(nodeCfg)
 		if err != nil {
 			return err
 		}
-
 	case "srl":
-		err = initSRLNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initSRLNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "crpd":
-		err = initCrpdNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initCrpdNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "sonic-vs":
-		err = initSonicNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initSonicNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "vr-sros":
-		err = initSROSNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initSROSNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "vr-vmx":
-		err = initVrVMXNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initVrVMXNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "vr-xrv":
-		err = initVrXRVNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initVrXRVNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "vr-xrv9k":
-		err = initVrXRV9kNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initVrXRV9kNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "vr-veos":
-		err = initVrVeosNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initVrVeosNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "vr-csr":
-		err = initVrCSRNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initVrCSRNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "vr-ros":
-		err = initVrROSNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initVrROSNode(nodeCfg)
 		if err != nil {
 			return err
 		}
 	case "alpine", "linux", "mysocketio":
-		err = initLinuxNode(c, nodeDef, nodeCfg, user, envs)
+		err = c.initLinuxNode(nodeCfg)
 		if err != nil {
 			return err
 		}
-
 	case "bridge", "ovs-bridge":
-		nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-		nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
-
 	default:
-		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeName, nodeCfg.Kind, kinds)
+		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
 	}
 
 	// init labels after all node kinds are processed
-	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeName)
+	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 	nodeCfg.Labels = utils.MergeStringMaps(nodeCfg.Labels, map[string]string{
 		"containerlab":      c.Config.Name,
 		"clab-node-name":    nodeCfg.ShortName,
@@ -250,7 +256,6 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 		"clab-node-lab-dir": nodeCfg.LabDir,
 		"clab-topo-file":    c.TopoFile.path,
 	})
-	c.Nodes[nodeName] = nodeCfg
 	return nil
 }
 

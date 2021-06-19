@@ -13,20 +13,17 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func initSROSNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeConfig, user string, envs map[string]string) error {
+func (c *CLab) initSROSNode(nodeCfg *types.NodeConfig) error {
 	var err error
 
-	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	nodeCfg.Image = c.Config.Topology.GetNodeImage(nodeCfg.ShortName)
-	nodeCfg.Group = c.Config.Topology.GetNodeGroup(nodeCfg.ShortName)
-	nodeCfg.Position = c.Config.Topology.GetNodePosition(nodeCfg.ShortName)
-	nodeCfg.User = user
-
+	if nodeCfg.Config == "" {
+		nodeCfg.Config = defaultConfigTemplates[nodeCfg.Kind]
+	}
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
-	nodeCfg.NodeType = c.Config.Topology.GetNodeType(nodeCfg.ShortName)
 	if nodeCfg.NodeType == "" {
 		nodeCfg.NodeType = vrsrosDefaultType
 	}
@@ -41,7 +38,7 @@ func initSROSNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCon
 		"DOCKER_NET_V4_ADDR": c.Config.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": c.Config.Mgmt.IPv6Subnet,
 	}
-	nodeCfg.Env = utils.MergeStringMaps(defEnv, envs)
+	nodeCfg.Env = utils.MergeStringMaps(defEnv, nodeCfg.Env)
 
 	// mount tftpboot dir
 	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprint(path.Join(nodeCfg.LabDir, "tftpboot"), ":/tftpboot"))
@@ -54,7 +51,7 @@ func initSROSNode(c *CLab, nodeDef *types.NodeDefinition, nodeCfg *types.NodeCon
 		nodeCfg.ShortName,
 		nodeCfg.NodeType,
 	)
-	return err
+	return nil
 }
 
 func (c *CLab) createVrSROSFiles(node *types.NodeConfig) error {
