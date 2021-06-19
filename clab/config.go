@@ -140,7 +140,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 		LabDir:          path.Join(c.Dir.Lab, nodeName),
 		Index:           idx,
 		Endpoints:       make([]*types.Endpoint, 0),
-		NetworkMode:     strings.ToLower(nodeDef.GetNetworkMode()),
+		NetworkMode:     strings.ToLower(c.Config.Topology.GetNodeNetworkMode(nodeName)),
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
 	}

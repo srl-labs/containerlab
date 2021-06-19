@@ -70,15 +70,13 @@ func (t *Topology) GetNodeKind(name string) string {
 
 func (t *Topology) GetNodeBinds(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if len(ndef.Binds) > 0 {
-			return ndef.Binds
+		if len(ndef.GetBinds()) > 0 {
+			return ndef.GetBinds()
 		}
-		if t.Kinds != nil {
-			if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-				return t.Kinds[ndef.Kind].Binds
-			}
+		if len(t.GetKind(t.GetNodeKind(name)).GetBinds()) > 0 {
+			return t.GetKind(t.GetNodeKind(name)).GetBinds()
 		}
-		return t.Defaults.Binds
+		return t.GetDefaults().GetBinds()
 	}
 	return nil
 }
@@ -113,7 +111,7 @@ func (t *Topology) GetNodeEnv(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
 		return utils.MergeStringMaps(
 			utils.MergeStringMaps(t.GetDefaults().GetEnv(),
-				t.GetKind(ndef.GetKind()).GetEnv()),
+				t.GetKind(t.GetNodeKind(name)).GetEnv()),
 			ndef.Env)
 	}
 	return nil
@@ -138,7 +136,7 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
 		return utils.MergeStringMaps(
 			utils.MergeStringMaps(t.Defaults.GetLabels(),
-				t.GetKind(ndef.GetKind()).GetLabels()),
+				t.GetKind(t.GetNodeKind(name)).GetLabels()),
 			ndef.Labels)
 	}
 	return nil
@@ -148,12 +146,12 @@ func (t *Topology) GetNodeConfig(name string) (string, error) {
 	var cfg string
 	if ndef, ok := t.Nodes[name]; ok {
 		var err error
-		cfg = ndef.Config
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && cfg == "" {
-			cfg = kdef.Config
+		cfg = ndef.GetConfig()
+		if t.GetKind(t.GetNodeKind(name)).GetConfig() != "" && cfg == "" {
+			cfg = t.GetKind(t.GetNodeKind(name)).GetConfig()
 		}
 		if cfg == "" {
-			cfg = t.Defaults.Config
+			cfg = t.GetDefaults().GetConfig()
 		}
 		if cfg != "" {
 			cfg, err = resolvePath(cfg)
@@ -171,12 +169,12 @@ func (t *Topology) GetNodeLicense(name string) (string, error) {
 	var license string
 	if ndef, ok := t.Nodes[name]; ok {
 		var err error
-		license = ndef.License
-		if license == "" {
-			license = t.GetKind(ndef.GetKind()).GetLicense()
+		license = ndef.GetLicense()
+		if t.GetKind(t.GetNodeKind(name)).GetLicense() != "" && license == "" {
+			license = t.GetKind(t.GetNodeKind(name)).GetLicense()
 		}
 		if license == "" {
-			license = t.Defaults.GetLicense()
+			license = t.GetDefaults().GetLicense()
 		}
 		if license != "" {
 			license, err = resolvePath(license)
@@ -192,60 +190,52 @@ func (t *Topology) GetNodeLicense(name string) (string, error) {
 
 func (t *Topology) GetNodeImage(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.Image != "" {
-			return ndef.Image
+		if ndef.GetImage() != "" {
+			return ndef.GetImage()
 		}
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-			if kdef.Image != "" {
-				return kdef.Image
-			}
+		if t.GetKind(t.GetNodeKind(name)).GetImage() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetImage()
 		}
-		return t.Defaults.Image
+		return t.GetDefaults().GetImage()
 	}
 	return ""
 }
 
 func (t *Topology) GetNodeGroup(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.Group != "" {
-			return ndef.Group
+		if ndef.GetGroup() != "" {
+			return ndef.GetGroup()
 		}
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-			if kdef.Group != "" {
-				return kdef.Group
-			}
+		if t.GetKind(t.GetNodeKind(name)).GetGroup() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetGroup()
 		}
-		return t.Defaults.Group
+		return t.GetDefaults().GetGroup()
 	}
 	return ""
 }
 
 func (t *Topology) GetNodeType(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.Type != "" {
-			return ndef.Type
+		if ndef.GetType() != "" {
+			return ndef.GetType()
 		}
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-			if kdef.Type != "" {
-				return kdef.Type
-			}
+		if t.GetKind(t.GetNodeKind(name)).GetType() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetType()
 		}
-		return t.Defaults.Type
+		return t.GetDefaults().GetType()
 	}
 	return ""
 }
 
 func (t *Topology) GetNodePosition(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.Position != "" {
-			return ndef.Position
+		if ndef.GetPostion() != "" {
+			return ndef.GetPostion()
 		}
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-			if kdef.Position != "" {
-				return kdef.Position
-			}
+		if t.GetKind(t.GetNodeKind(name)).GetPostion() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetPostion()
 		}
-		return t.Defaults.Position
+		return t.GetDefaults().GetPostion()
 	}
 	return ""
 }
@@ -255,25 +245,36 @@ func (t *Topology) GetNodeCmd(name string) string {
 		if ndef.GetCmd() != "" {
 			return ndef.GetCmd()
 		}
-		if t.GetKind(ndef.GetKind()).GetCmd() != "" {
-			return t.GetKind(ndef.GetKind()).GetCmd()
+		if t.GetKind(t.GetNodeKind(name)).GetCmd() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetCmd()
 		}
-		return t.Defaults.GetCmd()
+		return t.GetDefaults().GetCmd()
 	}
 	return ""
 }
 
 func (t *Topology) GetNodeUser(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.User != "" {
-			return ndef.User
+		if ndef.GetUser() != "" {
+			return ndef.GetUser()
 		}
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-			if kdef.User != "" {
-				return kdef.User
-			}
+		if t.GetKind(t.GetNodeKind(name)).GetUser() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetUser()
 		}
-		return t.Defaults.User
+		return t.GetDefaults().GetUser()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeNetworkMode(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNetworkMode() != "" {
+			return ndef.GetNetworkMode()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNetworkMode() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNetworkMode()
+		}
+		return t.GetDefaults().GetNetworkMode()
 	}
 	return ""
 }
