@@ -53,7 +53,7 @@ func (c *CLab) createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	// copy crpd sshd conf file to crpd node dir
 	src := "/etc/containerlab/templates/crpd/sshd_config"
 	dst := path.Join(nodeCfg.LabDir, "/config/sshd_config")
-	err = copyFile(src, dst)
+	err = utils.CopyFile(src, dst)
 	if err != nil {
 		return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 	}
@@ -63,7 +63,7 @@ func (c *CLab) createCRPDFiles(nodeCfg *types.NodeConfig) error {
 		// copy license file to node specific lab directory
 		src = nodeCfg.License
 		dst = path.Join(nodeCfg.LabDir, "/config/license.conf")
-		if err = copyFile(src, dst); err != nil {
+		if err = utils.CopyFile(src, dst); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

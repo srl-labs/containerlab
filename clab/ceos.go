@@ -104,6 +104,6 @@ func (c *CLab) createCEOSFiles(node *types.NodeConfig) error {
 		return err
 	}
 	m[5] = m[5] + 1
-	createFile(path.Join(node.LabDir, "flash", "system_mac_address"), m.String())
+	utils.CreateFile(path.Join(node.LabDir, "flash", "system_mac_address"), m.String())
 	return nil
 }

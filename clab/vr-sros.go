@@ -62,7 +62,7 @@ func (c *CLab) createVrSROSFiles(node *types.NodeConfig) error {
 		// copy license file to node specific lab directory
 		src := node.License
 		dst := path.Join(node.LabDir, "/tftpboot/license.txt")
-		if err := copyFile(src, dst); err != nil {
+		if err := utils.CopyFile(src, dst); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

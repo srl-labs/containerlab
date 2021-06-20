@@ -131,7 +131,7 @@ func (c *CLab) createSRLFiles(node *types.NodeConfig) error {
 	// copy license file to node specific directory in lab
 	src = node.License
 	dst = path.Join(node.LabDir, "license.key")
-	if err := copyFile(src, dst); err != nil {
+	if err := utils.CopyFile(src, dst); err != nil {
 		return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 	}
 	log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
@@ -155,7 +155,7 @@ func (c *CLab) createSRLFiles(node *types.NodeConfig) error {
 	// copy env config to node specific directory in lab
 	src = "/etc/containerlab/templates/srl/srl_env.conf"
 	dst = node.LabDir + "/" + "srlinux.conf"
-	err = copyFile(src, dst)
+	err = utils.CopyFile(src, dst)
 	if err != nil {
 		return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 	}

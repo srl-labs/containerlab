@@ -221,10 +221,10 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 			defer wg.Done()
 			for {
 				select {
-				case node := <-nodesChan:
-					if node == nil {
+				case node, ok := <-nodesChan:
+					if node == nil || !ok {
 						log.Debugf("Worker %d terminating...", i)
-						continue
+						return
 					}
 					log.Debugf("Worker %d received node: %+v", i, node)
 					if node.Kind == "bridge" || node.Kind == "ovs-bridge" {

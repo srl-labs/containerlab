@@ -230,9 +230,9 @@ func (c *CLab) RetrieveNodeCertData(n *types.NodeConfig) (*Certificates, error) 
 }
 
 func (c *CLab) writeCertFiles(certs *Certificates, filesPrefix string) {
-	createFile(filesPrefix+".pem", string(certs.Cert))
-	createFile(filesPrefix+"-key.pem", string(certs.Key))
-	createFile(filesPrefix+".csr", string(certs.Csr))
+	utils.CreateFile(filesPrefix+".pem", string(certs.Cert))
+	utils.CreateFile(filesPrefix+"-key.pem", string(certs.Key))
+	utils.CreateFile(filesPrefix+".csr", string(certs.Csr))
 }
 
 //CreateRootCA creates RootCA key/certificate if it is needed by the topology

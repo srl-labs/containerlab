@@ -261,24 +261,15 @@ func (c *CLab) initializeNodeCfg(nodeCfg *types.NodeConfig) error {
 
 // NewLink initializes a new link object
 func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
-	// initialize a new link
-	link := new(types.Link)
-	link.Labels = l.Labels
-
-	if link.MTU <= 0 {
-		link.MTU = defaultVethLinkMTU
+	if len(l.Endpoints) != 2 {
+		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints)
 	}
-
-	for i, d := range l.Endpoints {
-		// i indicates the number and d presents the string, which need to be
-		// split in node and endpoint name
-		if i == 0 {
-			link.A = c.NewEndpoint(d)
-		} else {
-			link.B = c.NewEndpoint(d)
-		}
+	return &types.Link{
+		A:      c.NewEndpoint(l.Endpoints[0]),
+		B:      c.NewEndpoint(l.Endpoints[1]),
+		MTU:    defaultVethLinkMTU,
+		Labels: l.Labels,
 	}
-	return link
 }
 
 // NewEndpoint initializes a new endpoint object
@@ -291,9 +282,13 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	if len(split) != 2 {
 		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904
 	}
-	nName := split[0]  // node name
-	epName := split[1] // endpoint name
+	nName := split[0] // node name
 
+	// initialize the endpoint name based on the split function
+	endpoint.EndpointName = split[1] // endpoint name
+	if len(endpoint.EndpointName) > 15 {
+		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
+	}
 	// generate unqiue MAC
 	endpoint.MAC = genMac(clabOUI)
 
@@ -315,13 +310,12 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 			ShortName: "mgmt-net",
 		}
 	default:
-		for name, n := range c.Nodes {
-			if name == nName {
-				endpoint.Node = n
-				n.Endpoints = append(n.Endpoints, endpoint)
-				break
-			}
+		c.m.Lock()
+		if n, ok := c.Nodes[nName]; ok {
+			endpoint.Node = n
+			n.Endpoints = append(n.Endpoints, endpoint)
 		}
+		c.m.Unlock()
 	}
 
 	// stop the deployment if the matching node element was not found
@@ -330,38 +324,31 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904
 	}
 
-	// initialize the endpoint name based on the split function
-	endpoint.EndpointName = epName
-	if len(endpoint.EndpointName) > 15 {
-		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
-	}
 	return endpoint
 }
 
 // CheckTopologyDefinition runs topology checks and returns any errors found
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyBridgesExist(); err != nil {
+	var err error
+	if err = c.verifyBridgesExist(); err != nil {
 		return err
 	}
-	if err := c.verifyLinks(); err != nil {
+	if err = c.verifyLinks(); err != nil {
 		return err
 	}
-	if err := c.verifyRootNetnsInterfaceUniqueness(); err != nil {
+	if err = c.verifyRootNetnsInterfaceUniqueness(); err != nil {
 		return err
 	}
-	if err := c.VerifyContainersUniqueness(ctx); err != nil {
+	if err = c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
-	if err := c.verifyVirtSupport(); err != nil {
+	if err = c.verifyVirtSupport(); err != nil {
 		return err
 	}
-	if err := c.verifyHostIfaces(); err != nil {
+	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
-	if err := c.VerifyImages(ctx); err != nil {
-		return err
-	}
-	if err := c.VerifyImages(ctx); err != nil { // skipcq: RVV-B0005
+	if err = c.VerifyImages(ctx); err != nil {
 		return err
 	}
 
