@@ -348,11 +348,7 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
-	if err = c.VerifyImages(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return c.VerifyImages(ctx)
 }
 
 // VerifyBridgeExists verifies if every node of kind=bridge/ovs-bridge exists on the lab host
