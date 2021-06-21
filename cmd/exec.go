@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -15,7 +16,10 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-var labels []string
+var (
+	labels     []string
+	jsonOutput bool
+)
 
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
@@ -59,7 +63,10 @@ var execCmd = &cobra.Command{
 		for _, a := range args {
 			cmds = append(cmds, strings.Split(a, " ")...)
 		}
+		jsonResult := make(map[string]map[string]interface{})
+
 		for _, cont := range containers {
+			var doc interface{}
 			if cont.State != "running" {
 				continue
 			}
@@ -68,12 +75,30 @@ var execCmd = &cobra.Command{
 				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
 				continue
 			}
-			if len(stdout) > 0 {
-				log.Infof("%s: stdout:\n%s", cont.Names, string(stdout))
+			if jsonOutput {
+				jsonResult[cont.Names[0]] = make(map[string]interface{})
+				err := json.Unmarshal([]byte(stdout), &doc)
+				if err == nil {
+					jsonResult[cont.Names[0]]["stdout"] = doc
+				} else {
+					jsonResult[cont.Names[0]]["stdout"] = string(stdout)
+				}
+				jsonResult[cont.Names[0]]["stderr"] = string(stderr)
+			} else {
+				if len(stdout) > 0 {
+					log.Infof("%s: stdout:\n%s", cont.Names, string(stdout))
+				}
+				if len(stderr) > 0 {
+					log.Infof("%s: stderr:\n%s", cont.Names, string(stderr))
+				}
 			}
-			if len(stderr) > 0 {
-				log.Infof("%s: stderr:\n%s", cont.Names, string(stderr))
+		}
+		if jsonOutput {
+			result, err := json.Marshal(jsonResult)
+			if err != nil {
+				log.Debug("Issue converting to json %v", err)
 			}
+			fmt.Println(string(result))
 		}
 	},
 }
@@ -81,4 +106,5 @@ var execCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(execCmd)
 	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
+	execCmd.Flags().BoolVarP(&jsonOutput, "json", "j", false, "get output in json format")
 }
