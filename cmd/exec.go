@@ -96,7 +96,7 @@ var execCmd = &cobra.Command{
 		if jsonOutput {
 			result, err := json.Marshal(jsonResult)
 			if err != nil {
-				log.Debug("Issue converting to json %v", err)
+				log.Errorf("Issue converting to json %v", err)
 			}
 			fmt.Println(string(result))
 		}
