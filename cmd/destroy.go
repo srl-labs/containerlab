@@ -22,7 +22,7 @@ import (
 var (
 	cleanup     bool
 	graceful    bool
-	keepmgmtnet bool
+	keepMgmtNet bool
 )
 
 // destroyCmd represents the destroy command
@@ -44,7 +44,7 @@ var destroyCmd = &cobra.Command{
 			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
 
-		if keepmgmtnet {
+		if keepMgmtNet {
 			opts = append(opts, clab.WithKeepMgmtNet())
 		}
 
@@ -109,7 +109,7 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleteing nodes")
-	destroyCmd.Flags().BoolVarP(&keepmgmtnet, "keep-mgmt-net", "", false, "do not remove the mgmt network")
+	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
 }
 
 func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName string) error {
@@ -200,13 +200,13 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// delete lab management network
-	log.Infof("Cleanup networking")
-	if err = c.Runtime.DeleteNet(ctx); err != nil {
-		// do not log error message if deletion error simply says that such network doesn't exist
-		if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
-			log.Error(err)
+	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
+		if err = c.Runtime.DeleteNet(ctx); err != nil {
+			// do not log error message if deletion error simply says that such network doesn't exist
+			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
+				log.Error(err)
+			}
 		}
-
 	}
 	// delete container network namespaces symlinks
 	return c.DeleteNetnsSymlinks()

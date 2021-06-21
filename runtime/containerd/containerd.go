@@ -102,14 +102,26 @@ func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
 	return nil
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
+	var err error
 	bridgename := c.Mgmt.Bridge
-	brInUse, err := utils.CheckBrInUse(bridgename)
+	brInUse := true
+	for i := 0; i < 10; i++ {
+		brInUse, err = utils.CheckBrInUse(bridgename)
+		if err != nil {
+			return err
+		}
+		time.Sleep(time.Millisecond * 100)
+		if !brInUse {
+			// Stop early if bridge no longer in use
+			// Need to wait some time, since the earlier veth deletion
+			// triggert from the cotnainer deletion is async and needs
+			// to finish. W'll have a race condition otherwise.
+			break
+		}
+	}
 	if c.keepMgmtNet || brInUse {
 		log.Infof("Skipping deletion of bridge '%s'", bridgename)
 		return nil
-	}
-	if err != nil {
-		return err
 	}
 	return utils.DeleteNetworkInterface(bridgename)
 }
@@ -119,7 +131,6 @@ func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.Ge
 }
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
-
 	log.Debugf("Looking up %s container image", imagename)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 	if !strings.Contains(imagename, ":") {
@@ -239,7 +250,6 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		if len(portmappings) > 0 {
 			cnirc.CapabilityArgs["portMappings"] = portmappings
 		}
-
 	}
 
 	var cOpts []containerd.NewContainerOpts

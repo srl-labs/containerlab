@@ -107,7 +107,6 @@ func WithTopoFile(file string) ClabOption {
 		if err != nil {
 			log.Fatalf("failed to init the management network: %s", err)
 		}
-
 	}
 }
 
