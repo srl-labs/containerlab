@@ -55,7 +55,7 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *types.NodeConfig, lworke
 func (c *CLab) initCeosNode(nodeCfg *types.NodeConfig) error {
 	var err error
 
-	c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
