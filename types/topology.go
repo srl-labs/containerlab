@@ -84,25 +84,17 @@ func (t *Topology) GetNodeBinds(name string) []string {
 func (t *Topology) GetNodePorts(name string) (nat.PortSet, nat.PortMap, error) {
 	if ndef, ok := t.Nodes[name]; ok {
 		// node level ports
-		if len(ndef.Ports) != 0 {
-			ps, pb, err := nat.ParsePortSpecs(ndef.Ports)
-			if err != nil {
-				return nil, nil, err
-			}
-			return ps, pb, nil
+		if len(ndef.GetPorts()) != 0 {
+			return nat.ParsePortSpecs(ndef.Ports)
 		}
 		// kind level ports
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-			if len(kdef.Ports) > 0 {
-				ps, pb, err := nat.ParsePortSpecs(kdef.Ports)
-				if err != nil {
-					return nil, nil, err
-				}
-				return ps, pb, nil
-			}
+		if len(t.GetKind(t.GetNodeKind(name)).GetPorts()) > 0 {
+			return nat.ParsePortSpecs(t.GetKind(t.GetNodeKind(name)).GetPorts())
 		}
-		// default ports ?
-		return nil, nil, nil
+		// default level ports
+		if len(t.GetDefaults().GetPorts()) > 0 {
+			return nat.ParsePortSpecs(t.GetDefaults().GetPorts())
+		}
 	}
 	return nil, nil, nil
 }
