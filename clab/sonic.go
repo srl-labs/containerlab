@@ -6,20 +6,16 @@ package clab
 
 import "github.com/srl-labs/containerlab/types"
 
-func initSonicNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func (c *CLab) initSonicNode(nodeCfg *types.NodeConfig) error {
 	var err error
 
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-	node.User = user
 
 	// rewrite entrypoint so sonic won't start supervisord before we attach veth interfaces
-	node.Entrypoint = "/bin/bash"
+	nodeCfg.Entrypoint = "/bin/bash"
 
-	return err
+	return nil
 }

@@ -12,3 +12,24 @@ func ConvertEnvs(m map[string]string) []string {
 	}
 	return s
 }
+
+// mergeStringMaps merges map m1 into m2 and return a resulting map as a new map
+// maps that are passed for merging will not be changed
+func MergeStringMaps(m1, m2 map[string]string) map[string]string {
+	if m1 == nil {
+		return m2
+	}
+	if m2 == nil {
+		return m1
+	}
+	// make a copy of a map
+	m := make(map[string]string)
+	for k, v := range m1 {
+		m[k] = v
+	}
+
+	for k, v := range m2 {
+		m[k] = v
+	}
+	return m
+}

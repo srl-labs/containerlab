@@ -212,7 +212,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 }
 
 // CreateContainer creates a docker container
-func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.Node) (err error) {
+func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (err error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)

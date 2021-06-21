@@ -202,7 +202,7 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 
 // RetrieveNodeCertData reads the node private key and certificate by the well known paths
 // if either of those files doesn't exist, an error is returned
-func (c *CLab) RetrieveNodeCertData(n *types.Node) (*Certificates, error) {
+func (c *CLab) RetrieveNodeCertData(n *types.NodeConfig) (*Certificates, error) {
 	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
 	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
 	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
@@ -230,9 +230,9 @@ func (c *CLab) RetrieveNodeCertData(n *types.Node) (*Certificates, error) {
 }
 
 func (c *CLab) writeCertFiles(certs *Certificates, filesPrefix string) {
-	createFile(filesPrefix+".pem", string(certs.Cert))
-	createFile(filesPrefix+"-key.pem", string(certs.Key))
-	createFile(filesPrefix+".csr", string(certs.Csr))
+	utils.CreateFile(filesPrefix+".pem", string(certs.Cert))
+	utils.CreateFile(filesPrefix+"-key.pem", string(certs.Key))
+	utils.CreateFile(filesPrefix+".csr", string(certs.Csr))
 }
 
 //CreateRootCA creates RootCA key/certificate if it is needed by the topology

@@ -10,25 +10,18 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-func initLinuxNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func (c *CLab) initLinuxNode(nodeCfg *types.NodeConfig) error {
 	var err error
 
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-	node.Cmd = c.cmdInit(&nodeCfg, node.Kind)
-	node.User = user
 
-	node.Sysctls = make(map[string]string)
-	if strings.ToLower(node.NetworkMode) != "host" {
-		node.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+	nodeCfg.Sysctls = make(map[string]string)
+	if strings.ToLower(nodeCfg.NetworkMode) != "host" {
+		nodeCfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
 	}
 
-	node.Env = envs
-
-	return err
+	return nil
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uint) error {
+func ceosPostDeploy(ctx context.Context, c *CLab, node *types.NodeConfig, lworkers uint) error {
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
 	err := node.GenerateConfig(node.ResConfig, defaultConfigTemplates[node.Kind])
 	if err != nil {
@@ -52,18 +52,16 @@ func ceosPostDeploy(ctx context.Context, c *CLab, node *types.Node, lworkers uin
 	return err
 }
 
-func initCeosNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, envs map[string]string) error {
+func (c *CLab) initCeosNode(nodeCfg *types.NodeConfig) error {
 	var err error
 
-	// initialize the global parameters with defaults, can be overwritten later
-	node.Config, err = c.configInit(&nodeCfg, node.Kind)
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return err
 	}
-	node.Image = c.imageInitialization(&nodeCfg, node.Kind)
-	node.Position = c.positionInitialization(&nodeCfg, node.Kind)
-
-	// initialize specific container information
+	if nodeCfg.Config == "" {
+		nodeCfg.Config = defaultConfigTemplates[nodeCfg.Kind]
+	}
 
 	// defined env vars for the ceos
 	kindEnv := map[string]string{
@@ -74,32 +72,27 @@ func initCeosNode(c *CLab, nodeCfg NodeConfig, node *types.Node, user string, en
 		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
 		"INTFTYPE":                            "eth",
 		"MAPETH0":                             "1",
-		"MGMT_INTF":                           "eth0"}
-	node.Env = mergeStringMaps(kindEnv, envs)
+		"MGMT_INTF":                           "eth0",
+	}
+	nodeCfg.Env = utils.MergeStringMaps(kindEnv, nodeCfg.Env)
 
 	// the node.Cmd should be aligned with the environment.
 	var envSb strings.Builder
 	envSb.WriteString("/sbin/init ")
-	for k, v := range node.Env {
+	for k, v := range nodeCfg.Env {
 		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
-
 	}
-	node.Cmd = envSb.String()
-
-	node.User = user
-	node.Group = c.groupInitialization(&nodeCfg, node.Kind)
-	node.NodeType = nodeCfg.Type
-
-	node.MacAddress = genMac("00:1c:73")
+	nodeCfg.Cmd = envSb.String()
+	nodeCfg.MacAddress = genMac("00:1c:73")
 
 	// mount config dir
-	cfgPath := filepath.Join(node.LabDir, "flash")
-	node.Binds = append(node.Binds, fmt.Sprint(cfgPath, ":/mnt/flash/"))
+	cfgPath := filepath.Join(nodeCfg.LabDir, "flash")
+	nodeCfg.Binds = append(nodeCfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
 
-	return err
+	return nil
 }
 
-func (c *CLab) createCEOSFiles(node *types.Node) error {
+func (c *CLab) createCEOSFiles(node *types.NodeConfig) error {
 	// generate config directory
 	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := path.Join(node.LabDir, "flash", "startup-config")
@@ -111,6 +104,6 @@ func (c *CLab) createCEOSFiles(node *types.Node) error {
 		return err
 	}
 	m[5] = m[5] + 1
-	createFile(path.Join(node.LabDir, "flash", "system_mac_address"), m.String())
+	utils.CreateFile(path.Join(node.LabDir, "flash", "system_mac_address"), m.String())
 	return nil
 }

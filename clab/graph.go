@@ -76,7 +76,7 @@ func (c *CLab) GenerateGraph(topo string) error {
 
 	// create graph filename
 	dotfile := c.Dir.LabGraph + "/" + c.TopoFile.name + ".dot"
-	createFile(dotfile, g.String())
+	utils.CreateFile(dotfile, g.String())
 	log.Infof("Created %s", dotfile)
 
 	pngfile := c.Dir.LabGraph + "/" + c.TopoFile.name + ".png"
