@@ -37,7 +37,9 @@ func (l *linux) Config() *types.NodeConfig { return l.cfg }
 
 func (l *linux) PreDeploy(configName, labCADir, labCARoot string) error { return nil }
 
-func (l *linux) Deploy(ctx context.Context, r runtime.ContainerRuntime) error { return nil }
+func (l *linux) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
+	return r.CreateContainer(ctx, l.cfg)
+}
 
 func (l *linux) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", l.cfg.ShortName)
