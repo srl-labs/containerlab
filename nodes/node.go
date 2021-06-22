@@ -37,6 +37,10 @@ type NodeOption func(Node)
 
 func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 	return func(n Node) {
+		if mgmt == nil {
+			n.WithMgmtNet(new(types.MgmtNet))
+			return
+		}
 		n.WithMgmtNet(mgmt)
 	}
 }
