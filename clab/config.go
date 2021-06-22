@@ -31,8 +31,6 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/64"
-	srlDefaultType    = "ixr6"
-	vrsrosDefaultType = "sr-1"
 	// NSPath value assigned to host interfaces
 	hostNSPath = "__host"
 	// veth link mtu. jacked up to 65k to allow jumbo testing of various sizes
@@ -169,7 +167,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Endpoints:       make([]*types.Endpoint, 0),
 	}
 
-	log.Infof("node config: %+v", nodeCfg)
+	log.Debugf("node config: %+v", nodeCfg)
 	var err error
 	// intialize config
 	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
