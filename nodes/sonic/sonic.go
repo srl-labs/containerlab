@@ -36,12 +36,16 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 func (s *sonic) Config() *types.NodeConfig { return s.cfg }
+
 func (s *sonic) PreDeploy(configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 
 	return nil
 }
-func (s *sonic) Deploy(ctx context.Context, r runtime.ContainerRuntime) error { return nil }
+func (s *sonic) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
+	return r.CreateContainer(ctx, s.cfg)
+}
+
 func (s *sonic) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.cfg.ShortName)
 	// TODO: change this calls to c.ExecNotWait
@@ -62,5 +66,5 @@ func (s *sonic) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns m
 	}
 	return nil
 }
-func (s *sonic) Destroy(ctx context.Context, r runtime.ContainerRuntime) error { return nil }
-func (s *sonic) WithMgmtNet(*types.MgmtNet)                                    {}
+
+func (s *sonic) WithMgmtNet(*types.MgmtNet) {}
