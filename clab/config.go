@@ -326,14 +326,13 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 	for _, node := range c.Nodes {
 		// skip image verification for bridge kinds
 		if node.Config().Kind == "bridge" || node.Config().Kind == "ovs-bridge" {
-			return nil
+			continue
 		}
 		if node.Config().Image == "" {
 			return fmt.Errorf("missing required image for node %s", node.Config().ShortName)
 		}
-		if node.Config().Image != "" {
-			images[node.Config().Image] = struct{}{}
-		}
+
+		images[node.Config().Image] = struct{}{}
 	}
 
 	for image := range images {
