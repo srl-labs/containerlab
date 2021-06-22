@@ -91,7 +91,7 @@ func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) 
 func WithTopoFile(file string) ClabOption {
 	return func(c *CLab) {
 		if file == "" {
-			log.Fatal("provide a path to the clab toplogy file")
+			log.Fatal("provide a path to the clab topology file")
 		}
 		if err := c.GetTopology(file); err != nil {
 			log.Fatalf("failed to read topology file: %v", err)
