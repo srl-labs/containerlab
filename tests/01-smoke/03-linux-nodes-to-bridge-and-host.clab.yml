@@ -1,0 +1,21 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: 03-bridge-and-host
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      cmd: ash -c "sleep 9999"
+    br-01-03-clab:
+      kind: bridge
+
+  links:
+    - endpoints: ["l1:eth1", "br-01-03-clab:l1-eth1"]
+    - endpoints: ["br-01-03-clab:l1-eth2", "l1:eth2"]
+    # l1:eth3 is connected to host via host link
+    # https://containerlab.srlinux.dev/manual/network/#host-links
+    - endpoints: ["l1:eth3", "host:l1-01-03-eth3"]
