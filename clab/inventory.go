@@ -54,7 +54,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	}
 
 	for _, n := range c.Nodes {
-		i.Nodes[n.Kind] = append(i.Nodes[n.Kind], n)
+		i.Nodes[n.Config().Kind] = append(i.Nodes[n.Config().Kind], n.Config())
 	}
 
 	// sort nodes by name as they are not sorted originally

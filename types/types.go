@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/cloudflare/cfssl/log"
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -111,6 +112,27 @@ func (node *NodeConfig) GenerateConfig(dst, defaultTemplatePath string) error {
 	}
 	defer f.Close()
 	_, err = f.Write(dstBytes.Bytes())
+	return err
+}
+
+func DisableTxOffload(n *NodeConfig) error {
+	// skip this if node runs in host mode
+	if strings.ToLower(n.NetworkMode) == "host" {
+		return nil
+	}
+	// disable tx checksum offload for linux containers on eth0 interfaces
+	nodeNS, err := ns.GetNS(n.NSPath)
+	if err != nil {
+		return err
+	}
+	err = nodeNS.Do(func(_ ns.NetNS) error {
+		// disabling offload on lo0 interface
+		err := utils.EthtoolTXOff("eth0")
+		if err != nil {
+			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
+		}
+		return err
+	})
 	return err
 }
 

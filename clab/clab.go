@@ -6,16 +6,13 @@ package clab
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"path"
-	"strings"
 	"sync"
-	"text/template"
 	"time"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes"
+	_ "github.com/srl-labs/containerlab/nodes/all"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
@@ -26,7 +23,7 @@ type CLab struct {
 	Config   *Config
 	TopoFile *TopoFile
 	m        *sync.RWMutex
-	Nodes    map[string]*types.NodeConfig
+	Nodes    map[string]nodes.Node
 	Links    map[int]*types.Link
 	Runtime  runtime.ContainerRuntime
 	Dir      *Directory
@@ -120,7 +117,7 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 		},
 		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
-		Nodes:    make(map[string]*types.NodeConfig),
+		Nodes:    make(map[string]nodes.Node),
 		Links:    make(map[int]*types.Link),
 	}
 
@@ -153,68 +150,10 @@ func (c *CLab) initMgmtNetwork() error {
 	return nil
 }
 
-func (c *CLab) CreateNode(ctx context.Context, node *types.NodeConfig, certs *Certificates) error {
-	if certs != nil {
-		c.m.Lock()
-		node.TLSCert = string(certs.Cert)
-		node.TLSKey = string(certs.Key)
-		c.m.Unlock()
-	}
-	err := c.CreateNodeDirStructure(node)
-	if err != nil {
-		return err
-	}
-	return c.Runtime.CreateContainer(ctx, node)
-}
-
-// ExecPostDeployTasks executes tasks that some nodes might require to boot properly after start
-func (c *CLab) ExecPostDeployTasks(ctx context.Context, node *types.NodeConfig, lworkers uint) error {
-	switch node.Kind {
-	case "ceos":
-		log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", node.ShortName)
-		return ceosPostDeploy(ctx, c, node, lworkers)
-	case "crpd":
-		_, _, err := c.Runtime.Exec(ctx, node.ContainerID, []string{"service ssh restart"})
-		if err != nil {
-			return err
-		}
-
-	case "linux":
-		log.Debugf("Running postdeploy actions for Linux '%s' node", node.ShortName)
-		return disableTxOffload(node)
-
-	case "sonic-vs":
-		log.Debugf("Running postdeploy actions for sonic-vs '%s' node", node.ShortName)
-		// TODO: change this calls to c.ExecNotWait
-		// exec `supervisord` to start sonic services
-		_, _, err := c.Runtime.Exec(ctx, node.ContainerID, []string{"supervisord"})
-		if err != nil {
-			return err
-		}
-
-		_, _, err = c.Runtime.Exec(ctx, node.ContainerID, []string{"/usr/lib/frr/bgpd"})
-		if err != nil {
-			return err
-		}
-
-	case "mysocketio":
-		log.Debugf("Running postdeploy actions for mysocketio '%s' node", node.ShortName)
-		err := disableTxOffload(node)
-		if err != nil {
-			return fmt.Errorf("failed to disable tx checksum offload for mysocketio kind: %v", err)
-		}
-
-		log.Infof("Creating mysocketio tunnels...")
-		err = createMysocketTunnels(ctx, c, node)
-		return err
-	}
-	return nil
-}
-
 func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
-	nodesChan := make(chan *types.NodeConfig)
+	nodesChan := make(chan nodes.Node)
 	// start workers
 	for i := uint(0); i < workers; i++ {
 		go func(i uint) {
@@ -226,47 +165,18 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 						log.Debugf("Worker %d terminating...", i)
 						return
 					}
-					log.Debugf("Worker %d received node: %+v", i, node)
-					if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
+					log.Debugf("Worker %d received node: %+v", i, node.Config())
+					// PreDeploy
+					err := node.PreDeploy(c.Config.Name, c.Dir.LabCA, c.Dir.LabCARoot)
+					if err != nil {
+						log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 						continue
 					}
-
-					var nodeCerts *Certificates
-					var certTpl *template.Template
-					if node.Kind == "srl" {
-						var err error
-						nodeCerts, err = c.RetrieveNodeCertData(node)
-						// if not available on disk, create cert in next step
-						if err != nil {
-							// create CERT
-							certTpl, err = template.New("node-cert").Parse(nodeCSRTempl)
-							if err != nil {
-								log.Errorf("failed to parse Node CSR Template: %v", err)
-							}
-							certInput := CertInput{
-								Name:     node.ShortName,
-								LongName: node.LongName,
-								Fqdn:     node.Fqdn,
-								Prefix:   c.Config.Name,
-							}
-							nodeCerts, err = c.GenerateCert(
-								path.Join(c.Dir.LabCARoot, "root-ca.pem"),
-								path.Join(c.Dir.LabCARoot, "root-ca-key.pem"),
-								certTpl,
-								certInput,
-								path.Join(c.Dir.LabCA, certInput.Name),
-							)
-							if err != nil {
-								log.Errorf("failed to generate certificates for node %s: %v", node.ShortName, err)
-							}
-							log.Debugf("%s CSR: %s", node.ShortName, string(nodeCerts.Csr))
-							log.Debugf("%s Cert: %s", node.ShortName, string(nodeCerts.Cert))
-							log.Debugf("%s Key: %s", node.ShortName, string(nodeCerts.Key))
-						}
-					}
-					err := c.CreateNode(ctx, node, nodeCerts)
+					// Deploy
+					err = node.Deploy(ctx, c.Runtime)
 					if err != nil {
-						log.Errorf("failed to create node %s: %v", node.ShortName, err)
+						log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
+						continue
 					}
 				case <-ctx.Done():
 					return
@@ -343,7 +253,6 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types
 	ctrChan := make(chan *types.GenericContainer)
 	wg.Add(int(workers))
 	for i := uint(0); i < workers; i++ {
-
 		go func(i uint) {
 			defer wg.Done()
 			for {
@@ -371,34 +280,4 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types
 
 	wg.Wait()
 
-}
-
-func disableTxOffload(n *types.NodeConfig) error {
-	// skip this if node runs in host mode
-	if strings.ToLower(n.NetworkMode) == "host" {
-		return nil
-	}
-	// disable tx checksum offload for linux containers on eth0 interfaces
-	nodeNS, err := ns.GetNS(n.NSPath)
-	if err != nil {
-		return err
-	}
-	err = nodeNS.Do(func(_ ns.NetNS) error {
-		// disabling offload on lo0 interface
-		err := utils.EthtoolTXOff("eth0")
-		if err != nil {
-			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
-		}
-		return err
-	})
-	return err
-}
-
-func StringInSlice(slice []string, val string) (int, bool) {
-	for i, item := range slice {
-		if item == val {
-			return i, true
-		}
-	}
-	return -1, false
 }
