@@ -5,7 +5,7 @@ This test suite verifies
 
 *** Settings ***
 Library           OperatingSystem
-Suite Setup       Run    sudo ip l del ${bridge-name}
+Suite Setup       Setup
 Suite Teardown    Cleanup
 
 *** Variables ***
@@ -47,6 +47,13 @@ Verify links in host ns
     Should Contain    ${output}    state UP
 
 *** Keywords ***
+Setup
+    # ensure the bridge we about to create is deleted first
+    Run    sudo ip l del ${bridge-name}
+    # remove the alpine:3 container image, to test that we are able to live-pull it
+    Run    sudo docker image rm alpine:3
+    Run    sudo ctr -n clab image rm docker.io/library/alpine:3
+
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
