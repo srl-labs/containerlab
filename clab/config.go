@@ -128,7 +128,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	}
 	n := nodeInitializer()
 	// Init
-	err = n.Init(nodeCfg)
+	err = n.Init(nodeCfg, nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
