@@ -168,12 +168,6 @@ func signCert(cmd *cobra.Command, args []string) error {
 	`
 	var err error
 
-	// opts := []clab.ClabOption{
-	// 	clab.WithDebug(debug),
-	// 	clab.WithTimeout(timeout),
-	// }
-	// c := clab.NewContainerLab(opts...)
-
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
 		cfssllog.Level = cfssllog.LevelDebug
@@ -209,5 +203,5 @@ func signCert(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate and sign certificate: %v", err)
 	}
 
-	return err
+	return nil
 }
