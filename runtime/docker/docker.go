@@ -544,6 +544,5 @@ func (c *DockerRuntime) ContainerInspect(ctx context.Context, id string) (*types
 }
 
 func (c *DockerRuntime) StopContainer(ctx context.Context, name string, dur *time.Duration) error {
-	c.Client.ContainerKill(ctx, name, "kill")
-	return nil
+	return c.Client.ContainerKill(ctx, name, "kill")
 }

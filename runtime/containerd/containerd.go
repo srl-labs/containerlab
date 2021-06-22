@@ -438,9 +438,6 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 		if paused {
 			if err := ctask.Resume(ctx); err != nil {
 				log.Warnf("Cannot unpause container %s: %s", containername, err)
-			} else {
-				// no need to do it again when send sigkill signal
-				paused = false
 			}
 		}
 
@@ -654,13 +651,13 @@ func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd 
 		return nil, nil, err
 	}
 
-	NeedToDelete := true
+	needToDelete := true
 	p, err := task.LoadProcess(ctx, clabExecId, nil)
 	if err != nil {
-		NeedToDelete = false
+		needToDelete = false
 	}
 
-	if NeedToDelete {
+	if needToDelete {
 		log.Debugf("Deleting old process with exec-id %s", clabExecId)
 		_, err := p.Delete(ctx, containerd.WithProcessKill)
 		if err != nil {
@@ -677,7 +674,16 @@ func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd 
 	var statusC <-chan containerd.ExitStatus
 	if !detach {
 
-		defer process.Delete(ctx)
+		defer func() {
+			exitStatus, err := process.Delete(ctx)
+			if err != nil {
+				log.Errorf("failed to delete process: %v", err)
+				return
+			}
+			if exitStatus.Error() != nil {
+				log.Errorf("failed to delete process: %v", exitStatus.Error())
+			}
+		}()
 
 		statusC, err = process.Wait(ctx)
 		if err != nil {
