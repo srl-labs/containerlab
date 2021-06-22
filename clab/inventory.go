@@ -21,10 +21,7 @@ func (c *CLab) GenerateInventories() error {
 	if err != nil {
 		return err
 	}
-	if err := c.generateAnsibleInventory(f); err != nil {
-		return err
-	}
-	return nil
+	return c.generateAnsibleInventory(f)
 }
 
 // generateAnsibleInventory generates and writes ansible inventory file to w

@@ -240,9 +240,5 @@ func generateSRLTopologyFile(src, labDir string, index int) error {
 		return err
 	}
 	defer f.Close()
-
-	if err = tpl.Execute(f, mac); err != nil {
-		return err
-	}
-	return nil
+	return tpl.Execute(f, mac)
 }

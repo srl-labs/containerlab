@@ -40,10 +40,12 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	// mount config and log dirs
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, "config"), ":/config"))
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, "log"), ":/var/log"))
-	// mount sshd_config
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"))
+	s.cfg.Binds = append(s.cfg.Binds,
+		fmt.Sprint(path.Join(s.cfg.LabDir, "config"), ":/config"),
+		fmt.Sprint(path.Join(s.cfg.LabDir, "log"), ":/var/log"),
+		// mount sshd_config
+		fmt.Sprint(path.Join(s.cfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"),
+	)
 
 	return nil
 }

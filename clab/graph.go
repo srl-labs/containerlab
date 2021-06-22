@@ -38,7 +38,7 @@ func (c *CLab) GenerateGraph(topo string) error {
 
 		attr["label"] = nodeName
 		attr["xlabel"] = node.Config().Kind
-		if len(strings.TrimSpace(node.Config().Group)) != 0 {
+		if strings.TrimSpace(node.Config().Group) != "" {
 			attr["group"] = node.Config().Group
 			if strings.Contains(node.Config().Group, "bb") {
 				attr["fillcolor"] = "blue"

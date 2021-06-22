@@ -135,7 +135,7 @@ func GenerateRootCa(labCARoot string, csrRootJsonTpl *template.Template, input C
 
 // GenerateCert generates and signs a certificate passed as input and saves the certificate and generated private key by path
 // CA used to sign the cert is passed as ca and caKey file paths
-func GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput, targetPath string) (*Certificates, error) {
+func GenerateCert(ca, caKey string, csrJSONTpl *template.Template, input CertInput, targetPath string) (*Certificates, error) {
 	utils.CreateDirectory(targetPath, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
