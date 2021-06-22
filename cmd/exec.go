@@ -17,8 +17,7 @@ import (
 )
 
 var (
-	labels     []string
-	jsonOutput bool
+	labels []string
 )
 
 // execCmd represents the exec command
@@ -35,6 +34,13 @@ var execCmd = &cobra.Command{
 		if len(args) == 0 {
 			fmt.Println("provide command to execute")
 			return
+		}
+		switch format {
+		case "json",
+			"plain":
+			// expected values, go on
+		default:
+			log.Error("format is expected to be either json or plain")
 		}
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
@@ -75,25 +81,28 @@ var execCmd = &cobra.Command{
 				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
 				continue
 			}
-			if jsonOutput {
-				jsonResult[cont.Names[0]] = make(map[string]interface{})
+			contName := strings.TrimLeft(cont.Names[0], "/")
+			switch format {
+			case "json":
+				jsonResult[contName] = make(map[string]interface{})
 				err := json.Unmarshal([]byte(stdout), &doc)
 				if err == nil {
-					jsonResult[cont.Names[0]]["stdout"] = doc
+					jsonResult[contName]["stdout"] = doc
 				} else {
-					jsonResult[cont.Names[0]]["stdout"] = string(stdout)
+					jsonResult[contName]["stdout"] = string(stdout)
 				}
-				jsonResult[cont.Names[0]]["stderr"] = string(stderr)
-			} else {
+				jsonResult[contName]["stderr"] = string(stderr)
+			case "plain":
 				if len(stdout) > 0 {
-					log.Infof("%s: stdout:\n%s", cont.Names, string(stdout))
+					log.Infof("%s: stdout:\n%s", contName, string(stdout))
 				}
 				if len(stderr) > 0 {
-					log.Infof("%s: stderr:\n%s", cont.Names, string(stderr))
+					log.Infof("%s: stderr:\n%s", contName, string(stderr))
 				}
+
 			}
 		}
-		if jsonOutput {
+		if format == "json" {
 			result, err := json.Marshal(jsonResult)
 			if err != nil {
 				log.Errorf("Issue converting to json %v", err)
@@ -106,5 +115,5 @@ var execCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(execCmd)
 	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
-	execCmd.Flags().BoolVarP(&jsonOutput, "json", "j", false, "get output in json format")
+	execCmd.Flags().StringVarP(&format, "format", "f", "plain", "output format. One of [json, plain]")
 }
