@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	nodeKind = "vr-sros"
+	nodeKind = "vr-veos"
 )
 
 func init() {
