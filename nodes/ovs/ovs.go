@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	nodeKind = "ovs"
+	nodeKind = "ovs-bridge"
 )
 
 func init() {
