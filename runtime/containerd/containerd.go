@@ -562,13 +562,13 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 			}
 			ctr.State = string(status.Status)
 
-			switch s := status.Status; s {
+			switch status.Status {
 			case containerd.Stopped:
 				ctr.Status = fmt.Sprintf("Exited (%v) %s", status.ExitStatus, timeSinceInHuman(status.ExitTime))
 			case containerd.Running:
 				ctr.Status = "Up"
 			default:
-				ctr.Status = strings.Title(string(s))
+				ctr.Status = strings.Title(string(status.Status))
 			}
 
 			ctr.Pid = int(task.Pid())
