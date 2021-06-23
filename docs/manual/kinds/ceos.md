@@ -213,4 +213,11 @@ The following labs feature cEOS node:
 
 - [SR Linux and cEOS](../../lab-examples/srl-ceos.md)
 
+## Known issues or limitations
+### cgroups v1
+
+As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environment.  For many users this should not require any changes to the runtime environment.  However, some linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box, which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
+
+Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467). 
+
 [^1]: https://eos.arista.com/ceos-lab-topo/

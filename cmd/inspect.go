@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package cmd
 
 import (
@@ -60,12 +64,17 @@ var inspectCmd = &cobra.Command{
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+		var glabels []*types.GenericFilter
 		if all {
-			labels = append(labels, "containerlab")
+			glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
 		} else {
-			labels = append(labels, "containerlab="+name)
+			if name != "" {
+				glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
+			} else if topo != "" {
+				glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+			}
 		}
-		containers, err := c.Runtime.ListContainers(ctx, labels)
+		containers, err := c.Runtime.ListContainers(ctx, glabels)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
 		}
@@ -124,9 +133,8 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 			IPv4Address: getContainerIPv4(cont, bridgeName),
 			IPv6Address: getContainerIPv6(cont, bridgeName),
 		}
-		if len(cont.ID) > 11 {
-			cdet.ContainerID = cont.ID[:12]
-		}
+		cdet.ContainerID = cont.ShortID
+
 		if len(cont.Names) > 0 {
 			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
 		}

@@ -1,4 +1,8 @@
-package clab
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
+package cert
 
 import (
 	"bytes"
@@ -16,6 +20,7 @@ import (
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/universal"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -75,7 +80,7 @@ var rootCACSRTempl string = `{
 }
 `
 
-var nodeCSRTempl string = `{
+var NodeCSRTempl string = `{
     "CN": "{{.Name}}.{{.Prefix}}.io",
     "key": {
       "algo": "rsa",
@@ -93,15 +98,13 @@ var nodeCSRTempl string = `{
       "{{.Fqdn}}"
     ]
 }
-
-
 `
 
 // GenerateRootCa function
-func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
+func GenerateRootCa(labCARoot string, csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
 	log.Info("Creating root CA")
 	// create root CA root directory
-	utils.CreateDirectory(c.Dir.LabCARoot, 0755)
+	utils.CreateDirectory(labCARoot, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
 	err = csrRootJsonTpl.Execute(csrBuff, input)
@@ -126,16 +129,13 @@ func (c *CLab) GenerateRootCa(csrRootJsonTpl *template.Template, input CaRootInp
 		Csr:  csrPEM,
 		Cert: cert,
 	}
-	c.writeCertFiles(certs, path.Join(c.Dir.LabCARoot, input.NamePrefix))
+	writeCertFiles(certs, path.Join(labCARoot, input.NamePrefix))
 	return certs, nil
 }
 
 // GenerateCert generates and signs a certificate passed as input and saves the certificate and generated private key by path
 // CA used to sign the cert is passed as ca and caKey file paths
-func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Template, input CertInput, targetPath string) (*Certificates, error) {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
+func GenerateCert(ca, caKey string, csrJSONTpl *template.Template, input CertInput, targetPath string) (*Certificates, error) {
 	utils.CreateDirectory(targetPath, 0755)
 	var err error
 	csrBuff := new(bytes.Buffer)
@@ -192,14 +192,14 @@ func (c *CLab) GenerateCert(ca string, caKey string, csrJSONTpl *template.Templa
 		Cert: cert,
 	}
 
-	c.writeCertFiles(certs, path.Join(targetPath, input.Name))
+	writeCertFiles(certs, path.Join(targetPath, input.Name))
 	return certs, nil
 }
 
 // RetrieveNodeCertData reads the node private key and certificate by the well known paths
 // if either of those files doesn't exist, an error is returned
-func (c *CLab) RetrieveNodeCertData(n *types.Node) (*Certificates, error) {
-	var nodeCertFilesDir = path.Join(c.Dir.LabCA, n.ShortName)
+func RetrieveNodeCertData(n *types.NodeConfig, labCADir string) (*Certificates, error) {
+	var nodeCertFilesDir = path.Join(labCADir, n.ShortName)
 	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
 	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
 
@@ -225,19 +225,19 @@ func (c *CLab) RetrieveNodeCertData(n *types.Node) (*Certificates, error) {
 	return certs, nil
 }
 
-func (c *CLab) writeCertFiles(certs *Certificates, filesPrefix string) {
-	createFile(filesPrefix+".pem", string(certs.Cert))
-	createFile(filesPrefix+"-key.pem", string(certs.Key))
-	createFile(filesPrefix+".csr", string(certs.Csr))
+func writeCertFiles(certs *Certificates, filesPrefix string) {
+	utils.CreateFile(filesPrefix+".pem", string(certs.Cert))
+	utils.CreateFile(filesPrefix+"-key.pem", string(certs.Key))
+	utils.CreateFile(filesPrefix+".csr", string(certs.Csr))
 }
 
 //CreateRootCA creates RootCA key/certificate if it is needed by the topology
-func (c *CLab) CreateRootCA() error {
+func CreateRootCA(configName, labCARoot string, ns map[string]nodes.Node) error {
 	rootCANeeded := false
 	// check if srl kinds defined in topo
 	// for them we need to create rootCA and certs
-	for _, n := range c.Nodes {
-		if n.Kind == "srl" {
+	for _, n := range ns {
+		if n.Config().Kind == "srl" {
 			rootCANeeded = true
 			break
 		}
@@ -247,8 +247,8 @@ func (c *CLab) CreateRootCA() error {
 		return nil
 	}
 
-	var rootCaCertPath = path.Join(c.Dir.LabCARoot, "root-ca.pem")
-	var rootCaKeyPath = path.Join(c.Dir.LabCARoot, "root-ca-key.pem")
+	var rootCaCertPath = path.Join(labCARoot, "root-ca.pem")
+	var rootCaKeyPath = path.Join(labCARoot, "root-ca-key.pem")
 
 	var rootCaCertExists = false
 	var rootCaKeyExists = false
@@ -273,8 +273,8 @@ func (c *CLab) CreateRootCA() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse Root CA CSR Template: %v", err)
 	}
-	rootCerts, err := c.GenerateRootCa(tpl, CaRootInput{
-		Prefix:     c.Config.Name,
+	rootCerts, err := GenerateRootCa(labCARoot, tpl, CaRootInput{
+		Prefix:     configName,
 		NamePrefix: "root-ca",
 	})
 	if err != nil {

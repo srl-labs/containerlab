@@ -1,3 +1,7 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
 name: single-node
 
 topology:
@@ -5,3 +9,4 @@ topology:
     l1:
       kind: linux
       image: alpine:3
+      cmd: ash -c "sleep 9999"

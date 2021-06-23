@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package cmd
 
 import (
@@ -8,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/types"
 )
 
 var labels []string
@@ -40,8 +45,9 @@ var execCmd = &cobra.Command{
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		labels = append(labels, "containerlab="+name)
-		containers, err := c.Runtime.ListContainers(ctx, labels)
+		filters := []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
+		filters = append(filters, types.FilterFromLabelStrings(labels)...)
+		containers, err := c.Runtime.ListContainers(ctx, filters)
 		if err != nil {
 			log.Fatalf("could not list containers: %v", err)
 		}

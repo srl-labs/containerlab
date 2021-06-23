@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package cmd
 
 import (
@@ -10,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var AEnd = ""
@@ -54,14 +59,14 @@ var vethCreateCmd = &cobra.Command{
 			return err
 		}
 
-		aNode := &types.Node{
+		aNode := &types.NodeConfig{
 			LongName:  vethAEndpoint.node,
 			ShortName: vethAEndpoint.node,
 			Kind:      vethAEndpoint.kind,
 			NSPath:    "__host", // NSPath defaults to __host to make attachment to host. For attachment to containers the NSPath will be overwritten
 		}
 
-		bNode := &types.Node{
+		bNode := &types.NodeConfig{
 			LongName:  vethBEndpoint.node,
 			ShortName: vethBEndpoint.node,
 			Kind:      vethBEndpoint.kind,
@@ -120,7 +125,7 @@ func parseVethEndpoint(s string) (*vethEndpoint, error) {
 		ve.node = arr[0]
 		ve.iface = arr[1]
 	case 3:
-		if _, ok := clab.StringInSlice(supportedKinds, arr[0]); !ok {
+		if _, ok := utils.StringInSlice(supportedKinds, arr[0]); !ok {
 			return nil, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
 		}
 		ve.kind = arr[0]

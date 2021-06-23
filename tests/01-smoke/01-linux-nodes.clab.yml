@@ -1,3 +1,7 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
 name: 2-linux-nodes
 
 topology:
@@ -5,9 +9,20 @@ topology:
     l1:
       kind: linux
       image: alpine:3
+      cmd: ash -c "sleep 9999"
+      binds:
+        - /tmp/clab-01-test.txt:/01-test.txt
     l2:
       kind: linux
-      image: alpine:3
+      image: nginx:stable-alpine
+      ports:
+        - 56180:80
+      mgmt_ipv4: 172.20.20.100
+      mgmt_ipv6: 2001:172:20:20::100
+    l3:
+      kind: linux
+      image: nginx:stable-alpine
+      network-mode: host
 
   links:
     - endpoints: ["l1:eth1", "l2:eth1"]

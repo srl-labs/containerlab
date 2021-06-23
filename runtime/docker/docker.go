@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package docker
 
 import (
@@ -19,11 +23,24 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const sysctlBase = "/proc/sys"
+const (
+	dockerRuntimeName = "docker"
+	sysctlBase        = "/proc/sys"
+	defaultTimeout    = 30 * time.Second
+)
+
+func init() {
+	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
+		return &DockerRuntime{
+			Mgmt: new(types.MgmtNet),
+		}
+	})
+}
 
 type DockerRuntime struct {
 	Client           *dockerC.Client
@@ -33,23 +50,29 @@ type DockerRuntime struct {
 	gracefulShutdown bool
 }
 
-func NewDockerRuntime(d bool, dur time.Duration, gracefulShutdown bool) *DockerRuntime {
-	c, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
+func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
+	var err error
+	log.Debug("Runtime: Docker")
+	c.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
-		log.Fatalf("failed to create docker client: %v", err)
+		return err
 	}
+	for _, o := range opts {
+		o(c)
+	}
+	return nil
+}
 
-	return &DockerRuntime{
-		Client: c,
-		Mgmt:   new(types.MgmtNet),
-		// TODO: undo this hard-coding
-		timeout:          dur,
-		debug:            d,
-		gracefulShutdown: gracefulShutdown,
+func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
+	c.timeout = cfg.Timeout
+	c.debug = cfg.Debug
+	c.gracefulShutdown = cfg.GracefulShutdown
+	if c.timeout <= 0 {
+		c.timeout = defaultTimeout
 	}
 }
 
-func (c *DockerRuntime) SetMgmtNet(n *types.MgmtNet) {
+func (c *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
 }
 
@@ -59,7 +82,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	defer cancel()
 
 	// linux bridge name that is used by docker network
-	var bridgeName string
+	bridgeName := c.Mgmt.Bridge
 
 	log.Debugf("Checking if docker network '%s' exists", c.Mgmt.Network)
 	netResource, err := c.Client.NetworkInspect(nctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
@@ -99,7 +122,8 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 				"containerlab": "",
 			},
 			Options: map[string]string{
-				"com.docker.network.driver.mtu": c.Mgmt.MTU,
+				"com.docker.network.driver.mtu":  c.Mgmt.MTU,
+				"com.docker.network.bridge.name": bridgeName,
 			},
 		}
 
@@ -111,7 +135,11 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		if len(netCreateResponse.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
-		bridgeName = "br-" + netCreateResponse.ID[:12]
+		// when bridge is not set by a user explicitly
+		// we use the 12 chars of docker net as its name
+		if bridgeName == "" {
+			bridgeName = "br-" + netCreateResponse.ID[:12]
+		}
 
 	case err == nil:
 		log.Debugf("network '%s' was found. Reusing it...", c.Mgmt.Network)
@@ -122,13 +150,20 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		case "bridge":
 			bridgeName = "docker0"
 		default:
-			bridgeName = "br-" + netResource.ID[:12]
+			if _, ok := netResource.Options["com.docker.network.bridge.name"]; ok {
+				bridgeName = netResource.Options["com.docker.network.bridge.name"]
+			} else {
+				bridgeName = "br-" + netResource.ID[:12]
+			}
 		}
 
 	default:
 		return err
 	}
-	c.Mgmt.Bridge = bridgeName
+
+	if c.Mgmt.Bridge == "" {
+		c.Mgmt.Bridge = bridgeName
+	}
 
 	log.Debugf("Docker network '%s', bridge name '%s'", c.Mgmt.Network, bridgeName)
 
@@ -160,6 +195,10 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 // DeleteNet deletes a docker bridge
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
+	if c.Mgmt.Network == "bridge" {
+		log.Debug("Skipping potential deletion of docker default bridge 'bridge'.")
+		return nil
+	}
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
@@ -185,7 +224,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 }
 
 // CreateContainer creates a docker container
-func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.Node) (err error) {
+func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (err error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -296,28 +335,7 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 		return nil
 	}
 
-	// might need canonical name e.g.
-	//    -> alpine == docker.io/library/alpine
-	//    -> foo/bar == docker.io/foo/bar
-	//    -> foo.bar/baz == foo.bar/bar
-	//    -> docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch
-	canonicalImageName := imageName
-	slashCount := strings.Count(imageName, "/")
-
-	switch slashCount {
-	case 0:
-		canonicalImageName = "docker.io/library/" + imageName
-	case 1:
-		// split on slash to get first element of the name
-		nameSplit := strings.Split(imageName, "/")
-		// case of foo.bar/baz
-		if strings.Contains(nameSplit[0], ".") {
-			canonicalImageName = imageName
-		} else {
-			canonicalImageName = "docker.io/" + imageName
-		}
-	}
-
+	canonicalImageName := utils.GetCanonicalImageName(imageName)
 	log.Infof("Pulling %s Docker image", canonicalImageName)
 	reader, err := c.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{})
 	if err != nil {
@@ -345,14 +363,11 @@ func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
 }
 
 // ListContainers lists all containers with labels []string
-func (c *DockerRuntime) ListContainers(ctx context.Context, labels []string) ([]types.GenericContainer, error) {
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
+func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	filter := filters.NewArgs()
-	for _, l := range labels {
-		filter.Add("label", l)
-	}
-	ctrs, err := c.Client.ContainerList(nctx, dockerTypes.ContainerListOptions{
+	filter := c.buildFilterString(gfilters)
+	ctrs, err := c.Client.ContainerList(ctx, dockerTypes.ContainerListOptions{
 		All:     true,
 		Filters: filter,
 	})
@@ -361,19 +376,46 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, labels []string) ([]
 	}
 	var nr []dockerTypes.NetworkResource
 	if c.Mgmt.Network == "" {
-		netFilter := filters.NewArgs()
-		netFilter.Add("label", "containerlab")
 		nctx, cancel := context.WithTimeout(ctx, c.timeout)
 		defer cancel()
-
+		// fetch containerlab created networks
+		f := filters.NewArgs()
+		f.Add("label", "containerlab")
 		nr, err = c.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
-			Filters: netFilter,
+			Filters: f,
 		})
+
 		if err != nil {
 			return nil, err
 		}
+
+		// fetch default bridge network
+		f = filters.NewArgs()
+		f.Add("name", "bridge")
+		bridgenet, err := c.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
+			Filters: f,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		nr = append(nr, bridgenet...)
 	}
 	return c.produceGenericContainerList(ctrs, nr)
+}
+
+func (c *DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters.Args {
+	filter := filters.NewArgs()
+	for _, filterentry := range gfilters {
+		filterstring := filterentry.Field
+		if filterentry.Operator != "exists" {
+			filterstring = filterstring + filterentry.Operator + filterentry.Match
+		}
+		log.Debug("Filterstring: " + filterstring)
+		filter.Add(filterentry.FilterType, filterstring)
+	}
+	return filter
 }
 
 // Transform docker-specific to generic container format
@@ -382,12 +424,13 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 
 	for _, i := range inputContainers {
 		ctr := types.GenericContainer{
-			Names:  i.Names,
-			ID:     i.ID,
-			Image:  i.Image,
-			State:  i.State,
-			Status: i.Status,
-			Labels: i.Labels,
+			Names:   i.Names,
+			ID:      i.ID,
+			ShortID: i.ID[:12],
+			Image:   i.Image,
+			State:   i.State,
+			Status:  i.Status,
+			Labels:  i.Labels,
 			NetworkSettings: &types.GenericMgmtIPs{
 				Set: false,
 			},
@@ -477,23 +520,23 @@ func (c *DockerRuntime) ExecNotWait(ctx context.Context, id string, cmd []string
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *DockerRuntime) DeleteContainer(ctx context.Context, name string) error {
+func (c *DockerRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
 	var err error
 	force := !c.gracefulShutdown
 	if c.gracefulShutdown {
-		log.Infof("Stopping container: %s", name)
-		err = c.Client.ContainerStop(ctx, name, &c.timeout)
+		log.Infof("Stopping container: %s", container.Names[0])
+		err = c.Client.ContainerStop(ctx, container.ID, &c.timeout)
 		if err != nil {
-			log.Errorf("could not stop container '%s': %v", name, err)
+			log.Errorf("could not stop container '%s': %v", container.Names[0], err)
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", name)
-	err = c.Client.ContainerRemove(ctx, name, dockerTypes.ContainerRemoveOptions{Force: force})
+	log.Debugf("Removing container: %s", strings.TrimLeft(container.Names[0], "/"))
+	err = c.Client.ContainerRemove(ctx, container.ID, dockerTypes.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", name)
+	log.Infof("Removed container: %s", strings.TrimLeft(container.Names[0], "/"))
 	return nil
 }
 
@@ -502,16 +545,6 @@ func setSysctl(sysctl string, newVal int) error {
 	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
 }
 
-func (c *DockerRuntime) ContainerInspect(ctx context.Context, id string) (*types.GenericContainer, error) {
-	ctr, err := c.Client.ContainerInspect(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return &types.GenericContainer{
-		Pid: ctr.State.Pid,
-	}, nil
-}
-
-func (c *DockerRuntime) StopContainer(context.Context, string, *time.Duration) error {
-	return nil
+func (c *DockerRuntime) StopContainer(ctx context.Context, name string, dur *time.Duration) error {
+	return c.Client.ContainerKill(ctx, name, "kill")
 }

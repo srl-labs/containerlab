@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package cmd
 
 import (
@@ -7,7 +11,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/runtime"
 )
 
 var debugCount int
@@ -50,16 +53,7 @@ func init() {
 	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 30*time.Second, "timeout for docker requests, e.g: 30s, 1m, 2m30s")
-	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", runtime.DockerRuntime, "container runtime")
-
-}
-
-// returns an error if topo path is not provided
-func topoSet() error {
-	if topo == "" {
-		return errors.New("path to the topology definition file must be provided with --topo/-t flag")
-	}
-	return nil
+	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
 }
 
 func sudoCheck(cmd *cobra.Command, args []string) error {

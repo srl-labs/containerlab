@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package cmd
 
 import (
@@ -8,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -32,36 +35,21 @@ var destroyCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithRuntime(rt, debug, timeout, graceful),
+		}
+
+		topos := map[string]struct{}{}
+
 		switch {
 		case !all:
-			// stop if not topo file provided and not all labs are requested
-			// to be deleted
-			if err = topoSet(); err != nil {
-				return err
-			}
-			opts := []clab.ClabOption{
-				clab.WithDebug(debug),
-				clab.WithTimeout(timeout),
-				clab.WithTopoFile(topo),
-				clab.WithRuntime(rt, debug, timeout, graceful),
-				clab.WithGracefulShutdown(graceful),
-			}
-			c := clab.NewContainerLab(opts...)
-
-			// Parse topology information
-			if err = c.ParseTopology(); err != nil {
-				return err
-			}
-			labs = append(labs, c)
+			topos[topo] = struct{}{}
 		case all:
-			opts := []clab.ClabOption{
-				clab.WithDebug(debug),
-				clab.WithTimeout(timeout),
-				clab.WithRuntime(rt, debug, timeout, graceful),
-			}
 			c := clab.NewContainerLab(opts...)
 			// list all containerlab containers
-			containers, err := c.Runtime.ListContainers(ctx, []string{"containerlab"})
+			containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}})
 			if err != nil {
 				return fmt.Errorf("could not list containers: %v", err)
 			}
@@ -69,32 +57,30 @@ var destroyCmd = &cobra.Command{
 				return fmt.Errorf("no containerlab labs were found")
 			}
 			// get unique topo files from all labs
-			topos := map[string]struct{}{}
 			for _, cont := range containers {
 				topos[cont.Labels["clab-topo-file"]] = struct{}{}
 			}
-			for topo := range topos {
-				opts := []clab.ClabOption{
-					clab.WithDebug(debug),
-					clab.WithTimeout(timeout),
-					clab.WithTopoFile(topo),
-					clab.WithRuntime(rt, debug, timeout, graceful),
-					clab.WithGracefulShutdown(graceful),
-				}
-				c = clab.NewContainerLab(opts...)
-				// change to the dir where topo file is located
-				// to resolve relative paths of license/configs in ParseTopology
-				if err = os.Chdir(filepath.Dir(topo)); err != nil {
-					return err
-				}
-
-				// Parse topology information
-				if err = c.ParseTopology(); err != nil {
-					return err
-				}
-				labs = append(labs, c)
-			}
 		}
+
+		for topo := range topos {
+			opts := append(opts,
+				clab.WithTopoFile(topo),
+				clab.WithGracefulShutdown(graceful),
+			)
+			c := clab.NewContainerLab(opts...)
+			// change to the dir where topo file is located
+			// to resolve relative paths of license/configs in ParseTopology
+			if err = os.Chdir(filepath.Dir(topo)); err != nil {
+				return err
+			}
+
+			// Parse topology information
+			if err = c.ParseTopology(); err != nil {
+				return err
+			}
+			labs = append(labs, c)
+		}
+
 		var errs []error
 		for _, clab := range labs {
 			err = destroyLab(ctx, clab)
@@ -115,14 +101,14 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
 	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleteing nodes")
+	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleting nodes")
 }
 
 func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName string) error {
 	if bridgeName == "" {
 		return fmt.Errorf("missing bridge name")
 	}
-	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644)
+	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
@@ -168,7 +154,9 @@ func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName 
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.Runtime.ListContainers(ctx, []string{fmt.Sprintf("containerlab=%s", c.Config.Name)})
+
+	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+	containers, err := c.Runtime.ListContainers(ctx, labels)
 	if err != nil {
 		return fmt.Errorf("could not list containers: %v", err)
 	}
@@ -187,41 +175,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
-	ctrChan := make(chan *types.GenericContainer)
-	wg := new(sync.WaitGroup)
-	wg.Add(int(maxWorkers))
-	for i := uint(0); i < maxWorkers; i++ {
-
-		go func(i uint) {
-			defer wg.Done()
-			for {
-				select {
-				case cont := <-ctrChan:
-					if cont == nil {
-						log.Debugf("Worker %d terminating...", i)
-						return
-					}
-					name := cont.ID
-					if len(cont.Names) > 0 {
-						name = strings.TrimLeft(cont.Names[0], "/")
-					}
-					err := c.Runtime.DeleteContainer(ctx, name)
-					if err != nil {
-						log.Errorf("could not remove container '%s': %v", name, err)
-					}
-				case <-ctx.Done():
-					return
-				}
-			}
-		}(i)
-	}
-	for _, ctr := range containers {
-		ctr := ctr
-		ctrChan <- &ctr
-	}
-	close(ctrChan)
-
-	wg.Wait()
+	c.DeleteNodes(ctx, maxWorkers, containers)
 
 	// remove the lab directories
 	if cleanup {
@@ -238,7 +192,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// delete lab management network
-	log.Infof("Deleting docker network '%s'...", c.Config.Mgmt.Network)
+	log.Infof("Deleting network '%s'...", c.Config.Mgmt.Network)
 	if err = c.Runtime.DeleteNet(ctx); err != nil {
 		// do not log error message if deletion error simply says that such network doesn't exist
 		if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {

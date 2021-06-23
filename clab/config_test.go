@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package clab
 
 import (
@@ -44,9 +48,11 @@ func TestLicenseInit(t *testing.T) {
 			if err := c.ParseTopology(); err != nil {
 				t.Fatal(err)
 			}
-
-			if filepath.Base(c.Nodes["node1"].License) != tc.want {
-				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].License)
+			// fmt.Println(c.Config.Topology.Defaults)
+			// fmt.Println(c.Config.Topology.Kinds)
+			// fmt.Println(c.Config.Topology.Nodes)
+			if filepath.Base(c.Nodes["node1"].Config().License) != tc.want {
+				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].Config().License)
 			}
 		})
 	}
@@ -90,10 +96,11 @@ func TestBindsInit(t *testing.T) {
 			}
 
 			nodeCfg := c.Config.Topology.Nodes["node1"]
-			node := types.Node{}
-			node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
+			node := types.NodeConfig{}
+			nodeCfg.Kind = strings.ToLower(c.Config.Topology.GetNodeKind("node1"))
 
-			binds := c.bindsInit(&nodeCfg)
+			// binds := c.bindsInit(nodeCfg)
+			binds := c.Config.Topology.GetNodeBinds("node1")
 			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
 			err := resolveBindPaths(tc.want, node.LabDir)
 			if err != nil {
@@ -128,7 +135,7 @@ func TestBindsInitNodeDir(t *testing.T) {
 			// extract host filesystem path
 			bind_part := strings.Split(tc.want, ":")
 			// create folder from filesystem path
-			os.MkdirAll(bind_part[0], os.ModePerm)
+			_ = os.MkdirAll(bind_part[0], os.ModePerm)
 
 			binds := []string{tc.bind}
 			err := resolveBindPaths(binds, tc.nodeDir)
@@ -179,14 +186,8 @@ func TestTypeInit(t *testing.T) {
 			if err := c.ParseTopology(); err != nil {
 				t.Fatal(err)
 			}
-
-			// nodeCfg := c.Config.Topology.Nodes[tc.node]
-			// node := Node{}
-			// node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
-
-			// ntype := c.typeInit(&nodeCfg, node.Kind)
-			if !reflect.DeepEqual(c.Nodes[tc.node].NodeType, tc.want) {
-				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].NodeType)
+			if !reflect.DeepEqual(c.Nodes[tc.node].Config().NodeType, tc.want) {
+				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].Config().NodeType)
 			}
 		})
 	}
@@ -243,9 +244,10 @@ func TestEnvInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			nodeCfg := c.Config.Topology.Nodes[tc.node]
-			kind := strings.ToLower(c.kindInitialization(&nodeCfg))
-			env := c.envInit(&nodeCfg, kind)
+			// nodeCfg := c.Config.Topology.Nodes[tc.node]
+			// kind := strings.ToLower(c.kindInitialization(nodeCfg))
+			env := c.Config.Topology.GetNodeEnv(tc.node)
+			//env := c.envInit(nodeCfg, kind)
 			if !reflect.DeepEqual(env, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, env)
 			}
@@ -291,9 +293,10 @@ func TestUserInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			nodeCfg := c.Config.Topology.Nodes[tc.node]
-			kind := strings.ToLower(c.kindInitialization(&nodeCfg))
-			user := c.userInit(&nodeCfg, kind)
+			// nodeCfg := c.Config.Topology.Nodes[tc.node]
+			// kind := strings.ToLower(c.kindInitialization(nodeCfg))
+			user := c.Config.Topology.GetNodeUser(tc.node)
+			//user := c.userInit(nodeCfg, kind)
 			if user != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, user)
 			}
@@ -335,7 +338,7 @@ func TestVerifyLinks(t *testing.T) {
 
 }
 
-func TestLablesInit(t *testing.T) {
+func TestLabelsInit(t *testing.T) {
 	tests := map[string]struct {
 		got  string
 		node string
@@ -411,7 +414,7 @@ func TestLablesInit(t *testing.T) {
 			tc.want["clab-node-lab-dir"], _ = resolvePath(tc.want["clab-node-lab-dir"])
 			tc.want["clab-topo-file"], _ = resolvePath(tc.want["clab-topo-file"])
 
-			labels := c.Nodes[tc.node].Labels
+			labels := c.Nodes[tc.node].Config().Labels
 
 			if !cmp.Equal(labels, tc.want) {
 				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, labels)

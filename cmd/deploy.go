@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package cmd
 
 import (
@@ -12,7 +16,9 @@ import (
 	cfssllog "github.com/cloudflare/cfssl/log"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -40,9 +46,6 @@ var deployCmd = &cobra.Command{
 	PreRunE:      sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
-		if err = topoSet(); err != nil {
-			return err
-		}
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
@@ -91,7 +94,7 @@ var deployCmd = &cobra.Command{
 		if debug {
 			cfssllog.Level = cfssllog.LevelDebug
 		}
-		if err := c.CreateRootCA(); err != nil {
+		if err := cert.CreateRootCA(c.Config.Name, c.Dir.LabCARoot, c.Nodes); err != nil {
 			return err
 		}
 
@@ -128,7 +131,7 @@ var deployCmd = &cobra.Command{
 		}
 		log.Debug("containers created, retrieving state and IP addresses...")
 
-		labels = append(labels, "containerlab="+c.Config.Name)
+		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
 		containers, err := c.Runtime.ListContainers(ctx, labels)
 		if err != nil {
 			return fmt.Errorf("could not list containers: %v", err)
@@ -147,14 +150,13 @@ var deployCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		wg.Add(len(c.Nodes))
 		for _, node := range c.Nodes {
-			go func(node *types.Node) {
+			go func(node nodes.Node) {
 				defer wg.Done()
-				err := c.ExecPostDeployTasks(ctx, node, linksMaxWorkers)
+				err := node.PostDeploy(ctx, c.Runtime, c.Nodes)
 				if err != nil {
-					log.Errorf("failed to run postdeploy task for node %s: %v", node.ShortName, err)
+					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
 				}
 			}(node)
-
 		}
 		wg.Wait()
 
@@ -250,25 +252,24 @@ func hostsEntries(containers []types.GenericContainer, bridgeName string) []byte
 	return buff.Bytes()
 }
 
-func enrichNodes(containers []types.GenericContainer, nodes map[string]*types.Node, mgmtNet string) {
+func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node, mgmtNet string) {
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
-		if node, ok := nodes[name]; ok {
+		if node, ok := nodesMap[name]; ok {
 			// add network information
 			// skipping host networking nodes as they don't have separate addresses
-			if strings.ToLower(node.NetworkMode) == "host" {
+			if strings.ToLower(node.Config().NetworkMode) == "host" {
 				continue
 			}
 
 			if c.NetworkSettings.Set {
-				node.MgmtIPv4Address = c.NetworkSettings.IPv4addr
-				node.MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
-				node.MgmtIPv6Address = c.NetworkSettings.IPv6addr
-				node.MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
+				node.Config().MgmtIPv4Address = c.NetworkSettings.IPv4addr
+				node.Config().MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
+				node.Config().MgmtIPv6Address = c.NetworkSettings.IPv6addr
+				node.Config().MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
 			}
 
-			node.ContainerID = c.ID
+			node.Config().ContainerID = c.ID
 		}
-
 	}
 }

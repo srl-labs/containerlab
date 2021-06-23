@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 package types
 
 import (
@@ -5,9 +9,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/cloudflare/cfssl/log"
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -27,7 +33,7 @@ func (link *Link) String() string {
 
 // Endpoint is a struct that contains information of a link endpoint
 type Endpoint struct {
-	Node *Node
+	Node *NodeConfig
 	// e1-x, eth, etc
 	EndpointName string
 	// mac address
@@ -38,14 +44,14 @@ type Endpoint struct {
 // it is provided via docker network object
 type MgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string // linux bridge backing the docker network
+	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network (or containerd bridge net)
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
 }
 
-// Node is a struct that contains the information of a container element
-type Node struct {
+// NodeConfig is a struct that contains the information of a container element
+type NodeConfig struct {
 	ShortName string
 	LongName  string
 	Fqdn      string
@@ -90,7 +96,7 @@ type Node struct {
 }
 
 // GenerateConfig generates configuration for the nodes
-func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
+func (node *NodeConfig) GenerateConfig(dst, defaultTemplatePath string) error {
 	if utils.FileExists(dst) && (node.Config == defaultTemplatePath) {
 		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
 		return nil
@@ -115,10 +121,32 @@ func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
 	return err
 }
 
+func DisableTxOffload(n *NodeConfig) error {
+	// skip this if node runs in host mode
+	if strings.ToLower(n.NetworkMode) == "host" {
+		return nil
+	}
+	// disable tx checksum offload for linux containers on eth0 interfaces
+	nodeNS, err := ns.GetNS(n.NSPath)
+	if err != nil {
+		return err
+	}
+	err = nodeNS.Do(func(_ ns.NetNS) error {
+		// disabling offload on lo0 interface
+		err := utils.EthtoolTXOff("eth0")
+		if err != nil {
+			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
+		}
+		return err
+	})
+	return err
+}
+
 // Data struct storing generic container data
 type GenericContainer struct {
 	Names           []string
 	ID              string
+	ShortID         string // trimmed ID for display purposes
 	Image           string
 	State           string
 	Status          string
@@ -133,4 +161,37 @@ type GenericMgmtIPs struct {
 	IPv4pLen int
 	IPv6addr string
 	IPv6pLen int
+}
+
+type GenericFilter struct {
+	// defined by now "label"
+	FilterType string
+	// defines e.g. the label name for FilterType "label"
+	Field string
+	// = | != | exists
+	Operator string
+	// match value
+	Match string
+}
+
+func FilterFromLabelStrings(labels []string) []*GenericFilter {
+	gfl := []*GenericFilter{}
+	var gf *GenericFilter
+	for _, s := range labels {
+		gf = &GenericFilter{
+			FilterType: "label",
+		}
+		if strings.Contains(s, "=") {
+			gf.Operator = "="
+			subs := strings.Split(s, "=")
+			gf.Field = strings.TrimSpace(subs[0])
+			gf.Match = strings.TrimSpace(subs[1])
+		} else {
+			gf.Match = "exists"
+			gf.Field = strings.TrimSpace(s)
+		}
+
+		gfl = append(gfl, gf)
+	}
+	return gfl
 }
