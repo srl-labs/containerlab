@@ -38,7 +38,7 @@ type Endpoint struct {
 // it is provided via docker network object
 type MgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string // linux bridge backing the docker network
+	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network (or containerd bridge net)
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`

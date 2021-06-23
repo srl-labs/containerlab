@@ -2,9 +2,11 @@
 This test suite verifies
 - connectivity of nodes to the linux bridge
 - connectivity of nodes to the host netns
+- user-specified bridge is honored as a mgmt net bridge
 
 *** Settings ***
 Library           OperatingSystem
+Library           Process
 Suite Setup       Setup
 Suite Teardown    Cleanup
 
@@ -16,6 +18,7 @@ ${br-link1-name}    l1-eth1
 ${br-link2-name}    l1-eth2
 ${host-link-name}    l1-01-03-eth3
 ${runtime}        docker
+${mgmt-br-name}    01-03-mgmt
 
 *** Test Cases ***
 Create linux bridge
@@ -45,6 +48,20 @@ Verify links in host ns
     ...    sudo ip link show ${host-link-name}
     Log    ${output}
     Should Contain    ${output}    state UP
+
+Verify management network is using user-specified bridge
+    # containerd has an issue with filtering at this moment, so skip it
+    Skip If    '${runtime} != docker'
+    # show management interface info and cut the information about the ifindex of the remote veth
+    # note that exec returns the info in the stderr stream, thus we use stderr to parse the ifindex
+    ${rc}    ${iface} =    OperatingSystem.Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 ip l show eth0 2>&1 | cut -d ' ' -f5 | cut -d '@' -f2 | cut -c3-
+    Log    ${iface}
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${res} =    OperatingSystem.Run And Return Rc And Output
+    ...    sudo ip l | grep ${iface}
+    Log    ${res}
+    Should Contain    ${res}    master ${mgmt-br-name} state UP
 
 *** Keywords ***
 Setup

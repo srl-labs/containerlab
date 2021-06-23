@@ -362,7 +362,7 @@ func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *li
 	cnirc := &libcni.RuntimeConf{
 		ContainerID: cId,
 		IfName:      ifName,
-		//// NetNS must be set later, can just be determined after cotnainer start
+		//// NetNS must be set later, can just be determined after container start
 		//NetNS:          node.NSPath,
 		CapabilityArgs: make(map[string]interface{}),
 	}

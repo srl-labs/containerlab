@@ -82,7 +82,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	defer cancel()
 
 	// linux bridge name that is used by docker network
-	var bridgeName string
+	bridgeName := c.Mgmt.Bridge
 
 	log.Debugf("Checking if docker network '%s' exists", c.Mgmt.Network)
 	netResource, err := c.Client.NetworkInspect(nctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
@@ -122,7 +122,8 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 				"containerlab": "",
 			},
 			Options: map[string]string{
-				"com.docker.network.driver.mtu": c.Mgmt.MTU,
+				"com.docker.network.driver.mtu":  c.Mgmt.MTU,
+				"com.docker.network.bridge.name": bridgeName,
 			},
 		}
 
@@ -134,7 +135,11 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		if len(netCreateResponse.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
-		bridgeName = "br-" + netCreateResponse.ID[:12]
+		// when bridge is not set by a user explicitly
+		// we use the 12 chars of docker net as its name
+		if bridgeName == "" {
+			bridgeName = "br-" + netCreateResponse.ID[:12]
+		}
 
 	case err == nil:
 		log.Debugf("network '%s' was found. Reusing it...", c.Mgmt.Network)
@@ -145,13 +150,20 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		case "bridge":
 			bridgeName = "docker0"
 		default:
-			bridgeName = "br-" + netResource.ID[:12]
+			if _, ok := netResource.Options["com.docker.network.bridge.name"]; ok {
+				bridgeName = netResource.Options["com.docker.network.bridge.name"]
+			} else {
+				bridgeName = "br-" + netResource.ID[:12]
+			}
 		}
 
 	default:
 		return err
 	}
-	c.Mgmt.Bridge = bridgeName
+
+	if c.Mgmt.Bridge == "" {
+		c.Mgmt.Bridge = bridgeName
+	}
 
 	log.Debugf("Docker network '%s', bridge name '%s'", c.Mgmt.Network, bridgeName)
 

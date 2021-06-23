@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: 03-bridge-and-host
+mgmt:
+  bridge: 01-03-mgmt
 
 topology:
   nodes:
