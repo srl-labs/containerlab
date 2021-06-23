@@ -14,8 +14,9 @@ topology:
         - /tmp/clab-01-test.txt:/01-test.txt
     l2:
       kind: linux
-      image: alpine:3
-      cmd: ash -c "sleep 9999"
+      image: nginx:stable-alpine
+      ports:
+        - 56180:80
 
   links:
     - endpoints: ["l1:eth1", "l2:eth1"]

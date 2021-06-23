@@ -78,6 +78,13 @@ Verify bind mount in l1 node
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Hello, containerlab
 
+Verify port forwarding for node l2
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    curl localhost:56180
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Thank you for using nginx
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
