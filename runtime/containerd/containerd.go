@@ -101,9 +101,6 @@ func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	log.Debug("DeleteNet() - Not yet required with containerd")
 	return nil
 }
-func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.GenericContainer, error) {
-	return nil, errors.New("not implemented")
-}
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
 
