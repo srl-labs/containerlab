@@ -135,13 +135,13 @@ func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
 	log.Info("building graph from topology file")
 	for _, node := range c.Nodes {
 		g.Nodes = append(g.Nodes, containerDetails{
-			Name:        node.ShortName,
-			Kind:        node.Kind,
-			Image:       node.Image,
-			Group:       node.Group,
+			Name:        node.Config().ShortName,
+			Kind:        node.Config().Kind,
+			Image:       node.Config().Image,
+			Group:       node.Config().Group,
 			State:       "N/A",
-			IPv4Address: node.MgmtIPv4Address,
-			IPv6Address: node.MgmtIPv6Address,
+			IPv4Address: node.Config().MgmtIPv4Address,
+			IPv6Address: node.Config().MgmtIPv6Address,
 		})
 	}
 
@@ -157,9 +157,9 @@ func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Ge
 		if node, ok := c.Nodes[name]; ok {
 			g.Nodes = append(g.Nodes, containerDetails{
 				Name:        name,
-				Kind:        node.Kind,
+				Kind:        node.Config().Kind,
 				Image:       cont.Image,
-				Group:       node.Group,
+				Group:       node.Config().Group,
 				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
 				IPv4Address: getContainerIPv4(cont, c.Config.Mgmt.Network),
 				IPv6Address: getContainerIPv6(cont, c.Config.Mgmt.Network),

@@ -5,9 +5,11 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
 
@@ -46,4 +48,22 @@ func DefaultNetMTU() (string, error) {
 		return "1500", err
 	}
 	return fmt.Sprint(b.MTU), nil
+}
+
+// GenMac generates a random MAC address for a given OUI
+func GenMac(oui string) string {
+	buf := make([]byte, 3)
+	_, _ = rand.Read(buf)
+	return fmt.Sprintf("%s:%02x:%02x:%02x", oui, buf[0], buf[1], buf[2])
+}
+
+// deleteNetnsSymlink deletes a network namespace and removes the symlink created by linkContainerNS func
+func DeleteNetnsSymlink(n string) error {
+	log.Debug("Deleting netns symlink: ", n)
+	sl := fmt.Sprintf("/run/netns/%s", n)
+	err := os.Remove(sl)
+	if err != nil {
+		log.Debug("Failed to delete netns symlink by path:", sl)
+	}
+	return nil
 }

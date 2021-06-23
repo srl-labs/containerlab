@@ -111,7 +111,7 @@ func (n *NodeDefinition) GetMgmtIPv6() string {
 	if n == nil {
 		return ""
 	}
-	return n.MgmtIPv4
+	return n.MgmtIPv6
 }
 
 func (n *NodeDefinition) GetPublish() []string {

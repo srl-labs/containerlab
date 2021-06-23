@@ -12,8 +12,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -48,39 +46,6 @@ func (c *CLab) GetTopology(topo string) error {
 		path:     topoAbsPath,
 		fullName: file,
 		name:     strings.TrimSuffix(file, path.Ext(file)),
-	}
-	return nil
-}
-
-// CreateNodeDirStructure create the directory structure and files for the lab nodes
-func (c *CLab) CreateNodeDirStructure(node *types.NodeConfig) (err error) {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	// create node directory in the lab directory
-	// skip creation of node directory for linux/bridge kinds
-	// since they don't keep any state normally
-	if node.Kind != "linux" && node.Kind != "bridge" {
-		utils.CreateDirectory(node.LabDir, 0777)
-	}
-
-	switch node.Kind {
-	case "srl":
-		if err := c.createSRLFiles(node); err != nil {
-			return err
-		}
-	case "ceos":
-		if err := c.createCEOSFiles(node); err != nil {
-			return err
-		}
-	case "crpd":
-		if err := c.createCRPDFiles(node); err != nil {
-			return err
-		}
-	case "vr-sros":
-		if err := c.createVrSROSFiles(node); err != nil {
-			return err
-		}
 	}
 	return nil
 }

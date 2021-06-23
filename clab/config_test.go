@@ -51,8 +51,8 @@ func TestLicenseInit(t *testing.T) {
 			// fmt.Println(c.Config.Topology.Defaults)
 			// fmt.Println(c.Config.Topology.Kinds)
 			// fmt.Println(c.Config.Topology.Nodes)
-			if filepath.Base(c.Nodes["node1"].License) != tc.want {
-				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].License)
+			if filepath.Base(c.Nodes["node1"].Config().License) != tc.want {
+				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].Config().License)
 			}
 		})
 	}
@@ -186,14 +186,8 @@ func TestTypeInit(t *testing.T) {
 			if err := c.ParseTopology(); err != nil {
 				t.Fatal(err)
 			}
-
-			// nodeCfg := c.Config.Topology.Nodes[tc.node]
-			// node := Node{}
-			// node.Kind = strings.ToLower(c.kindInitialization(&nodeCfg))
-
-			// ntype := c.typeInit(&nodeCfg, node.Kind)
-			if !reflect.DeepEqual(c.Nodes[tc.node].NodeType, tc.want) {
-				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].NodeType)
+			if !reflect.DeepEqual(c.Nodes[tc.node].Config().NodeType, tc.want) {
+				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].Config().NodeType)
 			}
 		})
 	}
@@ -420,7 +414,7 @@ func TestLabelsInit(t *testing.T) {
 			tc.want["clab-node-lab-dir"], _ = resolvePath(tc.want["clab-node-lab-dir"])
 			tc.want["clab-topo-file"], _ = resolvePath(tc.want["clab-topo-file"])
 
-			labels := c.Nodes[tc.node].Labels
+			labels := c.Nodes[tc.node].Config().Labels
 
 			if !cmp.Equal(labels, tc.want) {
 				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, labels)
