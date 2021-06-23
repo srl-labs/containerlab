@@ -101,7 +101,7 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
 	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleteing nodes")
+	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleting nodes")
 }
 
 func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName string) error {
