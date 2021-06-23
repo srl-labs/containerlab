@@ -19,6 +19,10 @@ topology:
         - 56180:80
       mgmt_ipv4: 172.20.20.100
       mgmt_ipv6: 2001:172:20:20::100
+    l3:
+      kind: linux
+      image: nginx:stable-alpine
+      network-mode: host
 
   links:
     - endpoints: ["l1:eth1", "l2:eth1"]
