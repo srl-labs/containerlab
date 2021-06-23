@@ -252,10 +252,10 @@ func hostsEntries(containers []types.GenericContainer, bridgeName string) []byte
 	return buff.Bytes()
 }
 
-func enrichNodes(containers []types.GenericContainer, nodes map[string]nodes.Node, mgmtNet string) {
+func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node, mgmtNet string) {
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
-		if node, ok := nodes[name]; ok {
+		if node, ok := nodesMap[name]; ok {
 			// add network information
 			// skipping host networking nodes as they don't have separate addresses
 			if strings.ToLower(node.Config().NetworkMode) == "host" {
@@ -271,6 +271,5 @@ func enrichNodes(containers []types.GenericContainer, nodes map[string]nodes.Nod
 
 			node.Config().ContainerID = c.ID
 		}
-
 	}
 }
