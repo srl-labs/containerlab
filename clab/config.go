@@ -187,10 +187,12 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 	nodeCfg.Binds = binds
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
-
+	if err != nil {
+		return nil, err
+	}
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 
-	return nodeCfg, err
+	return nodeCfg, nil
 }
 
 // NewLink initializes a new link object
@@ -416,13 +418,12 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	for _, l := range c.Links {
 		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
-			if e.Node.Kind == "bridge" || e.Node.Kind == "ovs-bridge" || e.Node.Kind == "host" {
+			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
 					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces. 
 					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
-				} else {
-					rootNsIfaces[e.EndpointName] = struct{}{}
 				}
+				rootNsIfaces[e.EndpointName] = struct{}{}
 			}
 		}
 	}
