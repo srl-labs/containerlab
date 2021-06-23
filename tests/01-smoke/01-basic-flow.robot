@@ -1,6 +1,7 @@
 *** Settings ***
 Library           OperatingSystem
 Library           String
+Suite Setup       Setup
 Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 *** Variables ***
@@ -9,6 +10,7 @@ ${runtime}        docker
 # runtime command to execute tasks in a container
 # defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
 ${runtime-cli-exec-cmd}    sudo docker exec
+${bind-orig-path}    /tmp/clab-01-test.txt
 
 *** Test Cases ***
 Deploy ${lab-name} lab
@@ -69,8 +71,20 @@ Ensure "inspect all" outputs IP addresses
     ${ipv6} =    String.Strip String    ${data}[11]
     Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+/\\d{1,2}$
 
+Verify bind mount in l1 node
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/01-linux-nodes.clab.yml --label clab-node-name=l1 cat 01-test.txt
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Hello, containerlab
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+
+*** Keywords ***
+Setup
+    Run    rm -rf ${bind-orig-path}
+    OperatingSystem.Create File    ${bind-orig-path}    Hello, containerlab
