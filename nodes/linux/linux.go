@@ -13,12 +13,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-const (
-	nodeKind = "linux"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindLinux, func() nodes.Node {
 		return new(linux)
 	})
 }

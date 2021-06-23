@@ -12,12 +12,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-const (
-	nodeKind = "host"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindHOST, func() nodes.Node {
 		return new(host)
 	})
 }

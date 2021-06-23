@@ -288,7 +288,7 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 // VerifyBridgeExists verifies if every node of kind=bridge/ovs-bridge exists on the lab host
 func (c *CLab) verifyBridgesExist() error {
 	for name, node := range c.Nodes {
-		if node.Config().Kind == "bridge" || node.Config().Kind == "ovs-bridge" {
+		if node.Config().Kind == nodes.NodeKindBridge || node.Config().Kind == nodes.NodeKindOVS {
 			if _, err := netlink.LinkByName(name); err != nil {
 				return fmt.Errorf("bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
 			}

@@ -14,12 +14,8 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const (
-	nodeKind = "vr-veos"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindVrVEOS, func() nodes.Node {
 		return new(vrVEOS)
 	})
 }

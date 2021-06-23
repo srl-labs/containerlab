@@ -10,12 +10,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-const (
-	nodeKind = "mysocketio"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindMySocketIO, func() nodes.Node {
 		return new(mySocketIO)
 	})
 }

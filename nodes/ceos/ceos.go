@@ -20,10 +20,6 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const (
-	nodeKind = "ceos"
-)
-
 // defined env vars for the ceos
 var ceosEnv = map[string]string{
 	"CEOS":                                "1",
@@ -37,7 +33,7 @@ var ceosEnv = map[string]string{
 }
 
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindCEOS, func() nodes.Node {
 		return new(ceos)
 	})
 }

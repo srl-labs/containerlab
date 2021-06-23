@@ -14,12 +14,8 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const (
-	nodeKind = "vr-ros"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindVrROS, func() nodes.Node {
 		return new(vrRos)
 	})
 }

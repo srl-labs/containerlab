@@ -15,12 +15,8 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const (
-	nodeKind = "sonic-vs"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindSonic, func() nodes.Node {
 		return new(sonic)
 	})
 }

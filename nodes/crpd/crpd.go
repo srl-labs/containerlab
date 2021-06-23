@@ -16,12 +16,8 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const (
-	nodeKind = "crpd"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindCRPD, func() nodes.Node {
 		return new(crpd)
 	})
 }

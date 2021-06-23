@@ -14,12 +14,8 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-const (
-	nodeKind = "vr-vmx"
-)
-
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindVrVMX, func() nodes.Node {
 		return new(vrVMX)
 	})
 }

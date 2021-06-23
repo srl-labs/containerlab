@@ -16,6 +16,27 @@ const (
 	VrDefConnMode = "tc"
 )
 
+var NodeKind string
+
+const (
+	NodeKindBridge     = "bridge"
+	NodeKindCEOS       = "ceos"
+	NodeKindCRPD       = "crpd"
+	NodeKindHOST       = "host"
+	NodeKindLinux      = "linux"
+	NodeKindMySocketIO = "mysocketio"
+	NodeKindOVS        = "bridge-ovs"
+	NodeKindSonic      = "sonic"
+	NodeKindSRL        = "srl"
+	NodeKindVrCSR      = "vr-csr"
+	NodeKindVrROS      = "vr-ros"
+	NodeKindVrSROS     = "vr-sros"
+	NodeKindVrVEOS     = "vr-veos"
+	NodeKindVrVMX      = "vr-vmx"
+	NodeKindVrXRV      = "vr-xrv"
+	NodeKindVrXRV9K    = "vr-xrv9k"
+)
+
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	Config() *types.NodeConfig

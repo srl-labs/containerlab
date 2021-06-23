@@ -17,12 +17,11 @@ import (
 )
 
 const (
-	nodeKind          = "vr-sros"
 	vrsrosDefaultType = "sr-1"
 )
 
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindVrSROS, func() nodes.Node {
 		return new(vrSROS)
 	})
 }

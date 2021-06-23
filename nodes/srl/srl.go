@@ -24,7 +24,6 @@ import (
 )
 
 const (
-	nodeKind       = "srl"
 	srlDefaultType = "ixr6"
 	baseConfigDir  = "/etc/containerlab/templates/srl/"
 )
@@ -49,7 +48,7 @@ var srlSysctl = map[string]string{
 }
 
 func init() {
-	nodes.Register(nodeKind, func() nodes.Node {
+	nodes.Register(nodes.NodeKindSRL, func() nodes.Node {
 		return new(srl)
 	})
 }
