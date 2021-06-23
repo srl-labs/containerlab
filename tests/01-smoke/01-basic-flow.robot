@@ -11,6 +11,8 @@ ${runtime}        docker
 # defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
 ${runtime-cli-exec-cmd}    sudo docker exec
 ${bind-orig-path}    /tmp/clab-01-test.txt
+${n2-ipv4}        172.20.20.100/24
+${n2-ipv6}        2001:172:20:20::100/64
 
 *** Test Cases ***
 Deploy ${lab-name} lab
@@ -84,6 +86,16 @@ Verify port forwarding for node l2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Thank you for using nginx
+
+Verify static mgmt addressing for l2
+    ${rc}    ${ipv4} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -4 a sh eth0 | cut -d ' ' -f7
+    Log    ${ipv4}
+    Should Be Equal As Strings    ${ipv4}    ${n2-ipv4}
+    ${rc}    ${ipv6} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -6 a sh eth0 | cut -d ' ' -f7 | head -1
+    Log    ${ipv6}
+    Should Be Equal As Strings    ${ipv6}    ${n2-ipv6}
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output

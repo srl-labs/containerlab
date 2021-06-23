@@ -17,6 +17,8 @@ topology:
       image: nginx:stable-alpine
       ports:
         - 56180:80
+      mgmt_ipv4: 172.20.20.100
+      mgmt_ipv6: 2001:172:20:20::100
 
   links:
     - endpoints: ["l1:eth1", "l2:eth1"]
