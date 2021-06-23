@@ -73,7 +73,7 @@ Ensure "inspect all" outputs IP addresses
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/01-linux-nodes.clab.yml --label clab-node-name=l1 cat 01-test.txt
+    ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l1 cat 01-test.txt
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Hello, containerlab
