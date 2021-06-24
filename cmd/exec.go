@@ -69,13 +69,11 @@ var execCmd = &cobra.Command{
 			return errors.New("no containers found")
 		}
 
-		fmt.Println(execCommand)
 		cmds, err := shlex.Split(execCommand)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println(cmds)
 		jsonResult := make(map[string]map[string]interface{})
 
 		for _, cont := range containers {
@@ -122,7 +120,7 @@ var execCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(execCmd)
-	execCmd.Flags().StringVarP(&execCommand, "command", "c", "", "command to execute")
+	execCmd.Flags().StringVarP(&execCommand, "cmd", "", "", "command to execute")
 	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
 	execCmd.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")
 }
