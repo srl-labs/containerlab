@@ -11,7 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Juniper/go-netconf/netconf"
+	"github.com/scrapli/scrapligo/driver/base"
+	"github.com/scrapli/scrapligo/netconf"
+	"github.com/scrapli/scrapligo/transport"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -115,28 +117,34 @@ func init() {
 	rootCmd.AddCommand(saveCmd)
 }
 
+// netconfSave saves the running config to the startup by means
+// of invoking a netconf rpc <copy-config>
+// this method is used on the network elements that can't perform a save of config via other means
 func netconfSave(cont types.GenericContainer) {
 	kind := cont.Labels["clab-node-kind"]
-	config := netconf.SSHConfigPassword(clab.DefaultCredentials[kind][0],
-		clab.DefaultCredentials[kind][1])
-
 	host := strings.TrimLeft(cont.Names[0], "/")
-	ncHost := host + ":830"
 
-	s, err := netconf.DialSSH(ncHost, config)
+	d, err := netconf.NewNetconfDriver(
+		host,
+		base.WithAuthStrictKey(false),
+		base.WithAuthUsername(clab.DefaultCredentials[kind][0]),
+		base.WithAuthPassword(clab.DefaultCredentials[kind][1]),
+		base.WithTransportType(transport.StandardTransportName),
+	)
+	log.Errorf("Could not create netconf driver for %s: %+v\n", host, err)
+
+	err = d.Open()
 	if err != nil {
-		log.Errorf("%s: Could not connect SSH to %s %s", cont.Names[0], host, err)
+		log.Errorf("failed to open netconf driver for %s: %+v\n", host, err)
 		return
 	}
-	defer s.Close()
+	defer d.Close()
 
-	save := `<copy-config><target><startup/></target><source><running/></source></copy-config>`
-
-	_, err = s.Exec(netconf.RawMethod(save))
+	_, err = d.CopyConfig("running", "startup")
 	if err != nil {
-		log.Errorf("%s: Could not send Netconf save to %s %s", cont.Names[0], host, err)
+		log.Errorf("%s: Could not send save config via Netconf: %+v", host, err)
 		return
 	}
 
-	log.Infof("saved %s configuration from node %s\n", kind, host)
+	log.Infof("saved configuration from %s node\n", host)
 }

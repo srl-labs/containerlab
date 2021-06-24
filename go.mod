@@ -3,7 +3,6 @@ module github.com/srl-labs/containerlab
 go 1.15
 
 require (
-	github.com/Juniper/go-netconf v0.1.1
 	github.com/awalterschulze/gographviz v2.0.1+incompatible
 	github.com/cloudflare/cfssl v1.4.1
 	github.com/containerd/containerd v1.5.2
@@ -23,10 +22,10 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210303205135-43e4633e40c1
 	github.com/pkg/errors v0.9.1
+	github.com/scrapli/scrapligo v0.0.0-20210617193454-8a38a1b551e8
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
 	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5
-	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
 	gopkg.in/yaml.v2 v2.4.0
 )
