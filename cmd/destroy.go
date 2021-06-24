@@ -35,33 +35,18 @@ var destroyCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		opts := []clab.ClabOption{
+			clab.WithDebug(debug),
+			clab.WithTimeout(timeout),
+			clab.WithRuntime(rt, debug, timeout, graceful),
+		}
+
+		topos := map[string]struct{}{}
+
 		switch {
 		case !all:
-			// stop if not topo file provided and not all labs are requested
-			// to be deleted
-			if err = topoSet(); err != nil {
-				return err
-			}
-			opts := []clab.ClabOption{
-				clab.WithDebug(debug),
-				clab.WithTimeout(timeout),
-				clab.WithTopoFile(topo),
-				clab.WithRuntime(rt, debug, timeout, graceful),
-				clab.WithGracefulShutdown(graceful),
-			}
-			c := clab.NewContainerLab(opts...)
-
-			// Parse topology information
-			if err = c.ParseTopology(); err != nil {
-				return err
-			}
-			labs = append(labs, c)
+			topos[topo] = struct{}{}
 		case all:
-			opts := []clab.ClabOption{
-				clab.WithDebug(debug),
-				clab.WithTimeout(timeout),
-				clab.WithRuntime(rt, debug, timeout, graceful),
-			}
 			c := clab.NewContainerLab(opts...)
 			// list all containerlab containers
 			containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}})
@@ -72,32 +57,30 @@ var destroyCmd = &cobra.Command{
 				return fmt.Errorf("no containerlab labs were found")
 			}
 			// get unique topo files from all labs
-			topos := map[string]struct{}{}
 			for _, cont := range containers {
 				topos[cont.Labels["clab-topo-file"]] = struct{}{}
 			}
-			for topo := range topos {
-				opts := []clab.ClabOption{
-					clab.WithDebug(debug),
-					clab.WithTimeout(timeout),
-					clab.WithTopoFile(topo),
-					clab.WithRuntime(rt, debug, timeout, graceful),
-					clab.WithGracefulShutdown(graceful),
-				}
-				c = clab.NewContainerLab(opts...)
-				// change to the dir where topo file is located
-				// to resolve relative paths of license/configs in ParseTopology
-				if err = os.Chdir(filepath.Dir(topo)); err != nil {
-					return err
-				}
-
-				// Parse topology information
-				if err = c.ParseTopology(); err != nil {
-					return err
-				}
-				labs = append(labs, c)
-			}
 		}
+
+		for topo := range topos {
+			opts := append(opts,
+				clab.WithTopoFile(topo),
+				clab.WithGracefulShutdown(graceful),
+			)
+			c := clab.NewContainerLab(opts...)
+			// change to the dir where topo file is located
+			// to resolve relative paths of license/configs in ParseTopology
+			if err = os.Chdir(filepath.Dir(topo)); err != nil {
+				return err
+			}
+
+			// Parse topology information
+			if err = c.ParseTopology(); err != nil {
+				return err
+			}
+			labs = append(labs, c)
+		}
+
 		var errs []error
 		for _, clab := range labs {
 			err = destroyLab(ctx, clab)
@@ -118,7 +101,7 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "", false, "delete lab directory")
 	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleteing nodes")
+	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleting nodes")
 }
 
 func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName string) error {

@@ -54,14 +54,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
 }
 
-// returns an error if topo path is not provided
-func topoSet() error {
-	if topo == "" {
-		return errors.New("path to the topology definition file must be provided with --topo/-t flag")
-	}
-	return nil
-}
-
 func sudoCheck(cmd *cobra.Command, args []string) error {
 	id := os.Geteuid()
 	if id != 0 {

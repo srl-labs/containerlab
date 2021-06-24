@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/cloudflare/cfssl/log"
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -26,7 +27,7 @@ type Link struct {
 
 // Endpoint is a struct that contains information of a link endpoint
 type Endpoint struct {
-	Node *Node
+	Node *NodeConfig
 	// e1-x, eth, etc
 	EndpointName string
 	// mac address
@@ -37,14 +38,14 @@ type Endpoint struct {
 // it is provided via docker network object
 type MgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string // linux bridge backing the docker network
+	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network (or containerd bridge net)
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
 }
 
-// Node is a struct that contains the information of a container element
-type Node struct {
+// NodeConfig is a struct that contains the information of a container element
+type NodeConfig struct {
 	ShortName string
 	LongName  string
 	Fqdn      string
@@ -89,7 +90,7 @@ type Node struct {
 }
 
 // GenerateConfig generates configuration for the nodes
-func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
+func (node *NodeConfig) GenerateConfig(dst, defaultTemplatePath string) error {
 	if utils.FileExists(dst) && (node.Config == defaultTemplatePath) {
 		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
 		return nil
@@ -111,6 +112,27 @@ func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
 	}
 	defer f.Close()
 	_, err = f.Write(dstBytes.Bytes())
+	return err
+}
+
+func DisableTxOffload(n *NodeConfig) error {
+	// skip this if node runs in host mode
+	if strings.ToLower(n.NetworkMode) == "host" {
+		return nil
+	}
+	// disable tx checksum offload for linux containers on eth0 interfaces
+	nodeNS, err := ns.GetNS(n.NSPath)
+	if err != nil {
+		return err
+	}
+	err = nodeNS.Do(func(_ ns.NetNS) error {
+		// disabling offload on lo0 interface
+		err := utils.EthtoolTXOff("eth0")
+		if err != nil {
+			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
+		}
+		return err
+	})
 	return err
 }
 
