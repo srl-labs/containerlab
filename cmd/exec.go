@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	labels []string
+	labels     []string
+	execFormat string
 )
 
 // execCmd represents the exec command
@@ -35,7 +36,7 @@ var execCmd = &cobra.Command{
 			fmt.Println("provide command to execute")
 			return
 		}
-		switch format {
+		switch execFormat {
 		case "json",
 			"plain":
 			// expected values, go on
@@ -82,7 +83,7 @@ var execCmd = &cobra.Command{
 				continue
 			}
 			contName := strings.TrimLeft(cont.Names[0], "/")
-			switch format {
+			switch execFormat {
 			case "json":
 				jsonResult[contName] = make(map[string]interface{})
 				err := json.Unmarshal([]byte(stdout), &doc)
@@ -102,7 +103,7 @@ var execCmd = &cobra.Command{
 
 			}
 		}
-		if format == "json" {
+		if execFormat == "json" {
 			result, err := json.Marshal(jsonResult)
 			if err != nil {
 				log.Errorf("Issue converting to json %v", err)
@@ -115,5 +116,5 @@ var execCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(execCmd)
 	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
-	execCmd.Flags().StringVarP(&format, "format", "f", "plain", "output format. One of [json, plain]")
+	execCmd.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")
 }
