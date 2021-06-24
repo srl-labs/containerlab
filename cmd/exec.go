@@ -7,9 +7,11 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -17,8 +19,9 @@ import (
 )
 
 var (
-	labels     []string
-	execFormat string
+	labels      []string
+	execFormat  string
+	execCommand string
 )
 
 // execCmd represents the exec command
@@ -26,16 +29,16 @@ var execCmd = &cobra.Command{
 	Use:     "exec",
 	Short:   "execute a command on one or multiple containers",
 	PreRunE: sudoCheck,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" && topo == "" {
-			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
-			return
+			return errors.New("provide either lab name (--name) or topology file path (--topo)")
+
 		}
-		log.Debugf("raw command: %v", args)
-		if len(args) == 0 {
-			fmt.Println("provide command to execute")
-			return
+
+		if execCommand == "" {
+			return errors.New("provide command to execute")
 		}
+
 		switch execFormat {
 		case "json",
 			"plain":
@@ -63,13 +66,16 @@ var execCmd = &cobra.Command{
 			log.Fatalf("could not list containers: %v", err)
 		}
 		if len(containers) == 0 {
-			log.Println("no containers found")
-			return
+			return errors.New("no containers found")
 		}
-		cmds := make([]string, 0, len(args))
-		for _, a := range args {
-			cmds = append(cmds, strings.Split(a, " ")...)
+
+		fmt.Println(execCommand)
+		cmds, err := shlex.Split(execCommand)
+		if err != nil {
+			return err
 		}
+
+		fmt.Println(cmds)
 		jsonResult := make(map[string]map[string]interface{})
 
 		for _, cont := range containers {
@@ -110,11 +116,13 @@ var execCmd = &cobra.Command{
 			}
 			fmt.Println(string(result))
 		}
+		return err
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(execCmd)
+	execCmd.Flags().StringVarP(&execCommand, "command", "c", "", "command to execute")
 	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
 	execCmd.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")
 }
