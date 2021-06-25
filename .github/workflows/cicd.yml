@@ -63,7 +63,7 @@ jobs:
           go-version: ${{ env.GOVER }}
       - name: Staticcheck
         run: |
-          go get -u honnef.co/go/tools/cmd/staticcheck
+          go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
 
   docs-test:
