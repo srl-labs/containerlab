@@ -6,31 +6,45 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/types"
 )
 
-var labels []string
+var (
+	labels      []string
+	execFormat  string
+	execCommand string
+)
 
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
 	Use:     "exec",
 	Short:   "execute a command on one or multiple containers",
 	PreRunE: sudoCheck,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" && topo == "" {
-			fmt.Println("provide either lab name (--name) or topology file path (--topo)")
-			return
+			return errors.New("provide either lab name (--name) or topology file path (--topo)")
+
 		}
-		log.Debugf("raw command: %v", args)
-		if len(args) == 0 {
-			fmt.Println("provide command to execute")
-			return
+
+		if execCommand == "" {
+			return errors.New("provide command to execute")
+		}
+
+		switch execFormat {
+		case "json",
+			"plain":
+			// expected values, go on
+		default:
+			log.Error("format is expected to be either json or plain")
 		}
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
@@ -52,14 +66,18 @@ var execCmd = &cobra.Command{
 			log.Fatalf("could not list containers: %v", err)
 		}
 		if len(containers) == 0 {
-			log.Println("no containers found")
-			return
+			return errors.New("no containers found")
 		}
-		cmds := make([]string, 0, len(args))
-		for _, a := range args {
-			cmds = append(cmds, strings.Split(a, " ")...)
+
+		cmds, err := shlex.Split(execCommand)
+		if err != nil {
+			return err
 		}
+
+		jsonResult := make(map[string]map[string]interface{})
+
 		for _, cont := range containers {
+			var doc interface{}
 			if cont.State != "running" {
 				continue
 			}
@@ -68,17 +86,41 @@ var execCmd = &cobra.Command{
 				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
 				continue
 			}
-			if len(stdout) > 0 {
-				log.Infof("%s: stdout:\n%s", cont.Names, string(stdout))
-			}
-			if len(stderr) > 0 {
-				log.Infof("%s: stderr:\n%s", cont.Names, string(stderr))
+			contName := strings.TrimLeft(cont.Names[0], "/")
+			switch execFormat {
+			case "json":
+				jsonResult[contName] = make(map[string]interface{})
+				err := json.Unmarshal([]byte(stdout), &doc)
+				if err == nil {
+					jsonResult[contName]["stdout"] = doc
+				} else {
+					jsonResult[contName]["stdout"] = string(stdout)
+				}
+				jsonResult[contName]["stderr"] = string(stderr)
+			case "plain":
+				if len(stdout) > 0 {
+					log.Infof("%s: stdout:\n%s", contName, string(stdout))
+				}
+				if len(stderr) > 0 {
+					log.Infof("%s: stderr:\n%s", contName, string(stderr))
+				}
+
 			}
 		}
+		if execFormat == "json" {
+			result, err := json.Marshal(jsonResult)
+			if err != nil {
+				log.Errorf("Issue converting to json %v", err)
+			}
+			fmt.Println(string(result))
+		}
+		return err
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(execCmd)
+	execCmd.Flags().StringVarP(&execCommand, "cmd", "", "", "command to execute")
 	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
+	execCmd.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")
 }
