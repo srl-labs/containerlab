@@ -1,6 +1,6 @@
 module github.com/srl-labs/containerlab
 
-go 1.15
+go 1.16
 
 require (
 	github.com/Juniper/go-netconf v0.1.1
