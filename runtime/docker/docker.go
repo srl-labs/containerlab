@@ -111,7 +111,15 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			Config: ipamConfig,
 		}
 
-		networkOptions := dockerTypes.NetworkCreate{
+		netwOpts := map[string]string{
+			"com.docker.network.driver.mtu": c.Mgmt.MTU,
+		}
+
+		if bridgeName != "" {
+			netwOpts["com.docker.network.bridge.name"] = bridgeName
+		}
+
+		opts := dockerTypes.NetworkCreate{
 			CheckDuplicate: true,
 			Driver:         "bridge",
 			EnableIPv6:     enableIPv6,
@@ -121,13 +129,10 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			Labels: map[string]string{
 				"containerlab": "",
 			},
-			Options: map[string]string{
-				"com.docker.network.driver.mtu":  c.Mgmt.MTU,
-				"com.docker.network.bridge.name": bridgeName,
-			},
+			Options: netwOpts,
 		}
 
-		netCreateResponse, err := c.Client.NetworkCreate(nctx, c.Mgmt.Network, networkOptions)
+		netCreateResponse, err := c.Client.NetworkCreate(nctx, c.Mgmt.Network, opts)
 		if err != nil {
 			return err
 		}
@@ -150,7 +155,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		case "bridge":
 			bridgeName = "docker0"
 		default:
-			if _, ok := netResource.Options["com.docker.network.bridge.name"]; ok {
+			if netResource.Options["com.docker.network.bridge.name"] != "" {
 				bridgeName = netResource.Options["com.docker.network.bridge.name"]
 			} else {
 				bridgeName = "br-" + netResource.ID[:12]
