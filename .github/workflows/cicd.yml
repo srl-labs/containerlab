@@ -96,7 +96,7 @@ jobs:
         with:
           go-version: ${{ env.GOVER }}
       - name: Build containerlab
-        run: go build -o /usr/bin/containerlab
+        run: go build && sudo mv ./containerlab /usr/bin/containerlab
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
