@@ -58,13 +58,15 @@ func (s *crpd) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
 
 func (s *crpd) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.cfg.ShortName)
-	_, stderr, err := r.Exec(ctx, s.cfg.ContainerID, []string{"service ssh restart"})
+	_, stderr, err := r.Exec(ctx, s.cfg.ContainerID, []string{"service", "ssh", "restart"})
 	if err != nil {
 		return err
 	}
+
 	if len(stderr) > 0 {
 		return fmt.Errorf("crpd post-deploy failed: %s", string(stderr))
 	}
+
 	return err
 }
 
