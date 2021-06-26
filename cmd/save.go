@@ -124,14 +124,24 @@ func netconfSave(cont types.GenericContainer) {
 	kind := cont.Labels["clab-node-kind"]
 	host := strings.TrimLeft(cont.Names[0], "/")
 
-	d, err := netconf.NewNetconfDriver(
-		host,
+	driverOpts := []base.Option{
 		base.WithAuthStrictKey(false),
 		base.WithAuthUsername(clab.DefaultCredentials[kind][0]),
 		base.WithAuthPassword(clab.DefaultCredentials[kind][1]),
 		base.WithTransportType(transport.StandardTransportName),
+	}
+	if kind == "vr-sros" {
+		// vr-sros doesn't use echo on ssh channel, so we explicitly set it here
+		driverOpts = append(driverOpts, base.WithNetconfServerEcho(false))
+	}
+
+	d, err := netconf.NewNetconfDriver(
+		host,
+		driverOpts...,
 	)
-	log.Errorf("Could not create netconf driver for %s: %+v\n", host, err)
+	if err != nil {
+		log.Errorf("Could not create netconf driver for %s: %+v\n", host, err)
+	}
 
 	err = d.Open()
 	if err != nil {
