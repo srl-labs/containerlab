@@ -47,9 +47,6 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
-	}
 
 	s.cfg.Env = utils.MergeStringMaps(ceosEnv, s.cfg.Env)
 
@@ -106,7 +103,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 
 func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *types.NodeConfig) error {
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
-	err := nodeCfg.GenerateConfig(nodeCfg.ResConfig, nodes.DefaultConfigTemplates[nodeCfg.Kind])
+	err := nodeCfg.GenerateConfig(nodeCfg.ResConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
