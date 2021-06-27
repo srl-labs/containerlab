@@ -68,7 +68,7 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *ceos) Config() *types.NodeConfig { return nil }
+func (s *ceos) Config() *types.NodeConfig { return s.cfg }
 
 func (s *ceos) PreDeploy(configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
