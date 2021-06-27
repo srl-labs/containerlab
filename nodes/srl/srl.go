@@ -7,6 +7,7 @@ package srl
 import (
 	"context"
 	"crypto/rand"
+	_ "embed"
 	"fmt"
 	"os"
 	"path"
@@ -46,6 +47,9 @@ var srlSysctl = map[string]string{
 	"net.ipv6.conf.all.autoconf":       "0",
 	"net.ipv6.conf.default.autoconf":   "0",
 }
+
+//go:embed srl_config.cfg
+var cfgTemplate string
 
 func init() {
 	nodes.Register(nodes.NodeKindSRL, func() nodes.Node {
@@ -188,12 +192,12 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		return err
 	}
 
-	// generate a config file if the destination does not exist
+	// generate a config file
 	// if the node has a `config:` statement, the file specified in that section
 	// will be used as a template in nodeGenerateConfig()
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
 	dst = path.Join(nodeCfg.LabDir, "config", "config.json")
-	err = nodeCfg.GenerateConfig(dst, nodes.DefaultConfigTemplates[nodeCfg.Kind])
+	err = nodeCfg.GenerateConfig(dst, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
 	}
