@@ -86,6 +86,10 @@ func (s *ceos) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns ma
 
 func (s *ceos) WithMgmtNet(*types.MgmtNet) {}
 
+func (s *ceos) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}
+
 //
 
 func createCEOSFiles(node *types.NodeConfig) error {

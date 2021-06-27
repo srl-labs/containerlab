@@ -63,3 +63,7 @@ func (s *vrVEOS) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns 
 }
 
 func (s *vrVEOS) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
+
+func (s *vrVEOS) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}

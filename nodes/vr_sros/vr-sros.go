@@ -84,6 +84,20 @@ func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet) {
 	s.mgmt = mgmt
 }
 
+func (s *vrSROS) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
+		nodes.DefaultCredentials[s.cfg.Kind][0],
+		nodes.DefaultCredentials[s.cfg.Kind][0],
+		false)
+
+	if err != nil {
+		return err
+	}
+
+	log.Infof("saved %s running configuration to startup configuration file\n", s.cfg.ShortName)
+	return nil
+}
+
 //
 
 func createVrSROSFiles(node *types.NodeConfig) error {

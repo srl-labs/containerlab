@@ -64,3 +64,7 @@ func (s *vrCsr) Destroy(ctx context.Context, r runtime.ContainerRuntime) error {
 func (s *vrCsr) WithMgmtNet(mgmt *types.MgmtNet) {
 	s.mgmt = mgmt
 }
+
+func (s *vrCsr) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}

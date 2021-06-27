@@ -70,6 +70,10 @@ func (s *crpd) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns ma
 
 func (s *crpd) WithMgmtNet(*types.MgmtNet) {}
 
+func (s *crpd) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}
+
 ///
 
 func createCRPDFiles(nodeCfg *types.NodeConfig) error {

@@ -167,6 +167,10 @@ func (s *srl) Destroy(ctx context.Context, r runtime.ContainerRuntime) error {
 
 func (s *srl) WithMgmtNet(*types.MgmtNet) {}
 
+func (s *srl) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}
+
 //
 
 func createSRLFiles(nodeCfg *types.NodeConfig) error {

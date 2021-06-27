@@ -64,3 +64,7 @@ func (s *sonic) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns m
 }
 
 func (s *sonic) WithMgmtNet(*types.MgmtNet) {}
+
+func (s *sonic) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}
