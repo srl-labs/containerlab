@@ -100,9 +100,9 @@ Once installed, issue `sudo service docker start` to start the docker service in
     It appears to be that next versions of WSL2 kernels will support KVM.
 
 ### Mac OS
-Containerlab doesn't run on mac OS because Docker Desktop for Mac doesn't provide the networking features containerlab relies on.
+Containerlab doesn't run on Mac OS because Docker Desktop for Mac doesn't provide the networking features containerlab relies on.
 
-The workaround for mac OS users is to start a Linux VM (Virtual Machine) on mac and run Containerlab inside the VM. For example, free softwares such as Vagrant or Virtualbox can be used to deploy a Linux VM on a Mac OS.
+The workaround for Mac OS users is to start a Linux VM (Virtual Machine) on mac and run Containerlab inside the VM. For example, free softwares such as Vagrant or Virtualbox can be used to deploy a Linux VM on a Mac OS.
 
 ### Upgrade
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
