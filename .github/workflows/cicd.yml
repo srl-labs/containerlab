@@ -54,7 +54,7 @@ jobs:
 
   staticcheck:
     runs-on: ubuntu-20.04
-    needs: file-changes
+    needs: unit-test
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v2
@@ -66,25 +66,12 @@ jobs:
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
 
-  docs-test:
-    runs-on: ubuntu-20.04
-    needs: file-changes
-    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
-    steps:
-      - uses: actions/checkout@v2
-      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
-      - name: htmltest
-        run: |
-          curl https://htmltest.wjdp.uk | bash
-          ./bin/htmltest -c docs/htmltest.yml
-
   smoke-tests:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
         runtime: ["docker", "containerd"]
     needs:
-      - staticcheck
       - unit-test
     steps:
       - name: Checkout
@@ -119,10 +106,8 @@ jobs:
     strategy:
       matrix:
         runtime: ["docker", "containerd"]
-    # needs:
-    # - staticcheck
-    # - unit-test
-    # - smoke-tests
+    needs:
+      - unit-test
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -159,12 +144,26 @@ jobs:
           name: 03-basic-ceos-log
           path: ./tests/out/*.html
 
+  docs-test:
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
+      - name: htmltest
+        run: |
+          curl https://htmltest.wjdp.uk | bash
+          ./bin/htmltest -c docs/htmltest.yml
+
   build-and-release:
     runs-on: ubuntu-20.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - docs-test
       - smoke-tests
+      - staticcheck
+      - ceos-basic-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v2
