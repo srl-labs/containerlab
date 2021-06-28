@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -23,6 +24,8 @@ var (
 
 	//go:embed sshd_config
 	sshdCfg string
+
+	saveCmd = []string{"cli", "show", "conf"}
 )
 
 func init() {
@@ -82,6 +85,23 @@ func (s *crpd) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns ma
 func (s *crpd) WithMgmtNet(*types.MgmtNet) {}
 
 func (s *crpd) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	stdout, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
+	}
+
+	if len(stderr) > 0 {
+		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
+	}
+
+	// path by which to save a config
+	confPath := s.cfg.LabDir + "/config/conf-saved.conf"
+	err = ioutil.WriteFile(confPath, stdout, 0777)
+	if err != nil {
+		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.cfg.ShortName, err)
+	}
+	log.Infof("saved cRPD configuration from %s node to %s\n", s.cfg.ShortName, confPath)
+
 	return nil
 }
 

@@ -175,7 +175,6 @@ func (s *srl) Destroy(ctx context.Context, r runtime.ContainerRuntime) error {
 func (s *srl) WithMgmtNet(*types.MgmtNet) {}
 
 func (s *srl) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
-
 	stdout, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
