@@ -15,14 +15,13 @@ import (
 // SaveCfgViaNetconf saves the running config to the startup by means
 // of invoking a netconf rpc <copy-config>
 // this method is used on the network elements that can't perform a save of config via other means
-func SaveCfgViaNetconf(addr, username, password string, echo bool) error {
+func SaveCfgViaNetconf(addr, username, password string) error {
 	d, err := netconf.NewNetconfDriver(
 		addr,
 		base.WithAuthStrictKey(false),
 		base.WithAuthUsername(username),
 		base.WithAuthPassword(password),
 		base.WithTransportType(transport.StandardTransportName),
-		base.WithNetconfServerEcho(echo),
 	)
 	if err != nil {
 		return fmt.Errorf("Could not create netconf driver for %s: %+v\n", addr, err)

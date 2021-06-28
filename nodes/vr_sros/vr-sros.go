@@ -88,7 +88,7 @@ func (s *vrSROS) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) err
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][0],
-		false)
+	)
 
 	if err != nil {
 		return err
