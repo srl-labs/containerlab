@@ -6,6 +6,7 @@ package ceos
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"path"
@@ -31,6 +32,9 @@ var ceosEnv = map[string]string{
 	"MAPETH0":                             "1",
 	"MGMT_INTF":                           "eth0",
 }
+
+//go:embed ceos.cfg
+var cfgTemplate string
 
 func init() {
 	nodes.Register(nodes.NodeKindCEOS, func() nodes.Node {
