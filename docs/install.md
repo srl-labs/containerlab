@@ -102,7 +102,7 @@ Once installed, issue `sudo service docker start` to start the docker service in
 ### Mac OS
 Containerlab doesn't run on Mac OS because Docker Desktop for Mac doesn't provide the networking features containerlab relies on.
 
-The workaround for Mac OS users is to start a Linux VM (Virtual Machine) on mac and run Containerlab inside the VM. For example, free softwares such as Vagrant or Virtualbox can be used to deploy a Linux VM on a Mac OS.
+The workaround for Mac OS users is to start a Linux VM (Virtual Machine) on mac and run Containerlab inside the VM. For example, free software such as Vagrant or Virtualbox can be used to deploy a Linux VM on a Mac OS.
 
 ### Upgrade
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
