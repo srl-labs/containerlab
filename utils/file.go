@@ -74,17 +74,20 @@ func CopyFileContents(src, dst string) (err error) {
 	return
 }
 
-func CreateFile(file, content string) {
+// CreateFile writes content to a file by path `file`
+func CreateFile(file, content string) error {
 	var f *os.File
 	f, err := os.Create(file)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer f.Close()
 
 	if _, err := f.WriteString(content + "\n"); err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // CreateDirectory creates a directory by a path with a mode/permission specified by perm.

@@ -48,35 +48,11 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVER }}
-      # create fake default config of srl for tests to validate path
-      - run: sudo mkdir -p /etc/containerlab/templates/srl && sudo touch /etc/containerlab/templates/srl/srlconfig.tpl
       - run: go test -cover ./...
-
-  staticcheck:
-    runs-on: ubuntu-20.04
-    needs: file-changes
-    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GOVER }}
       - name: Staticcheck
         run: |
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
-
-  docs-test:
-    runs-on: ubuntu-20.04
-    needs: file-changes
-    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
-    steps:
-      - uses: actions/checkout@v2
-      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
-      - name: htmltest
-        run: |
-          curl https://htmltest.wjdp.uk | bash
-          ./bin/htmltest -c docs/htmltest.yml
 
   smoke-tests:
     runs-on: ubuntu-20.04
@@ -84,7 +60,6 @@ jobs:
       matrix:
         runtime: ["docker", "containerd"]
     needs:
-      - staticcheck
       - unit-test
     steps:
       - name: Checkout
@@ -96,7 +71,7 @@ jobs:
         with:
           go-version: ${{ env.GOVER }}
       - name: Build containerlab
-        run: sudo go build -o /usr/bin/containerlab
+        run: go build && sudo mv ./containerlab /usr/bin/containerlab
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
@@ -114,12 +89,68 @@ jobs:
           name: 01-smoke-log
           path: ./tests/out/*.html
 
+  ceos-basic-tests:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        runtime: ["docker", "containerd"]
+    needs:
+      - unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+      - name: Build containerlab
+        run: go build && sudo mv ./containerlab /usr/bin/containerlab
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Install robotframework
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: hellt
+          password: ${{ secrets.GHCR_READ_PKG_PAT }}
+      - name: Pull ceos image
+        run: docker pull ghcr.io/srl-labs/ceos:4.25.0F && docker tag ghcr.io/srl-labs/ceos:4.25.0F ceos:4.25.0F
+      - name: Run ceos tests
+        run: |
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/03-basic-ceos
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: 03-basic-ceos-log
+          path: ./tests/out/*.html
+
+  docs-test:
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
+      - name: htmltest
+        run: |
+          curl https://htmltest.wjdp.uk | bash
+          ./bin/htmltest -c docs/htmltest.yml
+
   build-and-release:
     runs-on: ubuntu-20.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - docs-test
       - smoke-tests
+      - ceos-basic-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v2

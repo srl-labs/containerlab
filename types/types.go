@@ -46,21 +46,19 @@ type MgmtNet struct {
 
 // NodeConfig is a struct that contains the information of a container element
 type NodeConfig struct {
-	ShortName string
-	LongName  string
-	Fqdn      string
-	LabDir    string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index     int
-	Group     string
-	Kind      string
-	// path to config template file that is used for config generation
-	Config       string
+	ShortName    string
+	LongName     string
+	Fqdn         string
+	LabDir       string // LabDir is a directory related to the node, it contains config items and/or other persistent state
+	Index        int
+	Group        string
+	Kind         string
+	Config       string // path to config template file that is used for config generation
 	ResConfig    string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType     string
 	Position     string
 	License      string
 	Image        string
-	Topology     string
 	Sysctls      map[string]string
 	User         string
 	Entrypoint   string
@@ -90,13 +88,14 @@ type NodeConfig struct {
 }
 
 // GenerateConfig generates configuration for the nodes
-func (node *NodeConfig) GenerateConfig(dst, defaultTemplatePath string) error {
-	if utils.FileExists(dst) && (node.Config == defaultTemplatePath) {
+// out of the templ based on the node configuration
+func (node *NodeConfig) GenerateConfig(dst, templ string) error {
+	if utils.FileExists(dst) && (node.Config != "") {
 		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
 		return nil
 	}
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.Config)
-	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
+	tpl, err := template.New(filepath.Base(node.Config)).Parse(templ)
 	if err != nil {
 		return err
 	}

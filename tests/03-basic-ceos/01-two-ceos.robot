@@ -46,14 +46,14 @@ Ensure n1 is reachable over ssh
     ...    address=${n1-mgmt-ip}
     ...    username=admin
     ...    password=admin
-    ...    try_for=60
+    ...    try_for=120
 
 Ensure n2 is reachable over ssh
     Common.Login via SSH with username and password
     ...    address=${n2-mgmt-ip}
     ...    username=admin
     ...    password=admin
-    ...    try_for=60
+    ...    try_for=120
 
 *** Keywords ***
 Cleanup

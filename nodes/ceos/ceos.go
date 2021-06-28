@@ -6,6 +6,7 @@ package ceos
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"path"
@@ -32,6 +33,9 @@ var ceosEnv = map[string]string{
 	"MGMT_INTF":                           "eth0",
 }
 
+//go:embed ceos.cfg
+var cfgTemplate string
+
 func init() {
 	nodes.Register(nodes.NodeKindCEOS, func() nodes.Node {
 		return new(ceos)
@@ -46,9 +50,6 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg = cfg
 	for _, o := range opts {
 		o(s)
-	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
 
 	s.cfg.Env = utils.MergeStringMaps(ceosEnv, s.cfg.Env)
@@ -68,7 +69,7 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *ceos) Config() *types.NodeConfig { return nil }
+func (s *ceos) Config() *types.NodeConfig { return s.cfg }
 
 func (s *ceos) PreDeploy(configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
@@ -106,7 +107,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 
 func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *types.NodeConfig) error {
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
-	err := nodeCfg.GenerateConfig(nodeCfg.ResConfig, nodes.DefaultConfigTemplates[nodeCfg.Kind])
+	err := nodeCfg.GenerateConfig(nodeCfg.ResConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
