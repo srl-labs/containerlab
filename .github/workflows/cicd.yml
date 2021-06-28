@@ -48,8 +48,6 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVER }}
-      # create fake default config of srl for tests to validate path
-      - run: sudo mkdir -p /etc/containerlab/templates/srl && sudo touch /etc/containerlab/templates/srl/srlconfig.tpl
       - run: go test -cover ./...
 
   staticcheck:
