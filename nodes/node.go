@@ -68,8 +68,6 @@ func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 }
 
 var DefaultConfigTemplates = map[string]string{
-	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
-	"ceos":    "/etc/containerlab/templates/arista/ceos.cfg.tpl",
 	"crpd":    "/etc/containerlab/templates/crpd/juniper.conf",
 	"vr-sros": "",
 }

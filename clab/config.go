@@ -112,6 +112,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	if err != nil {
 		return err
 	}
+
 	// Init
 	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
 	if !ok {
@@ -124,6 +125,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
+
 	n.Config().Labels = utils.MergeStringMaps(n.Config().Labels, map[string]string{
 		"containerlab":      c.Config.Name,
 		"clab-node-name":    n.Config().ShortName,
@@ -134,6 +136,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 		"clab-topo-file":    c.TopoFile.path,
 	})
 	c.Nodes[nodeName] = n
+
 	return nil
 }
 

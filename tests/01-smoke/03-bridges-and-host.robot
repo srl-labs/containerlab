@@ -55,7 +55,7 @@ Verify management network is using user-specified bridge
     # show management interface info and cut the information about the ifindex of the remote veth
     # note that exec returns the info in the stderr stream, thus we use stderr to parse the ifindex
     ${rc}    ${iface} =    OperatingSystem.Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 ip l show eth0 2>&1 | cut -d ' ' -f5 | cut -d '@' -f2 | cut -c3-
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd "ip l show eth0" 2>&1 | cut -d ' ' -f5 | cut -d '@' -f2 | cut -c3-
     Log    ${iface}
     Should Be Equal As Integers    ${rc}    0
     ${rc}    ${res} =    OperatingSystem.Run And Return Rc And Output

@@ -6,6 +6,7 @@ package crpd
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"path"
 
@@ -14,6 +15,14 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+)
+
+var (
+	//go:embed crpd.cfg
+	cfgTemplate string
+
+	//go:embed sshd_config
+	sshdCfg string
 )
 
 func init() {
@@ -58,13 +67,15 @@ func (s *crpd) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
 
 func (s *crpd) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.cfg.ShortName)
-	_, stderr, err := r.Exec(ctx, s.cfg.ContainerID, []string{"service ssh restart"})
+	_, stderr, err := r.Exec(ctx, s.cfg.ContainerID, []string{"service", "ssh", "restart"})
 	if err != nil {
 		return err
 	}
+
 	if len(stderr) > 0 {
 		return fmt.Errorf("crpd post-deploy failed: %s", string(stderr))
 	}
+
 	return err
 }
 
@@ -84,23 +95,22 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	// copy crpd config from default template or user-provided conf file
 	cfg := path.Join(nodeCfg.LabDir, "/config/juniper.conf")
 
-	err := nodeCfg.GenerateConfig(cfg, nodes.DefaultConfigTemplates[nodeCfg.Kind])
+	err := nodeCfg.GenerateConfig(cfg, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
 	}
 
-	// copy crpd sshd conf file to crpd node dir
-	src := "/etc/containerlab/templates/crpd/sshd_config"
+	// write crpd sshd conf file to crpd node dir
 	dst := path.Join(nodeCfg.LabDir, "/config/sshd_config")
-	err = utils.CopyFile(src, dst)
+	err = utils.CreateFile(dst, sshdCfg)
 	if err != nil {
-		return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
+		return fmt.Errorf("failed to write sshd_config file %v", err)
 	}
-	log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
+	log.Debug("Writing sshd_config succeeded")
 
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
-		src = nodeCfg.License
+		src := nodeCfg.License
 		dst = path.Join(nodeCfg.LabDir, "/config/license.conf")
 		if err = utils.CopyFile(src, dst); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
