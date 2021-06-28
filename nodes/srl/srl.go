@@ -7,7 +7,7 @@ package srl
 import (
 	"context"
 	"crypto/rand"
-	_ "embed"
+	"embed"
 	"fmt"
 	"os"
 	"path"
@@ -15,6 +15,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/srl-labs/containerlab/cert"
@@ -26,30 +27,34 @@ import (
 
 const (
 	srlDefaultType = "ixr6"
-	baseConfigDir  = "/etc/containerlab/templates/srl/"
 )
 
-var srlTypes = map[string]string{
-	"ixr6":  "topology-7250IXR6.yml",
-	"ixr10": "topology-7250IXR10.yml",
-	"ixrd1": "topology-7220IXRD1.yml",
-	"ixrd2": "topology-7220IXRD2.yml",
-	"ixrd3": "topology-7220IXRD3.yml",
-}
+var (
+	srlSysctl = map[string]string{
+		"net.ipv4.ip_forward":              "0",
+		"net.ipv6.conf.all.disable_ipv6":   "0",
+		"net.ipv6.conf.all.accept_dad":     "0",
+		"net.ipv6.conf.default.accept_dad": "0",
+		"net.ipv6.conf.all.autoconf":       "0",
+		"net.ipv6.conf.default.autoconf":   "0",
+	}
 
-var srlEnv = map[string]string{"SRLINUX": "1"}
+	srlTypes = map[string]string{
+		"ixr6":  "7250IXR6.yml",
+		"ixr10": "7250IXR10.yml",
+		"ixrd1": "7220IXRD1.yml",
+		"ixrd2": "7220IXRD2.yml",
+		"ixrd3": "7220IXRD3.yml",
+	}
 
-var srlSysctl = map[string]string{
-	"net.ipv4.ip_forward":              "0",
-	"net.ipv6.conf.all.disable_ipv6":   "0",
-	"net.ipv6.conf.all.accept_dad":     "0",
-	"net.ipv6.conf.default.accept_dad": "0",
-	"net.ipv6.conf.all.autoconf":       "0",
-	"net.ipv6.conf.default.autoconf":   "0",
-}
+	srlEnv = map[string]string{"SRLINUX": "1"}
 
-//go:embed srl_config.cfg
-var cfgTemplate string
+	//go:embed srl.cfg
+	cfgTemplate string
+
+	//go:embed topology/*
+	topologies embed.FS
+)
 
 func init() {
 	nodes.Register(nodes.NodeKindSRL, func() nodes.Node {
@@ -75,9 +80,7 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	if s.cfg.NodeType == "" {
 		s.cfg.NodeType = srlDefaultType
 	}
-	if filename, found := srlTypes[s.cfg.NodeType]; found {
-		s.cfg.Topology = path.Join(baseConfigDir, filename)
-	} else {
+	if _, found := srlTypes[s.cfg.NodeType]; !found {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
 			keys = append(keys, key)
@@ -151,9 +154,7 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	}
 	s.cfg.TLSCert = string(nodeCerts.Cert)
 	s.cfg.TLSKey = string(nodeCerts.Key)
-	// generate certificates if needed
-	// create directory structure and copy necessary files
-	// utils.CreateDirectory(s.cfg.LabDir, 0777)
+
 	return createSRLFiles(s.cfg)
 }
 
@@ -187,7 +188,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
 	// generate SRL topology file
-	err := generateSRLTopologyFile(nodeCfg.Topology, nodeCfg.LabDir, nodeCfg.Index)
+	err := generateSRLTopologyFile(nodeCfg.NodeType, nodeCfg.LabDir, nodeCfg.Index)
 	if err != nil {
 		return err
 	}
@@ -202,15 +203,6 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
 	}
 
-	// copy env config to node specific directory in lab
-	src = "/etc/containerlab/templates/srl/srl_env.conf"
-	dst = nodeCfg.LabDir + "/" + "srlinux.conf"
-	err = utils.CopyFile(src, dst)
-	if err != nil {
-		return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
-	}
-	log.Debugf("CopyFile src %s -> dst %s succeeded\n", src, dst)
-
 	return err
 }
 
@@ -218,11 +210,12 @@ type mac struct {
 	MAC string
 }
 
-func generateSRLTopologyFile(src, labDir string, index int) error {
+func generateSRLTopologyFile(nodeType, labDir string, index int) error {
 	dst := path.Join(labDir, "topology.yml")
-	tpl, err := template.ParseFiles(src)
+
+	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[nodeType])
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
 	// generate random bytes to use in the 2-3rd bytes of a base mac

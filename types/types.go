@@ -59,7 +59,6 @@ type NodeConfig struct {
 	Position     string
 	License      string
 	Image        string
-	Topology     string
 	Sysctls      map[string]string
 	User         string
 	Entrypoint   string
