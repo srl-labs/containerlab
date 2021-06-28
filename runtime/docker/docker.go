@@ -303,6 +303,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if err != nil {
 		return err
 	}
+
 	return utils.LinkContainerNS(node.NSPath, node.LongName)
 
 }

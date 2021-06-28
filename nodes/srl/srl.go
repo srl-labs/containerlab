@@ -54,6 +54,8 @@ var (
 
 	//go:embed topology/*
 	topologies embed.FS
+
+	saveCmd []string = []string{"sr_cli", "-d", "tools", "system", "configuration", "generate-checkpoint"}
 )
 
 func init() {
@@ -173,6 +175,19 @@ func (s *srl) Destroy(ctx context.Context, r runtime.ContainerRuntime) error {
 func (s *srl) WithMgmtNet(*types.MgmtNet) {}
 
 func (s *srl) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+
+	stdout, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
+	}
+
+	if len(stderr) > 0 {
+		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
+	}
+
+	confPath := s.cfg.LabDir + "/config/checkpoint/checkpoint-0.json"
+	log.Infof("saved SR Linux configuration from %s node to %s\noutput:\n%s", s.cfg.ShortName, confPath, string(stdout))
+
 	return nil
 }
 
