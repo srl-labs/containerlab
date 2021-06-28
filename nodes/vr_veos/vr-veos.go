@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -65,5 +66,15 @@ func (s *vrVEOS) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns 
 func (s *vrVEOS) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
 
 func (s *vrVEOS) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
+		nodes.DefaultCredentials[s.cfg.Kind][0],
+		nodes.DefaultCredentials[s.cfg.Kind][0],
+	)
+
+	if err != nil {
+		return err
+	}
+
+	log.Infof("saved %s running configuration to startup configuration file\n", s.cfg.ShortName)
 	return nil
 }
