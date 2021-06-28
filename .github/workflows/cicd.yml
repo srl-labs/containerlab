@@ -10,7 +10,7 @@ on:
   pull_request:
 
 env:
-  GOVER: 1.15.8
+  GOVER: 1.16.5
   CGO_ENABLED: 0
   MKDOCS_MATERIAL_VER: 7.1.0
 
@@ -63,7 +63,7 @@ jobs:
           go-version: ${{ env.GOVER }}
       - name: Staticcheck
         run: |
-          go get -u honnef.co/go/tools/cmd/staticcheck
+          go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
 
   docs-test:

@@ -35,6 +35,7 @@ nav:
       - destroy: cmd/destroy.md
       - inspect: cmd/inspect.md
       - save: cmd/save.md
+      - exec: cmd/exec.md
       - generate: cmd/generate.md
       - graph: cmd/graph.md
       - tools:

@@ -101,9 +101,6 @@ func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	log.Debug("DeleteNet() - Not yet required with containerd")
 	return nil
 }
-func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.GenericContainer, error) {
-	return nil, errors.New("not implemented")
-}
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
 
@@ -362,7 +359,7 @@ func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *li
 	cnirc := &libcni.RuntimeConf{
 		ContainerID: cId,
 		IfName:      ifName,
-		//// NetNS must be set later, can just be determined after cotnainer start
+		//// NetNS must be set later, can just be determined after container start
 		//NetNS:          node.NSPath,
 		CapabilityArgs: make(map[string]interface{}),
 	}
@@ -438,9 +435,6 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 		if paused {
 			if err := ctask.Resume(ctx); err != nil {
 				log.Warnf("Cannot unpause container %s: %s", containername, err)
-			} else {
-				// no need to do it again when send sigkill signal
-				paused = false
 			}
 		}
 
@@ -568,13 +562,13 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 			}
 			ctr.State = string(status.Status)
 
-			switch s := status.Status; s {
+			switch status.Status {
 			case containerd.Stopped:
 				ctr.Status = fmt.Sprintf("Exited (%v) %s", status.ExitStatus, timeSinceInHuman(status.ExitTime))
 			case containerd.Running:
 				ctr.Status = "Up"
 			default:
-				ctr.Status = strings.Title(string(s))
+				ctr.Status = strings.Title(string(status.Status))
 			}
 
 			ctr.Pid = int(task.Pid())
@@ -657,13 +651,13 @@ func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd 
 		return nil, nil, err
 	}
 
-	NeedToDelete := true
+	needToDelete := true
 	p, err := task.LoadProcess(ctx, clabExecId, nil)
 	if err != nil {
-		NeedToDelete = false
+		needToDelete = false
 	}
 
-	if NeedToDelete {
+	if needToDelete {
 		log.Debugf("Deleting old process with exec-id %s", clabExecId)
 		_, err := p.Delete(ctx, containerd.WithProcessKill)
 		if err != nil {
@@ -680,7 +674,16 @@ func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd 
 	var statusC <-chan containerd.ExitStatus
 	if !detach {
 
-		defer process.Delete(ctx)
+		defer func() {
+			exitStatus, err := process.Delete(ctx)
+			if err != nil {
+				log.Errorf("failed to delete process: %v", err)
+				return
+			}
+			if exitStatus.Error() != nil {
+				log.Errorf("failed to delete process: %v", exitStatus.Error())
+			}
+		}()
 
 		statusC, err = process.Wait(ctx)
 		if err != nil {

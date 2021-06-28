@@ -18,23 +18,19 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 const (
-	baseConfigDir = "/etc/containerlab/templates/srl/"
 	// prefix is used to distinct containerlab created files/dirs/containers
 	prefix = "clab"
 	// a name of a docker network that nodes management interfaces connect to
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/64"
-	srlDefaultType    = "ixr6"
-	vrsrosDefaultType = "sr-1"
-	// default connection mode for vrnetlab based containers
-	vrDefConnMode = "tc"
 	// NSPath value assigned to host interfaces
 	hostNSPath = "__host"
 	// veth link mtu. jacked up to 65k to allow jumbo testing of various sizes
@@ -63,26 +59,11 @@ var kinds = []string{
 	"host",
 }
 
-var defaultConfigTemplates = map[string]string{
-	"srl":     "/etc/containerlab/templates/srl/srlconfig.tpl",
-	"ceos":    "/etc/containerlab/templates/arista/ceos.cfg.tpl",
-	"crpd":    "/etc/containerlab/templates/crpd/juniper.conf",
-	"vr-sros": "",
-}
-
 // DefaultCredentials holds default username and password per each kind
 var DefaultCredentials = map[string][]string{
 	"vr-sros":  {"admin", "admin"},
 	"vr-vmx":   {"admin", "admin@123"},
 	"vr-xrv9k": {"clab", "clab@123"},
-}
-
-var srlTypes = map[string]string{
-	"ixr6":  "topology-7250IXR6.yml",
-	"ixr10": "topology-7250IXR10.yml",
-	"ixrd1": "topology-7220IXRD1.yml",
-	"ixrd2": "topology-7220IXRD2.yml",
-	"ixrd3": "topology-7220IXRD3.yml",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
@@ -109,7 +90,7 @@ func (c *CLab) ParseTopology() error {
 	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
 
 	// initialize Nodes and Links variable
-	c.Nodes = make(map[string]*types.NodeConfig)
+	c.Nodes = make(map[string]nodes.Node)
 	c.Links = make(map[int]*types.Link)
 
 	// initialize the Node information from the topology map
@@ -118,8 +99,10 @@ func (c *CLab) ParseTopology() error {
 		nodeNames = append(nodeNames, nodeName)
 	}
 	sort.Strings(nodeNames)
+	var err error
 	for idx, nodeName := range nodeNames {
-		if err := c.NewNode(nodeName, c.Config.Topology.Nodes[nodeName], idx); err != nil {
+		err = c.NewNode(nodeName, c.Config.Topology.Nodes[nodeName], idx)
+		if err != nil {
 			return err
 		}
 	}
@@ -136,12 +119,28 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	if err != nil {
 		return err
 	}
-
-	err = c.initializeNodeCfg(nodeCfg)
-	if err != nil {
-		return err
+	// Init
+	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
+	if !ok {
+		log.Fatalf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
 	}
-	c.Nodes[nodeName] = nodeCfg
+	n := nodeInitializer()
+	// Init
+	err = n.Init(nodeCfg, nodes.WithMgmtNet(c.Config.Mgmt))
+	if err != nil {
+		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
+		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
+	}
+	n.Config().Labels = utils.MergeStringMaps(n.Config().Labels, map[string]string{
+		"containerlab":      c.Config.Name,
+		"clab-node-name":    n.Config().ShortName,
+		"clab-node-kind":    n.Config().Kind,
+		"clab-node-type":    n.Config().NodeType,
+		"clab-node-group":   n.Config().Group,
+		"clab-node-lab-dir": n.Config().LabDir,
+		"clab-topo-file":    c.TopoFile.path,
+	})
+	c.Nodes[nodeName] = n
 	return nil
 }
 
@@ -164,99 +163,36 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
+		Sysctls:         make(map[string]string),
+		Endpoints:       make([]*types.Endpoint, 0),
 	}
 
+	log.Debugf("node config: %+v", nodeCfg)
+	var err error
+	// initialize config
+	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	if err != nil {
+		return nil, err
+	}
+	// initialize license field
+	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	if err != nil {
+		return nil, err
+	}
 	// initialize bind mounts
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
-	err := resolveBindPaths(binds, nodeCfg.LabDir)
+	err = resolveBindPaths(binds, nodeCfg.LabDir)
 	if err != nil {
 		return nil, err
 	}
 	nodeCfg.Binds = binds
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
-	return nodeCfg, err
-}
-
-func (c *CLab) initializeNodeCfg(nodeCfg *types.NodeConfig) error {
-	var err error
-	switch nodeCfg.Kind {
-	case "ceos":
-		err = c.initCeosNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "srl":
-		err = c.initSRLNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "crpd":
-		err = c.initCrpdNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "sonic-vs":
-		err = c.initSonicNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "vr-sros":
-		err = c.initSROSNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "vr-vmx":
-		err = c.initVrVMXNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "vr-xrv":
-		err = c.initVrXRVNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "vr-xrv9k":
-		err = c.initVrXRV9kNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "vr-veos":
-		err = c.initVrVeosNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "vr-csr":
-		err = c.initVrCSRNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "vr-ros":
-		err = c.initVrROSNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "alpine", "linux", "mysocketio":
-		err = c.initLinuxNode(nodeCfg)
-		if err != nil {
-			return err
-		}
-	case "bridge", "ovs-bridge":
-	default:
-		return fmt.Errorf("node '%s' refers to a kind '%s' which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
+	if err != nil {
+		return nil, err
 	}
-
-	// init labels after all node kinds are processed
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
-	nodeCfg.Labels = utils.MergeStringMaps(nodeCfg.Labels, map[string]string{
-		"containerlab":      c.Config.Name,
-		"clab-node-name":    nodeCfg.ShortName,
-		"clab-node-kind":    nodeCfg.Kind,
-		"clab-node-type":    nodeCfg.NodeType,
-		"clab-node-group":   nodeCfg.Group,
-		"clab-node-lab-dir": nodeCfg.LabDir,
-		"clab-topo-file":    c.TopoFile.path,
-	})
-	return nil
+
+	return nodeCfg, nil
 }
 
 // NewLink initializes a new link object
@@ -290,7 +226,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
 	// generate unqiue MAC
-	endpoint.MAC = genMac(clabOUI)
+	endpoint.MAC = utils.GenMac(clabOUI)
 
 	// search the node pointer for a node name referenced in endpoint section
 	switch nName {
@@ -312,8 +248,8 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	default:
 		c.m.Lock()
 		if n, ok := c.Nodes[nName]; ok {
-			endpoint.Node = n
-			n.Endpoints = append(n.Endpoints, endpoint)
+			endpoint.Node = n.Config()
+			n.Config().Endpoints = append(n.Config().Endpoints, endpoint)
 		}
 		c.m.Unlock()
 	}
@@ -354,7 +290,7 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 // VerifyBridgeExists verifies if every node of kind=bridge/ovs-bridge exists on the lab host
 func (c *CLab) verifyBridgesExist() error {
 	for name, node := range c.Nodes {
-		if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
+		if node.Config().Kind == nodes.NodeKindBridge || node.Config().Kind == nodes.NodeKindOVS {
 			if _, err := netlink.LinkByName(name); err != nil {
 				return fmt.Errorf("bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
 			}
@@ -391,15 +327,14 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 	images := map[string]struct{}{}
 	for _, node := range c.Nodes {
 		// skip image verification for bridge kinds
-		if node.Kind == "bridge" || node.Kind == "ovs-bridge" {
-			return nil
+		if node.Config().Kind == "bridge" || node.Config().Kind == "ovs-bridge" {
+			continue
 		}
-		if node.Image == "" {
-			return fmt.Errorf("missing required image for node %s", node.ShortName)
+		if node.Config().Image == "" {
+			return fmt.Errorf("missing required image for node %s", node.Config().ShortName)
 		}
-		if node.Image != "" {
-			images[node.Image] = struct{}{}
-		}
+
+		images[node.Config().Image] = struct{}{}
 	}
 
 	for image := range images {
@@ -428,8 +363,8 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	dups := []string{}
 	for _, n := range c.Nodes {
 		for _, cnt := range containers {
-			if "/"+n.LongName == cnt.Names[0] {
-				dups = append(dups, n.LongName)
+			if "/"+n.Config().LongName == cnt.Names[0] {
+				dups = append(dups, n.Config().LongName)
 			}
 		}
 	}
@@ -483,13 +418,12 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	for _, l := range c.Links {
 		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
-			if e.Node.Kind == "bridge" || e.Node.Kind == "ovs-bridge" || e.Node.Kind == "host" {
+			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
 					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces. 
 					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
-				} else {
-					rootNsIfaces[e.EndpointName] = struct{}{}
 				}
+				rootNsIfaces[e.EndpointName] = struct{}{}
 			}
 		}
 	}
@@ -500,7 +434,7 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 func (c *CLab) verifyVirtSupport() error {
 	virtNeeded := false
 	for _, n := range c.Nodes {
-		if strings.HasPrefix(n.Kind, "vr-") {
+		if strings.HasPrefix(n.Config().Kind, "vr-") {
 			virtNeeded = true
 			break
 		}

@@ -12,6 +12,7 @@ import (
 	cfssllog "github.com/cloudflare/cfssl/log"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 )
 
@@ -127,7 +128,7 @@ func createCA(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = c.GenerateRootCa(csrTpl, clab.CaRootInput{
+	_, err = cert.GenerateRootCa(c.Dir.LabCARoot, csrTpl, cert.CaRootInput{
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,
@@ -167,12 +168,6 @@ func signCert(cmd *cobra.Command, args []string) error {
 	`
 	var err error
 
-	opts := []clab.ClabOption{
-		clab.WithDebug(debug),
-		clab.WithTimeout(timeout),
-	}
-	c := clab.NewContainerLab(opts...)
-
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
 		cfssllog.Level = cfssllog.LevelDebug
@@ -192,7 +187,7 @@ func signCert(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = c.GenerateCert(caCertPath, caKeyPath, csrTpl, clab.CertInput{
+	_, err = cert.GenerateCert(caCertPath, caKeyPath, csrTpl, cert.CertInput{
 		Hosts:            certHosts,
 		CommonName:       commonName,
 		Country:          country,
@@ -208,5 +203,5 @@ func signCert(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate and sign certificate: %v", err)
 	}
 
-	return err
+	return nil
 }

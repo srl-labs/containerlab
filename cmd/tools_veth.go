@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var AEnd = ""
@@ -124,7 +125,7 @@ func parseVethEndpoint(s string) (*vethEndpoint, error) {
 		ve.node = arr[0]
 		ve.iface = arr[1]
 	case 3:
-		if _, ok := clab.StringInSlice(supportedKinds, arr[0]); !ok {
+		if _, ok := utils.StringInSlice(supportedKinds, arr[0]); !ok {
 			return nil, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
 		}
 		ve.kind = arr[0]

@@ -82,7 +82,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	defer cancel()
 
 	// linux bridge name that is used by docker network
-	var bridgeName string
+	bridgeName := c.Mgmt.Bridge
 
 	log.Debugf("Checking if docker network '%s' exists", c.Mgmt.Network)
 	netResource, err := c.Client.NetworkInspect(nctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
@@ -111,7 +111,15 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			Config: ipamConfig,
 		}
 
-		networkOptions := dockerTypes.NetworkCreate{
+		netwOpts := map[string]string{
+			"com.docker.network.driver.mtu": c.Mgmt.MTU,
+		}
+
+		if bridgeName != "" {
+			netwOpts["com.docker.network.bridge.name"] = bridgeName
+		}
+
+		opts := dockerTypes.NetworkCreate{
 			CheckDuplicate: true,
 			Driver:         "bridge",
 			EnableIPv6:     enableIPv6,
@@ -121,12 +129,10 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			Labels: map[string]string{
 				"containerlab": "",
 			},
-			Options: map[string]string{
-				"com.docker.network.driver.mtu": c.Mgmt.MTU,
-			},
+			Options: netwOpts,
 		}
 
-		netCreateResponse, err := c.Client.NetworkCreate(nctx, c.Mgmt.Network, networkOptions)
+		netCreateResponse, err := c.Client.NetworkCreate(nctx, c.Mgmt.Network, opts)
 		if err != nil {
 			return err
 		}
@@ -134,7 +140,11 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		if len(netCreateResponse.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
-		bridgeName = "br-" + netCreateResponse.ID[:12]
+		// when bridge is not set by a user explicitly
+		// we use the 12 chars of docker net as its name
+		if bridgeName == "" {
+			bridgeName = "br-" + netCreateResponse.ID[:12]
+		}
 
 	case err == nil:
 		log.Debugf("network '%s' was found. Reusing it...", c.Mgmt.Network)
@@ -145,13 +155,20 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		case "bridge":
 			bridgeName = "docker0"
 		default:
-			bridgeName = "br-" + netResource.ID[:12]
+			if netResource.Options["com.docker.network.bridge.name"] != "" {
+				bridgeName = netResource.Options["com.docker.network.bridge.name"]
+			} else {
+				bridgeName = "br-" + netResource.ID[:12]
+			}
 		}
 
 	default:
 		return err
 	}
-	c.Mgmt.Bridge = bridgeName
+
+	if c.Mgmt.Bridge == "" {
+		c.Mgmt.Bridge = bridgeName
+	}
 
 	log.Debugf("Docker network '%s', bridge name '%s'", c.Mgmt.Network, bridgeName)
 
@@ -533,17 +550,6 @@ func setSysctl(sysctl string, newVal int) error {
 	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
 }
 
-func (c *DockerRuntime) ContainerInspect(ctx context.Context, id string) (*types.GenericContainer, error) {
-	ctr, err := c.Client.ContainerInspect(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return &types.GenericContainer{
-		Pid: ctr.State.Pid,
-	}, nil
-}
-
 func (c *DockerRuntime) StopContainer(ctx context.Context, name string, dur *time.Duration) error {
-	c.Client.ContainerKill(ctx, name, "kill")
-	return nil
+	return c.Client.ContainerKill(ctx, name, "kill")
 }

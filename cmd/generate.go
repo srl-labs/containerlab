@@ -44,7 +44,7 @@ var errSyntax = errors.New("syntax error")
 
 var image []string
 var kind string
-var nodes []string
+var nodesFlag []string
 var license []string
 var nodePrefix string
 var groupPrefix string
@@ -78,7 +78,7 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("parsed images: %+v", images)
 
-		nodeDefs, err := parseNodesFlag(kind, nodes...)
+		nodeDefs, err := parseNodesFlag(kind, nodesFlag...)
 		if err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func init() {
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>=<image_name>")
 	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", fmt.Sprintf("container kind, one of %v", supportedKinds))
-	generateCmd.Flags().StringSliceVarP(&nodes, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
+	generateCmd.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
 	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>=/path/to/file")
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
