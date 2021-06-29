@@ -37,3 +37,6 @@ func (s *host) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns ma
 }
 
 func (s *host) WithMgmtNet(*types.MgmtNet) {}
+func (s *host) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}

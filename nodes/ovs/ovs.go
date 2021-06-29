@@ -41,3 +41,7 @@ func (l *ovs) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map
 }
 
 func (l *ovs) WithMgmtNet(*types.MgmtNet) {}
+
+func (s *ovs) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}

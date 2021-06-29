@@ -36,3 +36,6 @@ func (s *bridge) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns 
 	return nil
 }
 func (s *bridge) WithMgmtNet(*types.MgmtNet) {}
+func (s *bridge) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}

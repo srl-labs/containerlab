@@ -216,12 +216,12 @@ topology:
       label2: value2
   kinds:
     srl:
-      env:
+      labels:
         label1: kind_value1
         label3: value3
   nodes:
     node1:
-      env:
+      labels:
         label1: node_value1
 ```
 

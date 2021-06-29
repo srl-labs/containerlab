@@ -49,4 +49,8 @@ func (s *mySocketIO) PostDeploy(ctx context.Context, r runtime.ContainerRuntime,
 
 func (s *mySocketIO) WithMgmtNet(*types.MgmtNet) {}
 
+func (s *mySocketIO) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}
+
 ///

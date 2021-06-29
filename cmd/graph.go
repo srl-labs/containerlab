@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -19,14 +20,15 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-const (
-	defaultTemplatePath = "/etc/containerlab/templates/graph/index.html"
-)
+var (
+	srv     string
+	tmpl    string
+	offline bool
+	dot     bool
 
-var srv string
-var tmpl string
-var offline bool
-var dot bool
+	//go:embed graph-template.html
+	graphTemplate string
+)
 
 type graphTopo struct {
 	Nodes []containerDetails `json:"nodes,omitempty"`
@@ -117,9 +119,15 @@ var graphCmd = &cobra.Command{
 			Name: c.Config.Name,
 			Data: template.JS(string(b)),
 		}
-		tmpl := template.Must(template.ParseFiles(tmpl))
+		var t *template.Template
+		if tmpl != "" {
+			t = template.Must(template.ParseFiles(tmpl))
+		} else {
+			t = template.Must(template.New("graph").Parse(graphTemplate))
+		}
+
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			_ = tmpl.Execute(w, topoD)
+			_ = t.Execute(w, topoD)
 		})
 
 		log.Infof("Listening on %s...", srv)
@@ -173,5 +181,5 @@ func init() {
 	graphCmd.Flags().StringVarP(&srv, "srv", "s", ":50080", "HTTP server address to view, customize and export your topology")
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false, "use only information from topo file when building graph")
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file instead of launching the web server")
-	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultTemplatePath, "Go html template used to generate the graph")
+	graphCmd.Flags().StringVarP(&tmpl, "template", "", "", "Go html template used to generate the graph")
 }

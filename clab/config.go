@@ -59,14 +59,6 @@ var kinds = []string{
 	"host",
 }
 
-// DefaultCredentials holds default username and password per each kind
-var DefaultCredentials = map[string][]string{
-	"srl":      {"admin", "admin"},
-	"vr-sros":  {"admin", "admin"},
-	"vr-vmx":   {"admin", "admin@123"},
-	"vr-xrv9k": {"clab", "clab@123"},
-}
-
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
 	Name       string          `json:"name,omitempty"`
@@ -120,6 +112,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	if err != nil {
 		return err
 	}
+
 	// Init
 	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
 	if !ok {
@@ -132,6 +125,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
+
 	n.Config().Labels = utils.MergeStringMaps(n.Config().Labels, map[string]string{
 		"containerlab":      c.Config.Name,
 		"clab-node-name":    n.Config().ShortName,
@@ -142,6 +136,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 		"clab-topo-file":    c.TopoFile.path,
 	})
 	c.Nodes[nodeName] = n
+
 	return nil
 }
 
