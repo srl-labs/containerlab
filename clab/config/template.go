@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kellerza/template"
+	jT "github.com/kellerza/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
@@ -36,7 +36,7 @@ func RenderAll(nodes map[string]*types.NodeConfig, links map[int]*types.Link) (m
 		return nil, fmt.Errorf("please specify one of more paths with --template-path")
 	}
 
-	tmpl, err := template.New("", template.SearchPath(TemplatePaths...))
+	tmpl, err := jT.New("", jT.SearchPath(TemplatePaths...))
 	if err != nil {
 		return nil, err
 	}
