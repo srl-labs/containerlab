@@ -59,13 +59,6 @@ var kinds = []string{
 	"host",
 }
 
-// DefaultCredentials holds default username and password per each kind
-var DefaultCredentials = map[string][]string{
-	"vr-sros":  {"admin", "admin"},
-	"vr-vmx":   {"admin", "admin@123"},
-	"vr-xrv9k": {"clab", "clab@123"},
-}
-
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
 	Name       string          `json:"name,omitempty"`

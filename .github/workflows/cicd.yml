@@ -118,8 +118,8 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
-          username: hellt
-          password: ${{ secrets.GHCR_READ_PKG_PAT }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Pull ceos image
         run: docker pull ghcr.io/srl-labs/ceos:4.25.0F && docker tag ghcr.io/srl-labs/ceos:4.25.0F ceos:4.25.0F
       - name: Run ceos tests

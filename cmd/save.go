@@ -7,22 +7,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"strings"
 	"sync"
 
-	"github.com/Juniper/go-netconf/netconf"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/nodes"
 )
-
-var saveCommand = map[string][]string{
-	"srl":  {"sr_cli", "-d", "tools", "system", "configuration", "generate-checkpoint"},
-	"ceos": {"Cli", "-p", "15", "-c", "copy running flash:conf-saved.conf"},
-	"crpd": {"cli", "show", "conf"},
-}
 
 // saveCmd represents the save command
 var saveCmd = &cobra.Command{
@@ -46,64 +37,21 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-		containers, err := c.Runtime.ListContainers(ctx, labels)
-		if err != nil {
-			return fmt.Errorf("could not list containers: %v", err)
-		}
-		if len(containers) == 0 {
-			return fmt.Errorf("no containers found")
+		if err := c.ParseTopology(); err != nil {
+			return err
 		}
 
 		var wg sync.WaitGroup
-		wg.Add(len(containers))
-		for _, cont := range containers {
-			go func(cont types.GenericContainer) {
+		wg.Add(len(c.Nodes))
+		for _, node := range c.Nodes {
+			go func(node nodes.Node) {
 				defer wg.Done()
-				kind := cont.Labels["clab-node-kind"]
 
-				switch kind {
-				case "vr-sros",
-					"vr-vmx":
-					netconfSave(cont)
-					return
-				}
-
-				// skip saving if we have no command map
-				if _, ok := saveCommand[kind]; !ok {
-					return
-				}
-				stdout, stderr, err := c.Runtime.Exec(ctx, cont.ID, saveCommand[kind])
+				err := node.SaveConfig(ctx, c.Runtime)
 				if err != nil {
-					log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
-
+					log.Errorf("err: %v", err)
 				}
-				if len(stderr) > 0 {
-					log.Infof("%s errors: %s", strings.TrimLeft(cont.Names[0], "/"), string(stderr))
-				}
-				switch {
-				// for srl kinds print the full stdout
-				case kind == "srl":
-					if len(stdout) > 0 {
-						confPath := cont.Labels["clab-node-dir"] + "/config/checkpoint/checkpoint-0.json"
-						log.Infof("saved SR Linux configuration from %s node to %s\noutput:\n%s", strings.TrimLeft(cont.Names[0], "/"), confPath, string(stdout))
-					}
-
-				case kind == "crpd":
-					// path by which to save a config
-					confPath := cont.Labels["clab-node-dir"] + "/config/conf-saved.conf"
-					err := ioutil.WriteFile(confPath, stdout, 0777)
-					if err != nil {
-						log.Errorf("failed to write config by %s path from %s container: %v", confPath, strings.TrimLeft(cont.Names[0], "/"), err)
-					}
-					log.Infof("saved cRPD configuration from %s node to %s", strings.TrimLeft(cont.Names[0], "/"), confPath)
-
-				case kind == "ceos":
-					// path by which a config was saved
-					confPath := cont.Labels["clab-node-dir"] + "/flash/conf-saved.conf"
-					log.Infof("saved cEOS configuration from %s node to %s", strings.TrimLeft(cont.Names[0], "/"), confPath)
-				}
-			}(cont)
+			}(node)
 		}
 		wg.Wait()
 
@@ -113,30 +61,4 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 
 func init() {
 	rootCmd.AddCommand(saveCmd)
-}
-
-func netconfSave(cont types.GenericContainer) {
-	kind := cont.Labels["clab-node-kind"]
-	config := netconf.SSHConfigPassword(clab.DefaultCredentials[kind][0],
-		clab.DefaultCredentials[kind][1])
-
-	host := strings.TrimLeft(cont.Names[0], "/")
-	ncHost := host + ":830"
-
-	s, err := netconf.DialSSH(ncHost, config)
-	if err != nil {
-		log.Errorf("%s: Could not connect SSH to %s %s", cont.Names[0], host, err)
-		return
-	}
-	defer s.Close()
-
-	save := `<copy-config><target><startup/></target><source><running/></source></copy-config>`
-
-	_, err = s.Exec(netconf.RawMethod(save))
-	if err != nil {
-		log.Errorf("%s: Could not send Netconf save to %s %s", cont.Names[0], host, err)
-		return
-	}
-
-	log.Infof("saved %s configuration from node %s\n", kind, host)
 }

@@ -44,6 +44,7 @@ type Node interface {
 	Deploy(context.Context, runtime.ContainerRuntime) error
 	PostDeploy(context.Context, runtime.ContainerRuntime, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)
+	SaveConfig(context.Context, runtime.ContainerRuntime) error
 }
 
 var Nodes = map[string]Initializer{}
@@ -69,4 +70,11 @@ func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 var DefaultConfigTemplates = map[string]string{
 	"crpd":    "/etc/containerlab/templates/crpd/juniper.conf",
 	"vr-sros": "",
+}
+
+// DefaultCredentials holds default username and password per each kind
+var DefaultCredentials = map[string][]string{
+	"vr-sros":  {"admin", "admin"},
+	"vr-vmx":   {"admin", "admin@123"},
+	"vr-xrv9k": {"clab", "clab@123"},
 }

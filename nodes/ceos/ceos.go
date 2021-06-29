@@ -21,20 +21,24 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-// defined env vars for the ceos
-var ceosEnv = map[string]string{
-	"CEOS":                                "1",
-	"EOS_PLATFORM":                        "ceoslab",
-	"container":                           "docker",
-	"ETBA":                                "4",
-	"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
-	"INTFTYPE":                            "eth",
-	"MAPETH0":                             "1",
-	"MGMT_INTF":                           "eth0",
-}
+var (
+	// defined env vars for the ceos
+	ceosEnv = map[string]string{
+		"CEOS":                                "1",
+		"EOS_PLATFORM":                        "ceoslab",
+		"container":                           "docker",
+		"ETBA":                                "4",
+		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
+		"INTFTYPE":                            "eth",
+		"MAPETH0":                             "1",
+		"MGMT_INTF":                           "eth0",
+	}
 
-//go:embed ceos.cfg
-var cfgTemplate string
+	//go:embed ceos.cfg
+	cfgTemplate string
+
+	saveCmd = []string{"Cli", "-p", "15", "-c", "copy running flash:conf-saved.conf"}
+)
 
 func init() {
 	nodes.Register(nodes.NodeKindCEOS, func() nodes.Node {
@@ -86,6 +90,22 @@ func (s *ceos) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns ma
 }
 
 func (s *ceos) WithMgmtNet(*types.MgmtNet) {}
+
+func (s *ceos) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	_, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
+	}
+
+	if len(stderr) > 0 {
+		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
+	}
+
+	confPath := s.cfg.LabDir + "/flash/conf-saved.conf"
+	log.Infof("saved cEOS configuration from %s node to %s\n", s.cfg.ShortName, confPath)
+
+	return nil
+}
 
 //
 
