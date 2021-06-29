@@ -8,6 +8,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/config"
 	"github.com/srl-labs/containerlab/clab/config/transport"
+	"github.com/srl-labs/containerlab/nodes"
 )
 
 // Only print config locally, dont send to the node
@@ -71,8 +72,8 @@ var configCmd = &cobra.Command{
 					tx, err = transport.NewSSHTransport(
 						cs.TargetNode,
 						transport.WithUserNamePassword(
-							clab.DefaultCredentials[cs.TargetNode.Kind][0],
-							clab.DefaultCredentials[cs.TargetNode.Kind][1]),
+							nodes.DefaultCredentials[cs.TargetNode.Kind][0],
+							nodes.DefaultCredentials[cs.TargetNode.Kind][1]),
 						transport.HostKeyCallback(),
 					)
 					if err != nil {
