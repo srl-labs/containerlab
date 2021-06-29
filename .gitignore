@@ -9,6 +9,7 @@ bin/*
 rpm
 rpm/*
 dist
+private
 
 # Test binary, built with `go test -c`
 *.test
