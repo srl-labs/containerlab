@@ -24,12 +24,12 @@ func SaveCfgViaNetconf(addr, username, password string) error {
 		base.WithTransportType(transport.StandardTransportName),
 	)
 	if err != nil {
-		return fmt.Errorf("Could not create netconf driver for %s: %+v\n", addr, err)
+		return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)
 	}
 
 	err = d.Open()
 	if err != nil {
-		return fmt.Errorf("failed to open netconf driver for %s: %+v\n", addr, err)
+		return fmt.Errorf("failed to open netconf driver for %s: %+v", addr, err)
 	}
 	defer d.Close()
 
