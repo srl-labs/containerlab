@@ -15,12 +15,6 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 )
 
-var saveCommand = map[string][]string{
-	"srl":  {"sr_cli", "-d", "tools", "system", "configuration", "generate-checkpoint"},
-	"ceos": {"Cli", "-p", "15", "-c", "copy running flash:conf-saved.conf"},
-	"crpd": {"cli", "show", "conf"},
-}
-
 // saveCmd represents the save command
 var saveCmd = &cobra.Command{
 	Use:   "save",
