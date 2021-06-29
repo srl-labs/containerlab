@@ -8,6 +8,7 @@ import (
 	jT "github.com/kellerza/template"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -26,7 +27,7 @@ type NodeConfig struct {
 	Info []string
 }
 
-func RenderAll(nodes map[string]*types.NodeConfig, links map[int]*types.Link) (map[string]*NodeConfig, error) {
+func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[string]*NodeConfig, error) {
 	res := make(map[string]*NodeConfig)
 
 	if len(TemplateNames) == 0 {
@@ -43,7 +44,7 @@ func RenderAll(nodes map[string]*types.NodeConfig, links map[int]*types.Link) (m
 
 	for nodeName, vars := range PrepareVars(nodes, links) {
 		res[nodeName] = &NodeConfig{
-			TargetNode: nodes[nodeName],
+			TargetNode: nodes[nodeName].Config(),
 			Vars:       vars,
 		}
 

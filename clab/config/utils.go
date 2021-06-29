@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"inet.af/netaddr"
 )
@@ -17,16 +18,17 @@ const (
 type Dict map[string]interface{}
 
 // Prepare variables for all nodes. This will also prepare all variables for the links
-func PrepareVars(nodes map[string]*types.NodeConfig, links map[int]*types.Link) map[string]Dict {
+func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[string]Dict {
 
 	res := make(map[string]Dict)
 
 	// preparing all nodes vars
 	for _, node := range nodes {
-		name := node.ShortName
+		nodeCfg := node.Config()
+		name := nodeCfg.ShortName
 		// Init array for this node
 		res[name] = make(map[string]interface{})
-		nc := GetNodeConfigFromLabels(node.Labels)
+		nc := GetNodeConfigFromLabels(nodeCfg.Labels)
 		for key := range nc.Vars {
 			res[name][key] = nc.Vars[key]
 		}
@@ -34,7 +36,7 @@ func PrepareVars(nodes map[string]*types.NodeConfig, links map[int]*types.Link) 
 		res[name]["links"] = []interface{}{}
 		// Ensure role or Kind
 		if _, ok := res[name]["role"]; !ok {
-			res[name]["role"] = node.Kind
+			res[name]["role"] = nodeCfg.Kind
 		}
 	}
 

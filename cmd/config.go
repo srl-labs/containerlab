@@ -23,9 +23,6 @@ var configCmd = &cobra.Command{
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
-		if err = topoSet(); err != nil {
-			return err
-		}
 
 		transport.DebugCount = debugCount
 
@@ -35,7 +32,7 @@ var configCmd = &cobra.Command{
 			clab.WithTopoFile(topo),
 		)
 
-		setFlags(c.Config)
+		// setFlags(c.Config)
 		log.Debugf("Topology definition: %+v", c.Config)
 		// Parse topology information
 		if err = c.ParseTopology(); err != nil {
