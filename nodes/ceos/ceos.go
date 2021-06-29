@@ -6,6 +6,7 @@ package ceos
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"path"
@@ -20,17 +21,24 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-// defined env vars for the ceos
-var ceosEnv = map[string]string{
-	"CEOS":                                "1",
-	"EOS_PLATFORM":                        "ceoslab",
-	"container":                           "docker",
-	"ETBA":                                "4",
-	"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
-	"INTFTYPE":                            "eth",
-	"MAPETH0":                             "1",
-	"MGMT_INTF":                           "eth0",
-}
+var (
+	// defined env vars for the ceos
+	ceosEnv = map[string]string{
+		"CEOS":                                "1",
+		"EOS_PLATFORM":                        "ceoslab",
+		"container":                           "docker",
+		"ETBA":                                "4",
+		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
+		"INTFTYPE":                            "eth",
+		"MAPETH0":                             "1",
+		"MGMT_INTF":                           "eth0",
+	}
+
+	//go:embed ceos.cfg
+	cfgTemplate string
+
+	saveCmd = []string{"Cli", "-p", "15", "-c", "copy running flash:conf-saved.conf"}
+)
 
 func init() {
 	nodes.Register(nodes.NodeKindCEOS, func() nodes.Node {
@@ -46,9 +54,6 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg = cfg
 	for _, o := range opts {
 		o(s)
-	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
 
 	s.cfg.Env = utils.MergeStringMaps(ceosEnv, s.cfg.Env)
@@ -68,7 +73,7 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *ceos) Config() *types.NodeConfig { return nil }
+func (s *ceos) Config() *types.NodeConfig { return s.cfg }
 
 func (s *ceos) PreDeploy(configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
@@ -85,6 +90,22 @@ func (s *ceos) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns ma
 }
 
 func (s *ceos) WithMgmtNet(*types.MgmtNet) {}
+
+func (s *ceos) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	_, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
+	}
+
+	if len(stderr) > 0 {
+		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
+	}
+
+	confPath := s.cfg.LabDir + "/flash/conf-saved.conf"
+	log.Infof("saved cEOS configuration from %s node to %s\n", s.cfg.ShortName, confPath)
+
+	return nil
+}
 
 //
 
@@ -106,7 +127,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 
 func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *types.NodeConfig) error {
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
-	err := nodeCfg.GenerateConfig(nodeCfg.ResConfig, nodes.DefaultConfigTemplates[nodeCfg.Kind])
+	err := nodeCfg.GenerateConfig(nodeCfg.ResConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}

@@ -40,7 +40,7 @@ Based on the provided type, containerlab will generate the [topology file](#topo
 ### Node configuration
 SR Linux nodes have a dedicated [`config`](#config-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `srl` kind with a basic "empty" config or to provide a custom config file that will be used as a startup config instead.
 #### Default node configuration
-When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/templates/srl/srlconfig.tpl) and put it in that directory.
+When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.cfg) and put it in that directory.
 
 ```yaml
 # example of a topo file that does not define a custom config
@@ -148,9 +148,6 @@ The `config` directory is mounted to container's `/etc/opt/srlinux/` in `rw` mod
 ❯ ls srl1/config
 banner  cli  config.json  devices  tls  ztp
 ```
-
-#### CLI env config
-Another file that SR Linux expects to have is the `srlinux.conf` file that contains CLI environment config. Containerlab uses a [template of this file](https://github.com/srl-labs/containerlab/blob/master/templates/srl/srl_env.conf) and mounts it to `/home/admin/.srlinux.conf` in `rw` mode.
 
 #### Topology file
 The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type` the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.

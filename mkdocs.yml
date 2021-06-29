@@ -16,6 +16,7 @@ nav:
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
           - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
+          - vr-csr - Cisco CSR1000v: manual/kinds/vr-csr.md
           - vr-veos - Arista vEOS: manual/kinds/vr-veos.md
           - vr-ros - MikroTik RouterOS: manual/kinds/vr-ros.md
           - linux - Linux container: manual/kinds/linux.md
@@ -87,6 +88,7 @@ site_description: >-
 # Repository
 repo_name: srl-labs/containerlab
 repo_url: https://github.com/srl-labs/containerlab
+site_url: "https://containerlab.srlinux.dev/"
 edit_uri: ""
 theme:
   name: material
@@ -145,6 +147,9 @@ extra:
       link: https://github.com/hellt
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/ntdvps
+  analytics:
+    provider: google
+    property: G-368XR9X5MG
 
 extra_css:
   - stylesheets/extra.css
@@ -186,7 +191,3 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
-
-google_analytics:
-  - UA-101537614-3
-  - auto

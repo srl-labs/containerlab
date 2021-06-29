@@ -65,3 +65,7 @@ func (s *vrRos) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns m
 }
 
 func (s *vrRos) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
+
+func (s *vrRos) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+	return nil
+}

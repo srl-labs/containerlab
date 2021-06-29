@@ -16,7 +16,6 @@ archives:
   - replacements:
       linux: Linux
     files:
-      - templates/**/*
       - lab-examples/**/*
 checksum:
   name_template: checksums.txt
@@ -54,8 +53,6 @@ nfpms:
     contents:
       - src: ./lab-examples
         dst: /etc/containerlab/lab-examples
-      - src: ./templates
-        dst: /etc/containerlab/templates
       # - src: ./tools
       #   dst: /etc/containerlab/tools
       - src: /usr/bin/containerlab

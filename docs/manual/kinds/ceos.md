@@ -109,7 +109,7 @@ cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-di
 used as a startup config instead.
 
 #### Default node configuration
-When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/templates/arista/ceos.cfg.tpl) and copy it to the config directory of the node.
+When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/crpd/crpd.cfg) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config
