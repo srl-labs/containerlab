@@ -18,7 +18,7 @@ var TemplateNames []string
 var TemplatePaths []string
 
 type NodeConfig struct {
-	TargetNode *types.Node
+	TargetNode *types.NodeConfig
 	// All the variables used to render the template
 	Vars map[string]interface{}
 	// the Rendered templates
@@ -26,7 +26,7 @@ type NodeConfig struct {
 	Info []string
 }
 
-func RenderAll(nodes map[string]*types.Node, links map[int]*types.Link) (map[string]*NodeConfig, error) {
+func RenderAll(nodes map[string]*types.NodeConfig, links map[int]*types.Link) (map[string]*NodeConfig, error) {
 	res := make(map[string]*NodeConfig)
 
 	if len(TemplateNames) == 0 {

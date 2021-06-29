@@ -84,7 +84,7 @@ func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 	}
 }
 
-func NewSSHTransport(node *types.Node, options ...SSHTransportOption) (*SSHTransport, error) {
+func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SSHTransport, error) {
 	switch node.Kind {
 	case "vr-sros", "srl":
 		c := &SSHTransport{}
