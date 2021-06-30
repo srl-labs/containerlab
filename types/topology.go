@@ -134,7 +134,7 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 	return nil
 }
 
-func (t *Topology) GetNodeConfig(name string) (string, error) {
+func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	var cfg string
 	if ndef, ok := t.Nodes[name]; ok {
 		var err error

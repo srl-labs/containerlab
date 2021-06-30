@@ -264,7 +264,7 @@ func TestGetNodeType(t *testing.T) {
 func TestGetNodeConfig(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
-		config, err := item.input.GetNodeConfig("node1")
+		config, err := item.input.GetNodeStartupConfig("node1")
 		if err != nil {
 			t.Fatal(err)
 		}

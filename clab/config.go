@@ -166,7 +166,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	log.Debugf("node config: %+v", nodeCfg)
 	var err error
 	// initialize config
-	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	if len(endpoint.EndpointName) > 15 {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
-	// generate unqiue MAC
+	// generate unique MAC
 	endpoint.MAC = utils.GenMac(clabOUI)
 
 	// search the node pointer for a node name referenced in endpoint section
