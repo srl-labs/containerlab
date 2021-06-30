@@ -166,7 +166,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	log.Debugf("node config: %+v", nodeCfg)
 	var err error
 	// initialize config
-	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
@@ -188,6 +188,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 
+	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
+
 	return nodeCfg, nil
 }
 
@@ -196,11 +198,13 @@ func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
 	if len(l.Endpoints) != 2 {
 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints)
 	}
+
 	return &types.Link{
 		A:      c.NewEndpoint(l.Endpoints[0]),
 		B:      c.NewEndpoint(l.Endpoints[1]),
 		MTU:    defaultVethLinkMTU,
 		Labels: l.Labels,
+		Vars:   l.Vars,
 	}
 }
 
@@ -221,7 +225,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	if len(endpoint.EndpointName) > 15 {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
-	// generate unqiue MAC
+	// generate unique MAC
 	endpoint.MAC = utils.GenMac(clabOUI)
 
 	// search the node pointer for a node name referenced in endpoint section
@@ -416,7 +420,7 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 		for _, e := range endpoints {
 			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
-					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces. 
+					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
 					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
 				}
 				rootNsIfaces[e.EndpointName] = struct{}{}

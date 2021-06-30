@@ -6,6 +6,7 @@ package types
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,6 +24,12 @@ type Link struct {
 	B      *Endpoint
 	MTU    int
 	Labels map[string]string
+	Vars   map[string]string
+}
+
+func (link *Link) String() string {
+	return fmt.Sprintf("link [%s:%s, %s:%s]", link.A.Node.ShortName,
+		link.A.EndpointName, link.B.Node.ShortName, link.B.EndpointName)
 }
 
 // Endpoint is a struct that contains information of a link endpoint
@@ -55,6 +62,7 @@ type NodeConfig struct {
 	Kind             string
 	StartupConfig    string // path to config template file that is used for startup config generation
 	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
+	Config           *ConfigDispatcher
 	NodeType         string
 	Position         string
 	License          string
@@ -190,4 +198,11 @@ func FilterFromLabelStrings(labels []string) []*GenericFilter {
 		gfl = append(gfl, gf)
 	}
 	return gfl
+}
+
+// ConfigDispatcher represents the config of a configuration machine
+// that is responsible to execute configuration commands on the nodes
+// after they started
+type ConfigDispatcher struct {
+	Vars map[string]string `yaml:"vars,omitempty"`
 }

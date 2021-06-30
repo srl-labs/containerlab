@@ -74,6 +74,7 @@ var DefaultConfigTemplates = map[string]string{
 
 // DefaultCredentials holds default username and password per each kind
 var DefaultCredentials = map[string][]string{
+	"srl":      {"admin", "admin"},
 	"vr-sros":  {"admin", "admin"},
 	"vr-vmx":   {"admin", "admin@123"},
 	"vr-xrv9k": {"clab", "clab@123"},
