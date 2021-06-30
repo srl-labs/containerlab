@@ -58,8 +58,8 @@ docker tag srlinux:20.6.1-286 srlinux:latest
 ### license
 Some containerized NOSes require a license to operate. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
 
-### config
-For some kinds its possible to pass a path to a config file that a node will use on start instead of a bare config. Check documentation for a specific kind to see if `config` element is supported.
+### startup-config
+For some kinds it's possible to pass a path to a config file that a node will use on start instead of a bare config. Check documentation for a specific kind to see if `startup-config` element is supported.
 
 ### binds
 In order to expose host files to the containerized nodes a user can leverage the bind mount capability.

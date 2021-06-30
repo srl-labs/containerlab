@@ -28,14 +28,14 @@ var topologyTestSet = map[string]struct {
 		input: &Topology{
 			Kinds: map[string]*NodeDefinition{
 				"srl": {
-					Group:    "grp1",
-					Type:     "type1",
-					Config:   "test_data/config.cfg",
-					Image:    "image:latest",
-					License:  "test_data/lic1.key",
-					Position: "pos1",
-					Cmd:      "runit",
-					User:     "user1",
+					Group:         "grp1",
+					Type:          "type1",
+					StartupConfig: "test_data/config.cfg",
+					Image:         "image:latest",
+					License:       "test_data/lic1.key",
+					Position:      "pos1",
+					Cmd:           "runit",
+					User:          "user1",
 					Binds: []string{
 						"a:b",
 						"c:d",
@@ -67,15 +67,15 @@ var topologyTestSet = map[string]struct {
 		},
 		want: map[string]*NodeDefinition{
 			"node1": {
-				Kind:     "srl",
-				Group:    "grp1",
-				Type:     "type1",
-				Config:   "test_data/config.cfg",
-				Image:    "image:latest",
-				License:  "test_data/lic1.key",
-				Position: "pos1",
-				Cmd:      "runit",
-				User:     "user1",
+				Kind:          "srl",
+				Group:         "grp1",
+				Type:          "type1",
+				StartupConfig: "test_data/config.cfg",
+				Image:         "image:latest",
+				License:       "test_data/lic1.key",
+				Position:      "pos1",
+				Cmd:           "runit",
+				User:          "user1",
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -102,13 +102,13 @@ var topologyTestSet = map[string]struct {
 			},
 			Kinds: map[string]*NodeDefinition{
 				"srl": {
-					Group:    "grp1",
-					Type:     "type1",
-					Config:   "test_data/config.cfg",
-					Image:    "image:latest",
-					License:  "test_data/lic1.key",
-					Position: "pos1",
-					Cmd:      "runit",
+					Group:         "grp1",
+					Type:          "type1",
+					StartupConfig: "test_data/config.cfg",
+					Image:         "image:latest",
+					License:       "test_data/lic1.key",
+					Position:      "pos1",
+					Cmd:           "runit",
 					Binds: []string{
 						"a:b",
 						"c:d",
@@ -132,15 +132,15 @@ var topologyTestSet = map[string]struct {
 		},
 		want: map[string]*NodeDefinition{
 			"node1": {
-				Kind:     "srl",
-				Group:    "grp1",
-				Type:     "type1",
-				Config:   "test_data/config.cfg",
-				Image:    "image:latest",
-				License:  "test_data/lic1.key",
-				Position: "pos1",
-				Cmd:      "runit",
-				User:     "user1",
+				Kind:          "srl",
+				Group:         "grp1",
+				Type:          "type1",
+				StartupConfig: "test_data/config.cfg",
+				Image:         "image:latest",
+				License:       "test_data/lic1.key",
+				Position:      "pos1",
+				Cmd:           "runit",
+				User:          "user1",
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -162,14 +162,14 @@ var topologyTestSet = map[string]struct {
 	"node_default": {
 		input: &Topology{
 			Defaults: &NodeDefinition{
-				Kind:     "srl",
-				Group:    "grp1",
-				Type:     "type1",
-				Config:   "test_data/config.cfg",
-				Image:    "image:latest",
-				License:  "test_data/lic1.key",
-				Position: "pos1",
-				Cmd:      "runit",
+				Kind:          "srl",
+				Group:         "grp1",
+				Type:          "type1",
+				StartupConfig: "test_data/config.cfg",
+				Image:         "image:latest",
+				License:       "test_data/lic1.key",
+				Position:      "pos1",
+				Cmd:           "runit",
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -192,14 +192,14 @@ var topologyTestSet = map[string]struct {
 		},
 		want: map[string]*NodeDefinition{
 			"node1": {
-				Kind:     "srl",
-				Group:    "grp1",
-				Type:     "type1",
-				Config:   "test_data/config.cfg",
-				Image:    "image:latest",
-				License:  "test_data/lic1.key",
-				Position: "pos1",
-				Cmd:      "runit",
+				Kind:          "srl",
+				Group:         "grp1",
+				Type:          "type1",
+				StartupConfig: "test_data/config.cfg",
+				Image:         "image:latest",
+				License:       "test_data/lic1.key",
+				Position:      "pos1",
+				Cmd:           "runit",
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -268,7 +268,7 @@ func TestGetNodeConfig(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantedConfig, err := resolvePath(item.want["node1"].Config)
+		wantedConfig, err := resolvePath(item.want["node1"].StartupConfig)
 		if err != nil {
 			t.Fatal(err)
 		}

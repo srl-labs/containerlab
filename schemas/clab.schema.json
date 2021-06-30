@@ -41,10 +41,10 @@
                     "description": "path to a license file",
                     "markdownDescription": "path to a [license](https://containerlab.srlinux.dev/manual/nodes/#license) file"
                 },
-                "config": {
+                "startup-config": {
                     "type": "string",
-                    "description": "path to a config file (if supported by kind)",
-                    "markdownDescription": "path to a [config file](https://containerlab.srlinux.dev/manual/nodes/#config) (if supported by kind)"
+                    "description": "path to a startup config file (if supported by kind)",
+                    "markdownDescription": "path to a [config file](https://containerlab.srlinux.dev/manual/nodes/#startup-config) (if supported by kind)"
                 },
                 "binds": {
                     "type": "array",
