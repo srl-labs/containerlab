@@ -59,6 +59,7 @@ var configCmd = &cobra.Command{
 				defer wg.Done()
 
 				var tx transport.Transport
+				var err error
 
 				ct, ok := cs.TargetNode.Labels["config.transport"]
 				if !ok {
@@ -83,7 +84,7 @@ var configCmd = &cobra.Command{
 					return
 				}
 
-				err := transport.Write(tx, cs.TargetNode.LongName, cs.Data, cs.Info)
+				err = transport.Write(tx, cs.TargetNode.LongName, cs.Data, cs.Info)
 				if err != nil {
 					log.Errorf("%s\n", err)
 				}
