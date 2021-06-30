@@ -188,6 +188,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 
+	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
+
 	return nodeCfg, nil
 }
 
@@ -196,11 +198,13 @@ func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
 	if len(l.Endpoints) != 2 {
 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints)
 	}
+
 	return &types.Link{
 		A:      c.NewEndpoint(l.Endpoints[0]),
 		B:      c.NewEndpoint(l.Endpoints[1]),
 		MTU:    defaultVethLinkMTU,
 		Labels: l.Labels,
+		Vars:   l.Vars,
 	}
 }
 

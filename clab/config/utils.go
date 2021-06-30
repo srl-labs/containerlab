@@ -29,7 +29,7 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		name := nodeCfg.ShortName
 		// Init array for this node
 		res[name] = make(map[string]interface{})
-		nc := GetNodeConfigFromLabels(nodeCfg.Labels)
+		nc := GetNodeConfig(nodeCfg.Config.Vars)
 		for key := range nc.Vars {
 			res[name][key] = nc.Vars[key]
 		}
@@ -57,9 +57,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 
 // Prepare variables for a specific link
 func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interface{}) error {
-	ncA := GetNodeConfigFromLabels(link.A.Node.Labels)
-	ncB := GetNodeConfigFromLabels(link.B.Node.Labels)
-	linkVars := link.Labels
+	ncA := GetNodeConfig(link.A.Node.Config.Vars)
+	ncB := GetNodeConfig(link.B.Node.Config.Vars)
 
 	addV := func(key string, v1 interface{}, v2 ...interface{}) {
 		varsA[key] = v1
@@ -77,11 +76,12 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interfa
 	if err != nil {
 		return fmt.Errorf("%s: %s", link, err)
 	}
+
 	addV("ip", ipA.String(), ipB.String())
 	addV(systemIP, ncA.Vars[systemIP], ncB.Vars[systemIP])
 
 	// Split all fields with a comma...
-	for k, v := range linkVars {
+	for k, v := range link.Vars {
 		r := SplitTrim(v)
 		switch len(r) {
 		case 1:
@@ -108,7 +108,7 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interfa
 func linkIPfromSystemIP(link *types.Link) (netaddr.IPPrefix, netaddr.IPPrefix, error) {
 	var ipA netaddr.IPPrefix
 	var err error
-	if linkIp, ok := link.Labels["ip"]; ok {
+	if linkIp, ok := link.Vars["ip"]; ok {
 		// calc far end IP
 		ipA, err = netaddr.ParseIPPrefix(linkIp)
 		if err != nil {
@@ -116,11 +116,11 @@ func linkIPfromSystemIP(link *types.Link) (netaddr.IPPrefix, netaddr.IPPrefix, e
 		}
 	} else {
 		// Calculate link IP from the system IPs
-		sysA, err := netaddr.ParseIPPrefix(link.A.Node.Labels[systemIP])
+		sysA, err := netaddr.ParseIPPrefix(link.A.Node.Config.Vars[systemIP])
 		if err != nil {
 			return ipA, ipA, fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", systemIP, link.A.Node.ShortName, err)
 		}
-		sysB, err := netaddr.ParseIPPrefix(link.B.Node.Labels[systemIP])
+		sysB, err := netaddr.ParseIPPrefix(link.B.Node.Config.Vars[systemIP])
 		if err != nil {
 			return ipA, ipA, fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", systemIP, link.B.Node.ShortName, err)
 		}

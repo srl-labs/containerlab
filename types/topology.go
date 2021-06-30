@@ -29,6 +29,7 @@ func NewTopology() *Topology {
 type LinkConfig struct {
 	Endpoints []string
 	Labels    map[string]string `yaml:"labels,omitempty"`
+	Vars      map[string]string `yaml:"vars,omitempty"`
 }
 
 func (t *Topology) GetDefaults() *NodeDefinition {
@@ -131,6 +132,21 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 				t.GetKind(t.GetNodeKind(name)).GetLabels()),
 			ndef.Labels)
 	}
+	return nil
+}
+
+func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
+	if ndef, ok := t.Nodes[name]; ok {
+		vars := utils.MergeStringMaps(
+			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().Vars,
+				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().Vars),
+			ndef.Config.Vars)
+
+		return &ConfigDispatcher{
+			Vars: vars,
+		}
+	}
+
 	return nil
 }
 

@@ -22,7 +22,7 @@ type NodeSettings struct {
 
 // Temporary function to extract NodeSettings from the Labels
 // In the next phase node settings will be added to the clab file
-func GetNodeConfigFromLabels(labels map[string]string) NodeSettings {
+func GetNodeConfig(labels map[string]string) NodeSettings {
 	nc := NodeSettings{
 		Vars:      labels,
 		Transport: "ssh",

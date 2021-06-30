@@ -24,6 +24,7 @@ type Link struct {
 	B      *Endpoint
 	MTU    int
 	Labels map[string]string
+	Vars   map[string]string
 }
 
 func (link *Link) String() string {
@@ -61,6 +62,7 @@ type NodeConfig struct {
 	Kind             string
 	StartupConfig    string // path to config template file that is used for startup config generation
 	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
+	Config           *ConfigDispatcher
 	NodeType         string
 	Position         string
 	License          string
@@ -196,4 +198,11 @@ func FilterFromLabelStrings(labels []string) []*GenericFilter {
 		gfl = append(gfl, gf)
 	}
 	return gfl
+}
+
+// ConfigDispatcher represents the config of a configuration machine
+// that is responsible to execute configuration commands on the nodes
+// after they started
+type ConfigDispatcher struct {
+	Vars map[string]string `yaml:"vars,omitempty"`
 }
