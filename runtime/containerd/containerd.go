@@ -490,8 +490,8 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 
 func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
 	filterstring := ""
-	delim := ""
-	for _, filterEntry := range filter {
+	delim := ","
+	for counter, filterEntry := range filter {
 		isExistsOperator := false
 
 		operator := filterEntry.Operator
@@ -503,14 +503,17 @@ func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) str
 			isExistsOperator = true
 		}
 
+		if counter+1 == len(filter) {
+			delim = ""
+		}
+
 		if filterEntry.FilterType == "label" {
-			filterstring = filterstring + "labels." + filterEntry.Field
+			filterstring = filterstring + "labels.\"" + filterEntry.Field + "\""
 			if !isExistsOperator {
-				filterstring = filterstring + operator + filterEntry.Match + delim
+				filterstring = filterstring + operator + "\"" + filterEntry.Match + "\"" + delim
 			}
 
 		} // more might be implemented later
-		delim = ","
 	}
 	log.Debug("Filterstring: " + filterstring)
 	return filterstring
