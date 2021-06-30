@@ -21,10 +21,7 @@ func (c *CLab) GenerateInventories() error {
 	if err != nil {
 		return err
 	}
-	if err := c.generateAnsibleInventory(f); err != nil {
-		return err
-	}
-	return nil
+	return c.generateAnsibleInventory(f)
 }
 
 // generateAnsibleInventory generates and writes ansible inventory file to w
@@ -45,16 +42,16 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 	type inv struct {
 		// clab nodes aggregated by their kind
-		Nodes map[string][]*types.Node
+		Nodes map[string][]*types.NodeConfig
 		Meta  map[string]string
 	}
 
 	i := inv{
-		Nodes: make(map[string][]*types.Node),
+		Nodes: make(map[string][]*types.NodeConfig),
 	}
 
 	for _, n := range c.Nodes {
-		i.Nodes[n.Kind] = append(i.Nodes[n.Kind], n)
+		i.Nodes[n.Config().Kind] = append(i.Nodes[n.Config().Kind], n.Config())
 	}
 
 	// sort nodes by name as they are not sorted originally

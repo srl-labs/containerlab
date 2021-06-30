@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/cloudflare/cfssl/log"
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -26,7 +27,7 @@ type Link struct {
 
 // Endpoint is a struct that contains information of a link endpoint
 type Endpoint struct {
-	Node *Node
+	Node *NodeConfig
 	// e1-x, eth, etc
 	EndpointName string
 	// mac address
@@ -37,29 +38,27 @@ type Endpoint struct {
 // it is provided via docker network object
 type MgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network
+	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network (or containerd bridge net)
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
 }
 
-// Node is a struct that contains the information of a container element
-type Node struct {
-	ShortName string
-	LongName  string
-	Fqdn      string
-	LabDir    string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index     int
-	Group     string
-	Kind      string
-	// path to config template file that is used for config generation
-	Config       string
+// NodeConfig is a struct that contains the information of a container element
+type NodeConfig struct {
+	ShortName    string
+	LongName     string
+	Fqdn         string
+	LabDir       string // LabDir is a directory related to the node, it contains config items and/or other persistent state
+	Index        int
+	Group        string
+	Kind         string
+	Config       string // path to config template file that is used for config generation
 	ResConfig    string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType     string
 	Position     string
 	License      string
 	Image        string
-	Topology     string
 	Sysctls      map[string]string
 	User         string
 	Entrypoint   string
@@ -89,13 +88,14 @@ type Node struct {
 }
 
 // GenerateConfig generates configuration for the nodes
-func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
-	if utils.FileExists(dst) && (node.Config == defaultTemplatePath) {
+// out of the templ based on the node configuration
+func (node *NodeConfig) GenerateConfig(dst, templ string) error {
+	if utils.FileExists(dst) && (node.Config != "") {
 		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
 		return nil
 	}
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.Config)
-	tpl, err := template.New(filepath.Base(node.Config)).ParseFiles(node.Config)
+	tpl, err := template.New(filepath.Base(node.Config)).Parse(templ)
 	if err != nil {
 		return err
 	}
@@ -111,6 +111,27 @@ func (node *Node) GenerateConfig(dst, defaultTemplatePath string) error {
 	}
 	defer f.Close()
 	_, err = f.Write(dstBytes.Bytes())
+	return err
+}
+
+func DisableTxOffload(n *NodeConfig) error {
+	// skip this if node runs in host mode
+	if strings.ToLower(n.NetworkMode) == "host" {
+		return nil
+	}
+	// disable tx checksum offload for linux containers on eth0 interfaces
+	nodeNS, err := ns.GetNS(n.NSPath)
+	if err != nil {
+		return err
+	}
+	err = nodeNS.Do(func(_ ns.NetNS) error {
+		// disabling offload on lo0 interface
+		err := utils.EthtoolTXOff("eth0")
+		if err != nil {
+			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
+		}
+		return err
+	})
 	return err
 }
 

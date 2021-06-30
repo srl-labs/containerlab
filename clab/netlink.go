@@ -5,10 +5,8 @@
 package clab
 
 import (
-	"crypto/rand"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -222,9 +220,9 @@ func (veth *vEthEndpoint) toBridge() error {
 // DeleteNetnsSymlinks deletes the symlink file created for each container netns
 func (c *CLab) DeleteNetnsSymlinks() (err error) {
 	for _, node := range c.Nodes {
-		if node.Kind != "bridge" {
-			log.Debugf("Deleting %s network namespace", node.LongName)
-			if err := deleteNetnsSymlink(node.LongName); err != nil {
+		if node.Config().Kind != "bridge" {
+			log.Debugf("Deleting %s network namespace", node.Config().LongName)
+			if err := utils.DeleteNetnsSymlink(node.Config().LongName); err != nil {
 				return err
 			}
 		}
@@ -237,17 +235,6 @@ func (c *CLab) DeleteNetnsSymlinks() (err error) {
 func genIfName() string {
 	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
 	return string(s[:8])
-}
-
-// deleteNetnsSymlink deletes a network namespace and removes the symlink created by linkContainerNS func
-func deleteNetnsSymlink(n string) error {
-	log.Debug("Deleting netns symlink: ", n)
-	sl := fmt.Sprintf("/run/netns/%s", n)
-	err := os.Remove(sl)
-	if err != nil {
-		log.Debug("Failed to delete netns symlink by path:", sl)
-	}
-	return nil
 }
 
 // GetLinksByNamePrefix returns a list of links whose name matches a prefix
@@ -271,11 +258,4 @@ func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
 		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
 	}
 	return fls, nil
-}
-
-// genMac generates a random MAC address for a given OUI
-func genMac(oui string) string {
-	buf := make([]byte, 3)
-	_, _ = rand.Read(buf)
-	return fmt.Sprintf("%s:%02x:%02x:%02x", oui, buf[0], buf[1], buf[2])
 }

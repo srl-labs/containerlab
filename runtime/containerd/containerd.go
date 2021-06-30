@@ -126,10 +126,6 @@ func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	return utils.DeleteNetworkInterface(bridgename)
 }
 
-func (c *ContainerdRuntime) ContainerInspect(context.Context, string) (*types.GenericContainer, error) {
-	return nil, errors.New("not implemented")
-}
-
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
 	log.Debugf("Looking up %s container image", imagename)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
@@ -149,7 +145,7 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Node) error {
+func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) error {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
@@ -385,7 +381,7 @@ func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *li
 	cnirc := &libcni.RuntimeConf{
 		ContainerID: cId,
 		IfName:      ifName,
-		//// NetNS must be set later, can just be determined after cotnainer start
+		//// NetNS must be set later, can just be determined after container start
 		//NetNS:          node.NSPath,
 		CapabilityArgs: make(map[string]interface{}),
 	}
@@ -461,9 +457,6 @@ func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername str
 		if paused {
 			if err := ctask.Resume(ctx); err != nil {
 				log.Warnf("Cannot unpause container %s: %s", containername, err)
-			} else {
-				// no need to do it again when send sigkill signal
-				paused = false
 			}
 		}
 
@@ -519,8 +512,8 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 
 func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
 	filterstring := ""
-	delim := ""
-	for _, filterEntry := range filter {
+	delim := ","
+	for counter, filterEntry := range filter {
 		isExistsOperator := false
 
 		operator := filterEntry.Operator
@@ -532,14 +525,17 @@ func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) str
 			isExistsOperator = true
 		}
 
+		if counter+1 == len(filter) {
+			delim = ""
+		}
+
 		if filterEntry.FilterType == "label" {
-			filterstring = filterstring + "labels." + filterEntry.Field
+			filterstring = filterstring + "labels.\"" + filterEntry.Field + "\""
 			if !isExistsOperator {
-				filterstring = filterstring + operator + filterEntry.Match + delim
+				filterstring = filterstring + operator + "\"" + filterEntry.Match + "\"" + delim
 			}
 
 		} // more might be implemented later
-		delim = ","
 	}
 	log.Debug("Filterstring: " + filterstring)
 	return filterstring
@@ -588,13 +584,13 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 			}
 			ctr.State = string(status.Status)
 
-			switch s := status.Status; s {
+			switch status.Status {
 			case containerd.Stopped:
 				ctr.Status = fmt.Sprintf("Exited (%v) %s", status.ExitStatus, timeSinceInHuman(status.ExitTime))
 			case containerd.Running:
 				ctr.Status = "Up"
 			default:
-				ctr.Status = strings.Title(string(s))
+				ctr.Status = strings.Title(string(status.Status))
 			}
 
 			ctr.Pid = int(task.Pid())
@@ -677,13 +673,13 @@ func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd 
 		return nil, nil, err
 	}
 
-	NeedToDelete := true
+	needToDelete := true
 	p, err := task.LoadProcess(ctx, clabExecId, nil)
 	if err != nil {
-		NeedToDelete = false
+		needToDelete = false
 	}
 
-	if NeedToDelete {
+	if needToDelete {
 		log.Debugf("Deleting old process with exec-id %s", clabExecId)
 		_, err := p.Delete(ctx, containerd.WithProcessKill)
 		if err != nil {
@@ -700,7 +696,16 @@ func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd 
 	var statusC <-chan containerd.ExitStatus
 	if !detach {
 
-		defer process.Delete(ctx)
+		defer func() {
+			exitStatus, err := process.Delete(ctx)
+			if err != nil {
+				log.Errorf("failed to delete process: %v", err)
+				return
+			}
+			if exitStatus.Error() != nil {
+				log.Errorf("failed to delete process: %v", exitStatus.Error())
+			}
+		}()
 
 		statusC, err = process.Wait(ctx)
 		if err != nil {

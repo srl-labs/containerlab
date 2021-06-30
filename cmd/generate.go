@@ -44,7 +44,7 @@ var errSyntax = errors.New("syntax error")
 
 var image []string
 var kind string
-var nodes []string
+var nodesFlag []string
 var license []string
 var nodePrefix string
 var groupPrefix string
@@ -78,7 +78,7 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("parsed images: %+v", images)
 
-		nodeDefs, err := parseNodesFlag(kind, nodes...)
+		nodeDefs, err := parseNodesFlag(kind, nodesFlag...)
 		if err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func init() {
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>=<image_name>")
 	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", fmt.Sprintf("container kind, one of %v", supportedKinds))
-	generateCmd.Flags().StringSliceVarP(&nodes, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
+	generateCmd.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
 	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>=/path/to/file")
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
@@ -135,9 +135,9 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 	config := &clab.Config{
 		Name: name,
 		Mgmt: new(types.MgmtNet),
-		Topology: clab.Topology{
-			Kinds: make(map[string]clab.NodeConfig),
-			Nodes: make(map[string]clab.NodeConfig),
+		Topology: &types.Topology{
+			Kinds: make(map[string]*types.NodeDefinition),
+			Nodes: make(map[string]*types.NodeDefinition),
 		},
 	}
 	config.Mgmt.Network = network
@@ -148,7 +148,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 		config.Mgmt.IPv6Subnet = ipv6range
 	}
 	for k, img := range images {
-		config.Topology.Kinds[k] = clab.NodeConfig{Image: img}
+		config.Topology.Kinds[k] = &types.NodeDefinition{Image: img}
 	}
 	for k, lic := range licenses {
 		if knd, ok := config.Topology.Kinds[k]; ok {
@@ -156,13 +156,13 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 			config.Topology.Kinds[k] = knd
 			continue
 		}
-		config.Topology.Kinds[k] = clab.NodeConfig{License: lic}
+		config.Topology.Kinds[k] = &types.NodeDefinition{License: lic}
 	}
 	if numStages == 1 {
 		for j := uint(0); j < nodes[0].numNodes; j++ {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = clab.NodeConfig{
+				config.Topology.Nodes[node1] = &types.NodeDefinition{
 					Group: fmt.Sprintf("%s-1", groupPrefix),
 					Kind:  nodes[0].kind,
 					Type:  nodes[0].typ,
@@ -178,7 +178,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 		for j := uint(0); j < nodes[i].numNodes; j++ {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = clab.NodeConfig{
+				config.Topology.Nodes[node1] = &types.NodeDefinition{
 					Group: fmt.Sprintf("%s-%d", groupPrefix, i+1),
 					Kind:  nodes[i].kind,
 					Type:  nodes[i].typ,
@@ -187,13 +187,13 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 			for k := uint(0); k < nodes[i+1].numNodes; k++ {
 				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1)
 				if _, ok := config.Topology.Nodes[node2]; !ok {
-					config.Topology.Nodes[node2] = clab.NodeConfig{
+					config.Topology.Nodes[node2] = &types.NodeDefinition{
 						Group: fmt.Sprintf("%s-%d", groupPrefix, i+2),
 						Kind:  nodes[i+1].kind,
 						Type:  nodes[i+1].typ,
 					}
 				}
-				config.Topology.Links = append(config.Topology.Links, clab.LinkConfig{
+				config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
 					Endpoints: []string{
 						node1 + ":" + fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset),
 						node2 + ":" + fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1),
