@@ -43,8 +43,8 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
+	if s.cfg.StartupConfig == "" {
+		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
 
 	// mount config and log dirs

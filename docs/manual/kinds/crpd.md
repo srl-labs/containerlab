@@ -112,7 +112,7 @@ topology:
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/juniper.conf`. Using the example topology presented above, the exact path to the config will be `clab-crpd/crpd/config/juniper.conf`.
 
 #### User defined config
-It is possible to make cRPD nodes to boot up with a user-defined config instead of a built-in one. With a [`config`](../nodes.md#config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
+It is possible to make cRPD nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
 
 ```yaml
 name: crpd_lab

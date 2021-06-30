@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -113,7 +114,21 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	// generate config directory
 	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := path.Join(node.LabDir, "flash", "startup-config")
-	node.ResConfig = cfg
+	node.ResStartupConfig = cfg
+
+	// use startup config file provided by a user
+	if node.StartupConfig != "" {
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+		cfgTemplate = string(c)
+
+		err = node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
+		if err != nil {
+			return err
+		}
+	}
 
 	// sysmac is a system mac that is +1 to Ma0 mac
 	m, err := net.ParseMAC(node.MacAddress)
@@ -126,8 +141,12 @@ func createCEOSFiles(node *types.NodeConfig) error {
 }
 
 func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *types.NodeConfig) error {
+	// post deploy actions are not needed if a user specified startup config was provided
+	if nodeCfg.StartupConfig != "" {
+		return nil
+	}
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
-	err := nodeCfg.GenerateConfig(nodeCfg.ResConfig, cfgTemplate)
+	err := nodeCfg.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}

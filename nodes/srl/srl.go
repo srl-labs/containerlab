@@ -73,8 +73,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
+	if s.cfg.StartupConfig == "" {
+		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
 	if s.cfg.License == "" {
 		return fmt.Errorf("no license found for node '%s' of kind '%s'", s.cfg.ShortName, s.cfg.Kind)
@@ -211,11 +211,18 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		return err
 	}
 
-	// generate a config file
-	// if the node has a `config:` statement, the file specified in that section
-	// will be used as a template in nodeGenerateConfig()
+	// generate a startup config file
+	// if the node has a `startup-config:` statement, the file specified in that section
+	// will be used as a template in GenerateConfig()
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
 	dst = path.Join(nodeCfg.LabDir, "config", "config.json")
+	if nodeCfg.StartupConfig != "" {
+		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+		cfgTemplate = string(c)
+	}
 	err = nodeCfg.GenerateConfig(dst, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
