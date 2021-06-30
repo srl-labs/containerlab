@@ -140,7 +140,7 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 		vars := utils.MergeStringMaps(
 			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().Vars,
 				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().Vars),
-			ndef.Config.Vars)
+			ndef.GetConfigDispatcher().Vars)
 
 		return &ConfigDispatcher{
 			Vars: vars,
