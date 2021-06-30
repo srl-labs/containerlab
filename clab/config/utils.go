@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -172,4 +173,30 @@ func ipFarEnd(in netaddr.IPPrefix) netaddr.IPPrefix {
 	return netaddr.IPPrefixFrom(n, in.Bits())
 }
 
-// DictString
+// GetTemplateNamesInDirs returns a list of template file names found in a dir p
+// without traversing nested dirs
+// template names are following the pattern <some-name>__<kind>.tmpl
+func GetTemplateNamesInDirs(paths []string) ([]string, error) {
+	var tnames []string
+	for _, p := range paths {
+		files, err := os.ReadDir(p)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, file := range files {
+			if file.IsDir() {
+				continue
+			}
+			var tn string
+			fn := file.Name()
+			if strings.Contains(fn, "__") {
+				tn = strings.Split(fn, "__")[0]
+			}
+
+			tnames = append(tnames, tn)
+		}
+	}
+
+	return tnames, nil
+}

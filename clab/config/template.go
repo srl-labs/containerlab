@@ -30,11 +30,19 @@ type NodeConfig struct {
 func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[string]*NodeConfig, error) {
 	res := make(map[string]*NodeConfig)
 
-	if len(TemplateNames) == 0 {
-		return nil, fmt.Errorf("please specify one of more templates with --template-list")
-	}
 	if len(TemplatePaths) == 0 {
 		return nil, fmt.Errorf("please specify one of more paths with --template-path")
+	}
+
+	if len(TemplateNames) == 0 {
+		var err error
+		TemplateNames, err = GetTemplateNamesInDirs(TemplatePaths)
+		if err != nil {
+			return nil, err
+		}
+		if len(TemplateNames) == 0 {
+			return nil, fmt.Errorf("no templates files were found by %s path", TemplatePaths)
+		}
 	}
 
 	tmpl, err := jT.New("", jT.SearchPath(TemplatePaths...))
@@ -49,7 +57,7 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 		}
 
 		for _, baseN := range TemplateNames {
-			tmplN := fmt.Sprintf("%s-%s.tmpl", baseN, vars["role"])
+			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, vars["role"])
 			data1, err := tmpl.ExecuteTemplate(tmplN, vars)
 			if err != nil {
 				return nil, err
