@@ -4,43 +4,47 @@ topology:
   defaults:
     kind: vr-sros
     image: registry.srlinux.dev/pub/vr-sros:21.2.R1
-    license: /home/kellerza/license/license-sros21.txt
+    license: license-sros21.txt
     labels:
       isis_iid: 0
   nodes:
     sr1:
-      labels:
-        systemip: 10.0.50.31/32
-        sid_idx: 1
+      config:
+        vars:
+          systemip: 10.0.50.31/32
+          sid_idx: 1
     sr2:
-      labels:
-        systemip: 10.0.50.32/32
-        sid_idx: 2
+      config:
+        vars:
+          systemip: 10.0.50.32/32
+          sid_idx: 2
     sr3:
-      labels:
-        systemip: 10.0.50.33/32
-        sid_idx: 3
+      config:
+        vars:
+          systemip: 10.0.50.33/32
+          sid_idx: 3
     sr4:
-      labels:
-        systemip: 10.0.50.34/32
-        sid_idx: 4
+      config:
+        vars:
+          systemip: 10.0.50.34/32
+          sid_idx: 4
   links:
     - endpoints: [sr1:eth1, sr2:eth2]
-      labels:
+      vars:
         port: 1/1/c1/1, 1/1/c2/1
         ip: 1.1.1.2/30
         vlan: "99,99"
         isis_iid: 0
     - endpoints: [sr2:eth1, sr3:eth2]
-      labels:
+      vars:
         port: 1/1/c1/1, 1/1/c2/1
         vlan: 98
         isis_iid: 0
     - endpoints: [sr3:eth1, sr4:eth2]
-      labels:
+      vars:
         port: 1/1/c1/1, 1/1/c2/1
         isis_iid: 0
     - endpoints: [sr4:eth1, sr1:eth2]
-      labels:
+      vars:
         port: 1/1/c1/1, 1/1/c2/1
         isis_iid: 0
