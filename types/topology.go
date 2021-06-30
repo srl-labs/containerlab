@@ -138,12 +138,12 @@ func (t *Topology) GetNodeConfig(name string) (string, error) {
 	var cfg string
 	if ndef, ok := t.Nodes[name]; ok {
 		var err error
-		cfg = ndef.GetConfig()
-		if t.GetKind(t.GetNodeKind(name)).GetConfig() != "" && cfg == "" {
-			cfg = t.GetKind(t.GetNodeKind(name)).GetConfig()
+		cfg = ndef.GetStartupConfig()
+		if t.GetKind(t.GetNodeKind(name)).GetStartupConfig() != "" && cfg == "" {
+			cfg = t.GetKind(t.GetNodeKind(name)).GetStartupConfig()
 		}
 		if cfg == "" {
-			cfg = t.GetDefaults().GetConfig()
+			cfg = t.GetDefaults().GetStartupConfig()
 		}
 		if cfg != "" {
 			cfg, err = resolvePath(cfg)

@@ -127,7 +127,7 @@ The generated config will be saved by the path `clab-<lab_name>/<node-name>/flas
 cEOS Ma0 interface will be configured with a random MAC address with `00:1c:73` OUI part. Containerlab will also create a `system_mac_address` file in the node's lab directory with the value of a System MAC address. The System MAC address value is calculated as `Ma0-MAC-addr + 1`.
 
 #### User defined config
-It is possible to make ceos nodes to boot up with a user-defined config instead of a built-in one. With a [`config`](../nodes.md#config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
+It is possible to make ceos nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
 
 ```yaml
 name: ceos_lab

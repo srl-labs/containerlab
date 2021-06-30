@@ -2,14 +2,14 @@ package types
 
 // NodeDefinition represents a configuration a given node can have in the lab definition file
 type NodeDefinition struct {
-	Kind     string `yaml:"kind,omitempty"`
-	Group    string `yaml:"group,omitempty"`
-	Type     string `yaml:"type,omitempty"`
-	Config   string `yaml:"config,omitempty"`
-	Image    string `yaml:"image,omitempty"`
-	License  string `yaml:"license,omitempty"`
-	Position string `yaml:"position,omitempty"`
-	Cmd      string `yaml:"cmd,omitempty"`
+	Kind          string `yaml:"kind,omitempty"`
+	Group         string `yaml:"group,omitempty"`
+	Type          string `yaml:"type,omitempty"`
+	StartupConfig string `yaml:"startup-config,omitempty"`
+	Image         string `yaml:"image,omitempty"`
+	License       string `yaml:"license,omitempty"`
+	Position      string `yaml:"position,omitempty"`
+	Cmd           string `yaml:"cmd,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
 	// list of port bindings
@@ -51,11 +51,11 @@ func (n *NodeDefinition) GetType() string {
 	return n.Type
 }
 
-func (n *NodeDefinition) GetConfig() string {
+func (n *NodeDefinition) GetStartupConfig() string {
 	if n == nil {
 		return ""
 	}
-	return n.Config
+	return n.StartupConfig
 }
 
 func (n *NodeDefinition) GetImage() string {

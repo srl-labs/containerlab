@@ -7,6 +7,7 @@ package vr_sros
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -36,8 +37,8 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
+	if s.cfg.StartupConfig == "" {
+		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
 	if s.cfg.NodeType == "" {
@@ -112,15 +113,21 @@ func createVrSROSFiles(node *types.NodeConfig) error {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+	}
 
+	if node.StartupConfig != "" {
 		cfg := path.Join(node.LabDir, "tftpboot", "config.txt")
-		if node.Config != "" {
-			err := node.GenerateConfig(cfg, nodes.DefaultConfigTemplates[node.Kind])
-			if err != nil {
-				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-			}
-		} else {
-			log.Debugf("Config file exists for node %s", node.ShortName)
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(cfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 		}
 	}
 	return nil

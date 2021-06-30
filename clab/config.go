@@ -166,7 +166,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	log.Debugf("node config: %+v", nodeCfg)
 	var err error
 	// initialize config
-	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
