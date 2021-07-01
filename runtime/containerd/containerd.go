@@ -123,7 +123,7 @@ func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 		log.Infof("Skipping deletion of bridge '%s'", bridgename)
 		return nil
 	}
-	return utils.DeleteNetworkInterface(bridgename)
+	return utils.DeleteLinkByName(bridgename)
 }
 
 func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {

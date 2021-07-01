@@ -70,7 +70,7 @@ func CheckBrInUse(brname string) (bool, error) {
 	return InUse, nil
 }
 
-func DeleteNetworkInterface(name string) error {
+func DeleteLinkByName(name string) error {
 	l, err := netlink.LinkByName(name)
 	if err != nil {
 		return err
