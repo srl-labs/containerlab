@@ -100,7 +100,7 @@ Verify static mgmt addressing for l2
     Log    ${ipv6}
     Should Be Equal As Strings    ${ipv6}    ${n2-ipv6}
 
-Verify on l1 environment variable MYVAR is set 
+Verify l1 environment has MYVAR variable set
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l1 sh -c "echo \\$MYVAR"
     Log    ${output}
