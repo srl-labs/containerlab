@@ -1,0 +1,142 @@
+{{ expect .systemip "ip" }}
+{{ optional .isis_iid "0-31" }}
+{{ optional .sid_idx "0-999" }}
+{{ optional .sid_start "19000-30000" }}
+{{ optional .sid_end "19000-30000" }}
+{{ range .links }}
+    {{ expect .port "^\\d+/\\d/" }}
+    {{ expect .name "string" }}
+    {{ expect .ip "ip" }}
+    {{ optional .vlan "0-4096" }}
+    {{ optional .isis_iid "0-31" }}
+    {{ optional .sid_idx "0-999" }}
+    {{ optional .metric "1-10000" }}
+{{ end }}
+
+/configure system login-control idle-timeout 1440
+
+/configure router interface "system"
+    ipv4 primary address {{ ip .systemip }}
+    ipv4 primary prefix-length {{ ipmask .systemip }}
+    admin-state enable
+
+/configure router
+    autonomous-system {{ default 64500 .as_number }}
+    mpls-labels sr-labels start {{ default 19000 .sid_start }} end {{ default 30000 .sid_end }}
+
+{{ if .isis_iid }}
+/configure router isis {{ .isis_iid }}
+    area-address 49.0000.0000.0000.{{ .isis_iid | printf "%02s" }}
+    level-capability 2
+    level 2 wide-metrics-only
+    #database-export igp-identifier {{ .isis_iid }} bgp-ls-identifier value {{ default 0 .isis_iid }}
+    traffic-engineering
+    advertise-router-capability area
+    admin-state enable
+    interface "system" admin-state enable
+    {{- if .sid_idx }}
+    interface "system" ipv4-node-sid index {{ .sid_idx }}{{ .isis_iid | printf "%02s"  }}
+    segment-routing prefix-sid-range global
+    segment-routing admin-state enable
+    {{- end }}
+{{ end }}
+
+/configure router rsvp
+    admin-state enable
+    interface system admin-state enable
+
+/configure router mpls
+    cspf-on-loose-hop
+    interface system admin-state enable
+    admin-state enable
+    pce-report rsvp-te true
+    pce-report sr-te true
+
+{{ range .links }}
+
+{{- if contains  "/c" .port }}
+/configure port {{ slice 0 -2 .port }} admin-state enable
+/configure port {{ .port | slice 0 -2 }} connector breakout c1-10g
+{{- end }}
+
+/configure port {{ .port }} admin-state enable
+
+/configure router interface {{ .name }}
+    ipv4 primary address {{ ip .ip }}
+    ipv4 primary prefix-length {{ ipmask .ip }}
+    port {{ .port }}:{{ default 10 .vlan }}
+
+{{- if .isis_iid }}
+/configure router isis {{ default 0 .isis_iid }}
+    area-address 49.0000.0000.0000.{{ .isis_iid | printf "%02s" }}
+    level-capability 2
+    level 2 wide-metrics-only
+    traffic-engineering
+    advertise-router-capability area
+    admin-state enable
+    interface "system" admin-state enable
+    {{- if .sid_idx }}
+    interface "system" ipv4-node-sid index {{ .sid_idx }}{{ default 0 .isis_iid | printf "%02s"  }}
+    segment-routing prefix-sid-range global
+    segment-routing admin-state enable
+    {{- end }}
+    interface {{ .name }} admin-state enable
+    interface {{ .name }} interface-type point-to-point
+    interface {{ .name }} level 2 metric {{ default 10 .metric }}
+{{- end }}
+
+/configure router rsvp
+    interface {{ .name }} admin-state enable
+
+/configure router mpls
+    interface {{ .name }} admin-state enable
+
+{{ end }}
+
+/configure apply-groups ["baseport"]
+/configure router bgp apply-groups ["basebgp"]
+
+/configure groups {
+    group "baseport" {
+            port "<.*\/[0-9]+>" {
+            # wanted to add this, but you really need the /1 context to exist
+            # admin-state enable
+            ethernet {
+                mode hybrid
+                encap-type dot1q
+                lldp {
+                    dest-mac nearest-bridge {
+                        notification true
+                        receive true
+                        transmit true
+                        tx-tlvs {
+                            #port-desc true
+                            sys-name true
+                            #sys-desc true
+                            sys-cap true
+                        }
+                        tx-mgmt-address system {
+                            admin-state enable
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+/configure groups {
+    group "basebgp" {
+        router "Base" {
+            bgp {
+                group "<.*>" {
+                    admin-state enable
+                    min-route-advertisement 5
+                    type internal
+                }
+                neighbor "<.*>" {
+                    admin-state enable
+                }
+            }
+        }
+    }
+}
