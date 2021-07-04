@@ -5,6 +5,7 @@ topology:
     sw1:
       kind: cvx
       image: networkop/cx:4.3.0
+      runtime: docker
       binds:
         - sw1/interfaces:/etc/network/interfaces.d/host-mounts
     h1:

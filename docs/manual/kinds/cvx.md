@@ -11,8 +11,8 @@ CVX nodes launched with containerlab comes up with:
 
 CVX supports two modes of operation:
 
-* Using Firecracker micro-VMs -- this mode runs Cumulus VX inside a micro-VM on top of the native Cumulus kernel. This should be the default way of running CVX nodes and requires `-r ignite` flag to be passed to containerlab for deploy and destroy actions.
-* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG.
+* Using Firecracker micro-VMs -- this mode runs Cumulus VX inside a micro-VM on top of the native Cumulus kernel. This is the default way of running CVX nodes.
+* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode add `runtime: docker` under the cvx node definition (see also this example).
 
 
 ## Managing cvx nodes
@@ -68,3 +68,4 @@ This will be addressed in the future releases.
 The following labs feature CVX node:
 
 - [Cumulus Linux Test Drive](../../lab-examples/cvx03.md)
+- [Cumulus and FRR](../../lab-examples/cvx01.md)

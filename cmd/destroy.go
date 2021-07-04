@@ -174,9 +174,6 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		}
 	}
 
-	log.Infof("Candidates %+v", c.Nodes)
-	// get lab directory used by this lab to remove it later if cleanup is used
-
 	if cleanup {
 		labDir = filepath.Dir(labDir)
 	}
