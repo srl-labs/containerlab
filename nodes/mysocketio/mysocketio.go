@@ -36,14 +36,7 @@ func (s *mySocketIO) PreDeploy(configName, labCADir, labCARoot string) error {
 	// utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
-<<<<<<< HEAD
-
-func (s *mySocketIO) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
-	return r.CreateContainer(ctx, s.cfg)
-}
-=======
 func (s *mySocketIO) Deploy(ctx context.Context) error { return nil }
->>>>>>> merged, untested
 
 func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for mysocketio '%s' node", s.cfg.ShortName)

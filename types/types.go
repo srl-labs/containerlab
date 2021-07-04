@@ -53,9 +53,8 @@ type MgmtNet struct {
 
 // NodeConfig is a struct that contains the information of a container element
 type NodeConfig struct {
-<<<<<<< HEAD
-	ShortName        string
-	LongName         string
+	ShortName        string // node of the Node inside topology YAML
+	LongName         string // containerlab-prefixed unique name
 	Fqdn             string
 	LabDir           string // LabDir is a directory related to the node, it contains config items and/or other persistent state
 	Index            int
@@ -64,6 +63,7 @@ type NodeConfig struct {
 	StartupConfig    string // path to config template file that is used for startup config generation
 	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
 	Config           *ConfigDispatcher
+	ResConfig        string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType         string
 	Position         string
 	License          string
@@ -76,29 +76,6 @@ type NodeConfig struct {
 	Binds            []string    // Bind mounts strings (src:dest:options)
 	PortBindings     nat.PortMap // PortBindings define the bindings between the container ports and host ports
 	PortSet          nat.PortSet // PortSet define the ports that should be exposed on a container
-=======
-	ShortName    string // node of the Node inside topology YAML
-	LongName     string // containerlab-prefixed unique name
-	Fqdn         string
-	LabDir       string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index        int
-	Group        string
-	Kind         string
-	Config       string // path to config template file that is used for config generation
-	ResConfig    string // path to config file that is actually mounted to the container and is a result of templation
-	NodeType     string
-	Position     string
-	License      string
-	Image        string
-	Sysctls      map[string]string
-	User         string
-	Entrypoint   string
-	Cmd          string
-	Env          map[string]string
-	Binds        []string    // Bind mounts strings (src:dest:options)
-	PortBindings nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet      nat.PortSet // PortSet define the ports that should be exposed on a container
->>>>>>> merged, untested
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface

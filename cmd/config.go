@@ -26,18 +26,17 @@ var configCmd = &cobra.Command{
 
 		transport.DebugCount = debugCount
 
-		c := clab.NewContainerLab(
+		c, err := clab.NewContainerLab(
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
 		)
+		if err != nil {
+			return err
+		}
 
 		// setFlags(c.Config)
 		log.Debugf("Topology definition: %+v", c.Config)
-		// Parse topology information
-		if err = c.ParseTopology(); err != nil {
-			return err
-		}
 
 		// Config map per node. Each node gets a config.NodeConfig
 		allConfig, err := config.RenderAll(c.Nodes, c.Links)
