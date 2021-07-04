@@ -21,6 +21,7 @@ var NodeKind string
 const (
 	NodeKindBridge     = "bridge"
 	NodeKindCEOS       = "ceos"
+	NodeKindCVX        = "cvx"
 	NodeKindCRPD       = "crpd"
 	NodeKindHOST       = "host"
 	NodeKindLinux      = "linux"
@@ -41,10 +42,15 @@ type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	Config() *types.NodeConfig
 	PreDeploy(configName, labCADir, labCARoot string) error
-	Deploy(context.Context, runtime.ContainerRuntime) error
-	PostDeploy(context.Context, runtime.ContainerRuntime, map[string]Node) error
+	Deploy(context.Context) error
+	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)
-	SaveConfig(context.Context, runtime.ContainerRuntime) error
+	WithRuntime(runtime.ContainerRuntime)
+	SaveConfig(context.Context) error
+	Delete(context.Context) error
+	GetImages() []string
+	GetName() string
+	GetRuntime() runtime.ContainerRuntime
 }
 
 var Nodes = map[string]Initializer{}
@@ -64,6 +70,12 @@ func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 			return
 		}
 		n.WithMgmtNet(mgmt)
+	}
+}
+
+func WithRuntime(r runtime.ContainerRuntime) NodeOption {
+	return func(n Node) {
+		n.WithRuntime(r)
 	}
 }
 

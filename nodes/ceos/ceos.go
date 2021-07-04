@@ -48,7 +48,8 @@ func init() {
 }
 
 type ceos struct {
-	cfg *types.NodeConfig
+	cfg     *types.NodeConfig
+	runtime runtime.ContainerRuntime
 }
 
 func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -81,19 +82,25 @@ func (s *ceos) PreDeploy(configName, labCADir, labCARoot string) error {
 	return createCEOSFiles(s.cfg)
 }
 
-func (s *ceos) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
-	return r.CreateContainer(ctx, s.cfg)
+func (s *ceos) Deploy(ctx context.Context) error {
+	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *ceos) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (s *ceos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", s.cfg.ShortName)
-	return ceosPostDeploy(ctx, r, s.cfg)
+	return ceosPostDeploy(ctx, s.runtime, s.cfg)
 }
 
-func (s *ceos) WithMgmtNet(*types.MgmtNet) {}
+func (s *ceos) WithMgmtNet(*types.MgmtNet)             {}
+func (s *ceos) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *ceos) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
-func (s *ceos) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
-	_, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+func (s *ceos) SaveConfig(ctx context.Context) error {
+	_, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
 	}
@@ -107,8 +114,6 @@ func (s *ceos) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error
 
 	return nil
 }
-
-//
 
 func createCEOSFiles(node *types.NodeConfig) error {
 	// generate config directory
@@ -150,7 +155,6 @@ func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *ty
 	if err != nil {
 		return err
 	}
-	log.Infof("Restarting '%s' node", nodeCfg.ShortName)
 	// force stopping and start is faster than ContainerRestart
 	var timeout time.Duration = 1
 	err = r.StopContainer(ctx, nodeCfg.ContainerID, &timeout)
@@ -162,6 +166,7 @@ func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *ty
 	if err := utils.DeleteNetnsSymlink(nodeCfg.LongName); err != nil {
 		return err
 	}
+
 	err = r.StartContainer(ctx, nodeCfg.ContainerID)
 	if err != nil {
 		return err
@@ -170,5 +175,16 @@ func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *ty
 	if err != nil {
 		return err
 	}
+
 	return utils.LinkContainerNS(nodeCfg.NSPath, nodeCfg.LongName)
 }
+
+func (s *ceos) GetImages() []string {
+	return []string{s.cfg.Image}
+}
+
+func (s *ceos) Delete(ctx context.Context) error {
+	return s.runtime.DeleteContainer(ctx, s.GetName())
+}
+
+func (s *ceos) GetName() string { return s.cfg.LongName }

@@ -1,0 +1,17 @@
+name: cvx02
+
+topology:
+  nodes:
+    sw1:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+        - sw1/interfaces:/etc/network/interfaces.d/host-mounts
+    h1:
+      kind: linux
+      image: networkop/host:ignite
+      binds:
+        - h1/interfaces:/etc/network/interfaces
+
+  links:
+    - endpoints: ["sw1:swp12", "h1:eth1"]

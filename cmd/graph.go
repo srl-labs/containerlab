@@ -59,10 +59,8 @@ var graphCmd = &cobra.Command{
 			clab.WithTopoFile(topo),
 			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
-		c := clab.NewContainerLab(opts...)
-
-		// Parse topology information
-		if err := c.ParseTopology(); err != nil {
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
 			return err
 		}
 
@@ -83,12 +81,12 @@ var graphCmd = &cobra.Command{
 		var containers []types.GenericContainer
 		// if offline mode is not enforced, list containers matching lab name
 		if !offline {
-			var err error
 			labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-			containers, err = c.Runtime.ListContainers(ctx, labels)
+			containers, err := c.ListContainers(ctx, labels)
 			if err != nil {
-				log.Errorf("could not list containers: %v", err)
+				return err
 			}
+
 			log.Debugf("found %d containers", len(containers))
 		}
 

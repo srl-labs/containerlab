@@ -65,7 +65,8 @@ func init() {
 }
 
 type srl struct {
-	cfg *types.NodeConfig
+	cfg     *types.NodeConfig
+	runtime runtime.ContainerRuntime
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -160,22 +161,38 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	return createSRLFiles(s.cfg)
 }
 
-func (s *srl) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
-	return r.CreateContainer(ctx, s.cfg)
-}
-
-func (s *srl) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
-	return nil
-}
-func (s *srl) Destroy(ctx context.Context, r runtime.ContainerRuntime) error {
-	// return r.DeleteContainer(ctx, s.cfg)
+func (s *srl) Deploy(ctx context.Context) error {
+	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (s *srl) WithMgmtNet(*types.MgmtNet) {}
+func (s *srl) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+	return nil
+}
+func (s *srl) Destroy(ctx context.Context) error {
+	// return s.runtime.DeleteContainer(ctx, s.cfg)
+	return nil
+}
 
-func (s *srl) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
-	stdout, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+func (s *srl) GetImages() []string {
+	return []string{s.cfg.Image}
+}
+
+func (s *srl) WithMgmtNet(*types.MgmtNet)             {}
+func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+
+func (s *srl) Delete(ctx context.Context) error {
+	return s.runtime.DeleteContainer(ctx, s.GetName())
+}
+
+func (s *srl) GetName() string { return s.cfg.LongName }
+
+func (s *srl) SaveConfig(ctx context.Context) error {
+	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
 	}

@@ -18,7 +18,10 @@ func init() {
 	})
 }
 
-type host struct{ cfg *types.NodeConfig }
+type host struct {
+	cfg     *types.NodeConfig
+	runtime runtime.ContainerRuntime
+}
 
 func (s *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg = cfg
@@ -31,12 +34,29 @@ func (s *host) Config() *types.NodeConfig { return s.cfg }
 func (s *host) PreDeploy(configName, labCADir, labCARoot string) error {
 	return nil
 }
-func (s *host) Deploy(ctx context.Context, r runtime.ContainerRuntime) error { return nil }
-func (s *host) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (s *host) Deploy(ctx context.Context) error { return nil }
+func (s *host) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *host) WithMgmtNet(*types.MgmtNet) {}
-func (s *host) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+func (s *host) GetImages() []string {
+	return []string{s.cfg.Image}
+}
+
+func (s *host) WithMgmtNet(*types.MgmtNet)             {}
+func (s *host) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *host) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+
+func (s *host) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
+	return nil, nil
+}
+
+func (s *host) Delete(ctx context.Context) error {
+	return nil
+}
+
+func (s *host) GetName() string { return s.cfg.LongName }
+
+func (s *host) SaveConfig(ctx context.Context) error {
 	return nil
 }

@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -47,12 +48,17 @@ var destroyCmd = &cobra.Command{
 		case !all:
 			topos[topo] = struct{}{}
 		case all:
-			c := clab.NewContainerLab(opts...)
-			// list all containerlab containers
-			containers, err := c.Runtime.ListContainers(ctx, []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}})
+			c, err := clab.NewContainerLab(opts...)
 			if err != nil {
-				return fmt.Errorf("could not list containers: %v", err)
+				return err
 			}
+			// list all containerlab containers
+			labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+			containers, err := c.ListContainers(ctx, labels)
+			if err != nil {
+				return err
+			}
+
 			if len(containers) == 0 {
 				return fmt.Errorf("no containerlab labs were found")
 			}
@@ -67,17 +73,16 @@ var destroyCmd = &cobra.Command{
 				clab.WithTopoFile(topo),
 				clab.WithGracefulShutdown(graceful),
 			)
-			c := clab.NewContainerLab(opts...)
+			c, err := clab.NewContainerLab(opts...)
+			if err != nil {
+				return err
+			}
 			// change to the dir where topo file is located
 			// to resolve relative paths of license/configs in ParseTopology
 			if err = os.Chdir(filepath.Dir(topo)); err != nil {
 				return err
 			}
 
-			// Parse topology information
-			if err = c.ParseTopology(); err != nil {
-				return err
-			}
 			labs = append(labs, c)
 		}
 
@@ -156,26 +161,37 @@ func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-	containers, err := c.Runtime.ListContainers(ctx, labels)
+	containers, err := c.ListContainers(ctx, labels)
 	if err != nil {
-		return fmt.Errorf("could not list containers: %v", err)
-	}
-	if len(containers) == 0 {
-		return nil
+		return err
 	}
 
-	// get lab directory used by this lab to remove it later if cleanup is used
 	var labDir string
+	for _, ctr := range containers {
+		if n, ok := c.Nodes[ctr.ShortID]; ok {
+			c.Nodes[ctr.ShortID] = n
+			labDir = n.Config().LabDir
+		}
+	}
+
+	log.Infof("Candidates %+v", c.Nodes)
+	// get lab directory used by this lab to remove it later if cleanup is used
+
 	if cleanup {
-		labDir = filepath.Dir(containers[0].Labels["clab-node-lab-dir"])
+		labDir = filepath.Dir(labDir)
 	}
 
 	if maxWorkers == 0 {
-		maxWorkers = uint(len(containers))
+		maxWorkers = uint(len(c.Nodes))
+	}
+
+	// Serializing ignite workers due to busy device error
+	if rt == ignite.RuntimeName {
+		maxWorkers = 1
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
-	c.DeleteNodes(ctx, maxWorkers, containers)
+	c.DeleteNodes(ctx, maxWorkers, c.Nodes)
 
 	// remove the lab directories
 	if cleanup {
@@ -193,7 +209,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	// delete lab management network
 	log.Infof("Deleting network '%s'...", c.Config.Mgmt.Network)
-	if err = c.Runtime.DeleteNet(ctx); err != nil {
+	if err = c.GlobalRuntime().DeleteNet(ctx); err != nil {
 		// do not log error message if deletion error simply says that such network doesn't exist
 		if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
 			log.Error(err)

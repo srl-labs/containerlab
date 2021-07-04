@@ -30,7 +30,7 @@ type ContainerRuntime interface {
 	// Pull container image if not present
 	PullImageIfRequired(context.Context, string) error
 	// Create container
-	CreateContainer(context.Context, *types.NodeConfig) error
+	CreateContainer(context.Context, *types.NodeConfig) (interface{}, error)
 	// Start pre-created container by its name
 	StartContainer(context.Context, string) error
 	// Stop running container by its name
@@ -44,7 +44,12 @@ type ContainerRuntime interface {
 	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
 	ExecNotWait(context.Context, string, []string) error
 	// Delete container by its name
-	DeleteContainer(context.Context, *types.GenericContainer) error
+	DeleteContainer(context.Context, string) error
+	// Getters for config options
+	GetDebug() bool
+	GetTimeout() time.Duration
+	GetGracefulShutdown() bool
+	GetName() string
 }
 
 type Initializer func() ContainerRuntime

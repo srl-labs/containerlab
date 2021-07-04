@@ -19,6 +19,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Arista cEOS](https://www.arista.com/en/products/software-controlled-container-networking)
 * [Azure SONiC](https://azure.github.io/SONiC/)
 * [Juniper cRPD](https://www.juniper.net/documentation/en_US/crpd/topics/concept/understanding-crpd.html)
+* [Cumulus VX](https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](manual/vrnetlab.md):
 

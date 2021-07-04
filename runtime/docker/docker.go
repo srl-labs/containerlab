@@ -29,13 +29,13 @@ import (
 )
 
 const (
-	dockerRuntimeName = "docker"
-	sysctlBase        = "/proc/sys"
-	defaultTimeout    = 30 * time.Second
+	RuntimeName    = "docker"
+	sysctlBase     = "/proc/sys"
+	defaultTimeout = 30 * time.Second
 )
 
 func init() {
-	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
+	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
 		return &DockerRuntime{
 			Mgmt: new(types.MgmtNet),
 		}
@@ -62,6 +62,11 @@ func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	}
 	return nil
 }
+
+func (c *DockerRuntime) GetName() string           { return RuntimeName }
+func (c *DockerRuntime) GetDebug() bool            { return c.debug }
+func (c *DockerRuntime) GetTimeout() time.Duration { return c.timeout }
+func (c *DockerRuntime) GetGracefulShutdown() bool { return c.gracefulShutdown }
 
 func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	c.timeout = cfg.Timeout
@@ -229,7 +234,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 }
 
 // CreateContainer creates a docker container
-func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (err error) {
+func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -237,7 +242,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	cmd, err := shlex.Split(node.Cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	containerConfig := &container.Config{
@@ -288,23 +293,23 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		node.LongName,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Debugf("Container '%s' create response: %v", node.ShortName, cont)
 	log.Debugf("Start container: %s", node.LongName)
 
 	err = c.StartContainer(ctx, cont.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Debugf("Container started: %s", node.LongName)
 
 	node.NSPath, err = c.GetNSPath(ctx, cont.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return utils.LinkContainerNS(node.NSPath, node.LongName)
+	return nil, utils.LinkContainerNS(node.NSPath, node.LongName)
 
 }
 
@@ -372,6 +377,7 @@ func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
 func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
+
 	filter := c.buildFilterString(gfilters)
 	ctrs, err := c.Client.ContainerList(ctx, dockerTypes.ContainerListOptions{
 		All:     true,
@@ -409,6 +415,24 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		nr = append(nr, bridgenet...)
 	}
 	return c.produceGenericContainerList(ctrs, nr)
+}
+
+func (c *DockerRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
+	var ctr *types.GenericContainer
+	gFilter := types.GenericFilter{
+		FilterType: "name",
+		Field:      "",
+		Operator:   "",
+		Match:      containerID,
+	}
+	ctrs, err := c.ListContainers(ctx, []*types.GenericFilter{&gFilter})
+	if err != nil {
+		return ctr, err
+	}
+	if len(ctrs) != 1 {
+		return ctr, fmt.Errorf("found unexpected number of containers: %d", len(ctrs))
+	}
+	return &ctrs[0], nil
 }
 
 func (c *DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters.Args {
@@ -526,23 +550,23 @@ func (c *DockerRuntime) ExecNotWait(ctx context.Context, id string, cmd []string
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *DockerRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
+func (c *DockerRuntime) DeleteContainer(ctx context.Context, containerID string) error {
 	var err error
 	force := !c.gracefulShutdown
 	if c.gracefulShutdown {
-		log.Infof("Stopping container: %s", container.Names[0])
-		err = c.Client.ContainerStop(ctx, container.ID, &c.timeout)
+		log.Infof("Stopping container: %s", containerID)
+		err = c.Client.ContainerStop(ctx, containerID, &c.timeout)
 		if err != nil {
-			log.Errorf("could not stop container '%s': %v", container.Names[0], err)
+			log.Errorf("could not stop container '%s': %v", containerID, err)
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", strings.TrimLeft(container.Names[0], "/"))
-	err = c.Client.ContainerRemove(ctx, container.ID, dockerTypes.ContainerRemoveOptions{Force: force})
+	log.Debugf("Removing container: %s", strings.TrimLeft(containerID, "/"))
+	err = c.Client.ContainerRemove(ctx, containerID, dockerTypes.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", strings.TrimLeft(container.Names[0], "/"))
+	log.Infof("Removed container: %s", strings.TrimLeft(containerID, "/"))
 	return nil
 }
 
@@ -552,5 +576,6 @@ func setSysctl(sysctl string, newVal int) error {
 }
 
 func (c *DockerRuntime) StopContainer(ctx context.Context, name string, dur *time.Duration) error {
+	log.Printf("Stopping container %q", name)
 	return c.Client.ContainerKill(ctx, name, "kill")
 }

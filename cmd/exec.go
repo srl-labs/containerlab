@@ -52,19 +52,24 @@ var execCmd = &cobra.Command{
 			clab.WithTopoFile(topo),
 			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
-		c := clab.NewContainerLab(opts...)
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
 
 		if name == "" {
 			name = c.Config.Name
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
 		filters := []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
 		filters = append(filters, types.FilterFromLabelStrings(labels)...)
-		containers, err := c.Runtime.ListContainers(ctx, filters)
+		containers, err := c.ListContainers(ctx, filters)
 		if err != nil {
-			log.Fatalf("could not list containers: %v", err)
+			return err
 		}
+
 		if len(containers) == 0 {
 			return errors.New("no containers found")
 		}
@@ -81,7 +86,13 @@ var execCmd = &cobra.Command{
 			if cont.State != "running" {
 				continue
 			}
-			stdout, stderr, err := c.Runtime.Exec(ctx, cont.ID, cmds)
+
+			nodeRuntime, err := c.GetNodeRuntime(cntName)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			stdout, stderr, err := nodeRuntime.Exec(ctx, cont.ID, cmds)
 			if err != nil {
 				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
 				continue

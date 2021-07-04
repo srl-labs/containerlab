@@ -57,6 +57,7 @@ var kinds = []string{
 	"ovs-bridge",
 	"mysocketio",
 	"host",
+	"cvx",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
@@ -68,7 +69,7 @@ type Config struct {
 }
 
 // ParseTopology parses the lab topology
-func (c *CLab) ParseTopology() error {
+func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 	log.Debugf("Lab name: %s", c.Config.Name)
 
@@ -103,6 +104,12 @@ func (c *CLab) ParseTopology() error {
 		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
+
+	// update runtimes in case overridden by nodes
+	for _, node := range c.Nodes {
+		c.Runtimes[node.GetRuntime().GetName()] = node.GetRuntime()
+	}
+
 	return nil
 }
 
@@ -120,7 +127,8 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	}
 	n := nodeInitializer()
 	// Init
-	err = n.Init(nodeCfg, nodes.WithMgmtNet(c.Config.Mgmt))
+
+	err = n.Init(nodeCfg, nodes.WithRuntime(c.GlobalRuntime()), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
@@ -161,6 +169,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         make(map[string]string),
 		Endpoints:       make([]*types.Endpoint, 0),
+		Sandbox:         nodeDef.Sandbox,
+		Kernel:          nodeDef.Kernel,
+		Runtime:         nodeDef.Runtime,
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
@@ -323,21 +334,22 @@ func (c *CLab) verifyLinks() error {
 // VerifyImages will check if image referred in the node config
 // either pullable or is available in the local image store
 func (c *CLab) VerifyImages(ctx context.Context) error {
-	images := map[string]struct{}{}
+
+	images := make(map[string]string)
+
 	for _, node := range c.Nodes {
-		// skip image verification for bridge kinds
-		if node.Config().Kind == "bridge" || node.Config().Kind == "ovs-bridge" {
-			continue
-		}
-		if node.Config().Image == "" {
-			return fmt.Errorf("missing required image for node %s", node.Config().ShortName)
+
+		for _, imageName := range node.GetImages() {
+			if imageName == "" {
+				log.Errorf("missing required image for node %q", node.Config().ShortName)
+			}
+			images[imageName] = node.GetRuntime().GetName()
 		}
 
-		images[node.Config().Image] = struct{}{}
 	}
 
-	for image := range images {
-		err := c.Runtime.PullImageIfRequired(ctx, image)
+	for image, runtimeName := range images {
+		err := c.Runtimes[runtimeName].PullImageIfRequired(ctx, image)
 		if err != nil {
 			return err
 		}
@@ -351,10 +363,11 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	containers, err := c.Runtime.ListContainers(nctx, nil)
+	containers, err := c.ListContainers(nctx, nil)
 	if err != nil {
-		return fmt.Errorf("could not list containers: %v", err)
+		return err
 	}
+
 	if len(containers) == 0 {
 		return nil
 	}
@@ -380,7 +393,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 		}
 	}
 
-	return err
+	return nil
 }
 
 // verifyHostIfaces ensures that host interfaces referenced in the topology

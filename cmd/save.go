@@ -32,14 +32,13 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 			clab.WithTopoFile(topo),
 			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
-		c := clab.NewContainerLab(opts...)
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-
-		if err := c.ParseTopology(); err != nil {
-			return err
-		}
 
 		var wg sync.WaitGroup
 		wg.Add(len(c.Nodes))
@@ -47,7 +46,7 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 			go func(node nodes.Node) {
 				defer wg.Done()
 
-				err := node.SaveConfig(ctx, c.Runtime)
+				err := node.SaveConfig(ctx)
 				if err != nil {
 					log.Errorf("err: %v", err)
 				}

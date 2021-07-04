@@ -1,0 +1,11 @@
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+
+auto eth1
+iface eth1 inet static
+  address 10.0.10.101
+  netmask 255.255.255.0
+  post-up ip route add 10.0.0.0/8 via 10.0.10.1

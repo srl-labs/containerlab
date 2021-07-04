@@ -27,17 +27,25 @@ var disableTxOffloadCmd = &cobra.Command{
 			clab.WithTimeout(timeout),
 			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
-		c := clab.NewContainerLab(opts...)
-
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		log.Infof("getting container '%s' information", cntName)
 
-		NSPath, err := c.Runtime.GetNSPath(ctx, cntName)
+		nodeRuntime, err := c.GetNodeRuntime(cntName)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		NSPath, err := nodeRuntime.GetNSPath(ctx, cntName)
 		if err != nil {
 			return err
 		}
+
 		nodeNS, err := ns.GetNS(NSPath)
 		if err != nil {
 			return err

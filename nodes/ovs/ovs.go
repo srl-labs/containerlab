@@ -19,7 +19,8 @@ func init() {
 }
 
 type ovs struct {
-	cfg *types.NodeConfig
+	cfg     *types.NodeConfig
+	runtime runtime.ContainerRuntime
 }
 
 func (l *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -34,14 +35,30 @@ func (l *ovs) Config() *types.NodeConfig { return l.cfg }
 
 func (l *ovs) PreDeploy(configName, labCADir, labCARoot string) error { return nil }
 
-func (l *ovs) Deploy(ctx context.Context, r runtime.ContainerRuntime) error { return nil }
+func (l *ovs) Deploy(ctx context.Context) error { return nil }
 
-func (l *ovs) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (l *ovs) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (l *ovs) WithMgmtNet(*types.MgmtNet) {}
+func (l *ovs) WithMgmtNet(*types.MgmtNet)             {}
+func (s *ovs) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *ovs) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
-func (s *ovs) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+func (s *ovs) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
+	return nil, nil
+}
+
+func (s *ovs) Delete(ctx context.Context) error {
+	return nil
+}
+
+func (s *ovs) GetName() string { return s.cfg.LongName }
+
+func (s *ovs) GetImages() []string {
+	return []string{}
+}
+
+func (s *ovs) SaveConfig(ctx context.Context) error {
 	return nil
 }
