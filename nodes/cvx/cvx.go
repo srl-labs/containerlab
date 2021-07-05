@@ -69,11 +69,7 @@ func (c *cvx) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 		return nil
 	}
 
-	if err := <-c.vmChans.SpawnFinished; err != nil {
-		return err
-	}
-
-	return nil
+	return <-c.vmChans.SpawnFinished
 }
 
 func (c *cvx) GetImages() []string {
