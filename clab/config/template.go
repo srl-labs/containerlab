@@ -3,7 +3,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"text/template"
 
 	jT "github.com/kellerza/template"
 
@@ -27,6 +31,22 @@ type NodeConfig struct {
 	Info []string
 }
 
+func LoadTemplate(tmpl *template.Template, name string) error {
+	for i := len(TemplatePaths) - 1; i >= 0; i-- {
+		fn := filepath.Join(TemplatePaths[i], name)
+		_, err := tmpl.ParseFiles(fn)
+		if os.IsNotExist(err) { // try in next path
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("could not load template %s: %s", fn, err)
+		}
+		log.Debugf("template loaded %d. %s %s\n", i, name, fn)
+		return nil
+	}
+	return fmt.Errorf("could not find template %s in search path", name)
+}
+
 func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[string]*NodeConfig, error) {
 	res := make(map[string]*NodeConfig)
 
@@ -45,10 +65,7 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 		}
 	}
 
-	tmpl, err := jT.New("", jT.SearchPath(TemplatePaths...))
-	if err != nil {
-		return nil, err
-	}
+	tmpl := template.New("").Funcs(jT.Funcs)
 
 	for nodeName, vars := range PrepareVars(nodes, links) {
 		res[nodeName] = &NodeConfig{
@@ -58,11 +75,21 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 
 		for _, baseN := range TemplateNames {
 			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, vars["role"])
-			data1, err := tmpl.ExecuteTemplate(tmplN, vars)
+
+			if tmpl.Lookup(tmplN) == nil {
+				err := LoadTemplate(tmpl, tmplN)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			var buf strings.Builder
+			err := tmpl.Lookup(tmplN).Execute(&buf, vars)
 			if err != nil {
 				return nil, err
 			}
-			data1 = strings.ReplaceAll(strings.Trim(data1, "\n \t"), "\n\n\n", "\n\n")
+
+			data1 := strings.ReplaceAll(strings.Trim(buf.String(), "\n \t"), "\n\n\n", "\n\n")
 			res[nodeName].Data = append(res[nodeName].Data, data1)
 			res[nodeName].Info = append(res[nodeName].Info, tmplN)
 		}
