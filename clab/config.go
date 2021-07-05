@@ -321,8 +321,7 @@ func (c *CLab) verifyLinks() error {
 }
 
 // VerifyImages will check if image referred in the node config
-// either pullable or present or is available in the local registry
-// if it is not available it will emit an error
+// either pullable or is available in the local image store
 func (c *CLab) VerifyImages(ctx context.Context) error {
 	images := map[string]struct{}{}
 	for _, node := range c.Nodes {
