@@ -53,7 +53,7 @@ var destroyCmd = &cobra.Command{
 				return err
 			}
 			// list all containerlab containers
-			labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+			labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "exists"}}
 			containers, err := c.ListContainers(ctx, labels)
 			if err != nil {
 				return err
