@@ -12,7 +12,7 @@ CVX nodes launched with containerlab comes up with:
 CVX supports two modes of operation:
 
 * Using Firecracker micro-VMs -- this mode runs Cumulus VX inside a micro-VM on top of the native Cumulus kernel. This is the default way of running CVX nodes.
-* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode add `runtime: docker` under the cvx node definition (see also [this example](../../lab-examples/cvx02.md)).
+* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode add `runtime: docker` under the cvx node definition (see also [this example](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx02/README.md)).
 
 
 ## Managing cvx nodes
@@ -37,9 +37,6 @@ Cumulus VX node launched with containerlab can be managed via the following inte
 !!!info
     Default user credentials: `root:root`
 
-## Node definition
-In order to run CVX nodes, 
-
 
 #### User defined config
 It is possible to make cvx nodes to boot up with a user-defined config by passing any number of files along with their desired mount path:
@@ -57,7 +54,6 @@ topology:
 ```
 
 
-
 ### Note on configuration persistency
 
 When running inside the `ignite` runtime, all mount binds work one way -- from host OS to the cvx node, but not the other way around. Currently, it's up to a user to manually update individual files if configuration updates need to be persisted.
@@ -67,10 +63,10 @@ This will be addressed in the future releases.
 ## Lab examples
 The following labs feature CVX node:
 
-- [Cumulus Linux Test Drive](../../lab-examples/cvx03.md)
-- [Cumulus and FRR](../../lab-examples/cvx01.md)
+- [Cumulus Linux Test Drive](https://github.com/srl-labs/containerlab/blob/master/lab-examples/lab-start.yml)
+- [Cumulus and FRR](https://github.com/srl-labs/containerlab/blob/master/lab-examples/topo.yml)
 
 
 ## Known issues or limitations
 
-* CVX in Ignite is always be attache to the default docker bridge network
+* CVX in Ignite is always attached to the default docker bridge network

@@ -107,6 +107,9 @@ func (c *CLab) parseTopology() error {
 
 	// update runtimes in case overridden by nodes
 	for _, node := range c.Nodes {
+		if node.GetRuntime() == nil {
+			continue
+		}
 		c.Runtimes[node.GetRuntime().GetName()] = node.GetRuntime()
 	}
 
