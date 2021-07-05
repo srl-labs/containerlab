@@ -10,7 +10,7 @@ topology:
         - sw1/interfaces:/etc/network/interfaces.d/host-mounts
     h1:
       kind: linux
-      image: networkop/host:ignite
+      image: networkop/host:ifreload
       binds:
         - h1/interfaces:/etc/network/interfaces
 

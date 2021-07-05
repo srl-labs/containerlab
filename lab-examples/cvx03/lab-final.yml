@@ -27,16 +27,14 @@ topology:
         - spine01/frr.conf:/etc/frr/frr.conf
 
     server01:
-      kind: cvx
-      image: networkop/host:ignite
-      kernel: networkop/ignite-kernel:5.4.108-amd64
+      kind: linux
+      image: networkop/host:ifreload
       binds:
         - server01/interfaces:/etc/network/interfaces
 
     server02:
-      kind: cvx
-      image: networkop/host:ignite
-      kernel: networkop/ignite-kernel:5.4.108-amd64
+      kind: linux
+      image: networkop/host:ifreload
       binds:
         - server02/interfaces:/etc/network/interfaces
 
