@@ -60,7 +60,7 @@ var inspectCmd = &cobra.Command{
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {
-			fmt.Errorf("could not parse the topology file: %v", err)
+			log.Errorf("could not parse the topology file: %v", err)
 		}
 
 		if name == "" {
