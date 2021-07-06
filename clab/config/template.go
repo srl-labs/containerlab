@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -31,20 +30,16 @@ type NodeConfig struct {
 	Info []string
 }
 
-func LoadTemplate(tmpl *template.Template, name string) error {
-	for i := len(TemplatePaths) - 1; i >= 0; i-- {
-		fn := filepath.Join(TemplatePaths[i], name)
-		_, err := tmpl.ParseFiles(fn)
-		if os.IsNotExist(err) { // try in next path
-			continue
-		}
+// Load templates from all paths for the specific role/kind
+func LoadTemplates(tmpl *template.Template, role string) error {
+	for i := range TemplatePaths {
+		fn := filepath.Join(TemplatePaths[i], fmt.Sprintf("*__%s.tmpl", role))
+		_, err := tmpl.ParseGlob(fn)
 		if err != nil {
-			return fmt.Errorf("could not load template %s: %s", fn, err)
+			return fmt.Errorf("could not load templates from %s: %s", fn, err)
 		}
-		log.Debugf("template loaded %d. %s %s\n", i, name, fn)
-		return nil
 	}
-	return fmt.Errorf("could not find template %s in search path", name)
+	return nil
 }
 
 func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[string]*NodeConfig, error) {
@@ -77,9 +72,12 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, vars["role"])
 
 			if tmpl.Lookup(tmplN) == nil {
-				err := LoadTemplate(tmpl, tmplN)
+				err := LoadTemplates(tmpl, tmplN)
 				if err != nil {
 					return nil, err
+				}
+				if tmpl.Lookup(tmplN) == nil {
+					return nil, fmt.Errorf("template not found %s", tmplN)
 				}
 			}
 
@@ -97,7 +95,7 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 	return res, nil
 }
 
-// Implement stringer for conf snippet
+// Implement stringer for NodeConfig
 func (c *NodeConfig) String() string {
 
 	s := fmt.Sprintf("%s: %v", c.TargetNode.ShortName, c.Info)
