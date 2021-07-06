@@ -165,11 +165,11 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	ociRef, err = meta.NewOCIImageRef(node.Image)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse OCI image ref %q: %s", node.Image, err)
+		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Image, err)
 	}
 	img, err := operations.FindOrImportImage(providers.Client, ociRef)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to find OCI image ref %q: %s", ociRef, err)
+		return nil, fmt.Errorf("failed to find OCI image ref %q: %s", ociRef, err)
 	}
 	vm.SetImage(img)
 
