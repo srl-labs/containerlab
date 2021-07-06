@@ -130,7 +130,7 @@ func (c *CLab) parseTopology() error {
 				clabRuntimes.WithConfig(&defaultConfig),
 			)
 			if err != nil {
-				log.Fatalf("failed to init the container runtime: %s", err)
+				return fmt.Errorf("failed to init the container runtime: %s", err)
 			}
 
 			c.Runtimes[r] = newRuntime
@@ -162,7 +162,7 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	// Init
 	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
 	if !ok {
-		log.Fatalf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
+		return fmt.Errorf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
 	}
 	n := nodeInitializer()
 	// Init

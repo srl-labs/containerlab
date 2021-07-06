@@ -577,8 +577,7 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 		if taskfound {
 			status, err := task.Status(ctx)
 			if err != nil {
-				log.Fatalf("failed to retrieve task status")
-				return nil, err
+				return nil, fmt.Errorf("failed to retrieve task status")
 			}
 			ctr.State = string(status.Status)
 

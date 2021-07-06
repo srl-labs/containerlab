@@ -59,7 +59,7 @@ var vxlanCreateCmd = &cobra.Command{
 		if parentDev == "" {
 			conn, err := rtnl.Dial(nil)
 			if err != nil {
-				log.Fatal("can't establish netlink connection: ", err)
+				return fmt.Errorf("can't establish netlink connection: ", err)
 			}
 			defer conn.Close()
 			r, err := conn.RouteGet(net.ParseIP(vxlanRemote))

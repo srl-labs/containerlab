@@ -88,7 +88,7 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
-		log.Fatalf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
+		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
 	}
 
 	// the addition touch is needed to support non docker runtimes

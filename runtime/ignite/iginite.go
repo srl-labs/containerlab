@@ -135,11 +135,11 @@ func (c *IgniteRuntime) DeleteNet(ctx context.Context) error {
 func (c *IgniteRuntime) PullImageIfRequired(ctx context.Context, imageName string) error {
 	ociRef, err := meta.NewOCIImageRef(imageName)
 	if err != nil {
-		log.Fatalf("Failed to parse OCI image ref %q: %s", imageName, err)
+		return fmt.Errorf("failed to parse OCI image ref %q: %s", imageName, err)
 	}
 	_, err = operations.FindOrImportImage(providers.Client, ociRef)
 	if err != nil {
-		log.Fatalf("Failed to find OCI image ref %q: %s", ociRef, err)
+		return fmt.Errorf("failed to find OCI image ref %q: %s", ociRef, err)
 	}
 
 	return nil
@@ -151,13 +151,13 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	ociRef, err := meta.NewOCIImageRef(node.Sandbox)
 	if err != nil {
-		log.Fatalf("Failed to parse OCI image ref %q: %s", node.Sandbox, err)
+		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Sandbox, err)
 	}
 	vm.Spec.Sandbox.OCI = ociRef
 
 	ociRef, err = meta.NewOCIImageRef(node.Kernel)
 	if err != nil {
-		log.Fatalf("Failed to parse OCI image ref %q: %s", node.Kernel, err)
+		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Kernel, err)
 	}
 	c.baseVM.Spec.Kernel.OCI = ociRef
 	k, _ := operations.FindOrImportKernel(providers.Client, ociRef)
@@ -165,11 +165,11 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	ociRef, err = meta.NewOCIImageRef(node.Image)
 	if err != nil {
-		log.Fatalf("Failed to parse OCI image ref %q: %s", node.Image, err)
+		return nil, fmt.Errorf("Failed to parse OCI image ref %q: %s", node.Image, err)
 	}
 	img, err := operations.FindOrImportImage(providers.Client, ociRef)
 	if err != nil {
-		log.Fatalf("Failed to find OCI image ref %q: %s", ociRef, err)
+		return nil, fmt.Errorf("Failed to find OCI image ref %q: %s", ociRef, err)
 	}
 	vm.SetImage(img)
 
