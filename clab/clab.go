@@ -308,7 +308,7 @@ func (c *CLab) ListContainers(ctx context.Context, labels []*types.GenericFilter
 }
 
 func (c *CLab) GetNodeRuntime(query string) (runtime.ContainerRuntime, error) {
-	_, _, shortName, err := parseLongName(query)
+	shortName, err := getShortName(c.Config.Name, query)
 	if err != nil {
 		return nil, err
 	}

@@ -609,10 +609,11 @@ func sysMemory(v string) uint64 {
 	return m
 }
 
-func parseLongName(input string) (string, string, string, error) {
-	result := strings.Split(input, "-")
-	if len(result) != 3 {
-		return "", "", "", fmt.Errorf("failed to parse container name %q", input)
+// returns nodeCfg.ShortName based on the provided containerName and labName
+func getShortName(labName, containerName string) (string, error) {
+	result := strings.Split(containerName, "-"+labName+"-")
+	if len(result) != 2 {
+		return "", fmt.Errorf("failed to parse container name %q", containerName)
 	}
-	return result[0], result[1], result[2], nil
+	return result[1], nil
 }
