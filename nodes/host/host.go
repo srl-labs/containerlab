@@ -39,11 +39,7 @@ func (s *host) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *host) GetImages() map[string]string {
-	return map[string]string{
-		nodes.ImageKey: s.cfg.Image,
-	}
-}
+func (s *host) GetImages() map[string]string { return map[string]string{} }
 
 func (s *host) WithMgmtNet(*types.MgmtNet)             {}
 func (s *host) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
