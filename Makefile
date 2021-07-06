@@ -15,3 +15,7 @@ lint:
 
 clint:
 	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.40.1 golangci-lint run -v
+
+docs:
+	docker run -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:7.1.8 build --clean --strict
+

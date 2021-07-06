@@ -12,7 +12,7 @@ CVX nodes launched with containerlab comes up with:
 CVX supports two modes of operation:
 
 * Using Firecracker micro-VMs -- this mode runs Cumulus VX inside a micro-VM on top of the native Cumulus kernel. This is the default way of running CVX nodes.
-* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode add `runtime: docker` under the cvx node definition (see also [this example](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx02/README.md)).
+* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode add `runtime: docker` under the cvx node definition (see also [this example](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx02/topo.yml)).
 
 
 ## Managing cvx nodes
@@ -23,7 +23,7 @@ Cumulus VX node launched with containerlab can be managed via the following inte
     ```bash
     docker attach <container-id> 
     ```
-    Use Docker's detach sequence (^P^Q) to disconnect.
+    Use Docker's detach sequence (Ctrl+P+Q) to disconnect.
 
 === "SSH"
     SSH server is running on port 22

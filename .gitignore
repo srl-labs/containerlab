@@ -22,9 +22,11 @@ lab-examples/**/clab-*
 
 # ignore the following files/directories
 graph/*
+
 license.key
 container-lab
 containerlab
+site/
 .vscode/
 .DS_Store
 __rd*
