@@ -44,10 +44,11 @@ func TestLicenseInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
-			if err := c.ParseTopology(); err != nil {
+			c, err := NewContainerLab(opts...)
+			if err != nil {
 				t.Fatal(err)
 			}
+
 			// fmt.Println(c.Config.Topology.Defaults)
 			// fmt.Println(c.Config.Topology.Kinds)
 			// fmt.Println(c.Config.Topology.Nodes)
@@ -90,8 +91,8 @@ func TestBindsInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
-			if err := c.ParseTopology(); err != nil {
+			c, err := NewContainerLab(opts...)
+			if err != nil {
 				t.Fatal(err)
 			}
 
@@ -102,7 +103,7 @@ func TestBindsInit(t *testing.T) {
 			// binds := c.bindsInit(nodeCfg)
 			binds := c.Config.Topology.GetNodeBinds("node1")
 			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
-			err := resolveBindPaths(tc.want, node.LabDir)
+			err = resolveBindPaths(tc.want, node.LabDir)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -182,10 +183,11 @@ func TestTypeInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
-			if err := c.ParseTopology(); err != nil {
+			c, err := NewContainerLab(opts...)
+			if err != nil {
 				t.Fatal(err)
 			}
+
 			if !reflect.DeepEqual(c.Nodes[tc.node].Config().NodeType, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].Config().NodeType)
 			}
@@ -239,8 +241,8 @@ func TestEnvInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
-			if err := c.ParseTopology(); err != nil {
+			c, err := NewContainerLab(opts...)
+			if err != nil {
 				t.Fatal(err)
 			}
 
@@ -288,8 +290,8 @@ func TestUserInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
-			if err := c.ParseTopology(); err != nil {
+			c, err := NewContainerLab(opts...)
+			if err != nil {
 				t.Fatal(err)
 			}
 
@@ -324,9 +326,12 @@ func TestVerifyLinks(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			err := c.verifyLinks()
+			err = c.verifyLinks()
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
 			}
@@ -406,8 +411,8 @@ func TestLabelsInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
-			if err := c.ParseTopology(); err != nil {
+			c, err := NewContainerLab(opts...)
+			if err != nil {
 				t.Fatal(err)
 			}
 
@@ -428,13 +433,12 @@ func TestVerifyRootNetnsInterfaceUniqueness(t *testing.T) {
 	opts := []ClabOption{
 		WithTopoFile("test_data/topo7-dup-rootnetns.yml"),
 	}
-	c := NewContainerLab(opts...)
-
-	if err := c.ParseTopology(); err != nil {
+	c, err := NewContainerLab(opts...)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	err := c.verifyRootNetnsInterfaceUniqueness()
+	err = c.verifyRootNetnsInterfaceUniqueness()
 	if err == nil {
 		t.Fatalf("expected duplicate rootns links error")
 	}

@@ -6,6 +6,7 @@ package clab
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -20,13 +21,14 @@ import (
 )
 
 type CLab struct {
-	Config   *Config
-	TopoFile *TopoFile
-	m        *sync.RWMutex
-	Nodes    map[string]nodes.Node
-	Links    map[int]*types.Link
-	Runtime  runtime.ContainerRuntime
-	Dir      *Directory
+	Config        *Config
+	TopoFile      *TopoFile
+	m             *sync.RWMutex
+	Nodes         map[string]nodes.Node
+	Links         map[int]*types.Link
+	Runtimes      map[string]runtime.ContainerRuntime
+	globalRuntime string
+	Dir           *Directory
 
 	debug            bool
 	timeout          time.Duration
@@ -66,10 +68,11 @@ func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) 
 		default:
 			name = runtime.DockerRuntime
 		}
+		c.globalRuntime = name
 
 		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
-			c.Runtime = rInit()
-			err := c.Runtime.Init(
+			r := rInit()
+			err := r.Init(
 				runtime.WithConfig(&runtime.RuntimeConfig{
 					Timeout: dur,
 					Debug:   d,
@@ -79,6 +82,9 @@ func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) 
 			if err != nil {
 				log.Fatalf("failed to init the container runtime: %s", err)
 			}
+
+			c.Runtimes[name] = r
+
 			return
 		}
 		log.Fatalf("unknown container runtime %q", name)
@@ -109,7 +115,7 @@ func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
 }
 
 // NewContainerLab function defines a new container lab
-func NewContainerLab(opts ...ClabOption) *CLab {
+func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	c := &CLab{
 		Config: &Config{
 			Mgmt:     new(types.MgmtNet),
@@ -119,13 +125,16 @@ func NewContainerLab(opts ...ClabOption) *CLab {
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]nodes.Node),
 		Links:    make(map[int]*types.Link),
+		Runtimes: make(map[string]runtime.ContainerRuntime),
 	}
 
 	for _, o := range opts {
 		o(c)
 	}
 
-	return c
+	err := c.parseTopology()
+
+	return c, err
 }
 
 // initMgmtNetwork sets management network config
@@ -148,6 +157,10 @@ func (c *CLab) initMgmtNetwork() error {
 	}
 
 	return nil
+}
+
+func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
+	return c.Runtimes[c.globalRuntime]
 }
 
 func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
@@ -173,7 +186,7 @@ func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
 						continue
 					}
 					// Deploy
-					err = node.Deploy(ctx, c.Runtime)
+					err = node.Deploy(ctx)
 					if err != nil {
 						log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
 						continue
@@ -247,24 +260,24 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg.Wait()
 }
 
-func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types.GenericContainer) {
+func (c *CLab) DeleteNodes(ctx context.Context, workers uint, deleteCandidates map[string]nodes.Node) {
 	wg := new(sync.WaitGroup)
 
-	ctrChan := make(chan *types.GenericContainer)
+	nodeChan := make(chan nodes.Node)
 	wg.Add(int(workers))
 	for i := uint(0); i < workers; i++ {
 		go func(i uint) {
 			defer wg.Done()
 			for {
 				select {
-				case cont := <-ctrChan:
-					if cont == nil {
+				case n := <-nodeChan:
+					if n == nil {
 						log.Debugf("Worker %d terminating...", i)
 						return
 					}
-					err := c.Runtime.DeleteContainer(ctx, cont)
+					err := n.Delete(ctx)
 					if err != nil {
-						log.Errorf("could not remove container '%s': %v", cont.ID, err)
+						log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
 					}
 				case <-ctx.Done():
 					return
@@ -272,12 +285,37 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, containers []types
 			}
 		}(i)
 	}
-	for _, ctr := range containers {
-		ctr := ctr
-		ctrChan <- &ctr
+	for _, n := range deleteCandidates {
+		nodeChan <- n
 	}
-	close(ctrChan)
+	close(nodeChan)
 
 	wg.Wait()
 
+}
+
+func (c *CLab) ListContainers(ctx context.Context, labels []*types.GenericFilter) ([]types.GenericContainer, error) {
+	var containers []types.GenericContainer
+
+	for _, r := range c.Runtimes {
+		ctrs, err := r.ListContainers(ctx, labels)
+		if err != nil {
+			return containers, fmt.Errorf("could not list containers: %v", err)
+		}
+		containers = append(containers, ctrs...)
+	}
+	return containers, nil
+}
+
+func (c *CLab) GetNodeRuntime(query string) (runtime.ContainerRuntime, error) {
+	shortName, err := getShortName(c.Config.Name, query)
+	if err != nil {
+		return nil, err
+	}
+
+	if node, ok := c.Nodes[shortName]; ok {
+		return node.GetRuntime(), nil
+	}
+
+	return nil, fmt.Errorf("could not find a container matching name %q", query)
 }

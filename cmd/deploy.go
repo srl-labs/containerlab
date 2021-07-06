@@ -19,6 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -52,17 +53,16 @@ var deployCmd = &cobra.Command{
 			clab.WithTopoFile(topo),
 			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
-		c := clab.NewContainerLab(opts...)
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		setFlags(c.Config)
 		log.Debugf("lab Conf: %+v", c.Config)
-		// Parse topology information
-		if err = c.ParseTopology(); err != nil {
-			return err
-		}
 
 		// latest version channel
 		vCh := make(chan string)
@@ -99,45 +99,35 @@ var deployCmd = &cobra.Command{
 		}
 
 		// create docker network or use existing one
-		if err = c.Runtime.CreateNet(ctx); err != nil {
+		if err = c.GlobalRuntime().CreateNet(ctx); err != nil {
 			return err
 		}
 
-		numNodes := uint(len(c.Nodes))
-		numLinks := uint(len(c.Links))
-		nodesMaxWorkers := maxWorkers
-		linksMaxWorkers := maxWorkers
+		nodeWorkers := uint(len(c.Nodes))
+		linkWorkers := uint(len(c.Links))
 
-		if maxWorkers == 0 {
-			nodesMaxWorkers = numNodes
-			linksMaxWorkers = numLinks
+		if maxWorkers > 0 && maxWorkers < nodeWorkers {
+			nodeWorkers = maxWorkers
 		}
 
-		if nodesMaxWorkers > numNodes {
-			nodesMaxWorkers = numNodes
-		}
-		if linksMaxWorkers > numLinks {
-			linksMaxWorkers = numLinks
+		if maxWorkers > 0 && maxWorkers < linkWorkers {
+			linkWorkers = maxWorkers
 		}
 
-		c.CreateNodes(ctx, nodesMaxWorkers)
-		c.CreateLinks(ctx, linksMaxWorkers, false)
-
-		// generate graph of the lab topology
-		if graph {
-			if err = c.GenerateGraph(topo); err != nil {
-				log.Error(err)
-			}
+		// Serializing ignite workers due to busy device error
+		if _, ok := c.Runtimes[runtime.IgniteRuntime]; ok {
+			nodeWorkers = 1
 		}
+
+		c.CreateNodes(ctx, nodeWorkers)
+		c.CreateLinks(ctx, linkWorkers, false)
 		log.Debug("containers created, retrieving state and IP addresses...")
 
+		// Building list of generic containers
 		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-		containers, err := c.Runtime.ListContainers(ctx, labels)
+		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
-			return fmt.Errorf("could not list containers: %v", err)
-		}
-		if len(containers) == 0 {
-			return fmt.Errorf("no containers found")
+			return err
 		}
 
 		log.Debug("enriching nodes with IP information...")
@@ -152,7 +142,7 @@ var deployCmd = &cobra.Command{
 		for _, node := range c.Nodes {
 			go func(node nodes.Node) {
 				defer wg.Done()
-				err := node.PostDeploy(ctx, c.Runtime, c.Nodes)
+				err := node.PostDeploy(ctx, c.Nodes)
 				if err != nil {
 					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
 				}
@@ -160,8 +150,21 @@ var deployCmd = &cobra.Command{
 		}
 		wg.Wait()
 
+		// Update containers after postDeploy action
+		containers, err = c.ListContainers(ctx, labels)
+		if err != nil {
+			return err
+		}
+
+		// generate graph of the lab topology
+		if graph {
+			if err = c.GenerateGraph(topo); err != nil {
+				log.Error(err)
+			}
+		}
+
 		// run links postdeploy creation (ceos links creation)
-		c.CreateLinks(ctx, linksMaxWorkers, true)
+		c.CreateLinks(ctx, linkWorkers, true)
 
 		log.Info("Writing /etc/hosts file")
 		err = createHostsFile(containers, c.Config.Mgmt.Network)

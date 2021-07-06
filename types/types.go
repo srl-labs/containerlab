@@ -53,8 +53,8 @@ type MgmtNet struct {
 
 // NodeConfig is a struct that contains the information of a container element
 type NodeConfig struct {
-	ShortName        string
-	LongName         string
+	ShortName        string // name of the Node inside topology YAML
+	LongName         string // containerlab-prefixed unique container name
 	Fqdn             string
 	LabDir           string // LabDir is a directory related to the node, it contains config items and/or other persistent state
 	Index            int
@@ -63,6 +63,7 @@ type NodeConfig struct {
 	StartupConfig    string // path to config template file that is used for startup config generation
 	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
 	Config           *ConfigDispatcher
+	ResConfig        string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType         string
 	Position         string
 	License          string
@@ -93,6 +94,10 @@ type NodeConfig struct {
 	Labels map[string]string
 	// Slice of pointers to local endpoints
 	Endpoints []*Endpoint
+	// Ignite sandbox and kernel imageNames
+	Sandbox, Kernel string
+	// Configured container runtime
+	Runtime string
 }
 
 // GenerateConfig generates configuration for the nodes

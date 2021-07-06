@@ -1,0 +1,17 @@
+auto lo
+iface lo inet loopback
+    address 10.255.255.101/32
+
+auto swp1
+iface swp1
+
+auto swp2
+iface swp2
+
+auto mgmt
+iface mgmt
+    vrf-table auto
+
+auto eth0
+iface eth0 inet dhcp
+    vrf mgmt

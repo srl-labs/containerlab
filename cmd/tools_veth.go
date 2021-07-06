@@ -44,7 +44,10 @@ var vethCreateCmd = &cobra.Command{
 			clab.WithTimeout(timeout),
 			clab.WithRuntime(rt, debug, timeout, graceful),
 		}
-		c := clab.NewContainerLab(opts...)
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -74,13 +77,13 @@ var vethCreateCmd = &cobra.Command{
 		}
 
 		if aNode.Kind == "container" {
-			aNode.NSPath, err = c.Runtime.GetNSPath(ctx, aNode.LongName)
+			aNode.NSPath, err = c.GlobalRuntime().GetNSPath(ctx, aNode.LongName)
 			if err != nil {
 				return err
 			}
 		}
 		if bNode.Kind == "container" {
-			bNode.NSPath, err = c.Runtime.GetNSPath(ctx, bNode.LongName)
+			bNode.NSPath, err = c.GlobalRuntime().GetNSPath(ctx, bNode.LongName)
 			if err != nil {
 				return err
 			}

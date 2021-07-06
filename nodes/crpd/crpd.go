@@ -35,7 +35,8 @@ func init() {
 }
 
 type crpd struct {
-	cfg *types.NodeConfig
+	cfg     *types.NodeConfig
+	runtime runtime.ContainerRuntime
 }
 
 func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -64,13 +65,14 @@ func (s *crpd) PreDeploy(configName, labCADir, labCARoot string) error {
 	return createCRPDFiles(s.cfg)
 }
 
-func (s *crpd) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
-	return r.CreateContainer(ctx, s.cfg)
+func (s *crpd) Deploy(ctx context.Context) error {
+	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	return err
 }
 
-func (s *crpd) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (s *crpd) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.cfg.ShortName)
-	_, stderr, err := r.Exec(ctx, s.cfg.ContainerID, []string{"service", "ssh", "restart"})
+	_, stderr, err := s.runtime.Exec(ctx, s.cfg.ContainerID, []string{"service", "ssh", "restart"})
 	if err != nil {
 		return err
 	}
@@ -82,10 +84,22 @@ func (s *crpd) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns ma
 	return err
 }
 
-func (s *crpd) WithMgmtNet(*types.MgmtNet) {}
+func (s *crpd) GetImages() map[string]string {
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
+}
 
-func (s *crpd) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
-	stdout, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+func (s *crpd) WithMgmtNet(*types.MgmtNet)             {}
+func (s *crpd) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *crpd) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+
+func (s *crpd) Delete(ctx context.Context) error {
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+}
+
+func (s *crpd) SaveConfig(ctx context.Context) error {
+	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
 	}
@@ -113,7 +127,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "log"), 0777)
 
 	// copy crpd config from default template or user-provided conf file
-	cfg := path.Join(nodeCfg.LabDir, "/config/juniper.conf")
+	cfg := path.Join(nodeCfg.LabDir, "/config/junipes.runtime.conf")
 
 	err := nodeCfg.GenerateConfig(cfg, cfgTemplate)
 	if err != nil {

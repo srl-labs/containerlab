@@ -28,8 +28,9 @@ func init() {
 }
 
 type vrSROS struct {
-	cfg  *types.NodeConfig
-	mgmt *types.MgmtNet
+	cfg     *types.NodeConfig
+	mgmt    *types.MgmtNet
+	runtime runtime.ContainerRuntime
 }
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -73,19 +74,30 @@ func (s *vrSROS) PreDeploy(configName, labCADir, labCARoot string) error {
 	return createVrSROSFiles(s.cfg)
 }
 
-func (s *vrSROS) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
-	return r.CreateContainer(ctx, s.cfg)
+func (s *vrSROS) Deploy(ctx context.Context) error {
+	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	return err
 }
 
-func (s *vrSROS) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (s *vrSROS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet) {
-	s.mgmt = mgmt
+func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
+func (s *vrSROS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *vrSROS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+
+func (s *vrSROS) Delete(ctx context.Context) error {
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrSROS) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+func (s *vrSROS) GetImages() map[string]string {
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
+}
+
+func (s *vrSROS) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][0],

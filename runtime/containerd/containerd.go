@@ -32,12 +32,12 @@ import (
 const (
 	containerdNamespace = "clab"
 	cniCache            = "/opt/cni/cache"
-	dockerRuntimeName   = "containerd"
+	runtimeName         = "containerd"
 	defaultTimeout      = 30 * time.Second
 )
 
 func init() {
-	runtime.Register(dockerRuntimeName, func() runtime.ContainerRuntime {
+	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &ContainerdRuntime{
 			Mgmt: new(types.MgmtNet),
 		}
@@ -66,19 +66,17 @@ func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 }
 
 type ContainerdRuntime struct {
-	client           *containerd.Client
-	timeout          time.Duration
-	Mgmt             *types.MgmtNet
-	debug            bool
-	gracefulShutdown bool
+	config runtime.RuntimeConfig
+	client *containerd.Client
+	Mgmt   *types.MgmtNet
 }
 
 func (c *ContainerdRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
-	c.timeout = cfg.Timeout
-	c.debug = cfg.Debug
-	c.gracefulShutdown = cfg.GracefulShutdown
-	if c.timeout <= 0 {
-		c.timeout = defaultTimeout
+	c.config.Timeout = cfg.Timeout
+	c.config.Debug = cfg.Debug
+	c.config.GracefulShutdown = cfg.GracefulShutdown
+	if c.config.Timeout <= 0 {
+		c.config.Timeout = defaultTimeout
 	}
 }
 
@@ -92,6 +90,9 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 	}
 	c.Mgmt = n
 }
+
+func (c *ContainerdRuntime) GetName() string               { return runtimeName }
+func (c *ContainerdRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
@@ -122,7 +123,7 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) error {
+func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
@@ -135,13 +136,13 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		// as it might be that we pulled this image with canonical name
 		img, err = c.client.GetImage(ctx, utils.GetCanonicalImageName(node.Image))
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	cmd, err := shlex.Split(node.Cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mounts := make([]specs.Mount, len(node.Binds))
@@ -199,7 +200,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	default:
 		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0", c.Mgmt)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// set mac if defined in node
@@ -215,7 +216,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 			for _, x := range hostdata {
 				hostport, err := strconv.Atoi(x.HostPort)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				portmappings = append(portmappings, portMapping{HostPort: hostport, ContainerPort: contdatasl.Int(), Protocol: contdatasl.Proto()})
 			}
@@ -240,7 +241,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		cOpts...,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Container '%s' created", node.LongName)
@@ -248,19 +249,19 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 
 	err = c.StartContainer(ctx, node.LongName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Container started: %s", node.LongName)
 
 	node.NSPath, err = c.GetNSPath(ctx, node.LongName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = utils.LinkContainerNS(node.NSPath, node.LongName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// if this is not a host network namespace container
@@ -270,7 +271,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		cnirc.NetNS = node.NSPath
 		res, err := cnic.AddNetworkList(ctx, cncl, cnirc)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		result, _ := current.NewResultFromResult(res)
 
@@ -295,10 +296,10 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 		}
 		_, err = newContainer.SetLabels(ctx, additionalLabels)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
@@ -488,6 +489,25 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 	return c.produceGenericContainerList(ctx, containerlist)
 }
 
+// TODO this will probably not work. need to work out the exact filter format
+func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
+	var ctr *types.GenericContainer
+	gFilter := types.GenericFilter{
+		FilterType: "name",
+		Field:      "",
+		Operator:   "",
+		Match:      containerID,
+	}
+	ctrs, err := c.ListContainers(ctx, []*types.GenericFilter{&gFilter})
+	if err != nil {
+		return ctr, err
+	}
+	if len(ctrs) != 1 {
+		return ctr, fmt.Errorf("found unexpected number of containers: %d", len(ctrs))
+	}
+	return &ctrs[0], nil
+}
+
 func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
 	filterstring := ""
 	delim := ","
@@ -557,8 +577,7 @@ func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, inp
 		if taskfound {
 			status, err := task.Status(ctx)
 			if err != nil {
-				log.Fatalf("failed to retrieve task status")
-				return nil, err
+				return nil, fmt.Errorf("failed to retrieve task status")
 			}
 			ctr.State = string(status.Status)
 
@@ -706,16 +725,16 @@ func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd 
 	return stdoutbuf.Bytes(), stderrbuf.Bytes(), nil
 }
 
-func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *types.GenericContainer) error {
-	log.Debugf("deleting container %s", container.ID)
+func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID string) error {
+	log.Debugf("deleting container %s", containerID)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
-	err := c.StopContainer(ctx, container.ID, nil)
+	err := c.StopContainer(ctx, containerID, nil)
 	if err != nil {
 		return err
 	}
 
-	cnic, cncl, cnirc, err := cniInit(container.ID, "eth0", c.Mgmt)
+	cnic, cncl, cnirc, err := cniInit(containerID, "eth0", c.Mgmt)
 	if err != nil {
 		return err
 	}
@@ -725,7 +744,7 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *type
 		return err
 	}
 
-	cont, err := c.client.LoadContainer(ctx, container.ID)
+	cont, err := c.client.LoadContainer(ctx, containerID)
 	if err != nil {
 		return err
 	}
@@ -736,7 +755,7 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, container *type
 		return err
 	}
 
-	log.Debugf("successfully deleted container %s", container.ID)
+	log.Debugf("successfully deleted container %s", containerID)
 
 	return nil
 }

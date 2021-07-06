@@ -1,0 +1,14 @@
+auto lo
+iface lo inet loopback
+
+auto mgmt
+iface mgmt
+    vrf-table auto
+    
+auto eth0
+iface eth0 
+    vrf mgmt
+
+auto swp12
+iface swp12 
+    address 12.12.12.1/24

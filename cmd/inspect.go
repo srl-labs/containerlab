@@ -58,7 +58,11 @@ var inspectCmd = &cobra.Command{
 		if topo != "" {
 			opts = append(opts, clab.WithTopoFile(topo))
 		}
-		c := clab.NewContainerLab(opts...)
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			log.Errorf("could not parse the topology file: %v", err)
+		}
+
 		if name == "" {
 			name = c.Config.Name
 		}
@@ -74,10 +78,12 @@ var inspectCmd = &cobra.Command{
 				glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
 			}
 		}
-		containers, err := c.Runtime.ListContainers(ctx, glabels)
+
+		containers, err := c.ListContainers(ctx, glabels)
 		if err != nil {
-			log.Fatalf("could not list containers: %v", err)
+			log.Fatalf("failed to list containers: %s", err)
 		}
+
 		if len(containers) == 0 {
 			log.Println("no containers found")
 			return
@@ -192,7 +198,13 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 	if !printMysocket {
 		return
 	}
-	stdout, stderr, err := c.Runtime.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
+
+	nodeRuntime, err := c.GetNodeRuntime(cntName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stdout, stderr, err := nodeRuntime.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
 	if err != nil {
 		log.Errorf("failed to execute cmd: %v", err)
 

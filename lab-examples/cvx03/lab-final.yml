@@ -1,0 +1,52 @@
+name: ctd # Cumulus Linux Test Drive
+
+topology:
+  nodes:
+    leaf01:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+        - leaf01/interfaces:/etc/network/interfaces
+        - leaf01/daemons:/etc/frr/daemons
+        - leaf01/frr.conf:/etc/frr/frr.conf
+
+    leaf02:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+        - leaf02/interfaces:/etc/network/interfaces
+        - leaf02/daemons:/etc/frr/daemons
+        - leaf02/frr.conf:/etc/frr/frr.conf
+
+    spine01:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+        - spine01/interfaces:/etc/network/interfaces
+        - spine01/daemons:/etc/frr/daemons
+        - spine01/frr.conf:/etc/frr/frr.conf
+
+    server01:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+        - server01/interfaces:/etc/network/interfaces
+
+    server02:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+        - server02/interfaces:/etc/network/interfaces
+
+
+  links:
+    - endpoints: ["leaf01:swp1", "server01:eth1"]
+    - endpoints: ["leaf01:swp2", "server02:eth1"]
+    - endpoints: ["leaf02:swp1", "server01:eth2"]
+    - endpoints: ["leaf02:swp2", "server02:eth2"]
+
+    - endpoints: ["leaf01:swp49", "leaf02:swp49"]
+    - endpoints: ["leaf01:swp50", "leaf02:swp50"]
+
+    - endpoints: ["spine01:swp1", "leaf01:swp51"]
+    - endpoints: ["spine01:swp2", "leaf02:swp51"]

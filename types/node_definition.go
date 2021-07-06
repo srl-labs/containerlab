@@ -29,6 +29,11 @@ type NodeDefinition struct {
 	Labels map[string]string `yaml:"labels,omitempty"`
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `yaml:"network-mode,omitempty"`
+	// Ignite sandbox and kernel imageNames
+	Sandbox string `yaml:"sandbox,omitempty"`
+	Kernel  string `yaml:"kernel,omitempty"`
+	// Override container runtime
+	Runtime string `yaml:"runtime,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -158,4 +163,25 @@ func (n *NodeDefinition) GetNetworkMode() string {
 		return ""
 	}
 	return n.NetworkMode
+}
+
+func (n *NodeDefinition) GetNodeSandbox() string {
+	if n == nil {
+		return ""
+	}
+	return n.Sandbox
+}
+
+func (n *NodeDefinition) GetNodeKernel() string {
+	if n == nil {
+		return ""
+	}
+	return n.Kernel
+}
+
+func (n *NodeDefinition) GetNodeRuntime() string {
+	if n == nil {
+		return ""
+	}
+	return n.Runtime
 }
