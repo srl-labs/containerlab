@@ -84,7 +84,7 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 			}
 
 			var buf strings.Builder
-			err := tmpl.Lookup(tmplN).Execute(&buf, vars)
+			err := tmpl.ExecutTemplate(&buf, tmplN, vars)
 			if err != nil {
 				return nil, err
 			}
