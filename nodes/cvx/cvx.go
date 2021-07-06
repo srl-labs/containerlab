@@ -89,7 +89,7 @@ func (c *cvx) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.C
 
 	// fallback to the global runtime if overridden
 	if c.Config().Runtime != "" {
-		c.runtime = allRuntimes[globalRuntime]
+		c.runtime = allRuntimes[c.Config().Runtime]
 		return
 	}
 

@@ -287,6 +287,45 @@ func (t *Topology) GetNodeNetworkMode(name string) string {
 	return ""
 }
 
+func (t *Topology) GetNodeSandbox(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeSandbox() != "" {
+			return ndef.GetNodeSandbox()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeSandbox() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeSandbox()
+		}
+		return t.GetDefaults().GetNodeSandbox()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeKernel(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeKernel() != "" {
+			return ndef.GetNodeKernel()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeKernel() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeKernel()
+		}
+		return t.GetDefaults().GetNodeKernel()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeRuntime(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeRuntime() != "" {
+			return ndef.GetNodeRuntime()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeRuntime() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeRuntime()
+		}
+		return t.GetDefaults().GetNodeRuntime()
+	}
+	return ""
+}
+
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
 func resolvePath(p string) (string, error) {
 	if p == "" {

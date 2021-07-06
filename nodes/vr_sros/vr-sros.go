@@ -94,9 +94,9 @@ func (s *vrSROS) Delete(ctx context.Context) error {
 }
 
 func (s *vrSROS) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = s.cfg.Image
-	return images
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
 }
 
 func (s *vrSROS) SaveConfig(ctx context.Context) error {

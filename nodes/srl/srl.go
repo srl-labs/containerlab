@@ -175,9 +175,9 @@ func (s *srl) Destroy(ctx context.Context) error {
 }
 
 func (s *srl) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = s.cfg.Image
-	return images
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
 }
 
 func (s *srl) WithMgmtNet(*types.MgmtNet) {}

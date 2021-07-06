@@ -38,7 +38,7 @@ var disableTxOffloadCmd = &cobra.Command{
 
 		nodeRuntime, err := c.GetNodeRuntime(cntName)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		NSPath, err := nodeRuntime.GetNSPath(ctx, cntName)

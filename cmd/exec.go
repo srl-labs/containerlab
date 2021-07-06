@@ -89,7 +89,7 @@ var execCmd = &cobra.Command{
 
 			nodeRuntime, err := c.GetNodeRuntime(cntName)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			stdout, stderr, err := nodeRuntime.Exec(ctx, cont.ID, cmds)

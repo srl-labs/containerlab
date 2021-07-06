@@ -110,7 +110,9 @@ func (c *CLab) parseTopology() error {
 		if node.GetRuntime() == nil {
 			continue
 		}
-		c.Runtimes[node.GetRuntime().GetName()] = node.GetRuntime()
+		if _, ok := c.Runtimes[node.GetRuntime().GetName()]; !ok {
+			c.Runtimes[node.GetRuntime().GetName()] = node.GetRuntime()
+		}
 	}
 
 	return nil
@@ -172,9 +174,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         make(map[string]string),
 		Endpoints:       make([]*types.Endpoint, 0),
-		Sandbox:         nodeDef.GetNodeSandbox(),
-		Kernel:          nodeDef.GetNodeKernel(),
-		Runtime:         nodeDef.GetNodeRuntime(),
+		Sandbox:         c.Config.Topology.GetNodeSandbox(),
+		Kernel:          c.Config.Topology.GetNodeKernel(),
+		Runtime:         c.Config.Topology.GetNodeRuntime(),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
@@ -571,4 +573,12 @@ func sysMemory(v string) uint64 {
 		m = uint64(in.Freeram) * uint64(in.Unit)
 	}
 	return m
+}
+
+func parseLongName(input string) (string, string, string, error) {
+	result := strings.Split(input, "-")
+	if len(result) != 3 {
+		return "", "", "", fmt.Errorf("failed to parse container name %q", input)
+	}
+	return result[0], result[1], result[2], nil
 }

@@ -66,9 +66,9 @@ func (s *vrVEOS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error
 }
 
 func (s *vrVEOS) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = s.cfg.Image
-	return images
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
 }
 
 func (s *vrVEOS) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }

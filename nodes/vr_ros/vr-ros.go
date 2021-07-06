@@ -63,9 +63,9 @@ func (s *vrRos) Deploy(ctx context.Context) error {
 }
 
 func (s *vrRos) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = s.cfg.Image
-	return images
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
 }
 
 func (s *vrRos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {

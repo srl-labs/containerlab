@@ -165,17 +165,13 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	if err != nil {
 		return err
 	}
-
-	var labDir string
-	for _, ctr := range containers {
-		if n, ok := c.Nodes[ctr.ShortID]; ok {
-			c.Nodes[ctr.ShortID] = n
-			labDir = n.Config().LabDir
-		}
+	if len(containers) == 0 {
+		return nil
 	}
 
+	var labDir string
 	if cleanup {
-		labDir = filepath.Dir(labDir)
+		labDir = filepath.Dir(containers[0].Labels["clab-node-lab-dir"])
 	}
 
 	if maxWorkers == 0 {
@@ -183,11 +179,8 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// Serializing ignite workers due to busy device error
-	for _, node := range c.Nodes {
-		if node.GetRuntime().GetName() == runtime.IgniteRuntime {
-			maxWorkers = 1
-			break
-		}
+	if _, ok := c.Runtimes[runtime.IgniteRuntime]; ok {
+		maxWorkers = 1
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)

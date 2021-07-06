@@ -46,15 +46,9 @@ func (s *bridge) GetContainer(ctx context.Context) (*types.GenericContainer, err
 	return nil, nil
 }
 
-func (s *bridge) SaveConfig(ctx context.Context) error {
-	return nil
-}
+func (s *bridge) SaveConfig(ctx context.Context) error { return nil }
 
-func (s *bridge) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = s.cfg.Image
-	return images
-}
+func (s *bridge) GetImages() map[string]string { return map[string]string{} }
 
 func (s *bridge) Delete(ctx context.Context) error {
 	return nil

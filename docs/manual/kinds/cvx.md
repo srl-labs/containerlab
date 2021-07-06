@@ -63,8 +63,8 @@ This will be addressed in the future releases.
 ## Lab examples
 The following labs feature CVX node:
 
-- [Cumulus Linux Test Drive](https://github.com/srl-labs/containerlab/blob/master/lab-examples/lab-start.yml)
-- [Cumulus and FRR](https://github.com/srl-labs/containerlab/blob/master/lab-examples/topo.yml)
+- [Cumulus Linux Test Drive](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx03/lab-start.yml)
+- [Cumulus and FRR](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx01/topo.yml)
 
 
 ## Known issues or limitations

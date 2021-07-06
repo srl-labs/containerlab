@@ -36,8 +36,10 @@ func (s *mySocketIO) PreDeploy(configName, labCADir, labCARoot string) error {
 	// utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
-func (s *mySocketIO) Deploy(ctx context.Context) error { return nil }
-
+func (s *mySocketIO) Deploy(ctx context.Context) error {
+	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	return err
+}
 func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for mysocketio '%s' node", s.cfg.ShortName)
 	err := types.DisableTxOffload(s.cfg)
@@ -65,9 +67,9 @@ func (s *mySocketIO) Delete(ctx context.Context) error {
 }
 
 func (s *mySocketIO) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = s.cfg.Image
-	return images
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
 }
 
 func (s *mySocketIO) SaveConfig(ctx context.Context) error {

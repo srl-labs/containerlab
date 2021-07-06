@@ -115,15 +115,13 @@ var deployCmd = &cobra.Command{
 		}
 
 		// Serializing ignite workers due to busy device error
-		for _, node := range c.Nodes {
-			if node.GetRuntime().GetName() == runtime.IgniteRuntime {
-				nodeWorkers = 1
-				break
-			}
+		if _, ok := c.Runtimes[runtime.IgniteRuntime]; ok {
+			nodeWorkers = 1
 		}
 
 		c.CreateNodes(ctx, nodeWorkers)
 		c.CreateLinks(ctx, linkWorkers, false)
+		log.Debug("containers created, retrieving state and IP addresses...")
 
 		// Building list of generic containers
 		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
@@ -164,7 +162,6 @@ var deployCmd = &cobra.Command{
 				log.Error(err)
 			}
 		}
-		log.Debug("containers created, retrieving state and IP addresses...")
 
 		// run links postdeploy creation (ceos links creation)
 		c.CreateLinks(ctx, linkWorkers, true)

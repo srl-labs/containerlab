@@ -30,7 +30,8 @@ type ContainerRuntime interface {
 	DeleteNet(context.Context) error
 	// Pull container image if not present
 	PullImageIfRequired(context.Context, string) error
-	// Create container
+	// Create container returns an extra interface that can be used to receive signals
+	// about the container life-cycle after it was created, e.g. for post-deploy tassks
 	CreateContainer(context.Context, *types.NodeConfig) (interface{}, error)
 	// Start pre-created container by its name
 	StartContainer(context.Context, string) error

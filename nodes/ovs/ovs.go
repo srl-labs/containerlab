@@ -55,11 +55,8 @@ func (s *ovs) Delete(ctx context.Context) error {
 	return nil
 }
 
-func (s *ovs) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = s.cfg.Image
-	return images
-}
+func (s *ovs) GetImages() map[string]string { return map[string]string{} }
+
 func (s *ovs) SaveConfig(ctx context.Context) error {
 	return nil
 }
