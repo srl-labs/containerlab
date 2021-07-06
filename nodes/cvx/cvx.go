@@ -74,6 +74,11 @@ func (c *cvx) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 func (c *cvx) GetImages() map[string]string {
 	images := make(map[string]string)
 	images[nodes.ImageKey] = c.cfg.Image
+
+	if c.runtime.GetName() != runtime.IgniteRuntime {
+		return images
+	}
+
 	images[nodes.KernelKey] = c.cfg.Kernel
 	images[nodes.SandboxKey] = c.cfg.Sandbox
 	return images

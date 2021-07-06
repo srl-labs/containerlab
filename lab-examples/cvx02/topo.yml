@@ -7,7 +7,7 @@ topology:
       image: networkop/cx:4.3.0
       runtime: docker
       binds:
-        - sw1/interfaces:/etc/network/interfaces.d/host-mounts
+        - sw1/interfaces:/etc/network/interfaces
     h1:
       kind: linux
       image: networkop/host:ifreload
