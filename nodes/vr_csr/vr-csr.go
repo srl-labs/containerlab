@@ -70,12 +70,10 @@ func (s *vrCsr) GetImages() map[string]string {
 	}
 }
 
-func (s *vrCsr) Destroy(ctx context.Context) error { return nil }
-func (s *vrCsr) WithMgmtNet(mgmt *types.MgmtNet)   { s.mgmt = mgmt }
-func (s *vrCsr) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
-}
-func (s *vrCsr) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (s *vrCsr) Destroy(ctx context.Context) error      { return nil }
+func (s *vrCsr) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
+func (s *vrCsr) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *vrCsr) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrCsr) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)

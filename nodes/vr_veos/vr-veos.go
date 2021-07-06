@@ -71,11 +71,9 @@ func (s *vrVEOS) GetImages() map[string]string {
 	}
 }
 
-func (s *vrVEOS) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
-func (s *vrVEOS) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
-}
-func (s *vrVEOS) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (s *vrVEOS) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
+func (s *vrVEOS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *vrVEOS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrVEOS) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)

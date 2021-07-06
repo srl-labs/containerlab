@@ -52,11 +52,9 @@ func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) e
 	return err
 }
 
-func (s *mySocketIO) WithMgmtNet(*types.MgmtNet) {}
-func (s *mySocketIO) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
-}
-func (s *mySocketIO) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (s *mySocketIO) WithMgmtNet(*types.MgmtNet)             {}
+func (s *mySocketIO) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *mySocketIO) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *mySocketIO) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil

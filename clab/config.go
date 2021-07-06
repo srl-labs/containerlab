@@ -19,6 +19,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
+	clabRuntimes "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -93,9 +94,52 @@ func (c *CLab) parseTopology() error {
 		nodeNames = append(nodeNames, nodeName)
 	}
 	sort.Strings(nodeNames)
+
+	// collect node runtimes in a map[NodeName] -> RuntimeName
+	var nodeRuntimes = make(map[string]string)
+
+	for nodeName, topologyNode := range c.Config.Topology.Nodes {
+		// this case is when runtime was overridden at the node level
+		if r := c.Config.Topology.GetNodeRuntime(nodeName); r != "" {
+			nodeRuntimes[nodeName] = r
+			continue
+		}
+
+		// this case if for non-default runtimes overriding the global default
+		if r, ok := nodes.NonDefaultRuntimes[topologyNode.GetKind()]; ok {
+			nodeRuntimes[nodeName] = r
+			continue
+		}
+
+		// saving the global default runtime
+		nodeRuntimes[nodeName] = c.globalRuntime
+	}
+
+	// initialize any extra runtimes
+	for _, r := range nodeRuntimes {
+		// this is the case for already init'ed runtimes
+		if _, ok := c.Runtimes[r]; ok {
+			continue
+		}
+
+		if rInit, ok := clabRuntimes.ContainerRuntimes[r]; ok {
+
+			newRuntime := rInit()
+			defaultConfig := c.Runtimes[c.globalRuntime].Config()
+			err := newRuntime.Init(
+				clabRuntimes.WithConfig(&defaultConfig),
+			)
+			if err != nil {
+				log.Fatalf("failed to init the container runtime: %s", err)
+			}
+
+			c.Runtimes[r] = newRuntime
+		}
+	}
+
 	var err error
 	for idx, nodeName := range nodeNames {
-		err = c.NewNode(nodeName, c.Config.Topology.Nodes[nodeName], idx)
+		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
 		if err != nil {
 			return err
 		}
@@ -105,21 +149,11 @@ func (c *CLab) parseTopology() error {
 		c.Links[i] = c.NewLink(l)
 	}
 
-	// update runtimes in case overridden by nodes
-	for _, node := range c.Nodes {
-		if node.GetRuntime() == nil {
-			continue
-		}
-		if _, ok := c.Runtimes[node.GetRuntime().GetName()]; !ok {
-			c.Runtimes[node.GetRuntime().GetName()] = node.GetRuntime()
-		}
-	}
-
 	return nil
 }
 
 // NewNode initializes a new node object
-func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) error {
+func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int) error {
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
@@ -133,7 +167,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	n := nodeInitializer()
 	// Init
 
-	err = n.Init(nodeCfg, nodes.WithRuntime(c.globalRuntime, c.Runtimes), nodes.WithMgmtNet(c.Config.Mgmt))
+	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)

@@ -42,6 +42,11 @@ const (
 	NodeKindVrXRV9K    = "vr-xrv9k"
 )
 
+// a map of node kinds overriding the default global runtime
+var NonDefaultRuntimes = map[string]string{
+	NodeKindCVX: runtime.IgniteRuntime,
+}
+
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	Config() *types.NodeConfig
@@ -49,7 +54,7 @@ type Node interface {
 	Deploy(context.Context) error
 	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)
-	WithRuntime(string, map[string]runtime.ContainerRuntime)
+	WithRuntime(runtime.ContainerRuntime)
 	SaveConfig(context.Context) error
 	Delete(context.Context) error
 	GetImages() map[string]string
@@ -76,9 +81,9 @@ func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 	}
 }
 
-func WithRuntime(g string, r map[string]runtime.ContainerRuntime) NodeOption {
+func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 	return func(n Node) {
-		n.WithRuntime(g, r)
+		n.WithRuntime(r)
 	}
 }
 

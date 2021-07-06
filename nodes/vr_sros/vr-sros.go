@@ -83,11 +83,9 @@ func (s *vrSROS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error
 	return nil
 }
 
-func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
-func (s *vrSROS) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
-}
-func (s *vrSROS) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
+func (s *vrSROS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *vrSROS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrSROS) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)

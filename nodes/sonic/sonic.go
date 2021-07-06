@@ -67,11 +67,9 @@ func (s *sonic) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error 
 	return nil
 }
 
-func (s *sonic) WithMgmtNet(*types.MgmtNet) {}
-func (s *sonic) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
-}
-func (s *sonic) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (s *sonic) WithMgmtNet(*types.MgmtNet)             {}
+func (s *sonic) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *sonic) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *sonic) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)

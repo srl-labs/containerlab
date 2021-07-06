@@ -84,36 +84,8 @@ func (c *cvx) GetImages() map[string]string {
 	return images
 }
 
-func (c *cvx) WithMgmtNet(*types.MgmtNet) {}
-func (c *cvx) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-
-	// fallback to the global runtime if overridden
-	if c.Config().Runtime != "" {
-		c.runtime = allRuntimes[c.Config().Runtime]
-		return
-	}
-
-	// By default, running in ignite runtime
-	if igniteRuntime, ok := allRuntimes[runtime.IgniteRuntime]; ok {
-		c.runtime = igniteRuntime
-		return
-	}
-
-	if rInit, ok := runtime.ContainerRuntimes[runtime.IgniteRuntime]; ok {
-
-		c.runtime = rInit()
-
-		defaultConfig := allRuntimes[globalRuntime].Config()
-
-		err := c.runtime.Init(
-			runtime.WithConfig(&defaultConfig),
-		)
-		if err != nil {
-			log.Fatalf("failed to init the container runtime: %s", err)
-		}
-
-	}
-}
+func (c *cvx) WithMgmtNet(*types.MgmtNet)             {}
+func (c *cvx) WithRuntime(r runtime.ContainerRuntime) { c.runtime = r }
 
 func (c *cvx) Delete(ctx context.Context) error {
 	return c.runtime.DeleteContainer(ctx, c.Config().LongName)

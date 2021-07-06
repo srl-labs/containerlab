@@ -36,11 +36,9 @@ func (s *bridge) Deploy(ctx context.Context) error                       { retur
 func (s *bridge) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
-func (s *bridge) WithMgmtNet(*types.MgmtNet) {}
-func (s *bridge) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
-}
-func (s *bridge) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (s *bridge) WithMgmtNet(*types.MgmtNet)             {}
+func (s *bridge) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *bridge) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *bridge) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil

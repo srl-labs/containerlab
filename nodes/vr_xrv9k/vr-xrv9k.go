@@ -78,8 +78,8 @@ func (s *vrXRV9K) PostDeploy(ctx context.Context, ns map[string]nodes.Node) erro
 }
 
 func (s *vrXRV9K) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
-func (s *vrXRV9K) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
+func (s *vrXRV9K) WithRuntime(r runtime.ContainerRuntime) {
+	s.runtime = r
 }
 func (s *vrXRV9K) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 

@@ -41,11 +41,9 @@ func (l *ovs) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (l *ovs) WithMgmtNet(*types.MgmtNet) {}
-func (s *ovs) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	s.runtime = allRuntimes[globalRuntime]
-}
-func (s *ovs) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (l *ovs) WithMgmtNet(*types.MgmtNet)             {}
+func (s *ovs) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *ovs) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *ovs) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil

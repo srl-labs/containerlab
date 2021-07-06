@@ -52,11 +52,9 @@ func (s *linux) GetImages() map[string]string {
 	return images
 }
 
-func (l *linux) WithMgmtNet(*types.MgmtNet) {}
-func (l *linux) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
-	l.runtime = allRuntimes[globalRuntime]
-}
-func (s *linux) GetRuntime() runtime.ContainerRuntime { return s.runtime }
+func (l *linux) WithMgmtNet(*types.MgmtNet)             {}
+func (l *linux) WithRuntime(r runtime.ContainerRuntime) { l.runtime = r }
+func (s *linux) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (l *linux) Delete(ctx context.Context) error {
 	return l.runtime.DeleteContainer(ctx, l.Config().LongName)
