@@ -29,9 +29,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		name := nodeCfg.ShortName
 		// Init array for this node
 		res[name] = make(map[string]interface{})
-		nc := GetNodeConfig(nodeCfg.Config.Vars)
-		for key := range nc.Vars {
-			res[name][key] = nc.Vars[key]
+		for key := range nodeCfg.Config.Vars {
+			res[name][key] = nodeCfg.Config.Vars[key]
 		}
 		// Create link array
 		res[name]["links"] = []interface{}{}
@@ -57,8 +56,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 
 // Prepare variables for a specific link
 func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interface{}) error {
-	ncA := GetNodeConfig(link.A.Node.Config.Vars)
-	ncB := GetNodeConfig(link.B.Node.Config.Vars)
+	varsA["far"] = link.B.Node
+	varsB["far"] = link.A.Node
 
 	addV := func(key string, v1 interface{}, v2 ...interface{}) {
 		varsA[key] = v1
@@ -72,13 +71,13 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interfa
 	}
 
 	// Link IPs
-	ipA, ipB, err := linkIPfromSystemIP(link)
+	ipA, ipB, err := linkIP(link)
 	if err != nil {
 		return fmt.Errorf("%s: %s", link, err)
 	}
-
-	addV("ip", ipA.String(), ipB.String())
-	addV(systemIP, ncA.Vars[systemIP], ncB.Vars[systemIP])
+	if !ipA.IsZero() {
+		addV("ip", ipA.String(), ipB.String())
+	}
 
 	// Split all fields with a comma...
 	for k, v := range link.Vars {
@@ -93,6 +92,7 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interfa
 		}
 	}
 
+	// Add a link name if not already there
 	if _, ok := varsA["name"]; !ok {
 		var linkNr string
 		if v, ok := varsA["linkNr"]; ok {
@@ -105,7 +105,7 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interfa
 	return nil
 }
 
-func linkIPfromSystemIP(link *types.Link) (netaddr.IPPrefix, netaddr.IPPrefix, error) {
+func linkIP(link *types.Link) (netaddr.IPPrefix, netaddr.IPPrefix, error) {
 	var ipA netaddr.IPPrefix
 	var err error
 	if linkIp, ok := link.Vars["ip"]; ok {
@@ -116,7 +116,18 @@ func linkIPfromSystemIP(link *types.Link) (netaddr.IPPrefix, netaddr.IPPrefix, e
 		}
 	} else {
 		// Calculate link IP from the system IPs
-		sysA, err := netaddr.ParseIPPrefix(link.A.Node.Config.Vars[systemIP])
+		_, okA := link.A.Node.Config.Vars[systemIP]
+		_, okB := link.B.Node.Config.Vars[systemIP]
+		if okA != okB {
+			return ipA, ipA, fmt.Errorf("%s var required on all nodes", systemIP)
+		}
+		if !okA {
+			return ipA, ipA, nil
+		}
+		if _, ok := link.B.Node.Config.Vars[systemIP]; !ok {
+			return ipA, ipA, nil
+		}
+		sysA, err := netaddr.ParseIPPrefix(link.B.Node.Config.Vars[systemIP])
 		if err != nil {
 			return ipA, ipA, fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", systemIP, link.A.Node.ShortName, err)
 		}
