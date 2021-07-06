@@ -38,6 +38,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		if _, ok := res[name]["role"]; !ok {
 			res[name]["role"] = nodeCfg.Kind
 		}
+		// Add the map of all nodes to each node
+		res[name]["nodes"] = res
 	}
 
 	// prepare all links
@@ -48,6 +50,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		if err != nil {
 			log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
 		}
+		varsA["far"] = res[link.B.Node.ShortName]
+		varsB["far"] = res[link.A.Node.ShortName]
 		res[link.A.Node.ShortName]["links"] = append(res[link.A.Node.ShortName]["links"].([]interface{}), varsA)
 		res[link.B.Node.ShortName]["links"] = append(res[link.B.Node.ShortName]["links"].([]interface{}), varsB)
 	}
@@ -56,9 +60,9 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 
 // Prepare variables for a specific link
 func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB map[string]interface{}) error {
-	varsA["far"] = link.B.Node
-	varsB["far"] = link.A.Node
 
+	// Add a key/value(s) pairs to the links vars (varsA & varsB)
+	// If multiple vars are specified, each links also gets the far end value
 	addV := func(key string, v1 interface{}, v2 ...interface{}) {
 		varsA[key] = v1
 		if len(v2) == 0 {
