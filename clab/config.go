@@ -131,7 +131,7 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	n := nodeInitializer()
 	// Init
 
-	err = n.Init(nodeCfg, nodes.WithRuntime(c.GlobalRuntime()), nodes.WithMgmtNet(c.Config.Mgmt))
+	err = n.Init(nodeCfg, nodes.WithRuntime(c.globalRuntime, c.Runtimes), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
@@ -172,9 +172,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         make(map[string]string),
 		Endpoints:       make([]*types.Endpoint, 0),
-		Sandbox:         nodeDef.Sandbox,
-		Kernel:          nodeDef.Kernel,
-		Runtime:         nodeDef.Runtime,
+		Sandbox:         nodeDef.GetNodeSandbox(),
+		Kernel:          nodeDef.GetNodeKernel(),
+		Runtime:         nodeDef.GetNodeRuntime(),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)

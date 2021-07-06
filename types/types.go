@@ -53,8 +53,8 @@ type MgmtNet struct {
 
 // NodeConfig is a struct that contains the information of a container element
 type NodeConfig struct {
-	ShortName        string // node of the Node inside topology YAML
-	LongName         string // containerlab-prefixed unique name
+	ShortName        string // name of the Node inside topology YAML
+	LongName         string // containerlab-prefixed unique container name
 	Fqdn             string
 	LabDir           string // LabDir is a directory related to the node, it contains config items and/or other persistent state
 	Index            int

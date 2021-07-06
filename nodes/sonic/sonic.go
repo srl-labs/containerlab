@@ -43,10 +43,7 @@ func (s *sonic) PreDeploy(configName, labCADir, labCARoot string) error {
 }
 func (s *sonic) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (s *sonic) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
@@ -70,18 +67,20 @@ func (s *sonic) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error 
 	return nil
 }
 
-func (s *sonic) WithMgmtNet(*types.MgmtNet)             {}
-func (s *sonic) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *sonic) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *sonic) WithMgmtNet(*types.MgmtNet) {}
+func (s *sonic) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
+	s.runtime = allRuntimes[globalRuntime]
+}
+func (s *sonic) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *sonic) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.GetName())
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *sonic) GetName() string { return s.cfg.LongName }
-
-func (s *sonic) GetImages() []string {
-	return []string{s.cfg.Image}
+func (s *sonic) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = s.cfg.Image
+	return images
 }
 
 func (s *sonic) SaveConfig(ctx context.Context) error {

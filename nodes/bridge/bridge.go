@@ -36,9 +36,11 @@ func (s *bridge) Deploy(ctx context.Context) error                       { retur
 func (s *bridge) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
-func (s *bridge) WithMgmtNet(*types.MgmtNet)             {}
-func (s *bridge) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *bridge) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *bridge) WithMgmtNet(*types.MgmtNet) {}
+func (s *bridge) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
+	s.runtime = allRuntimes[globalRuntime]
+}
+func (s *bridge) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *bridge) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil
@@ -48,12 +50,12 @@ func (s *bridge) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func (s *bridge) GetImages() []string {
-	return []string{}
+func (s *bridge) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = s.cfg.Image
+	return images
 }
 
 func (s *bridge) Delete(ctx context.Context) error {
 	return nil
 }
-
-func (s *bridge) GetName() string { return s.cfg.LongName }

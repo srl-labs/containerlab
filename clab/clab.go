@@ -132,11 +132,9 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		o(c)
 	}
 
-	if err := c.parseTopology(); err != nil {
-		return nil, err
-	}
+	err := c.parseTopology()
 
-	return c, nil
+	return c, err
 }
 
 // initMgmtNetwork sets management network config
@@ -279,7 +277,7 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, deleteCandidates m
 					}
 					err := n.Delete(ctx)
 					if err != nil {
-						log.Errorf("could not remove container %q: %v", n.GetName(), err)
+						log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
 					}
 				case <-ctx.Done():
 					return
@@ -311,7 +309,7 @@ func (c *CLab) ListContainers(ctx context.Context, labels []*types.GenericFilter
 
 func (c *CLab) GetNodeRuntime(query string) (runtime.ContainerRuntime, error) {
 	for _, node := range c.Nodes {
-		if node.GetName() == query {
+		if node.Config().LongName == query {
 			return node.GetRuntime(), nil
 		}
 	}

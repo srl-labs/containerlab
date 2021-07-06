@@ -164,3 +164,24 @@ func (n *NodeDefinition) GetNetworkMode() string {
 	}
 	return n.NetworkMode
 }
+
+func (n *NodeDefinition) GetNodeSandbox() string {
+	if n == nil {
+		return ""
+	}
+	return n.Sandbox
+}
+
+func (n *NodeDefinition) GetNodeKernel() string {
+	if n == nil {
+		return ""
+	}
+	return n.Kernel
+}
+
+func (n *NodeDefinition) GetNodeRuntime() string {
+	if n == nil {
+		return ""
+	}
+	return n.Runtime
+}

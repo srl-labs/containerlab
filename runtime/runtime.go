@@ -14,6 +14,7 @@ import (
 const (
 	DockerRuntime     = "docker"
 	ContainerdRuntime = "containerd"
+	IgniteRuntime     = "ignite"
 )
 
 type ContainerRuntime interface {
@@ -45,10 +46,8 @@ type ContainerRuntime interface {
 	ExecNotWait(context.Context, string, []string) error
 	// Delete container by its name
 	DeleteContainer(context.Context, string) error
-	// Getters for config options
-	GetDebug() bool
-	GetTimeout() time.Duration
-	GetGracefulShutdown() bool
+	// Getter for runtime config options
+	Config() RuntimeConfig
 	GetName() string
 }
 

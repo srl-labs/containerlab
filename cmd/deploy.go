@@ -19,7 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime/ignite"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -116,7 +116,7 @@ var deployCmd = &cobra.Command{
 
 		// Serializing ignite workers due to busy device error
 		for _, node := range c.Nodes {
-			if node.GetRuntime().GetName() == ignite.RuntimeName {
+			if node.GetRuntime().GetName() == runtime.IgniteRuntime {
 				nodeWorkers = 1
 				break
 			}

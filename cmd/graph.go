@@ -53,6 +53,8 @@ var graphCmd = &cobra.Command{
 	Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.srlinux.dev/cmd/graph/",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var err error
+
 		opts := []clab.ClabOption{
 			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
@@ -82,7 +84,7 @@ var graphCmd = &cobra.Command{
 		// if offline mode is not enforced, list containers matching lab name
 		if !offline {
 			labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-			containers, err := c.ListContainers(ctx, labels)
+			containers, err = c.ListContainers(ctx, labels)
 			if err != nil {
 				return err
 			}

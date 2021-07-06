@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/runtime/ignite"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -183,8 +183,11 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// Serializing ignite workers due to busy device error
-	if rt == ignite.RuntimeName {
-		maxWorkers = 1
+	for _, node := range c.Nodes {
+		if node.GetRuntime().GetName() == runtime.IgniteRuntime {
+			maxWorkers = 1
+			break
+		}
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)

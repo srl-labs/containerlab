@@ -39,13 +39,17 @@ func (s *host) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *host) GetImages() []string {
-	return []string{s.cfg.Image}
+func (s *host) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = s.cfg.Image
+	return images
 }
 
-func (s *host) WithMgmtNet(*types.MgmtNet)             {}
-func (s *host) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *host) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *host) WithMgmtNet(*types.MgmtNet) {}
+func (s *host) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
+	s.runtime = allRuntimes[globalRuntime]
+}
+func (s *host) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *host) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil
@@ -54,8 +58,6 @@ func (s *host) GetContainer(ctx context.Context) (*types.GenericContainer, error
 func (s *host) Delete(ctx context.Context) error {
 	return nil
 }
-
-func (s *host) GetName() string { return s.cfg.LongName }
 
 func (s *host) SaveConfig(ctx context.Context) error {
 	return nil

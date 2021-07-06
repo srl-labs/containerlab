@@ -14,6 +14,10 @@ import (
 const (
 	// default connection mode for vrnetlab based containers
 	VrDefConnMode = "tc"
+	// keys for the map returned by GetImages
+	ImageKey   = "image"
+	KernelKey  = "kernel"
+	SandboxKey = "sandbox"
 )
 
 var NodeKind string
@@ -45,11 +49,10 @@ type Node interface {
 	Deploy(context.Context) error
 	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)
-	WithRuntime(runtime.ContainerRuntime)
+	WithRuntime(string, map[string]runtime.ContainerRuntime)
 	SaveConfig(context.Context) error
 	Delete(context.Context) error
-	GetImages() []string
-	GetName() string
+	GetImages() map[string]string
 	GetRuntime() runtime.ContainerRuntime
 }
 
@@ -73,9 +76,9 @@ func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 	}
 }
 
-func WithRuntime(r runtime.ContainerRuntime) NodeOption {
+func WithRuntime(g string, r map[string]runtime.ContainerRuntime) NodeOption {
 	return func(n Node) {
-		n.WithRuntime(r)
+		n.WithRuntime(g, r)
 	}
 }
 

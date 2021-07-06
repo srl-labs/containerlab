@@ -29,13 +29,13 @@ import (
 )
 
 const (
-	RuntimeName    = "docker"
+	runtimeName    = "docker"
 	sysctlBase     = "/proc/sys"
 	defaultTimeout = 30 * time.Second
 )
 
 func init() {
-	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
+	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &DockerRuntime{
 			Mgmt: new(types.MgmtNet),
 		}
@@ -43,11 +43,9 @@ func init() {
 }
 
 type DockerRuntime struct {
-	Client           *dockerC.Client
-	timeout          time.Duration
-	Mgmt             *types.MgmtNet
-	debug            bool
-	gracefulShutdown bool
+	config runtime.RuntimeConfig
+	Client *dockerC.Client
+	Mgmt   *types.MgmtNet
 }
 
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
@@ -63,17 +61,15 @@ func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	return nil
 }
 
-func (c *DockerRuntime) GetName() string           { return RuntimeName }
-func (c *DockerRuntime) GetDebug() bool            { return c.debug }
-func (c *DockerRuntime) GetTimeout() time.Duration { return c.timeout }
-func (c *DockerRuntime) GetGracefulShutdown() bool { return c.gracefulShutdown }
+func (c *DockerRuntime) GetName() string               { return runtimeName }
+func (c *DockerRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
-	c.timeout = cfg.Timeout
-	c.debug = cfg.Debug
-	c.gracefulShutdown = cfg.GracefulShutdown
-	if c.timeout <= 0 {
-		c.timeout = defaultTimeout
+	c.config.Timeout = cfg.Timeout
+	c.config.Debug = cfg.Debug
+	c.config.GracefulShutdown = cfg.GracefulShutdown
+	if c.config.Timeout <= 0 {
+		c.config.Timeout = defaultTimeout
 	}
 }
 
@@ -83,7 +79,7 @@ func (c *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 
 // CreateDockerNet creates a docker network or reusing if it exists
 func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
+	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
 	// linux bridge name that is used by docker network
@@ -209,7 +205,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		log.Debug("Skipping potential deletion of docker default bridge 'bridge'.")
 		return nil
 	}
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
+	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
 	nres, err := c.Client.NetworkInspect(ctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
@@ -218,7 +214,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	}
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
-		if c.debug {
+		if c.config.Debug {
 			log.Debugf("network '%s' has %d active endpoints, deletion skipped", c.Mgmt.Network, numEndpoints)
 			for _, endp := range nres.Containers {
 				log.Debugf("'%s' is connected to %s", endp.Name, c.Mgmt.Network)
@@ -237,7 +233,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
 	log.Infof("Creating container: %s", node.ShortName)
 
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
+	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
 	cmd, err := shlex.Split(node.Cmd)
@@ -315,7 +311,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 // GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container
 func (c *DockerRuntime) GetNSPath(ctx context.Context, containerId string) (string, error) {
-	nctx, cancelFn := context.WithTimeout(ctx, c.timeout)
+	nctx, cancelFn := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancelFn()
 	cJSON, err := c.Client.ContainerInspect(nctx, containerId)
 	if err != nil {
@@ -362,7 +358,7 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 
 // StartContainer starts a docker container
 func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
-	nctx, cancel := context.WithTimeout(ctx, c.timeout)
+	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 	return c.Client.ContainerStart(nctx,
 		id,
@@ -375,7 +371,7 @@ func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
 
 // ListContainers lists all containers with labels []string
 func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	ctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
 	filter := c.buildFilterString(gfilters)
@@ -388,7 +384,7 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	}
 	var nr []dockerTypes.NetworkResource
 	if c.Mgmt.Network == "" {
-		nctx, cancel := context.WithTimeout(ctx, c.timeout)
+		nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 		defer cancel()
 		// fetch containerlab created networks
 		f := filters.NewArgs()
@@ -552,10 +548,10 @@ func (c *DockerRuntime) ExecNotWait(ctx context.Context, id string, cmd []string
 // DeleteContainer tries to stop a container then remove it
 func (c *DockerRuntime) DeleteContainer(ctx context.Context, containerID string) error {
 	var err error
-	force := !c.gracefulShutdown
-	if c.gracefulShutdown {
+	force := !c.config.GracefulShutdown
+	if c.config.GracefulShutdown {
 		log.Infof("Stopping container: %s", containerID)
-		err = c.Client.ContainerStop(ctx, containerID, &c.timeout)
+		err = c.Client.ContainerStop(ctx, containerID, &c.config.Timeout)
 		if err != nil {
 			log.Errorf("could not stop container '%s': %v", containerID, err)
 			force = true

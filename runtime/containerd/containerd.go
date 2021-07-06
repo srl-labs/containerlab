@@ -32,12 +32,12 @@ import (
 const (
 	containerdNamespace = "clab"
 	cniCache            = "/opt/cni/cache"
-	RuntimeName         = "containerd"
+	runtimeName         = "containerd"
 	defaultTimeout      = 30 * time.Second
 )
 
 func init() {
-	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
+	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &ContainerdRuntime{
 			Mgmt: new(types.MgmtNet),
 		}
@@ -66,19 +66,17 @@ func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 }
 
 type ContainerdRuntime struct {
-	client           *containerd.Client
-	timeout          time.Duration
-	Mgmt             *types.MgmtNet
-	debug            bool
-	gracefulShutdown bool
+	config runtime.RuntimeConfig
+	client *containerd.Client
+	Mgmt   *types.MgmtNet
 }
 
 func (c *ContainerdRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
-	c.timeout = cfg.Timeout
-	c.debug = cfg.Debug
-	c.gracefulShutdown = cfg.GracefulShutdown
-	if c.timeout <= 0 {
-		c.timeout = defaultTimeout
+	c.config.Timeout = cfg.Timeout
+	c.config.Debug = cfg.Debug
+	c.config.GracefulShutdown = cfg.GracefulShutdown
+	if c.config.Timeout <= 0 {
+		c.config.Timeout = defaultTimeout
 	}
 }
 
@@ -93,10 +91,8 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
 }
 
-func (c *ContainerdRuntime) GetName() string           { return RuntimeName }
-func (c *ContainerdRuntime) GetDebug() bool            { return c.debug }
-func (c *ContainerdRuntime) GetTimeout() time.Duration { return c.timeout }
-func (c *ContainerdRuntime) GetGracefulShutdown() bool { return c.gracefulShutdown }
+func (c *ContainerdRuntime) GetName() string               { return runtimeName }
+func (c *ContainerdRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")

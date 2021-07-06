@@ -41,9 +41,11 @@ func (l *ovs) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (l *ovs) WithMgmtNet(*types.MgmtNet)             {}
-func (s *ovs) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *ovs) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (l *ovs) WithMgmtNet(*types.MgmtNet) {}
+func (s *ovs) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
+	s.runtime = allRuntimes[globalRuntime]
+}
+func (s *ovs) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *ovs) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil
@@ -53,12 +55,11 @@ func (s *ovs) Delete(ctx context.Context) error {
 	return nil
 }
 
-func (s *ovs) GetName() string { return s.cfg.LongName }
-
-func (s *ovs) GetImages() []string {
-	return []string{}
+func (s *ovs) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = s.cfg.Image
+	return images
 }
-
 func (s *ovs) SaveConfig(ctx context.Context) error {
 	return nil
 }

@@ -84,10 +84,7 @@ func (s *ceos) PreDeploy(configName, labCADir, labCARoot string) error {
 
 func (s *ceos) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (s *ceos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
@@ -95,9 +92,11 @@ func (s *ceos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return ceosPostDeploy(ctx, s.runtime, s.cfg)
 }
 
-func (s *ceos) WithMgmtNet(*types.MgmtNet)             {}
-func (s *ceos) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *ceos) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *ceos) WithMgmtNet(*types.MgmtNet) {}
+func (s *ceos) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
+	s.runtime = allRuntimes[globalRuntime]
+}
+func (s *ceos) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *ceos) SaveConfig(ctx context.Context) error {
 	_, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
@@ -179,12 +178,12 @@ func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *ty
 	return utils.LinkContainerNS(nodeCfg.NSPath, nodeCfg.LongName)
 }
 
-func (s *ceos) GetImages() []string {
-	return []string{s.cfg.Image}
+func (s *ceos) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = s.cfg.Image
+	return images
 }
 
 func (s *ceos) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.GetName())
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
-
-func (s *ceos) GetName() string { return s.cfg.LongName }

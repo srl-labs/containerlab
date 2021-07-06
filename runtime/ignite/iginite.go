@@ -18,22 +18,24 @@ import (
 	"github.com/weaveworks/ignite/pkg/dmlegacy"
 	"github.com/weaveworks/ignite/pkg/filter"
 	"github.com/weaveworks/ignite/pkg/metadata"
+	igniteNetwork "github.com/weaveworks/ignite/pkg/network"
 	"github.com/weaveworks/ignite/pkg/operations"
 	"github.com/weaveworks/ignite/pkg/providers"
 	igniteDocker "github.com/weaveworks/ignite/pkg/providers/docker"
 	"github.com/weaveworks/ignite/pkg/providers/ignite"
+	igniteRuntimes "github.com/weaveworks/ignite/pkg/runtime"
 	"github.com/weaveworks/ignite/pkg/util"
 )
 
 const (
-	RuntimeName      = "ignite"
-	dockerRuntime    = "docker"
-	defaultTimeout   = 30 * time.Second
-	kvmPath          = "/dev/kvm"
-	dockerBridge     = "docker-bridge"
-	udevRuleTemplate = "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"%s\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"%s\""
-	udevRulesPath    = "/etc/udev/rules.d/70-persistent-net.rules"
-	hostnamePath     = "/etc/hostname"
+	runtimeName                   = "ignite"
+	defaultContainerRuntime       = igniteRuntimes.RuntimeDocker
+	defaultTimeout                = 30 * time.Second
+	kvmPath                       = "/dev/kvm"
+	defaultContainerNetworkPlugin = igniteNetwork.PluginDockerBridge
+	udevRuleTemplate              = "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"%s\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"%s\""
+	udevRulesPath                 = "/etc/udev/rules.d/70-persistent-net.rules"
+	hostnamePath                  = "/etc/hostname"
 )
 
 var runtimePaths = []string{
@@ -43,26 +45,22 @@ var runtimePaths = []string{
 }
 
 type IgniteRuntime struct {
-	baseVM           *api.VM
-	Mgmt             *types.MgmtNet
-	timeout          time.Duration
-	ctrRuntime       runtime.ContainerRuntime
-	debug            bool
-	gracefulShutdown bool
+	config     runtime.RuntimeConfig
+	baseVM     *api.VM
+	Mgmt       *types.MgmtNet
+	ctrRuntime runtime.ContainerRuntime
 }
 
 func init() {
-	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
+	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &IgniteRuntime{
 			Mgmt: new(types.MgmtNet),
 		}
 	})
 }
 
-func (c *IgniteRuntime) GetName() string           { return RuntimeName }
-func (c *IgniteRuntime) GetDebug() bool            { return c.debug }
-func (c *IgniteRuntime) GetTimeout() time.Duration { return c.timeout }
-func (c *IgniteRuntime) GetGracefulShutdown() bool { return c.gracefulShutdown }
+func (c *IgniteRuntime) GetName() string               { return runtimeName }
+func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 
@@ -85,22 +83,22 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 	igniteDocker.SetDockerRuntime()
 	igniteDocker.SetDockerNetwork()
 
-	providers.RuntimeName = dockerRuntime
-	providers.NetworkPluginName = dockerBridge
+	providers.RuntimeName = defaultContainerRuntime
+	providers.NetworkPluginName = defaultContainerNetworkPlugin
 	providers.Populate(ignite.Providers)
 
 	// build VM skeleton
 	vm := providers.Client.VMs().New()
 
 	// force runtime and network plugin to docker/CNM
-	vm.Status.Runtime.Name = dockerRuntime
-	vm.Status.Network.Plugin = dockerBridge
+	vm.Status.Runtime.Name = defaultContainerRuntime
+	vm.Status.Network.Plugin = defaultContainerNetworkPlugin
 
 	c.baseVM = vm
 
-	rInit, ok := runtime.ContainerRuntimes[dockerRuntime]
+	rInit, ok := runtime.ContainerRuntimes[defaultContainerRuntime.String()]
 	if !ok {
-		return fmt.Errorf("failed to initialize %q runtime", dockerRuntime)
+		return fmt.Errorf("failed to initialize %q runtime", defaultContainerRuntime)
 	}
 	c.ctrRuntime = rInit()
 
@@ -113,11 +111,11 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 }
 
 func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
-	c.timeout = cfg.Timeout
-	c.debug = cfg.Debug
-	c.gracefulShutdown = cfg.GracefulShutdown
-	if c.timeout <= 0 {
-		c.timeout = defaultTimeout
+	c.config.Timeout = cfg.Timeout
+	c.config.Debug = cfg.Debug
+	c.config.GracefulShutdown = cfg.GracefulShutdown
+	if c.config.Timeout <= 0 {
+		c.config.Timeout = defaultTimeout
 	}
 
 }
@@ -238,7 +236,7 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		return nil, err
 	}
 
-	vmChans, err := operations.StartVMNonBlocking(vm, c.debug)
+	vmChans, err := operations.StartVMNonBlocking(vm, c.config.Debug)
 	if err != nil {
 		return nil, err
 	}

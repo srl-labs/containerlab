@@ -61,29 +61,28 @@ func (s *vrXRV) PreDeploy(configName, labCADir, labCARoot string) error {
 
 func (s *vrXRV) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (s *vrXRV) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *vrXRV) GetImages() []string {
-	return []string{s.cfg.Image}
+func (s *vrXRV) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = s.cfg.Image
+	return images
 }
 
-func (s *vrXRV) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
-func (s *vrXRV) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *vrXRV) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *vrXRV) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
+func (s *vrXRV) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
+	s.runtime = allRuntimes[globalRuntime]
+}
+func (s *vrXRV) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *vrXRV) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.GetName())
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
-
-func (s *vrXRV) GetName() string { return s.cfg.LongName }
 
 func (s *vrXRV) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,

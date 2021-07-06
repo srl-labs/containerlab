@@ -1013,8 +1013,8 @@ github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc/go.mod h1:ZjcWmF
 github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17pCcGlemwknint6hfoeCVQrEMVwxRLRjXpq+BU=
 github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae h1:4hwBBUfQCFe3Cym0ZtKyq7L16eZUtYKs+BaHDN6mAns=
 github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
-github.com/weaveworks/ignite v0.9.1-0.20210628093711-07ebb19ff227 h1:vD0YcUStbI2ijP4cmsc+wviFU5xboc1BM/bT24pOLYs=
-github.com/weaveworks/ignite v0.9.1-0.20210628093711-07ebb19ff227/go.mod h1:Uz7DEE4rYUpN2/L9lDxjYui9IktTU6YKXThSvmP83sU=
+github.com/weaveworks/ignite v0.9.1-0.20210705155449-2dbcdd663727 h1:3ghRZuxJng0xZdPNkDOk2P41gxgRr5yp0G6e+mWwKNI=
+github.com/weaveworks/ignite v0.9.1-0.20210705155449-2dbcdd663727/go.mod h1:Uz7DEE4rYUpN2/L9lDxjYui9IktTU6YKXThSvmP83sU=
 github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c h1:sjuQNsahOaafCY6l5xagnTFwFW6Y6Wm0nnn7U1WvGmA=
 github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c/go.mod h1:1oFuIJ/fBC3gpqsa+xtgG2Febt2ru9aWn2WEMYlIqso=
 github.com/weppos/publicsuffix-go v0.4.0/go.mod h1:z3LCPQ38eedDQSwmsSRW4Y7t2L8Ln16JPQ02lHAdn5k=

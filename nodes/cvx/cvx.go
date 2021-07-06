@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
@@ -72,28 +71,37 @@ func (c *cvx) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return <-c.vmChans.SpawnFinished
 }
 
-func (c *cvx) GetImages() []string {
-	return []string{c.cfg.Image, c.cfg.Kernel, c.cfg.Sandbox}
+func (c *cvx) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = c.cfg.Image
+	images[nodes.KernelKey] = c.cfg.Kernel
+	images[nodes.SandboxKey] = c.cfg.Sandbox
+	return images
 }
 
 func (c *cvx) WithMgmtNet(*types.MgmtNet) {}
-func (c *cvx) WithRuntime(r runtime.ContainerRuntime) {
+func (c *cvx) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
 
 	// fallback to the global runtime if overridden
 	if c.Config().Runtime != "" {
-		c.runtime = r
+		c.runtime = allRuntimes[globalRuntime]
 		return
 	}
 
 	// By default, running in ignite runtime
-	if rInit, ok := runtime.ContainerRuntimes[ignite.RuntimeName]; ok {
+	if igniteRuntime, ok := allRuntimes[runtime.IgniteRuntime]; ok {
+		c.runtime = igniteRuntime
+		return
+	}
+
+	if rInit, ok := runtime.ContainerRuntimes[runtime.IgniteRuntime]; ok {
+
 		c.runtime = rInit()
+
+		defaultConfig := allRuntimes[globalRuntime].Config()
+
 		err := c.runtime.Init(
-			runtime.WithConfig(&runtime.RuntimeConfig{
-				Timeout:          r.GetTimeout(),
-				Debug:            r.GetDebug(),
-				GracefulShutdown: r.GetGracefulShutdown(),
-			}),
+			runtime.WithConfig(&defaultConfig),
 		)
 		if err != nil {
 			log.Fatalf("failed to init the container runtime: %s", err)
@@ -103,10 +111,9 @@ func (c *cvx) WithRuntime(r runtime.ContainerRuntime) {
 }
 
 func (c *cvx) Delete(ctx context.Context) error {
-	return c.runtime.DeleteContainer(ctx, c.GetName())
+	return c.runtime.DeleteContainer(ctx, c.Config().LongName)
 }
 
-func (c *cvx) GetName() string                      { return c.cfg.LongName }
 func (s *cvx) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (c *cvx) SaveConfig(ctx context.Context) error {

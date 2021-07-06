@@ -76,28 +76,27 @@ func (s *vrSROS) PreDeploy(configName, labCADir, labCARoot string) error {
 
 func (s *vrSROS) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (s *vrSROS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
-func (s *vrSROS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *vrSROS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet) { s.mgmt = mgmt }
+func (s *vrSROS) WithRuntime(globalRuntime string, allRuntimes map[string]runtime.ContainerRuntime) {
+	s.runtime = allRuntimes[globalRuntime]
+}
+func (s *vrSROS) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *vrSROS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.GetName())
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrSROS) GetName() string { return s.cfg.LongName }
-
-func (s *vrSROS) GetImages() []string {
-	return []string{s.cfg.Image}
+func (s *vrSROS) GetImages() map[string]string {
+	images := make(map[string]string)
+	images[nodes.ImageKey] = s.cfg.Image
+	return images
 }
 
 func (s *vrSROS) SaveConfig(ctx context.Context) error {
