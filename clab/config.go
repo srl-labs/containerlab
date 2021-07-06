@@ -174,9 +174,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         make(map[string]string),
 		Endpoints:       make([]*types.Endpoint, 0),
-		Sandbox:         c.Config.Topology.GetNodeSandbox(),
-		Kernel:          c.Config.Topology.GetNodeKernel(),
-		Runtime:         c.Config.Topology.GetNodeRuntime(),
+		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
+		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
+		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
@@ -346,7 +346,7 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 
 		for _, imageName := range node.GetImages() {
 			if imageName == "" {
-				log.Errorf("missing required image for node %q", node.Config().ShortName)
+				return fmt.Errorf("missing required image for node %q", node.Config().ShortName)
 			}
 			images[imageName] = node.GetRuntime().GetName()
 		}
