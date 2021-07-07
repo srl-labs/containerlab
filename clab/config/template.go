@@ -87,8 +87,8 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 				return nil, err
 			}
 
-			data1 := strings.ReplaceAll(strings.Trim(buf.String(), "\n \t"), "\n\n\n", "\n\n")
-			res[nodeName].Data = append(res[nodeName].Data, data1)
+			data := strings.ReplaceAll(strings.Trim(buf.String(), "\n \t"), "\n\n\n", "\n\n")
+			res[nodeName].Data = append(res[nodeName].Data, data)
 			res[nodeName].Info = append(res[nodeName].Info, tmplN)
 		}
 	}
