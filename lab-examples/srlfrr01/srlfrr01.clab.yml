@@ -4,8 +4,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: ghcr.io/nokia/srlinux
     frr:
       kind: linux
       image: frrouting/frr:v7.5.0

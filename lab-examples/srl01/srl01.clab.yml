@@ -5,8 +5,7 @@ topology:
   kinds:
     srl:
       type: ixr6
-      image: srlinux
-      license: license.key
+      image: ghcr.io/nokia/srlinux
   nodes:
     srl:
       kind: srl
