@@ -4,8 +4,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: registry.srlinux.dev/pub/srlinux:21.3.1-410
-      license: license.key
+      image: ghcr.io/nokia/srlinux
       config:
         vars:
           systemip: 10.0.50.50/32

@@ -4,7 +4,7 @@ Containerlab is a perfect tool of choice when all the lab components/nodes fit i
 Although containerlab is not (yet) capable of deploying topologies over a number of container hosts, we have embedded some capabilities that can help you to workaround the single-host resources constraint.
 
 ## Exposing services
-Sometimes all that is needed is to make certain services running inside the nodes launched with containerlab availalbe to a system running outside of the container host. For example, you might have an already running telemetry stack somewhere in your lab and you want to use it with the routing systems deployed with containerlab.
+Sometimes all that is needed is to make certain services running inside the nodes launched with containerlab available to a system running outside of the container host. For example, you might have an already running telemetry stack somewhere in your lab and you want to use it with the routing systems deployed with containerlab.
 
 In that case, the simple solution would be to expose the nodes' ports which are used to collect telemetry information. Take a look the following example where two nodes are defined in the topology file and get their gNMI port exposed to a host under a user-defined host-port.
 
@@ -21,8 +21,7 @@ topology:
         - 57401:57400
     srl:
       kind: srl
-      image: srl:latest
-      license: lic.txt
+      image: ghcr.io/nokia/srlinux
       ports:
         - 57402:57400
   links:
@@ -39,14 +38,14 @@ Exposing services on a per-port basis as shown above is a quick and easy way to 
 Imagine if you want to integrate an NMS system running elsewhere with a lab you launched with containerlab. Typically you would need to expose the entire management network for an NMS to start managing the nodes with management protocols required.  
 In this scenario you wouldn't get far with exposing services via host-ports, as NMS would expect to have IP connectivity with the node it is about to adopt for managing.
 
-For integration tasks like this containerlab users can levelrage static routing towards [containerlab management network](network.md#management-network). Consider the following diagram:
+For integration tasks like this containerlab users can leverage static routing towards [containerlab management network](network.md#management-network). Consider the following diagram:
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
-This solution requires to set up roting between the host which runs the NMS and the container host that has containerlab nodes inside. Since containers are always attached to a common management network, we can make this network reachable by installing, for example, a static route on the NMS host. This will provision the datapath between the NMS and the containerlab management network.
+This solution requires to set up routing between the host which runs the NMS and the container host that has containerlab nodes inside. Since containers are always attached to a common management network, we can make this network reachable by installing, for example, a static route on the NMS host. This will provision the datapath between the NMS and the containerlab management network.
 
-By default, containerlab management network is addressed with `172.20.20./0` IPv4 address, but this can be easily [changed](network.md#configuring-management-network) to accomodate for network environment.
+By default, containerlab management network is addressed with `172.20.20./0` IPv4 address, but this can be easily [changed](network.md#configuring-management-network) to accommodate for network environment.
 
 ## Bridging
 Previous examples were aiming management network access, but what if we need to rather connect a network interfaces of a certain node with a system running outside of the container host? An example for such connectivity requirement could be a traffic generator connected to a containerized node port.

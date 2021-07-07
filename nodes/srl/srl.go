@@ -74,15 +74,15 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
+
 	if s.cfg.StartupConfig == "" {
 		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
-	if s.cfg.License == "" {
-		return fmt.Errorf("no license found for node '%s' of kind '%s'", s.cfg.ShortName, s.cfg.Kind)
-	}
+
 	if s.cfg.NodeType == "" {
 		s.cfg.NodeType = srlDefaultType
 	}
+
 	if _, found := srlTypes[s.cfg.NodeType]; !found {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
@@ -104,8 +104,10 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.cfg.Sysctls[k] = v
 	}
 
-	// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+	if s.cfg.License != "" {
+		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+	}
 
 	// mount config directory
 	cfgPath := filepath.Join(s.cfg.LabDir, "config")
@@ -211,13 +213,15 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	var src string
 	var dst string
 
-	// copy license file to node specific directory in lab
-	src = nodeCfg.License
-	dst = path.Join(nodeCfg.LabDir, "license.key")
-	if err := utils.CopyFile(src, dst); err != nil {
-		return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
+	if nodeCfg.License != "" {
+		// copy license file to node specific directory in lab
+		src = nodeCfg.License
+		dst = path.Join(nodeCfg.LabDir, "license.key")
+		if err := utils.CopyFile(src, dst); err != nil {
+			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
+		}
+		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
-	log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
 	// generate SRL topology file
 	err := generateSRLTopologyFile(nodeCfg.NodeType, nodeCfg.LabDir, nodeCfg.Index)

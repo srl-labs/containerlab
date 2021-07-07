@@ -9,8 +9,7 @@ topology:
     node1:  # node name
       kind: srl
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: ghcr.io/nokia/srlinux
       config: /root/mylab/node1.cfg
       binds:
         - /usr/local/bin/gobgp:/root/gobgp
@@ -56,7 +55,7 @@ docker tag srlinux:20.6.1-286 srlinux:latest
 ```
 
 ### license
-Some containerized NOSes require a license to operate. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
+Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
 
 ### startup-config
 For some kinds it's possible to pass a path to a config file that a node will use on start instead of a bare config. Check documentation for a specific kind to see if `startup-config` element is supported.
@@ -258,7 +257,7 @@ nodes:
 ```
 
 ### publish
-Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with cusomters/partners/colleagues.
+Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with customers/partners/colleagues.
 
 This integration is extensively covered on [Publish ports](published-ports.md) page.
 
