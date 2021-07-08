@@ -119,6 +119,9 @@ func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	}
 
 }
+func (c *IgniteRuntime) WithKeepMgmtNet() {
+	c.ctrRuntime.WithKeepMgmtNet()
+}
 
 func (c *IgniteRuntime) WithMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
@@ -252,7 +255,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string) error {
 	// this is a no-op
 	return nil
 }
-func (c *IgniteRuntime) StopContainer(ctx context.Context, name string, timeout *time.Duration) error {
+func (c *IgniteRuntime) StopContainer(ctx context.Context, name string) error {
 	// this is a no-op, only used by ceos at this stage
 	return nil
 }

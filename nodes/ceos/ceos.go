@@ -13,7 +13,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -152,9 +151,8 @@ func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *ty
 	if err != nil {
 		return err
 	}
-	// force stopping and start is faster than ContainerRestart
-	var timeout time.Duration = 1
-	err = r.StopContainer(ctx, nodeCfg.ContainerID, &timeout)
+
+	err = r.StopContainer(ctx, nodeCfg.ContainerID)
 	if err != nil {
 		return err
 	}

@@ -4,9 +4,9 @@ Containerlab can connect its nodes to a Linux bridge instead of interconnecting 
 
 For example, by connecting a lab node to a bridge we can:
 
-1. allow a node to talk to any workloads (VMs, containers, baremetals) which are connected to that bridge
+1. allow a node to talk to any workload (VM, container, baremetal) which are connected to that bridge
 2. let a node to reach networks which are available via that bridge
-3. scale out containerlab labs by running separate labs in different hosts and get network reachibility between them
+3. scale out containerlab labs by running separate labs in different hosts and get network reachability between them
 4. wiring nodes' data interfaces via a broadcast domain (linux bridge) and use vlans to making dynamic connections
 
 
@@ -25,8 +25,7 @@ topology:
   kinds:
     srl:
       type: ixrd2
-      image: srlinux
-      license: license.key
+      image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
       kind: srl
@@ -61,4 +60,4 @@ br-clab         8000.6281eb7133d2       no              eth1
                                                         eth3
 ```
 
-Chec out ["External bridge"](../../lab-examples/ext-bridge.md) lab for a ready-made example on how to use bridges.
+Check out ["External bridge"](../../lab-examples/ext-bridge.md) lab for a ready-made example on how to use bridges.

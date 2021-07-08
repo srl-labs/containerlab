@@ -4,8 +4,7 @@ name: clos01
 topology:
   kinds:
     srl:
-      image: srlinux
-      license: license.key
+      image: ghcr.io/nokia/srlinux
     linux:
       image: ghcr.io/hellt/network-multitool
   nodes:

@@ -4,8 +4,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: ghcr.io/nokia/srlinux
     vmx:
       kind: vr-vmx
       image: vrnetlab/vr-vmx:20.2R1.10

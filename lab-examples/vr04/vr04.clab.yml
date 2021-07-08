@@ -4,8 +4,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: ghcr.io/nokia/srlinux
     xrv9k:
       kind: vr-xrv9k
       image: vr-xrv:7.2.1 # do not forget to re-tag the image if needed
