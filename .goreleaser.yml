@@ -12,6 +12,8 @@ builds:
       - linux
     goarch:
       - amd64
+    hooks:
+      post: upx "{{ .Path }}"
 archives:
   - replacements:
       linux: Linux

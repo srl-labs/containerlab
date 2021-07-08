@@ -160,6 +160,11 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVER }}
+      - name: Install upx
+        run: |
+          sudo apt update && sudo apt install -y libucl1
+          curl -L http://archive.ubuntu.com/ubuntu/pool/universe/u/upx-ucl/upx-ucl_3.96-2_amd64.deb -o /tmp/upx.deb
+          sudo dpkg -i /tmp/upx.deb
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
@@ -171,7 +176,7 @@ jobs:
 
   publish-docs:
     runs-on: ubuntu-20.04
-    if: startsWith(github.ref, 'refs/tags/v') && startsWith(github.ref, 'refs/tags/v0.0.0') != true
+    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
     needs: build-and-release
     steps:
       - name: Checkout
