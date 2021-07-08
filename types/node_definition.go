@@ -2,14 +2,15 @@ package types
 
 // NodeDefinition represents a configuration a given node can have in the lab definition file
 type NodeDefinition struct {
-	Kind     string `yaml:"kind,omitempty"`
-	Group    string `yaml:"group,omitempty"`
-	Type     string `yaml:"type,omitempty"`
-	Config   string `yaml:"config,omitempty"`
-	Image    string `yaml:"image,omitempty"`
-	License  string `yaml:"license,omitempty"`
-	Position string `yaml:"position,omitempty"`
-	Cmd      string `yaml:"cmd,omitempty"`
+	Kind          string            `yaml:"kind,omitempty"`
+	Group         string            `yaml:"group,omitempty"`
+	Type          string            `yaml:"type,omitempty"`
+	StartupConfig string            `yaml:"startup-config,omitempty"`
+	Config        *ConfigDispatcher `yaml:"config,omitempty"`
+	Image         string            `yaml:"image,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Position      string            `yaml:"position,omitempty"`
+	Cmd           string            `yaml:"cmd,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
 	// list of port bindings
@@ -28,6 +29,11 @@ type NodeDefinition struct {
 	Labels map[string]string `yaml:"labels,omitempty"`
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `yaml:"network-mode,omitempty"`
+	// Ignite sandbox and kernel imageNames
+	Sandbox string `yaml:"sandbox,omitempty"`
+	Kernel  string `yaml:"kernel,omitempty"`
+	// Override container runtime
+	Runtime string `yaml:"runtime,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -51,9 +57,19 @@ func (n *NodeDefinition) GetType() string {
 	return n.Type
 }
 
-func (n *NodeDefinition) GetConfig() string {
+func (n *NodeDefinition) GetStartupConfig() string {
 	if n == nil {
 		return ""
+	}
+	return n.StartupConfig
+}
+
+func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
+	if n == nil {
+		return nil
+	}
+	if n.Config == nil {
+		return &ConfigDispatcher{}
 	}
 	return n.Config
 }
@@ -147,4 +163,25 @@ func (n *NodeDefinition) GetNetworkMode() string {
 		return ""
 	}
 	return n.NetworkMode
+}
+
+func (n *NodeDefinition) GetNodeSandbox() string {
+	if n == nil {
+		return ""
+	}
+	return n.Sandbox
+}
+
+func (n *NodeDefinition) GetNodeKernel() string {
+	if n == nil {
+		return ""
+	}
+	return n.Kernel
+}
+
+func (n *NodeDefinition) GetNodeRuntime() string {
+	if n == nil {
+		return ""
+	}
+	return n.Runtime
 }

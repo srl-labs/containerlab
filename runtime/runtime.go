@@ -14,6 +14,7 @@ import (
 const (
 	DockerRuntime     = "docker"
 	ContainerdRuntime = "containerd"
+	IgniteRuntime     = "ignite"
 )
 
 type ContainerRuntime interface {
@@ -31,8 +32,9 @@ type ContainerRuntime interface {
 	DeleteNet(context.Context) error
 	// Pull container image if not present
 	PullImageIfRequired(context.Context, string) error
-	// Create container
-	CreateContainer(context.Context, *types.NodeConfig) error
+	// Create container returns an extra interface that can be used to receive signals
+	// about the container life-cycle after it was created, e.g. for post-deploy tassks
+	CreateContainer(context.Context, *types.NodeConfig) (interface{}, error)
 	// Start pre-created container by its name
 	StartContainer(context.Context, string) error
 	// Stop running container by its name
@@ -46,7 +48,10 @@ type ContainerRuntime interface {
 	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
 	ExecNotWait(context.Context, string, []string) error
 	// Delete container by its name
-	DeleteContainer(context.Context, *types.GenericContainer) error
+	DeleteContainer(context.Context, string) error
+	// Getter for runtime config options
+	Config() RuntimeConfig
+	GetName() string
 }
 
 type Initializer func() ContainerRuntime

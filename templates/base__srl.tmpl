@@ -1,0 +1,75 @@
+{{ expect .systemip "ip" }}
+{{ optional .isis_iid "0-31" }}
+{{ range .links }}
+    {{ expect .port "^(ethernet-\\d+/|e\\d+-)\\d+$" }}
+    {{ expect .name "string" }}
+    {{ expect .ip "ip" }}
+    {{ optional .vlan "0-4095" }}
+    {{ optional .metric "1-10000" }}
+{{ end }}
+
+/interface lo0 {
+    admin-state enable
+    subinterface 0 {
+        ipv4 {
+            address {{ .systemip }} {
+            }
+        }
+        ipv6 {
+            address ::ffff:{{ ip .systemip }}/128 {
+            }
+        }
+    }
+}
+
+/network-instance default {
+    router-id {{ ip .systemip }}
+    interface lo0.0 {
+    }
+    protocols {
+        isis {
+            instance default {
+                admin-state enable
+                level-capability L2
+                set level 2 metric-style wide
+                # net should not be multiline (net [), becasue of the SRL ... prompt
+                net [ 49.0000.0000.0000.0{{ default 0 .isis_iid }} ]
+                interface lo0.0 {
+                }
+            }
+        }
+    }
+}
+
+ /system lldp admin-state enable
+
+
+{{ range .links }}
+/interface {{ .port }} {
+    admin-state enable
+    vlan-tagging true
+    subinterface {{ default 10 .vlan }} {
+        set vlan encap single-tagged vlan-id {{ default 10 .vlan }}
+        set ipv4 address {{ .ip }}
+        set ipv6 address ::FFFF:{{ ip .ip }}/127
+    }
+}
+
+/network-instance default {
+    interface {{ .port }}.{{ default 10 .vlan }} {
+    }
+    protocols {
+        isis {
+            instance default {
+                interface {{ .port }}.{{ default 10 .vlan }} {
+                    circuit-type point-to-point
+                    level 2 {
+                        metric {{ default 10 .metric }}
+                    }
+                }
+            }
+        }
+    }
+}
+
+{{ end }}

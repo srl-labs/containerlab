@@ -14,6 +14,10 @@ import (
 const (
 	// default connection mode for vrnetlab based containers
 	VrDefConnMode = "tc"
+	// keys for the map returned by GetImages
+	ImageKey   = "image"
+	KernelKey  = "kernel"
+	SandboxKey = "sandbox"
 )
 
 var NodeKind string
@@ -21,6 +25,7 @@ var NodeKind string
 const (
 	NodeKindBridge     = "bridge"
 	NodeKindCEOS       = "ceos"
+	NodeKindCVX        = "cvx"
 	NodeKindCRPD       = "crpd"
 	NodeKindHOST       = "host"
 	NodeKindLinux      = "linux"
@@ -37,14 +42,23 @@ const (
 	NodeKindVrXRV9K    = "vr-xrv9k"
 )
 
+// a map of node kinds overriding the default global runtime
+var NonDefaultRuntimes = map[string]string{
+	NodeKindCVX: runtime.IgniteRuntime,
+}
+
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	Config() *types.NodeConfig
 	PreDeploy(configName, labCADir, labCARoot string) error
-	Deploy(context.Context, runtime.ContainerRuntime) error
-	PostDeploy(context.Context, runtime.ContainerRuntime, map[string]Node) error
+	Deploy(context.Context) error
+	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)
-	SaveConfig(context.Context, runtime.ContainerRuntime) error
+	WithRuntime(runtime.ContainerRuntime)
+	SaveConfig(context.Context) error
+	Delete(context.Context) error
+	GetImages() map[string]string
+	GetRuntime() runtime.ContainerRuntime
 }
 
 var Nodes = map[string]Initializer{}
@@ -67,6 +81,12 @@ func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 	}
 }
 
+func WithRuntime(r runtime.ContainerRuntime) NodeOption {
+	return func(n Node) {
+		n.WithRuntime(r)
+	}
+}
+
 var DefaultConfigTemplates = map[string]string{
 	"crpd":    "/etc/containerlab/templates/crpd/juniper.conf",
 	"vr-sros": "",
@@ -74,6 +94,7 @@ var DefaultConfigTemplates = map[string]string{
 
 // DefaultCredentials holds default username and password per each kind
 var DefaultCredentials = map[string][]string{
+	"srl":      {"admin", "admin"},
 	"vr-sros":  {"admin", "admin"},
 	"vr-vmx":   {"admin", "admin@123"},
 	"vr-xrv9k": {"clab", "clab@123"},

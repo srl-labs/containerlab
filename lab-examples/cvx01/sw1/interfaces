@@ -1,0 +1,3 @@
+auto swp12
+iface swp12 
+    address 12.12.12.1/24

@@ -29,6 +29,7 @@ func NewTopology() *Topology {
 type LinkConfig struct {
 	Endpoints []string
 	Labels    map[string]string `yaml:"labels,omitempty"`
+	Vars      map[string]string `yaml:"vars,omitempty"`
 }
 
 func (t *Topology) GetDefaults() *NodeDefinition {
@@ -134,16 +135,31 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 	return nil
 }
 
-func (t *Topology) GetNodeConfig(name string) (string, error) {
+func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
+	if ndef, ok := t.Nodes[name]; ok {
+		vars := utils.MergeStringMaps(
+			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().Vars,
+				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().Vars),
+			ndef.GetConfigDispatcher().Vars)
+
+		return &ConfigDispatcher{
+			Vars: vars,
+		}
+	}
+
+	return nil
+}
+
+func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	var cfg string
 	if ndef, ok := t.Nodes[name]; ok {
 		var err error
-		cfg = ndef.GetConfig()
-		if t.GetKind(t.GetNodeKind(name)).GetConfig() != "" && cfg == "" {
-			cfg = t.GetKind(t.GetNodeKind(name)).GetConfig()
+		cfg = ndef.GetStartupConfig()
+		if t.GetKind(t.GetNodeKind(name)).GetStartupConfig() != "" && cfg == "" {
+			cfg = t.GetKind(t.GetNodeKind(name)).GetStartupConfig()
 		}
 		if cfg == "" {
-			cfg = t.GetDefaults().GetConfig()
+			cfg = t.GetDefaults().GetStartupConfig()
 		}
 		if cfg != "" {
 			cfg, err = resolvePath(cfg)
@@ -267,6 +283,45 @@ func (t *Topology) GetNodeNetworkMode(name string) string {
 			return t.GetKind(t.GetNodeKind(name)).GetNetworkMode()
 		}
 		return t.GetDefaults().GetNetworkMode()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeSandbox(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeSandbox() != "" {
+			return ndef.GetNodeSandbox()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeSandbox() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeSandbox()
+		}
+		return t.GetDefaults().GetNodeSandbox()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeKernel(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeKernel() != "" {
+			return ndef.GetNodeKernel()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeKernel() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeKernel()
+		}
+		return t.GetDefaults().GetNodeKernel()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeRuntime(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeRuntime() != "" {
+			return ndef.GetNodeRuntime()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeRuntime() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeRuntime()
+		}
+		return t.GetDefaults().GetNodeRuntime()
 	}
 	return ""
 }

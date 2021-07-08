@@ -65,7 +65,8 @@ func init() {
 }
 
 type srl struct {
-	cfg *types.NodeConfig
+	cfg     *types.NodeConfig
+	runtime runtime.ContainerRuntime
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -73,21 +74,21 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
+
+	if s.cfg.StartupConfig == "" {
+		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
-	if s.cfg.License == "" {
-		return fmt.Errorf("no license found for node '%s' of kind '%s'", s.cfg.ShortName, s.cfg.Kind)
-	}
+
 	if s.cfg.NodeType == "" {
 		s.cfg.NodeType = srlDefaultType
 	}
+
 	if _, found := srlTypes[s.cfg.NodeType]; !found {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
-		log.Fatalf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
+		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
 	}
 
 	// the addition touch is needed to support non docker runtimes
@@ -103,8 +104,10 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.cfg.Sysctls[k] = v
 	}
 
-	// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+	if s.cfg.License != "" {
+		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+	}
 
 	// mount config directory
 	cfgPath := filepath.Join(s.cfg.LabDir, "config")
@@ -160,22 +163,35 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	return createSRLFiles(s.cfg)
 }
 
-func (s *srl) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
-	return r.CreateContainer(ctx, s.cfg)
+func (s *srl) Deploy(ctx context.Context) error {
+	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	return err
 }
 
-func (s *srl) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (s *srl) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
-func (s *srl) Destroy(ctx context.Context, r runtime.ContainerRuntime) error {
-	// return r.DeleteContainer(ctx, s.cfg)
+func (s *srl) Destroy(ctx context.Context) error {
+	// return s.runtime.DeleteContainer(ctx, s.cfg)
 	return nil
 }
 
-func (s *srl) WithMgmtNet(*types.MgmtNet) {}
+func (s *srl) GetImages() map[string]string {
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
+}
 
-func (s *srl) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
-	stdout, stderr, err := r.Exec(ctx, s.cfg.LongName, saveCmd)
+func (s *srl) WithMgmtNet(*types.MgmtNet)             {}
+func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+
+func (s *srl) Delete(ctx context.Context) error {
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+}
+
+func (s *srl) SaveConfig(ctx context.Context) error {
+	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
 	}
@@ -197,13 +213,15 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	var src string
 	var dst string
 
-	// copy license file to node specific directory in lab
-	src = nodeCfg.License
-	dst = path.Join(nodeCfg.LabDir, "license.key")
-	if err := utils.CopyFile(src, dst); err != nil {
-		return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
+	if nodeCfg.License != "" {
+		// copy license file to node specific directory in lab
+		src = nodeCfg.License
+		dst = path.Join(nodeCfg.LabDir, "license.key")
+		if err := utils.CopyFile(src, dst); err != nil {
+			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
+		}
+		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
-	log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 
 	// generate SRL topology file
 	err := generateSRLTopologyFile(nodeCfg.NodeType, nodeCfg.LabDir, nodeCfg.Index)
@@ -211,11 +229,18 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		return err
 	}
 
-	// generate a config file
-	// if the node has a `config:` statement, the file specified in that section
-	// will be used as a template in nodeGenerateConfig()
+	// generate a startup config file
+	// if the node has a `startup-config:` statement, the file specified in that section
+	// will be used as a template in GenerateConfig()
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
 	dst = path.Join(nodeCfg.LabDir, "config", "config.json")
+	if nodeCfg.StartupConfig != "" {
+		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+		cfgTemplate = string(c)
+	}
 	err = nodeCfg.GenerateConfig(dst, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)

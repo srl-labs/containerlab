@@ -1,0 +1,13 @@
+repos:
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.0.0
+    hooks:
+      - id: codespell
+  - repo: https://github.com/syntaqx/git-hooks
+    rev: v0.0.17
+    hooks:
+      - id: forbid-binary
+      - id: go-fmt
+      - id: go-test
+      - id: go-mod-tidy
+      - id: shfmt

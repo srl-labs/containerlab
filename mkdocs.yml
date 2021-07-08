@@ -11,6 +11,7 @@ nav:
           - srl - Nokia SR Linux: manual/kinds/srl.md
           - crpd - Juniper cRPD: manual/kinds/crpd.md
           - ceos - Arista cEOS: manual/kinds/ceos.md
+          - cvx - Cumulus VX: manual/kinds/cvx.md
           - sonic-vs - SONiC: manual/kinds/sonic-vs.md
           - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
@@ -70,6 +71,7 @@ nav:
       - Nokia SR Linux and Cisco XRv: lab-examples/vr-xrv.md
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - FRR: lab-examples/frr01.md
+      - Cumulus Test Drive: lab-examples/cvx03.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
   - Release notes:

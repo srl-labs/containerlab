@@ -20,8 +20,7 @@ topology:
   kinds:
     srl:
       type: ixr6
-      image: srlinux
-      license: license.key
+      image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
       kind: srl
@@ -171,7 +170,7 @@ mgmt:
 Since `bridge` network is created by default by docker, using its name in the configuration will make nodes to connect to this network.
 
 #### bridge name
-By default, containerlab will create a linux bridge backing the management docker network with the following name `br-<netword-id>`. The network-id part is coming from the docker network ID that docker manages.
+By default, containerlab will create a linux bridge backing the management docker network with the following name `br-<network-id>`. The network-id part is coming from the docker network ID that docker manages.
 
 We allow our users to change the bridge name that the management network will use. This can be used to connect containers to an already existing bridge with other workloads connected:
 
@@ -219,7 +218,7 @@ The above diagram shows how links are created in the topology definition file. I
 The p2p links are provided by the `veth` device pairs where each end of the `veth` pair is attached to a respective container. The MTU on these veth links is set to 65000, so a regular 9212 MTU on the network links shouldn't be a problem.
 
 ### host links
-It is also possible to interconnect container' data inteface not with other container or add it to a [bridge](kinds/bridge.md), but to attach it to a host's root namespace. This is, for example, needed to create a L2 connectivity between containerlab nodes running on different VMs (aka multi-node labs).
+It is also possible to interconnect container' data interface not with other container or add it to a [bridge](kinds/bridge.md), but to attach it to a host's root namespace. This is, for example, needed to create a L2 connectivity between containerlab nodes running on different VMs (aka multi-node labs).
 
 This "host-connectivity" is achieved by using a reserved node name - `host` - referenced in the endpoints section. Consider the following example where an SR Linux container has its only data interface connected to a hosts root namespace via veth interface:
 
@@ -230,8 +229,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: ghcr.io/nokia/srlinux
       config: test-srl-config.json
   links:
     - endpoints: ["srl:e1-1", "host:srl_e1-1"]
@@ -259,8 +257,7 @@ topology:
   nodes:
     n1:
       kind: srl
-      image: srlinux:21.3.1-410
-      license: license.key
+      image: ghcr.io/nokia/srlinux
   links:
     - endpoints:
         - "n1:e1-1"

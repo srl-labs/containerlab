@@ -7,6 +7,7 @@ package vr_sros
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -27,8 +28,9 @@ func init() {
 }
 
 type vrSROS struct {
-	cfg  *types.NodeConfig
-	mgmt *types.MgmtNet
+	cfg     *types.NodeConfig
+	mgmt    *types.MgmtNet
+	runtime runtime.ContainerRuntime
 }
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -36,8 +38,8 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	if s.cfg.Config == "" {
-		s.cfg.Config = nodes.DefaultConfigTemplates[s.cfg.Kind]
+	if s.cfg.StartupConfig == "" {
+		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
 	if s.cfg.NodeType == "" {
@@ -72,19 +74,30 @@ func (s *vrSROS) PreDeploy(configName, labCADir, labCARoot string) error {
 	return createVrSROSFiles(s.cfg)
 }
 
-func (s *vrSROS) Deploy(ctx context.Context, r runtime.ContainerRuntime) error {
-	return r.CreateContainer(ctx, s.cfg)
+func (s *vrSROS) Deploy(ctx context.Context) error {
+	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	return err
 }
 
-func (s *vrSROS) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (s *vrSROS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet) {
-	s.mgmt = mgmt
+func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
+func (s *vrSROS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *vrSROS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+
+func (s *vrSROS) Delete(ctx context.Context) error {
+	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrSROS) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+func (s *vrSROS) GetImages() map[string]string {
+	return map[string]string{
+		nodes.ImageKey: s.cfg.Image,
+	}
+}
+
+func (s *vrSROS) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][0],
@@ -112,15 +125,21 @@ func createVrSROSFiles(node *types.NodeConfig) error {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+	}
 
+	if node.StartupConfig != "" {
 		cfg := path.Join(node.LabDir, "tftpboot", "config.txt")
-		if node.Config != "" {
-			err := node.GenerateConfig(cfg, nodes.DefaultConfigTemplates[node.Kind])
-			if err != nil {
-				log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-			}
-		} else {
-			log.Debugf("Config file exists for node %s", node.ShortName)
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(cfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 		}
 	}
 	return nil

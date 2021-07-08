@@ -19,6 +19,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
+	clabRuntimes "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -57,6 +58,7 @@ var kinds = []string{
 	"ovs-bridge",
 	"mysocketio",
 	"host",
+	"cvx",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
@@ -68,7 +70,7 @@ type Config struct {
 }
 
 // ParseTopology parses the lab topology
-func (c *CLab) ParseTopology() error {
+func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 	log.Debugf("Lab name: %s", c.Config.Name)
 
@@ -92,9 +94,52 @@ func (c *CLab) ParseTopology() error {
 		nodeNames = append(nodeNames, nodeName)
 	}
 	sort.Strings(nodeNames)
+
+	// collect node runtimes in a map[NodeName] -> RuntimeName
+	var nodeRuntimes = make(map[string]string)
+
+	for nodeName, topologyNode := range c.Config.Topology.Nodes {
+		// this case is when runtime was overridden at the node level
+		if r := c.Config.Topology.GetNodeRuntime(nodeName); r != "" {
+			nodeRuntimes[nodeName] = r
+			continue
+		}
+
+		// this case if for non-default runtimes overriding the global default
+		if r, ok := nodes.NonDefaultRuntimes[topologyNode.GetKind()]; ok {
+			nodeRuntimes[nodeName] = r
+			continue
+		}
+
+		// saving the global default runtime
+		nodeRuntimes[nodeName] = c.globalRuntime
+	}
+
+	// initialize any extra runtimes
+	for _, r := range nodeRuntimes {
+		// this is the case for already init'ed runtimes
+		if _, ok := c.Runtimes[r]; ok {
+			continue
+		}
+
+		if rInit, ok := clabRuntimes.ContainerRuntimes[r]; ok {
+
+			newRuntime := rInit()
+			defaultConfig := c.Runtimes[c.globalRuntime].Config()
+			err := newRuntime.Init(
+				clabRuntimes.WithConfig(&defaultConfig),
+			)
+			if err != nil {
+				return fmt.Errorf("failed to init the container runtime: %s", err)
+			}
+
+			c.Runtimes[r] = newRuntime
+		}
+	}
+
 	var err error
 	for idx, nodeName := range nodeNames {
-		err = c.NewNode(nodeName, c.Config.Topology.Nodes[nodeName], idx)
+		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
 		if err != nil {
 			return err
 		}
@@ -103,11 +148,12 @@ func (c *CLab) ParseTopology() error {
 		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l)
 	}
+
 	return nil
 }
 
 // NewNode initializes a new node object
-func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) error {
+func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int) error {
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
@@ -116,11 +162,12 @@ func (c *CLab) NewNode(nodeName string, nodeDef *types.NodeDefinition, idx int) 
 	// Init
 	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
 	if !ok {
-		log.Fatalf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
+		return fmt.Errorf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
 	}
 	n := nodeInitializer()
 	// Init
-	err = n.Init(nodeCfg, nodes.WithMgmtNet(c.Config.Mgmt))
+
+	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
@@ -161,12 +208,15 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         make(map[string]string),
 		Endpoints:       make([]*types.Endpoint, 0),
+		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
+		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
+		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
 	var err error
 	// initialize config
-	nodeCfg.Config, err = c.Config.Topology.GetNodeConfig(nodeCfg.ShortName)
+	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
@@ -188,6 +238,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 
+	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
+
 	return nodeCfg, nil
 }
 
@@ -196,11 +248,13 @@ func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
 	if len(l.Endpoints) != 2 {
 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints)
 	}
+
 	return &types.Link{
 		A:      c.NewEndpoint(l.Endpoints[0]),
 		B:      c.NewEndpoint(l.Endpoints[1]),
 		MTU:    defaultVethLinkMTU,
 		Labels: l.Labels,
+		Vars:   l.Vars,
 	}
 }
 
@@ -221,7 +275,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	if len(endpoint.EndpointName) > 15 {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
-	// generate unqiue MAC
+	// generate unique MAC
 	endpoint.MAC = utils.GenMac(clabOUI)
 
 	// search the node pointer for a node name referenced in endpoint section
@@ -317,24 +371,24 @@ func (c *CLab) verifyLinks() error {
 }
 
 // VerifyImages will check if image referred in the node config
-// either pullable or present or is available in the local registry
-// if it is not available it will emit an error
+// either pullable or is available in the local image store
 func (c *CLab) VerifyImages(ctx context.Context) error {
-	images := map[string]struct{}{}
+
+	images := make(map[string]string)
+
 	for _, node := range c.Nodes {
-		// skip image verification for bridge kinds
-		if node.Config().Kind == "bridge" || node.Config().Kind == "ovs-bridge" {
-			continue
-		}
-		if node.Config().Image == "" {
-			return fmt.Errorf("missing required image for node %s", node.Config().ShortName)
+
+		for _, imageName := range node.GetImages() {
+			if imageName == "" {
+				return fmt.Errorf("missing required image for node %q", node.Config().ShortName)
+			}
+			images[imageName] = node.GetRuntime().GetName()
 		}
 
-		images[node.Config().Image] = struct{}{}
 	}
 
-	for image := range images {
-		err := c.Runtime.PullImageIfRequired(ctx, image)
+	for image, runtimeName := range images {
+		err := c.Runtimes[runtimeName].PullImageIfRequired(ctx, image)
 		if err != nil {
 			return err
 		}
@@ -348,10 +402,11 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	containers, err := c.Runtime.ListContainers(nctx, nil)
+	containers, err := c.ListContainers(nctx, nil)
 	if err != nil {
-		return fmt.Errorf("could not list containers: %v", err)
+		return err
 	}
+
 	if len(containers) == 0 {
 		return nil
 	}
@@ -377,7 +432,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 		}
 	}
 
-	return err
+	return nil
 }
 
 // verifyHostIfaces ensures that host interfaces referenced in the topology
@@ -416,7 +471,7 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 		for _, e := range endpoints {
 			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
-					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces. 
+					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
 					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
 				}
 				rootNsIfaces[e.EndpointName] = struct{}{}
@@ -552,4 +607,13 @@ func sysMemory(v string) uint64 {
 		m = uint64(in.Freeram) * uint64(in.Unit)
 	}
 	return m
+}
+
+// returns nodeCfg.ShortName based on the provided containerName and labName
+func getShortName(labName, containerName string) (string, error) {
+	result := strings.Split(containerName, "-"+labName+"-")
+	if len(result) != 2 {
+		return "", fmt.Errorf("failed to parse container name %q", containerName)
+	}
+	return result[1], nil
 }

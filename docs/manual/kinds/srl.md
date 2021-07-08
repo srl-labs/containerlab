@@ -52,13 +52,12 @@ topology:
     srl1:
       kind: srl
       type: ixr6
-      license: lic.key
 ```
 
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
 
-#### User defined config
-It is possible to make SR Linux nodes to boot up with a user-defined config instead of a built-in one. With a [`config`](../nodes.md#config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
+#### User defined startup config
+It is possible to make SR Linux nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
 
 ```yaml
 name: srl_lab
@@ -67,7 +66,7 @@ topology:
     srl1:
       kind: srl
       type: ixr6
-      license: lic.key
+      image: ghcr.io/nokia/srlinux
       config: myconfig.json
 ```
 
@@ -111,7 +110,10 @@ In case a user-provided certificates/keys need to be used, the `root-ca.pem`, `<
 In case only `root-ca.pem` and `root-ca-key.pem` files are provided, the node certificates will be generated using these CA files.
 
 ### License
-SR Linux containers require a license file to be provided. With a [`license`](../nodes.md#license) directive it's possible to provide a path to a license file that will be used for srl nodes.
+SR Linux container can run without any license :partying_face:.  
+In that license-less mode the datapath is limited to 100PPS and the sr_linux process will reboot once a week.
+
+The license file lifts these limitations and a path to it can be provided with [`license`](../nodes.md#license) directive.
 
 ## Container configuration
 To start an SR Linux NOS containerlab uses the configuration that is described in [SR Linux Software Installation Guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE16113AAAATQZZA01_V1_SR%20Linux%20R20.6%20Software%20Installation.pdf)

@@ -35,13 +35,13 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
-			c := NewContainerLab(opts...)
-			if err := c.ParseTopology(); err != nil {
+			c, err := NewContainerLab(opts...)
+			if err != nil {
 				t.Fatal(err)
 			}
 
 			var s strings.Builder
-			err := c.generateAnsibleInventory(&s)
+			err = c.generateAnsibleInventory(&s)
 			if err != nil {
 				t.Fatal(err)
 			}

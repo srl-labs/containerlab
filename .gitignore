@@ -9,6 +9,7 @@ bin/*
 rpm
 rpm/*
 dist
+private
 
 # Test binary, built with `go test -c`
 *.test
@@ -16,12 +17,18 @@ dist
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# clab directories
+lab-examples/**/clab-*
+
 # ignore the following files/directories
 graph/*
+
 license.key
 container-lab
 containerlab
+site/
 .vscode/
 .DS_Store
 __rd*
 tests/out
+

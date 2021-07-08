@@ -35,8 +35,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      image: srlinux:20.6.3-145
-      license: license.key
+      image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos
       image: ceos:4.25.0F
@@ -54,7 +53,7 @@ A [topology definition deep-dive](manual/topo-def-file.md) document provides a c
 * The nodes are always of a certain [`kind`](manual/kinds/kinds.md). The `kind` defines the node configuration and behavior.
 * Containerlab supports a fixed number of `kinds`. In the example above, the `srl` and `ceos` are one of the [supported kinds](manual/kinds/kinds.md).
 * The actual [nodes](manual/nodes.md) of the topology are defined in the `nodes` section which holds a map of node names. In the example above, nodes with names `srl` and `ceos` are defined.
-* Node elements must have a `kind` parameter to indicate which kind this node belongs to. Under the nodes section you typically provide node-specific parameters. This lab uses node-specific parameters such as `image` and `license`.  
+* Node elements must have a `kind` parameter to indicate which kind this node belongs to. Under the nodes section you typically provide node-specific parameters. This lab uses a node-specific parameters - `image`.  
 * `nodes` are interconnected with `links`. Each `link` is [defined](manual/topo-def-file.md#links) by a set of `endpoints`.
 
 ## Container image
@@ -67,25 +66,19 @@ The image name follows the same rules as the images you use with, for example, D
 
     For example: `docker tag srlinux:20.6.1-286 srlinux:latest`
 
-## License files
-For the nodes/kinds which require a license to run (like Nokia SR Linux) the [`license`](manual/nodes.md#license) element must specify a path to a valid license file.
-In the example we work with, the license path is set to `license.key` for `srl` kind. That means that containerlab will look for this file by the `${PWD}/license.key` path. It is also possible to provide absolute paths as well.
-
-Before deploying our lab, we have to copy the license file in the `~/clab-quickstart` directory to make it available by the specified relative path.
-
 ## Deploying a lab
-Now when we know what a basic topology file consists of, sorted out the container image name and node's license file, we can proceed with deploying this lab. To keep things easy and guessable, the command to deploy a lab is called [`deploy`](cmd/deploy.md).
+Now when we know what a basic topology file consists of and sorted out the container image name and node's license file, we can proceed with deploying this lab. To keep things easy and guessable, the command to deploy a lab is called [`deploy`](cmd/deploy.md).
 
 ```bash
-# checking that topology and license files are present in ~/clab-quickstart
+# checking that topology file is present in ~/clab-quickstart
 ❯ ls
-license.key  srlceos01.clab.yml
+srlceos01.clab.yml
 
 # checking that container images are available
 docker images | grep -E "srlinux|ceos"
-REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-srlinux             20.6.3-145          79019d14cfc7        3 months ago        1.32GB
-ceos                4.25.0F             15a5f97fe8e8        3 months ago        1.76GB
+REPOSITORY             TAG                 IMAGE ID            CREATED             SIZE
+ghcr.io/nokia/srlinux  latest              79019d14cfc7        3 months ago        1.32GB
+ceos                   4.25.0F             15a5f97fe8e8        3 months ago        1.76GB
 
 # start the lab deployment by referencing the topology file
 containerlab deploy --topo srlceos01.clab.yml
@@ -94,12 +87,12 @@ containerlab deploy --topo srlceos01.clab.yml
 After a couple of seconds you will see the summary of the deployed nodes:
 
 ```
-+---+---------------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
-| # |        Name         | Container ID |       Image        | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+---------------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
-| 1 | clab-srlceos01-ceos | 2e2e04a42cea | ceos:4.25.0F       | ceos |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
-| 2 | clab-srlceos01-srl  | 1b9568fcdb01 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
-+---+---------------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
++---+---------------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+| # |        Name         | Container ID |       Image           | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
++---+---------------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+| 1 | clab-srlceos01-ceos | 2e2e04a42cea | ceos:4.25.0F          | ceos |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
+| 2 | clab-srlceos01-srl  | 1b9568fcdb01 | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
++---+---------------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
 ```
 
 The node name presented in the summary table is the fully qualified node name, it is built using the following pattern: `clab-{{lab-name}}-{{node-name}}`.

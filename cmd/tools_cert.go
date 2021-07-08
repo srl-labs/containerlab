@@ -103,7 +103,10 @@ func createCA(cmd *cobra.Command, args []string) error {
 		clab.WithDebug(debug),
 		clab.WithTimeout(timeout),
 	}
-	c := clab.NewContainerLab(opts...)
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return err
+	}
 
 	cfssllog.Level = cfssllog.LevelError
 	if debug {

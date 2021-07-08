@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var debugCount int
 var debug bool
 var timeout time.Duration
 
@@ -29,6 +30,7 @@ var rootCmd = &cobra.Command{
 	Use:   "containerlab",
 	Short: "deploy container based lab environments with a user-defined interconnections",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		debug = debugCount > 0
 		if debug {
 			log.SetLevel(log.DebugLevel)
 		}
@@ -45,7 +47,7 @@ func Execute() {
 
 func init() {
 	rootCmd.SilenceUsage = true
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
+	rootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
 	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "", "path to the file with topology information")
 	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")

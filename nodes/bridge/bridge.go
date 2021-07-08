@@ -19,7 +19,8 @@ func init() {
 }
 
 type bridge struct {
-	cfg *types.NodeConfig
+	cfg     *types.NodeConfig
+	runtime runtime.ContainerRuntime
 }
 
 func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -29,13 +30,24 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	return nil
 }
-func (s *bridge) Config() *types.NodeConfig                                    { return s.cfg }
-func (s *bridge) PreDeploy(configName, labCADir, labCARoot string) error       { return nil }
-func (s *bridge) Deploy(ctx context.Context, r runtime.ContainerRuntime) error { return nil }
-func (s *bridge) PostDeploy(ctx context.Context, r runtime.ContainerRuntime, ns map[string]nodes.Node) error {
+func (s *bridge) Config() *types.NodeConfig                              { return s.cfg }
+func (s *bridge) PreDeploy(configName, labCADir, labCARoot string) error { return nil }
+func (s *bridge) Deploy(ctx context.Context) error                       { return nil }
+func (s *bridge) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	return nil
 }
-func (s *bridge) WithMgmtNet(*types.MgmtNet) {}
-func (s *bridge) SaveConfig(ctx context.Context, r runtime.ContainerRuntime) error {
+func (s *bridge) WithMgmtNet(*types.MgmtNet)             {}
+func (s *bridge) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
+func (s *bridge) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+
+func (s *bridge) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
+	return nil, nil
+}
+
+func (s *bridge) SaveConfig(ctx context.Context) error { return nil }
+
+func (s *bridge) GetImages() map[string]string { return map[string]string{} }
+
+func (s *bridge) Delete(ctx context.Context) error {
 	return nil
 }

@@ -1,0 +1,39 @@
+auto lo
+iface lo inet loopback
+    address 10.255.255.2/32
+
+auto eth0
+iface eth0 inet dhcp
+    vrf mgmt
+
+auto mgmt
+iface mgmt
+    address 127.0.0.1/8
+    address ::1/128
+    vrf-table auto
+
+auto swp2
+iface swp2
+    bridge-access 20
+
+auto swp49
+iface swp49
+
+auto swp50
+iface swp50
+
+auto swp51
+iface swp51
+
+auto bridge
+iface bridge
+    bridge-ports swp2
+    bridge-vids 20
+    bridge-vlan-aware yes
+
+auto vlan20
+iface vlan20
+    address 10.0.20.3/24
+    address-virtual 00:00:00:00:1a:20 10.0.20.1/24
+    vlan-id 20
+    vlan-raw-device bridge
