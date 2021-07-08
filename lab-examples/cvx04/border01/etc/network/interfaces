@@ -1,0 +1,125 @@
+# Ansible Managed File
+auto lo
+iface lo inet loopback
+    address 10.10.10.63/32
+    address 10.10.100.100/32
+    vxlan-local-tunnelip 10.10.10.63
+
+auto eth0
+iface eth0 inet dhcp
+    vrf mgmt
+
+auto mgmt
+iface mgmt
+  vrf-table auto
+  address 127.0.0.1/8
+  address ::1/128
+
+auto RED
+iface RED
+  vrf-table auto
+
+auto BLUE
+iface BLUE
+  vrf-table auto
+
+auto bridge
+iface bridge
+    bridge-ports vni101 vni102 vniRED vniBLUE bond1 
+    bridge-vids 101 102  
+    bridge-vlan-aware yes
+
+auto vni101
+iface vni101
+    bridge-access 101
+    vxlan-id 101
+    mstpctl-portbpdufilter yes
+    mstpctl-bpduguard yes
+    bridge-learning off
+    bridge-arp-nd-suppress on
+    vxlan-mcastgrp 239.1.1.101
+
+auto vni102
+iface vni102
+    bridge-access 102
+    vxlan-id 102
+    mstpctl-portbpdufilter yes
+    mstpctl-bpduguard yes
+    bridge-learning off
+    bridge-arp-nd-suppress on
+    vxlan-mcastgrp 239.1.1.102
+
+auto vniRED
+iface vniRED
+    bridge-access 4001
+    vxlan-id 4001
+    mstpctl-portbpdufilter yes
+    mstpctl-bpduguard yes
+    bridge-learning off
+    bridge-arp-nd-suppress on
+
+auto vniBLUE
+iface vniBLUE
+    bridge-access 4002
+    vxlan-id 4002
+    mstpctl-portbpdufilter yes
+    mstpctl-bpduguard yes
+    bridge-learning off
+    bridge-arp-nd-suppress on
+
+auto vlan101
+iface vlan101
+    address 10.1.101.64/24
+    address-virtual 00:00:00:00:00:01 10.1.101.1/24
+    vrf RED
+    vlan-raw-device bridge
+    vlan-id 101
+
+auto vlan102
+iface vlan102
+    address 10.1.102.64/24
+    address-virtual 00:00:00:00:00:02 10.1.102.1/24
+    vrf BLUE
+    vlan-raw-device bridge
+    vlan-id 102
+
+auto vlan4001
+iface vlan4001
+    hwaddress 44:38:39:BE:EF:FF
+    vrf RED
+    vlan-raw-device bridge
+    vlan-id 4001
+
+auto vlan4002
+iface vlan4002
+    hwaddress 44:38:39:BE:EF:FF
+    vrf BLUE
+    vlan-raw-device bridge
+    vlan-id 4002
+
+auto swp51
+iface swp51
+    alias to spine
+
+auto swp52
+iface swp52
+    alias to spine
+
+auto swp53
+iface swp53
+    alias to spine
+
+auto swp54
+iface swp54
+    alias to spine
+
+auto swp3
+iface swp3
+    alias bond member of bond1
+auto bond1
+iface bond1
+    bond-slaves swp3 
+    es-sys-mac 44:38:39:BE:EF:FF
+    bridge-vids 101 102
+    mtu 9000
+

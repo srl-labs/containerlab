@@ -1,0 +1,141 @@
+name: citc # Cumulus In The Cloud
+
+topology:
+  nodes:
+    border01:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - border01/etc/network/interfaces:/etc/network/interfaces
+      - border01/etc/frr/daemons:/etc/frr/daemons
+      - border01/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    border02:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - border02/etc/network/interfaces:/etc/network/interfaces
+      - border02/etc/frr/daemons:/etc/frr/daemons
+      - border02/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    spine01:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - spine01/etc/network/interfaces:/etc/network/interfaces
+      - spine01/etc/frr/daemons:/etc/frr/daemons
+      - spine01/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    spine02:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - spine02/etc/network/interfaces:/etc/network/interfaces
+      - spine02/etc/frr/daemons:/etc/frr/daemons
+      - spine02/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    leaf01:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - leaf01/etc/network/interfaces:/etc/network/interfaces
+      - leaf01/etc/frr/daemons:/etc/frr/daemons
+      - leaf01/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    leaf02:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - leaf02/etc/network/interfaces:/etc/network/interfaces
+      - leaf02/etc/frr/daemons:/etc/frr/daemons
+      - leaf02/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    leaf03:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - leaf03/etc/network/interfaces:/etc/network/interfaces
+      - leaf03/etc/frr/daemons:/etc/frr/daemons
+      - leaf03/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    leaf04:
+      kind: cvx
+      image: networkop/cx:4.3.0
+      binds:
+      - leaf04/etc/network/interfaces:/etc/network/interfaces
+      - leaf04/etc/frr/daemons:/etc/frr/daemons
+      - leaf04/etc/frr/frr.conf:/etc/frr/frr.conf
+
+    server01:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+      - server01/etc/network/interfaces:/etc/network/interfaces
+
+    server02:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+      - server02/etc/network/interfaces:/etc/network/interfaces
+
+    server03:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+      - server03/etc/network/interfaces:/etc/network/interfaces
+
+    server04:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+      - server04/etc/network/interfaces:/etc/network/interfaces
+
+    server05:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+      - server05/etc/network/interfaces:/etc/network/interfaces
+
+    server06:
+      kind: linux
+      image: networkop/host:ifreload
+      binds:
+      - server06/etc/network/interfaces:/etc/network/interfaces
+
+
+  links:
+    - endpoints: ["spine01:swp1", "leaf01:swp51"]
+    - endpoints: ["spine02:swp1", "leaf01:swp52"]
+
+    - endpoints: ["spine01:swp2", "leaf02:swp51"]
+    - endpoints: ["spine02:swp2", "leaf02:swp52"]
+
+    - endpoints: ["spine01:swp3", "leaf03:swp51"]
+    - endpoints: ["spine02:swp3", "leaf03:swp52"]
+
+    - endpoints: ["spine01:swp4", "leaf04:swp51"]
+    - endpoints: ["spine02:swp4", "leaf04:swp52"]
+
+    - endpoints: ["spine01:swp5", "border01:swp51"]
+    - endpoints: ["spine02:swp5", "border01:swp52"]
+
+    - endpoints: ["spine01:swp6", "border02:swp51"]
+    - endpoints: ["spine02:swp6", "border02:swp52"]
+
+    - endpoints: ["server01:eth1", "leaf01:swp1"]
+    - endpoints: ["server01:eth2", "leaf02:swp1"]
+
+    - endpoints: ["server02:eth1", "leaf01:swp2"]
+    - endpoints: ["server02:eth2", "leaf02:swp2"]
+
+    - endpoints: ["server03:eth1", "leaf01:swp3"]
+    - endpoints: ["server03:eth2", "leaf02:swp3"]
+
+    - endpoints: ["server04:eth1", "leaf03:swp1"]
+    - endpoints: ["server04:eth2", "leaf04:swp1"]
+
+    - endpoints: ["server05:eth1", "leaf03:swp2"]
+    - endpoints: ["server05:eth2", "leaf04:swp2"]
+
+    - endpoints: ["server06:eth1", "leaf03:swp3"]
+    - endpoints: ["server06:eth2", "leaf04:swp3"]
