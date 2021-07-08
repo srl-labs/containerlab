@@ -36,7 +36,7 @@ type ContainerRuntime interface {
 	// Start pre-created container by its name
 	StartContainer(context.Context, string) error
 	// Stop running container by its name
-	StopContainer(context.Context, string, *time.Duration) error
+	StopContainer(context.Context, string) error
 	// List all containers matching labels
 	ListContainers(context.Context, []*types.GenericFilter) ([]types.GenericContainer, error)
 	// Get a netns path using the pid of a container

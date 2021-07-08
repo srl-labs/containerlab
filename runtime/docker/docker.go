@@ -571,7 +571,7 @@ func setSysctl(sysctl string, newVal int) error {
 	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
 }
 
-func (c *DockerRuntime) StopContainer(ctx context.Context, name string, dur *time.Duration) error {
+func (c *DockerRuntime) StopContainer(ctx context.Context, name string) error {
 	log.Printf("Stopping container %q", name)
 	return c.Client.ContainerKill(ctx, name, "kill")
 }
