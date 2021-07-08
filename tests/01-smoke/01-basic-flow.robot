@@ -84,7 +84,7 @@ Verify bind mount in l1 node
 
 Verify port forwarding for node l2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    curl localhost:56180
+    ...    curl -m 3 localhost:56180
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Thank you for using nginx
@@ -99,6 +99,13 @@ Verify static mgmt addressing for l2
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -6 a sh eth0 | cut -d ' ' -f7 | head -1
     Log    ${ipv6}
     Should Be Equal As Strings    ${ipv6}    ${n2-ipv6}
+
+Verify l1 environment has MYVAR variable set
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l1 sh -c "echo \\$MYVAR"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    MYVAR is SET
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output

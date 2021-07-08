@@ -61,6 +61,9 @@ func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	return nil
 }
 
+func (c *DockerRuntime) WithKeepMgmtNet() {
+	c.config.KeepMgmtNet = true
+}
 func (c *DockerRuntime) GetName() string               { return runtimeName }
 func (c *DockerRuntime) Config() runtime.RuntimeConfig { return c.config }
 
@@ -201,14 +204,15 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 // DeleteNet deletes a docker bridge
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
-	if c.Mgmt.Network == "bridge" {
-		log.Debug("Skipping potential deletion of docker default bridge 'bridge'.")
+	network := c.Mgmt.Network
+	if network == "bridge" || c.config.KeepMgmtNet {
+		log.Debugf("Skipping deletion of '%s' network", network)
 		return nil
 	}
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
-	nres, err := c.Client.NetworkInspect(ctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
+	nres, err := c.Client.NetworkInspect(ctx, network, dockerTypes.NetworkInspectOptions{})
 	if err != nil {
 		return err
 	}
@@ -217,12 +221,12 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		if c.config.Debug {
 			log.Debugf("network '%s' has %d active endpoints, deletion skipped", c.Mgmt.Network, numEndpoints)
 			for _, endp := range nres.Containers {
-				log.Debugf("'%s' is connected to %s", endp.Name, c.Mgmt.Network)
+				log.Debugf("'%s' is connected to %s", endp.Name, network)
 			}
 		}
 		return nil
 	}
-	err = c.Client.NetworkRemove(nctx, c.Mgmt.Network)
+	err = c.Client.NetworkRemove(nctx, network)
 	if err != nil {
 		return err
 	}

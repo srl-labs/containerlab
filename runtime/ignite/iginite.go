@@ -119,6 +119,9 @@ func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	}
 
 }
+func (c *IgniteRuntime) WithKeepMgmtNet() {
+	c.ctrRuntime.WithKeepMgmtNet()
+}
 
 func (c *IgniteRuntime) WithMgmtNet(n *types.MgmtNet) {
 	c.Mgmt = n
