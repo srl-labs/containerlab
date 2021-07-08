@@ -404,7 +404,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername st
 	}
 	return nil
 }
-func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string, dur *time.Duration) error {
+func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
 		log.Debugf("container %s: %v", containername, err)
@@ -729,7 +729,7 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 	log.Debugf("deleting container %s", containerID)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
-	err := c.StopContainer(ctx, containerID, nil)
+	err := c.StopContainer(ctx, containerID)
 	if err != nil {
 		return err
 	}
