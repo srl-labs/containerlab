@@ -93,7 +93,7 @@ func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) 
 
 func WithKeepMgmtNet() ClabOption {
 	return func(c *CLab) {
-		c.Runtime.WithKeepMgmtNet()
+		c.GlobalRuntime().WithKeepMgmtNet()
 	}
 }
 
