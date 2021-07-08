@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -40,9 +41,14 @@ var vethCreateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 		opts := []clab.ClabOption{
-			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
-			clab.WithRuntime(rt, debug, timeout, graceful),
+			clab.WithRuntime(rt,
+				&runtime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: graceful,
+				},
+			),
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {

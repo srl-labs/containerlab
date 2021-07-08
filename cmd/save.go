@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 )
 
 // saveCmd represents the save command
@@ -27,10 +28,15 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 			return fmt.Errorf("provide topology file path  with --topo flag")
 		}
 		opts := []clab.ClabOption{
-			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithRuntime(rt, debug, timeout, graceful),
+			clab.WithRuntime(rt,
+				&runtime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: graceful,
+				},
+			),
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {

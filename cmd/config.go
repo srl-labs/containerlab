@@ -27,7 +27,6 @@ var configCmd = &cobra.Command{
 		transport.DebugCount = debugCount
 
 		c, err := clab.NewContainerLab(
-			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
 		)
