@@ -44,6 +44,7 @@ func (s *host) GetImages() map[string]string { return map[string]string{} }
 func (s *host) WithMgmtNet(*types.MgmtNet)             {}
 func (s *host) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *host) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *host) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *host) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil

@@ -324,6 +324,19 @@ func (t *Topology) GetNodeRuntime(name string) string {
 	return ""
 }
 
+func (t *Topology) GetNodeMaxWorkers(name string) uint {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetMaxWorkers() != 0 {
+			return ndef.GetMaxWorkers()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetMaxWorkers() != 0 {
+			return t.GetKind(t.GetNodeKind(name)).GetMaxWorkers()
+		}
+		return t.GetDefaults().GetMaxWorkers()
+	}
+	return 0
+}
+
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
 func resolvePath(p string) (string, error) {
 	if p == "" {

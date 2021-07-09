@@ -151,47 +151,60 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntime]
 }
 
-func (c *CLab) CreateNodes(ctx context.Context, workers uint) {
-	wg := new(sync.WaitGroup)
-	wg.Add(int(workers))
-	nodesChan := make(chan nodes.Node)
-	// start workers
-	for i := uint(0); i < workers; i++ {
-		go func(i uint) {
-			defer wg.Done()
-			for {
-				select {
-				case node, ok := <-nodesChan:
-					if node == nil || !ok {
-						log.Debugf("Worker %d terminating...", i)
+func (c *CLab) CreateNodes(ctx context.Context, workerMap map[uint][]nodes.Node) {
+	wgs := make([]*sync.WaitGroup, 0, len(workerMap))
+	for maxWorkers, ns := range workerMap {
+
+		// Making sure we don't overcommit
+		if maxWorkers > uint(len(ns)) {
+			maxWorkers = uint(len(ns))
+		}
+
+		wg := new(sync.WaitGroup)
+		wgs = append(wgs, wg)
+		wg.Add(int(maxWorkers))
+		nodesChan := make(chan nodes.Node)
+		// start workers
+		for i := uint(0); i < maxWorkers; i++ {
+			go func(i uint, wg *sync.WaitGroup) {
+				defer wg.Done()
+				for {
+					select {
+					case node, ok := <-nodesChan:
+						if node == nil || !ok {
+							log.Debugf("Worker %d terminating...", i)
+							return
+						}
+						log.Debugf("Worker %d received node: %+v", i, node.Config())
+						// PreDeploy
+						err := node.PreDeploy(c.Config.Name, c.Dir.LabCA, c.Dir.LabCARoot)
+						if err != nil {
+							log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
+							continue
+						}
+						// Deploy
+						err = node.Deploy(ctx)
+						if err != nil {
+							log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
+							continue
+						}
+					case <-ctx.Done():
 						return
 					}
-					log.Debugf("Worker %d received node: %+v", i, node.Config())
-					// PreDeploy
-					err := node.PreDeploy(c.Config.Name, c.Dir.LabCA, c.Dir.LabCARoot)
-					if err != nil {
-						log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
-						continue
-					}
-					// Deploy
-					err = node.Deploy(ctx)
-					if err != nil {
-						log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
-						continue
-					}
-				case <-ctx.Done():
-					return
 				}
-			}
-		}(i)
+			}(i, wg)
+		}
+		for _, n := range ns {
+			nodesChan <- n
+		}
+		// close channel to terminate the workers
+		close(nodesChan)
 	}
-	for _, n := range c.Nodes {
-		nodesChan <- n
+
+	for _, wg := range wgs {
+		// wait for all workers to finish
+		wg.Wait()
 	}
-	// close channel to terminate the workers
-	close(nodesChan)
-	// wait for all workers to finish
-	wg.Wait()
 }
 
 // CreateLinks creates links using the specified number of workers

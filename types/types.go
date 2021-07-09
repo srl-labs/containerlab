@@ -98,6 +98,8 @@ type NodeConfig struct {
 	Sandbox, Kernel string
 	// Configured container runtime
 	Runtime string
+	// Maximum number of concurrent workers for this node
+	MaxWorkers uint
 }
 
 // GenerateConfig generates configuration for the nodes
