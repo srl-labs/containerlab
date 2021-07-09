@@ -40,7 +40,7 @@ root@94992c82719f1172:mgmt:~#
 
 [cvx]: https://www.nvidia.com/en-gb/networking/ethernet-switching/cumulus-vx/
 [topo-mh]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx04/symm-mh.yml
-[topo-mlag]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx03/symm-mlag.yml
+[topo-mlag]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx04/symm-mlag.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
