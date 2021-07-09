@@ -40,9 +40,14 @@ var destroyCmd = &cobra.Command{
 		defer cancel()
 
 		opts := []clab.ClabOption{
-			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
-			clab.WithRuntime(rt, debug, timeout, graceful),
+			clab.WithRuntime(rt,
+				&runtime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: graceful,
+				},
+			),
 		}
 
 		if keepMgmtNet {
@@ -78,7 +83,6 @@ var destroyCmd = &cobra.Command{
 		for topo := range topos {
 			opts := append(opts,
 				clab.WithTopoFile(topo),
-				clab.WithGracefulShutdown(graceful),
 			)
 			c, err := clab.NewContainerLab(opts...)
 			if err != nil {

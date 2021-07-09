@@ -48,10 +48,15 @@ var deployCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 		opts := []clab.ClabOption{
-			clab.WithDebug(debug),
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo),
-			clab.WithRuntime(rt, debug, timeout, graceful),
+			clab.WithRuntime(rt,
+				&runtime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: graceful,
+				},
+			),
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {

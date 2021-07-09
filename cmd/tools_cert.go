@@ -100,7 +100,6 @@ func createCA(cmd *cobra.Command, args []string) error {
 `
 	var err error
 	opts := []clab.ClabOption{
-		clab.WithDebug(debug),
 		clab.WithTimeout(timeout),
 	}
 	c, err := clab.NewContainerLab(opts...)

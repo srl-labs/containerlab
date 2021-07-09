@@ -30,9 +30,7 @@ type CLab struct {
 	globalRuntime string
 	Dir           *Directory
 
-	debug            bool
-	timeout          time.Duration
-	gracefulShutdown bool
+	timeout time.Duration
 }
 
 type Directory struct {
@@ -44,19 +42,13 @@ type Directory struct {
 
 type ClabOption func(c *CLab)
 
-func WithDebug(d bool) ClabOption {
-	return func(c *CLab) {
-		c.debug = d
-	}
-}
-
 func WithTimeout(dur time.Duration) ClabOption {
 	return func(c *CLab) {
 		c.timeout = dur
 	}
 }
 
-func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) ClabOption {
+func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 	return func(c *CLab) {
 		// define runtime name.
 		// order of preference: cli flag -> env var -> default value of docker
@@ -73,10 +65,7 @@ func WithRuntime(name string, d bool, dur time.Duration, gracefulShutdown bool) 
 		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
 			r := rInit()
 			err := r.Init(
-				runtime.WithConfig(&runtime.RuntimeConfig{
-					Timeout: dur,
-					Debug:   d,
-				}),
+				runtime.WithConfig(rtconfig),
 				runtime.WithMgmtNet(c.Config.Mgmt),
 			)
 			if err != nil {
@@ -110,12 +99,6 @@ func WithTopoFile(file string) ClabOption {
 		if err != nil {
 			log.Fatalf("failed to init the management network: %s", err)
 		}
-	}
-}
-
-func WithGracefulShutdown(gracefulShutdown bool) ClabOption {
-	return func(c *CLab) {
-		c.gracefulShutdown = gracefulShutdown
 	}
 }
 
