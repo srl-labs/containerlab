@@ -56,6 +56,16 @@ You are ready to deploy!
 containerlab deploy -t <topo-file>
 ```
 
+#### SSH access
+For nodes that come up with `sshd` enabled, the following lines can be added to `~/.ssh/config` file to simplify access and prevent future ssh key warnings:
+
+```
+Host clab-*
+  User root
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+```
+
 ## Public clab catalogs
 As mentioned in the introduction of this article, the lab examples shipped with containerlab explain the features containerlab offers. The comprehensive lab examples are not part of containerlab installation as we want the community to own their work.
 

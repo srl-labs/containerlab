@@ -139,3 +139,9 @@ topology:
 
     - endpoints: ["server06:eth1", "leaf03:swp3"]
     - endpoints: ["server06:eth2", "leaf04:swp3"]
+
+    - endpoints: ["leaf01:swp49", "leaf02:swp49"]
+    - endpoints: ["leaf01:swp50", "leaf02:swp50"]
+
+    - endpoints: ["leaf03:swp49", "leaf04:swp49"]
+    - endpoints: ["leaf03:swp50", "leaf04:swp50"]

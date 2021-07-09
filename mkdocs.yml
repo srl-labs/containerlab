@@ -72,6 +72,7 @@ nav:
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - FRR: lab-examples/frr01.md
       - Cumulus Test Drive: lab-examples/cvx03.md
+      - Cumulus In The CLoud: lab-examples/cvx04.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
   - Release notes:
