@@ -55,6 +55,7 @@ func (s *linux) GetImages() map[string]string {
 func (l *linux) WithMgmtNet(*types.MgmtNet)             {}
 func (l *linux) WithRuntime(r runtime.ContainerRuntime) { l.runtime = r }
 func (s *linux) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *linux) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (l *linux) Delete(ctx context.Context) error {
 	return l.runtime.DeleteContainer(ctx, l.Config().LongName)

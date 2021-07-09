@@ -44,6 +44,7 @@ func (l *ovs) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 func (l *ovs) WithMgmtNet(*types.MgmtNet)             {}
 func (s *ovs) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *ovs) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (s *ovs) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *ovs) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil

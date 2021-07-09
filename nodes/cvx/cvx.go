@@ -86,6 +86,15 @@ func (c *cvx) GetImages() map[string]string {
 
 func (c *cvx) WithMgmtNet(*types.MgmtNet)             {}
 func (c *cvx) WithRuntime(r runtime.ContainerRuntime) { c.runtime = r }
+func (s *cvx) MaxWorkers() uint {
+
+	// overriding default
+	if s.cfg.MaxWorkers == 0 {
+		return 1
+	}
+
+	return s.cfg.MaxWorkers
+}
 
 func (c *cvx) Delete(ctx context.Context) error {
 	return c.runtime.DeleteContainer(ctx, c.Config().LongName)

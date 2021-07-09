@@ -59,6 +59,7 @@ type Node interface {
 	Delete(context.Context) error
 	GetImages() map[string]string
 	GetRuntime() runtime.ContainerRuntime
+	MaxWorkers() uint
 }
 
 var Nodes = map[string]Initializer{}

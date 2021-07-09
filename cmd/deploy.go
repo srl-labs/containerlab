@@ -19,7 +19,6 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -114,12 +113,20 @@ var deployCmd = &cobra.Command{
 			linkWorkers = maxWorkers
 		}
 
-		// Serializing ignite workers due to busy device error
-		if _, ok := c.Runtimes[runtime.IgniteRuntime]; ok {
-			nodeWorkers = 1
+		// building a map of maxWorker -> Node
+		workersMap := make(map[uint][]nodes.Node)
+		for _, n := range c.Nodes {
+			// 0 is a special case for unconstrained
+			if n.MaxWorkers() == 0 {
+				log.Infof("Node %s will have %d maxworkers", n.Config().LongName, nodeWorkers)
+				workersMap[nodeWorkers] = append(workersMap[nodeWorkers], n)
+				continue
+			}
+			log.Infof("Node %s will have %d maxworkers", n.Config().LongName, n.MaxWorkers())
+			workersMap[n.MaxWorkers()] = append(workersMap[n.MaxWorkers()], n)
 		}
 
-		c.CreateNodes(ctx, nodeWorkers)
+		c.CreateNodes(ctx, workersMap)
 		c.CreateLinks(ctx, linkWorkers, false)
 		log.Debug("containers created, retrieving state and IP addresses...")
 
@@ -137,16 +144,17 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		var wg sync.WaitGroup
+		wg := new(sync.WaitGroup)
 		wg.Add(len(c.Nodes))
+
 		for _, node := range c.Nodes {
-			go func(node nodes.Node) {
+			go func(node nodes.Node, wg *sync.WaitGroup) {
 				defer wg.Done()
 				err := node.PostDeploy(ctx, c.Nodes)
 				if err != nil {
 					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
 				}
-			}(node)
+			}(node, wg)
 		}
 		wg.Wait()
 
