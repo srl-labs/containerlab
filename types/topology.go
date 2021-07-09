@@ -138,9 +138,9 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 	if ndef, ok := t.Nodes[name]; ok {
 		vars := utils.MergeStringMaps(
-			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().Vars,
-				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().Vars),
-			ndef.GetConfigDispatcher().Vars)
+			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().GetVars(),
+				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars()),
+			ndef.GetConfigDispatcher().GetVars())
 
 		return &ConfigDispatcher{
 			Vars: vars,

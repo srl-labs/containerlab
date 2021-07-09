@@ -65,8 +65,8 @@ func (n *NodeDefinition) GetStartupConfig() string {
 }
 
 func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
-	if n == nil || n.Config == nil {
-		return &ConfigDispatcher{}
+	if n == nil {
+		return nil
 	}
 	return n.Config
 }
