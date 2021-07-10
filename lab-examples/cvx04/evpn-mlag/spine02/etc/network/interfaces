@@ -1,0 +1,39 @@
+# Ansible Managed File
+auto lo
+iface lo inet loopback
+    address 10.10.10.102/32
+
+auto eth0
+iface eth0 inet dhcp
+    vrf mgmt
+
+auto mgmt
+iface mgmt
+  vrf-table auto
+  address 127.0.0.1/8
+  address ::1/128
+
+auto swp1
+iface swp1
+    alias to leaf
+
+auto swp2
+iface swp2
+    alias to leaf
+
+auto swp3
+iface swp3
+    alias to leaf
+
+auto swp4
+iface swp4
+    alias to leaf
+
+auto swp5
+iface swp5
+    alias to leaf
+
+auto swp6
+iface swp6
+    alias to leaf
+
