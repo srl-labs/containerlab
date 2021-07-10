@@ -9,10 +9,10 @@ topology:
   nodes:
     srl1:
       kind: srl
-      config: srl1.cfg.json
+      startup-config: srl1.cfg.json
     srl2:
       kind: srl
-      config: srl2.cfg.json
+      startup-config: srl2.cfg.json
 
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
