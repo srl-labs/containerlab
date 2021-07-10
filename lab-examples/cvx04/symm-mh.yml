@@ -71,36 +71,42 @@ topology:
       image: networkop/host:ifreload
       binds:
       - evpn-mh/server01/etc/network/interfaces:/etc/network/interfaces
+      cmd: 3
 
     server02:
       kind: linux
       image: networkop/host:ifreload
       binds:
       - evpn-mh/server02/etc/network/interfaces:/etc/network/interfaces
+      cmd: 3
 
     server03:
       kind: linux
       image: networkop/host:ifreload
       binds:
       - evpn-mh/server03/etc/network/interfaces:/etc/network/interfaces
+      cmd: 3
 
     server04:
       kind: linux
       image: networkop/host:ifreload
       binds:
       - evpn-mh/server04/etc/network/interfaces:/etc/network/interfaces
+      cmd: 3
 
     server05:
       kind: linux
       image: networkop/host:ifreload
       binds:
       - evpn-mh/server05/etc/network/interfaces:/etc/network/interfaces
+      cmd: 3
 
     server06:
       kind: linux
       image: networkop/host:ifreload
       binds:
       - evpn-mh/server06/etc/network/interfaces:/etc/network/interfaces
+      cmd: 3
 
 
   links:
