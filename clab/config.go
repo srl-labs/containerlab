@@ -34,8 +34,8 @@ const (
 	dockerNetIPv6Addr = "2001:172:20:20::/64"
 	// NSPath value assigned to host interfaces
 	hostNSPath = "__host"
-	// veth link mtu. jacked up to 65k to allow jumbo testing of various sizes
-	defaultVethLinkMTU = 65000
+	// veth link mtu
+	defaultVethLinkMTU = 9500
 	// containerlab's reserved OUI
 	clabOUI = "aa:c1:ab"
 )
