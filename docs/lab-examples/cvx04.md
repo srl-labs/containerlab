@@ -16,12 +16,12 @@ The lab is a multi-node topology that consists of two racks with two dual-homed 
 ## Use cases
 This is a "Cumulus In The Cloud" topology designed to demonstrate some of the advanced features of Cumulus Linux. It is based on the [original CITC demo environment](https://www.nvidia.com/en-gb/networking/network-simulation/) with the only exception being the reduced number of spine switches (2 instead of 4). The topology can be spun up fully provisioned with the following two configuration options:
 
-1. [EVPN Multi-Homing](topo-mh) -- an EVPN-VXLAN environment with layer 2 extension, layer 3 VXLAN routing and VRFs for multi-tenancy that uses a multicast underlay for VXLAN packet replication and does not use MLAG or CLAG.
-2. [EVPN Symmetric Mode](topo-mlag) -- an EVPN-VXLAN environment with layer 2 extension, layer 3 VXLAN routing, VRFs for multi-tenancy and MLAG/CLAG for server multi-homing.
+1. [EVPN Multi-Homing][topo-mh] -- an EVPN-VXLAN environment with layer 2 extension, layer 3 VXLAN routing and VRFs for multi-tenancy that uses a multicast underlay for VXLAN packet replication and does not use MLAG or CLAG.
+2. [EVPN Symmetric Mode][topo-mlag] -- an EVPN-VXLAN environment with layer 2 extension, layer 3 VXLAN routing, VRFs for multi-tenancy and MLAG/CLAG for server multi-homing.
 
 ## Instructions
 
-Each configuration option is provided in its own configuration file -- [`symm-mh.yml`](topo-mh) or [`symm-mlag.yml`](topo-mlag). See [instructions](/lab-examples/lab-examples/#how-to-deploy-a-lab-from-the-lab-catalog) for how to deploy a topology. 
+Each configuration option is provided in its own configuration file -- [`symm-mh.yml`][topo-mh] or [`symm-mlag.yml`][topo-mlag]. See [instructions](/lab-examples/lab-examples/#how-to-deploy-a-lab-from-the-lab-catalog) for how to deploy a topology. 
 
 Once up, each node can be accessed via ssh using its hostname (automatically populated in your `/etc/hosts` file) and the default credentials `root/root`:
 
