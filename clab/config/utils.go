@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -35,13 +36,13 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 	for _, node := range nodes {
 		nodeCfg := node.Config()
 		name := nodeCfg.ShortName
-		vars := make(map[string]interface{})
+		vars := make(Dict)
 		vars[vkNodeName] = name
 
 		// Init array for this node
 		for key, val := range nodeCfg.Config.Vars {
 			if key == vkNodes || key == vkNodeName {
-				log.Warning("the variable %s on %s will be ignored, it hides the other nodes", vkNodes, name)
+				log.Warningf("the variable %s on %s will be ignored, it hides other nodes", vkNodes, name)
 				continue
 			}
 			vars[key] = val
@@ -236,4 +237,25 @@ func ipFarEnd(in netaddr.IPPrefix) netaddr.IPPrefix {
 		return netaddr.IPPrefix{}
 	}
 	return netaddr.IPPrefixFrom(n, in.Bits())
+}
+
+// GetTemplateNamesInDirs returns a list of template file names found in a dir p
+// without traversing nested dirs
+// template names are following the pattern <some-name>__<role/kind>.tmpl
+func GetTemplateNamesInDirs(paths []string) ([]string, error) {
+	var tnames []string
+	for _, p := range paths {
+		all, err := filepath.Glob(filepath.Join(p, "*__*.tmpl"))
+		if err != nil {
+			return nil, err
+		}
+		for _, fn := range all {
+			tn := strings.Split(filepath.Base(fn), "__")[0]
+			if len(tnames) > 0 && tnames[len(tnames)-1] == tn {
+				continue
+			}
+			tnames = append(tnames, tn)
+		}
+	}
+	return tnames, nil
 }

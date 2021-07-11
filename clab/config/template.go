@@ -55,7 +55,14 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 	}
 
 	if len(TemplateNames) == 0 {
-		TemplateNames = []string{"base"}
+		var err error
+		TemplateNames, err = GetTemplateNamesInDirs(TemplatePaths)
+		if err != nil {
+			return nil, err
+		}
+		if len(TemplateNames) == 0 {
+			return nil, fmt.Errorf("no templates files were found by %s path", TemplatePaths)
+		}
 	}
 
 	tmpl := template.New("").Funcs(jT.Funcs)
