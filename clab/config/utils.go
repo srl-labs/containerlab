@@ -173,7 +173,7 @@ func linkIP(link *types.Link) (string, string, error) {
 	if !okA {
 		return "", "", nil
 	}
-	sysA, err := netaddr.ParseIPPrefix(link.B.Node.Config.Vars[vkSystemIP])
+	sysA, err := netaddr.ParseIPPrefix(link.A.Node.Config.Vars[vkSystemIP])
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.A.Node.ShortName, err)
 	}
