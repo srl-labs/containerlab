@@ -1,6 +1,0 @@
-{{ range .links }}
-
-Link: {{ $.node }} ({{ $.systemip }}) - {{ .far.node }} ({{ (index $.nodes .far.node).systemip }})
-Port: {{ .port }}:{{  .vlan }} - {{ .far.ip }}:{{  .vlan }}
-IP: {{ .ip }} - {{ .far.ip }}
-{{ end }}
