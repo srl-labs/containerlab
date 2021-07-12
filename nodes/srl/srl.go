@@ -55,7 +55,7 @@ var (
 	//go:embed topology/*
 	topologies embed.FS
 
-	saveCmd []string = []string{"sr_cli", "-d", "tools", "system", "configuration", "generate-checkpoint"}
+	saveCmd []string = []string{"sr_cli", "-d", "tools", "system", "configuration", "save"}
 )
 
 func init() {
@@ -200,8 +200,7 @@ func (s *srl) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
 	}
 
-	confPath := s.cfg.LabDir + "/config/checkpoint/checkpoint-0.json"
-	log.Infof("saved SR Linux configuration from %s node to %s\noutput:\n%s", s.cfg.ShortName, confPath, string(stdout))
+	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", s.cfg.ShortName, string(stdout))
 
 	return nil
 }
