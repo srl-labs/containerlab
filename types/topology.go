@@ -105,22 +105,22 @@ func (t *Topology) GetNodeEnv(name string) map[string]string {
 		return utils.MergeStringMaps(
 			utils.MergeStringMaps(t.GetDefaults().GetEnv(),
 				t.GetKind(t.GetNodeKind(name)).GetEnv()),
-			ndef.Env)
+			ndef.GetEnv())
 	}
 	return nil
 }
 
 func (t *Topology) GetNodePublish(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if len(ndef.Publish) > 0 {
-			return ndef.Publish
+		if len(ndef.GetPublish()) > 0 {
+			return ndef.GetPublish()
 		}
-		if kdef, ok := t.Kinds[ndef.Kind]; ok && kdef != nil {
-			if len(kdef.Publish) > 0 {
-				return kdef.Publish
+		if kdef, ok := t.Kinds[ndef.GetKind()]; ok && kdef != nil {
+			if len(kdef.GetPublish()) > 0 {
+				return kdef.GetPublish()
 			}
 		}
-		return t.Defaults.Publish
+		return t.Defaults.GetPublish()
 	}
 	return nil
 }
@@ -130,7 +130,7 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 		return utils.MergeStringMaps(
 			utils.MergeStringMaps(t.Defaults.GetLabels(),
 				t.GetKind(t.GetNodeKind(name)).GetLabels()),
-			ndef.Labels)
+			ndef.GetLabels())
 	}
 	return nil
 }
@@ -138,9 +138,9 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 	if ndef, ok := t.Nodes[name]; ok {
 		vars := utils.MergeStringMaps(
-			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().Vars,
-				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().Vars),
-			ndef.GetConfigDispatcher().Vars)
+			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().GetVars(),
+				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars()),
+			ndef.GetConfigDispatcher().GetVars())
 
 		return &ConfigDispatcher{
 			Vars: vars,

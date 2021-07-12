@@ -31,6 +31,9 @@ jobs:
               - 'runtime/**'
               - 'cmd/**'
               - 'tests/**'
+              - 'nodes/**'
+              - 'types/**'
+              - 'utils/**'
               - '.github/workflows/cicd.yml'
             docs:
               - "docs/**"

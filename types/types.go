@@ -211,3 +211,10 @@ func FilterFromLabelStrings(labels []string) []*GenericFilter {
 type ConfigDispatcher struct {
 	Vars map[string]string `yaml:"vars,omitempty"`
 }
+
+func (cd *ConfigDispatcher) GetVars() map[string]string {
+	if cd == nil {
+		return nil
+	}
+	return cd.Vars
+}

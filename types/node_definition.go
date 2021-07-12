@@ -68,9 +68,6 @@ func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
 	if n == nil {
 		return nil
 	}
-	if n.Config == nil {
-		return &ConfigDispatcher{}
-	}
 	return n.Config
 }
 
