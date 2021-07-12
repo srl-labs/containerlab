@@ -73,26 +73,22 @@ topology:
 With such topology file containerlab is instructed to take a file `myconfig.json` from the current working directory, copy it to the lab directory for that specific node under the `config.json` name and mount that file to the container. This will result in this config to act as a startup config for the node.
 
 #### Saving configuration
-As was explained in the [Node configuration](#node-configuration) section, SR Linux containers can make their config persist because config files are provided to the containers from the host via bind mount. There are two options to make a running configuration to be saved in a file.
+As was explained in the [Node configuration](#node-configuration) section, SR Linux containers can make their config persistent, because config files are provided to the containers from the host via the bind mount.
 
-##### Rewriting startup configuration
-When a user configures SR Linux node via CLI the changes are saved into the running configuration stored in memory. To save the running configuration as a startup configuration the user needs to execute the `tools system configuration save` CLI command. This will write the config to the `config.json` file that holds the startup config and is exposed to the host.
+When a user configures SR Linux node the changes are saved into the running configuration stored in memory. To save the running configuration as a startup configuration the user needs to execute the `tools system configuration save` CLI command. This will write the config to the `/etc/opt/srlinux/config.json` file that holds the startup config and is exposed to the host.
 
-##### Generating config checkpoint
-If the startup configuration must be left intact, use an alternative method of saving the configuration checkpoint: `tools system configuration generate-checkpoint`. This command will create a `checkpoint-x.json` file that you will be able to find in the same `config` directory.
-
-Containerlab allows to perform a bulk configuration-save operation that can be executed with `containerlab save -t <path-to-topo-file>` command.
-
-With this command, every node that supports the "save" operation will execute a command to save it's running configuration to a persistent location. For SR Linux nodes the `save` command will trigger the checkpoint generation:
+SR Linux node also support the [`containerlab save -t <topo-file>`](../../cmd/save.md) command which will execute the command to save the running config on all the lab nodes. For SR Linux node the `tools system configuration save` will be executed:
 
 ```
-❯ containerlab save -t srl02.clab.yml
-INFO[0000] Getting topology information from ../srl02.clab.yml file...
-INFO[0001] clab-srl02-srl1 output: /system:
-    Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-12-03T15:12:46.854Z' and comment ''
-
-INFO[0004] clab-srl02-srl2 output: /system:
-    Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-12-03T15:12:49.892Z' and comment ''
+❯ containerlab save -t quickstart.clab.yml
+INFO[0000] Parsing & checking topology file: quickstart.clab.yml 
+INFO[0001] saved SR Linux configuration from leaf1 node. Output:
+/system:
+    Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
+ 
+INFO[0001] saved SR Linux configuration from leaf2 node. Output:
+/system:
+    Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
 ```
 
 ### TLS
@@ -131,6 +127,7 @@ To start an SR Linux NOS containerlab uses the configuration that is described i
     ```
 === "Environment variables"
     `SRLINUX=1`
+
 ### File mounts
 #### Config directory
 When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `srl` kind containerlab creates directories for each node of that kind.
