@@ -39,7 +39,6 @@ func (s *bridge) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error
 func (s *bridge) WithMgmtNet(*types.MgmtNet)             {}
 func (s *bridge) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *bridge) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-func (s *bridge) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *bridge) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil

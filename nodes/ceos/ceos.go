@@ -94,7 +94,6 @@ func (s *ceos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 func (s *ceos) WithMgmtNet(*types.MgmtNet)             {}
 func (s *ceos) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *ceos) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-func (s *ceos) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *ceos) SaveConfig(ctx context.Context) error {
 	_, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)

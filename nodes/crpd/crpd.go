@@ -93,7 +93,6 @@ func (s *crpd) GetImages() map[string]string {
 func (s *crpd) WithMgmtNet(*types.MgmtNet)             {}
 func (s *crpd) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *crpd) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-func (s *crpd) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *crpd) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
