@@ -19,6 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -113,20 +114,16 @@ var deployCmd = &cobra.Command{
 			linkWorkers = maxWorkers
 		}
 
-		// building a map of maxWorker -> Node
-		workersMap := make(map[uint][]nodes.Node)
+		// a set of workers that do not support concurrency
+		serialNodes := make(map[string]struct{})
 		for _, n := range c.Nodes {
-			// 0 is a special case for unconstrained
-			if n.MaxWorkers() == 0 {
-				log.Infof("Node %s will have %d maxworkers", n.Config().LongName, nodeWorkers)
-				workersMap[nodeWorkers] = append(workersMap[nodeWorkers], n)
-				continue
+			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
+				serialNodes[n.Config().LongName] = struct{}{}
+				nodeWorkers = nodeWorkers - 1
 			}
-			log.Infof("Node %s will have %d maxworkers", n.Config().LongName, n.MaxWorkers())
-			workersMap[n.MaxWorkers()] = append(workersMap[n.MaxWorkers()], n)
 		}
 
-		c.CreateNodes(ctx, workersMap)
+		c.CreateNodes(ctx, nodeWorkers, serialNodes)
 		c.CreateLinks(ctx, linkWorkers, false)
 		log.Debug("containers created, retrieving state and IP addresses...")
 

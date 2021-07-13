@@ -75,7 +75,6 @@ func (s *vrRos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error 
 func (s *vrRos) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
 func (s *vrRos) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrRos) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-func (s *vrRos) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *vrRos) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)

@@ -55,7 +55,6 @@ func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) e
 func (s *mySocketIO) WithMgmtNet(*types.MgmtNet)             {}
 func (s *mySocketIO) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *mySocketIO) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-func (s *mySocketIO) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *mySocketIO) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
 	return nil, nil

@@ -82,7 +82,6 @@ func (s *vrXRV9K) WithRuntime(r runtime.ContainerRuntime) {
 	s.runtime = r
 }
 func (s *vrXRV9K) GetRuntime() runtime.ContainerRuntime { return s.runtime }
-func (s *vrXRV9K) MaxWorkers() uint                     { return s.cfg.MaxWorkers }
 
 func (s *vrXRV9K) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)

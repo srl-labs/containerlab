@@ -34,8 +34,6 @@ type NodeDefinition struct {
 	Kernel  string `yaml:"kernel,omitempty"`
 	// Override container runtime
 	Runtime string `yaml:"runtime,omitempty"`
-	// Override maxWorkers per node
-	MaxWorkers uint `yaml:"maxworkers,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -186,11 +184,4 @@ func (n *NodeDefinition) GetNodeRuntime() string {
 		return ""
 	}
 	return n.Runtime
-}
-
-func (n *NodeDefinition) GetMaxWorkers() uint {
-	if n == nil {
-		return 0
-	}
-	return n.MaxWorkers
 }

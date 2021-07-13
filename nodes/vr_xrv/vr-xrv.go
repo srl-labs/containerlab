@@ -77,7 +77,6 @@ func (s *vrXRV) GetImages() map[string]string {
 func (s *vrXRV) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
 func (s *vrXRV) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrXRV) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-func (s *vrXRV) MaxWorkers() uint                       { return s.cfg.MaxWorkers }
 
 func (s *vrXRV) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
