@@ -4,6 +4,8 @@
 
 package utils
 
+import "reflect"
+
 // convertEnvs convert env variables passed as a map to a list of them
 func ConvertEnvs(m map[string]string) []string {
 	s := make([]string, 0, len(m))
@@ -13,9 +15,21 @@ func ConvertEnvs(m map[string]string) []string {
 	return s
 }
 
+func mapify(i interface{}) (map[string]interface{}, bool) {
+	value := reflect.ValueOf(i)
+	if value.Kind() == reflect.Map {
+		m := map[string]interface{}{}
+		for _, k := range value.MapKeys() {
+			m[k.String()] = value.MapIndex(k).Interface()
+		}
+		return m, true
+	}
+	return map[string]interface{}{}, false
+}
+
 // merge all dictionaries and return a new dictionary
 // recursively if matching keys are both dictionaries
-func MergeDicts(dicts ...map[string]interface{}) map[string]interface{} {
+func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 	res := make(map[string]interface{})
 	for _, m := range dicts {
 		if m == nil {
@@ -25,10 +39,10 @@ func MergeDicts(dicts ...map[string]interface{}) map[string]interface{} {
 
 			if v0, ok := res[k]; ok {
 				// Recursive merging if res[k] exists (and both are dicts)
-				t0, ok0 := v0.(map[string]interface{})
-				t1, ok1 := v.(map[string]interface{})
+				t0, ok0 := mapify(v0)
+				t1, ok1 := mapify(v)
 				if ok0 && ok1 {
-					res[k] = MergeDicts(t0, t1)
+					res[k] = MergeMaps(t0, t1)
 					continue
 				}
 			}
