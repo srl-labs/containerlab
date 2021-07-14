@@ -181,7 +181,17 @@ func linkIP(link *types.Link) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.B.Node.ShortName, err)
 	}
-	o2, o3, o4 := ipLastOctet(sysA.IP()), ipLastOctet(sysB.IP()), 0
+
+	o4 := 0
+	if v, ok := link.Vars[vkLinkNr]; ok {
+		o4, err = strconv.Atoi(fmt.Sprintf("%v", v))
+		if err != nil {
+			log.Warnf("%s is expected to contain a number, got %s", vkLinkNr, v)
+		}
+		o4 *= 2
+	}
+
+	o2, o3 := ipLastOctet(sysA.IP()), ipLastOctet(sysB.IP())
 	if o3 < o2 {
 		o2, o3, o4 = o3, o2, o4+1
 	}
