@@ -32,8 +32,7 @@ type NodeConfig struct {
 
 // Load templates from all paths for the specific role/kind
 func LoadTemplates(tmpl *template.Template, role string) error {
-	for i := range TemplatePaths {
-		p := TemplatePaths[i]
+	for _, p := range TemplatePaths {
 		if p == "@" {
 			p = "/etc/containerlab/templates/"
 		}
