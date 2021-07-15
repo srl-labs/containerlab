@@ -11,7 +11,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 )
 
-// Only print config locally, dont send to the node
+// Only print config locally, don't send to the node
 var printLines int
 
 // configCmd represents the config command
@@ -104,5 +104,5 @@ func init() {
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
 	configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
-	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render dry-run & print n lines of config")
+	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render templates in dry-run mode & print N lines of rendered config")
 }
