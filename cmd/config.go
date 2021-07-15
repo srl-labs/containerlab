@@ -11,14 +11,14 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 )
 
-// Only print config locally, dont send to the node
+// Only print config locally, don't send to the node
 var printLines int
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:          "config",
 	Short:        "configure a lab",
-	Long:         "configure a lab based using templates and variables from the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/config/",
+	Long:         "configure a lab based on templates and variables from the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/config/",
 	Aliases:      []string{"conf"},
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -33,9 +33,6 @@ var configCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		// setFlags(c.Config)
-		log.Debugf("Topology definition: %+v", c.Config)
 
 		// Config map per node. Each node gets a config.NodeConfig
 		allConfig, err := config.RenderAll(c.Nodes, c.Links)
@@ -106,5 +103,5 @@ func init() {
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
 	configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
-	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render dry-run & print n lines of config")
+	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render templates in dry-run mode & print N lines of rendered config")
 }
