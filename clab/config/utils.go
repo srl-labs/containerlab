@@ -249,7 +249,7 @@ func ipFarEnd(in netaddr.IPPrefix) netaddr.IPPrefix {
 	return netaddr.IPPrefixFrom(n, in.Bits())
 }
 
-// GetTemplateNamesInDirs returns a list of template file names found in a dir p
+// GetTemplateNamesInDirs returns a list of template file names found in a list of dir `paths`
 // without traversing nested dirs
 // template names are following the pattern <some-name>__<role/kind>.tmpl
 func GetTemplateNamesInDirs(paths []string) ([]string, error) {
@@ -261,6 +261,7 @@ func GetTemplateNamesInDirs(paths []string) ([]string, error) {
 		}
 		for _, fn := range all {
 			tn := strings.Split(filepath.Base(fn), "__")[0]
+			// skip adding templates with the same name
 			if len(tnames) > 0 && tnames[len(tnames)-1] == tn {
 				continue
 			}
