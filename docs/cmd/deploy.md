@@ -31,6 +31,15 @@ Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get 
 #### max-workers
 With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.
 
+#### runtime
+Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides `docker`, containerlab has experimental support for `containerd` and `ignite` runtimes.
+
+A global runtime can be selected with a global `--runtime | -r` flag that will select a runtime to use. The supported value are:
+
+* `docker` - default
+* `containerd`
+* `ignite`
+
 ### Examples
 
 ```bash
