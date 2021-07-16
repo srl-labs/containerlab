@@ -119,6 +119,7 @@ var deployCmd = &cobra.Command{
 		for _, n := range c.Nodes {
 			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
 				serialNodes[n.Config().LongName] = struct{}{}
+				// decreasing the num of nodeworkers as they are used for concurrent nodes
 				nodeWorkers = nodeWorkers - 1
 			}
 		}
