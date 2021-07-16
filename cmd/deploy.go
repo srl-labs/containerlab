@@ -141,7 +141,7 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		wg := new(sync.WaitGroup)
+		wg := &sync.WaitGroup{}
 		wg.Add(len(c.Nodes))
 
 		for _, node := range c.Nodes {
