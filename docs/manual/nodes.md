@@ -286,3 +286,22 @@ my-node:
 ```
 
 The `network-mode` configuration option set to `host` will launch the node in the [host networking mode](https://docs.docker.com/network/host/).
+
+### runtime
+By default containerlab nodes will be started based on the docker container engine. 
+
+Besides that, the container engine "containerd" as well as the Virtual Machine (VM) manager with a container UX.
+
+Options for the runtime parameter are:
+- `docker`
+- `containerd`
+- `ignite`
+
+The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable, which takes the same values as mentioned above.
+
+```yaml
+# example node definition with runtime definition
+my-node:
+  image: alpine:3
+  runtime: containerd
+```
