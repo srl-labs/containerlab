@@ -137,7 +137,7 @@
                 },
                 "runtime": {
                     "type": "string",
-                    "description": "Runtime used to execute the container node",
+                    "description": "Runtime used to launch the container node",
                     "markdownDescription": "[Runtime](https://containerlab.srlinux.dev/manual/nodes/#runtime) for the node",
                     "enum": [
                         "docker",
