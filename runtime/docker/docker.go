@@ -576,6 +576,5 @@ func setSysctl(sysctl string, newVal int) error {
 }
 
 func (c *DockerRuntime) StopContainer(ctx context.Context, name string) error {
-	log.Printf("Stopping container %q", name)
 	return c.Client.ContainerKill(ctx, name, "kill")
 }
