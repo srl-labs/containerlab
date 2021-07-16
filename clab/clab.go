@@ -154,10 +154,9 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map[string]struct{}) {
 
 	wg := new(sync.WaitGroup)
+	wg.Add(int(maxWorkers))
 	if len(serialNodes) > 0 {
-		wg.Add(int(maxWorkers) + 1)
-	} else {
-		wg.Add(int(maxWorkers))
+		wg.Add(1)
 	}
 
 	concurrentChan := make(chan nodes.Node)
