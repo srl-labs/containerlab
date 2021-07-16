@@ -5,9 +5,7 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -178,7 +176,7 @@ var deployCmd = &cobra.Command{
 		c.CreateLinks(ctx, linkWorkers, true)
 
 		log.Info("Writing /etc/hosts file")
-		err = createHostsFile(containers, c.Config.Mgmt.Network)
+		err = clab.AppendHostsFileEntries(containers, c.Config.Name)
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
 		}
@@ -215,55 +213,6 @@ func setFlags(conf *clab.Config) {
 	if mgmtIPv6Subnet.String() != "<nil>" {
 		conf.Mgmt.IPv6Subnet = mgmtIPv6Subnet.String()
 	}
-}
-
-func createHostsFile(containers []types.GenericContainer, bridgeName string) error {
-	if bridgeName == "" {
-		return fmt.Errorf("missing bridge name")
-	}
-	data := hostsEntries(containers, bridgeName)
-	if len(data) == 0 {
-		return nil
-	}
-	f, err := os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.WriteString("\n")
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// hostEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
-func hostsEntries(containers []types.GenericContainer, bridgeName string) []byte {
-	buff := bytes.Buffer{}
-	for _, cont := range containers {
-		if len(cont.Names) == 0 {
-			continue
-		}
-		if cont.NetworkSettings.Set {
-			if cont.NetworkSettings.IPv4addr != "" {
-				buff.WriteString(cont.NetworkSettings.IPv4addr)
-				buff.WriteString("\t")
-				buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-				buff.WriteString("\n")
-			}
-			if cont.NetworkSettings.IPv6addr != "" {
-				buff.WriteString(cont.NetworkSettings.IPv6addr)
-				buff.WriteString("\t")
-				buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-				buff.WriteString("\n")
-			}
-		}
-	}
-	return buff.Bytes()
 }
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node, mgmtNet string) {

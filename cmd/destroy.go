@@ -5,13 +5,10 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -121,55 +118,6 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
 }
 
-func deleteEntriesFromHostsFile(containers []types.GenericContainer, bridgeName string) error {
-	if bridgeName == "" {
-		return fmt.Errorf("missing bridge name")
-	}
-	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644) // skipcq: GSC-G302
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	data := hostsEntries(containers, bridgeName)
-	remainingLines := make([][]byte, 0)
-	reader := bufio.NewReader(f)
-	for {
-		line, _, err := reader.ReadLine()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		found := false
-		sLine := strings.Join(strings.Fields(string(line)), " ")
-		for _, dl := range strings.Split(string(data), "\n") {
-			sdl := strings.Join(strings.Fields(string(dl)), " ")
-			if strings.Compare(sLine, sdl) == 0 {
-				found = true
-				break
-			}
-		}
-		if !found {
-			remainingLines = append(remainingLines, line)
-		}
-	}
-
-	err = f.Truncate(0)
-	if err != nil {
-		return err
-	}
-	_, err = f.Seek(0, 0)
-	if err != nil {
-		return err
-	}
-	for _, l := range remainingLines {
-		_, _ = f.Write(l)
-		_, _ = f.Write([]byte("\n"))
-	}
-	return nil
-}
-
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
@@ -217,7 +165,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	log.Info("Removing container entries from /etc/hosts file")
-	err = deleteEntriesFromHostsFile(containers, c.Config.Mgmt.Network)
+	err = clab.DeleteEntriesFromHostsFile(c.Config.Name)
 	if err != nil {
 		return err
 	}
