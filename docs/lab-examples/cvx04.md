@@ -3,7 +3,7 @@
 | **Description**               | Cumulus In The Cloud                                                                 |
 | **Components**                | [Cumulus Linux][cvx]                                                                     |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 4 GB                     |
-| **Topology file**             | [symm-mh.yml][topo-mh] <br/>[symm-mlag.yml][topo-mlag]                                                                     |
+| **Topology file**             | [symm-mh.clab.yml][topo-mh] <br/>[symm-mlag.clab.yml][topo-mlag]                                                                     |
 | **Name**                      | cvx04                                                                                    |
 | **Version information**[^2]   | `cvx:4.3.0` `docker-ce:19.03.13`                                                         |
 
@@ -21,7 +21,7 @@ This is a "Cumulus In The Cloud" topology designed to demonstrate some of the ad
 
 ## Instructions
 
-Each configuration option is provided in its own configuration file -- [`symm-mh.yml`][topo-mh] or [`symm-mlag.yml`][topo-mlag]. See [instructions](/lab-examples/lab-examples/#how-to-deploy-a-lab-from-the-lab-catalog) for how to deploy a topology. 
+Each configuration option is provided in its own configuration file -- [`symm-mh.clab.yml`][topo-mh] or [`symm-mlag.clab.yml`][topo-mlag]. See [instructions](/lab-examples/lab-examples/#how-to-deploy-a-lab-from-the-lab-catalog) for how to deploy a topology. 
 
 Once up, each node can be accessed via ssh using its hostname (automatically populated in your `/etc/hosts` file) and the default credentials `root/root`:
 
@@ -34,13 +34,10 @@ Last login: Fri Jul  9 13:35:48 2021 from 192.168.223.1
 root@94992c82719f1172:mgmt:~# 
 ```
 
-!!!note
-    Due to the different boot order inside a container, BGPd may come up stuck waiting for IPv6 LLA of the peer. This issue only appears on the initial boot and can be fixed with the `vtysh -c 'clear ip bgp *` command.
-
 
 [cvx]: https://www.nvidia.com/en-gb/networking/ethernet-switching/cumulus-vx/
-[topo-mh]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx04/symm-mh.yml
-[topo-mlag]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx04/symm-mlag.yml
+[topo-mh]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx04/symm-mh.clab.yml
+[topo-mlag]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx04/symm-mlag.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
