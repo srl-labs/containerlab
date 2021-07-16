@@ -75,4 +75,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **Telemetry validation**
     Coupling modern telemetry stacks with containerlab labs make a perfect fit for Telemetry use cases validation. Spin up a lab with containerized network functions with a telemetry on the side, and run comprehensive telemetry use cases.
 
+## Join us
+Have questions, ideas, bug reports or just want to chat? Come join [our discord server](https://discord.gg/vAyddtaEV9).
+
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
