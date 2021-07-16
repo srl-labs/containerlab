@@ -17,17 +17,14 @@ topology:
     server01:
       kind: linux
       image: networkop/host:ignite
-      kernel: networkop/ignite-kernel:5.4.108-amd64
       binds:
         - server01/interfaces:/etc/network/interfaces
 
     server02:
       kind: linux
       image: networkop/host:ignite
-      kernel: networkop/ignite-kernel:5.4.108-amd64
       binds:
         - server02/interfaces:/etc/network/interfaces
-
 
   links:
     - endpoints: ["leaf01:swp1", "server01:eth1"]
