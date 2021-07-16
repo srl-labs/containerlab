@@ -186,13 +186,23 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		maxWorkers = uint(len(c.Nodes))
 	}
 
+	// a set of workers that do not support concurrency
+	serialNodes := make(map[string]struct{})
+	for _, n := range c.Nodes {
+		if n.GetRuntime().GetName() == runtime.IgniteRuntime {
+			serialNodes[n.Config().LongName] = struct{}{}
+			// decreasing the num of maxWorkers as they are used for concurrent nodes
+			maxWorkers = maxWorkers - 1
+		}
+	}
+
 	// Serializing ignite workers due to busy device error
 	if _, ok := c.Runtimes[runtime.IgniteRuntime]; ok {
 		maxWorkers = 1
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
-	c.DeleteNodes(ctx, maxWorkers, c.Nodes)
+	c.DeleteNodes(ctx, maxWorkers, c.Nodes, serialNodes)
 
 	// remove the lab directories
 	if cleanup {

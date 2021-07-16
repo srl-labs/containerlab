@@ -286,35 +286,56 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg.Wait()
 }
 
-func (c *CLab) DeleteNodes(ctx context.Context, workers uint, deleteCandidates map[string]nodes.Node) {
-	wg := new(sync.WaitGroup)
+func (c *CLab) DeleteNodes(ctx context.Context, workers uint, deleteCandidates map[string]nodes.Node, serialNodes map[string]struct{}) {
 
-	nodeChan := make(chan nodes.Node)
+	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
-	for i := uint(0); i < workers; i++ {
-		go func(i uint) {
-			defer wg.Done()
-			for {
-				select {
-				case n := <-nodeChan:
-					if n == nil {
-						log.Debugf("Worker %d terminating...", i)
-						return
-					}
-					err := n.Delete(ctx)
-					if err != nil {
-						log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
-					}
-				case <-ctx.Done():
+	if len(serialNodes) > 0 {
+		wg.Add(1)
+	}
+
+	concurrentChan := make(chan nodes.Node)
+	serialChan := make(chan nodes.Node)
+
+	workerFunc := func(i uint, input chan nodes.Node, wg *sync.WaitGroup) {
+		defer wg.Done()
+		for {
+			select {
+			case n := <-input:
+				if n == nil {
+					log.Debugf("Worker %d terminating...", i)
 					return
 				}
+				err := n.Delete(ctx)
+				if err != nil {
+					log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
+				}
+			case <-ctx.Done():
+				return
 			}
-		}(i)
+		}
 	}
-	for _, n := range deleteCandidates {
-		nodeChan <- n
+
+	// start concurrent workers
+	for i := uint(0); i < workers; i++ {
+		go workerFunc(i, concurrentChan, wg)
 	}
-	close(nodeChan)
+
+	// start the serial worker
+	go workerFunc(workers, serialChan, wg)
+
+	// send nodes to workers
+	for _, n := range c.Nodes {
+		if _, ok := serialNodes[n.Config().LongName]; ok {
+			serialChan <- n
+			continue
+		}
+		concurrentChan <- n
+	}
+
+	// close channel to terminate the workers
+	close(concurrentChan)
+	close(serialChan)
 
 	wg.Wait()
 
