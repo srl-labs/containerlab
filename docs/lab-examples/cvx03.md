@@ -3,7 +3,7 @@
 | **Description**               | Cumulus Linux Test Drive                                                                 |
 | **Components**                | [Cumulus Linux][cvx]                                                                     |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                     |
-| **Topology file**             | [lab-start.yml][topofile] <br/>[lab-final.yml][finalfile]                                                                     |
+| **Topology file**             | [lab-start.clab.yml][topofile] <br/>[lab-final.clab.yml][finalfile]                                                                     |
 | **Name**                      | cvx03                                                                                    |
 | **Version information**[^2]   | `cvx:4.3.0` `docker-ce:19.03.13`                                                         |
 
@@ -19,13 +19,13 @@ This is a "Cumulus Test Drive" topology designed to provide an overview of NVIDI
 2. BGP Unnumbered (Lab3) -- learn how to configure BGP unnumbered between leaf and spine switches and advertise locally connected interfaces.
 
 !!!note
-    Everything from Lab1 is already pre-configured when the topology is created with [lab-start.yml][topofile].
+    Everything from Lab1 is already pre-configured when the topology is created with [lab-start.clab.yml][topofile].
 
-Additionally, the lab directory contains a [lab-final.yml][finalfile] which will load final configurations as they appear at the end of Lab3.
+Additionally, the lab directory contains a [lab-final.clab.yml][finalfile] which will load final configurations as they appear at the end of Lab3.
 
 [cvx]: https://www.nvidia.com/en-gb/networking/ethernet-switching/cumulus-vx/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx03/lab-start.yml
-[finalfile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx03/lab-final.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx03/lab-start.clab.yml
+[finalfile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cvx03/lab-final.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

@@ -135,6 +135,16 @@
                         }
                     }
                 },
+                "runtime": {
+                    "type": "string",
+                    "description": "Runtime used to launch the container node",
+                    "markdownDescription": "[Runtime](https://containerlab.srlinux.dev/manual/nodes/#runtime) for the node",
+                    "enum": [
+                        "docker",
+                        "containerd",
+                        "ignite"
+                    ]
+                },
                 "mgmt_ipv4": {
                     "type": "string",
                     "description": "IPv4 management address of the node (e.g. 172.10.10.11)",
@@ -221,6 +231,10 @@
             "properties": {
                 "network": {
                     "description": "management network name",
+                    "type": "string"
+                },
+                "bridge": {
+                    "description": "Define the underlaying bridge to use for the management network.",
                     "type": "string"
                 },
                 "ipv4_subnet": {
