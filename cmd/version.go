@@ -85,7 +85,20 @@ func newVerNotification(vc chan string) {
 	select {
 	case ver, ok := <-vc:
 		if ok {
-			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.srlinux.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.srlinux.dev/install/\n", ver, ver)
+			v, _ := gover.NewVersion(ver)
+			segments := v.Segments()
+			maj := segments[0]
+			min := segments[1]
+			patch := segments[2]
+
+			// relSlug is the URI path attribute of a given rel version
+			// for 0.15.0 version, the relSlug will be 0.15/
+			// for 0.15.1 - 0.15/#0.15.1
+			relSlug := fmt.Sprintf("%d.%d/", maj, min)
+			if patch != 0 {
+				relSlug = relSlug + fmt.Sprintf("#%d.%d.%d", maj, min, patch)
+			}
+			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.srlinux.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.srlinux.dev/install/\n", v.String(), relSlug)
 		}
 	default:
 		return
