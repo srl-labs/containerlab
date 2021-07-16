@@ -76,6 +76,7 @@ nav:
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
   - Release notes:
+      - 0.15: rn/0.15.md
       - 0.14.4: rn/0.14.4.md
       - 0.14.3: rn/0.14.3.md
       - 0.14.2: rn/0.14.2.md
@@ -150,6 +151,8 @@ extra:
       link: https://github.com/hellt
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/ntdvps
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/vAyddtaEV9
   analytics:
     provider: google
     property: G-368XR9X5MG
