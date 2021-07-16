@@ -154,10 +154,6 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map[string]struct{}) {
 
 	wg := new(sync.WaitGroup)
-	wg.Add(int(maxWorkers))
-	if len(serialNodes) > 0 {
-		wg.Add(1)
-	}
 
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
@@ -191,12 +187,18 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map
 	}
 
 	// start concurrent workers
+	wg.Add(int(maxWorkers))
+	// it's safe to not check if all nodes are serial because in that case
+	// maxWorkers will be 0
 	for i := uint(0); i < maxWorkers; i++ {
 		go workerFunc(i, concurrentChan, wg)
 	}
 
 	// start the serial worker
-	go workerFunc(maxWorkers, serialChan, wg)
+	if len(serialNodes) > 0 {
+		wg.Add(1)
+		go workerFunc(maxWorkers, serialChan, wg)
+	}
 
 	// send nodes to workers
 	for _, n := range c.Nodes {
@@ -272,10 +274,6 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 func (c *CLab) DeleteNodes(ctx context.Context, workers uint, deleteCandidates map[string]nodes.Node, serialNodes map[string]struct{}) {
 
 	wg := new(sync.WaitGroup)
-	wg.Add(int(workers))
-	if len(serialNodes) > 0 {
-		wg.Add(1)
-	}
 
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
@@ -300,12 +298,16 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, deleteCandidates m
 	}
 
 	// start concurrent workers
+	wg.Add(int(workers))
 	for i := uint(0); i < workers; i++ {
 		go workerFunc(i, concurrentChan, wg)
 	}
 
 	// start the serial worker
-	go workerFunc(workers, serialChan, wg)
+	if len(serialNodes) > 0 {
+		wg.Add(1)
+		go workerFunc(workers, serialChan, wg)
+	}
 
 	// send nodes to workers
 	for _, n := range c.Nodes {
