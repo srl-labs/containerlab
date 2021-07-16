@@ -1,17 +1,17 @@
-|                               |                                                                                          |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
-| **Description**               | Cumulus In The Cloud                                                                 |
-| **Components**                | [Cumulus Linux][cvx]                                                                     |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 4 GB                     |
-| **Topology file**             | [symm-mh.clab.yml][topo-mh] <br/>[symm-mlag.clab.yml][topo-mlag]                                                                     |
-| **Name**                      | cvx04                                                                                    |
-| **Version information**[^2]   | `cvx:4.3.0` `docker-ce:19.03.13`                                                         |
+|                               |                                                                      |
+| ----------------------------- | -------------------------------------------------------------------- |
+| **Description**               | Cumulus In The Cloud                                                 |
+| **Components**                | [Cumulus Linux][cvx]                                                 |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 4 GB |
+| **Topology file**             | [symm-mh.clab.yml][topo-mh] <br/>[symm-mlag.clab.yml][topo-mlag]     |
+| **Name**                      | cvx04                                                                |
+| **Version information**[^2]   | `cvx:4.3.0` `docker-ce:19.03.13`                                     |
 
 ## Description
 The lab is a multi-node topology that consists of two racks with two dual-homed servers connected with a leaf-spine network.
 
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:2,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/cvx.drawio&quot;}"></div>
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/cvx.drawio&quot;}"></div>
 
 ## Use cases
 This is a "Cumulus In The Cloud" topology designed to demonstrate some of the advanced features of Cumulus Linux. It is based on the [original CITC demo environment](https://www.nvidia.com/en-gb/networking/network-simulation/) with the only exception being the reduced number of spine switches (2 instead of 4). The topology can be spun up fully provisioned with the following two configuration options:
