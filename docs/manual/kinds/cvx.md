@@ -12,7 +12,7 @@ CVX nodes launched with containerlab comes up with:
 CVX supports two modes of operation:
 
 * Using Firecracker micro-VMs -- this mode runs Cumulus VX inside a micro-VM on top of the native Cumulus kernel. This is the default way of running CVX nodes.
-* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode add `runtime: docker` under the cvx node definition (see also [this example](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx02/topo.yml)).
+* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode add `runtime: docker` under the cvx node definition (see also [this example](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx02/topo.clab.yml)).
 
 
 ## Managing cvx nodes
@@ -63,8 +63,8 @@ This will be addressed in the future releases.
 ## Lab examples
 The following labs feature CVX node:
 
-- [Cumulus Linux Test Drive](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx03/lab-start.yml)
-- [Cumulus and FRR](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx01/topo.yml)
+- [Cumulus Linux Test Drive](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx03/lab-start.clab.yml)
+- [Cumulus and FRR](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx01/topo.clab.yml)
 
 
 ## Known issues or limitations
