@@ -44,11 +44,12 @@ var versionCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(slug)
+		verSlug := docsLinkFromVer(version)
 		fmt.Printf("    version: %s\n", version)
 		fmt.Printf("     commit: %s\n", commit)
 		fmt.Printf("       date: %s\n", date)
 		fmt.Printf("     source: %s\n", repoUrl)
-		fmt.Printf(" rel. notes: https://containerlab.srlinux.dev/rn/%s\n", version)
+		fmt.Printf(" rel. notes: https://containerlab.srlinux.dev/rn/%s\n", verSlug)
 	},
 }
 
@@ -85,22 +86,27 @@ func newVerNotification(vc chan string) {
 	select {
 	case ver, ok := <-vc:
 		if ok {
-			v, _ := gover.NewVersion(ver)
-			segments := v.Segments()
-			maj := segments[0]
-			min := segments[1]
-			patch := segments[2]
-
-			// relSlug is the URI path attribute of a given rel version
-			// for 0.15.0 version, the relSlug will be 0.15/
-			// for 0.15.1 - 0.15/#0.15.1
-			relSlug := fmt.Sprintf("%d.%d/", maj, min)
-			if patch != 0 {
-				relSlug = relSlug + fmt.Sprintf("#%d.%d.%d", maj, min, patch)
-			}
-			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.srlinux.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.srlinux.dev/install/\n", v.String(), relSlug)
+			relSlug := docsLinkFromVer(ver)
+			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.srlinux.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.srlinux.dev/install/\n", ver, relSlug)
 		}
 	default:
 		return
 	}
+}
+
+// docsLinkFromVer creates a documentation path attribute for a given version
+// for 0.15.0 version, the it returns 0.15/
+// for 0.15.1 - 0.15/#0.15.1
+func docsLinkFromVer(ver string) string {
+	v, _ := gover.NewVersion(ver)
+	segments := v.Segments()
+	maj := segments[0]
+	min := segments[1]
+	patch := segments[2]
+
+	relSlug := fmt.Sprintf("%d.%d/", maj, min)
+	if patch != 0 {
+		relSlug = relSlug + fmt.Sprintf("#%d.%d.%d", maj, min, patch)
+	}
+	return relSlug
 }
