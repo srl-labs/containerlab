@@ -96,7 +96,7 @@ func newVerNotification(vc chan string) {
 
 // docsLinkFromVer creates a documentation path attribute for a given version
 // for 0.15.0 version, the it returns 0.15/
-// for 0.15.1 - 0.15/#0.15.1
+// for 0.15.1 - 0.15/#0151
 func docsLinkFromVer(ver string) string {
 	v, _ := gover.NewVersion(ver)
 	segments := v.Segments()
@@ -106,7 +106,7 @@ func docsLinkFromVer(ver string) string {
 
 	relSlug := fmt.Sprintf("%d.%d/", maj, min)
 	if patch != 0 {
-		relSlug = relSlug + fmt.Sprintf("#%d.%d.%d", maj, min, patch)
+		relSlug = relSlug + fmt.Sprintf("#%d%d%d", maj, min, patch)
 	}
 	return relSlug
 }
