@@ -72,7 +72,9 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 	// ensure firecracker directroy
 	for _, path := range runtimePaths {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			os.Mkdir(path, os.ModeDir)
+			if err := os.MkdirAll(path, os.ModeDir); err != nil {
+				return fmt.Errorf("cannot create the required directory %q: %s", path, err)
+			}
 		}
 	}
 
