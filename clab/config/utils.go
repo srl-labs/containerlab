@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -101,35 +102,37 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 		(varsB[vkFarEnd]).(Dict)[key] = v1
 	}
 
-	// Split all fields with a comma...
+	// Ensure values are added to both ends of the link
 	for k, v := range link.Vars {
-
-		r := SplitTrim(v)
-
 		if k == vkFarEnd || k == vkNodeName {
 			return fmt.Errorf("%s: reserved variable name '%s' found", link.String(), k)
 		}
 
-		if k == vkLinkIP && len(r) == 1 {
-			// calc the remote IP
-			ipF, err := ipFarEndS(v)
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+			// Array/slice should contain 2 values, one for each end of the link
+			if vv.Len() != 2 {
+				return fmt.Errorf("%s: var %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
+			}
+			addValues(k, vv.Index(0), vv.Index(1))
+			continue
+		}
+
+		if k == vkLinkIP {
+			// Calculate the remote IP
+			vs := fmt.Sprintf("%v", v)
+			ipF, err := ipFarEndS(vs)
 			if err != nil {
 				return fmt.Errorf("%s: %s", link.String(), err)
 			}
-			r = append(r, ipF)
+			addValues(k, vs, ipF)
+			continue
 		}
 
-		if len(r) == 1 { // Ensure we add single values to local and far-end
-			r = append(r, r[0])
-		}
-		if len(r) > 2 { // too many values
-			log.Warnf("%s: variable %s contains %d comma separated values, should be 1 or 2: %s", link.String(), k, len(r), v)
-		}
-
-		addValues(k, r[0], r[1])
+		addValues(k, v, v)
 	}
 
-	// Run through a list of additional values to add if they are not present
+	// Add additional values if they are not present
 	add := map[string]func(link *types.Link) (string, string, error){
 		vkLinkIP:   linkIP,
 		vkLinkName: linkName,
@@ -173,11 +176,11 @@ func linkIP(link *types.Link) (string, string, error) {
 	if !okA {
 		return "", "", nil
 	}
-	sysA, err := netaddr.ParseIPPrefix(link.A.Node.Config.Vars[vkSystemIP])
+	sysA, err := netaddr.ParseIPPrefix(fmt.Sprintf("%v", link.A.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.A.Node.ShortName, err)
 	}
-	sysB, err := netaddr.ParseIPPrefix(link.B.Node.Config.Vars[vkSystemIP])
+	sysB, err := netaddr.ParseIPPrefix(fmt.Sprintf("%v", link.B.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.B.Node.ShortName, err)
 	}
