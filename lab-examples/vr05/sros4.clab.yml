@@ -31,20 +31,20 @@ topology:
   links:
     - endpoints: [sr1:eth1, sr2:eth2]
       vars:
-        port: 1/1/c1/1, 1/1/c2/1
+        port: [1/1/c1/1, 1/1/c2/1]
         ip: 1.1.1.2/30
-        vlan: "99,99"
+        vlan: [99, 99]
         isis_iid: 0
     - endpoints: [sr2:eth1, sr3:eth2]
       vars:
-        port: 1/1/c1/1, 1/1/c2/1
+        port: [1/1/c1/1, 1/1/c2/1]
         vlan: 98
         isis_iid: 0
     - endpoints: [sr3:eth1, sr4:eth2]
       vars:
-        port: 1/1/c1/1, 1/1/c2/1
+        port: [1/1/c1/1, 1/1/c2/1]
         isis_iid: 0
     - endpoints: [sr4:eth1, sr1:eth2]
       vars:
-        port: 1/1/c1/1, 1/1/c2/1
+        port: [1/1/c1/1, 1/1/c2/1]
         isis_iid: 0
