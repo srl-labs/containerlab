@@ -107,11 +107,27 @@ Verify l1 environment has MYVAR variable set
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    MYVAR is SET
 
+Verify Hosts entries exist
+    [Documentation]     Verification that the expected /etc/hosts entries are created. We are also checking for the HEADER and FOOTER values here, which also contain the lab name.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    cat /etc/hosts | grep "2-linux-nodes" | wc -l
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    6
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+
+Verify Hosts entries are gone
+    [Documentation]     Verification that the previously created /etc/hosts entries are properly removed. (Again including HEADER and FOOTER).
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    cat /etc/hosts | grep "2-linux-nodes" | wc -l
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    0
 
 *** Keywords ***
 Setup
