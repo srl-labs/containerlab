@@ -3,11 +3,13 @@ package clab
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -47,9 +49,10 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 
 // hostEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
 func GenerateHostsEntries(containers []types.GenericContainer, labname string) []byte {
-	buff := bytes.Buffer{}
-	v4buff := bytes.Buffer{}
-	v6buff := bytes.Buffer{}
+	entries := strings.Builder{}
+	v6entries := strings.Builder{}
+
+	entries.WriteString(fmt.Sprintf(CLAB_HOSTENTRY_PREFIX+"\n", labname))
 
 	for _, cont := range containers {
 		if len(cont.Names) == 0 {
@@ -57,25 +60,17 @@ func GenerateHostsEntries(containers []types.GenericContainer, labname string) [
 		}
 		if cont.NetworkSettings.Set {
 			if cont.NetworkSettings.IPv4addr != "" {
-				v4buff.WriteString(cont.NetworkSettings.IPv4addr)
-				v4buff.WriteString("\t")
-				v4buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-				v4buff.WriteString("\n")
+				fmt.Fprintf(&entries, "%s\t%s\n", cont.NetworkSettings.IPv4addr, strings.TrimLeft(cont.Names[0], "/"))
 			}
 			if cont.NetworkSettings.IPv6addr != "" {
-				v6buff.WriteString(cont.NetworkSettings.IPv6addr)
-				v6buff.WriteString("\t")
-				v6buff.WriteString(strings.TrimLeft(cont.Names[0], "/"))
-				v6buff.WriteString("\n")
+				fmt.Fprintf(&v6entries, "%s\t%s\n", cont.NetworkSettings.IPv6addr, strings.TrimLeft(cont.Names[0], "/"))
 			}
 		}
 	}
-	// combine stuff
-	buff.WriteString(fmt.Sprintf(CLAB_HOSTENTRY_PREFIX+"\n", labname))
-	buff.WriteString(v4buff.String())
-	buff.WriteString(v6buff.String())
-	buff.WriteString(fmt.Sprintf(CLAB_HOSTENTRY_POSTFIX+"\n", labname))
-	return buff.Bytes()
+
+	entries.WriteString(v6entries.String())
+	entries.WriteString(fmt.Sprintf(CLAB_HOSTENTRY_POSTFIX+"\n", labname))
+	return []byte(entries.String())
 }
 
 func DeleteEntriesFromHostsFile(labname string) error {
@@ -84,7 +79,12 @@ func DeleteEntriesFromHostsFile(labname string) error {
 	}
 	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
-		return err
+		if errors.Is(err, os.ErrNotExist) {
+			log.Info("/etc/hosts does not exist")
+			return nil
+		} else {
+			return err
+		}
 	}
 	defer f.Close()
 	reader := bufio.NewReader(f)
