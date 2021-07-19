@@ -5,6 +5,7 @@
 package ceos
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
@@ -141,38 +142,47 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	return nil
 }
 
-func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *types.NodeConfig) error {
+func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
 	// post deploy actions are not needed if a user specified startup config was provided
-	if nodeCfg.StartupConfig != "" {
-		return nil
+	// and it doesn't have templation vars for ipv4 management address
+	if node.StartupConfig != "" {
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+		if !bytes.Contains(c, []byte("{{ if .MgmtIPv4Address }}")) {
+			return nil
+		}
+
+		cfgTemplate = string(c)
 	}
 
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
-	err := nodeCfg.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err := node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
 
-	err = r.StopContainer(ctx, nodeCfg.ContainerID)
+	err = r.StopContainer(ctx, node.ContainerID)
 	if err != nil {
 		return err
 	}
 	// remove the netns symlink created during original start
 	// we will re-symlink it later
-	if err := utils.DeleteNetnsSymlink(nodeCfg.LongName); err != nil {
+	if err := utils.DeleteNetnsSymlink(node.LongName); err != nil {
 		return err
 	}
 
-	err = r.StartContainer(ctx, nodeCfg.ContainerID)
+	err = r.StartContainer(ctx, node.ContainerID)
 	if err != nil {
 		return err
 	}
-	nodeCfg.NSPath, err = r.GetNSPath(ctx, nodeCfg.ContainerID)
+	node.NSPath, err = r.GetNSPath(ctx, node.ContainerID)
 	if err != nil {
 		return err
 	}
 
-	return utils.LinkContainerNS(nodeCfg.NSPath, nodeCfg.LongName)
+	return utils.LinkContainerNS(node.NSPath, node.LongName)
 }
 
 func (s *ceos) GetImages() map[string]string {
