@@ -109,7 +109,7 @@ cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-di
 used as a startup config instead.
 
 #### Default node configuration
-When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/crpd/crpd.cfg) and copy it to the config directory of the node.
+When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config
@@ -141,6 +141,31 @@ topology:
 When a config file is passed via `config` parameter, it will override any configuration that may have left upon lab destroy.
 
 With such topology file containerlab is instructed to take a file `myconfig.conf` from the current working directory, copy it to the lab directory for that specific node under the `/flash/startup-config` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
+
+It is possible to change the default config which every ceos node will start with with the following steps:
+
+1. Save the [default configuration template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) under some local file name[^2] and add the necessary changes to it
+2. Use this file as a startup-config for ceos kind:
+    ```
+    name: ceos
+
+    topology:
+    kinds:
+        ceos:
+        startup-config: ceos-custom-startup.cfg
+    nodes:
+        # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
+        ceos1:
+        kind: ceos
+        image: ceos:4.25.0F
+        # ceos2 will boot with its own specific startup config, as it overrides the kind variables
+        ceos2: 
+        kind: ceos
+        image: ceos:4.25.0F
+        startup-config: node-specific-startup.cfg
+    links:
+        - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+    ```
 
 #### Configuration persistency
 
@@ -221,3 +246,4 @@ As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environ
 Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467). 
 
 [^1]: https://eos.arista.com/ceos-lab-topo/
+[^2]: do not remove the template variables from the `Management0` interface, otherwise the nodes will not apply the IP address from docker IPAM service.
