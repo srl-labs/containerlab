@@ -26,7 +26,7 @@
 
 {{ if .isis_iid }}
 /configure router isis {{ .isis_iid }}
-    area-address 49.0000.0000.0000.{{ .isis_iid | printf "%02s" }}
+    area-address 49.0000.0000.0000.{{ .isis_iid | printf "%02v" }}
     level-capability 2
     level 2 wide-metrics-only
     #database-export igp-identifier {{ .isis_iid }} bgp-ls-identifier value {{ default 0 .isis_iid }}
@@ -35,7 +35,7 @@
     admin-state enable
     interface "system" admin-state enable
     {{- if .sid_idx }}
-    interface "system" ipv4-node-sid index {{ .sid_idx }}{{ .isis_iid | printf "%02s"  }}
+    interface "system" ipv4-node-sid index {{ .isis_iid | printf "%02v"  }}
     segment-routing prefix-sid-range global
     segment-routing admin-state enable
     {{- end }}
@@ -68,7 +68,7 @@
 
 {{- if .isis_iid }}
 /configure router isis {{ default 0 .isis_iid }}
-    area-address 49.0000.0000.0000.{{ .isis_iid | printf "%02s" }}
+    area-address 49.0000.0000.0000.{{ .isis_iid | printf "%02v" }}
     level-capability 2
     level 2 wide-metrics-only
     traffic-engineering
@@ -76,7 +76,7 @@
     admin-state enable
     interface "system" admin-state enable
     {{- if .sid_idx }}
-    interface "system" ipv4-node-sid index {{ .sid_idx }}{{ default 0 .isis_iid | printf "%02s"  }}
+    interface "system" ipv4-node-sid index {{ .sid_idx }}{{ default 0 .isis_iid | printf "%02v"  }}
     segment-routing prefix-sid-range global
     segment-routing admin-state enable
     {{- end }}

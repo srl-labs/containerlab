@@ -114,7 +114,7 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 			if vv.Len() != 2 {
 				return fmt.Errorf("%s: var %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
 			}
-			addValues(k, vv.Index(0), vv.Index(1))
+			addValues(k, vv.Index(0).Interface(), vv.Index(1).Interface())
 			continue
 		}
 
