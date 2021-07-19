@@ -123,9 +123,9 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		tpl := string(c)
 
-		err = node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
+		err = node.GenerateConfig(node.ResStartupConfig, tpl)
 		if err != nil {
 			return err
 		}
@@ -146,6 +146,7 @@ func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, nodeCfg *ty
 	if nodeCfg.StartupConfig != "" {
 		return nil
 	}
+
 	// regenerate ceos config since it is now known which IP address docker assigned to this container
 	err := nodeCfg.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
 	if err != nil {
