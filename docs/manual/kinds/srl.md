@@ -24,6 +24,10 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
     -e json_ietf \
     get --path /system/name/host-name
     ```
+=== "JSON-RPC"
+    SR Linux has a JSON-RPC interface, that is enabled on port 80/443 for HTTP/HTTPS schemas accordingly.
+
+    HTTPS server uses the same TLS certificate as gNMI server.
 
 !!!info
     Default user credentials: `admin:admin`
