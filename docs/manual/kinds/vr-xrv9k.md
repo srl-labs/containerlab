@@ -58,5 +58,3 @@ The following labs feature vr-xrv9k node:
 
 - [SR Linux and Cisco XRv9k](../../lab-examples/vr-xrv9k.md)
 
-## Known issues and limitations
-* LACP and BPDU packets are not propagated to/from vrnetlab based routers launched with containerlab.
