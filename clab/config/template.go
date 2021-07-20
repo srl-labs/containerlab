@@ -21,6 +21,9 @@ var TemplateNames []string
 // path to additional templates
 var TemplatePaths []string
 
+// debug count
+var DebugCount int
+
 type NodeConfig struct {
 	TargetNode *types.NodeConfig
 	// All the variables used to render the template
@@ -116,10 +119,27 @@ func (c *NodeConfig) Print(printLines int, forceDebug ...bool) {
 
 	if log.IsLevelEnabled(log.DebugLevel) || len(forceDebug) > 0 {
 		s.WriteString(" vars = ")
+		var saved_nodes Dict
+		restore := false
+		if DebugCount < 3 {
+			saved_nodes, restore = c.Vars[vkNodes].(Dict)
+			if restore {
+				var n strings.Builder
+				n.WriteRune('{')
+				for k := range saved_nodes {
+					fmt.Fprintf(&n, "%s: {...}, ", k)
+				}
+				n.WriteRune('}')
+				c.Vars[vkNodes] = n.String()
+			}
+		}
 		vars, err := yaml.Marshal(c.Vars)
 		if err != nil {
 			log.Warnf("error printing vars for node %s: %s", c.TargetNode.ShortName, err)
 			s.WriteString(err.Error())
+		}
+		if restore {
+			c.Vars[vkNodes] = saved_nodes
 		}
 		if len(vars) > 0 {
 			s.Write(vars)
