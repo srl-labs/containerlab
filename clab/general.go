@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	ClabHostEntryPrefix  = "###### CLAB-%s-START ######"
-	ClabHostEntryPostfix = "###### CLAB-%s-END ######"
+	clabHostEntryPrefix  = "###### CLAB-%s-START ######"
+	clabHostEntryPostfix = "###### CLAB-%s-END ######"
 )
 
 func AppendHostsFileEntries(containers []types.GenericContainer, labname string) error {
@@ -53,7 +53,8 @@ func generateHostsEntries(containers []types.GenericContainer, labname string) [
 	entries := bytes.Buffer{}
 	v6entries := bytes.Buffer{}
 
-	fmt.Fprintf(&entries, ClabHostEntryPrefix+"\n", labname)
+	fmt.Fprintf(&entries, clabHostEntryPrefix, labname)
+	entries.WriteByte('\n')
 
 	for _, cont := range containers {
 		if len(cont.Names) == 0 {
@@ -70,7 +71,8 @@ func generateHostsEntries(containers []types.GenericContainer, labname string) [
 	}
 
 	entries.Write(v6entries.Bytes())
-	fmt.Fprintf(&entries, ClabHostEntryPostfix+"\n", labname)
+	fmt.Fprintf(&entries, clabHostEntryPostfix, labname)
+	entries.WriteByte('\n')
 	return entries.Bytes()
 }
 
@@ -91,8 +93,8 @@ func DeleteEntriesFromHostsFile(labname string) error {
 	reader := bufio.NewReader(f)
 	skiplines := false
 	output := bytes.Buffer{}
-	prefix := fmt.Sprintf(ClabHostEntryPrefix, labname)
-	postfix := fmt.Sprintf(ClabHostEntryPostfix, labname)
+	prefix := fmt.Sprintf(clabHostEntryPrefix, labname)
+	postfix := fmt.Sprintf(clabHostEntryPostfix, labname)
 	for {
 		line, err := reader.ReadString(byte('\n'))
 		if err == io.EOF {
