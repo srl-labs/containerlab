@@ -25,6 +25,7 @@ var configCmd = &cobra.Command{
 		var err error
 
 		transport.DebugCount = debugCount
+		config.DebugCount = debugCount
 
 		c, err := clab.NewContainerLab(
 			clab.WithTimeout(timeout),
@@ -101,7 +102,7 @@ var configCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
-	configCmd.MarkFlagDirname("template-path")
+	_ = configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
 	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render templates in dry-run mode & print N lines of rendered config")
 }
