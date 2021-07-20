@@ -2,7 +2,10 @@
 
 [Cisco NXOS](https://www.cisco.com/c/en/us/products/ios-nx-os-software/nx-os/index.html) virtual appliance is identified with `vr-nxos` kind in the [topology file](../topo-def-file.md). It is built using [hellt/vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-nxos nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
+!!!note
+    This is a Titanium based system, which is an older version of NX-OS.
+
+vr-nxos nodes launched with containerlab come up pre-provisioned with SSH service enabled.
 
 ## Managing vr-nxos nodes
 Cisco NXOS node launched with containerlab can be managed via the following interfaces:
@@ -20,7 +23,7 @@ Cisco NXOS node launched with containerlab can be managed via the following inte
 
 
 !!!info
-    Default user credentials: `clab:clab@123`
+    Default user credentials: `admin:admin`
 
 ## Interfaces mapping
 vr-nxos container can have up to 90 interfaces and uses the following mapping rules:

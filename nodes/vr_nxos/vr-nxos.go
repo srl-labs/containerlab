@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -34,8 +33,8 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "clab",
-		"PASSWORD":           "clab@123",
+		"USERNAME":           "admin",
+		"PASSWORD":           "admin",
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "4096",
@@ -83,15 +82,5 @@ func (s *vrNXOS) Delete(ctx context.Context) error {
 }
 
 func (s *vrNXOS) SaveConfig(ctx context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-	)
-
-	if err != nil {
-		return err
-	}
-
-	log.Infof("saved %s running configuration to startup configuration file\n", s.cfg.ShortName)
 	return nil
 }
