@@ -34,6 +34,19 @@ func TestMergeMaps(t *testing.T) {
 	})
 }
 
+func TestMergeMapsLists(t *testing.T) {
+	d1 := map[string]interface{}{
+		"t": []string{"1"},
+	}
+	d2 := map[string]interface{}{
+		"t": []string{"2"},
+	}
+	expectMaps(t, d1, nil, d1)
+	expectMaps(t, d1, d1, d1)
+	expectMaps(t, d1, d1, nil)
+	expectMaps(t, d2, d1, d2)
+}
+
 func TestMergeMapsRecursive(t *testing.T) {
 	d0 := map[string]interface{}{
 		"a": "1",

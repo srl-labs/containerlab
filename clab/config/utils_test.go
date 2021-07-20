@@ -134,6 +134,7 @@ func TestPrepareLinkVars(t *testing.T) {
 		"ip":   "1.1.2.1/31",
 		"name": "to_a",
 	})
+<<<<<<< HEAD
 
 	l.Vars["ip"] = []string{"1.1.2.0/16", "1.1.2.1/16"}
 	l.Vars["name"] = "the_same"
@@ -149,4 +150,6 @@ func TestPrepareLinkVars(t *testing.T) {
 		"ip":   "1.1.2.1/16",
 		"name": "the_same",
 	})
+=======
+>>>>>>> 780815d... Some tests
 }
