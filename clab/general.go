@@ -13,9 +13,9 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-var (
-	CLAB_HOSTENTRY_PREFIX  = "###### CLAB-%s-START ######"
-	CLAB_HOSTENTRY_POSTFIX = "###### CLAB-%s-END ######"
+const (
+	ClabHostEntryPrefix  = "###### CLAB-%s-START ######"
+	ClabHostEntryPostfix = "###### CLAB-%s-END ######"
 )
 
 func AppendHostsFileEntries(containers []types.GenericContainer, labname string) error {
@@ -27,7 +27,7 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 	if err != nil {
 		return err
 	}
-	data := GenerateHostsEntries(containers, labname)
+	data := generateHostsEntries(containers, labname)
 	if len(data) == 0 {
 		return nil
 	}
@@ -48,11 +48,12 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 }
 
 // hostEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
-func GenerateHostsEntries(containers []types.GenericContainer, labname string) []byte {
-	entries := strings.Builder{}
-	v6entries := strings.Builder{}
+func generateHostsEntries(containers []types.GenericContainer, labname string) []byte {
 
-	entries.WriteString(fmt.Sprintf(CLAB_HOSTENTRY_PREFIX+"\n", labname))
+	entries := bytes.Buffer{}
+	v6entries := bytes.Buffer{}
+
+	fmt.Fprintf(&entries, ClabHostEntryPrefix+"\n", labname)
 
 	for _, cont := range containers {
 		if len(cont.Names) == 0 {
@@ -68,9 +69,9 @@ func GenerateHostsEntries(containers []types.GenericContainer, labname string) [
 		}
 	}
 
-	entries.WriteString(v6entries.String())
-	entries.WriteString(fmt.Sprintf(CLAB_HOSTENTRY_POSTFIX+"\n", labname))
-	return []byte(entries.String())
+	entries.Write(v6entries.Bytes())
+	fmt.Fprintf(&entries, ClabHostEntryPostfix+"\n", labname)
+	return entries.Bytes()
 }
 
 func DeleteEntriesFromHostsFile(labname string) error {
@@ -90,8 +91,8 @@ func DeleteEntriesFromHostsFile(labname string) error {
 	reader := bufio.NewReader(f)
 	skiplines := false
 	output := bytes.Buffer{}
-	prefix := fmt.Sprintf(CLAB_HOSTENTRY_PREFIX, labname)
-	postfix := fmt.Sprintf(CLAB_HOSTENTRY_POSTFIX, labname)
+	prefix := fmt.Sprintf(ClabHostEntryPrefix, labname)
+	postfix := fmt.Sprintf(ClabHostEntryPostfix, labname)
 	for {
 		line, err := reader.ReadString(byte('\n'))
 		if err == io.EOF {
