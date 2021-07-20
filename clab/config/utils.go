@@ -109,7 +109,7 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 		}
 
 		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		if vv.Kind() == reflect.Array {
 			// Array/slice should contain 2 values, one for each end of the link
 			if vv.Len() != 2 {
 				return fmt.Errorf("%s: var %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
