@@ -3,14 +3,13 @@ package clab
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -19,8 +18,15 @@ const (
 )
 
 func AppendHostsFileEntries(containers []types.GenericContainer, labname string) error {
+	filename := "/etc/hosts"
 	if labname == "" {
 		return fmt.Errorf("missing lab name")
+	}
+	if !utils.FileExists(filename) {
+		err := utils.CreateFile(filename, "127.0.0.1\tlocalhost")
+		if err != nil {
+			return err
+		}
 	}
 	// lets make sure we do not have remaining of a non destroyed run in the hosts file
 	err := DeleteEntriesFromHostsFile(labname)
@@ -31,10 +37,13 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 	if len(data) == 0 {
 		return nil
 	}
-	f, err := os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	var f *os.File
+
+	f, err = os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		return err
 	}
+
 	defer f.Close()
 	_, err = f.Write(data)
 	if err != nil {
@@ -78,12 +87,7 @@ func DeleteEntriesFromHostsFile(labname string) error {
 	}
 	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			log.Info("/etc/hosts does not exist")
-			return nil
-		} else {
-			return err
-		}
+		return err
 	}
 	defer f.Close()
 	reader := bufio.NewReader(f)
