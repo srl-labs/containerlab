@@ -36,10 +36,6 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 		return err
 	}
 	defer f.Close()
-	_, err = f.WriteString("\n")
-	if err != nil {
-		return err
-	}
 	_, err = f.Write(data)
 	if err != nil {
 		return err
