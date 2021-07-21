@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"gopkg.in/yaml.v2"
 )
 
 // templates to execute
@@ -116,10 +116,13 @@ func (c *NodeConfig) Print(printLines int, forceDebug ...bool) {
 
 	if log.IsLevelEnabled(log.DebugLevel) || len(forceDebug) > 0 {
 		s.WriteString(" vars = ")
-		vars, _ := json.MarshalIndent(c.Vars, "", "      ")
+		vars, err := yaml.Marshal(c.Vars)
+		if err != nil {
+			log.Warnf("error printing vars for node %s: %s", c.TargetNode.ShortName, err)
+			s.WriteString(err.Error())
+		}
 		if len(vars) > 0 {
-			s.Write(vars[0 : len(vars)-1])
-			s.WriteString("  }")
+			s.Write(vars)
 		}
 	}
 

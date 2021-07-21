@@ -171,9 +171,9 @@ func linkIP(link *types.Link) (string, string, error) {
 	_, okA := link.A.Node.Config.Vars[vkSystemIP]
 	_, okB := link.B.Node.Config.Vars[vkSystemIP]
 	if okA != okB {
-		return "", "", fmt.Errorf("%s var required on all nodes", vkSystemIP)
+		log.Warnf("to auto-generate link IPs, a %s var is required on all nodes", vkSystemIP)
 	}
-	if !okA {
+	if !okA || !okB {
 		return "", "", nil
 	}
 	sysA, err := netaddr.ParseIPPrefix(fmt.Sprintf("%v", link.A.Node.Config.Vars[vkSystemIP]))
