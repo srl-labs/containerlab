@@ -6,7 +6,7 @@ Keeping this requirement in mind from the very beginning, we added kinds like [`
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
-Although this approach has many pros, it doesn't allow users to define the VM based nodes in the same topology file. But not anymore, with [`vrnetlab`](https://github.com/plajjan/vrnetlab) integration containerlab is capable of launching topologies with VM-based routers defined in the same topology file.
+With this approach, you could bridge VM-based routing systems by attaching interfaces to the bridge you define in your topology, however it doesn't allow users to define the VM based nodes in the same topology file. With [`vrnetlab`](https://github.com/hellt/vrnetlab) integration, containerlab is now capable of launching topologies with VM-based routers defined in the same topology file.
 
 ## Vrnetlab
 Vrnetlab essentially allows to package a regular VM inside a container and makes it runnable and accessible as if it was a container image.
