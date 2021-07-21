@@ -172,3 +172,16 @@ interfaces:
 	assert(t, result, expT)
 
 }
+
+func TestMergeMapsLists(t *testing.T) {
+	d1 := map[string]interface{}{
+		"t": []string{"1"},
+	}
+	d2 := map[string]interface{}{
+		"t": []string{"2"},
+	}
+	assert(t, MergeMaps(nil, d1), d1)
+	assert(t, MergeMaps(d1, d1), d1)
+	assert(t, MergeMaps(d1, nil), d1)
+	assert(t, MergeMaps(d1, d2), d2)
+}
