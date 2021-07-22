@@ -92,7 +92,7 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 			var buf strings.Builder
 			err := tmpl.ExecuteTemplate(&buf, tmplN, vars)
 			if err != nil {
-				res[nodeName].Print(0, true)
+				res[nodeName].Print(true, true)
 				return nil, err
 			}
 
@@ -106,18 +106,17 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 
 // Implement stringer for NodeConfig
 func (c *NodeConfig) String() string {
-
 	s := fmt.Sprintf("%s: %v", c.TargetNode.ShortName, c.Info)
 	return s
 }
 
 // Print the config
-func (c *NodeConfig) Print(printLines int, forceDebug ...bool) {
+func (c *NodeConfig) Print(vars, rendered bool) {
 	var s strings.Builder
 
 	s.WriteString(c.TargetNode.ShortName)
 
-	if log.IsLevelEnabled(log.DebugLevel) || len(forceDebug) > 0 {
+	if vars {
 		s.WriteString(" vars = ")
 		var saved_nodes Dict
 		restore := false
@@ -146,14 +145,11 @@ func (c *NodeConfig) Print(printLines int, forceDebug ...bool) {
 		}
 	}
 
-	if printLines > 0 {
+	if rendered {
 		for idx, conf := range c.Data {
 			fmt.Fprintf(&s, "\n  Template %s for %s = [[", c.Info[idx], c.TargetNode.ShortName)
 
-			cl := strings.SplitN(conf, "\n", printLines+1)
-			if len(cl) > printLines {
-				cl[printLines] = "..."
-			}
+			cl := strings.Split(conf, "\n")
 			for _, l := range cl {
 				s.WriteString("\n     ")
 				s.WriteString(l)
