@@ -51,7 +51,7 @@ var configCmd = &cobra.Command{
 					c.Print(true, true)
 					return nil
 				}
-				log.Warnf("Invalid command line option for check. It needs to be either 'template'(default), 'vars', 'all' or a valid node name")
+				log.Warnf("Invalid command line option for check. Options: 'template'(default), 'vars', 'all' or a valid node name")
 				pt = true
 			}
 			for _, c := range allConfig {
@@ -116,6 +116,6 @@ func init() {
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
-	configCmd.Flags().StringVarP(&check, "check", "c", "", "render templates in dry-run mode & print N lines of rendered config")
+	configCmd.Flags().StringVarP(&check, "check", "c", "", "render templates in dry-run mode & print either 'template', 'vars', 'all' or a specific node")
 	configCmd.Flags().Lookup("check").NoOptDefVal = "template"
 }
