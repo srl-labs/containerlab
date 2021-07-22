@@ -13,6 +13,7 @@ topology:
       image: networkop/host:ifreload
       binds:
         - h1/interfaces:/etc/network/interfaces
+      cmd: 2 # wait for 2 interfaces to be connected: eth0 + eth1
 
   links:
     - endpoints: ["sw1:swp12", "h1:eth1"]
