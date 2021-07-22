@@ -28,6 +28,27 @@ func TestGenerateAnsibleInventory(t *testing.T) {
           ansible_host: 172.100.100.12
 `,
 		},
+		"case2": {
+			got: "test_data/topo8_ansible_groups.yml",
+			want: `all:
+  children:
+    srl:
+      hosts:
+        clab-topo8_ansible_groups-node1:
+          ansible_host: 172.100.100.11
+        clab-topo8_ansible_groups-node2:
+          ansible_host: 172.100.100.12
+        clab-topo8_ansible_groups-node3:
+          ansible_host: 172.100.100.13
+    extra_group:
+      hosts:
+        clab-topo8_ansible_groups-node2:
+        clab-topo8_ansible_groups-node3:
+    spine:
+      hosts:
+        clab-topo8_ansible_groups-node1:
+`,
+		},
 	}
 
 	for name, tc := range tests {
