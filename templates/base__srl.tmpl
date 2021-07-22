@@ -1,9 +1,8 @@
-{{ expect .system_ip "ip" }}
+{{ expect .clab_system_ip "ip" }}
 {{ optional .isis_iid "0-31" }}
 {{ range .clab_links }}
     {{ expect .port "^(ethernet-\\d+/|e\\d+-)\\d+$" }}
-    {{ expect .name "string" }}
-    {{ expect .ip "ip" }}
+    {{ expect .clab_link_ip "ip" }}
     {{ optional .vlan "0-4095" }}
     {{ optional .metric "1-10000" }}
 {{ end }}
@@ -12,18 +11,18 @@
     admin-state enable
     subinterface 0 {
         ipv4 {
-            address {{ .system_ip }} {
+            address {{ .clab_system_ip }} {
             }
         }
         ipv6 {
-            address ::ffff:{{ ip .system_ip }}/128 {
+            address ::ffff:{{ ip .clab_system_ip }}/128 {
             }
         }
     }
 }
 
 /network-instance default {
-    router-id {{ ip .system_ip }}
+    router-id {{ ip .clab_system_ip }}
     interface lo0.0 {
     }
     protocols {
@@ -50,8 +49,8 @@
     vlan-tagging true
     subinterface {{ default 10 .vlan }} {
         set vlan encap single-tagged vlan-id {{ default 10 .vlan }}
-        set ipv4 address {{ .ip }}
-        set ipv6 address ::FFFF:{{ ip .ip }}/127
+        set ipv4 address {{ .clab_link_ip }}
+        set ipv6 address ::FFFF:{{ ip .clab_link_ip }}/127
     }
 }
 

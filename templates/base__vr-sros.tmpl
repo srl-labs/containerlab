@@ -1,11 +1,11 @@
-{{ expect .system_ip "ip" }}
+{{ expect .clab_system_ip "ip" }}
 {{ optional .isis_iid "0-31" }}
 {{ optional .sid_idx "0-999" }}
 {{ optional .sid_start "19000-30000" }}
 {{ optional .sid_end "19000-30000" }}
 {{ range .clab_links }}
     {{ expect .port "^\\d+/\\d/" }}
-    {{ expect .name "string" }}
+    {{ expect .clab_link_name "string" }}
     {{ expect .ip "ip" }}
     {{ optional .vlan "0-4096" }}
     {{ optional .isis_iid "0-31" }}
@@ -16,8 +16,8 @@
 /configure system login-control idle-timeout 1440
 
 /configure router interface "system"
-    ipv4 primary address {{ ip .system_ip }}
-    ipv4 primary prefix-length {{ ipmask .system_ip }}
+    ipv4 primary address {{ ip .clab_system_ip }}
+    ipv4 primary prefix-length {{ ipmask .clab_system_ip }}
     admin-state enable
 
 /configure router
@@ -61,7 +61,7 @@
 
 /configure port {{ .port }} admin-state enable
 
-/configure router interface {{ .name }}
+/configure router interface {{ .clab_link_name }}
     ipv4 primary address {{ ip .ip }}
     ipv4 primary prefix-length {{ ipmask .ip }}
     port {{ .port }}:{{ default 10 .vlan }}
@@ -80,16 +80,16 @@
     segment-routing prefix-sid-range global
     segment-routing admin-state enable
     {{- end }}
-    interface {{ .name }} admin-state enable
-    interface {{ .name }} interface-type point-to-point
-    interface {{ .name }} level 2 metric {{ default 10 .metric }}
+    interface {{ .clab_link_name }} admin-state enable
+    interface {{ .clab_link_name }} interface-type point-to-point
+    interface {{ .clab_link_name }} level 2 metric {{ default 10 .metric }}
 {{- end }}
 
 /configure router rsvp
-    interface {{ .name }} admin-state enable
+    interface {{ .clab_link_name }} admin-state enable
 
 /configure router mpls
-    interface {{ .name }} admin-state enable
+    interface {{ .clab_link_name }} admin-state enable
 
 {{ end }}
 

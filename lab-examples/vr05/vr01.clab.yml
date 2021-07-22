@@ -7,7 +7,7 @@ topology:
       image: ghcr.io/nokia/srlinux
       config:
         vars:
-          system_ip: 10.0.50.50/32
+          clab_system_ip: 10.0.50.50/32
           isis_iid: 0
           sid_idx: 11
     sros:
@@ -17,7 +17,7 @@ topology:
       license: ~/license/license-sros21.txt
       config:
         vars:
-          system_ip: 10.0.50.51/32
+          clab_system_ip: 10.0.50.51/32
           sid_idx: 10
           isis_iid: 0
 

@@ -14,16 +14,16 @@ import (
 )
 
 const (
-	vkNodeName = "node"       // reserved, used for the node's ShortName
+	vkNodeName = "clab_node"  // reserved, used for the node's ShortName
 	vkNodes    = "clab_nodes" // reserved, used for all nodes
 	vkLinks    = "clab_links" // reserved, used for all link in a node
 	vkFarEnd   = "clab_far"   // reserved, used for far-end link & node info
 	vkRole     = "clab_role"  // optional, will default to the node's Kind. Used to select the template
 
-	vkSystemIP = "system_ip" // optional, system IP if present could be used to calc link IPs
-	vkLinkIP   = "ip"        // optional, link IP
-	vkLinkName = "name"      // optional, from ShortNames
-	vkLinkNo   = "link_no"   // optional, link number in case you have multiple, used to calculate the name
+	vkSystemIP = "clab_system_ip" // optional, system IP if present could be used to calc link IPs
+	vkLinkIP   = "clab_link_ip"   // optional, link IP
+	vkLinkName = "clab_link_name" // optional, from ShortNames
+	vkLinkNum  = "clab_link_num"  // optional, link number in case you have multiple, used to calculate the name
 )
 
 type Dict map[string]interface{}
@@ -112,7 +112,7 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 		if vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
 			// Array/slice should contain 2 values, one for each end of the link
 			if vv.Len() != 2 {
-				return fmt.Errorf("%s: var %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
+				return fmt.Errorf("%s: variable %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
 			}
 			addValues(k, vv.Index(0).Interface(), vv.Index(1).Interface())
 			continue
@@ -154,10 +154,10 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 	return nil
 }
 
-// Create a link name using the node names and optional link_no
+// Create a link name using the node names and optional link_num
 func linkName(link *types.Link) (string, string, error) {
 	var linkNo string
-	if v, ok := link.Vars[vkLinkNo]; ok {
+	if v, ok := link.Vars[vkLinkNum]; ok {
 		linkNo = fmt.Sprintf("_%v", v)
 	}
 	return fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNo), fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNo), nil
@@ -171,7 +171,7 @@ func linkIP(link *types.Link) (string, string, error) {
 	_, okA := link.A.Node.Config.Vars[vkSystemIP]
 	_, okB := link.B.Node.Config.Vars[vkSystemIP]
 	if okA != okB {
-		log.Warnf("to auto-generate link IPs, a %s var is required on all nodes", vkSystemIP)
+		log.Warnf("to auto-generate link IPs, a %s variable is required on all nodes", vkSystemIP)
 	}
 	if !okA || !okB {
 		return "", "", nil
@@ -186,10 +186,10 @@ func linkIP(link *types.Link) (string, string, error) {
 	}
 
 	o4 := 0
-	if v, ok := link.Vars[vkLinkNo]; ok {
+	if v, ok := link.Vars[vkLinkNum]; ok {
 		o4, err = strconv.Atoi(fmt.Sprintf("%v", v))
 		if err != nil {
-			log.Warnf("%s is expected to contain a number, got %s", vkLinkNo, v)
+			log.Warnf("%s is expected to contain a number, got %s", vkLinkNum, v)
 		}
 		o4 *= 2
 	}
