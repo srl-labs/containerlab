@@ -69,7 +69,7 @@ func gettestLink() *types.Link {
 				ShortName: "a",
 				Config: &types.ConfigDispatcher{
 					Vars: map[string]interface{}{
-						"systemip": "10.0.0.1/32",
+						vkSystemIP: "10.0.0.1/32",
 					},
 				},
 			},
@@ -79,7 +79,7 @@ func gettestLink() *types.Link {
 				ShortName: "b",
 				Config: &types.ConfigDispatcher{
 					Vars: map[string]interface{}{
-						"systemip": "10.0.0.2/32",
+						vkSystemIP: "10.0.0.2/32",
 					},
 				},
 			},
@@ -101,7 +101,7 @@ func TestLinkName(t *testing.T) {
 	assert(t, n1, "to_b")
 	assert(t, n2, "to_a")
 
-	l.Vars["linknr"] = 1
+	l.Vars["link_no"] = 1
 	n1, n2, _ = linkName(l)
 	assert(t, n1, "to_b_1")
 	assert(t, n2, "to_a_1")
@@ -113,7 +113,7 @@ func TestLinkIP(t *testing.T) {
 	assert(t, n1, "1.1.2.0/31")
 	assert(t, n2, "1.1.2.1/31")
 
-	l.Vars["linknr"] = 1
+	l.Vars["link_no"] = 1
 	n1, n2, _ = linkIP(l)
 	assert(t, n1, "1.1.2.2/31")
 	assert(t, n2, "1.1.2.3/31")

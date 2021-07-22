@@ -11,22 +11,22 @@ topology:
     sr1:
       config:
         vars:
-          systemip: 10.0.50.31/32
+          system_ip: 10.0.50.31/32
           sid_idx: 1
     sr2:
       config:
         vars:
-          systemip: 10.0.50.32/32
+          system_ip: 10.0.50.32/32
           sid_idx: 2
     sr3:
       config:
         vars:
-          systemip: 10.0.50.33/32
+          system_ip: 10.0.50.33/32
           sid_idx: 3
     sr4:
       config:
         vars:
-          systemip: 10.0.50.34/32
+          system_ip: 10.0.50.34/32
           sid_idx: 4
   links:
     - endpoints: [sr1:eth1, sr2:eth2]

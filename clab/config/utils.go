@@ -14,16 +14,16 @@ import (
 )
 
 const (
-	vkNodes    = "nodes" // reserved, used for all nodes
-	vkNodeName = "node"  // reserved, used for the node's ShortName
-	vkLinks    = "links" // reserved, used for all link in a node
-	vkRole     = "role"  // optional, will default to the node's Kind. Used to select the template
-	vkFarEnd   = "far"   // reserved, used for far-end link & node info
+	vkNodeName = "node"       // reserved, used for the node's ShortName
+	vkNodes    = "clab_nodes" // reserved, used for all nodes
+	vkLinks    = "clab_links" // reserved, used for all link in a node
+	vkFarEnd   = "clab_far"   // reserved, used for far-end link & node info
+	vkRole     = "clab_role"  // optional, will default to the node's Kind. Used to select the template
 
-	vkSystemIP = "systemip" // optional, system IP if present could be used to calc link IPs
-	vkLinkIP   = "ip"       // optional, link IP
-	vkLinkName = "name"     // optional, from ShortNames
-	vkLinkNr   = "linknr"   // optional, link number in case you have multiple, used to calculate the name
+	vkSystemIP = "system_ip" // optional, system IP if present could be used to calc link IPs
+	vkLinkIP   = "ip"        // optional, link IP
+	vkLinkName = "name"      // optional, from ShortNames
+	vkLinkNo   = "link_no"   // optional, link number in case you have multiple, used to calculate the name
 )
 
 type Dict map[string]interface{}
@@ -154,13 +154,13 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 	return nil
 }
 
-// Create a link name using the node names and optional linkNr
+// Create a link name using the node names and optional link_no
 func linkName(link *types.Link) (string, string, error) {
-	var linkNr string
-	if v, ok := link.Vars[vkLinkNr]; ok {
-		linkNr = fmt.Sprintf("_%v", v)
+	var linkNo string
+	if v, ok := link.Vars[vkLinkNo]; ok {
+		linkNo = fmt.Sprintf("_%v", v)
 	}
-	return fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNr), fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNr), nil
+	return fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNo), fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNo), nil
 }
 
 // Calculate link IP from the system IPs at both ends
@@ -186,10 +186,10 @@ func linkIP(link *types.Link) (string, string, error) {
 	}
 
 	o4 := 0
-	if v, ok := link.Vars[vkLinkNr]; ok {
+	if v, ok := link.Vars[vkLinkNo]; ok {
 		o4, err = strconv.Atoi(fmt.Sprintf("%v", v))
 		if err != nil {
-			log.Warnf("%s is expected to contain a number, got %s", vkLinkNr, v)
+			log.Warnf("%s is expected to contain a number, got %s", vkLinkNo, v)
 		}
 		o4 *= 2
 	}
@@ -200,7 +200,7 @@ func linkIP(link *types.Link) (string, string, error) {
 	}
 	ipA, err = netaddr.ParseIPPrefix(fmt.Sprintf("1.%d.%d.%d/31", o2, o3, o4))
 	if err != nil {
-		log.Errorf("could not create link IP from systemip: %s", err)
+		log.Errorf("could not create link IP from %s: %s", vkSystemIP, err)
 	}
 	return ipA.String(), ipFarEnd(ipA).String(), nil
 }

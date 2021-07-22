@@ -1,9 +1,9 @@
-{{ expect .systemip "ip" }}
+{{ expect .system_ip "ip" }}
 {{ optional .isis_iid "0-31" }}
 {{ optional .sid_idx "0-999" }}
 {{ optional .sid_start "19000-30000" }}
 {{ optional .sid_end "19000-30000" }}
-{{ range .links }}
+{{ range .clab_links }}
     {{ expect .port "^\\d+/\\d/" }}
     {{ expect .name "string" }}
     {{ expect .ip "ip" }}
@@ -16,8 +16,8 @@
 /configure system login-control idle-timeout 1440
 
 /configure router interface "system"
-    ipv4 primary address {{ ip .systemip }}
-    ipv4 primary prefix-length {{ ipmask .systemip }}
+    ipv4 primary address {{ ip .system_ip }}
+    ipv4 primary prefix-length {{ ipmask .system_ip }}
     admin-state enable
 
 /configure router
@@ -52,7 +52,7 @@
     pce-report rsvp-te true
     pce-report sr-te true
 
-{{ range .links }}
+{{ range .clab_links }}
 
 {{- if contains  "/c" .port }}
 /configure port {{ slice 0 -2 .port }} admin-state enable

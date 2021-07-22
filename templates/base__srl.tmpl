@@ -1,6 +1,6 @@
-{{ expect .systemip "ip" }}
+{{ expect .system_ip "ip" }}
 {{ optional .isis_iid "0-31" }}
-{{ range .links }}
+{{ range .clab_links }}
     {{ expect .port "^(ethernet-\\d+/|e\\d+-)\\d+$" }}
     {{ expect .name "string" }}
     {{ expect .ip "ip" }}
@@ -12,18 +12,18 @@
     admin-state enable
     subinterface 0 {
         ipv4 {
-            address {{ .systemip }} {
+            address {{ .system_ip }} {
             }
         }
         ipv6 {
-            address ::ffff:{{ ip .systemip }}/128 {
+            address ::ffff:{{ ip .system_ip }}/128 {
             }
         }
     }
 }
 
 /network-instance default {
-    router-id {{ ip .systemip }}
+    router-id {{ ip .system_ip }}
     interface lo0.0 {
     }
     protocols {
@@ -32,7 +32,7 @@
                 admin-state enable
                 level-capability L2
                 set level 2 metric-style wide
-                # net should not be multiline (net [), becasue of the SRL ... prompt
+                # net should not be multiline (net [), because of the SRL ... prompt
                 net [ 49.0000.0000.0000.0{{ default 0 .isis_iid }} ]
                 interface lo0.0 {
                 }
@@ -44,7 +44,7 @@
  /system lldp admin-state enable
 
 
-{{ range .links }}
+{{ range .clab_links }}
 /interface {{ .port }} {
     admin-state enable
     vlan-tagging true
