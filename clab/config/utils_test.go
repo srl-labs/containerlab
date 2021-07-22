@@ -125,28 +125,28 @@ func TestPrepareLinkVars(t *testing.T) {
 	l := gettestLink()
 	_ = prepareLinkVars(0, l, a, b)
 	assert(t, a, Dict{
-		"far":  Dict{"ip": "1.1.2.1/31", "name": "to_a", "node": "b"},
-		"ip":   "1.1.2.0/31",
-		"name": "to_b",
+		vkFarEnd:   Dict{vkLinkIP: "1.1.2.1/31", vkLinkName: "to_a", vkNodeName: "b"},
+		vkLinkIP:   "1.1.2.0/31",
+		vkLinkName: "to_b",
 	})
 	assert(t, b, Dict{
-		"far":  Dict{"ip": "1.1.2.0/31", "name": "to_b", "node": "a"},
-		"ip":   "1.1.2.1/31",
-		"name": "to_a",
+		vkFarEnd:   Dict{vkLinkIP: "1.1.2.0/31", vkLinkName: "to_b", vkNodeName: "a"},
+		vkLinkIP:   "1.1.2.1/31",
+		vkLinkName: "to_a",
 	})
 
-	l.Vars["ip"] = []string{"1.1.2.0/16", "1.1.2.1/16"}
-	l.Vars["name"] = "the_same"
+	l.Vars[vkLinkIP] = []string{"1.1.2.0/16", "1.1.2.1/16"}
+	l.Vars[vkLinkName] = "the_same"
 
 	_ = prepareLinkVars(0, l, a, b)
 	assert(t, a, Dict{
-		"far":  Dict{"ip": "1.1.2.1/16", "name": "the_same", "node": "b"},
-		"ip":   "1.1.2.0/16",
-		"name": "the_same",
+		vkFarEnd:   Dict{vkLinkIP: "1.1.2.1/16", vkLinkName: "the_same", vkNodeName: "b"},
+		vkLinkIP:   "1.1.2.0/16",
+		vkLinkName: "the_same",
 	})
 	assert(t, b, Dict{
-		"far":  Dict{"ip": "1.1.2.0/16", "name": "the_same", "node": "a"},
-		"ip":   "1.1.2.1/16",
-		"name": "the_same",
+		vkFarEnd:   Dict{vkLinkIP: "1.1.2.0/16", vkLinkName: "the_same", vkNodeName: "a"},
+		vkLinkIP:   "1.1.2.1/16",
+		vkLinkName: "the_same",
 	})
 }
