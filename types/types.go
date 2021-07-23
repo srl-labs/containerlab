@@ -141,7 +141,7 @@ func DisableTxOffload(n *NodeConfig) error {
 		return err
 	}
 	err = nodeNS.Do(func(_ ns.NetNS) error {
-		// disabling offload on lo0 interface
+		// disabling offload on eth0 interface
 		err := utils.EthtoolTXOff("eth0")
 		if err != nil {
 			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)

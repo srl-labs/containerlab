@@ -43,7 +43,7 @@ func (l *linux) Deploy(ctx context.Context) error {
 
 func (l *linux) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", l.cfg.ShortName)
-	return nil
+	return types.DisableTxOffload(l.cfg)
 }
 
 func (s *linux) GetImages() map[string]string {
