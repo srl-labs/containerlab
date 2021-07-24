@@ -154,13 +154,14 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	vm := c.baseVM.DeepCopy()
 
-	// CL 4.4.0 requires a slight memory bump
-	newMemoryStr := "768MB"
-	cvxMem, err := meta.NewSizeFromString(newMemoryStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %q as memory value: %s", newMemoryStr, err)
+	// updating the node RAM if it's set
+	if node.RAM != "" {
+		ram, err := meta.NewSizeFromString(node.RAM)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %q as memory value: %s", node.RAM, err)
+		}
+		vm.Spec.Memory = ram
 	}
-	vm.Spec.Memory = cvxMem
 
 	ociRef, err := meta.NewOCIImageRef(node.Sandbox)
 	if err != nil {

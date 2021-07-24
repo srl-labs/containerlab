@@ -2,11 +2,13 @@ package cvx
 
 import (
 	"context"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
 
@@ -14,6 +16,11 @@ var (
 	defaultCvxKernelImageRef  = "docker.io/networkop/kernel:4.19"
 	defaultIgniteSandboxImage = "networkop/ignite:dev"
 )
+
+var memoryReqs = map[string]string{
+	"4.3.0": "512MB",
+	"4.4.0": "768MB",
+}
 
 func init() {
 	nodes.Register(nodes.NodeKindCVX, func() nodes.Node {
@@ -39,6 +46,19 @@ func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	if c.cfg.Sandbox == "" {
 		c.cfg.Sandbox = defaultIgniteSandboxImage
+	}
+
+	ociRef, err := meta.NewOCIImageRef(cfg.Image)
+	if err != nil {
+		return fmt.Errorf("failed to parse OCI image ref %q: %s", cfg.Image, err)
+	}
+
+	ram, ok := memoryReqs[ociRef.Ref().Tag()]
+	cfg.RAM = ram
+
+	// by default setting the limit to 768MB
+	if !ok {
+		cfg.RAM = "768MB"
 	}
 
 	return nil

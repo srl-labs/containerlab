@@ -98,6 +98,8 @@ type NodeConfig struct {
 	Sandbox, Kernel string
 	// Configured container runtime
 	Runtime string
+	// Resource requirements
+	CPU, RAM string
 }
 
 // GenerateConfig generates configuration for the nodes
