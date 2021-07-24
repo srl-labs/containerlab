@@ -43,14 +43,15 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
       hosts:
       {{- range $nodes}}
         {{.LongName}}:
+          ansible_host: {{.MgmtIPv4Address}}
       {{- end}}
 {{- end}}
 `
 
 	type inv struct {
 		// clab nodes aggregated by their kind
-		Nodes  map[string][]*types.NodeConfig
-		Meta   map[string]string
+		Nodes map[string][]*types.NodeConfig
+		// clab nodes aggregated by user-defined groups
 		Groups map[string][]*types.NodeConfig
 	}
 
