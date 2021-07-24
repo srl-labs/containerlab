@@ -591,7 +591,7 @@ func (c *CLab) CheckResources() error {
 	return nil
 }
 
-// sets defaults after the topology has been parse
+// sets defaults after the topology has been parsed
 func (c *CLab) setDefaults() {
 	for _, n := range c.Nodes {
 
