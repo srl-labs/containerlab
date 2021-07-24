@@ -154,6 +154,14 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	vm := c.baseVM.DeepCopy()
 
+	// CL 4.4.0 requires a slight memory bump
+	newMemoryStr := "768MB"
+	cvxMem, err := meta.NewSizeFromString(newMemoryStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %q as memory value: %s", newMemoryStr, err)
+	}
+	vm.Spec.Memory = cvxMem
+
 	ociRef, err := meta.NewOCIImageRef(node.Sandbox)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Sandbox, err)
