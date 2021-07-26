@@ -28,6 +28,7 @@ container-lab
 containerlab
 site/
 .vscode/
+.idea/
 .DS_Store
 __rd*
 tests/out
