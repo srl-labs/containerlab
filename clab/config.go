@@ -51,6 +51,7 @@ var kinds = []string{
 	"vr-xrv",
 	"vr-xrv9k",
 	"vr-veos",
+	"vr-pan",
 	"vr-csr",
 	"vr-ros",
 	"linux",
