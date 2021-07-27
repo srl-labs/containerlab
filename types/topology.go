@@ -324,6 +324,32 @@ func (t *Topology) GetNodeRuntime(name string) string {
 	return ""
 }
 
+func (t *Topology) GetNodeCPU(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeCPU() != "" {
+			return ndef.GetNodeCPU()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeCPU() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeCPU()
+		}
+		return t.GetDefaults().GetNodeCPU()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeRAM(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeRAM() != "" {
+			return ndef.GetNodeRAM()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeRAM() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeRAM()
+		}
+		return t.GetDefaults().GetNodeRAM()
+	}
+	return ""
+}
+
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
 func resolvePath(p string) (string, error) {
 	if p == "" {

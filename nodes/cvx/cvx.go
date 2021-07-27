@@ -53,12 +53,15 @@ func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		return fmt.Errorf("failed to parse OCI image ref %q: %s", cfg.Image, err)
 	}
 
-	ram, ok := memoryReqs[ociRef.Ref().Tag()]
-	cfg.RAM = ram
+	// if RAM is not statically set, apply the defaults
+	if cfg.RAM == "" {
+		ram, ok := memoryReqs[ociRef.Ref().Tag()]
+		cfg.RAM = ram
 
-	// by default setting the limit to 768MB
-	if !ok {
-		cfg.RAM = "768MB"
+		// by default setting the limit to 768MB
+		if !ok {
+			cfg.RAM = "768MB"
+		}
 	}
 
 	return nil

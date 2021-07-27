@@ -211,6 +211,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
+		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
+		RAM:             c.Config.Topology.GetNodeRAM(nodeName),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
