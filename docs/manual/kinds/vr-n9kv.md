@@ -2,7 +2,7 @@
 
 Cisco CSR1000v virtualized router is identified with `vr-n9kv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-csr nodes launched with containerlab comes up pre-provisioned with SSH, SNMP and NETCONF services enabled.
+vr-csr nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF and GRPC services enabled.
 
 ## Managing vr-n9kv nodes
 
@@ -45,4 +45,4 @@ Data interfaces `eth1+` needs to be configured with IP addressing manually using
 
 ## Features and options
 ### Node configuration
-vr-n9kv nodes come up with a basic configuration where only `admin` user and management interfaces such as NETCONF provisioned.
+vr-n9kv nodes come up with a basic configuration where only `admin` user and management interfaces such as NETCONF and GRPC provisioned.
