@@ -75,10 +75,6 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		o(s)
 	}
 
-	if s.cfg.StartupConfig == "" {
-		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
-	}
-
 	if s.cfg.NodeType == "" {
 		s.cfg.NodeType = srlDefaultType
 	}

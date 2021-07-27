@@ -88,7 +88,6 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 }
 
 var DefaultConfigTemplates = map[string]string{
-	"crpd":    "/etc/containerlab/templates/crpd/juniper.conf",
 	"vr-sros": "",
 }
 
