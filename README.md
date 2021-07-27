@@ -29,6 +29,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vMX](https://containerlab.srlinux.dev/manual/kinds/vr-vmx/)
 * [Cisco IOS XRv9k](https://containerlab.srlinux.dev/manual/kinds/vr-xrv9k/)
 * [Arista vEOS](https://containerlab.srlinux.dev/manual/kinds/vr-veos)
+* [Palo Alto PAN](https://containerlab.srlinux.dev/manual/kinds/vr-pan)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 
