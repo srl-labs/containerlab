@@ -272,3 +272,19 @@ By specifying `mgmt-net` name of the node in the endpoint definition we tell con
 This is best illustrated with the following diagram:
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:14,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
+
+## DNS
+When containerlab finishes the nodes deployment, it also creates static DNS entries inside the `/etc/hosts` file so that users can access the nodes using their DNS names.
+
+The DNS entries are created for each node's IPv4/6 address, and follow the pattern - `clab-$labName-$nodeName`.
+
+For a lab named `demo` with two nodes named `l1` and `l2` containerlab will create the following section inside the `/etc/hosts` file.
+
+```
+###### CLAB-demo-START ######
+172.20.20.2     clab-demo-l1
+172.20.20.3     clab-demo-l2
+2001:172:20:20::2       clab-demo-l1
+2001:172:20:20::3       clab-demo-l2
+###### CLAB-demo-END ######
+```
