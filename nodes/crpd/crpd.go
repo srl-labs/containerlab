@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -43,9 +44,6 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg = cfg
 	for _, o := range opts {
 		o(s)
-	}
-	if s.cfg.StartupConfig == "" {
-		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
 	}
 
 	// mount config and log dirs
@@ -127,8 +125,16 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "log"), 0777)
 
 	// copy crpd config from default template or user-provided conf file
-	cfg := path.Join(nodeCfg.LabDir, "/config/junipes.runtime.conf")
+	cfg := path.Join(nodeCfg.LabDir, "/config/juniper.conf")
 
+	if nodeCfg.StartupConfig != "" {
+		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+		cfgTemplate = string(c)
+	}
+	fmt.Printf("\n\n\n%s\n\n\n", cfgTemplate)
 	err := nodeCfg.GenerateConfig(cfg, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
