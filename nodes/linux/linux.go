@@ -29,6 +29,10 @@ func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(l)
 	}
+
+	// make ipv6 enabled on all linux node interfaces
+	cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+
 	return nil
 }
 
