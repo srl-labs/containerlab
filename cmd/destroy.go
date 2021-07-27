@@ -164,7 +164,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		}
 	}
 
-	log.Info("Removing container entries from /etc/hosts file")
+	log.Info("Removing containerlab host entries from /etc/hosts file")
 	err = clab.DeleteEntriesFromHostsFile(c.Config.Name)
 	if err != nil {
 		return err
