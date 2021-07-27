@@ -175,7 +175,7 @@ var deployCmd = &cobra.Command{
 		// run links postdeploy creation (ceos links creation)
 		c.CreateLinks(ctx, linkWorkers, true)
 
-		log.Info("Writing /etc/hosts file")
+		log.Info("Adding containerlab host entries to /etc/hosts file")
 		err = clab.AppendHostsFileEntries(containers, c.Config.Name)
 		if err != nil {
 			log.Errorf("failed to create hosts file: %v", err)
