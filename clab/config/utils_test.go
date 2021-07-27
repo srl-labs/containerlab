@@ -32,13 +32,14 @@ func TestFarEndIP(t *testing.T) {
 		n := ipFarEnd(netaddr.MustParseIPPrefix(k))
 		n2, _ := ipFarEndS(k)
 
+		if n.IsZero() && v == "" && n2 == "" {
+			continue
+		}
+
 		if n2 != n.String() {
 			t.Errorf("far end %s != %s, expected %s", n, n2, v)
 		}
 
-		if n.IsZero() && v == "" {
-			continue
-		}
 		if v != n.String() {
 			t.Errorf("far end of %s, got %s, expected %s", k, n, v)
 		}
@@ -149,4 +150,16 @@ func TestPrepareLinkVars(t *testing.T) {
 		vkLinkIP:   "1.1.2.1/16",
 		vkLinkName: "the_same",
 	})
+}
+
+func TestIPfarEndS(t *testing.T) {
+	ipA := "10.0.3.0/31"
+	feA, err := ipFarEndS(ipA)
+	assert(t, err, nil)
+	assert(t, feA, "10.0.3.1/31")
+
+	ipA = "10.0.3.0/30"
+	feA, err = ipFarEndS(ipA)
+	assert(t, err.Error(), "invalid ip 10.0.3.0/30 - invalid IPPrefix")
+	assert(t, feA, "")
 }
