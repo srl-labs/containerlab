@@ -278,5 +278,8 @@ func GetTemplateNamesInDirs(paths []string) ([]string, error) {
 			tnames = append(tnames, tn)
 		}
 	}
+	if len(tnames) == 0 {
+		return nil, fmt.Errorf("no templates files were found in specified paths: %v", TemplatePaths)
+	}
 	return tnames, nil
 }
