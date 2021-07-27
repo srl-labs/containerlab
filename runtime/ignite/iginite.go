@@ -154,6 +154,15 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	vm := c.baseVM.DeepCopy()
 
+	// updating the node RAM if it's set
+	if node.RAM != "" {
+		ram, err := meta.NewSizeFromString(node.RAM)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %q as memory value: %s", node.RAM, err)
+		}
+		vm.Spec.Memory = ram
+	}
+
 	ociRef, err := meta.NewOCIImageRef(node.Sandbox)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Sandbox, err)
