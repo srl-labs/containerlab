@@ -74,6 +74,13 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 		})
 	}
 
+	// sort nodes-per-group by name as they are not sorted originally
+	for _, nodes := range i.Groups {
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].ShortName < nodes[j].ShortName
+		})
+	}
+
 	t, err := template.New("ansible").Parse(invT)
 	if err != nil {
 		return err
