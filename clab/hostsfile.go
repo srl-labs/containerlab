@@ -3,6 +3,7 @@ package clab
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,10 +16,11 @@ import (
 const (
 	clabHostEntryPrefix  = "###### CLAB-%s-START ######"
 	clabHostEntryPostfix = "###### CLAB-%s-END ######"
+	clabHostsFilename    = "/etc/hosts"
 )
 
 func AppendHostsFileEntries(containers []types.GenericContainer, labname string) error {
-	filename := "/etc/hosts"
+	filename := clabHostsFilename
 	if labname == "" {
 		return fmt.Errorf("missing lab name")
 	}
@@ -28,7 +30,7 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 			return err
 		}
 	}
-	// lets make sure we do not have remaining of a non destroyed run in the hosts file
+	// lets make sure to remove the entries of a non-properly destroyed lab in the hosts file
 	err := DeleteEntriesFromHostsFile(labname)
 	if err != nil {
 		return err
@@ -39,7 +41,7 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 	}
 	var f *os.File
 
-	f, err = os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	f, err = os.OpenFile(clabHostsFilename, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -52,7 +54,7 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 	return nil
 }
 
-// hostEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
+// generateHostsEntries hostEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
 func generateHostsEntries(containers []types.GenericContainer, labname string) []byte {
 
 	entries := bytes.Buffer{}
@@ -83,9 +85,9 @@ func generateHostsEntries(containers []types.GenericContainer, labname string) [
 
 func DeleteEntriesFromHostsFile(labname string) error {
 	if labname == "" {
-		return fmt.Errorf("missing containerlab name")
+		return errors.New("missing containerlab name")
 	}
-	f, err := os.OpenFile("/etc/hosts", os.O_RDWR, 0644) // skipcq: GSC-G302
+	f, err := os.OpenFile(clabHostsFilename, os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
@@ -115,7 +117,7 @@ func DeleteEntriesFromHostsFile(labname string) error {
 	if skiplines {
 		// if skiplines is not false, we did not find the end
 		// so we should not mess with /etc/hosts
-		return fmt.Errorf("issue cleaning up /etc/hosts file. Please do so manually")
+		return fmt.Errorf("issue cleaning up %s file. Please do so manually", clabHostsFilename)
 	}
 	err = f.Truncate(0)
 	if err != nil {
