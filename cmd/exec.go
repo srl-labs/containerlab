@@ -92,8 +92,10 @@ var execCmd = &cobra.Command{
 			if cont.State != "running" {
 				continue
 			}
-
-			nodeRuntime, err := c.GetNodeRuntime(cntName)
+			if len(cont.Names) == 0 {
+				continue
+			}
+			nodeRuntime, err := c.GetNodeRuntime(strings.TrimPrefix(cont.Names[0], "/"))
 			if err != nil {
 				return err
 			}
