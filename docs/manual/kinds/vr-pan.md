@@ -10,7 +10,7 @@ vr-pan nodes launched with containerlab comes up pre-provisioned with SSH, and H
     Containers with Palo Alto PA-VM inside will take ~8min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>`.
 
-Cisco Palo Alto PA-VM node launched with containerlab can be managed via the following interfaces:
+Palo Alto PA-VM node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
     to connect to a `bash` shell of a running vr-pan container:
@@ -32,8 +32,8 @@ Cisco Palo Alto PA-VM node launched with containerlab can be managed via the fol
 vr-pan container supports up to 24 interfaces (plus mgmt) and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to first data port of CSR1000v line card
-* `eth2+ - second and subsequent data interface
+* `eth1` - first data interface, mapped to first data port of PAN VM
+* `eth2+` - second and subsequent data interface
 
 When containerlab launches vr-pan node, it will assign IPv4/6 address to the `mgmt` interface. These addresses can be used to reach management plane of the router.
 
