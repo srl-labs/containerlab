@@ -31,7 +31,10 @@ func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	// make ipv6 enabled on all linux node interfaces
-	cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+	// but not for the nodes with host network mode, as this is not supported on gh action runners
+	if l.Config().NetworkMode != "host" {
+		cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+	}
 
 	return nil
 }
