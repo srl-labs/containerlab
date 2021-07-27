@@ -33,8 +33,9 @@ The following table provides a link between the version combinations that were v
 | --               | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)       | fixed serial (telnet) access to SR OS nodes                                                                                                              |
 | --               | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)       | set default cpu/ram for SR OS images                                                                                                                     |
 | `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)       | added support for Cisco CSR1000v via [`vr-csr`](kinds/vr-csr.md) and MikroTik routeros via [`vr-ros`](kinds/vr-ros.md) kind                              |
-|                  | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)       | enhanced SR OS boot sequence                                                                                                                             |
-| `0.15.5`         | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)       | fixed SR OS CPU allocation and added Palo Alto PAN support [`vr-pan`](kinds/vr-pan.md)                                                                   |
+| --               | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)       | enhanced SR OS boot sequence                                                                                                                             |
+| --               | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)       | fixed SR OS CPU allocation and added Palo Alto PAN support [`vr-pan`](kinds/vr-pan.md)                                                                   |
+| `0.15.5`         | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)       | added support for Cisco Nexus 9000v via [`vr-n9kv`](kinds/vr-n9kv.md) kind                                                                               |
 
 ### Building vrnetlab images
 To build a vrnetlab image compatible with containerlab users first need to ensure that the versions of both projects follow [compatibility matrix](#compatibility-matrix).
@@ -67,6 +68,8 @@ The images that work with containerlab will appear in the supported list gradual
 | Arista vEOS       | [vr-veos](kinds/vr-veos.md)   |                                            |                                                                                                                                                                                                              |
 | MikroTik RouterOS | [vr-ros](kinds/vr-ros.md)     |                                            |                                                                                                                                                                                                              |
 | Palo Alto PAN     | [vr-pan](kinds/vr-pan.md)     |                                            |                                                                                                                                                                                                              |
+| Cisco Nexus 9000v | [vr-n9kv](kinds/vr-n9kv.md)   |                                            |                                                                                                                                                                                                              |
+
 
 ### Connection modes
 Containerlab offers several ways VM based routers can be connected with the rest of the docker workloads. By default, vrnetlab integrated routers will use **tc** backend[^2] which doesn't require any additional packages to be installed on the container host and supports transparent passage of LACP frames.

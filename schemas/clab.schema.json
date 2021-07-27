@@ -30,6 +30,7 @@
                         "vr-csr",
                         "vr-pan",
                         "vr-ros",
+                        "vr-n9kv",
                         "linux",
                         "bridge",
                         "ovs-bridge",
