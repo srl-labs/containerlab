@@ -134,7 +134,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 		}
 		cfgTemplate = string(c)
 	}
-	fmt.Printf("\n\n\n%s\n\n\n", cfgTemplate)
+
 	err := nodeCfg.GenerateConfig(cfg, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
