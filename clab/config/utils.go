@@ -122,7 +122,6 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 			// Calculate the remote IP
 			vs := fmt.Sprintf("%v", v)
 			ipF, err := ipFarEndS(vs)
-			fmt.Printf("%s -- %s\n", vs, ipF)
 			if err != nil {
 				return fmt.Errorf("%s: %s", link.String(), err)
 			}
@@ -262,14 +261,12 @@ func ipFarEnd(in netaddr.IPPrefix) netaddr.IPPrefix {
 // template names are following the pattern <some-name>__<role/kind>.tmpl
 func GetTemplateNamesInDirs(paths []string) ([]string, error) {
 	var tnames []string
-	fmt.Printf("%v", paths)
 	for _, p := range paths {
 		all, err := filepath.Glob(filepath.Join(p, "*__*.tmpl"))
 		if err != nil {
 			return nil, err
 		}
 		for _, fn := range all {
-			fmt.Printf("%s", fn)
 			tn := strings.Split(filepath.Base(fn), "__")[0]
 			// skip adding templates with the same name
 			if len(tnames) > 0 && tnames[len(tnames)-1] == tn {
