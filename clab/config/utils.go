@@ -68,8 +68,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		if err != nil {
 			log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
 		}
-		res[link.A.Node.ShortName]["links"] = append(res[link.A.Node.ShortName]["links"].([]interface{}), varsA)
-		res[link.B.Node.ShortName]["links"] = append(res[link.B.Node.ShortName]["links"].([]interface{}), varsB)
+		res[link.A.Node.ShortName][vkLinks] = append(res[link.A.Node.ShortName][vkLinks].([]interface{}), varsA)
+		res[link.B.Node.ShortName][vkLinks] = append(res[link.B.Node.ShortName][vkLinks].([]interface{}), varsB)
 	}
 
 	// Prepare top-level map of nodes
@@ -224,7 +224,11 @@ func ipFarEndS(in string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid ip %s", in)
 	}
-	return ipFarEnd(ipA).String(), nil
+	feA := ipFarEnd(ipA)
+	if !feA.Valid() {
+		return "", fmt.Errorf("invalid ip %s - %v", in, feA)
+	}
+	return feA.String(), nil
 }
 
 // Calculates the far end IP (first free IP in the subnet)
@@ -270,6 +274,9 @@ func GetTemplateNamesInDirs(paths []string) ([]string, error) {
 			}
 			tnames = append(tnames, tn)
 		}
+	}
+	if len(tnames) == 0 {
+		return nil, fmt.Errorf("no templates files were found in specified paths: %v", TemplatePaths)
 	}
 	return tnames, nil
 }
