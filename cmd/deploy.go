@@ -8,6 +8,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -92,6 +93,14 @@ var deployCmd = &cobra.Command{
 
 		log.Info("Creating lab directory: ", c.Dir.Lab)
 		utils.CreateDirectory(c.Dir.Lab, 0755)
+
+		// create an empty ansible inventory file that will get populated later
+		// we create it here first, so that bind mounts of ansible-inventory.yml file could work
+		ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
+		_, err = os.Create(ansibleInvFPath)
+		if err != nil {
+			return err
+		}
 
 		cfssllog.Level = cfssllog.LevelError
 		if debug {
