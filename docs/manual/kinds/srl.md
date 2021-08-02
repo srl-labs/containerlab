@@ -40,9 +40,9 @@ The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3` which 
 
 By default, `ixr6` type will be used by containerlab.
 
-Based on the provided type, containerlab will generate the [topology file](#topology-file) that will be mounted to SR Linux container and make it boot in a chosen HW variant.
+Based on the provided type, containerlab will generate the topology file that will be mounted to SR Linux container and make it boot in a chosen HW variant.
 ### Node configuration
-SR Linux nodes have a dedicated [`config`](#config-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `srl` kind with a basic "empty" config or to provide a custom config file that will be used as a startup config instead.
+SR Linux nodes have a `config.json` file that is used to persist the configuration of the node. It is possible to launch nodes of `srl` kind with a basic "default" config or to provide a custom config file that will be used as a startup config instead.
 #### Default node configuration
 When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.cfg) and put it in that directory.
 
@@ -71,7 +71,7 @@ topology:
       kind: srl
       type: ixr6
       image: ghcr.io/nokia/srlinux
-      config: myconfig.json
+      startup-config: myconfig.json
 ```
 
 With such topology file containerlab is instructed to take a file `myconfig.json` from the current working directory, copy it to the lab directory for that specific node under the `config.json` name and mount that file to the container. This will result in this config to act as a startup config for the node.
@@ -133,24 +133,15 @@ To start an SR Linux NOS containerlab uses the configuration that is described i
     `SRLINUX=1`
 
 ### File mounts
-#### Config directory
 When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `srl` kind containerlab creates directories for each node of that kind.
 
 ```
 ~/clab/clab-srl02
 ❯ ls -lah srl1
-drwxrwxrwx+ 6 1002 1002   87 Dec  1 22:11 config
--rw-r--r--  1 root root 2.8K Dec  1 22:11 license.key
--rw-r--r--  1 root root 4.4K Dec  1 22:11 srlinux.conf
--rw-r--r--  1 root root  233 Dec  1 22:11 topology.clab.yml
+-rwxrwxrwx+ 1 1002 1002 36169 Aug  2 17:31 config.json
+-rw-r--r--  1 root root  233 Dec  1 22:11 topology.yml
 ```
 
-The `config` directory is mounted to container's `/etc/opt/srlinux/` in `rw` mode and will effectively contain configuration that SR Linux runs of as well as the files that SR Linux keeps in its `/etc/opt/srlinux/` directory:
+The `config.json` file is mounted to container's `/etc/opt/srlinux/config.json` in `rw` mode and will effectively contain the node's configuration that SR Linux runs:
 
-```
-❯ ls srl1/config
-banner  cli  config.json  devices  tls  ztp
-```
-
-#### Topology file
 The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type` the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
