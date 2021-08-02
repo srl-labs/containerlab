@@ -18,6 +18,7 @@ import (
 	_ "github.com/srl-labs/containerlab/nodes/vr_csr"
 	_ "github.com/srl-labs/containerlab/nodes/vr_nxos"
 	_ "github.com/srl-labs/containerlab/nodes/vr_pan"
+	_ "github.com/srl-labs/containerlab/nodes/vr_n9kv"
 	_ "github.com/srl-labs/containerlab/nodes/vr_ros"
 	_ "github.com/srl-labs/containerlab/nodes/vr_sros"
 	_ "github.com/srl-labs/containerlab/nodes/vr_veos"

@@ -18,8 +18,10 @@ nav:
           - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
           - vr-csr - Cisco CSR1000v: manual/kinds/vr-csr.md
+          - vr-n9kv - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - vr-veos - Arista vEOS: manual/kinds/vr-veos.md
           - vr-ros - MikroTik RouterOS: manual/kinds/vr-ros.md
+          - vr-pan - Palo Alto PAN: manual/kinds/vr-pan.md
           - linux - Linux container: manual/kinds/linux.md
           - bridge - Linux bridge: manual/kinds/bridge.md
           - ovs-bridge - Openvswitch bridge: manual/kinds/ovs-bridge.md
