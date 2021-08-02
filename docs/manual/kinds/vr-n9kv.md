@@ -7,7 +7,7 @@ vr-n9kv nodes launched with containerlab comes up pre-provisioned with SSH, SNMP
 ## Managing vr-n9kv nodes
 
 !!!note
-    Containers with Nexus 9000v inside will take ~4min to fully boot.  
+    Containers with Nexus 9000v inside will take ~8-10min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>`.
 
 Cisco Nexus 9000v node launched with containerlab can be managed via the following interfaces:
