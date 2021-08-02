@@ -16,7 +16,7 @@ Cisco NXOS node launched with containerlab can be managed via the following inte
     docker exec -it <container-name/id> bash
     ```
 === "CLI via SSH"
-    to connect to the XRv9kCLI
+    to connect to the NX-OS CLI
     ```bash
     ssh clab@<container-name/id>
     ```
@@ -29,7 +29,7 @@ Cisco NXOS node launched with containerlab can be managed via the following inte
 vr-nxos container can have up to 90 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to first data port of XRv9k line card
+* `eth1` - first data interface, mapped to first data port of NX-OS line card
 * `eth2+` - second and subsequent data interface
 
 When containerlab launches vr-nxos node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
