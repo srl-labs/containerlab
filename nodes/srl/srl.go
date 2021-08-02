@@ -109,10 +109,6 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	cfgPath := filepath.Join(s.cfg.LabDir, "config")
 	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
-	// mount srlinux.conf
-	srlconfPath := filepath.Join(s.cfg.LabDir, "srlinux.conf")
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
-
 	// mount srlinux topology
 	topoPath := filepath.Join(s.cfg.LabDir, "topology.yml")
 	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
