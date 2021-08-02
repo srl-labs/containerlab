@@ -10,6 +10,7 @@ rpm
 rpm/*
 dist
 private
+clab-*
 
 # Test binary, built with `go test -c`
 *.test
@@ -28,6 +29,7 @@ container-lab
 containerlab
 site/
 .vscode/
+.idea/
 .DS_Store
 __rd*
 tests/out

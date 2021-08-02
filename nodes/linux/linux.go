@@ -29,6 +29,13 @@ func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(l)
 	}
+
+	// make ipv6 enabled on all linux node interfaces
+	// but not for the nodes with host network mode, as this is not supported on gh action runners
+	if l.Config().NetworkMode != "host" {
+		cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
+	}
+
 	return nil
 }
 
@@ -43,7 +50,7 @@ func (l *linux) Deploy(ctx context.Context) error {
 
 func (l *linux) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", l.cfg.ShortName)
-	return nil
+	return types.DisableTxOffload(l.cfg)
 }
 
 func (s *linux) GetImages() map[string]string {

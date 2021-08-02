@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/awalterschulze/gographviz v2.0.1+incompatible
 	github.com/cloudflare/cfssl v1.4.1
-	github.com/containerd/containerd v1.5.2
+	github.com/containerd/containerd v1.5.4
 	github.com/containernetworking/cni v0.8.1
 	github.com/containernetworking/plugins v0.9.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
@@ -22,7 +22,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210303205135-43e4633e40c1
 	github.com/pkg/errors v0.9.1
-	github.com/scrapli/scrapligo v0.0.0-20210627135102-7fd8d8e86545
+	github.com/scrapli/scrapligo v0.0.0-20210704164516-6c3b4e74cfad
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
 	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5

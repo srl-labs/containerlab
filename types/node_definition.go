@@ -34,6 +34,10 @@ type NodeDefinition struct {
 	Kernel  string `yaml:"kernel,omitempty"`
 	// Override container runtime
 	Runtime string `yaml:"runtime,omitempty"`
+	// Set node CPU (cgroup or hypervisor)
+	CPU string `yaml:"cpu,omitempty"`
+	// Set node RAM (cgroup or hypervisor)
+	RAM string `yaml:"ram,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -181,4 +185,18 @@ func (n *NodeDefinition) GetNodeRuntime() string {
 		return ""
 	}
 	return n.Runtime
+}
+
+func (n *NodeDefinition) GetNodeCPU() string {
+	if n == nil {
+		return ""
+	}
+	return n.CPU
+}
+
+func (n *NodeDefinition) GetNodeRAM() string {
+	if n == nil {
+		return ""
+	}
+	return n.RAM
 }

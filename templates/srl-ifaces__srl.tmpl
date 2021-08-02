@@ -1,23 +1,22 @@
-{{ expect .systemip "ip" }}
-{{ range .links }}
+{{ expect .clab_system_ip "ip" }}
+{{ range .clab_links }}
     {{ expect .port "^(ethernet-\\d+/|e\\d+-)\\d+$" }}
-    {{ expect .name "string" }}
 {{ end }}
 /interface lo0 {
     admin-state enable
     subinterface 0 {
         ipv4 {
-            address {{ .systemip }} {
+            address {{ .clab_system_ip }} {
             }
         }
         ipv6 {
-            address ::c1ab:{{ ip .systemip }}/128 {
+            address ::c1ab:{{ ip .clab_system_ip }}/128 {
             }
         }
     }
 }
 /network-instance default {
-    router-id {{ ip .systemip }}
+    router-id {{ ip .clab_system_ip }}
     interface lo0.0 {
     }
 }
@@ -25,7 +24,7 @@
 / network-instance mgmt {
     description "set from clab"
 }
-{{ range .links }}
+{{ range .clab_links }}
 /interface {{ .port }} {
     admin-state enable
 }

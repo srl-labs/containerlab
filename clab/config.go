@@ -51,6 +51,7 @@ var kinds = []string{
 	"vr-xrv",
 	"vr-xrv9k",
 	"vr-veos",
+	"vr-pan",
 	"vr-csr",
 	"vr-ros",
 	"linux",
@@ -149,6 +150,9 @@ func (c *CLab) parseTopology() error {
 		c.Links[i] = c.NewLink(l)
 	}
 
+	// set any containerlab defaults after we've parsed the input
+	c.setDefaults()
+
 	return nil
 }
 
@@ -211,6 +215,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
+		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
+		RAM:             c.Config.Topology.GetNodeRAM(nodeName),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
@@ -586,6 +592,19 @@ func (c *CLab) CheckResources() error {
 		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", freeMemG)
 	}
 	return nil
+}
+
+// sets defaults after the topology has been parsed
+func (c *CLab) setDefaults() {
+	for _, n := range c.Nodes {
+
+		// Injecting the env var with expected number of links
+		numLinks := map[string]string{
+			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", len(n.Config().Endpoints)),
+		}
+		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numLinks)
+
+	}
 }
 
 // sysMemory reports on total installed or free memory (in bytes)

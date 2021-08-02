@@ -28,8 +28,8 @@ func NewTopology() *Topology {
 
 type LinkConfig struct {
 	Endpoints []string
-	Labels    map[string]string `yaml:"labels,omitempty"`
-	Vars      map[string]string `yaml:"vars,omitempty"`
+	Labels    map[string]string      `yaml:"labels,omitempty"`
+	Vars      map[string]interface{} `yaml:"vars,omitempty"`
 }
 
 func (t *Topology) GetDefaults() *NodeDefinition {
@@ -127,9 +127,8 @@ func (t *Topology) GetNodePublish(name string) []string {
 
 func (t *Topology) GetNodeLabels(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
-		return utils.MergeStringMaps(
-			utils.MergeStringMaps(t.Defaults.GetLabels(),
-				t.GetKind(t.GetNodeKind(name)).GetLabels()),
+		return utils.MergeStringMaps(t.Defaults.GetLabels(),
+			t.GetKind(t.GetNodeKind(name)).GetLabels(),
 			ndef.GetLabels())
 	}
 	return nil
@@ -137,9 +136,8 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 
 func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 	if ndef, ok := t.Nodes[name]; ok {
-		vars := utils.MergeStringMaps(
-			utils.MergeStringMaps(t.Defaults.GetConfigDispatcher().GetVars(),
-				t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars()),
+		vars := utils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
+			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars(),
 			ndef.GetConfigDispatcher().GetVars())
 
 		return &ConfigDispatcher{
@@ -322,6 +320,32 @@ func (t *Topology) GetNodeRuntime(name string) string {
 			return t.GetKind(t.GetNodeKind(name)).GetNodeRuntime()
 		}
 		return t.GetDefaults().GetNodeRuntime()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeCPU(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeCPU() != "" {
+			return ndef.GetNodeCPU()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeCPU() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeCPU()
+		}
+		return t.GetDefaults().GetNodeCPU()
+	}
+	return ""
+}
+
+func (t *Topology) GetNodeRAM(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeRAM() != "" {
+			return ndef.GetNodeRAM()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeRAM() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeRAM()
+		}
+		return t.GetDefaults().GetNodeRAM()
 	}
 	return ""
 }

@@ -29,6 +29,7 @@
                         "vr-nxos",
                         "vr-veos",
                         "vr-csr",
+                        "vr-pan",
                         "vr-ros",
                         "linux",
                         "bridge",

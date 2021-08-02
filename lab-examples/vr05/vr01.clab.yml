@@ -7,23 +7,23 @@ topology:
       image: ghcr.io/nokia/srlinux
       config:
         vars:
-          systemip: 10.0.50.50/32
+          clab_system_ip: 10.0.50.50/32
           isis_iid: 0
           sid_idx: 11
     sros:
       kind: vr-sros
       image: registry.srlinux.dev/pub/vr-sros:21.2.R1
       type: sr-1
-      license: license-sros21.txt
+      license: ~/license/license-sros21.txt
       config:
         vars:
-          systemip: 10.0.50.51/32
+          clab_system_ip: 10.0.50.51/32
           sid_idx: 10
           isis_iid: 0
 
   links:
     - endpoints: ["srl:e1-1", "sros:eth1"]
       vars:
-        port: ethernet-1/1, 1/1/c1/1
+        port: [ethernet-1/1, 1/1/c1/1]
         vlan: 10
         isis_iid: 0

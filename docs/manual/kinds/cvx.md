@@ -67,12 +67,14 @@ This will be addressed in the future releases.
 ## Lab examples
 The following labs feature CVX node:
 
-- [Cumulus Linux Test Drive](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx03/lab-start.clab.yml)
 - [Cumulus and FRR](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx01/topo.clab.yml)
+- [Cumulus in Docker runtime and Host](https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx02/topo.clab.yml)
+- [Cumulus Linux Test Drive](https://clabs.netdevops.me/rs/cvx03/)
+- [EVPN with MLAG and multi-homing scenarios](https://clabs.netdevops.me/rs/cvx04/)
 
 
 ## Known issues or limitations
 
 * CVX in Ignite is always attached to the default docker bridge network
 
-[^1]: this device is already part of the linux kernel, therefore this can be read as "no external dependencies are needed for running cvx with `ignite` runtime.
+[^1]: this device is already part of the linux kernel, therefore this can be read as "no external dependencies are needed for running cvx with `ignite` runtime".

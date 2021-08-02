@@ -45,3 +45,40 @@ Lab nodes are grouped under their kinds in the inventory so that the users can s
             clab-ansible-grafana:
               ansible_host: <mgmt-ipv4-address>
     ```
+
+## User-defined groups
+Users can enforce custom grouping of nodes in the inventory by adding the `ansible-inventory` label to the node definition:
+
+```yaml
+name: custom-groups
+topology:
+  nodes:
+    node1:
+      # <some node config data>
+      labels:
+        ansible-group: spine
+    node2:
+      # <some node config data>
+      labels:
+        ansible-group: extra_group
+```
+
+As a result of this configuration, the generated inventory will look like this:
+
+```yaml
+  children:
+    srl:
+      hosts:
+        clab-custom-groups-node1:
+          ansible_host: 172.100.100.11
+        clab-custom-groups-node2:
+          ansible_host: 172.100.100.12
+    extra_group:
+      hosts:
+        clab-custom-groups-node2:
+          ansible_host: 172.100.100.12
+    spine:
+      hosts:
+        clab-custom-groups-node1:
+          ansible_host: 172.100.100.11
+```

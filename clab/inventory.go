@@ -38,24 +38,44 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
           ansible_host: {{.MgmtIPv4Address}}
 {{- end}}
 {{- end}}
+{{- range $name, $nodes := .Groups}}
+    {{$name}}:
+      hosts:
+      {{- range $nodes}}
+        {{.LongName}}:
+          ansible_host: {{.MgmtIPv4Address}}
+      {{- end}}
+{{- end}}
 `
 
 	type inv struct {
 		// clab nodes aggregated by their kind
 		Nodes map[string][]*types.NodeConfig
-		Meta  map[string]string
+		// clab nodes aggregated by user-defined groups
+		Groups map[string][]*types.NodeConfig
 	}
 
 	i := inv{
-		Nodes: make(map[string][]*types.NodeConfig),
+		Nodes:  make(map[string][]*types.NodeConfig),
+		Groups: make(map[string][]*types.NodeConfig),
 	}
 
 	for _, n := range c.Nodes {
 		i.Nodes[n.Config().Kind] = append(i.Nodes[n.Config().Kind], n.Config())
+		if n.Config().Labels["ansible-group"] != "" {
+			i.Groups[n.Config().Labels["ansible-group"]] = append(i.Groups[n.Config().Labels["ansible-group"]], n.Config())
+		}
 	}
 
 	// sort nodes by name as they are not sorted originally
 	for _, nodes := range i.Nodes {
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].ShortName < nodes[j].ShortName
+		})
+	}
+
+	// sort nodes-per-group by name as they are not sorted originally
+	for _, nodes := range i.Groups {
 		sort.Slice(nodes, func(i, j int) bool {
 			return nodes[i].ShortName < nodes[j].ShortName
 		})

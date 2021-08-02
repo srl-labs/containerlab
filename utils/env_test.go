@@ -1,16 +1,17 @@
 package utils
 
 import (
-	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"gopkg.in/yaml.v2"
 )
 
-func expectMaps(t *testing.T, v map[string]interface{}, m ...map[string]interface{}) {
-	d := MergeMaps(m...)
-	if !cmp.Equal(d, v) {
-		t.Errorf("err %v, expected %v", d, v)
+func assert(t *testing.T, val, exp interface{}) {
+	if !cmp.Equal(val, exp) {
+		_, fn, line, _ := runtime.Caller(1)
+		t.Errorf("assert failed on line %v in %s\n%s", line, fn, cmp.Diff(exp, val))
 	}
 }
 
@@ -23,14 +24,14 @@ func TestMergeMaps(t *testing.T) {
 		"t":  "2",
 		"t2": "1",
 	}
-	expectMaps(t, d1, nil, d1)
-	expectMaps(t, d1, d1, d1)
-	expectMaps(t, d1, d1, nil)
-	expectMaps(t, d2, d1, d2)
-	expectMaps(t, map[string]interface{}{
+	assert(t, MergeMaps(nil, d1), d1)
+	assert(t, MergeMaps(d1, d1), d1)
+	assert(t, MergeMaps(d1, nil), d1)
+	assert(t, MergeMaps(d1, d2), d2)
+	assert(t, MergeMaps(d2, d1), map[string]interface{}{
 		"t":  "1",
 		"t2": "1",
-	}, d2, d1)
+	})
 }
 
 func TestMergeMapsRecursive(t *testing.T) {
@@ -61,16 +62,16 @@ func TestMergeMapsRecursive(t *testing.T) {
 	exp1 := d1
 
 	// all simple vars... second overwrites
-	expectMaps(t, exp0, d1, d0)
-	expectMaps(t, exp1, d0, d1)
+	assert(t, MergeMaps(d1, d0), exp0)
+	assert(t, MergeMaps(d0, d1), exp1)
 
 	// r are both dicts... recursive on r... same inner result as the previous
-	expectMaps(t, map[string]interface{}{"r": exp0, "r1": "1", "r2": "2"}, r1, r0)
-	expectMaps(t, map[string]interface{}{"r": exp1, "r1": "1", "r2": "2"}, r0, r1)
+	assert(t, MergeMaps(r1, r0), map[string]interface{}{"r": exp0, "r1": "1", "r2": "2"})
+	assert(t, MergeMaps(r0, r1), map[string]interface{}{"r": exp1, "r1": "1", "r2": "2"})
 
 	// one is NOT a dict... second overwrites
-	expectMaps(t, map[string]interface{}{"r": "00", "r2": "0"}, r1, r3)
-	expectMaps(t, map[string]interface{}{"r": exp1, "r2": "2"}, r3, r1)
+	assert(t, MergeMaps(r1, r3), map[string]interface{}{"r": "00", "r2": "0"})
+	assert(t, MergeMaps(r3, r1), map[string]interface{}{"r": exp1, "r2": "2"})
 }
 
 func TestMergeStringMaps(t *testing.T) {
@@ -82,13 +83,105 @@ func TestMergeStringMaps(t *testing.T) {
 		"b": "2",
 	}
 
-	expect := func(m1, m2 map[string]string, v string) {
-		d := MergeStringMaps(m1, m2)
-		if fmt.Sprintf("%v", d) != v {
-			t.Errorf("err %v, expected %s", d, v)
-		}
-	}
 	// all simple vars... second overwrites
-	expect(d1, d0, "map[a:1 b:2]")
-	expect(d0, d1, "map[a:11 b:2]")
+	assert(t, MergeStringMaps(d1, d0), map[string]string{"a": "1", "b": "2"})
+	assert(t, MergeStringMaps(d0, d1), map[string]string{"a": "11", "b": "2"})
+}
+
+func TestMapify(t *testing.T) {
+	a := map[interface{}]interface{}{
+		"key": "val",
+	}
+	b, ismap := mapify(a)
+	assert(t, ismap, true)
+	t.Logf("%v", b)
+	assert(t, b, map[string]interface{}{"key": "val"})
+}
+
+func TestMergeMapsFromYaml(t *testing.T) {
+	a := make(map[string]interface{})
+	b := make(map[string]interface{})
+
+	a_in := `
+globvar: globval
+globmap:
+  var1: val1
+  var2: val2
+`
+	b_in := `
+globmap:
+  var2: rewritten
+  newvar: newval
+interfaces:
+  - name: ethernet-1/1
+    description: set in node
+  - name: ethernet-1/2
+`
+
+	err := yaml.Unmarshal([]byte(a_in), a)
+	assert(t, err, nil)
+	err = yaml.Unmarshal([]byte(b_in), b)
+	assert(t, err, nil)
+
+	result := MergeMaps(a, b)
+	// We will test this result against:
+	//   1. a golang struct (shows exact types)
+	//   2. the expected result loaded from yaml
+
+	// 1. expected value in Go
+	expG := map[string]interface{}{
+		"globvar": "globval",
+		"globmap": map[string]interface{}{
+			"var1":   "val1",
+			"var2":   "rewritten",
+			"newvar": "newval",
+		},
+		"interfaces": []interface{}{
+			map[interface{}]interface{}{
+				"name":        "ethernet-1/1",
+				"description": "set in node",
+			},
+			map[interface{}]interface{}{
+				"name": "ethernet-1/2",
+			},
+		},
+	}
+	assert(t, result, expG)
+
+	// 2. expected value as text
+	expT_in := `
+globvar: globval
+globmap:
+  var1: val1
+  var2: rewritten
+  newvar: newval
+interfaces:
+  - name: ethernet-1/1
+    description: set in node
+  - name: ethernet-1/2
+`
+
+	expT := make(map[string]interface{})
+	err = yaml.Unmarshal([]byte(expT_in), expT)
+	assert(t, err, nil)
+
+	// Run expT through MergeMaps to convert "map[interface{}]" --> "map[string]"
+	// This is only done for maps & maps in maps, NOT for maps in arrays (refer to 1 above)
+	expT = MergeMaps(expT)
+
+	assert(t, result, expT)
+
+}
+
+func TestMergeMapsLists(t *testing.T) {
+	d1 := map[string]interface{}{
+		"t": []string{"1"},
+	}
+	d2 := map[string]interface{}{
+		"t": []string{"2"},
+	}
+	assert(t, MergeMaps(nil, d1), d1)
+	assert(t, MergeMaps(d1, d1), d1)
+	assert(t, MergeMaps(d1, nil), d1)
+	assert(t, MergeMaps(d1, d2), d2)
 }

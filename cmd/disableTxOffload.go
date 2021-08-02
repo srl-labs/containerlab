@@ -42,7 +42,7 @@ var disableTxOffloadCmd = &cobra.Command{
 
 		log.Infof("getting container '%s' information", cntName)
 
-		nodeRuntime, err := c.GetNodeRuntime(cntName)
+		nodeRuntime := c.GlobalRuntime()
 		if err != nil {
 			return err
 		}

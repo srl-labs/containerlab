@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"gopkg.in/yaml.v2"
 )
 
 // templates to execute
@@ -33,9 +33,6 @@ type NodeConfig struct {
 // Load templates from all paths for the specific role/kind
 func LoadTemplates(tmpl *template.Template, role string) error {
 	for _, p := range TemplatePaths {
-		if p == "@" {
-			p = "/etc/containerlab/templates/"
-		}
 		fn := filepath.Join(p, fmt.Sprintf("*__%s.tmpl", role))
 		_, err := tmpl.ParseGlob(fn)
 		if err != nil {
@@ -53,14 +50,17 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 		TemplatePaths = []string{"@"}
 	}
 
+	for i, v := range TemplatePaths {
+		if v == "@" {
+			TemplatePaths[i] = "/etc/containerlab/templates/"
+		}
+	}
+
 	if len(TemplateNames) == 0 {
 		var err error
 		TemplateNames, err = GetTemplateNamesInDirs(TemplatePaths)
 		if err != nil {
 			return nil, err
-		}
-		if len(TemplateNames) == 0 {
-			return nil, fmt.Errorf("no templates files were found by %s path", TemplatePaths)
 		}
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
@@ -74,10 +74,10 @@ func RenderAll(nodes map[string]nodes.Node, links map[int]*types.Link) (map[stri
 		}
 
 		for _, baseN := range TemplateNames {
-			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, vars["role"])
+			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, vars[vkRole])
 
 			if tmpl.Lookup(tmplN) == nil {
-				err := LoadTemplates(tmpl, fmt.Sprintf("%s", vars["role"]))
+				err := LoadTemplates(tmpl, fmt.Sprintf("%s", vars[vkRole]))
 				if err != nil {
 					return nil, err
 				}
@@ -116,10 +116,13 @@ func (c *NodeConfig) Print(printLines int, forceDebug ...bool) {
 
 	if log.IsLevelEnabled(log.DebugLevel) || len(forceDebug) > 0 {
 		s.WriteString(" vars = ")
-		vars, _ := json.MarshalIndent(c.Vars, "", "      ")
+		vars, err := yaml.Marshal(c.Vars)
+		if err != nil {
+			log.Warnf("error printing vars for node %s: %s", c.TargetNode.ShortName, err)
+			s.WriteString(err.Error())
+		}
 		if len(vars) > 0 {
-			s.Write(vars[0 : len(vars)-1])
-			s.WriteString("  }")
+			s.Write(vars)
 		}
 	}
 

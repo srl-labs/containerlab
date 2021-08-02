@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -13,16 +14,16 @@ import (
 )
 
 const (
-	vkNodes    = "nodes" // reserved, used for all nodes
-	vkNodeName = "node"  // reserved, used for the node's ShortName
-	vkLinks    = "links" // reserved, used for all link in a node
-	vkRole     = "role"  // optional, will default to the node's Kind. Used to select the template
-	vkFarEnd   = "far"   // reserved, used for far-end link & node info
+	vkNodeName = "clab_node"  // reserved, used for the node's ShortName
+	vkNodes    = "clab_nodes" // reserved, used for all nodes
+	vkLinks    = "clab_links" // reserved, used for all link in a node
+	vkFarEnd   = "clab_far"   // reserved, used for far-end link & node info
+	vkRole     = "clab_role"  // optional, will default to the node's Kind. Used to select the template
 
-	vkSystemIP = "systemip" // optional, system IP if present could be used to calc link IPs
-	vkLinkIP   = "ip"       // optional, link IP
-	vkLinkName = "name"     // optional, from ShortNames
-	vkLinkNr   = "linknr"   // optional, link number in case you have multiple, used to calculate the name
+	vkSystemIP = "clab_system_ip" // optional, system IP if present could be used to calc link IPs
+	vkLinkIP   = "clab_link_ip"   // optional, link IP
+	vkLinkName = "clab_link_name" // optional, from ShortNames
+	vkLinkNum  = "clab_link_num"  // optional, link number in case you have multiple, used to calculate the name
 )
 
 type Dict map[string]interface{}
@@ -67,8 +68,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		if err != nil {
 			log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
 		}
-		res[link.A.Node.ShortName]["links"] = append(res[link.A.Node.ShortName]["links"].([]interface{}), varsA)
-		res[link.B.Node.ShortName]["links"] = append(res[link.B.Node.ShortName]["links"].([]interface{}), varsB)
+		res[link.A.Node.ShortName][vkLinks] = append(res[link.A.Node.ShortName][vkLinks].([]interface{}), varsA)
+		res[link.B.Node.ShortName][vkLinks] = append(res[link.B.Node.ShortName][vkLinks].([]interface{}), varsB)
 	}
 
 	// Prepare top-level map of nodes
@@ -101,35 +102,37 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 		(varsB[vkFarEnd]).(Dict)[key] = v1
 	}
 
-	// Split all fields with a comma...
+	// Ensure values are added to both ends of the link
 	for k, v := range link.Vars {
-
-		r := SplitTrim(v)
-
 		if k == vkFarEnd || k == vkNodeName {
 			return fmt.Errorf("%s: reserved variable name '%s' found", link.String(), k)
 		}
 
-		if k == vkLinkIP && len(r) == 1 {
-			// calc the remote IP
-			ipF, err := ipFarEndS(v)
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+			// Array/slice should contain 2 values, one for each end of the link
+			if vv.Len() != 2 {
+				return fmt.Errorf("%s: variable %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
+			}
+			addValues(k, vv.Index(0).Interface(), vv.Index(1).Interface())
+			continue
+		}
+
+		if k == vkLinkIP {
+			// Calculate the remote IP
+			vs := fmt.Sprintf("%v", v)
+			ipF, err := ipFarEndS(vs)
 			if err != nil {
 				return fmt.Errorf("%s: %s", link.String(), err)
 			}
-			r = append(r, ipF)
+			addValues(k, vs, ipF)
+			continue
 		}
 
-		if len(r) == 1 { // Ensure we add single values to local and far-end
-			r = append(r, r[0])
-		}
-		if len(r) > 2 { // too many values
-			log.Warnf("%s: variable %s contains %d comma separated values, should be 1 or 2: %s", link.String(), k, len(r), v)
-		}
-
-		addValues(k, r[0], r[1])
+		addValues(k, v, v)
 	}
 
-	// Run through a list of additional values to add if they are not present
+	// Add additional values if they are not present
 	add := map[string]func(link *types.Link) (string, string, error){
 		vkLinkIP:   linkIP,
 		vkLinkName: linkName,
@@ -151,13 +154,13 @@ func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
 	return nil
 }
 
-// Create a link name using the node names and optional linkNr
+// Create a link name using the node names and optional link_num
 func linkName(link *types.Link) (string, string, error) {
-	var linkNr string
-	if v, ok := link.Vars[vkLinkNr]; ok {
-		linkNr = fmt.Sprintf("_%v", v)
+	var linkNo string
+	if v, ok := link.Vars[vkLinkNum]; ok {
+		linkNo = fmt.Sprintf("_%v", v)
 	}
-	return fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNr), fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNr), nil
+	return fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNo), fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNo), nil
 }
 
 // Calculate link IP from the system IPs at both ends
@@ -168,25 +171,25 @@ func linkIP(link *types.Link) (string, string, error) {
 	_, okA := link.A.Node.Config.Vars[vkSystemIP]
 	_, okB := link.B.Node.Config.Vars[vkSystemIP]
 	if okA != okB {
-		return "", "", fmt.Errorf("%s var required on all nodes", vkSystemIP)
+		log.Warnf("to auto-generate link IPs, a %s variable is required on all nodes", vkSystemIP)
 	}
-	if !okA {
+	if !okA || !okB {
 		return "", "", nil
 	}
-	sysA, err := netaddr.ParseIPPrefix(link.A.Node.Config.Vars[vkSystemIP])
+	sysA, err := netaddr.ParseIPPrefix(fmt.Sprintf("%v", link.A.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.A.Node.ShortName, err)
 	}
-	sysB, err := netaddr.ParseIPPrefix(link.B.Node.Config.Vars[vkSystemIP])
+	sysB, err := netaddr.ParseIPPrefix(fmt.Sprintf("%v", link.B.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.B.Node.ShortName, err)
 	}
 
 	o4 := 0
-	if v, ok := link.Vars[vkLinkNr]; ok {
+	if v, ok := link.Vars[vkLinkNum]; ok {
 		o4, err = strconv.Atoi(fmt.Sprintf("%v", v))
 		if err != nil {
-			log.Warnf("%s is expected to contain a number, got %s", vkLinkNr, v)
+			log.Warnf("%s is expected to contain a number, got %s", vkLinkNum, v)
 		}
 		o4 *= 2
 	}
@@ -197,7 +200,7 @@ func linkIP(link *types.Link) (string, string, error) {
 	}
 	ipA, err = netaddr.ParseIPPrefix(fmt.Sprintf("1.%d.%d.%d/31", o2, o3, o4))
 	if err != nil {
-		log.Errorf("could not create link IP from systemip: %s", err)
+		log.Errorf("could not create link IP from %s: %s", vkSystemIP, err)
 	}
 	return ipA.String(), ipFarEnd(ipA).String(), nil
 }
@@ -221,7 +224,11 @@ func ipFarEndS(in string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid ip %s", in)
 	}
-	return ipFarEnd(ipA).String(), nil
+	feA := ipFarEnd(ipA)
+	if !feA.Valid() {
+		return "", fmt.Errorf("invalid ip %s - %v", in, feA)
+	}
+	return feA.String(), nil
 }
 
 // Calculates the far end IP (first free IP in the subnet)
@@ -267,6 +274,9 @@ func GetTemplateNamesInDirs(paths []string) ([]string, error) {
 			}
 			tnames = append(tnames, tn)
 		}
+	}
+	if len(tnames) == 0 {
+		return nil, fmt.Errorf("no templates files were found in specified paths: %v", TemplatePaths)
 	}
 	return tnames, nil
 }

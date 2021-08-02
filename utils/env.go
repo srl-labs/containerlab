@@ -4,7 +4,10 @@
 
 package utils
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 // convertEnvs convert env variables passed as a map to a list of them
 func ConvertEnvs(m map[string]string) []string {
@@ -20,7 +23,7 @@ func mapify(i interface{}) (map[string]interface{}, bool) {
 	if value.Kind() == reflect.Map {
 		m := map[string]interface{}{}
 		for _, k := range value.MapKeys() {
-			m[k.String()] = value.MapIndex(k).Interface()
+			m[fmt.Sprintf("%v", k)] = value.MapIndex(k).Interface()
 		}
 		return m, true
 	}
@@ -36,17 +39,20 @@ func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 			continue
 		}
 		for k, v := range m {
-
+			vMap, vMapOk := mapify(v)
 			if v0, ok := res[k]; ok {
 				// Recursive merging if res[k] exists (and both are dicts)
 				t0, ok0 := mapify(v0)
-				t1, ok1 := mapify(v)
-				if ok0 && ok1 {
-					res[k] = MergeMaps(t0, t1)
+				if ok0 && vMapOk {
+					res[k] = MergeMaps(t0, vMap)
 					continue
 				}
 			}
-			res[k] = v
+			if vMapOk {
+				res[k] = vMap
+			} else {
+				res[k] = v
+			}
 		}
 	}
 	return res
