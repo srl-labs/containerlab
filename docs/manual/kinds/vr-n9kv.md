@@ -1,8 +1,8 @@
 # Cisco Nexus 9000v
 
-Cisco CSR1000v virtualized router is identified with `vr-n9kv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+Cisco Nexus900v virtualized router is identified with `vr-n9kv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-csr nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF and GRPC services enabled.
+vr-n9kv nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF, NXAPI and gRPC services enabled.
 
 ## Managing vr-n9kv nodes
 
@@ -27,6 +27,8 @@ Cisco Nexus 9000v node launched with containerlab can be managed via the followi
     ```bash
     ssh admin@<container-name> -p 830 -s netconf
     ```
+=== "gRPC"
+    gRPC server is running over port 50051
 
 !!!info
     Default user credentials: `admin:admin`
@@ -45,4 +47,4 @@ Data interfaces `eth1+` needs to be configured with IP addressing manually using
 
 ## Features and options
 ### Node configuration
-vr-n9kv nodes come up with a basic configuration where only `admin` user and management interfaces such as NETCONF and GRPC provisioned.
+vr-n9kv nodes come up with a basic configuration where only `admin` user and management interfaces such as NETCONF, NXAPI and GRPC provisioned.

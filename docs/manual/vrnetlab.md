@@ -35,7 +35,7 @@ The following table provides a link between the version combinations that were v
 | `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)       | added support for Cisco CSR1000v via [`vr-csr`](kinds/vr-csr.md) and MikroTik routeros via [`vr-ros`](kinds/vr-ros.md) kind                              |
 | --               | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)       | enhanced SR OS boot sequence                                                                                                                             |
 | --               | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)       | fixed SR OS CPU allocation and added Palo Alto PAN support [`vr-pan`](kinds/vr-pan.md)                                                                   |
-| `0.15.5`         | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)       | added support for Cisco Nexus 9000v via [`vr-n9kv`](kinds/vr-n9kv.md) kind                                                                               |
+| `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)       | added support for Cisco Nexus 9000v via [`vr-n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                     |
 
 ### Building vrnetlab images
 To build a vrnetlab image compatible with containerlab users first need to ensure that the versions of both projects follow [compatibility matrix](#compatibility-matrix).
