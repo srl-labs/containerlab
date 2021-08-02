@@ -127,9 +127,9 @@ var nodesTestSet = map[string]struct {
 		},
 		out: nodesOutput{
 			out: []nodesDef{
-				{numNodes: 1, kind: "srl", typ: "ixr6"},
-				{numNodes: 2, kind: "srl", typ: "ixr6"},
-				{numNodes: 3, kind: "srl", typ: "ixr6"},
+				{numNodes: 1, kind: "srl", typ: "ixrd2"},
+				{numNodes: 2, kind: "srl", typ: "ixrd2"},
+				{numNodes: 3, kind: "srl", typ: "ixrd2"},
 			},
 			err: nil,
 		},
@@ -142,7 +142,7 @@ var nodesTestSet = map[string]struct {
 		out: nodesOutput{
 			out: []nodesDef{
 				{numNodes: 1, kind: "linux", typ: ""},
-				{numNodes: 2, kind: "srl", typ: "ixr6"},
+				{numNodes: 2, kind: "srl", typ: "ixrd2"},
 				{numNodes: 3, kind: "ceos", typ: ""},
 			},
 			err: nil,
@@ -156,7 +156,7 @@ var nodesTestSet = map[string]struct {
 		out: nodesOutput{
 			out: []nodesDef{
 				{numNodes: 1, kind: "srl", typ: "ixrd"},
-				{numNodes: 2, kind: "srl", typ: "ixr6"},
+				{numNodes: 2, kind: "srl", typ: "ixrd2"},
 				{numNodes: 3, kind: "ceos", typ: ""},
 			},
 			err: nil,
@@ -169,7 +169,7 @@ var nodesTestSet = map[string]struct {
 		},
 		out: nodesOutput{
 			out: []nodesDef{
-				{numNodes: 2, kind: "srl", typ: "ixr6"},
+				{numNodes: 2, kind: "srl", typ: "ixrd2"},
 			},
 			err: nil,
 		},
