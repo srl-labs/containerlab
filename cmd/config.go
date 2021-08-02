@@ -1,18 +1,21 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/config"
 	"github.com/srl-labs/containerlab/clab/config/transport"
 	"github.com/srl-labs/containerlab/nodes"
+
+	log "github.com/sirupsen/logrus"
 )
 
-// Dryrun and print config
-var check string
+// Node Filter for config
+var configFilter []string
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
@@ -20,95 +23,125 @@ var configCmd = &cobra.Command{
 	Short:        "configure a lab",
 	Long:         "configure a lab based on templates and variables from the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/config/",
 	Aliases:      []string{"conf"},
+	ValidArgs:    []string{"commit", "send", "compare", "template"},
+	SilenceUsage: true,
+	RunE:         configRun,
+}
+
+var configSendCmd = &cobra.Command{
+	Use:          "send",
+	Short:        "send raw configuration to a lab",
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var err error
-
-		transport.DebugCount = debugCount
-		config.DebugCount = debugCount
-
-		c, err := clab.NewContainerLab(
-			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
-		)
-		if err != nil {
-			return err
+		if len(args) > 0 {
+			return fmt.Errorf("unexpected arguments: %s", args)
 		}
-
-		// Config map per node. Each node gets a config.NodeConfig
-		allConfig, err := config.RenderAll(c.Nodes, c.Links)
-		if err != nil {
-			return err
-		}
-
-		if check != "" {
-
-			pv := check == "all" || check == "vars"
-			pt := check == "all" || check == "template"
-
-			if !(pv || pt) {
-				if c, ok := allConfig[check]; ok {
-					c.Print(true, true)
-					return nil
-				}
-				log.Warnf("Invalid command line option for check. Options: 'template'(default), 'vars', 'all' or a valid node name")
-				pt = true
-			}
-			for _, c := range allConfig {
-				c.Print(pv, pt)
-			}
-			return nil
-		}
-
-		var wg sync.WaitGroup
-		wg.Add(len(allConfig))
-		for _, cs_ := range allConfig {
-			deploy1 := func(cs *config.NodeConfig) {
-				defer wg.Done()
-
-				var tx transport.Transport
-				var err error
-
-				ct, ok := cs.TargetNode.Labels["config.transport"]
-				if !ok {
-					ct = "ssh"
-				}
-
-				if ct == "ssh" {
-					tx, err = transport.NewSSHTransport(
-						cs.TargetNode,
-						transport.WithUserNamePassword(
-							nodes.DefaultCredentials[cs.TargetNode.Kind][0],
-							nodes.DefaultCredentials[cs.TargetNode.Kind][1]),
-						transport.HostKeyCallback(),
-					)
-					if err != nil {
-						log.Errorf("%s: %s", kind, err)
-					}
-				} else if ct == "grpc" {
-					// NewGRPCTransport
-				} else {
-					log.Errorf("Unknown transport: %s", ct)
-					return
-				}
-
-				err = transport.Write(tx, cs.TargetNode.LongName, cs.Data, cs.Info)
-				if err != nil {
-					log.Errorf("%s\n", err)
-				}
-			}
-
-			// On debug this will not be executed concurrently
-			if log.IsLevelEnabled(log.DebugLevel) {
-				deploy1(cs_)
-			} else {
-				go deploy1(cs_)
-			}
-		}
-		wg.Wait()
-
-		return nil
+		return configRun(cmd, []string{"send"})
 	},
+}
+
+var configCompareCmd = &cobra.Command{
+	Use:          "compare",
+	Short:        "compare configuration to a running lab",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return fmt.Errorf("unexpected arguments: %s", args)
+		}
+		return configRun(cmd, []string{"compare"})
+	},
+}
+
+func configRun(cmd *cobra.Command, args []string) error {
+	var err error
+
+	transport.DebugCount = debugCount
+	config.DebugCount = debugCount
+
+	c, err := clab.NewContainerLab(
+		clab.WithTimeout(timeout),
+		clab.WithTopoFile(topo),
+	)
+	if err != nil {
+		return err
+	}
+
+	err = validateFilter(c.Nodes)
+	if err != nil {
+		return err
+	}
+
+	allConfig := config.PrepareVars(c.Nodes, c.Links)
+
+	err = config.RenderAll(allConfig)
+	if err != nil {
+		return err
+	}
+
+	if len(args) > 1 {
+		return fmt.Errorf("unexpected arguments: %s", args)
+	}
+
+	action := "commit"
+	if len(args) > 0 {
+		action = args[0]
+		switch action {
+		case "commit":
+
+		case "compare", "send":
+			return fmt.Errorf("%s not implemented yet", action)
+		default:
+			return fmt.Errorf("unexpected arguments: %s", args)
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(configFilter))
+	for _, node := range configFilter {
+		deploy1 := func(n string) {
+			defer wg.Done()
+
+			cs, ok := allConfig[n]
+			if !ok {
+				log.Errorf("Invalid node in filter: %s", n)
+				return
+			}
+
+			err = config.Send(cs, action)
+			if err != nil {
+				log.Errorf("%s: %s", cs.TargetNode.ShortName, err)
+			}
+		}
+
+		// On debug this will not be executed concurrently
+		if log.IsLevelEnabled(log.DebugLevel) {
+			deploy1(node)
+		} else {
+			go deploy1(node)
+		}
+	}
+	wg.Wait()
+
+	return nil
+}
+
+func validateFilter(nodes map[string]nodes.Node) error {
+	if len(configFilter) == 0 {
+		for n := range nodes {
+			configFilter = append(configFilter, n)
+		}
+		return nil
+	}
+	mis := []string{}
+	for _, nn := range configFilter {
+		if _, ok := nodes[nn]; !ok {
+			mis = append(mis, nn)
+		}
+	}
+	if len(mis) > 0 {
+		return fmt.Errorf("invalid nodes in filter: %s", strings.Join(mis, ", "))
+	}
+	return nil
 }
 
 func init() {
@@ -116,6 +149,12 @@ func init() {
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
-	configCmd.Flags().StringVarP(&check, "check", "c", "", "render templates in dry-run mode & print either 'template', 'vars', 'all' or a specific node")
-	configCmd.Flags().Lookup("check").NoOptDefVal = "template"
+	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{}, "comma separated list of nodes to include")
+	configCmd.Flags().SortFlags = false
+
+	configCmd.AddCommand(configSendCmd)
+	configSendCmd.Flags().AddFlagSet(configCmd.Flags())
+
+	configCmd.AddCommand(configCompareCmd)
+	configCompareCmd.Flags().AddFlagSet(configCmd.Flags())
 }
