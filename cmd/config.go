@@ -11,8 +11,8 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 )
 
-// Only print config locally, don't send to the node
-var printLines int
+// Dryrun and print config
+var check string
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
@@ -25,6 +25,7 @@ var configCmd = &cobra.Command{
 		var err error
 
 		transport.DebugCount = debugCount
+		config.DebugCount = debugCount
 
 		c, err := clab.NewContainerLab(
 			clab.WithTimeout(timeout),
@@ -40,9 +41,21 @@ var configCmd = &cobra.Command{
 			return err
 		}
 
-		if printLines > 0 {
+		if check != "" {
+
+			pv := check == "all" || check == "vars"
+			pt := check == "all" || check == "template"
+
+			if !(pv || pt) {
+				if c, ok := allConfig[check]; ok {
+					c.Print(true, true)
+					return nil
+				}
+				log.Warnf("Invalid command line option for check. Options: 'template'(default), 'vars', 'all' or a valid node name")
+				pt = true
+			}
 			for _, c := range allConfig {
-				c.Print(printLines)
+				c.Print(pv, pt)
 			}
 			return nil
 		}
@@ -101,7 +114,8 @@ var configCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
-	configCmd.MarkFlagDirname("template-path")
+	_ = configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
-	configCmd.Flags().IntVarP(&printLines, "check", "c", 0, "render templates in dry-run mode & print N lines of rendered config")
+	configCmd.Flags().StringVarP(&check, "check", "c", "", "render templates in dry-run mode & print either 'template', 'vars', 'all' or a specific node")
+	configCmd.Flags().Lookup("check").NoOptDefVal = "template"
 }
