@@ -120,7 +120,10 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		o(c)
 	}
 
-	err := c.parseTopology()
+	var err error
+	if c.TopoFile.path != "" {
+		err = c.parseTopology()
+	}
 
 	return c, err
 }

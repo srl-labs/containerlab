@@ -159,7 +159,7 @@ func TestTypeInit(t *testing.T) {
 		"undefined_type_returns_default": {
 			got:  "test_data/topo1.yml",
 			node: "node2",
-			want: "ixr6",
+			want: "ixrd2",
 		},
 		"node_type_override_kind_type": {
 			got:  "test_data/topo2.yml",
@@ -369,7 +369,7 @@ func TestLabelsInit(t *testing.T) {
 				"containerlab":      "topo1",
 				"clab-node-name":    "node2",
 				"clab-node-kind":    "srl",
-				"clab-node-type":    "ixr6",
+				"clab-node-type":    "ixrd2",
 				"clab-node-group":   "",
 				"clab-node-lab-dir": "./clab-topo1/node2",
 				"clab-topo-file":    "./test_data/topo1.yml",

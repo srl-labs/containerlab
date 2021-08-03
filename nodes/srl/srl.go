@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	srlDefaultType = "ixr6"
+	srlDefaultType = "ixrd2"
 )
 
 var (
@@ -105,13 +105,9 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 	}
 
-	// mount config directory
-	cfgPath := filepath.Join(s.cfg.LabDir, "config")
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
-
-	// mount srlinux.conf
-	srlconfPath := filepath.Join(s.cfg.LabDir, "srlinux.conf")
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(srlconfPath, ":/home/admin/.srlinux.conf:rw"))
+	// mount config file
+	cfgPath := filepath.Join(s.cfg.LabDir, "config.json")
+	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/config.json:rw"))
 
 	// mount srlinux topology
 	topoPath := filepath.Join(s.cfg.LabDir, "topology.yml")
@@ -227,8 +223,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
-	dst = path.Join(nodeCfg.LabDir, "config", "config.json")
+	dst = path.Join(nodeCfg.LabDir, "config.json")
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
