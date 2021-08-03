@@ -38,7 +38,7 @@ For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that 
 
 The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3` which correspond to a hardware variant of Nokia 7250/7220 IXR chassis.
 
-By default, `ixr6` type will be used by containerlab.
+By default, `ixrd2` type will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to SR Linux container and make it boot in a chosen HW variant.
 ### Node configuration

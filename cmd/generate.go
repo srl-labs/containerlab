@@ -34,7 +34,7 @@ var interfaceFormat = map[string]string{
 var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-xrv9k"}
 
 const (
-	defaultSRLType     = "ixr6"
+	defaultSRLType     = "ixrd2"
 	defaultNodePrefix  = "node"
 	defaultGroupPrefix = "tier"
 )

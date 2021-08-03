@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	srlDefaultType = "ixr6"
+	srlDefaultType = "ixrd2"
 )
 
 var (
