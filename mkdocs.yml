@@ -88,6 +88,7 @@ nav:
       - 0.13.0: rn/0.13.0.md
       - 0.12.0: rn/0.12.0.md
       - 0.11.0: rn/0.11.0.md
+  - Community: community.md
 
 site_author: Roman Dodin
 site_description: >-
@@ -112,6 +113,8 @@ theme:
   features:
     - navigation.top
     - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
 
   language: en
   palette:
