@@ -573,7 +573,16 @@ func resolveBindPaths(binds []string, nodedir string) error {
 
 		_, err = os.Stat(hp)
 		if err != nil {
-			return fmt.Errorf("failed to verify bind path: %v", err)
+			// check if the hostpath mount has a reference to ansible-inventory.yml
+			// if that is the case, we do not emit an error on missing file, since this file
+			// will be created by containerlab upon lab deployment
+			labdir := filepath.Base(filepath.Dir(nodedir))
+			s := strings.Split(hp, string(os.PathSeparator))
+			// creating a path from last two elements of a resolved host path
+			h := path.Join(s[len(s)-2], s[len(s)-1])
+			if h != path.Join(labdir, "ansible-inventory.yml") {
+				return fmt.Errorf("failed to verify bind path: %v", err)
+			}
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
