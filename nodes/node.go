@@ -35,12 +35,14 @@ const (
 	NodeKindSRL        = "srl"
 	NodeKindVrCSR      = "vr-csr"
 	NodeKindVrPAN      = "vr-pan"
+	NodeKindVrN9KV     = "vr-n9kv"
 	NodeKindVrROS      = "vr-ros"
 	NodeKindVrSROS     = "vr-sros"
 	NodeKindVrVEOS     = "vr-veos"
 	NodeKindVrVMX      = "vr-vmx"
 	NodeKindVrXRV      = "vr-xrv"
 	NodeKindVrXRV9K    = "vr-xrv9k"
+	NodeKindVrNXOS     = "vr-nxos"
 )
 
 // a map of node kinds overriding the default global runtime
@@ -96,6 +98,7 @@ var DefaultConfigTemplates = map[string]string{
 var DefaultCredentials = map[string][]string{
 	"srl":      {"admin", "admin"},
 	"vr-pan":  {"admin", "Admin@123"},
+	"vr-n9kv":  {"admin", "admin"},
 	"vr-sros":  {"admin", "admin"},
 	"vr-vmx":   {"admin", "admin@123"},
 	"vr-xrv9k": {"clab", "clab@123"},

@@ -18,8 +18,10 @@ nav:
           - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
           - vr-csr - Cisco CSR1000v: manual/kinds/vr-csr.md
+          - vr-n9kv - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - vr-veos - Arista vEOS: manual/kinds/vr-veos.md
           - vr-ros - MikroTik RouterOS: manual/kinds/vr-ros.md
+          - vr-pan - Palo Alto PAN: manual/kinds/vr-pan.md
           - linux - Linux container: manual/kinds/linux.md
           - bridge - Linux bridge: manual/kinds/bridge.md
           - ovs-bridge - Openvswitch bridge: manual/kinds/ovs-bridge.md
@@ -76,6 +78,7 @@ nav:
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
   - Release notes:
+      - 0.16: rn/0.16.md
       - 0.15: rn/0.15.md
       - 0.14.4: rn/0.14.4.md
       - 0.14.3: rn/0.14.3.md
@@ -85,6 +88,7 @@ nav:
       - 0.13.0: rn/0.13.0.md
       - 0.12.0: rn/0.12.0.md
       - 0.11.0: rn/0.11.0.md
+  - Community: community.md
 
 site_author: Roman Dodin
 site_description: >-
@@ -109,6 +113,8 @@ theme:
   features:
     - navigation.top
     - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
 
   language: en
   palette:

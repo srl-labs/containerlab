@@ -26,7 +26,6 @@ var configCmd = &cobra.Command{
 	ValidArgs:    []string{"commit", "send", "compare", "template"},
 	SilenceUsage: true,
 	RunE:         configRun,
-}
 
 var configSendCmd = &cobra.Command{
 	Use:          "send",
