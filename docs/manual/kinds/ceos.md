@@ -138,7 +138,7 @@ topology:
       startup-config: myconfig.conf
 ```
 
-When a config file is passed via `config` parameter, it will override any configuration that may have left upon lab destroy.
+When a config file is passed via `startup-config` parameter, it will override any configuration that may have left upon lab destroy.
 
 With such topology file containerlab is instructed to take a file `myconfig.conf` from the current working directory, copy it to the lab directory for that specific node under the `/flash/startup-config` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
 
