@@ -135,7 +135,7 @@ topology:
   nodes:
     ceos:
       kind: ceos
-      config: myconfig.conf
+      startup-config: myconfig.conf
 ```
 
 When a config file is passed via `config` parameter, it will override any configuration that may have left upon lab destroy.

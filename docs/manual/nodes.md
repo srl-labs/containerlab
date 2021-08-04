@@ -10,7 +10,7 @@ topology:
       kind: srl
       type: ixrd2
       image: ghcr.io/nokia/srlinux
-      config: /root/mylab/node1.cfg
+      startup-config: /root/mylab/node1.cfg
       binds:
         - /usr/local/bin/gobgp:/root/gobgp
         - /root/files:/root/files:ro

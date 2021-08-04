@@ -120,7 +120,7 @@ topology:
   nodes:
     crpd:
       kind: crpd
-      config: myconfig.conf
+      startup-config: myconfig.conf
 ```
 
 With such topology file containerlab is instructed to take a file `myconfig.conf` from the current working directory, copy it to the lab directory for that specific node under the `/config/juniper.conf` name and mount that dir to the container. This will result in this config to act as a startup config for the node.

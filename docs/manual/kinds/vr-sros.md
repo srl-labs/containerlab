@@ -129,7 +129,7 @@ topology:
   nodes:
     sros:
       kind: vr-sros
-      config: myconfig.txt
+      startup-config: myconfig.txt
 ```
 
 With such topology file containerlab is instructed to take a file `myconfig.txt` from the current working directory, copy it to the lab directory for that specific node under the `/tftpboot/config.txt` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
