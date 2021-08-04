@@ -230,7 +230,7 @@ topology:
     srl:
       kind: srl
       image: ghcr.io/nokia/srlinux
-      config: test-srl-config.json
+      startup-config: test-srl-config.json
   links:
     - endpoints: ["srl:e1-1", "host:srl_e1-1"]
 ```
