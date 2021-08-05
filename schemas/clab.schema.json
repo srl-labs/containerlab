@@ -227,6 +227,10 @@
             "description": "topology name",
             "type": "string"
         },
+        "prefix": {
+            "description": "lab prefix",
+            "type": "string"
+        },
         "mgmt": {
             "description": "configuration container for management network",
             "markdownDescription": "configuration container for [management network](https://containerlab.srlinux.dev/manual/network/#management-network)",
