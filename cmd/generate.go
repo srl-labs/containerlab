@@ -168,7 +168,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 	case "clos":
           generateClosTopology(config,nodes)
 	case "petersen":
-          generatePetersonTopology(config,nodes)
+          generatePetersenTopology(config,nodes)
 	}
 	return yaml.Marshal(config)
 }
@@ -227,7 +227,7 @@ func generateClosTopology(config *clab.Config, nodes []nodesDef) {
  *
  * Inspired by https://metacpan.org/pod/Graph::Maker::Petersen
  */
-func generatePetersonTopology(config *clab.Config, nodes []nodesDef) error {
+func generatePetersenTopology(config *clab.Config, nodes []nodesDef) error {
   numStages := len(nodes)
   if numStages != 1 {
     return errors.New("Petersen topology requires a single stage")
