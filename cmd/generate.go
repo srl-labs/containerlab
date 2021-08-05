@@ -166,9 +166,9 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 	}
 	switch gen_topo {
 	case "clos":
-	  generateClosTopology(config,nodes)
+          generateClosTopology(config,nodes)
 	case "petersen":
-		generatePetersonTopology(config,nodes)
+          generatePetersonTopology(config,nodes)
 	}
 	return yaml.Marshal(config)
 }
@@ -228,67 +228,66 @@ func generateClosTopology(config *clab.Config, nodes []nodesDef) {
  * Inspired by https://metacpan.org/pod/Graph::Maker::Petersen
  */
 func generatePetersonTopology(config *clab.Config, nodes []nodesDef) error {
-	numStages := len(nodes)
-	if numStages != 1 {
-     return errors.New("Petersen topology requires a single stage")
-	}
-	numNodes := nodes[0].numNodes
-	if (numNodes < 6) || (numNodes % 2)==1 {
-		 return errors.New("Petersen topology requires an even number of nodes, minimal 6")
-	}
-	N := numNodes / 2 // Number of nodes in outer and inner circle
+  numStages := len(nodes)
+  if numStages != 1 {
+    return errors.New("Petersen topology requires a single stage")
+  }
+  numNodes := nodes[0].numNodes
+  if (numNodes < 6) || (numNodes % 2)==1 {
+    return errors.New("Petersen topology requires an even number of nodes, minimal 6")
+  }
+  N := numNodes / 2 // Number of nodes in outer and inner circle
 
   // Skip factor for inner ring, 1 <= K <= N/2
   if (petersenSkipFactor < 1) || (petersenSkipFactor > N/2) {
-		 return errors.New(fmt.Sprintf("petersenSkipFactor must be >= 1 and <= %d (= N/2)", N ))
-	}
-	var nodeNames = make([]string, numNodes, numNodes)
+    return errors.New(fmt.Sprintf("petersenSkipFactor must be >= 1 and <= %d (= N/2)", N ))
+  }
+  var nodeNames = make([]string, numNodes, numNodes)
 
-	// 1. Create nodes
-	for j := uint(0); j < N; j++ {
-		for r := uint(0); r < 2; r++ { // outer+inner circle
-		  node1 := fmt.Sprintf("%s-%d", nodePrefix, j+1 + r*N )
-			nodeNames[ j + r*N ] = node1
-		  if _, ok := config.Topology.Nodes[node1]; !ok {
-			  config.Topology.Nodes[node1] = &types.NodeDefinition{
-				  Group: fmt.Sprintf("%s-%s", groupPrefix, map[uint]string{0:"O",1:"I"} [r]),
-				  Kind:  nodes[0].kind,
-				  Type:  nodes[0].typ,
-			  }
-		  }
+  // 1. Create nodes
+  for j := uint(0); j < N; j++ {
+    for r := uint(0); r < 2; r++ { // outer+inner circle
+	node1 := fmt.Sprintf("%s-%d", nodePrefix, j+1 + r*N )
+	nodeNames[ j + r*N ] = node1
+	if _, ok := config.Topology.Nodes[node1]; !ok {
+	  config.Topology.Nodes[node1] = &types.NodeDefinition{
+	    Group: fmt.Sprintf("%s-%s", groupPrefix, map[uint]string{0:"O",1:"I"} [r]),
+	    Kind:  nodes[0].kind,
+	    Type:  nodes[0].typ,
+	  }
+	}
     }
-	}
+  }
 
-	// 2. Add links
-	addLink := func(n1 uint,n2 uint,p1 uint,p2 uint) {
-		config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
-			Endpoints: []string{
-				nodeNames[n1] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p1),
-				nodeNames[n2] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p2),
-			},
-		})
-	}
+  // 2. Add links
+  addLink := func(n1 uint,n2 uint,p1 uint,p2 uint) {
+    config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
+      Endpoints: []string{
+	nodeNames[n1] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p1),
+	nodeNames[n2] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p2),
+      },
+    })
+  }
 
-	for j := uint(0); j < N; j++ {
+  for j := uint(0); j < N; j++ {
+    // Each node has 3 links: 2 to nodes in the same circle, 1 outer<->inner
+    addLink(j,j+N,1,1) // port1 is connection between inner and outer
 
-		// Each node has 3 links: 2 to nodes in the same circle, 1 outer<->inner
-		addLink(j,j+N,1,1) // port1 is connection between inner and outer
+    for r := uint(0); r < 2; r++ { // outer+inner circle
+      b := r*N     // base ID, 0 for outer, N for inner
+      n := j + b   // node ID, 0..2N-1
+      skip := r*petersenSkipFactor // ==0 for outer circle
 
-		for r := uint(0); r < 2; r++ { // outer+inner circle
-			 b := r*N     // base ID, 0 for outer, N for inner
-			 n := j + b   // node ID, 0..2N-1
-			 skip := r*petersenSkipFactor // ==0 for outer circle
-
-			 // To avoid duplicating links, only emit when n is smaller
-			 if n < (n+1+skip)%N+b {
-			    addLink(n,(n+1+skip)%N+b,2,3)   // port2 to next neighbor
-			 }
-			 if n < (n+N-1-skip)%N+b {
-			    addLink(n,(n+N-1-skip)%N+b,3,2) // port3 to prev neighbor
-			 }
-		}
-	}
-	return nil
+      // To avoid duplicating links, only emit when n is smaller
+      if n < (n+1+skip)%N+b {
+	addLink(n,(n+1+skip)%N+b,2,3)   // port2 to next neighbor
+      }
+      if n < (n+N-1-skip)%N+b {
+        addLink(n,(n+N-1-skip)%N+b,3,2) // port3 to prev neighbor
+      }
+    }
+  }
+  return nil
 }
 
 func parseFlag(kind string, ls []string) (map[string]string, error) {
