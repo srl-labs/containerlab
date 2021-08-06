@@ -43,14 +43,14 @@ INFO<span class=o>[</span><span class=m>0000</span><span class=o>]</span> Writte
     <span class=c1># adding mysocketio container which has mysocketctl client inside</span>
     <span class=nt>mysocketio</span><span class=p>:</span>
       <span class=nt>kind</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">mysocketio</span>
-      <span class=nt>image</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">ghcr.io/hellt/mysocketctl:0.2.0</span>
+      <span class=nt>image</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">ghcr.io/hellt/mysocketctl:0.4.0</span>
       <span class=nt>binds</span><span class=p>:</span>
         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">.mysocketio_token:/root/.mysocketio_token</span> <span class=c1># bind mount API token</span>
 </code></pre></div> <p>The <code>mysocketio</code> node is a tiny linux container with mysocketctl client installed. Containerlab uses this node to create the sockets and start the tunnels as per <code>publish</code> block instructions.</p> <p>Pay specific attention to <code>binds</code> section defined for mysocketio node. With this section we provide a path to the API token that we acquired before launching the lab. This token is used to authenticate with mysocketio API service.</p> <h2 id=explore-published-ports>Explore published ports<a class=headerlink href=#explore-published-ports title="Permanent link">#</a></h2> <p>When a user launches a lab with published ports it will be presented with a summary table after the lab deployment process finishes:</p> <p><div class=highlight><pre><span></span><code>+---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
 | # |         Name          | Container ID |              Image              |    Kind    | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
 | 1 | clab-sock-r1          | 9cefd6cdb239 | srlinux:20.6.3-145              | srl        |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
-| 2 | clab-sock-mysocketctl | 8f5385beb97e | ghcr.io/hellt/mysocketctl:0.1.0 | mysocketio |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
+| 2 | clab-sock-mysocketctl | 8f5385beb97e | ghcr.io/hellt/mysocketctl:0.4.0 | mysocketio |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
 +---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
 Published ports:
 ┌──────────────────────────────────────┬──────────────────────────────────────┬─────────┬──────┬────────────┬────────────────────────┐

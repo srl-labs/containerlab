@@ -99,7 +99,7 @@ br-d2169a14e334     <span class=m>8000</span>.0242fe382b74   no            vetha
     <span class=nt>srl</span><span class=p>:</span>
       <span class=nt>kind</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">srl</span>
       <span class=nt>image</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">ghcr.io/nokia/srlinux</span>
-      <span class=nt>startup-config</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">test-srl-config.json</span>
+      <span class=nt>config</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">test-srl-config.json</span>
   <span class=nt>links</span><span class=p>:</span>
     <span class="p p-Indicator">-</span> <span class=nt>endpoints</span><span class=p>:</span> <span class="p p-Indicator">[</span><span class=s>&quot;srl:e1-1&quot;</span><span class="p p-Indicator">,</span> <span class=s>&quot;host:srl_e1-1&quot;</span><span class="p p-Indicator">]</span>
 </code></pre></div> <p>With this topology definition, we will have a veth interface with its one end in the container' namespace and its other end in the host namespace. The host will have the interface named <code>srl_e1-1</code> once the lab deployed:</p> <div class=highlight><pre><span></span><code>ip link
