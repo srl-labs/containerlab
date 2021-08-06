@@ -29,15 +29,15 @@ const (
 type Dict map[string]interface{}
 
 // Prepare variables for all nodes. This will also prepare all variables for the links
-func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[string]Dict {
+func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[string]*NodeConfig {
 
-	res := make(map[string]Dict)
+	res := make(map[string]*NodeConfig)
 
 	// preparing all nodes vars
 	for _, node := range nodes {
 		nodeCfg := node.Config()
 		name := nodeCfg.ShortName
-		vars := make(Dict)
+		vars := make(map[string]interface{})
 		vars[vkNodeName] = name
 
 		// Init array for this node
@@ -57,7 +57,10 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 			vars[vkRole] = nodeCfg.Kind
 		}
 
-		res[name] = vars
+		res[name] = &NodeConfig{
+			TargetNode: nodeCfg,
+			Vars:       vars,
+		}
 	}
 
 	// prepare all links
@@ -68,20 +71,20 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		if err != nil {
 			log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
 		}
-		res[link.A.Node.ShortName][vkLinks] = append(res[link.A.Node.ShortName][vkLinks].([]interface{}), varsA)
-		res[link.B.Node.ShortName][vkLinks] = append(res[link.B.Node.ShortName][vkLinks].([]interface{}), varsB)
+		res[link.A.Node.ShortName].Vars[vkLinks] = append(res[link.A.Node.ShortName].Vars[vkLinks].([]interface{}), varsA)
+		res[link.B.Node.ShortName].Vars[vkLinks] = append(res[link.B.Node.ShortName].Vars[vkLinks].([]interface{}), varsB)
 	}
 
 	// Prepare top-level map of nodes
 	// copy 1-level deep
 	all_nodes := make(Dict)
-	for name, vars := range res {
+	for name, nc := range res {
 		n := make(Dict)
 		all_nodes[name] = n
-		for k, v := range vars {
+		for k, v := range nc.Vars {
 			n[k] = v
 		}
-		vars[vkNodes] = all_nodes
+		nc.Vars[vkNodes] = all_nodes
 	}
 	return res
 }
