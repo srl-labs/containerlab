@@ -205,12 +205,9 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 		return
 	}
 
-	nodeRuntime, err := c.GetNodeRuntime(cntName)
-	if err != nil {
-		log.Fatal(err)
-	}
+	runtime := c.GlobalRuntime()
 
-	stdout, stderr, err := nodeRuntime.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
+	stdout, stderr, err := runtime.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
 	if err != nil {
 		log.Errorf("failed to execute cmd: %v", err)
 

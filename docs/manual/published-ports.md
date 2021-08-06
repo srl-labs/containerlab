@@ -106,7 +106,7 @@ topology:
     # adding mysocketio container which has mysocketctl client inside
     mysocketio:
       kind: mysocketio
-      image: ghcr.io/hellt/mysocketctl:0.2.0
+      image: ghcr.io/hellt/mysocketctl:0.4.0
       binds:
         - .mysocketio_token:/root/.mysocketio_token # bind mount API token
 ```
@@ -123,7 +123,7 @@ When a user launches a lab with published ports it will be presented with a summ
 | # |         Name          | Container ID |              Image              |    Kind    | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
 | 1 | clab-sock-r1          | 9cefd6cdb239 | srlinux:20.6.3-145              | srl        |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
-| 2 | clab-sock-mysocketctl | 8f5385beb97e | ghcr.io/hellt/mysocketctl:0.1.0 | mysocketio |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
+| 2 | clab-sock-mysocketctl | 8f5385beb97e | ghcr.io/hellt/mysocketctl:0.4.0 | mysocketio |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
 +---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
 Published ports:
 ┌──────────────────────────────────────┬──────────────────────────────────────┬─────────┬──────┬────────────┬────────────────────────┐
