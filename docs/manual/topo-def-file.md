@@ -42,6 +42,35 @@ The name is a free-formed string, though it is better not to use dashes (`-`) as
 
 When containerlab starts the containers, their names will be generated using the following pattern: `clab-{{lab-name}}-{{node-name}}`. The lab name here is used to make the container's names unique between two different labs even if the nodes are named the same.
 
+### Prefix
+It is possible to change the `clab` prefix that containerlab adds to node names and configuration directory by means of the `prefix` parameter. The `prefix` parameter follows the below mentioned logic:
+
+1. When `prefix` is not present in the topology file, the default `clab` prefix will apply.
+2. When set to some value, for example `cl`, this string value will be used as a prefix for container names and lab's configuration directory.
+3. When set to empty string the prefix will not be used at all, and nodes and lab directory will not have the prefix element.
+
+Example:
+
+```yaml
+name: mylab
+prefix: c
+nodes:
+  n1:
+   # <some config>
+```
+
+With a prefix set to `c`, the container name for node `n1` will be `c-mylab-n1`, and the lab directory will be named as `c-mylab`.
+
+```yaml
+name: mylab
+prefix: ""
+nodes:
+  n1:
+   # <some config>
+```
+
+When prefix is set to empty string like in the example above, the container name will be `mylab-n1` and the lab directory will be named simply `mylab`
+
 ### Topology
 The topology object inside the topology definition is the core element of the file. Under the `topology` element you will find all the main building blocks of a topology such as `nodes`, `kinds`, `defaults` and `links`.
 
