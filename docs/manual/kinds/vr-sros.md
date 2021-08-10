@@ -98,6 +98,13 @@ type: "cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___ lc: cpu=2 ram=4 m
 type: "cpu=2 ram=4 slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28"
 ```
 
+If your SR-OS license file requires a specific UUID, you can define it here:
+
+```yaml
+# note, typically only the cp needs the UUID defined.
+type: "cp: uuid=00001234-5678-9abc-def1-000012345678 cpu=4 ram=6 slot=A chassis=SR-12 card=cpm5 ___ lc: cpu=4 ram=6 max_nics=36 slot=1 chassis=SR-12 card=iom3-xp-c mda/1=m10-1gb+1-10gb"
+```
+
 ### Node configuration
 vr-sros nodes come up with a basic "blank" configuration where only the card/mda are provisioned, as well as the management interfaces such as Netconf, SNMP, gNMI.
 
