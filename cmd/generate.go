@@ -33,6 +33,9 @@ var interfaceFormat = map[string]string{
 }
 var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-xrv9k"}
 
+// JvB: Supported topology alternatives to generate, first=default
+var supportedTopos = []string{"clos", "petersen"}
+
 const (
 	defaultSRLType     = "ixrd2"
 	defaultNodePrefix  = "node"
@@ -44,12 +47,14 @@ var errSyntax = errors.New("syntax error")
 
 var image []string
 var kind string
+var gen_topo string  // JvB added to support other topologies besides 'clos'
 var nodesFlag []string
 var license []string
 var nodePrefix string
 var groupPrefix string
 var file string
 var deploy bool
+var petersenSkipFactor uint
 
 type nodesDef struct {
 	numNodes uint
@@ -61,7 +66,7 @@ type nodesDef struct {
 var generateCmd = &cobra.Command{
 	Use:     "generate",
 	Aliases: []string{"gen"},
-	Short:   "generate a Clos topology file, based on provided flags",
+	Short:   "generate a Clos (or other type) topology file, based on provided flags",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" {
 			return errors.New("provide a lab name with --name flag")
@@ -121,6 +126,7 @@ func init() {
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>=<image_name>")
 	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", fmt.Sprintf("container kind, one of %v", supportedKinds))
+	generateCmd.Flags().StringVarP(&gen_topo, "topology", "", supportedTopos[0], fmt.Sprintf("Topology to generate, one of %v", supportedTopos))
 	generateCmd.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
 	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>=/path/to/file")
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
@@ -128,10 +134,10 @@ func init() {
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
 	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false, "deploy a fabric based on the generated topology file")
 	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
+	generateCmd.Flags().UintVarP(&petersenSkipFactor, "petersen-skip-factor", "", 1, "Skip step for inner circle of Petersen topology, 1 >= K <= N/2")
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string, images map[string]string, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
-	numStages := len(nodes)
 	config := &clab.Config{
 		Name: name,
 		Mgmt: new(types.MgmtNet),
@@ -158,6 +164,17 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 		}
 		config.Topology.Kinds[k] = &types.NodeDefinition{License: lic}
 	}
+	switch gen_topo {
+	case "clos":
+          generateClosTopology(config,nodes)
+	case "petersen":
+          generatePetersenTopology(config,nodes)
+	}
+	return yaml.Marshal(config)
+}
+
+func generateClosTopology(config *clab.Config, nodes []nodesDef) {
+	numStages := len(nodes)
 	if numStages == 1 {
 		for j := uint(0); j < nodes[0].numNodes; j++ {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
@@ -202,7 +219,75 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string, images m
 			}
 		}
 	}
-	return yaml.Marshal(config)
+}
+
+/*
+ * Jvb: This generates a (generalized) Petersen graph, see
+ * https://en.wikipedia.org/wiki/Petersen_graph
+ *
+ * Inspired by https://metacpan.org/pod/Graph::Maker::Petersen
+ */
+func generatePetersenTopology(config *clab.Config, nodes []nodesDef) error {
+  numStages := len(nodes)
+  if numStages != 1 {
+    return errors.New("Petersen topology requires a single stage")
+  }
+  numNodes := nodes[0].numNodes
+  if (numNodes < 6) || (numNodes % 2)==1 {
+    return errors.New("Petersen topology requires an even number of nodes, minimal 6")
+  }
+  N := numNodes / 2 // Number of nodes in outer and inner circle
+
+  // Skip factor for inner ring, 1 <= K <= N/2
+  if (petersenSkipFactor < 1) || (petersenSkipFactor > N/2) {
+    return errors.New(fmt.Sprintf("petersenSkipFactor must be >= 1 and <= %d (= N/2)", N ))
+  }
+  var nodeNames = make([]string, numNodes, numNodes)
+
+  // 1. Create nodes
+  for j := uint(0); j < N; j++ {
+    for r := uint(0); r < 2; r++ { // outer+inner circle
+	node1 := fmt.Sprintf("%s-%d", nodePrefix, j+1 + r*N )
+	nodeNames[ j + r*N ] = node1
+	if _, ok := config.Topology.Nodes[node1]; !ok {
+	  config.Topology.Nodes[node1] = &types.NodeDefinition{
+	    Group: fmt.Sprintf("%s-%s", groupPrefix, map[uint]string{0:"O",1:"I"} [r]),
+	    Kind:  nodes[0].kind,
+	    Type:  nodes[0].typ,
+	  }
+	}
+    }
+  }
+
+  // 2. Add links
+  addLink := func(n1 uint,n2 uint,p1 uint,p2 uint) {
+    config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
+      Endpoints: []string{
+	nodeNames[n1] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p1),
+	nodeNames[n2] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p2),
+      },
+    })
+  }
+
+  for j := uint(0); j < N; j++ {
+    // Each node has 3 links: 2 to nodes in the same circle, 1 outer<->inner
+    addLink(j,j+N,1,1) // port1 is connection between inner and outer
+
+    for r := uint(0); r < 2; r++ { // outer+inner circle
+      b := r*N     // base ID, 0 for outer, N for inner
+      n := j + b   // node ID, 0..2N-1
+      skip := r*petersenSkipFactor // ==0 for outer circle
+
+      // To avoid duplicating links, only emit when n is smaller
+      if n < (n+1+skip)%N+b {
+	addLink(n,(n+1+skip)%N+b,2,3)   // port2 to next neighbor
+      }
+      if n < (n+N-1-skip)%N+b {
+        addLink(n,(n+N-1-skip)%N+b,3,2) // port3 to prev neighbor
+      }
+    }
+  }
+  return nil
 }
 
 func parseFlag(kind string, ls []string) (map[string]string, error) {
