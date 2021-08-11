@@ -17,12 +17,13 @@ As with any other node, the linux container is a node of a specific kind, `linux
 name: demo
 
 topology:
-  n1:
-    kind: linux
-    image: alpine:latest
-  n2:
-    kind: linux
-    image: alpine:latest
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:latest
+    n2:
+      kind: linux
+      image: alpine:latest
   links:
     - endpoints: ["n1:eth1","n2:eth1"]
 ```
