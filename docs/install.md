@@ -122,7 +122,8 @@ docker run --rm -it --privileged \
 The first command in the snippet above sets the working directory which you intend to use on your Mac OS. The `~/clab` in the example above expands to `/Users/<username>/clab` and means that we intent to have our containerlab labs to be stored in this directory.
 
 !!!note
-    It is best to create a directory under the `~/some/path` unless you know what to do[^6]
+    1. It is best to create a directory under the `~/some/path` unless you know what to do[^6]
+    2. vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.
 
 When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use `containerlab` commands right away.
 
