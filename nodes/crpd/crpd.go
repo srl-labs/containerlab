@@ -153,7 +153,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst = filepath.Join(nodeCfg.LabDir, "/config/license.conf")
-		if err = utils.CopyFile(src, dst); err != nil {
+		if err = utils.CopyFile(src, dst, 0444); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

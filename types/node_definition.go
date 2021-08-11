@@ -39,6 +39,9 @@ type NodeDefinition struct {
 	CPU string `yaml:"cpu,omitempty"`
 	// Set node RAM (cgroup or hypervisor)
 	RAM string `yaml:"ram,omitempty"`
+
+	// list of agent YAML files to provision for SRL nodes
+	Agents []string `yaml:"agents,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -116,6 +119,13 @@ func (n *NodeDefinition) GetBinds() []string {
 		return nil
 	}
 	return n.Binds
+}
+
+func (n *NodeDefinition) GetAgents() []string {
+	if n == nil {
+		return nil
+	}
+	return n.Agents
 }
 
 func (n *NodeDefinition) GetPorts() []string {

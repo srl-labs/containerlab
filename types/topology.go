@@ -82,6 +82,20 @@ func (t *Topology) GetNodeBinds(name string) []string {
 	return nil
 }
 
+func (t *Topology) GetNodeAgents(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if len(ndef.GetAgents()) > 0 {
+			return ndef.GetAgents()
+		}
+		agents := t.GetKind(t.GetNodeKind(name)).GetAgents()
+		if len(agents) > 0 {
+			return agents
+		}
+		return t.GetDefaults().GetAgents()
+	}
+	return nil
+}
+
 func (t *Topology) GetNodePorts(name string) (nat.PortSet, nat.PortMap, error) {
 	if ndef, ok := t.Nodes[name]; ok {
 		// node level ports

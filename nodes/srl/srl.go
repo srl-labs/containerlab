@@ -10,7 +10,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path"
+	// "path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -120,6 +120,22 @@ func (s *srl) Config() *types.NodeConfig { return s.cfg }
 
 func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
+
+	// Create appmgr subdir for agent specs and copy files, if needed
+	if s.cfg.Agents != nil {
+		log.Infof("PreDeploy %s copying agent files: %s...",s.cfg.ShortName,s.cfg.Agents)
+		appmgr := filepath.Join(s.cfg.LabDir, "config/appmgr/")
+		utils.CreateDirectory(appmgr, 0777)
+		for _, fullpath := range s.cfg.Agents {
+			pathparts := strings.Split(fullpath, "/")
+			basename := pathparts[ len(pathparts) - 1 ]
+			dst := filepath.Join(appmgr, basename)
+			if err := utils.CopyFile(fullpath, dst, 0644); err != nil {
+				return fmt.Errorf("Agent CopyFile src %s -> dst %s failed %v", fullpath, dst, err)
+			}
+		}
+	}
+
 	// retrieve node certificates
 	nodeCerts, err := cert.RetrieveNodeCertData(s.cfg, labCADir)
 	// if not available on disk, create cert in next step
@@ -136,11 +152,11 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 			Prefix:   configName,
 		}
 		nodeCerts, err = cert.GenerateCert(
-			path.Join(labCARoot, "root-ca.pem"),
-			path.Join(labCARoot, "root-ca-key.pem"),
+			filepath.Join(labCARoot, "root-ca.pem"),
+			filepath.Join(labCARoot, "root-ca-key.pem"),
 			certTpl,
 			certInput,
-			path.Join(labCADir, certInput.Name),
+			filepath.Join(labCADir, certInput.Name),
 		)
 		if err != nil {
 			log.Errorf("failed to generate certificates for node %s: %v", s.cfg.ShortName, err)
@@ -208,7 +224,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		// copy license file to node specific directory in lab
 		src = nodeCfg.License
 		dst = filepath.Join(nodeCfg.LabDir, "license.key")
-		if err := utils.CopyFile(src, dst); err != nil {
+		if err := utils.CopyFile(src, dst, 0444); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
@@ -223,7 +239,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
+	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0777)
 	dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
 	if nodeCfg.StartupConfig != "" {
 		log.Debugf("GenerateConfig reading startup-config %s", nodeCfg.StartupConfig )

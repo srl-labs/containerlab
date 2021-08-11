@@ -254,6 +254,12 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		return nil, err
 	}
 	nodeCfg.Binds = binds
+
+  // JvB: initialize agent paths, only for SRL Kind nodes
+	if (nodeCfg.Kind == "srl") {
+	  nodeCfg.Agents = c.Config.Topology.GetNodeAgents(nodeName)
+	}
+
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
 	if err != nil {
 		return nil, err

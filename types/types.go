@@ -76,6 +76,7 @@ type NodeConfig struct {
 	Cmd              string
 	Env              map[string]string
 	Binds            []string    // Bind mounts strings (src:dest:options)
+	Agents           []string    // Paths to YAML files for SRL agent extensions
 	PortBindings     nat.PortMap // PortBindings define the bindings between the container ports and host ports
 	PortSet          nat.PortSet // PortSet define the ports that should be exposed on a container
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network

@@ -76,6 +76,21 @@ topology:
 
 With such topology file containerlab is instructed to take a file `myconfig.json` from the current working directory, copy it to the lab directory for that specific node under the `config.json` name and mount that directory to the container. This will result in this config to act as a startup config for the node.
 
+#### User defined custom agents
+SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under /etc/opt/srlinux/appmgr. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
+
+```yaml
+name: srl_lab_with_custom_agents
+topology:
+  nodes:
+    srl1:
+      kind: srl
+      ...
+      agents:
+      - path1/my_custom_agent.yml
+      - path2/my_other_agent.yml
+```
+
 #### Saving configuration
 As was explained in the [Node configuration](#node-configuration) section, SR Linux containers can make their config persistent, because config files are provided to the containers from the host via the bind mount.
 
@@ -85,11 +100,11 @@ SR Linux node also supports the [`containerlab save -t <topo-file>`](../../cmd/s
 
 ```
 ❯ containerlab save -t quickstart.clab.yml
-INFO[0000] Parsing & checking topology file: quickstart.clab.yml 
+INFO[0000] Parsing & checking topology file: quickstart.clab.yml
 INFO[0001] saved SR Linux configuration from leaf1 node. Output:
 /system:
     Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
- 
+
 INFO[0001] saved SR Linux configuration from leaf2 node. Output:
 /system:
     Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
