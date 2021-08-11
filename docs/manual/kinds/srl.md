@@ -77,7 +77,7 @@ topology:
 With such topology file containerlab is instructed to take a file `myconfig.json` from the current working directory, copy it to the lab directory for that specific node under the `config.json` name and mount that directory to the container. This will result in this config to act as a startup config for the node.
 
 #### User defined custom agents
-SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under /etc/opt/srlinux/appmgr. This feature adds the ability to copy agent YAML file to the config directory of a specific SRL node, or all such nodes.
+SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under /etc/opt/srlinux/appmgr. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
 
 ```yaml
 name: srl_lab_with_custom_agents
