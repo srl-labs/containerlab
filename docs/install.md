@@ -100,9 +100,105 @@ Once installed, issue `sudo service docker start` to start the docker service in
     It appears to be that next versions of WSL2 kernels will support KVM.
 
 ### Mac OS
-Containerlab doesn't run on Mac OS because Docker Desktop for Mac doesn't provide the networking features containerlab relies on.
+Running containerlab on Mac OS is possible[^4] by means of a separate docker image with containerlab inside.
 
-The workaround for Mac OS users is to start a Linux VM (Virtual Machine) on mac and run Containerlab inside the VM. For example, free software such as Vagrant or Virtualbox can be used to deploy a Linux VM on a Mac OS.
+The container image `ghcr.io/srl-labs/clab:latest`[^5] contains the 0.16.2 version of containerlab at the time of this writing.
+
+To use this container use the following command:
+
+```shell linenums="1"
+CLAB_WORKDIR=~/clab
+
+docker run --rm -it --privileged \
+    --network host \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v /run/netns:/run/netns \
+    --pid="host" \
+    -w $CLAB_WORKDIR \
+    -v $CLAB_WORKDIR:$CLAB_WORKDIR \
+    ghcr.io/srl-labs/clab bash
+```
+
+The first command in the snippet above sets the working directory which you intend to use on your Mac OS. The `~/clab` in the example above expands to `/Users/<username>/clab` and means that we intent to have our containerlab labs to be stored in this directory.
+
+!!!note
+    It is best to create a directory under the `~/some/path` unless you know what to do[^6]
+
+When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use `containerlab` commands right away.
+
+???tip "Step by step example"
+    Let's imagine I want to run a lab with two SR Linux containers running directly on a Mac OS.
+
+    First, I need to have Docker Desktop for Mac installed and running.
+
+    Then I will create a directory under the `$HOME` path on my mac:
+
+    ```
+    mkdir -p ~/clab-mac-demo
+    ```
+
+    Then I will create a clab file defining my lab in the newly created directory:
+
+    ```bash
+    cat <<EOF >> ~/clab-mac-demo/2srl.clab.yml
+    name: 2srl
+
+    topology:
+    nodes:
+        srl1:
+        kind: srl
+        image: ghcr.io/nokia/srlinux
+        srl2:
+        kind: srl
+        image: ghcr.io/nokia/srlinux
+
+    links:
+        - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+    EOF
+    ```
+
+    Now when the clab file is there, launch the container and don't forget to use path to the directory you created:
+
+    ```bash
+    CLAB_WORKDIR=~/clab-mac-demo
+
+    docker run --rm -it --privileged \
+        --network host \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v /run/netns:/run/netns \
+        --pid="host" \
+        -w $CLAB_WORKDIR \
+        -v $CLAB_WORKDIR:$CLAB_WORKDIR \
+        ghcr.io/srl-labs/mac-clab bash
+    ```
+
+    Immediately you will get into the directory inside the container with your lab file available:
+
+    ```
+    root@docker-desktop:/Users/romandodin/clab-mac-demo# ls
+    2srl.clab.yml
+    ```
+
+    Now you can launch the lab, as containerlab is already part of the image:
+    ```
+    root@docker-desktop:/Users/romandodin/clab-mac-demo# clab dep -t 2srl.clab.yml
+    INFO[0000] Parsing & checking topology file: 2srl.clab.yml 
+    INFO[0000] Creating lab directory: /Users/romandodin/clab-mac-demo/clab-2srl 
+    INFO[0000] Creating root CA                             
+    INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500' 
+    INFO[0000] Creating container: srl1                     
+    INFO[0000] Creating container: srl2                     
+    INFO[0001] Creating virtual wire: srl1:e1-1 <--> srl2:e1-1 
+    INFO[0001] Adding containerlab host entries to /etc/hosts file 
+    +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+    | # |      Name      | Container ID |         Image         | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
+    +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+    | 1 | clab-2srl-srl1 | 574bf836fb40 | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+    | 2 | clab-2srl-srl2 | f88531a74ffb | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
+    +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+    ```
+
+
 
 ### Upgrade
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
@@ -130,3 +226,6 @@ To build containerlab from source:
 [^1]: only available if installed from packages
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
 [^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
+[^4]: kudos to Michael Kashin who [shared](https://github.com/srl-labs/containerlab/issues/577#issuecomment-895847387) this approach with us
+[^5]: later we will incorporate the container image build into our release tool chain, so that you could always get the latest containerlab inside that image. For now, if the upgraded version is needed, just do `clab version upgrade` inside the container.
+[^6]: otherwise make sure to add a custom shared directory to the docker on mac.
