@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -120,7 +121,7 @@ func createVrSROSFiles(node *types.NodeConfig) error {
 	if node.License != "" {
 		// copy license file to node specific lab directory
 		src := node.License
-		dst := path.Join(node.LabDir, "/tftpboot/license.txt")
+		dst := filepath.Join(node.LabDir, "/tftpboot/license.txt")
 		if err := utils.CopyFile(src, dst); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
@@ -128,7 +129,7 @@ func createVrSROSFiles(node *types.NodeConfig) error {
 	}
 
 	if node.StartupConfig != "" {
-		cfg := path.Join(node.LabDir, "tftpboot", "config.txt")
+		cfg := filepath.Join(node.LabDir, "tftpboot", "config.txt")
 
 		c, err := os.ReadFile(node.StartupConfig)
 		if err != nil {
