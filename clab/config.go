@@ -27,7 +27,7 @@ import (
 
 const (
 	// prefix is used to distinct containerlab created files/dirs/containers
-	prefix = "clab"
+	defaultPrefix = "clab"
 	// a name of a docker network that nodes management interfaces connect to
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
@@ -66,6 +66,7 @@ var kinds = []string{
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
 	Name       string          `json:"name,omitempty"`
+	Prefix     *string         `json:"prefix,omitempty"`
 	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology   *types.Topology `json:"topology,omitempty"`
 	ConfigPath string          `yaml:"config_path,omitempty"`
@@ -79,12 +80,21 @@ func (c *CLab) parseTopology() error {
 	if c.Config.ConfigPath == "" {
 		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 	}
+	if c.Config.Prefix == nil {
+		c.Config.Prefix = new(string)
+		*c.Config.Prefix = defaultPrefix
+	}
 
 	c.Dir = new(Directory)
-	c.Dir.Lab = c.Config.ConfigPath + "/" + prefix + "-" + c.Config.Name
-	c.Dir.LabCA = c.Dir.Lab + "/" + "ca"
-	c.Dir.LabCARoot = c.Dir.LabCA + "/" + "root"
-	c.Dir.LabGraph = c.Dir.Lab + "/" + "graph"
+	labDir := c.Config.Name
+	if c.Config.Prefix != nil && *c.Config.Prefix != "" {
+		labDir = strings.Join([]string{*c.Config.Prefix, c.Config.Name}, "-")
+	}
+	c.Dir.Lab = path.Join(c.Config.ConfigPath, labDir)
+
+	c.Dir.LabCA = path.Join(c.Dir.Lab, "ca")
+	c.Dir.LabCARoot = path.Join(c.Dir.LabCA, "root")
+	c.Dir.LabGraph = path.Join(c.Dir.Lab, "graph")
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
@@ -193,9 +203,13 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 }
 
 func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx int) (*types.NodeConfig, error) {
+	longName := strings.Join([]string{c.Config.Name, nodeName}, "-")
+	if c.Config.Prefix != nil && *c.Config.Prefix != "" {
+		longName = strings.Join([]string{*c.Config.Prefix, longName}, "-")
+	}
 	nodeCfg := &types.NodeConfig{
 		ShortName:       nodeName,
-		LongName:        strings.Join([]string{prefix, c.Config.Name, nodeName}, "-"),
+		LongName:        longName,
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, ".io"}, "."),
 		LabDir:          path.Join(c.Dir.Lab, nodeName),
 		Index:           idx,

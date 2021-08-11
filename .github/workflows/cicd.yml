@@ -12,7 +12,7 @@ on:
 env:
   GOVER: 1.16.5
   CGO_ENABLED: 0
-  MKDOCS_MATERIAL_VER: 7.1.8
+  MKDOCS_MATERIAL_VER: 7.2.2
 
 jobs:
   file-changes:
@@ -96,7 +96,9 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        runtime: ["docker", "containerd"]
+        runtime:
+          - "docker"
+          # - "containerd"
     needs:
       - unit-test
     steps:
@@ -133,6 +135,43 @@ jobs:
         if: always()
         with:
           name: 03-basic-ceos-log
+          path: ./tests/out/*.html
+
+  srlinux-basic-tests:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        runtime:
+          - "docker"
+          # - "containerd"
+    needs:
+      - unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+      - name: Build containerlab
+        run: go build && sudo mv ./containerlab /usr/bin/containerlab
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Install robotframework
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+      - name: Run srlinux tests
+        run: |
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: 02-basic-srl-log
           path: ./tests/out/*.html
 
   docs-test:

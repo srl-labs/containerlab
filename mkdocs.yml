@@ -115,6 +115,7 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.tabs
+    - search.suggest
 
   language: en
   palette:
