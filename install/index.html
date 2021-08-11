@@ -75,7 +75,7 @@ docker run --rm -it --privileged <span class=se>\</span>
     --pid<span class=o>=</span><span class=s2>&quot;host&quot;</span> <span class=se>\</span>
     -w <span class=nv>$CLAB_WORKDIR</span> <span class=se>\</span>
     -v <span class=nv>$CLAB_WORKDIR</span>:<span class=nv>$CLAB_WORKDIR</span> <span class=se>\</span>
-    ghcr.io/srl-labs/mac-clab bash
+    ghcr.io/srl-labs/clab bash
 </code></pre></div> <p>Immediately you will get into the directory inside the container with your lab file available:</p> <div class=highlight><pre><span></span><code>root@docker-desktop:/Users/romandodin/clab-mac-demo# ls
 2srl.clab.yml
 </code></pre></div> <p>Now you can launch the lab, as containerlab is already part of the image: <div class=highlight><pre><span></span><code>root@docker-desktop:/Users/romandodin/clab-mac-demo# clab dep -t 2srl.clab.yml
