@@ -30,7 +30,7 @@ telnet &lt;node-name&gt; <span class=m>5000</span>
   <span class=nt>nodes</span><span class=p>:</span>
     <span class=nt>sros</span><span class=p>:</span>
       <span class=nt>kind</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">vr-sros</span>
-      <span class=nt>config</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">myconfig.txt</span>
+      <span class=nt>startup-config</span><span class=p>:</span> <span class="l l-Scalar l-Scalar-Plain">myconfig.txt</span>
 </code></pre></div> <p>With such topology file containerlab is instructed to take a file <code>myconfig.txt</code> from the current working directory, copy it to the lab directory for that specific node under the <code>/tftpboot/config.txt</code> name and mount that dir to the container. This will result in this config to act as a startup config for the node.</p> <h4 id=configuration-save>Configuration save<a class=headerlink href=#configuration-save title="Permanent link">#</a></h4> <p>Containerlab's <a href=../../../cmd/save/ ><code>save</code></a> command will perform a configuration save for <code>vr-sros</code> nodes via Netconf. The configuration will be saved under <code>config.txt</code> file and can be found at the node's directory inside the lab parent directory:</p> <div class=highlight><pre><span></span><code><span class=c1># assuming the lab name is &quot;cert01&quot;</span>
 <span class=c1># and node name is &quot;sr&quot;</span>
 cat clab-cert01/sr/tftpboot/config.txt
