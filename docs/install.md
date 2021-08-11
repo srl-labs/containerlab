@@ -140,19 +140,19 @@ When the container is started, you will have a bash shell opened with the direct
     Then I will create a clab file defining my lab in the newly created directory:
 
     ```bash
-    cat <<EOF >> ~/clab-mac-demo/2srl.clab.yml
+    cat <<EOF > ~/clab-mac-demo/2srl.clab.yml
     name: 2srl
 
     topology:
-    nodes:
+      nodes:
         srl1:
-        kind: srl
-        image: ghcr.io/nokia/srlinux
+          kind: srl
+          image: ghcr.io/nokia/srlinux
         srl2:
-        kind: srl
-        image: ghcr.io/nokia/srlinux
+          kind: srl
+          image: ghcr.io/nokia/srlinux
 
-    links:
+      links:
         - endpoints: ["srl1:e1-1", "srl2:e1-1"]
     EOF
     ```
