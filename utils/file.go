@@ -21,7 +21,8 @@ func FileExists(filename string) bool {
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
-func CopyFile(src, dst string) (err error) {
+// mode is the desired target file permissions, e.g. "0644"
+func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	sfi, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -44,20 +45,24 @@ func CopyFile(src, dst string) (err error) {
 			return
 		}
 	}
-	return CopyFileContents(src, dst)
+	return CopyFileContents(src, dst, mode)
 }
 
 // copyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
-func CopyFileContents(src, dst string) (err error) {
+func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
 		return
 	}
 	defer in.Close()
 	out, err := os.Create(dst)
+	if err != nil {
+		return
+	}
+	err = out.Chmod(mode)
 	if err != nil {
 		return
 	}
