@@ -169,7 +169,7 @@ When the container is started, you will have a bash shell opened with the direct
         --pid="host" \
         -w $CLAB_WORKDIR \
         -v $CLAB_WORKDIR:$CLAB_WORKDIR \
-        ghcr.io/srl-labs/mac-clab bash
+        ghcr.io/srl-labs/clab bash
     ```
 
     Immediately you will get into the directory inside the container with your lab file available:
