@@ -42,12 +42,12 @@ By default, `ixrd2` type will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to SR Linux container and make it boot in a chosen HW variant.
 ### Node configuration
-SR Linux nodes have a `config.json` file that is used to persist the configuration of the node. It is possible to launch nodes of `srl` kind with a basic "default" config or to provide a custom config file that will be used as a startup config instead.
+SR Linux uses a `/etc/opt/srlinux/config.json` file to persist its configuration. By default containerlab starts nodes of `srl` kind with a basic "default" config, and with the `startup-config` parameter it is possible to provide a custom config file that will be used as a startup one.
 #### Default node configuration
-When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.cfg) and put it in that directory.
+When a node is defined without the `startup-config` statement present, containerlab will generate an basic config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.cfg):
 
 ```yaml
-# example of a topo file that does not define a custom config
+# example of a topo file that does not define a custom startup-config
 # as a result, the config will be generated from a template
 # and used by this node
 name: srl_lab
@@ -61,7 +61,7 @@ topology:
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
 
 #### User defined startup config
-It is possible to make SR Linux nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
+It is possible to make SR Linux nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the local config file that will be mounted to a container:
 
 ```yaml
 name: srl_lab
@@ -71,17 +71,17 @@ topology:
       kind: srl
       type: ixr6
       image: ghcr.io/nokia/srlinux
-      startup-config: myconfig.json
+      startup-config: myconfig.json # a path relative to the current working directory
 ```
 
-With such topology file containerlab is instructed to take a file `myconfig.json` from the current working directory, copy it to the lab directory for that specific node under the `config.json` name and mount that file to the container. This will result in this config to act as a startup config for the node.
+With such topology file containerlab is instructed to take a file `myconfig.json` from the current working directory, copy it to the lab directory for that specific node under the `config.json` name and mount that directory to the container. This will result in this config to act as a startup config for the node.
 
 #### Saving configuration
 As was explained in the [Node configuration](#node-configuration) section, SR Linux containers can make their config persistent, because config files are provided to the containers from the host via the bind mount.
 
 When a user configures SR Linux node the changes are saved into the running configuration stored in memory. To save the running configuration as a startup configuration the user needs to execute the `tools system configuration save` CLI command. This will write the config to the `/etc/opt/srlinux/config.json` file that holds the startup config and is exposed to the host.
 
-SR Linux node also support the [`containerlab save -t <topo-file>`](../../cmd/save.md) command which will execute the command to save the running config on all the lab nodes. For SR Linux node the `tools system configuration save` will be executed:
+SR Linux node also supports the [`containerlab save -t <topo-file>`](../../cmd/save.md) command which will execute the command to save the running config on all the lab nodes. For SR Linux node the `tools system configuration save` will be executed:
 
 ```
 ❯ containerlab save -t quickstart.clab.yml
@@ -138,10 +138,15 @@ When a user starts a lab, containerlab creates a lab directory for storing [conf
 ```
 ~/clab/clab-srl02
 ❯ ls -lah srl1
--rwxrwxrwx+ 1 1002 1002 36169 Aug  2 17:31 config.json
--rw-r--r--  1 root root  233 Dec  1 22:11 topology.yml
+drwxrwxrwx+ 6 1002 1002   87 Dec  1 22:11 config
+-rw-r--r--  1 root root  233 Dec  1 22:11 topology.clab.yml
 ```
 
-The `config.json` file is mounted to container's `/etc/opt/srlinux/config.json` in `rw` mode and will effectively contain the node's configuration that SR Linux runs:
+The `config` directory is mounted to container's `/etc/opt/srlinux/` path in `rw` mode and will effectively contain configuration that SR Linux runs of as well as the files that SR Linux keeps in its `/etc/opt/srlinux/` directory:
+
+```
+❯ ls srl1/config
+banner  cli  config.json  devices  tls  ztp
+```
 
 The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type` the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
