@@ -60,6 +60,9 @@ Some containerized NOSes require a license to operate or can leverage a license 
 ### startup-config
 For some kinds it's possible to pass a path to a config file that a node will use on start instead of a bare config. Check documentation for a specific kind to see if `startup-config` element is supported.
 
+### reset-startup-config
+By default, changes made to the initial `startup-config` will be preserved, unless `reset-startup-config` is explicitly set to `true`
+
 ### binds
 In order to expose host files to the containerized nodes a user can leverage the bind mount capability.
 

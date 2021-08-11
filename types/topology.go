@@ -171,6 +171,23 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	return cfg, nil
 }
 
+func (t *Topology) GetNodeResetConfig(name string) bool {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetResetConfig() != nil {
+			return *ndef.GetResetConfig()
+		}
+		kind_reset_config := t.GetKind(t.GetNodeKind(name)).GetResetConfig()
+		if kind_reset_config != nil {
+			return *kind_reset_config
+		}
+		default_reset_config := t.GetDefaults().GetResetConfig()
+		if default_reset_config != nil {
+			return *default_reset_config
+		}
+	}
+	return false
+}
+
 func (t *Topology) GetNodeLicense(name string) (string, error) {
 	var license string
 	if ndef, ok := t.Nodes[name]; ok {

@@ -6,6 +6,7 @@ type NodeDefinition struct {
 	Group         string            `yaml:"group,omitempty"`
 	Type          string            `yaml:"type,omitempty"`
 	StartupConfig string            `yaml:"startup-config,omitempty"`
+	ResetConfig   *bool             `yaml:"reset-startup-config,omitempty"`
 	Config        *ConfigDispatcher `yaml:"config,omitempty"`
 	Image         string            `yaml:"image,omitempty"`
 	License       string            `yaml:"license,omitempty"`
@@ -66,6 +67,13 @@ func (n *NodeDefinition) GetStartupConfig() string {
 		return ""
 	}
 	return n.StartupConfig
+}
+
+func (n *NodeDefinition) GetResetConfig() *bool {
+	if n == nil {
+		return nil
+	}
+	return n.ResetConfig
 }
 
 func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
