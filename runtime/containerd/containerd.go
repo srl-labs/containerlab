@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -53,7 +53,7 @@ func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	cniPath := utils.GetCNIBinaryPath()
 	binaries := []string{"tuning", "bridge", "host-local"}
 	for _, binary := range binaries {
-		binary = path.Join(cniPath, binary)
+		binary = filepath.Join(cniPath, binary)
 		if _, err := os.Stat(binary); err != nil {
 			return errors.WithMessagef(err, "CNI binaries not found. [ %s ] are required.", strings.Join(binaries, ","))
 		}

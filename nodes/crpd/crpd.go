@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -125,7 +126,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "log"), 0777)
 
 	// copy crpd config from default template or user-provided conf file
-	cfg := path.Join(nodeCfg.LabDir, "/config/juniper.conf")
+	cfg := filepath.Join(nodeCfg.LabDir, "/config/juniper.conf")
 
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
@@ -141,7 +142,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	}
 
 	// write crpd sshd conf file to crpd node dir
-	dst := path.Join(nodeCfg.LabDir, "/config/sshd_config")
+	dst := filepath.Join(nodeCfg.LabDir, "/config/sshd_config")
 	err = utils.CreateFile(dst, sshdCfg)
 	if err != nil {
 		return fmt.Errorf("failed to write sshd_config file %v", err)
@@ -151,7 +152,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
-		dst = path.Join(nodeCfg.LabDir, "/config/license.conf")
+		dst = filepath.Join(nodeCfg.LabDir, "/config/license.conf")
 		if err = utils.CopyFile(src, dst); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}

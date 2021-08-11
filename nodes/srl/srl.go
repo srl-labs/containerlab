@@ -207,7 +207,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	if nodeCfg.License != "" {
 		// copy license file to node specific directory in lab
 		src = nodeCfg.License
-		dst = path.Join(nodeCfg.LabDir, "license.key")
+		dst = filepath.Join(nodeCfg.LabDir, "license.key")
 		if err := utils.CopyFile(src, dst); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
@@ -224,7 +224,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
-	dst = path.Join(nodeCfg.LabDir, "config", "config.json")
+	dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
@@ -245,7 +245,7 @@ type mac struct {
 }
 
 func generateSRLTopologyFile(nodeType, labDir string, index int) error {
-	dst := path.Join(labDir, "topology.yml")
+	dst := filepath.Join(labDir, "topology.yml")
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[nodeType])
 	if err != nil {

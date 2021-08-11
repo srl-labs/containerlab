@@ -115,7 +115,7 @@ func (s *ceos) SaveConfig(ctx context.Context) error {
 func createCEOSFiles(node *types.NodeConfig) error {
 	// generate config directory
 	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
-	cfg := path.Join(node.LabDir, "flash", "startup-config")
+	cfg := filepath.Join(node.LabDir, "flash", "startup-config")
 	node.ResStartupConfig = cfg
 
 	// use startup config file provided by a user

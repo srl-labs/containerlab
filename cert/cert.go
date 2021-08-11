@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"text/template"
 
 	"github.com/cloudflare/cfssl/api/generator"
@@ -129,7 +129,7 @@ func GenerateRootCa(labCARoot string, csrRootJsonTpl *template.Template, input C
 		Csr:  csrPEM,
 		Cert: cert,
 	}
-	writeCertFiles(certs, path.Join(labCARoot, input.NamePrefix))
+	writeCertFiles(certs, filepath.Join(labCARoot, input.NamePrefix))
 	return certs, nil
 }
 
@@ -192,16 +192,16 @@ func GenerateCert(ca, caKey string, csrJSONTpl *template.Template, input CertInp
 		Cert: cert,
 	}
 
-	writeCertFiles(certs, path.Join(targetPath, input.Name))
+	writeCertFiles(certs, filepath.Join(targetPath, input.Name))
 	return certs, nil
 }
 
 // RetrieveNodeCertData reads the node private key and certificate by the well known paths
 // if either of those files doesn't exist, an error is returned
 func RetrieveNodeCertData(n *types.NodeConfig, labCADir string) (*Certificates, error) {
-	var nodeCertFilesDir = path.Join(labCADir, n.ShortName)
-	var nodeCertFile = path.Join(nodeCertFilesDir, n.ShortName+".pem")
-	var nodeKeyFile = path.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
+	var nodeCertFilesDir = filepath.Join(labCADir, n.ShortName)
+	var nodeCertFile = filepath.Join(nodeCertFilesDir, n.ShortName+".pem")
+	var nodeKeyFile = filepath.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
 
 	var certs = &Certificates{}
 
@@ -247,8 +247,8 @@ func CreateRootCA(configName, labCARoot string, ns map[string]nodes.Node) error 
 		return nil
 	}
 
-	var rootCaCertPath = path.Join(labCARoot, "root-ca.pem")
-	var rootCaKeyPath = path.Join(labCARoot, "root-ca-key.pem")
+	var rootCaCertPath = filepath.Join(labCARoot, "root-ca.pem")
+	var rootCaKeyPath = filepath.Join(labCARoot, "root-ca-key.pem")
 
 	var rootCaCertExists = false
 	var rootCaKeyExists = false

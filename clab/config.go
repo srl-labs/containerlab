@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -90,11 +89,11 @@ func (c *CLab) parseTopology() error {
 	if c.Config.Prefix != nil && *c.Config.Prefix != "" {
 		labDir = strings.Join([]string{*c.Config.Prefix, c.Config.Name}, "-")
 	}
-	c.Dir.Lab = path.Join(c.Config.ConfigPath, labDir)
+	c.Dir.Lab = filepath.Join(c.Config.ConfigPath, labDir)
 
-	c.Dir.LabCA = path.Join(c.Dir.Lab, "ca")
-	c.Dir.LabCARoot = path.Join(c.Dir.LabCA, "root")
-	c.Dir.LabGraph = path.Join(c.Dir.Lab, "graph")
+	c.Dir.LabCA = filepath.Join(c.Dir.Lab, "ca")
+	c.Dir.LabCARoot = filepath.Join(c.Dir.LabCA, "root")
+	c.Dir.LabGraph = filepath.Join(c.Dir.Lab, "graph")
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
@@ -211,7 +210,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		ShortName:       nodeName,
 		LongName:        longName,
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, ".io"}, "."),
-		LabDir:          path.Join(c.Dir.Lab, nodeName),
+		LabDir:          filepath.Join(c.Dir.Lab, nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
 		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
@@ -593,8 +592,8 @@ func resolveBindPaths(binds []string, nodedir string) error {
 			labdir := filepath.Base(filepath.Dir(nodedir))
 			s := strings.Split(hp, string(os.PathSeparator))
 			// creating a path from last two elements of a resolved host path
-			h := path.Join(s[len(s)-2], s[len(s)-1])
-			if h != path.Join(labdir, "ansible-inventory.yml") {
+			h := filepath.Join(s[len(s)-2], s[len(s)-1])
+			if h != filepath.Join(labdir, "ansible-inventory.yml") {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
