@@ -106,10 +106,11 @@ type NodeConfig struct {
 // GenerateConfig generates configuration for the nodes
 // out of the templ based on the node configuration and saves the result to dst
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
-
-	// If the config file is already present in the node dir and there is no startup-config, dont recreate it
-	if utils.FileExists(dst) && node.StartupConfig == "" {
-		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, node.ShortName)
+        // if startup config is not set, and the config file is already present in the node dir
+	// we do not regenerate the config, since we will take what was saved from the previous run
+	// in other words, the startup config set by a user takes preference and will trigger config generation
+	if utils.FileExists(dst) && (node.StartupConfig == "") {
+		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
 		return nil
 	}
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
