@@ -107,14 +107,10 @@ type NodeConfig struct {
 // out of the templ based on the node configuration and saves the result to dst
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 
-	// If the config file is already present in the node dir
-	// we do not regenerate the config unless ResetConfig is explicitly set
-	// By default, modifications to each config made by a user are preserved
-	if utils.FileExists(dst) && (node.StartupConfig == "" || !node.ResetConfig) {
+	// If the config file is already present in the node dir and there is no startup-config, dont recreate it
+	if utils.FileExists(dst) && node.StartupConfig == "" {
 		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, node.ShortName)
 		return nil
-	} else if node.ResetConfig {
-		log.Infof("Resetting node '%s' to startup-config '%s'", node.ShortName, dst)
 	}
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
 	tpl, err := template.New(filepath.Base(node.StartupConfig)).Parse(templ)
