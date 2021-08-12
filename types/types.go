@@ -61,7 +61,6 @@ type NodeConfig struct {
 	Group            string
 	Kind             string
 	StartupConfig    string // path to config template file that is used for startup config generation
-	ResetConfig      bool   // Flag to always regenerate from startup-config, even when modified (default:false)
 	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
 	Config           *ConfigDispatcher
 	ResConfig        string // path to config file that is actually mounted to the container and is a result of templation
@@ -75,7 +74,6 @@ type NodeConfig struct {
 	Cmd              string
 	Env              map[string]string
 	Binds            []string    // Bind mounts strings (src:dest:options)
-	Agents           []string    // Paths to YAML files for SRL agent extensions
 	ExtraHosts       []string    // Extra /etc/hosts entries for all nodes
 	PortBindings     nat.PortMap // PortBindings define the bindings between the container ports and host ports
 	PortSet          nat.PortSet // PortSet define the ports that should be exposed on a container
