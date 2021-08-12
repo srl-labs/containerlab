@@ -12,10 +12,9 @@ import (
 	"strings"
 	"text/template"
 
-	// "github.com/cloudflare/cfssl/log"
-	log "github.com/sirupsen/logrus"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
 
