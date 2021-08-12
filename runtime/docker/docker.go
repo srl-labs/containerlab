@@ -264,6 +264,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
 		NetworkMode:  container.NetworkMode(c.Mgmt.Network),
+		ExtraHosts:   node.ExtraHosts, // add static /etc/hosts entries
 	}
 
 	containerNetworkingConfig := &network.NetworkingConfig{}
