@@ -138,8 +138,12 @@ var deployCmd = &cobra.Command{
 
       // Build a map of nodes with static IPs, add to /etc/hosts
 			if n.Config().MgmtIPv4Address != "" {
-			   log.Infof("Adding static /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address )
+			   log.Infof("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address )
 				 host_entries = append( host_entries, n.Config().ShortName + ":" + n.Config().MgmtIPv4Address )
+			}
+			if n.Config().MgmtIPv6Address != "" {
+				 log.Infof("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address )
+				 host_entries = append( host_entries, n.Config().ShortName + ":" + n.Config().MgmtIPv6Address )
 			}
 		}
 
