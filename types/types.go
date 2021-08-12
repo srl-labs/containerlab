@@ -61,6 +61,7 @@ type NodeConfig struct {
 	Group            string
 	Kind             string
 	StartupConfig    string // path to config template file that is used for startup config generation
+	ResetConfig      bool   // Flag to always regenerate from startup-config, even when modified (default:false)
 	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
 	Config           *ConfigDispatcher
 	ResConfig        string // path to config file that is actually mounted to the container and is a result of templation
@@ -74,6 +75,8 @@ type NodeConfig struct {
 	Cmd              string
 	Env              map[string]string
 	Binds            []string    // Bind mounts strings (src:dest:options)
+	Agents           []string    // Paths to YAML files for SRL agent extensions
+	ExtraHosts       []string    // Extra /etc/hosts entries for all nodes
 	PortBindings     nat.PortMap // PortBindings define the bindings between the container ports and host ports
 	PortSet          nat.PortSet // PortSet define the ports that should be exposed on a container
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
@@ -105,12 +108,15 @@ type NodeConfig struct {
 // GenerateConfig generates configuration for the nodes
 // out of the templ based on the node configuration and saves the result to dst
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
-	// if startup config is not set, and the config file is already present in the node dir
-	// we do not regenerate the config, since we will take what was saved from the previous run
-	// in other words, the startup config set by a user takes preference and will trigger config generation
-	if utils.FileExists(dst) && (node.StartupConfig == "") {
-		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
+
+	// If the config file is already present in the node dir
+	// we do not regenerate the config unless ResetConfig is explicitly set
+	// By default, modifications to each config made by a user are preserved
+	if utils.FileExists(dst) && (node.StartupConfig == "" || !node.ResetConfig) {
+		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, node.ShortName)
 		return nil
+	} else if node.ResetConfig {
+		log.Infof("Resetting node '%s' to startup-config '%s'", node.ShortName, dst)
 	}
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
 	tpl, err := template.New(filepath.Base(node.StartupConfig)).Parse(templ)
