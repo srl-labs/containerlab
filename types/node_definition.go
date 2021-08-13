@@ -6,7 +6,7 @@ type NodeDefinition struct {
 	Group         string            `yaml:"group,omitempty"`
 	Type          string            `yaml:"type,omitempty"`
 	StartupConfig string            `yaml:"startup-config,omitempty"`
-	StartupDelay  uint              `default:0 yaml:"startup-delay"`
+	StartupDelay  uint              `yaml:"startup-delay"`
 	Config        *ConfigDispatcher `yaml:"config,omitempty"`
 	Image         string            `yaml:"image,omitempty"`
 	License       string            `yaml:"license,omitempty"`
