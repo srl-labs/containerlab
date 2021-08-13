@@ -171,6 +171,19 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	return cfg, nil
 }
 
+func (t *Topology) GetNodeStartupDelay(name string) uint {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetStartupDelay() != 0 {
+			return ndef.GetStartupDelay()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetStartupDelay() != 0 {
+			return t.GetKind(t.GetNodeKind(name)).GetStartupDelay()
+		}
+		return t.GetDefaults().GetStartupDelay()
+	}
+	return 0
+}
+
 func (t *Topology) GetNodeLicense(name string) (string, error) {
 	var license string
 	if ndef, ok := t.Nodes[name]; ok {

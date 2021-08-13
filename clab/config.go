@@ -240,6 +240,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
+	// Get optional startup delay
+	// JvB note this code could be refactored to lookup the node once, instead of
+	// every GetNodeXXX method
+	nodeCfg.StartupDelay = c.Config.Topology.GetNodeStartupDelay(nodeCfg.ShortName)
+
 	// initialize license field
 	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {

@@ -61,6 +61,7 @@ type NodeConfig struct {
 	Group            string
 	Kind             string
 	StartupConfig    string // path to config template file that is used for startup config generation
+	StartupDelay     uint   // optional delay (in seconds) to wait before creating this node
 	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
 	Config           *ConfigDispatcher
 	ResConfig        string // path to config file that is actually mounted to the container and is a result of templation

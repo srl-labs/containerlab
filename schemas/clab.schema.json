@@ -49,6 +49,11 @@
                     "description": "path to a startup config file (if supported by kind)",
                     "markdownDescription": "path to a [config file](https://containerlab.srlinux.dev/manual/nodes/#startup-config) (if supported by kind)"
                 },
+                "startup-delay": {
+                    "type": "int",
+                    "description": "Optional startup delay (seconds) to apply",
+                    "markdownDescription": "Optional [startup delay](https://containerlab.srlinux.dev/manual/nodes/#startup-delay) in seconds"
+                },
                 "binds": {
                     "type": "array",
                     "description": "list of file/directory bindings",
