@@ -169,7 +169,10 @@ topology:
     node1:
       env:
         ENV1: 1 # ENV1=1 will be set for node1
+        ENV2: ${ENV2} # ENV2 will be set to value of environment variable ENV2
 ```
+
+You can also specify magic variable `__IMPORT_ENVS: true`, then all environment variables defined in your shell will be imported to a node.
 
 ### user
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.

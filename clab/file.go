@@ -7,6 +7,7 @@ package clab
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -31,10 +32,13 @@ func (c *CLab) GetTopology(topo string) error {
 	}
 	log.Debug(fmt.Sprintf("Topology file contents:\n%s\n", yamlFile))
 
+	yamlFile = []byte(os.ExpandEnv(string(yamlFile)))
 	err = yaml.UnmarshalStrict(yamlFile, c.Config)
 	if err != nil {
 		return err
 	}
+
+	c.Config.Topology.ImportEnvs()
 
 	topoAbsPath, err := filepath.Abs(topo)
 	if err != nil {
