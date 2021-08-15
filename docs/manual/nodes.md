@@ -169,7 +169,13 @@ topology:
     node1:
       env:
         ENV1: 1 # ENV1=1 will be set for node1
+        # env vars expansion is available, for example
+        # ENV2 variable will be set to the value of the environment variable SOME_ENV
+        # that is defined for the shell you run containerlab with
+        ENV2: ${SOME_ENV} 
 ```
+
+You can also specify a magic ENV VAR - `__IMPORT_ENVS: true` - which will import all environment variables defined in your shell to the relevant topology level.
 
 ### user
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.

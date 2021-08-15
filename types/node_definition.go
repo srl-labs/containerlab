@@ -1,5 +1,14 @@
 package types
 
+import (
+	"os"
+	"strings"
+)
+
+const (
+	importEnvsKey = "__IMPORT_ENVS"
+)
+
 // NodeDefinition represents a configuration a given node can have in the lab definition file
 type NodeDefinition struct {
 	Kind          string            `yaml:"kind,omitempty"`
@@ -199,4 +208,29 @@ func (n *NodeDefinition) GetNodeRAM() string {
 		return ""
 	}
 	return n.RAM
+}
+
+// ImportEnvs imports all environment variales defined in the shell
+// if __IMPORT_ENVS is set to true
+func (n *NodeDefinition) ImportEnvs() {
+	var importEnvs bool
+
+	for k, v := range n.Env {
+		if k == importEnvsKey && v == "true" {
+			importEnvs = true
+		}
+	}
+
+	if !importEnvs {
+		return
+	}
+
+	for _, e := range os.Environ() {
+		kv := strings.Split(e, "=")
+		if _, exists := n.Env[kv[0]]; exists {
+			continue
+		} else {
+			n.Env[kv[0]] = kv[1]
+		}
+	}
 }
