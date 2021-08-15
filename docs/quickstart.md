@@ -55,7 +55,6 @@ A [topology definition deep-dive](manual/topo-def-file.md) document provides a c
 * The actual [nodes](manual/nodes.md) of the topology are defined in the `nodes` section which holds a map of node names. In the example above, nodes with names `srl` and `ceos` are defined.
 * Node elements must have a `kind` parameter to indicate which kind this node belongs to. Under the nodes section you typically provide node-specific parameters. This lab uses a node-specific parameters - `image`.  
 * `nodes` are interconnected with `links`. Each `link` is [defined](manual/topo-def-file.md#links) by a set of `endpoints`.
-* It supports environment variable expansion. You can specify environment variable like this `${YOUR_ENV_VAR}`.
 
 ## Container image
 One of node's most important properties is the container [`image`](manual/nodes.md#image) they use. In our example the nodes use a specific image which we imported upfront[^2].
