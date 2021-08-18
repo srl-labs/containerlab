@@ -225,6 +225,7 @@ func setFlags(conf *clab.Config) {
 }
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node, mgmtNet string) {
+	duplicate_check := make(map[string]bool)
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
 		if node, ok := nodesMap[name]; ok {
@@ -239,6 +240,19 @@ func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.
 				node.Config().MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
 				node.Config().MgmtIPv6Address = c.NetworkSettings.IPv6addr
 				node.Config().MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
+			}
+
+			if duplicate_check[ node.Config().MgmtIPv4Address ] {
+				 log.Errorf("Duplicate ipv4 mgmt IP for node %s: %v",
+					 node.Config().ShortName, node.Config().MgmtIPv4Address )
+			} else if node.Config().MgmtIPv4Address != "" {
+				 duplicate_check[ node.Config().MgmtIPv4Address ] = true
+			}
+			if duplicate_check[ node.Config().MgmtIPv6Address ] {
+				 log.Errorf("Duplicate ipv6 mgmt IP for node %s: %v",
+					 node.Config().ShortName, node.Config().MgmtIPv6Address )
+			} else if node.Config().MgmtIPv6Address != "" {
+	      duplicate_check[ node.Config().MgmtIPv6Address ] = true
 			}
 
 			node.Config().ContainerID = c.ID
