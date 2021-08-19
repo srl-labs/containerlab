@@ -155,13 +155,33 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 }
 
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map[string]struct{}) {
+	staticIPNodes := make(map[string]nodes.Node)
+	dynIPNodes := make(map[string]nodes.Node)
 
+	for name, n := range c.Nodes {
+		if n.Config().MgmtIPv4Address != "" || n.Config().MgmtIPv6Address != "" {
+			staticIPNodes[name] = n
+			continue
+		}
+		dynIPNodes[name] = n
+	}
+	log.Debug("scheduling nodes with static IPs first...")
+	c.createNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
+	log.Debug("scheduling nodes with dynamic IPs next...")
+	c.createNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
+}
+
+func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node) {
+	numScheduledNodes := len(scheduledNodes)
+	if numScheduledNodes == 0 {
+		return
+	}
 	wg := new(sync.WaitGroup)
 
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
 
-	workerFunc := func(i uint, input chan nodes.Node, wg *sync.WaitGroup) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup) {
 		defer wg.Done()
 		for {
 			select {
@@ -189,11 +209,14 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map
 		}
 	}
 
+	if numScheduledNodes < maxWorkers {
+		maxWorkers = numScheduledNodes
+	}
 	// start concurrent workers
 	wg.Add(int(maxWorkers))
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
-	for i := uint(0); i < maxWorkers; i++ {
+	for i := 0; i < maxWorkers; i++ {
 		go workerFunc(i, concurrentChan, wg)
 	}
 
@@ -204,8 +227,11 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map
 	}
 
 	// send nodes to workers
-	for _, n := range c.Nodes {
+	for _, n := range scheduledNodes {
 		if _, ok := serialNodes[n.Config().LongName]; ok {
+			// delete the entry to avoid starting a serial worker in the
+			// case of dynamic IP nodes scheduling
+			delete(serialNodes, n.Config().LongName)
 			serialChan <- n
 			continue
 		}
