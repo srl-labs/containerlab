@@ -109,7 +109,7 @@ cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-di
 used as a startup config instead.
 
 #### Default node configuration
-When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) and copy it to the config directory of the node.
+When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config
@@ -138,7 +138,7 @@ topology:
       startup-config: myconfig.conf
 ```
 
-When a config file is passed via `startup-config` parameter, it will override any configuration that may have left upon lab destroy.
+When a config file is passed via `startup-config` parameter it will be used during an initial lab deployment. However, a config file that might be in the lab directory of a node takes precedence over the startup-config[^3].
 
 With such topology file containerlab is instructed to take a file `myconfig.conf` from the current working directory, copy it to the lab directory for that specific node under the `/flash/startup-config` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
 
@@ -247,3 +247,4 @@ Consult your distribution's documentation for details regarding configuring cgro
 
 [^1]: https://eos.arista.com/ceos-lab-topo/
 [^2]: do not remove the template variables from the `Management0` interface, otherwise the nodes will not apply the IP address from docker IPAM service.
+[^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
