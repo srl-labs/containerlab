@@ -363,6 +363,18 @@ func (t *Topology) GetNodeRAM(name string) string {
 	return ""
 }
 
+func (t *Topology) ImportEnvs() {
+	t.Defaults.ImportEnvs()
+
+	for _, k := range t.Kinds {
+		k.ImportEnvs()
+	}
+
+	for _, n := range t.Nodes {
+		n.ImportEnvs()
+	}
+}
+
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
 func resolvePath(p string) (string, error) {
 	if p == "" {

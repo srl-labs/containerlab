@@ -197,9 +197,10 @@ func TestTypeInit(t *testing.T) {
 
 func TestEnvInit(t *testing.T) {
 	tests := map[string]struct {
-		got  string
-		node string
-		want map[string]string
+		got    string
+		node   string
+		envvar map[string]string
+		want   map[string]string
 	}{
 		"env_defined_at_node_level": {
 			got:  "test_data/topo1.yml",
@@ -234,10 +235,29 @@ func TestEnvInit(t *testing.T) {
 				"env5": "node",
 			},
 		},
+		"expand_env_variables": {
+			got:  "test_data/topo9.yml",
+			node: "node1",
+			envvar: map[string]string{
+				"CONTAINERLAB_TEST_ENV5": "node",
+			},
+			want: map[string]string{
+				"env1": "node",
+				"env2": "kind",
+				"env3": "global",
+				"env4": "kind",
+				"env5": "node",
+			},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			for k, v := range tc.envvar {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
 			opts := []ClabOption{
 				WithTopoFile(tc.got),
 			}
