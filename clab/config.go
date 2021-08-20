@@ -240,7 +240,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
-	nodeCfg.ResetConfig = c.Config.Topology.GetNodeResetConfig(nodeCfg.ShortName)
+	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
 	// initialize license field
 	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)

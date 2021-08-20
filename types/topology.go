@@ -171,19 +171,15 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	return cfg, nil
 }
 
-func (t *Topology) GetNodeResetConfig(name string) bool {
+func (t *Topology) GetNodeEnforceStartupConfig(name string) bool {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetResetConfig() != nil {
-			return *ndef.GetResetConfig()
+		if ndef.GetEnforceStartupConfig() {
+			return true
 		}
-		kind_reset_config := t.GetKind(t.GetNodeKind(name)).GetResetConfig()
-		if kind_reset_config != nil {
-			return *kind_reset_config
+		if t.GetKind(t.GetNodeKind(name)).GetEnforceStartupConfig() {
+			return true
 		}
-		default_reset_config := t.GetDefaults().GetResetConfig()
-		if default_reset_config != nil {
-			return *default_reset_config
-		}
+		return t.GetDefaults().GetEnforceStartupConfig()
 	}
 	return false
 }
