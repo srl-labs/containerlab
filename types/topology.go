@@ -171,6 +171,19 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	return cfg, nil
 }
 
+func (t *Topology) GetNodeEnforceStartupConfig(name string) bool {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetEnforceStartupConfig() {
+			return true
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetEnforceStartupConfig() {
+			return true
+		}
+		return t.GetDefaults().GetEnforceStartupConfig()
+	}
+	return false
+}
+
 func (t *Topology) GetNodeLicense(name string) (string, error) {
 	var license string
 	if ndef, ok := t.Nodes[name]; ok {
