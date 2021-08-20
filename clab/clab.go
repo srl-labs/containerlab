@@ -165,19 +165,17 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map
 		}
 		dynIPNodes[name] = n
 	}
-	log.Debug("scheduling nodes with static IPs first...")
-	c.createNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
-	log.Debug("scheduling nodes with dynamic IPs next...")
-	c.createNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
+	if len(staticIPNodes) > 0 {
+		log.Debug("scheduling nodes with static IPs...")
+		c.createNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
+	}
+	if len(dynIPNodes) > 0 {
+		log.Debug("scheduling nodes with dynamic IPs...")
+		c.createNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
+	}
 }
 
 func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node) {
-	numScheduledNodes := len(scheduledNodes)
-	if numScheduledNodes == 0 {
-		return
-	}
-	wg := new(sync.WaitGroup)
-
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
 
@@ -209,9 +207,12 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[
 		}
 	}
 
+	numScheduledNodes := len(scheduledNodes)
 	if numScheduledNodes < maxWorkers {
 		maxWorkers = numScheduledNodes
 	}
+	wg := new(sync.WaitGroup)
+
 	// start concurrent workers
 	wg.Add(int(maxWorkers))
 	// it's safe to not check if all nodes are serial because in that case
