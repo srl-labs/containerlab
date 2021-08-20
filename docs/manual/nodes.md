@@ -60,6 +60,8 @@ Some containerized NOSes require a license to operate or can leverage a license 
 ### startup-config
 For some kinds it's possible to pass a path to a config file that a node will use on start instead of a bare config. Check documentation for a specific kind to see if `startup-config` element is supported.
 
+Note, that if a config file exists in the lab directory for a given node, then it will take preference over the startup config passed with this setting. If it is desired to discard the previously saved config and use the startup config instead, use the `enforce-startup-config` setting or deploy a lab with the [`reconfigure`](../cmd/deploy.md#reconfigure) flag.
+
 ### enforce-startup-config
 By default, containerlab will use the config file that is available in the lab directory for a given node even if the `startup config` parameter points to another file. To make a node to boot with the config set with `startup-config` parameter no matter what, set the `enforce-startup-config` to `true`.
 
