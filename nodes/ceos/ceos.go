@@ -5,16 +5,20 @@
 package ceos
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/scrapli/scrapligo/driver/base"
+	"github.com/scrapli/scrapligo/driver/core"
+	"github.com/scrapli/scrapligo/transport"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -88,7 +92,7 @@ func (s *ceos) Deploy(ctx context.Context) error {
 }
 
 func (s *ceos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
-	log.Debugf("Running postdeploy actions for Arista cEOS '%s' node", s.cfg.ShortName)
+	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", s.cfg.ShortName)
 	return ceosPostDeploy(ctx, s.runtime, s.cfg)
 }
 
@@ -124,12 +128,12 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		if err != nil {
 			return err
 		}
-		tpl := string(c)
+		cfgTemplate = string(c)
+	}
 
-		err = node.GenerateConfig(node.ResStartupConfig, tpl)
-		if err != nil {
-			return err
-		}
+	err := node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
+	if err != nil {
+		return err
 	}
 
 	// sysmac is a system mac that is +1 to Ma0 mac
@@ -142,47 +146,71 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	return nil
 }
 
+// ceosPostDeploy runs postdeploy actions which are required for ceos nodes
 func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
-	// post deploy actions are not needed if a user specified startup config was provided
-	// and it doesn't have templation vars for ipv4 management address
-	if node.StartupConfig != "" {
-		c, err := os.ReadFile(node.StartupConfig)
-		if err != nil {
-			return err
+	// TODO: implement for ctr (containerd)
+	execCmd := "docker"
+	openCmd := []string{"exec", "-it"}
+
+	d, err := core.NewCoreDriver(
+		node.LongName,
+		"arista_eos",
+		base.WithAuthBypass(true),
+		// disable transport timeout
+		base.WithTimeoutTransport(0),
+	)
+	if err != nil {
+		return err
+	}
+
+	t, _ := d.Transport.(*transport.System)
+	t.ExecCmd = execCmd
+	t.OpenCmd = append(openCmd, node.LongName, "Cli")
+
+	fmt.Println(t.ExecCmd, t.OpenCmd)
+
+	transportReady := false
+	for !transportReady {
+		if err := d.Open(); err != nil {
+			log.Debugf("%s - Cli not ready (%s) - waiting.", node.LongName, err)
+			time.Sleep(time.Second * 2)
+			continue
 		}
-		if !bytes.Contains(c, []byte("{{ if .MgmtIPv4Address }}")) {
-			return nil
-		}
-
-		cfgTemplate = string(c)
+		transportReady = true
+		log.Debugf("%s - Cli ready.", node.LongName)
 	}
 
-	// regenerate ceos config since it is now known which IP address docker assigned to this container
-	err := node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
+	cfgs := []string{
+		"interface management 0",
+		"no ip address",
+		"no ipv6 address",
+	}
+
+	// adding ipv4 address to configs
+	if node.MgmtIPv4Address != "" {
+		cfgs = append(cfgs,
+			fmt.Sprintf("ip address %s/%d", node.MgmtIPv4Address, node.MgmtIPv4PrefixLength),
+		)
+	}
+
+	// adding ipv6 address to configs
+	if node.MgmtIPv6Address != "" {
+		cfgs = append(cfgs,
+			fmt.Sprintf("ipv6 address %s/%d", node.MgmtIPv6Address, node.MgmtIPv6PrefixLength),
+		)
+	}
+
+	// add save to startup cmd
+	cfgs = append(cfgs, "wr")
+
+	resp, err := d.SendConfigs(cfgs)
 	if err != nil {
 		return err
+	} else if resp.Failed() {
+		return errors.New("failed CLI configuration")
 	}
 
-	err = r.StopContainer(ctx, node.ContainerID)
-	if err != nil {
-		return err
-	}
-	// remove the netns symlink created during original start
-	// we will re-symlink it later
-	if err := utils.DeleteNetnsSymlink(node.LongName); err != nil {
-		return err
-	}
-
-	err = r.StartContainer(ctx, node.ContainerID)
-	if err != nil {
-		return err
-	}
-	node.NSPath, err = r.GetNSPath(ctx, node.ContainerID)
-	if err != nil {
-		return err
-	}
-
-	return utils.LinkContainerNS(node.NSPath, node.LongName)
+	return err
 }
 
 func (s *ceos) GetImages() map[string]string {
