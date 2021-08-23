@@ -38,7 +38,7 @@ var (
 	//go:embed ceos.cfg
 	cfgTemplate string
 
-	saveCmd = []string{"Cli", "-p", "15", "-c", "copy running flash:conf-saved.conf"}
+	saveCmd = []string{"Cli", "-p", "15", "-c", "wr"}
 )
 
 func init() {
