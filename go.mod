@@ -22,9 +22,10 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210303205135-43e4633e40c1
 	github.com/pkg/errors v0.9.1
-	github.com/scrapli/scrapligo v0.0.0-20210704164516-6c3b4e74cfad
+	github.com/scrapli/scrapligo v0.0.0-20210822185345-c949ba367b79
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
+	github.com/srl-labs/srlinux-scrapli v0.2.0
 	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5
 	github.com/weaveworks/ignite v0.9.1-0.20210705155449-2dbcdd663727
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b

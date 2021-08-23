@@ -279,21 +279,7 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	}
 
 	for _, link := range c.Links {
-		// skip the links of ceos kind
-		// ceos containers need to be restarted in the postdeploy stage, thus their data links
-		// will get recreated after post-deploy stage
-		if !postdeploy {
-			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
-				continue
-			}
-			linksChan <- link
-		} else {
-			// postdeploy stage
-			// create ceos links that were skipped during original links creation
-			if link.A.Node.Kind == "ceos" || link.B.Node.Kind == "ceos" {
-				linksChan <- link
-			}
-		}
+		linksChan <- link
 	}
 	// close channel to terminate the workers
 	close(linksChan)

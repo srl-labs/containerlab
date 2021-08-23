@@ -105,8 +105,7 @@ topology:
 
 ## Features and options
 ### Node configuration
-cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be 
-used as a startup config instead.
+cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) and copy it to the config directory of the node.
@@ -144,7 +143,7 @@ With such topology file containerlab is instructed to take a file `myconfig.conf
 
 It is possible to change the default config which every ceos node will start with with the following steps:
 
-1. Save the [default configuration template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) under some local file name[^2] and add the necessary changes to it
+1. Craft a valid startup configuration file[^2].
 2. Use this file as a startup-config for ceos kind:
     ```
     name: ceos
@@ -167,25 +166,8 @@ It is possible to change the default config which every ceos node will start wit
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
 
-#### Configuration persistency
-
-It is important to understand how configuration persistency behaves when a single lab is going through rounds of `deploy->destroy` actions.
-
-When the lab with cEOS nodes gets deployed for the first time the configuration file is generated with the IPv4/6 address assigned to `Ma0` management interface. These management interface addresses match the IP addresses that docker has assigned to cEOS containers. This makes it possible to have the cEOS nodes to start up with Management interface already correctly addressed.
-
-When a user later configures the nodes during the lab exercise and saves it with `wr mem` or similar, the changes will be written to `startup-config` file of cEOS.
-
-User then may destroy the lab and the config changes will persist on disk, this is done with `destroy` command. During this operation the containers will be destroyed, but their configuration files will still be kept in the lab directory by the path `clab-$labName`.
-
-If a user then desires to start this lab once again it may lead to a problem. Since docker may assign new IP addresses to the cEOS nodes of the lab, the configuration saved on disk may not match those new docker-assigned addresses, and that will result in an incorrect management interface configuration.
-
-To avoid this, and be able to start the nodes with the previously saved configuration, users may do the following:
-
-1. Address the nodes explicitly via [user defined addresses](../network.md#user-defined-addresses). This will instruct docker to use the addresses as specified by a user in a clab file.
-2. Leverage [user defined config](#user-defined-config), if all you need is to have a startup config.
-
 #### Saving configuration
-In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a file by `conf-saved.conf` path in the relevant node directory.
+In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup config file effectively calling the `write` CLI command.
 
 ## Container configuration
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
@@ -246,5 +228,5 @@ As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environ
 Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467). 
 
 [^1]: https://eos.arista.com/ceos-lab-topo/
-[^2]: do not remove the template variables from the `Management0` interface, otherwise the nodes will not apply the IP address from docker IPAM service.
+[^2]: feel free to omit the IP addressing for Management interface, as it will be configured by containerlab when ceos node boots.
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
