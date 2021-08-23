@@ -106,7 +106,7 @@ func (s *ceos) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
 	}
 
-	confPath := s.cfg.LabDir + "/flash/conf-saved.conf"
+	confPath := s.cfg.LabDir + "/flash/startup-config"
 	log.Infof("saved cEOS configuration from %s node to %s\n", s.cfg.ShortName, confPath)
 
 	return nil
