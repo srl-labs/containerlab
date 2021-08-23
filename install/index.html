@@ -50,8 +50,8 @@ bash
 <span class=linenos data-linenos=" 8 "></span>    -w <span class=nv>$CLAB_WORKDIR</span> <span class=se>\</span>
 <span class=linenos data-linenos=" 9 "></span>    -v <span class=nv>$CLAB_WORKDIR</span>:<span class=nv>$CLAB_WORKDIR</span> <span class=se>\</span>
 <span class=linenos data-linenos="10 "></span>    ghcr.io/srl-labs/clab bash
-</code></pre></div> <p>The first command in the snippet above sets the working directory which you intend to use on your Mac OS. The <code>~/clab</code> in the example above expands to <code>/Users/&lt;username&gt;/clab</code> and means that we intent to have our containerlab labs to be stored in this directory.</p> <div class="admonition note"> <p class=admonition-title>Note</p> <ol> <li>It is best to create a directory under the <code>~/some/path</code> unless you know what to do<sup id=fnref:6><a class=footnote-ref href=#fn:6>6</a></sup></li> <li>vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.</li> </ol> </div> <p>When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use <code>containerlab</code> commands right away.</p> <details class=tip><summary>Step by step example</summary><p>Let's imagine I want to run a lab with two SR Linux containers running directly on a Mac OS.</p> <p>First, I need to have Docker Desktop for Mac installed and running.</p> <p>Then I will create a directory under the <code>$HOME</code> path on my mac:</p> <div class=highlight><pre><span></span><code>mkdir -p ~/clab-mac-demo
-</code></pre></div> <p>Then I will create a clab file defining my lab in the newly created directory:</p> <div class=highlight><pre><span></span><code>cat <span class=s>&lt;&lt;EOF &gt; ~/clab-mac-demo/2srl.clab.yml</span>
+</code></pre></div> <p>The first command in the snippet above sets the working directory which you intend to use on your Mac OS. The <code>~/clab</code> in the example above expands to <code>/Users/&lt;username&gt;/clab</code> and means that we intent to have our containerlab labs to be stored in this directory.</p> <div class="admonition note"> <p class=admonition-title>Note</p> <ol> <li>It is best to create a directory under the <code>~/some/path</code> unless you know what to do<sup id=fnref:6><a class=footnote-ref href=#fn:6>6</a></sup></li> <li>vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.</li> </ol> </div> <p>When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use <code>containerlab</code> commands right away.</p> <details class=tip><summary>Step by step example</summary><p>Let's imagine I want to run a lab with two SR Linux containers running directly on a Mac OS.</p> <p>First, I need to have Docker Desktop for Mac installed and running.</p> <p>Then I will create a directory under the <code>$HOME</code> path on my mac:</p> <div class=highlight><pre><span></span><code>mkdir -p ~/clab
+</code></pre></div> <p>Then I will create a clab file defining my lab in the newly created directory:</p> <div class=highlight><pre><span></span><code>cat <span class=s>&lt;&lt;EOF &gt; ~/clab/2srl.clab.yml</span>
 <span class=s>name: 2srl</span>
 
 <span class=s>topology:</span>
@@ -66,7 +66,7 @@ bash
 <span class=s>  links:</span>
 <span class=s>    - endpoints: [&quot;srl1:e1-1&quot;, &quot;srl2:e1-1&quot;]</span>
 <span class=s>EOF</span>
-</code></pre></div> <p>Now when the clab file is there, launch the container and don't forget to use path to the directory you created:</p> <div class=highlight><pre><span></span><code><span class=nv>CLAB_WORKDIR</span><span class=o>=</span>~/clab-mac-demo
+</code></pre></div> <p>Now when the clab file is there, launch the container and don't forget to use path to the directory you created:</p> <div class=highlight><pre><span></span><code><span class=nv>CLAB_WORKDIR</span><span class=o>=</span>~/clab
 
 docker run --rm -it --privileged <span class=se>\</span>
     --network host <span class=se>\</span>
@@ -76,11 +76,11 @@ docker run --rm -it --privileged <span class=se>\</span>
     -w <span class=nv>$CLAB_WORKDIR</span> <span class=se>\</span>
     -v <span class=nv>$CLAB_WORKDIR</span>:<span class=nv>$CLAB_WORKDIR</span> <span class=se>\</span>
     ghcr.io/srl-labs/clab bash
-</code></pre></div> <p>Immediately you will get into the directory inside the container with your lab file available:</p> <div class=highlight><pre><span></span><code>root@docker-desktop:/Users/romandodin/clab-mac-demo# ls
+</code></pre></div> <p>Immediately you will get into the directory inside the container with your lab file available:</p> <div class=highlight><pre><span></span><code>root@docker-desktop:/Users/romandodin/clab# ls
 2srl.clab.yml
-</code></pre></div> <p>Now you can launch the lab, as containerlab is already part of the image: <div class=highlight><pre><span></span><code>root@docker-desktop:/Users/romandodin/clab-mac-demo# clab dep -t 2srl.clab.yml
+</code></pre></div> <p>Now you can launch the lab, as containerlab is already part of the image: <div class=highlight><pre><span></span><code>root@docker-desktop:/Users/romandodin/clab# clab dep -t 2srl.clab.yml
 INFO[0000] Parsing &amp; checking topology file: 2srl.clab.yml 
-INFO[0000] Creating lab directory: /Users/romandodin/clab-mac-demo/clab-2srl 
+INFO[0000] Creating lab directory: /Users/romandodin/clab/clab-2srl 
 INFO[0000] Creating root CA                             
 INFO[0000] Creating docker network: Name=&#39;clab&#39;, IPv4Subnet=&#39;172.20.20.0/24&#39;, IPv6Subnet=&#39;2001:172:20:20::/64&#39;, MTU=&#39;1500&#39; 
 INFO[0000] Creating container: srl1                     
