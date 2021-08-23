@@ -105,8 +105,7 @@ topology:
 
 ## Features and options
 ### Node configuration
-cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be 
-used as a startup config instead.
+cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) and copy it to the config directory of the node.
@@ -168,7 +167,7 @@ It is possible to change the default config which every ceos node will start wit
     ```
 
 #### Saving configuration
-In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup confif file effectively calling the `write` CLI command.
+In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup config file effectively calling the `write` CLI command.
 
 ## Container configuration
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
