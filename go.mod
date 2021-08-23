@@ -25,6 +25,7 @@ require (
 	github.com/scrapli/scrapligo v0.0.0-20210822185345-c949ba367b79
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
+	github.com/srl-labs/srlinux-scrapli v0.2.0
 	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5
 	github.com/weaveworks/ignite v0.9.1-0.20210705155449-2dbcdd663727
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b

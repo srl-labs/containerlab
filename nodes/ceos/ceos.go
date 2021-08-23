@@ -14,11 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/scrapli/scrapligo/driver/base"
-	"github.com/scrapli/scrapligo/driver/core"
-	"github.com/scrapli/scrapligo/transport"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -148,37 +144,12 @@ func createCEOSFiles(node *types.NodeConfig) error {
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes
 func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
-	// TODO: implement for ctr (containerd)
-	execCmd := "docker"
-	openCmd := []string{"exec", "-it"}
-
-	d, err := core.NewCoreDriver(
-		node.LongName,
-		"arista_eos",
-		base.WithAuthBypass(true),
-		// disable transport timeout
-		base.WithTimeoutTransport(0),
-	)
+	d, err := utils.SpawnCLIviaExec("arista_eos", node.LongName)
 	if err != nil {
 		return err
 	}
 
-	t, _ := d.Transport.(*transport.System)
-	t.ExecCmd = execCmd
-	t.OpenCmd = append(openCmd, node.LongName, "Cli")
-
-	fmt.Println(t.ExecCmd, t.OpenCmd)
-
-	transportReady := false
-	for !transportReady {
-		if err := d.Open(); err != nil {
-			log.Debugf("%s - Cli not ready (%s) - waiting.", node.LongName, err)
-			time.Sleep(time.Second * 2)
-			continue
-		}
-		transportReady = true
-		log.Debugf("%s - Cli ready.", node.LongName)
-	}
+	defer d.Close()
 
 	cfgs := []string{
 		"interface management 0",
