@@ -184,6 +184,19 @@ func (t *Topology) GetNodeStartupDelay(name string) uint {
 	return 0
 }
 
+func (t *Topology) GetNodeEnforceStartupConfig(name string) bool {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetEnforceStartupConfig() {
+			return true
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetEnforceStartupConfig() {
+			return true
+		}
+		return t.GetDefaults().GetEnforceStartupConfig()
+	}
+	return false
+}
+
 func (t *Topology) GetNodeLicense(name string) (string, error) {
 	var license string
 	if ndef, ok := t.Nodes[name]; ok {
@@ -361,6 +374,18 @@ func (t *Topology) GetNodeRAM(name string) string {
 		return t.GetDefaults().GetNodeRAM()
 	}
 	return ""
+}
+
+func (t *Topology) ImportEnvs() {
+	t.Defaults.ImportEnvs()
+
+	for _, k := range t.Kinds {
+		k.ImportEnvs()
+	}
+
+	for _, n := range t.Nodes {
+		n.ImportEnvs()
+	}
 }
 
 //resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path

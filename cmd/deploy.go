@@ -131,8 +131,6 @@ var deployCmd = &cobra.Command{
 		for _, n := range c.Nodes {
 			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
 				serialNodes[n.Config().LongName] = struct{}{}
-				// decreasing the num of nodeworkers as they are used for concurrent nodes
-				nodeWorkers = nodeWorkers - 1
 			}
 		}
 
@@ -180,9 +178,6 @@ var deployCmd = &cobra.Command{
 				log.Error(err)
 			}
 		}
-
-		// run links postdeploy creation (ceos links creation)
-		c.CreateLinks(ctx, linkWorkers, true)
 
 		log.Info("Adding containerlab host entries to /etc/hosts file")
 		err = clab.AppendHostsFileEntries(containers, c.Config.Name)

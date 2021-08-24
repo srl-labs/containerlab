@@ -226,6 +226,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
 	dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
 	if nodeCfg.StartupConfig != "" {
+		log.Debugf("GenerateConfig reading startup-config %s", nodeCfg.StartupConfig )
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
