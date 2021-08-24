@@ -214,8 +214,9 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int,
 					log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
-
+				c.m.Lock()
 				node.Config().DeploymentStatus = "created"
+				c.m.Unlock()
 			case <-ctx.Done():
 				return
 			}
@@ -301,10 +302,12 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 			break
 		}
 		for k, link := range linksCopy {
+			c.m.Lock()
 			if link.A.Node.DeploymentStatus == "created" && link.B.Node.DeploymentStatus == "created" {
 				linksChan <- link
 				delete(linksCopy, k)
 			}
+			c.m.Unlock()
 		}
 	}
 
