@@ -28,6 +28,7 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
+	s.cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
 	return nil
 }
 func (s *bridge) Config() *types.NodeConfig                              { return s.cfg }

@@ -308,16 +308,18 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// for which we create an special Node with kind "host"
 	case "host":
 		endpoint.Node = &types.NodeConfig{
-			Kind:      "host",
-			ShortName: "host",
-			NSPath:    hostNSPath,
+			Kind:             "host",
+			ShortName:        "host",
+			NSPath:           hostNSPath,
+			DeploymentStatus: "created",
 		}
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
 		endpoint.Node = &types.NodeConfig{
-			Kind:      "bridge",
-			ShortName: "mgmt-net",
+			Kind:             "bridge",
+			ShortName:        "mgmt-net",
+			DeploymentStatus: "created",
 		}
 	default:
 		c.m.Lock()
