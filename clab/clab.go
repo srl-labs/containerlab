@@ -190,12 +190,11 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[
 				}
 				log.Debugf("Worker %d received node: %+v", i, node.Config())
 
-                                // Apply any startup delay
+				// Apply any startup delay
 				delay := node.Config().StartupDelay
 				if delay > 0 {
-				   log.Infof("Worker %d applying startup delay (%d seconds) for node %q", i, delay, node.Config().ShortName)
-				   time.Sleep( time.Duration(delay) * time.Second )
-				   log.Debugf("Worker %d done with startup delay (%d seconds)", i, delay)
+					log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
+					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
 				// PreDeploy
