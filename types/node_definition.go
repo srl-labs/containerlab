@@ -22,7 +22,6 @@ type NodeDefinition struct {
 	License              string            `yaml:"license,omitempty"`
 	Position             string            `yaml:"position,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
-
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
 	// list of port bindings

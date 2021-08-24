@@ -214,6 +214,8 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int,
 					log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
+
+				node.Config().DeploymentStatus = "created"
 			case <-ctx.Done():
 				return
 			}
@@ -290,18 +292,18 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 		}(i)
 	}
 
-	workingLinks := map[int]*types.Link{}
+	linksCopy := map[int]*types.Link{}
 	for k, v := range c.Links {
-		workingLinks[k] = v
+		linksCopy[k] = v
 	}
 	for {
-		if len(workingLinks) == 0 {
+		if len(linksCopy) == 0 {
 			break
 		}
-		for k, link := range workingLinks {
-			if link.A.Node.NSPath != "" && link.B.Node.NSPath != "" {
+		for k, link := range linksCopy {
+			if link.A.Node.DeploymentStatus == "created" && link.B.Node.DeploymentStatus == "created" {
 				linksChan <- link
-				delete(workingLinks, k)
+				delete(linksCopy, k)
 			}
 		}
 	}

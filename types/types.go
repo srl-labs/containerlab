@@ -101,7 +101,8 @@ type NodeConfig struct {
 	// Configured container runtime
 	Runtime string
 	// Resource requirements
-	CPU, RAM string
+	CPU, RAM         string
+	DeploymentStatus string // status that is set by containerlab to indicate deployment stage
 }
 
 // GenerateConfig generates configuration for the nodes
