@@ -86,7 +86,7 @@ func (s *vrVMX) Delete(ctx context.Context) error {
 func (s *vrVMX) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][0],
+		nodes.DefaultCredentials[s.cfg.Kind][1],
 	)
 
 	if err != nil {
