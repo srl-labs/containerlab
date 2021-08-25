@@ -154,7 +154,11 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntime]
 }
 
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map[string]struct{}) {
+// CreateNodes will schedule nodes creation
+// returns waitgroups for nodes with static and dynamic IPs,
+// since static nodes are scheduled first
+func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
+	serialNodes map[string]struct{}) (*sync.WaitGroup, *sync.WaitGroup) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -165,17 +169,21 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, serialNodes map
 		}
 		dynIPNodes[name] = n
 	}
+	var staticIPWg *sync.WaitGroup
+	var dynIPWg *sync.WaitGroup
 	if len(staticIPNodes) > 0 {
 		log.Debug("scheduling nodes with static IPs...")
-		c.createNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
+		staticIPWg = c.createNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
 	}
 	if len(dynIPNodes) > 0 {
 		log.Debug("scheduling nodes with dynamic IPs...")
-		c.createNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
+		dynIPWg = c.createNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
 	}
+	return staticIPWg, dynIPWg
 }
 
-func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node) {
+func (c *CLab) createNodes(ctx context.Context, maxWorkers int,
+	serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
 
@@ -189,6 +197,14 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[
 					return
 				}
 				log.Debugf("Worker %d received node: %+v", i, node.Config())
+
+				// Apply any startup delay
+				delay := node.Config().StartupDelay
+				if delay > 0 {
+					log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
+					time.Sleep(time.Duration(delay) * time.Second)
+				}
+
 				// PreDeploy
 				err := node.PreDeploy(c.Config.Name, c.Dir.LabCA, c.Dir.LabCARoot)
 				if err != nil {
@@ -201,6 +217,12 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[
 					log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
+
+				// set deployment status of a node to created to indicate that it finished creating
+				// this status is checked during link creation to only schedule link creation if both nodes are ready
+				c.m.Lock()
+				node.Config().DeploymentStatus = "created"
+				c.m.Unlock()
 			case <-ctx.Done():
 				return
 			}
@@ -243,8 +265,7 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int, serialNodes map[
 	close(concurrentChan)
 	close(serialChan)
 
-	// wait for all workers to finish
-	wg.Wait()
+	return wg
 }
 
 // CreateLinks creates links using the specified number of workers
@@ -278,9 +299,26 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 		}(i)
 	}
 
-	for _, link := range c.Links {
-		linksChan <- link
+	// create a copy of links map to loop over
+	// so that we can wait till all the nodes are ready before scheduling a link
+	linksCopy := map[int]*types.Link{}
+	for k, v := range c.Links {
+		linksCopy[k] = v
 	}
+	for {
+		if len(linksCopy) == 0 {
+			break
+		}
+		for k, link := range linksCopy {
+			c.m.Lock()
+			if link.A.Node.DeploymentStatus == "created" && link.B.Node.DeploymentStatus == "created" {
+				linksChan <- link
+				delete(linksCopy, k)
+			}
+			c.m.Unlock()
+		}
+	}
+
 	// close channel to terminate the workers
 	close(linksChan)
 	// wait for all workers to finish
