@@ -61,6 +61,7 @@ type NodeConfig struct {
 	Group                string
 	Kind                 string
 	StartupConfig        string // path to config template file that is used for startup config generation
+	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
 	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
 	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
 	Config               *ConfigDispatcher
@@ -100,7 +101,8 @@ type NodeConfig struct {
 	// Configured container runtime
 	Runtime string
 	// Resource requirements
-	CPU, RAM string
+	CPU, RAM         string
+	DeploymentStatus string // status that is set by containerlab to indicate deployment stage
 }
 
 // GenerateConfig generates configuration for the nodes

@@ -134,8 +134,15 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		c.CreateNodes(ctx, nodeWorkers, serialNodes)
+		nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
 		c.CreateLinks(ctx, linkWorkers, false)
+		if nodesStaticWg != nil {
+			nodesStaticWg.Wait()
+		}
+		if nodesDynWg != nil {
+			nodesDynWg.Wait()
+		}
+
 		log.Debug("containers created, retrieving state and IP addresses...")
 
 		// Building list of generic containers

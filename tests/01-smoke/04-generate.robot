@@ -8,12 +8,14 @@ ${runtime}        docker
 
 *** Test Cases ***
 Deploy ${lab-name} lab with generate command
+    Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} generate --name ${lab-name} --kind linux --image ghcr.io/hellt/network-multitool --nodes 2,1,1 --deploy
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Verify nodes
+    Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} inspect --name ${lab-name}
     Log    ${output}
@@ -25,6 +27,7 @@ Verify nodes
 
 *** Keywords ***
 Cleanup
+    Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} destroy -t ${lab-name}.clab.yml --cleanup
     Log    ${output}

@@ -231,6 +231,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		RAM:             c.Config.Topology.GetNodeRAM(nodeName),
+		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
@@ -240,6 +241,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
+
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
 	// initialize license field
@@ -306,16 +308,18 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// for which we create an special Node with kind "host"
 	case "host":
 		endpoint.Node = &types.NodeConfig{
-			Kind:      "host",
-			ShortName: "host",
-			NSPath:    hostNSPath,
+			Kind:             "host",
+			ShortName:        "host",
+			NSPath:           hostNSPath,
+			DeploymentStatus: "created",
 		}
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
 		endpoint.Node = &types.NodeConfig{
-			Kind:      "bridge",
-			ShortName: "mgmt-net",
+			Kind:             "bridge",
+			ShortName:        "mgmt-net",
+			DeploymentStatus: "created",
 		}
 	default:
 		c.m.Lock()
