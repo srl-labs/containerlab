@@ -154,6 +154,9 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntime]
 }
 
+// CreateNodes will schedule nodes creation
+// returns waitgroups for nodes with static and dynamic IPs,
+// since static nodes are scheduled first
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{}) (*sync.WaitGroup, *sync.WaitGroup) {
 	staticIPNodes := make(map[string]nodes.Node)
@@ -214,6 +217,9 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int,
 					log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
+
+				// set deployment status of a node to created to indicate that it finished creating
+				// this status is checked during link creation to only schedule link creation if both nodes are ready
 				c.m.Lock()
 				node.Config().DeploymentStatus = "created"
 				c.m.Unlock()
@@ -293,6 +299,8 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 		}(i)
 	}
 
+	// create a copy of links map to loop over
+	// so that we can wait till all the nodes are ready before scheduling a link
 	linksCopy := map[int]*types.Link{}
 	for k, v := range c.Links {
 		linksCopy[k] = v
