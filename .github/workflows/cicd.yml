@@ -80,7 +80,7 @@ jobs:
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
@@ -116,7 +116,7 @@ jobs:
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
@@ -160,7 +160,7 @@ jobs:
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
