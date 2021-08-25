@@ -42,7 +42,7 @@ jobs:
               - "README.md"
               - '.github/workflows/cicd.yml'
 
-  unit-test:
+  build-containerlab:
     runs-on: ubuntu-20.04
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
@@ -58,6 +58,16 @@ jobs:
         with:
           name: containerlab
           path: containerlab
+
+  unit-test:
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
       - run: go test -cover ./...
       - name: Staticcheck
         run: |
@@ -71,6 +81,7 @@ jobs:
         runtime: ["docker", "containerd"]
     needs:
       - unit-test
+      - build-containerlab
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -107,6 +118,7 @@ jobs:
           # - "containerd"
     needs:
       - unit-test
+      - build-containerlab
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -151,6 +163,7 @@ jobs:
           # - "containerd"
     needs:
       - unit-test
+      - build-containerlab
     steps:
       - name: Checkout
         uses: actions/checkout@v2
