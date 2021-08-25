@@ -54,10 +54,10 @@ jobs:
       - name: Build containerlab
         run: go build
       # store clab binary as artifact
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@latest
         with:
           name: containerlab
-          path: ./containerlab
+          path: containerlab
       - run: go test -cover ./...
       - name: Staticcheck
         run: |
@@ -76,10 +76,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@latest
         with:
           name: containerlab
-          path: /usr/bin/containerlab
+          path: /usr/bin
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
