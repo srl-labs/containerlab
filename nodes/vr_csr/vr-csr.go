@@ -82,7 +82,7 @@ func (s *vrCsr) Delete(ctx context.Context) error {
 func (s *vrCsr) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][0],
+		nodes.DefaultCredentials[s.cfg.Kind][1],
 	)
 
 	if err != nil {
