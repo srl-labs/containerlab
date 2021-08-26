@@ -6,7 +6,7 @@
 {{ range .clab_links }}
     {{ expect .port "^\\d+/\\d/" }}
     {{ expect .clab_link_name "string" }}
-    {{ expect .ip "ip" }}
+    {{ expect .clab_link_ip "ip" }}
     {{ optional .vlan "0-4096" }}
     {{ optional .isis_iid "0-31" }}
     {{ optional .sid_idx "0-999" }}
@@ -62,8 +62,8 @@
 /configure port {{ .port }} admin-state enable
 
 /configure router interface {{ .clab_link_name }}
-    ipv4 primary address {{ ip .ip }}
-    ipv4 primary prefix-length {{ ipmask .ip }}
+    ipv4 primary address {{ ip .clab_link_ip }}
+    ipv4 primary prefix-length {{ ipmask .clab_link_ip }}
     port {{ .port }}:{{ default 10 .vlan }}
 
 {{- if .isis_iid }}
