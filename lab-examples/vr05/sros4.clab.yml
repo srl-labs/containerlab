@@ -5,8 +5,9 @@ topology:
     kind: vr-sros
     image: registry.srlinux.dev/pub/vr-sros:21.2.R1
     license: ~/license/sros.txt
-    labels:
-      isis_iid: 0
+    config:
+      vars:
+        isis_iid: 1
   nodes:
     sr1:
       config:
@@ -34,17 +35,17 @@ topology:
         port: [1/1/c1/1, 1/1/c2/1]
         clab_link_ip: 1.1.1.2/30
         vlan: [99, 99]
-        isis_iid: 0
+        isis_iid: 1
     - endpoints: [sr2:eth1, sr3:eth2]
       vars:
         port: [1/1/c1/1, 1/1/c2/1]
         vlan: 98
-        isis_iid: 0
+        isis_iid: 1
     - endpoints: [sr3:eth1, sr4:eth2]
       vars:
         port: [1/1/c1/1, 1/1/c2/1]
-        isis_iid: 0
+        isis_iid: 1
     - endpoints: [sr4:eth1, sr1:eth2]
       vars:
         port: [1/1/c1/1, 1/1/c2/1]
-        isis_iid: 0
+        isis_iid: 1
