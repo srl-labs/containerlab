@@ -33,3 +33,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	inet.af/netaddr v0.0.0-20210521171555-9ee55bc0c50b
 )
+
+replace github.com/srl-labs/srlinux-scrapli => github.com/carlmontanari/srlinux-scrapli 1ffa6ed435983b1b34ef0b97fea3430427cadb01
