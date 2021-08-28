@@ -49,7 +49,7 @@ var configTemplateCmd = &cobra.Command{
 		}
 
 		for _, n := range configFilter {
-			allConfig[n].Print(true, false)
+			allConfig[n].Print(false, true)
 		}
 
 		return nil
