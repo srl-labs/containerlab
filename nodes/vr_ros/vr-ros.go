@@ -59,7 +59,7 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrRos) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrRos) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrRos) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return createVrROSFiles(s.cfg)
 }
@@ -75,7 +75,7 @@ func (s *vrRos) GetImages() map[string]string {
 	}
 }
 
-func (s *vrRos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (*vrRos) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -87,7 +87,7 @@ func (s *vrRos) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrRos) SaveConfig(ctx context.Context) error {
+func (*vrRos) SaveConfig(_ context.Context) error {
 	return nil
 }
 
