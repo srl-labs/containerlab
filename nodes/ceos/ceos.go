@@ -177,7 +177,7 @@ func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, node *types
 	resp, err := d.SendConfigs(cfgs)
 	if err != nil {
 		return err
-	} else if resp.Failed() {
+	} else if resp.Failed != nil {
 		return errors.New("failed CLI configuration")
 	}
 
