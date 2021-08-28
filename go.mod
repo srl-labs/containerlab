@@ -34,4 +34,4 @@ require (
 	inet.af/netaddr v0.0.0-20210521171555-9ee55bc0c50b
 )
 
-replace github.com/srl-labs/srlinux-scrapli => github.com/carlmontanari/srlinux-scrapli 1ffa6ed435983b1b34ef0b97fea3430427cadb01
+replace github.com/srl-labs/srlinux-scrapli => github.com/carlmontanari/srlinux-scrapli v0.2.1-0.20210828230847-1ffa6ed43598
