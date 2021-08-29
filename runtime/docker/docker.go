@@ -64,7 +64,7 @@ func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 func (c *DockerRuntime) WithKeepMgmtNet() {
 	c.config.KeepMgmtNet = true
 }
-func (c *DockerRuntime) GetName() string               { return runtimeName }
+func (*DockerRuntime) GetName() string                 { return runtimeName }
 func (c *DockerRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
@@ -264,6 +264,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
 		NetworkMode:  container.NetworkMode(c.Mgmt.Network),
+		ExtraHosts:   node.ExtraHosts, // add static /etc/hosts entries
 	}
 
 	containerNetworkingConfig := &network.NetworkingConfig{}
@@ -435,7 +436,7 @@ func (c *DockerRuntime) GetContainer(ctx context.Context, containerID string) (*
 	return &ctrs[0], nil
 }
 
-func (c *DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters.Args {
+func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters.Args {
 	filter := filters.NewArgs()
 	for _, filterentry := range gfilters {
 		filterstring := filterentry.Field
@@ -533,8 +534,8 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 	return outBuf.Bytes(), errBuf.Bytes(), nil
 }
 
-// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
-func (c *DockerRuntime) ExecNotWait(ctx context.Context, id string, cmd []string) error {
+// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
+func (c *DockerRuntime) ExecNotWait(_ context.Context, id string, cmd []string) error {
 	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: cmd}
 	respID, err := c.Client.ContainerExecCreate(context.Background(), id, execConfig)
 	if err != nil {
