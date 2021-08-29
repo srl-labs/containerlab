@@ -132,8 +132,6 @@ var deployCmd = &cobra.Command{
 		for _, n := range c.Nodes {
 			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
 				serialNodes[n.Config().LongName] = struct{}{}
-				// decreasing the num of nodeworkers as they are used for concurrent nodes
-				nodeWorkers = nodeWorkers - 1
 			}
 
 			// add extra hosts out of statically configured nodes IPv4/6 addresses
@@ -149,8 +147,15 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		c.CreateNodes(ctx, nodeWorkers, serialNodes)
+		nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
 		c.CreateLinks(ctx, linkWorkers, false)
+		if nodesStaticWg != nil {
+			nodesStaticWg.Wait()
+		}
+		if nodesDynWg != nil {
+			nodesDynWg.Wait()
+		}
+
 		log.Debug("containers created, retrieving state and IP addresses...")
 
 		// Building list of generic containers
@@ -193,9 +198,6 @@ var deployCmd = &cobra.Command{
 				log.Error(err)
 			}
 		}
-
-		// run links postdeploy creation (ceos links creation)
-		c.CreateLinks(ctx, linkWorkers, true)
 
 		log.Info("Adding containerlab host entries to /etc/hosts file")
 		err = clab.AppendHostsFileEntries(containers, c.Config.Name)

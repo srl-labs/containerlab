@@ -53,30 +53,31 @@ type MgmtNet struct {
 
 // NodeConfig is a struct that contains the information of a container element
 type NodeConfig struct {
-	ShortName        string // name of the Node inside topology YAML
-	LongName         string // containerlab-prefixed unique container name
-	Fqdn             string
-	LabDir           string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index            int
-	Group            string
-	Kind             string
-	StartupConfig    string // path to config template file that is used for startup config generation
-	ResStartupConfig string // path to config file that is actually mounted to the container and is a result of templation
-	Config           *ConfigDispatcher
-	ResConfig        string // path to config file that is actually mounted to the container and is a result of templation
-	NodeType         string
-	Position         string
-	License          string
-	Image            string
-	Sysctls          map[string]string
-	User             string
-	Entrypoint       string
-	Cmd              string
-	Env              map[string]string
-	Binds            []string    // Bind mounts strings (src:dest:options)
-	ExtraHosts       []string    // Extra /etc/hosts entries for all nodes
-	PortBindings     nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet          nat.PortSet // PortSet define the ports that should be exposed on a container
+	ShortName            string // name of the Node inside topology YAML
+	LongName             string // containerlab-prefixed unique container name
+	Fqdn                 string
+	LabDir               string // LabDir is a directory related to the node, it contains config items and/or other persistent state
+	Index                int
+	Group                string
+	Kind                 string
+	StartupConfig        string // path to config template file that is used for startup config generation
+	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
+	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
+	Config               *ConfigDispatcher
+	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
+	NodeType             string
+	Position             string
+	License              string
+	Image                string
+	Sysctls              map[string]string
+	User                 string
+	Entrypoint           string
+	Cmd                  string
+	Env                  map[string]string
+	Binds                []string    // Bind mounts strings (src:dest:options)
+	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
+	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface
@@ -91,6 +92,7 @@ type NodeConfig struct {
 	TLSAnchor            string
 	NSPath               string   // network namespace path for this node
 	Publish              []string //list of ports to publish with mysocketctl
+	ExtraHosts           []string // Extra /etc/hosts entries for all nodes
 	// container labels
 	Labels map[string]string
 	// Slice of pointers to local endpoints
@@ -100,18 +102,22 @@ type NodeConfig struct {
 	// Configured container runtime
 	Runtime string
 	// Resource requirements
-	CPU, RAM string
+	CPU, RAM         string
+	DeploymentStatus string // status that is set by containerlab to indicate deployment stage
 }
 
 // GenerateConfig generates configuration for the nodes
-// out of the templ based on the node configuration and saves the result to dst
+// out of the template based on the node configuration and saves the result to dst
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
-        // if startup config is not set, and the config file is already present in the node dir
-	// we do not regenerate the config, since we will take what was saved from the previous run
-	// in other words, the startup config set by a user takes preference and will trigger config generation
-	if utils.FileExists(dst) && (node.StartupConfig == "") {
-		log.Debugf("config file '%s' for node '%s' already exists and will not be generated", dst, node.ShortName)
+
+	// If the config file is already present in the node dir
+	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
+	// this will persist the changes that users make to a running config when booted from some startup config
+	if utils.FileExists(dst) && (node.StartupConfig == "" || !node.EnforceStartupConfig) {
+		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, node.ShortName)
 		return nil
+	} else if node.EnforceStartupConfig {
+		log.Infof("Startup config for '%s' node enforced: '%s'", node.ShortName, dst)
 	}
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
 	tpl, err := template.New(filepath.Base(node.StartupConfig)).Parse(templ)

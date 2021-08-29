@@ -135,13 +135,13 @@ When the container is started, you will have a bash shell opened with the direct
     Then I will create a directory under the `$HOME` path on my mac:
 
     ```
-    mkdir -p ~/clab-mac-demo
+    mkdir -p ~/clab
     ```
 
     Then I will create a clab file defining my lab in the newly created directory:
 
     ```bash
-    cat <<EOF > ~/clab-mac-demo/2srl.clab.yml
+    cat <<EOF > ~/clab/2srl.clab.yml
     name: 2srl
 
     topology:
@@ -161,7 +161,7 @@ When the container is started, you will have a bash shell opened with the direct
     Now when the clab file is there, launch the container and don't forget to use path to the directory you created:
 
     ```bash
-    CLAB_WORKDIR=~/clab-mac-demo
+    CLAB_WORKDIR=~/clab
 
     docker run --rm -it --privileged \
         --network host \
@@ -176,15 +176,15 @@ When the container is started, you will have a bash shell opened with the direct
     Immediately you will get into the directory inside the container with your lab file available:
 
     ```
-    root@docker-desktop:/Users/romandodin/clab-mac-demo# ls
+    root@docker-desktop:/Users/romandodin/clab# ls
     2srl.clab.yml
     ```
 
     Now you can launch the lab, as containerlab is already part of the image:
     ```
-    root@docker-desktop:/Users/romandodin/clab-mac-demo# clab dep -t 2srl.clab.yml
+    root@docker-desktop:/Users/romandodin/clab# clab dep -t 2srl.clab.yml
     INFO[0000] Parsing & checking topology file: 2srl.clab.yml 
-    INFO[0000] Creating lab directory: /Users/romandodin/clab-mac-demo/clab-2srl 
+    INFO[0000] Creating lab directory: /Users/romandodin/clab/clab-2srl 
     INFO[0000] Creating root CA                             
     INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500' 
     INFO[0000] Creating container: srl1                     

@@ -60,6 +60,16 @@ Some containerized NOSes require a license to operate or can leverage a license 
 ### startup-config
 For some kinds it's possible to pass a path to a config file that a node will use on start instead of a bare config. Check documentation for a specific kind to see if `startup-config` element is supported.
 
+Note, that if a config file exists in the lab directory for a given node, then it will take preference over the startup config passed with this setting. If it is desired to discard the previously saved config and use the startup config instead, use the `enforce-startup-config` setting or deploy a lab with the [`reconfigure`](../cmd/deploy.md#reconfigure) flag.
+
+### enforce-startup-config
+By default, containerlab will use the config file that is available in the lab directory for a given node even if the `startup config` parameter points to another file. To make a node to boot with the config set with `startup-config` parameter no matter what, set the `enforce-startup-config` to `true`.
+
+## startup-delay
+To make certain node(s) to boot/start later than others use the `startup-delay` config element that accepts the delay amount in seconds.
+
+This setting can be applied on node/kind/default levels.
+
 ### binds
 In order to expose host files to the containerized nodes a user can leverage the bind mount capability.
 
@@ -169,7 +179,13 @@ topology:
     node1:
       env:
         ENV1: 1 # ENV1=1 will be set for node1
+        # env vars expansion is available, for example
+        # ENV2 variable will be set to the value of the environment variable SOME_ENV
+        # that is defined for the shell you run containerlab with
+        ENV2: ${SOME_ENV} 
 ```
+
+You can also specify a magic ENV VAR - `__IMPORT_ENVS: true` - which will import all environment variables defined in your shell to the relevant topology level.
 
 ### user
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.

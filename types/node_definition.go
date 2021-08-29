@@ -1,16 +1,27 @@
 package types
 
+import (
+	"os"
+	"strings"
+)
+
+const (
+	importEnvsKey = "__IMPORT_ENVS"
+)
+
 // NodeDefinition represents a configuration a given node can have in the lab definition file
 type NodeDefinition struct {
-	Kind          string            `yaml:"kind,omitempty"`
-	Group         string            `yaml:"group,omitempty"`
-	Type          string            `yaml:"type,omitempty"`
-	StartupConfig string            `yaml:"startup-config,omitempty"`
-	Config        *ConfigDispatcher `yaml:"config,omitempty"`
-	Image         string            `yaml:"image,omitempty"`
-	License       string            `yaml:"license,omitempty"`
-	Position      string            `yaml:"position,omitempty"`
-	Cmd           string            `yaml:"cmd,omitempty"`
+	Kind                 string            `yaml:"kind,omitempty"`
+	Group                string            `yaml:"group,omitempty"`
+	Type                 string            `yaml:"type,omitempty"`
+	StartupConfig        string            `yaml:"startup-config,omitempty"`
+	StartupDelay         uint              `yaml:"startup-delay,omitempty"`
+	EnforceStartupConfig bool              `yaml:"enforce-startup-config,omitempty"`
+	Config               *ConfigDispatcher `yaml:"config,omitempty"`
+	Image                string            `yaml:"image,omitempty"`
+	License              string            `yaml:"license,omitempty"`
+	Position             string            `yaml:"position,omitempty"`
+	Cmd                  string            `yaml:"cmd,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
 	// list of port bindings
@@ -66,6 +77,21 @@ func (n *NodeDefinition) GetStartupConfig() string {
 		return ""
 	}
 	return n.StartupConfig
+}
+
+func (n *NodeDefinition) GetStartupDelay() uint {
+	if n == nil {
+		return 0
+	}
+	return n.StartupDelay
+}
+
+func (n *NodeDefinition) GetEnforceStartupConfig() bool {
+	if n == nil {
+		return false
+	}
+	return n.EnforceStartupConfig
+
 }
 
 func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
@@ -199,4 +225,29 @@ func (n *NodeDefinition) GetNodeRAM() string {
 		return ""
 	}
 	return n.RAM
+}
+
+// ImportEnvs imports all environment variales defined in the shell
+// if __IMPORT_ENVS is set to true
+func (n *NodeDefinition) ImportEnvs() {
+	var importEnvs bool
+
+	for k, v := range n.Env {
+		if k == importEnvsKey && v == "true" {
+			importEnvs = true
+		}
+	}
+
+	if !importEnvs {
+		return
+	}
+
+	for _, e := range os.Environ() {
+		kv := strings.Split(e, "=")
+		if _, exists := n.Env[kv[0]]; exists {
+			continue
+		} else {
+			n.Env[kv[0]] = kv[1]
+		}
+	}
 }

@@ -1,0 +1,31 @@
+name: topo4
+topology:
+  defaults:
+    license: test_data/default.lic
+    binds:
+      - test_data/default.lic:/dst
+    env:
+      env1: global
+      env2: global
+      env3: global
+    user: customglobal
+  kinds:
+    srl:
+      license: test_data/kind.lic
+      binds:
+        - test_data/kind.lic:/dst
+      env:
+        env2: kind
+        env4: kind
+      user: customkind
+  nodes:
+    node1:
+      kind: srl
+      type: ixr6
+      license: test_data/node1.lic
+      binds:
+        - test_data/node1.lic:/dst
+      env:
+        env1: node
+        env5: ${CONTAINERLAB_TEST_ENV5}
+      user: customnode

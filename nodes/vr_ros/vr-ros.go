@@ -7,7 +7,11 @@ package vr_ros
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -40,6 +44,8 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
 
+	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, "ftpboot"), ":/ftpboot"))
+
 	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
 		s.cfg.Binds = append(s.cfg.Binds, "/dev:/dev")
@@ -50,11 +56,12 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	return nil
 }
+
 func (s *vrRos) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrRos) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrRos) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return nil
+	return createVrROSFiles(s.cfg)
 }
 
 func (s *vrRos) Deploy(ctx context.Context) error {
@@ -68,7 +75,7 @@ func (s *vrRos) GetImages() map[string]string {
 	}
 }
 
-func (s *vrRos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (*vrRos) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -80,6 +87,28 @@ func (s *vrRos) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrRos) SaveConfig(ctx context.Context) error {
+func (*vrRos) SaveConfig(_ context.Context) error {
+	return nil
+}
+
+func createVrROSFiles(node *types.NodeConfig) error {
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	utils.CreateDirectory(path.Join(node.LabDir, "ftpboot"), 0777)
+
+	if node.StartupConfig != "" {
+		cfg := filepath.Join(node.LabDir, "ftpboot", "config.auto.rsc")
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(cfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+		}
+	}
 	return nil
 }

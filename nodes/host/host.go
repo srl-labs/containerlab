@@ -28,6 +28,7 @@ func (s *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
+
 	return nil
 }
 func (s *host) Config() *types.NodeConfig { return s.cfg }
