@@ -166,7 +166,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		log.Debug("enriching nodes with IP information...")
-		enrichNodes(containers, c.Nodes, c.Config.Mgmt.Network)
+		enrichNodes(containers, c.Nodes)
 
 		if err := c.GenerateInventories(); err != nil {
 			return err
@@ -239,7 +239,7 @@ func setFlags(conf *clab.Config) {
 	}
 }
 
-func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node, mgmtNet string) {
+func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
 		if node, ok := nodesMap[name]; ok {
