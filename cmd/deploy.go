@@ -240,7 +240,6 @@ func setFlags(conf *clab.Config) {
 }
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node, mgmtNet string) {
-
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
 		if node, ok := nodesMap[name]; ok {
