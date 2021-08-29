@@ -128,7 +128,7 @@ var deployCmd = &cobra.Command{
 
 		// a set of workers that do not support concurrency
 		serialNodes := make(map[string]struct{})
-		host_entries := make([]string, 0, len(c.Nodes))
+
 		for _, n := range c.Nodes {
 			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
 				serialNodes[n.Config().LongName] = struct{}{}
@@ -136,20 +136,17 @@ var deployCmd = &cobra.Command{
 				nodeWorkers = nodeWorkers - 1
 			}
 
-      // Build a map of nodes with static IPs, add to /etc/hosts
+			// add extra hosts out of statically configured nodes IPv4/6 addresses
+			// to add to /etc/hosts of the nodes
 			if n.Config().MgmtIPv4Address != "" {
-			   log.Infof("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address )
-				 host_entries = append( host_entries, n.Config().ShortName + ":" + n.Config().MgmtIPv4Address )
+				log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address)
+				n.Config().ExtraHosts = append(n.Config().ExtraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
 			}
-			if n.Config().MgmtIPv6Address != "" {
-				 log.Infof("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address )
-				 host_entries = append( host_entries, n.Config().ShortName + ":" + n.Config().MgmtIPv6Address )
-			}
-		}
 
-    // populate each node, bit cumbersome
-    for _, n := range c.Nodes {
-			n.Config().ExtraHosts = host_entries
+			if n.Config().MgmtIPv6Address != "" {
+				log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address)
+				n.Config().ExtraHosts = append(n.Config().ExtraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
+			}
 		}
 
 		c.CreateNodes(ctx, nodeWorkers, serialNodes)
