@@ -129,22 +129,28 @@ var deployCmd = &cobra.Command{
 		// a set of workers that do not support concurrency
 		serialNodes := make(map[string]struct{})
 
+		// extraHosts holds host entries for nodes with static IPv4/6 addresses
+		// these entries will be used by container runtime to populate /etc/hosts file
+		extraHosts := make([]string, 0, len(c.Nodes))
+
 		for _, n := range c.Nodes {
 			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
 				serialNodes[n.Config().LongName] = struct{}{}
 			}
 
-			// add extra hosts out of statically configured nodes IPv4/6 addresses
-			// to add to /etc/hosts of the nodes
 			if n.Config().MgmtIPv4Address != "" {
 				log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address)
-				n.Config().ExtraHosts = append(n.Config().ExtraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
+				extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
 			}
 
 			if n.Config().MgmtIPv6Address != "" {
 				log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address)
-				n.Config().ExtraHosts = append(n.Config().ExtraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
+				extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
 			}
+		}
+
+		for _, n := range c.Nodes {
+			n.Config().ExtraHosts = extraHosts
 		}
 
 		nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
