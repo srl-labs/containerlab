@@ -205,7 +205,7 @@ func FilterFromLabelStrings(labels []string) []*GenericFilter {
 			gf.Field = strings.TrimSpace(subs[0])
 			gf.Match = strings.TrimSpace(subs[1])
 		} else {
-			gf.Match = "exists"
+			gf.Operator = "exists"
 			gf.Field = strings.TrimSpace(s)
 		}
 
