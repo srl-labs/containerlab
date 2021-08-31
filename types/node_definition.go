@@ -254,8 +254,8 @@ func (n *NodeDefinition) ImportEnvs() {
 		kv := strings.Split(e, "=")
 		if _, exists := n.Env[kv[0]]; exists {
 			continue
-		} else {
-			n.Env[kv[0]] = kv[1]
 		}
+
+		n.Env[kv[0]] = kv[1]
 	}
 }
