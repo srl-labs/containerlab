@@ -272,6 +272,19 @@ func (t *Topology) GetNodePosition(name string) string {
 	return ""
 }
 
+func (t *Topology) GetNodeEntrypoint(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetEntrypoint() != "" {
+			return ndef.GetEntrypoint()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetEntrypoint() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetEntrypoint()
+		}
+		return t.GetDefaults().GetEntrypoint()
+	}
+	return ""
+}
+
 func (t *Topology) GetNodeCmd(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if ndef.GetCmd() != "" {

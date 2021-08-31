@@ -245,8 +245,18 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		return nil, err
 	}
 
+	var entrypoint []string
+	if node.Entrypoint != "" {
+		entrypoint, err = shlex.Split(node.Entrypoint)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
 	containerConfig := &container.Config{
 		Image:        node.Image,
+		Entrypoint:   entrypoint,
 		Cmd:          cmd,
 		Env:          utils.ConvertEnvs(node.Env),
 		AttachStdout: true,
