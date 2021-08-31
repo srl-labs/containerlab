@@ -202,6 +202,21 @@ topology:
       user: clab # clab user will be used for node1
 ```
 
+### entrypoint
+Changing the entrypoint of the container is done with `entrypoint` config option. It accepts the "shell" form and can be set on all levels.
+
+```yaml
+topology:
+  defaults:
+    entrypoint: entrypoint.sh
+  kinds:
+    srl:
+      cmd: entrypoint.sh
+  nodes:
+    node1:
+      cmd: entrypoint.sh
+```
+
 ### cmd
 It is possible to set/override the command of the container image with `cmd` configuration option. It accepts the "shell" form and can be set on all levels.
 

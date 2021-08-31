@@ -21,6 +21,7 @@ type NodeDefinition struct {
 	Image                string            `yaml:"image,omitempty"`
 	License              string            `yaml:"license,omitempty"`
 	Position             string            `yaml:"position,omitempty"`
+	Entrypoint           string            `yaml:"entrypoint,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
@@ -120,6 +121,13 @@ func (n *NodeDefinition) GetPostion() string {
 		return ""
 	}
 	return n.Position
+}
+
+func (n *NodeDefinition) GetEntrypoint() string {
+	if n == nil {
+		return ""
+	}
+	return n.Entrypoint
 }
 
 func (n *NodeDefinition) GetCmd() string {
