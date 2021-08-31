@@ -74,6 +74,7 @@ type NodeConfig struct {
 	User                 string
 	Entrypoint           string
 	Cmd                  string
+	Exec                 []string
 	Env                  map[string]string
 	Binds                []string    // Bind mounts strings (src:dest:options)
 	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
