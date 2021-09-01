@@ -128,10 +128,29 @@ var deployCmd = &cobra.Command{
 
 		// a set of workers that do not support concurrency
 		serialNodes := make(map[string]struct{})
+
+		// extraHosts holds host entries for nodes with static IPv4/6 addresses
+		// these entries will be used by container runtime to populate /etc/hosts file
+		extraHosts := make([]string, 0, len(c.Nodes))
+
 		for _, n := range c.Nodes {
 			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
 				serialNodes[n.Config().LongName] = struct{}{}
 			}
+
+			if n.Config().MgmtIPv4Address != "" {
+				log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address)
+				extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
+			}
+
+			if n.Config().MgmtIPv6Address != "" {
+				log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address)
+				extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
+			}
+		}
+
+		for _, n := range c.Nodes {
+			n.Config().ExtraHosts = extraHosts
 		}
 
 		nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
@@ -153,7 +172,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		log.Debug("enriching nodes with IP information...")
-		enrichNodes(containers, c.Nodes, c.Config.Mgmt.Network)
+		enrichNodes(containers, c.Nodes)
 
 		if err := c.GenerateInventories(); err != nil {
 			return err
@@ -226,7 +245,7 @@ func setFlags(conf *clab.Config) {
 	}
 }
 
-func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node, mgmtNet string) {
+func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
 	for _, c := range containers {
 		name = c.Labels["clab-node-name"]
 		if node, ok := nodesMap[name]; ok {

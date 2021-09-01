@@ -92,6 +92,7 @@ type NodeConfig struct {
 	TLSAnchor            string
 	NSPath               string   // network namespace path for this node
 	Publish              []string //list of ports to publish with mysocketctl
+	ExtraHosts           []string // Extra /etc/hosts entries for all nodes
 	// container labels
 	Labels map[string]string
 	// Slice of pointers to local endpoints
@@ -106,7 +107,7 @@ type NodeConfig struct {
 }
 
 // GenerateConfig generates configuration for the nodes
-// out of the templ based on the node configuration and saves the result to dst
+// out of the template based on the node configuration and saves the result to dst
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 
 	// If the config file is already present in the node dir

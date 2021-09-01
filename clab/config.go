@@ -537,7 +537,7 @@ func (c *CLab) verifyVirtSupport() error {
 		return err
 	}
 
-	return fmt.Errorf("virtualization seems to be not supported and it is required by vrnetlab routers. Check if virtualization can been enabled")
+	return fmt.Errorf("virtualization seems to be not supported and it is required for VM based nodes. Check if virtualization can be enabled")
 }
 
 // checkEndpoint runs checks on the endpoint syntax
