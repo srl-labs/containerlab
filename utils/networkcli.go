@@ -51,9 +51,9 @@ func SpawnCLIviaExec(platform, contName string) (*network.Driver, error) {
 	execCmd := "docker"
 	openCmd := []string{"exec", "-it"}
 
-	t, _ := d.Transport.(*transport.System)
-	t.ExecCmd = execCmd
-	t.OpenCmd = append(openCmd, contName, NetworkOSCLICmd[platform])
+	t, _ := d.Transport.Impl.(transport.SystemTransport)
+	t.SetExecCmd(execCmd)
+	t.SetOpenCmd(append(openCmd, contName, NetworkOSCLICmd[platform]))
 
 	transportReady := false
 	for !transportReady {
