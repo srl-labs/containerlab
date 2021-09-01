@@ -77,7 +77,7 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *ceos) Config() *types.NodeConfig { return s.cfg }
 
-func (s *ceos) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *ceos) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return createCEOSFiles(s.cfg)
 }
@@ -87,12 +87,12 @@ func (s *ceos) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *ceos) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", s.cfg.ShortName)
 	return ceosPostDeploy(ctx, s.runtime, s.cfg)
 }
 
-func (s *ceos) WithMgmtNet(*types.MgmtNet)             {}
+func (*ceos) WithMgmtNet(*types.MgmtNet)               {}
 func (s *ceos) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *ceos) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
@@ -143,7 +143,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes
-func ceosPostDeploy(ctx context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
+func ceosPostDeploy(_ context.Context, _ runtime.ContainerRuntime, node *types.NodeConfig) error {
 	d, err := utils.SpawnCLIviaExec("arista_eos", node.LongName)
 	if err != nil {
 		return err
