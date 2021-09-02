@@ -300,13 +300,11 @@ func (t *Topology) GetNodeCmd(name string) string {
 
 func (t *Topology) GetNodeExec(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetExec() != nil {
-			return ndef.GetExec()
-		}
-		if t.GetKind(t.GetNodeKind(name)).GetExec() != nil {
-			return t.GetKind(t.GetNodeKind(name)).GetExec()
-		}
-		return t.GetDefaults().GetExec()
+		d := t.GetDefaults().GetExec()
+		k := t.GetKind(t.GetNodeKind(name)).GetExec()
+		n := ndef.GetExec()
+
+		return append(append(d, k...), n...)
 	}
 	return nil
 }

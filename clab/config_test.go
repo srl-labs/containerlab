@@ -437,7 +437,7 @@ func TestLabelsInit(t *testing.T) {
 			}
 
 			tc.want[NodeLabDirLabel], _ = resolvePath(tc.want[NodeLabDirLabel])
-			tc.want[TopoFileLabel], _ = resolvePath(tc.want["clab-topo-file"])
+			tc.want[TopoFileLabel], _ = resolvePath(tc.want[TopoFileLabel])
 
 			labels := c.Nodes[tc.node].Config().Labels
 
