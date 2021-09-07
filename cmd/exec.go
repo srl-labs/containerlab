@@ -145,10 +145,10 @@ func execCmds(
 		case "plain", "table":
 			contName := strings.TrimLeft(cont.Names[0], "/")
 			if len(stdout) > 0 {
-				log.Infof("%s: %s: stdout:\n%s", contName, cmd, string(stdout))
+				log.Infof("Executed command '%s' on %s. stdout:\n%s", cmd, contName, string(stdout))
 			}
 			if len(stderr) > 0 {
-				log.Infof("%s: %s: stderr:\n%s", contName, cmd, string(stderr))
+				log.Infof("Executed command '%s' on %s. stderr:\n%s", cmd, contName, string(stderr))
 			}
 		}
 	}

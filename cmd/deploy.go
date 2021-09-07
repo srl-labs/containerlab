@@ -213,13 +213,7 @@ var deployCmd = &cobra.Command{
 			log.Errorf("failed to create hosts file: %v", err)
 		}
 
-		// log new version availability info if ready
-		newVerNotification(vCh)
-
-		// print table summary
-		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
-
-		// exec cmds specified for containers
+		// exec commands specified for containers with `exec` parameter
 		execJSONResult := make(map[string]map[string]map[string]interface{})
 		for _, cont := range containers {
 			name := cont.Labels[clab.NodeNameLabel]
@@ -227,7 +221,7 @@ var deployCmd = &cobra.Command{
 				rt := node.GetRuntime()
 				contName := strings.TrimLeft(cont.Names[0], "/")
 				if execJSONResult[contName], err = execCmds(ctx, cont, rt, node.Config().Exec, format); err != nil {
-					log.Errorf("Failed to exec cmds for node %s", name)
+					log.Errorf("Failed to exec commands for node %s", name)
 				}
 			}
 		}
@@ -238,6 +232,12 @@ var deployCmd = &cobra.Command{
 			}
 			fmt.Println(string(result))
 		}
+
+		// log new version availability info if ready
+		newVerNotification(vCh)
+
+		// print table summary
+		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
 
 		return nil
 	},
