@@ -15,16 +15,26 @@ import (
 // SaveCfgViaNetconf saves the running config to the startup by means
 // of invoking a netconf rpc <copy-config>
 // this method is used on the network elements that can't perform a save of config via other means
-func SaveCfgViaNetconf(addr, username, password string) error {
-	d, err := netconf.NewNetconfDriver(
-		addr,
+func SaveCfgViaNetconf(addr, username, password, platform string) error {
+	baseOpts := []base.Option{
 		base.WithAuthStrictKey(false),
 		base.WithAuthUsername(username),
 		base.WithAuthPassword(password),
 		base.WithTransportType(transport.StandardTransportName),
+	}
+
+	d, err := netconf.NewNetconfDriver(
+		addr,
+		baseOpts...,
 	)
 	if err != nil {
 		return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)
+	}
+
+	switch platform {
+	// disable pty allocation for junos, as it breaks otherwise
+	case "juniper_junos":
+		d.Transport.BaseTransportArgs.NetconfForcePty = false
 	}
 
 	err = d.Open()

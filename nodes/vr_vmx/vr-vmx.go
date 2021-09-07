@@ -15,6 +15,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	scrapliPlatformName = "juniper_junos"
+)
+
 func init() {
 	nodes.Register(nodes.NodeKindVrVMX, func() nodes.Node {
 		return new(vrVMX)
@@ -87,6 +91,7 @@ func (s *vrVMX) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],
+		scrapliPlatformName,
 	)
 
 	if err != nil {

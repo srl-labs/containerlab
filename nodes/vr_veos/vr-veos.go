@@ -15,6 +15,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	scrapliPlatformName = "arista_eos"
+)
+
 func init() {
 	nodes.Register(nodes.NodeKindVrVEOS, func() nodes.Node {
 		return new(vrVEOS)
@@ -83,6 +87,7 @@ func (s *vrVEOS) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],
+		scrapliPlatformName,
 	)
 
 	if err != nil {
