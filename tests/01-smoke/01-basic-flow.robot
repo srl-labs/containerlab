@@ -19,7 +19,7 @@ Verify number of Hosts entries before deploy
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | wc -l
     Log    ${output}
-    Set Suite Variable  ${HostsFileLines}   ${output}
+    Set Suite Variable    ${HostsFileLines}    ${output}
 
 Deploy ${lab-name} lab
     Log    ${CURDIR}
@@ -27,6 +27,9 @@ Deploy ${lab-name} lab
     ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/01-linux-nodes.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    # ensure exec commands work
+    Should Contain    ${output}    this_is_an_exec_test
+    Should Contain    ${output}    ID=alpine
 
 Inspect ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -114,7 +117,7 @@ Verify l1 environment has MYVAR variable set
     Should Contain    ${output}    MYVAR is SET
 
 Verify Hosts entries exist
-    [Documentation]     Verification that the expected /etc/hosts entries are created. We are also checking for the HEADER and FOOTER values here, which also contain the lab name.
+    [Documentation]    Verification that the expected /etc/hosts entries are created. We are also checking for the HEADER and FOOTER values here, which also contain the lab name.
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep "${lab-name}" | wc -l
     Log    ${output}
@@ -128,13 +131,13 @@ Destroy ${lab-name} lab
     Should Be Equal As Integers    ${rc}    0
 
 Verify Hosts entries are gone
-    [Documentation]     Verification that the previously created /etc/hosts entries are properly removed. (Again including HEADER and FOOTER).
+    [Documentation]    Verification that the previously created /etc/hosts entries are properly removed. (Again including HEADER and FOOTER).
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep "${lab-name}" | wc -l
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0
-   
+
 Verify Hosts file has same number of lines
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | wc -l
