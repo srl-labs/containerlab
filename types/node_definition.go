@@ -238,11 +238,16 @@ func (n *NodeDefinition) GetNodeRAM() string {
 // ImportEnvs imports all environment variales defined in the shell
 // if __IMPORT_ENVS is set to true
 func (n *NodeDefinition) ImportEnvs() {
+	if n == nil || n.Env == nil {
+		return
+	}
+
 	var importEnvs bool
 
 	for k, v := range n.Env {
 		if k == importEnvsKey && v == "true" {
 			importEnvs = true
+			break
 		}
 	}
 
