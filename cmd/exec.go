@@ -80,15 +80,8 @@ var execCmd = &cobra.Command{
 			return errors.New("no containers found")
 		}
 
-		cmds, err := shlex.Split(execCommand)
-		if err != nil {
-			return err
-		}
-
-		jsonResult := make(map[string]map[string]interface{})
-
+		jsonResult := make(map[string]map[string]map[string]interface{})
 		for _, cont := range containers {
-			var doc interface{}
 			if cont.State != "running" {
 				continue
 			}
@@ -100,30 +93,11 @@ var execCmd = &cobra.Command{
 				return err
 			}
 
-			stdout, stderr, err := nodeRuntime.Exec(ctx, cont.ID, cmds)
-			if err != nil {
-				log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
-				continue
-			}
 			contName := strings.TrimLeft(cont.Names[0], "/")
-			switch execFormat {
-			case "json":
-				jsonResult[contName] = make(map[string]interface{})
-				err := json.Unmarshal([]byte(stdout), &doc)
-				if err == nil {
-					jsonResult[contName]["stdout"] = doc
-				} else {
-					jsonResult[contName]["stdout"] = string(stdout)
-				}
-				jsonResult[contName]["stderr"] = string(stderr)
-			case "plain":
-				if len(stdout) > 0 {
-					log.Infof("%s: stdout:\n%s", contName, string(stdout))
-				}
-				if len(stderr) > 0 {
-					log.Infof("%s: stderr:\n%s", contName, string(stderr))
-				}
-
+			if jsonResult[contName], err = execCmds(
+				ctx, cont, nodeRuntime, []string{execCommand}, execFormat,
+			); err != nil {
+				return err
 			}
 		}
 		if execFormat == "json" {
@@ -135,6 +109,51 @@ var execCmd = &cobra.Command{
 		}
 		return err
 	},
+}
+
+func execCmds(
+	ctx context.Context,
+	cont types.GenericContainer,
+	runtime runtime.ContainerRuntime,
+	cmds []string,
+	format string,
+) (result map[string]map[string]interface{}, err error) {
+	var doc interface{}
+
+	result = make(map[string]map[string]interface{})
+	for _, cmd := range cmds {
+		c, err := shlex.Split(cmd)
+		if err != nil {
+			return nil, err
+		}
+
+		stdout, stderr, err := runtime.Exec(ctx, cont.ID, c)
+		if err != nil {
+			log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
+			return nil, nil
+		}
+
+		switch format {
+		case "json":
+			result[cmd] = make(map[string]interface{})
+			if json.Unmarshal([]byte(stdout), &doc) == nil {
+				result[cmd]["stdout"] = doc
+			} else {
+				result[cmd]["stdout"] = string(stdout)
+			}
+			result[cmd]["stderr"] = string(stderr)
+		case "plain", "table":
+			contName := strings.TrimLeft(cont.Names[0], "/")
+			if len(stdout) > 0 {
+				log.Infof("Executed command '%s' on %s. stdout:\n%s", cmd, contName, string(stdout))
+			}
+			if len(stderr) > 0 {
+				log.Infof("Executed command '%s' on %s. stderr:\n%s", cmd, contName, string(stderr))
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func init() {

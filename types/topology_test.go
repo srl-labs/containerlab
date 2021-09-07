@@ -35,7 +35,11 @@ var topologyTestSet = map[string]struct {
 					License:       "test_data/lic1.key",
 					Position:      "pos1",
 					Cmd:           "runit",
-					User:          "user1",
+					Exec: []string{
+						"bash test1.sh",
+						"bash test2.sh",
+					},
+					User: "user1",
 					Binds: []string{
 						"a:b",
 						"c:d",
@@ -75,7 +79,11 @@ var topologyTestSet = map[string]struct {
 				License:       "test_data/lic1.key",
 				Position:      "pos1",
 				Cmd:           "runit",
-				User:          "user1",
+				Exec: []string{
+					"bash test1.sh",
+					"bash test2.sh",
+				},
+				User: "user1",
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -109,6 +117,10 @@ var topologyTestSet = map[string]struct {
 					License:       "test_data/lic1.key",
 					Position:      "pos1",
 					Cmd:           "runit",
+					Exec: []string{
+						"bash test1.sh",
+						"bash test2.sh",
+					},
 					Binds: []string{
 						"a:b",
 						"c:d",
@@ -141,6 +153,10 @@ var topologyTestSet = map[string]struct {
 				Position:      "pos1",
 				Cmd:           "runit",
 				User:          "user1",
+				Exec: []string{
+					"bash test1.sh",
+					"bash test2.sh",
+				},
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -170,6 +186,10 @@ var topologyTestSet = map[string]struct {
 				License:       "test_data/lic1.key",
 				Position:      "pos1",
 				Cmd:           "runit",
+				Exec: []string{
+					"bash test1.sh",
+					"bash test2.sh",
+				},
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -200,6 +220,10 @@ var topologyTestSet = map[string]struct {
 				License:       "test_data/lic1.key",
 				Position:      "pos1",
 				Cmd:           "runit",
+				Exec: []string{
+					"bash test1.sh",
+					"bash test2.sh",
+				},
 				Binds: []string{
 					"a:b",
 					"c:d",
@@ -340,6 +364,20 @@ func TestGetNodeCmd(t *testing.T) {
 			t.Errorf("item %q failed", name)
 			t.Errorf("item %q exp %q", name, item.want["node1"].Cmd)
 			t.Errorf("item %q got %q", name, cmd)
+			t.Fail()
+		}
+	}
+}
+
+func TestGetNodeExec(t *testing.T) {
+	for name, item := range topologyTestSet {
+		t.Logf("%q test item", name)
+		exec := item.input.GetNodeExec("node1")
+		t.Logf("%q test item result: %v", name, exec)
+		if !cmp.Equal(item.want["node1"].Exec, exec) {
+			t.Errorf("item %q failed", name)
+			t.Errorf("item %q exp %q", name, item.want["node1"].Exec)
+			t.Errorf("item %q got %q", name, exec)
 			t.Fail()
 		}
 	}

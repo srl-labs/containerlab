@@ -6,6 +6,8 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -211,11 +213,32 @@ var deployCmd = &cobra.Command{
 			log.Errorf("failed to create hosts file: %v", err)
 		}
 
+		// exec commands specified for containers with `exec` parameter
+		execJSONResult := make(map[string]map[string]map[string]interface{})
+		for _, cont := range containers {
+			name := cont.Labels[clab.NodeNameLabel]
+			if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
+				rt := node.GetRuntime()
+				contName := strings.TrimLeft(cont.Names[0], "/")
+				if execJSONResult[contName], err = execCmds(ctx, cont, rt, node.Config().Exec, format); err != nil {
+					log.Errorf("Failed to exec commands for node %s", name)
+				}
+			}
+		}
+		if format == "json" && (len(execJSONResult) > 0) {
+			result, err := json.Marshal(execJSONResult)
+			if err != nil {
+				log.Errorf("Issue converting exec results to json %v", err)
+			}
+			fmt.Println(string(result))
+		}
+
 		// log new version availability info if ready
 		newVerNotification(vCh)
 
 		// print table summary
 		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
+
 		return nil
 	},
 }
@@ -247,7 +270,7 @@ func setFlags(conf *clab.Config) {
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
 	for _, c := range containers {
-		name = c.Labels["clab-node-name"]
+		name = c.Labels[clab.NodeNameLabel]
 		if node, ok := nodesMap[name]; ok {
 			// add network information
 			// skipping host networking nodes as they don't have separate addresses

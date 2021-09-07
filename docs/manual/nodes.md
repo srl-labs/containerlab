@@ -336,3 +336,22 @@ my-node:
   image: alpine:3
   runtime: containerd
 ```
+
+### exec
+Containers typically have some process that is launched inside the sandboxed environment. The said process and its arguments are provided via container instructions such as `entrypoint` and `cmd` in Docker's case.
+
+Quite often, it is needed to run additional commands inside the containers when they finished booting. Instead of modifying the `entrypoint` and `cmd` it is possible to use the `exec` parameter and specify a list of commands to execute:
+
+```yaml
+# two commands will be executed for node `my-node` once it finishes booting
+my-node:
+  image: alpine:3
+  kind: linux
+  binds:
+    - myscript.sh:/myscript.sh
+  exec:
+    - echo test123
+    - bash /myscript.sh
+```
+
+The `exec` is particularly helpful to provide some startup configuration for linux nodes such as IP addressing and routing instructions.

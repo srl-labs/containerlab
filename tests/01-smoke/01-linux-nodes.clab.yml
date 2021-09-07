@@ -14,6 +14,9 @@ topology:
         - /tmp/clab-01-test.txt:/01-test.txt
       env:
         MYVAR: MYVAR is SET
+      exec:
+        - echo this_is_an_exec_test
+        - cat /etc/os-release
     l2:
       kind: linux
       image: nginx:stable-alpine

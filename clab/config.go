@@ -37,6 +37,15 @@ const (
 	defaultVethLinkMTU = 9500
 	// containerlab's reserved OUI
 	clabOUI = "aa:c1:ab"
+
+	// label names
+	ContainerlabLabel = "containerlab"
+	NodeNameLabel     = "clab-node-name"
+	NodeKindLabel     = "clab-node-kind"
+	NodeTypeLabel     = "clab-node-type"
+	NodeGroupLabel    = "clab-node-group"
+	NodeLabDirLabel   = "clab-node-lab-dir"
+	TopoFileLabel     = "clab-topo-file"
 )
 
 // supported kinds
@@ -188,13 +197,13 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	}
 
 	n.Config().Labels = utils.MergeStringMaps(n.Config().Labels, map[string]string{
-		"containerlab":      c.Config.Name,
-		"clab-node-name":    n.Config().ShortName,
-		"clab-node-kind":    n.Config().Kind,
-		"clab-node-type":    n.Config().NodeType,
-		"clab-node-group":   n.Config().Group,
-		"clab-node-lab-dir": n.Config().LabDir,
-		"clab-topo-file":    c.TopoFile.path,
+		ContainerlabLabel: c.Config.Name,
+		NodeNameLabel:     n.Config().ShortName,
+		NodeKindLabel:     n.Config().Kind,
+		NodeTypeLabel:     n.Config().NodeType,
+		NodeGroupLabel:    n.Config().Group,
+		NodeLabDirLabel:   n.Config().LabDir,
+		TopoFileLabel:     c.TopoFile.path,
 	})
 	c.Nodes[nodeName] = n
 
@@ -220,6 +229,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		User:            c.Config.Topology.GetNodeUser(nodeName),
 		Entrypoint:      c.Config.Topology.GetNodeEntrypoint(nodeName),
 		Cmd:             c.Config.Topology.GetNodeCmd(nodeName),
+		Exec:            c.Config.Topology.GetNodeExec(nodeName),
 		Env:             c.Config.Topology.GetNodeEnv(nodeName),
 		NetworkMode:     strings.ToLower(c.Config.Topology.GetNodeNetworkMode(nodeName)),
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
@@ -454,7 +464,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
 	for _, cnt := range containers {
-		if cnt.Labels["containerlab"] == c.Config.Name {
+		if cnt.Labels[ContainerlabLabel] == c.Config.Name {
 			return fmt.Errorf("the '%s' lab has already been deployed. Destroy the lab before deploying a lab with the same name", c.Config.Name)
 		}
 	}

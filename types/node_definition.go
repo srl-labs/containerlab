@@ -23,6 +23,8 @@ type NodeDefinition struct {
 	Position             string            `yaml:"position,omitempty"`
 	Entrypoint           string            `yaml:"entrypoint,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
+	// list of commands to run in container
+	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
 	// list of port bindings
@@ -233,6 +235,13 @@ func (n *NodeDefinition) GetNodeRAM() string {
 		return ""
 	}
 	return n.RAM
+}
+
+func (n *NodeDefinition) GetExec() []string {
+	if n == nil {
+		return nil
+	}
+	return n.Exec
 }
 
 // ImportEnvs imports all environment variales defined in the shell
