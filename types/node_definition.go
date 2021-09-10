@@ -60,9 +60,12 @@ type NodeDefinition struct {
 }
 
 type NodeExtrasDefinition struct {
-	Agents []string `yaml:"agents,omitempty"`
+	SRL *NodeExtrasDefinition_srl `yaml:"srl,omitempty"`
 }
 
+type NodeExtrasDefinition_srl struct {
+	Agents []string `yaml:"agents,omitempty"`
+}
 
 func (n *NodeDefinition) GetKind() string {
 	if n == nil {
@@ -261,7 +264,14 @@ func (n *NodeDefinition) GetExtras() *NodeExtrasDefinition {
         return n.Extras
 }
 
-func (n *NodeExtrasDefinition) GetAgents() []string {
+func (n *NodeExtrasDefinition) GetExtras_srl() *NodeExtrasDefinition_srl {
+        if n == nil {
+                return nil
+        }
+        return n.SRL
+}
+
+func (n *NodeExtrasDefinition_srl) GetAgents() []string {
         if n == nil {
                 return nil
         }

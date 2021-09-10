@@ -105,6 +105,9 @@ type NodeConfig struct {
 	// Resource requirements
 	CPU, RAM         string
 	DeploymentStatus string // status that is set by containerlab to indicate deployment stage
+
+	// Extras
+	Agents               []string    // Paths to YAML files for SRL agent extensions
 }
 
 // GenerateConfig generates configuration for the nodes
