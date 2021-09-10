@@ -14,8 +14,10 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/scrapli/scrapligo/driver/base"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/srl-labs/containerlab/cert"
@@ -27,6 +29,8 @@ import (
 
 const (
 	srlDefaultType = "ixrd2"
+
+	tlsServerProfileName = "clab-profile"
 )
 
 var (
@@ -161,8 +165,13 @@ func (s *srl) Deploy(ctx context.Context) error {
 }
 
 func (s *srl) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+	if s.cfg.StartupConfig == "" {
+		log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+		return addDefaultConfig(ctx, s.runtime, s.cfg)
+	}
 	return nil
 }
+
 func (s *srl) Destroy(ctx context.Context) error {
 	// return s.runtime.DeleteContainer(ctx, s.cfg)
 	return nil
@@ -220,22 +229,27 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		return err
 	}
 
+	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
+
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
-	dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
 	if nodeCfg.StartupConfig != "" {
-		log.Debugf("GenerateConfig reading startup-config %s", nodeCfg.StartupConfig )
+		dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
+
+		log.Debugf("Reading startup-config %s", nodeCfg.StartupConfig)
+
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
+
 		cfgTemplate = string(c)
-	}
-	err = nodeCfg.GenerateConfig(dst, cfgTemplate)
-	if err != nil {
-		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+
+		err = nodeCfg.GenerateConfig(dst, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+		}
 	}
 
 	return err
@@ -272,4 +286,50 @@ func generateSRLTopologyFile(nodeType, labDir string, index int) error {
 	}
 	defer f.Close()
 	return tpl.Execute(f, mac)
+}
+
+// addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
+func addDefaultConfig(_ context.Context, _ runtime.ContainerRuntime, node *types.NodeConfig) error {
+	// give srlinux 5 seconds to settle internal boot sequences
+	time.Sleep(time.Second * 5)
+
+	d, err := utils.SpawnCLIviaExec("nokia_srlinux", node.LongName)
+	if err != nil {
+		return err
+	}
+
+	defer d.Close()
+
+	cfgs := []string{
+		fmt.Sprintf("set / system tls server-profile %s", tlsServerProfileName),
+		fmt.Sprintf("set / system tls server-profile %s authenticate-client false", tlsServerProfileName),
+		fmt.Sprintf("system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s", tlsServerProfileName),
+		"system json-rpc-server admin-state enable network-instance mgmt http admin-state enable",
+		fmt.Sprintf("system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s", tlsServerProfileName),
+	}
+
+	resp, err := d.SendConfigs(cfgs)
+	if err != nil {
+		return err
+	} else if resp.Failed != nil {
+		return errors.New("failed to configure tls server profile")
+	}
+
+	// key and cert are send outside of sendconfigs, because it was not working properly with `eager` option
+	// we need eager option to wait till the prompt appears without trying to match each string
+	// as each string is prepended with `...` when we paste multiline string such as key/cert
+	_, err = d.SendConfig(fmt.Sprintf("set / system tls server-profile %s key \"%s\"", tlsServerProfileName, node.TLSKey),
+		base.WithSendEager(true))
+	if err != nil {
+		return err
+	}
+	_, err = d.SendConfig(fmt.Sprintf("set / system tls server-profile %s certificate \"%s\"", tlsServerProfileName, node.TLSCert),
+		base.WithSendEager(true))
+	if err != nil {
+		return err
+	}
+
+	_, err = d.SendConfig("commit save")
+
+	return err
 }

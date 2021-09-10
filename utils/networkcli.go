@@ -6,6 +6,7 @@ import (
 	"github.com/scrapli/scrapligo/driver/base"
 	"github.com/scrapli/scrapligo/driver/core"
 	"github.com/scrapli/scrapligo/driver/network"
+	"github.com/scrapli/scrapligo/logging"
 	"github.com/scrapli/scrapligo/transport"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/srlinux-scrapli"
@@ -25,6 +26,9 @@ func SpawnCLIviaExec(platform, contName string) (*network.Driver, error) {
 	var d *network.Driver
 	var err error
 
+	// uncomment to enable logging
+	logging.SetDebugLogger(log.Print)
+
 	switch platform {
 	case "nokia_srlinux":
 		d, err = srlinux.NewSRLinuxDriver(
@@ -33,6 +37,9 @@ func SpawnCLIviaExec(platform, contName string) (*network.Driver, error) {
 			// disable transport timeout
 			base.WithTimeoutTransport(0),
 		)
+		// jack up PtyWidth, since we use `docker exec` to enter certificate and key strings
+		// and these are lengthy
+		d.Transport.BaseTransportArgs.PtyWidth = 5000
 	default:
 		d, err = core.NewCoreDriver(
 			contName,
