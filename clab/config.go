@@ -245,7 +245,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 
 		// Extras
-		Agents:		 c.Config.Topology.GetNodeExtras_srl_Agents(nodeName),
+		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
