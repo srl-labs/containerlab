@@ -53,17 +53,13 @@ type NodeDefinition struct {
 	// Set node RAM (cgroup or hypervisor)
 	RAM string `yaml:"ram,omitempty"`
 
-	// Extra options, kind specific
+	// Extra options, may be kind specific
 	// Works, but doesn't check that options are valid
 	// Extras   map[string][]string `yaml:"extras,omitempty"`
 	Extras *NodeExtrasDefinition `yaml:"extras,omitempty"`
 }
 
 type NodeExtrasDefinition struct {
-	SRL *NodeExtrasDefinition_srl `yaml:"srl,omitempty"`
-}
-
-type NodeExtrasDefinition_srl struct {
 	Agents []string `yaml:"agents,omitempty"`
 }
 
@@ -262,20 +258,6 @@ func (n *NodeDefinition) GetExtras() *NodeExtrasDefinition {
                 return nil
         }
         return n.Extras
-}
-
-func (n *NodeExtrasDefinition) GetExtras_srl() *NodeExtrasDefinition_srl {
-        if n == nil {
-                return nil
-        }
-        return n.SRL
-}
-
-func (n *NodeExtrasDefinition_srl) GetAgents() []string {
-        if n == nil {
-                return nil
-        }
-        return n.Agents
 }
 
 // ImportEnvs imports all environment variales defined in the shell

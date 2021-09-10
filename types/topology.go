@@ -400,25 +400,18 @@ func (t *Topology) GetNodeRAM(name string) string {
 	return ""
 }
 
-// Returns the 'extras' section for the given node's type
-func (t *Topology) GetNodeExtras(name string) *NodeExtrasDefinition_srl {
+// Returns the 'extras' section for the given node
+func (t *Topology) GetNodeExtras(name string) *NodeExtrasDefinition {
 	if ndef, ok := t.Nodes[name]; ok {
-		ntype := ndef.GetType()
-		if ntype != "srl" {
-			return nil // for now, only 'srl' extras defined
-		}
 		node_extras := ndef.GetExtras()
-		if node_extras != nil && node_extras.GetExtras_srl() != nil {
-			return node_extras.GetExtras_srl()
+		if node_extras != nil {
+			return node_extras
 		}
 		kind_extras := t.GetKind(t.GetNodeKind(name)).GetExtras()
-		if kind_extras != nil && kind_extras.GetExtras_srl() != nil {
-			return kind_extras.GetExtras_srl()
+		if kind_extras != nil {
+			return kind_extras
 		}
-		default_extras := t.GetDefaults().GetExtras()
-		if default_extras != nil && default_extras.GetExtras_srl() != nil {
-			return default_extras.GetExtras_srl()
-		}
+		return t.GetDefaults().GetExtras()
 	}
 	return nil
 }
@@ -426,7 +419,7 @@ func (t *Topology) GetNodeExtras(name string) *NodeExtrasDefinition_srl {
 func (t *Topology) GetNodeExtras_srl_Agents(name string) []string {
 	extras := t.GetNodeExtras(name)
 	if extras != nil {
-		return extras.GetAgents()
+		return extras.Agents
 	}
 	return make([]string,0)
 }
