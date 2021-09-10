@@ -159,7 +159,7 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 		utils.CreateDirectory(appmgr, 0777)
 
 		for _, fullpath := range agents {
-			basename := filepath.Dir(fullpath)
+			basename := filepath.Base(fullpath)
 			dst := filepath.Join(appmgr, basename)
 			if err := utils.CopyFile(fullpath, dst); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
