@@ -164,15 +164,18 @@ func (s *srl) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *srl) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
-	if s.cfg.StartupConfig == "" {
-		log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
-		return addDefaultConfig(ctx, s.runtime, s.cfg)
+func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+	// only perform postdeploy additional config provisioning if there is not startup nor existing config
+	if s.cfg.StartupConfig != "" || utils.FileExists(s.cfg.LabDir+"/config/config.json") {
+		return nil
 	}
-	return nil
+
+	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+
+	return addDefaultConfig(ctx, s.runtime, s.cfg)
 }
 
-func (s *srl) Destroy(ctx context.Context) error {
+func (*srl) Destroy(_ context.Context) error {
 	// return s.runtime.DeleteContainer(ctx, s.cfg)
 	return nil
 }
@@ -183,7 +186,7 @@ func (s *srl) GetImages() map[string]string {
 	}
 }
 
-func (s *srl) WithMgmtNet(*types.MgmtNet)             {}
+func (*srl) WithMgmtNet(*types.MgmtNet)               {}
 func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
@@ -259,7 +262,7 @@ type mac struct {
 	MAC string
 }
 
-func generateSRLTopologyFile(nodeType, labDir string, index int) error {
+func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
 	dst := filepath.Join(labDir, "topology.yml")
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[nodeType])

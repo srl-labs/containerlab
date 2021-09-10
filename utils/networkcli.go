@@ -6,7 +6,6 @@ import (
 	"github.com/scrapli/scrapligo/driver/base"
 	"github.com/scrapli/scrapligo/driver/core"
 	"github.com/scrapli/scrapligo/driver/network"
-	"github.com/scrapli/scrapligo/logging"
 	"github.com/scrapli/scrapligo/transport"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/srlinux-scrapli"
@@ -25,9 +24,6 @@ var (
 func SpawnCLIviaExec(platform, contName string) (*network.Driver, error) {
 	var d *network.Driver
 	var err error
-
-	// uncomment to enable logging
-	logging.SetDebugLogger(log.Print)
 
 	switch platform {
 	case "nokia_srlinux":
