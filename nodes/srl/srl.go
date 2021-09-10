@@ -166,7 +166,7 @@ func (s *srl) Deploy(ctx context.Context) error {
 
 func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	// only perform postdeploy additional config provisioning if there is not startup nor existing config
-	if s.cfg.StartupConfig != "" || utils.FileExists(s.cfg.LabDir+"/config/config.json") {
+	if s.cfg.StartupConfig != "" || utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
 
