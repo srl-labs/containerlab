@@ -54,12 +54,7 @@ type NodeDefinition struct {
 	RAM string `yaml:"ram,omitempty"`
 
 	// Extra options, kind specific
-	Extras   map[string]*NodeExtrasDefinition `yaml:"extras,omitempty"`
-}
-
-type NodeExtrasDefinition struct {
-	// list of Agent YAML files to be copied to /etc/opt/srlinux/appmgr
-	Agents []string `yaml:"agents,omitempty"`
+	Extras   map[string][]string `yaml:"extras,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -252,18 +247,11 @@ func (n *NodeDefinition) GetExec() []string {
 	return n.Exec
 }
 
-func (n *NodeDefinition) GetExtras() map[string]*NodeExtrasDefinition {
-        if n.Extras == nil {
-                return make(map[string]*NodeExtrasDefinition)
-        }
-        return n.Extras
-}
-
-func (n *NodeExtrasDefinition) GetAgents() []string {
-        if n == nil {
+func (n *NodeDefinition) GetAgents() []string {
+        if n == nil || n.Extras == nil {
                 return nil
         }
-        return n.Agents
+        return n.Extras[ "agents" ]
 }
 
 // ImportEnvs imports all environment variales defined in the shell
