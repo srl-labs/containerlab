@@ -54,8 +54,15 @@ type NodeDefinition struct {
 	RAM string `yaml:"ram,omitempty"`
 
 	// Extra options, kind specific
-	Extras   map[string][]string `yaml:"extras,omitempty"`
+	// Works, but doesn't check that options are valid
+	// Extras   map[string][]string `yaml:"extras,omitempty"`
+	Extras *NodeExtrasDefinition `yaml:"extras,omitempty"`
 }
+
+type NodeExtrasDefinition struct {
+	Agents []string `yaml:"agents,omitempty"`
+}
+
 
 func (n *NodeDefinition) GetKind() string {
 	if n == nil {
@@ -247,11 +254,18 @@ func (n *NodeDefinition) GetExec() []string {
 	return n.Exec
 }
 
-func (n *NodeDefinition) GetAgents() []string {
-        if n == nil || n.Extras == nil {
+func (n *NodeDefinition) GetExtras() *NodeExtrasDefinition {
+        if n == nil {
                 return nil
         }
-        return n.Extras[ "agents" ]
+        return n.Extras
+}
+
+func (n *NodeExtrasDefinition) GetAgents() []string {
+        if n == nil {
+                return nil
+        }
+        return n.Agents
 }
 
 // ImportEnvs imports all environment variales defined in the shell
