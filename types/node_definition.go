@@ -52,6 +52,14 @@ type NodeDefinition struct {
 	CPU string `yaml:"cpu,omitempty"`
 	// Set node RAM (cgroup or hypervisor)
 	RAM string `yaml:"ram,omitempty"`
+
+	// Extra options, kind specific
+	Extras   map[string]*NodeExtraDefinition `yaml:"extras,omitempty"`
+}
+
+type NodeExtraDefinition struct {
+	// list of Agent YAML files to be copied to /etc/opt/srlinux/appmgr
+	Agents []string `yaml:"agents,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
