@@ -153,7 +153,7 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	s.cfg.TLSKey = string(nodeCerts.Key)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
-	if len(s.cfg.Extras.SRLAgents) != 0 {
+	if s.cfg.Extras != nil && len(s.cfg.Extras.SRLAgents) != 0 {
 		agents := s.cfg.Extras.SRLAgents
 		appmgr := filepath.Join(s.cfg.LabDir, "config/appmgr/")
 		utils.CreateDirectory(appmgr, 0777)
