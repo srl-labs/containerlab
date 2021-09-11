@@ -143,8 +143,8 @@ func createCEOSFiles(node *types.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes
-func ceosPostDeploy(_ context.Context, _ runtime.ContainerRuntime, node *types.NodeConfig) error {
-	d, err := utils.SpawnCLIviaExec("arista_eos", node.LongName)
+func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
+	d, err := utils.SpawnCLIviaExec("arista_eos", node.LongName, r.GetName())
 	if err != nil {
 		return err
 	}

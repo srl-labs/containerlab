@@ -292,11 +292,16 @@ func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
-func addDefaultConfig(_ context.Context, _ runtime.ContainerRuntime, node *types.NodeConfig) error {
+func addDefaultConfig(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
 	// give srlinux 5 seconds to settle internal boot sequences
 	time.Sleep(time.Second * 5)
 
-	d, err := utils.SpawnCLIviaExec("nokia_srlinux", node.LongName)
+	// containerd needs to sleep a bit more
+	if r.GetName() == "containerd" {
+		time.Sleep(time.Second * 10)
+	}
+
+	d, err := utils.SpawnCLIviaExec("nokia_srlinux", node.LongName, r.GetName())
 	if err != nil {
 		return err
 	}
@@ -311,7 +316,7 @@ func addDefaultConfig(_ context.Context, _ runtime.ContainerRuntime, node *types
 		fmt.Sprintf("system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s", tlsServerProfileName),
 	}
 
-	resp, err := d.SendConfigs(cfgs)
+	resp, err := d.SendConfigs(cfgs, base.WithSendEager(true))
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
