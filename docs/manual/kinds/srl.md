@@ -96,7 +96,7 @@ INFO[0001] saved SR Linux configuration from leaf2 node. Output:
 ```
 
 #### User defined custom agents for SR Linux nodes
-SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under /etc/opt/srlinux/appmgr/. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
+SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under `/etc/opt/srlinux/appmgr/`. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
 
 ```yaml
 name: srl_lab_with_custom_agents
