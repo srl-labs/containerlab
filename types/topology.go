@@ -400,6 +400,24 @@ func (t *Topology) GetNodeRAM(name string) string {
 	return ""
 }
 
+// Returns the 'extras' section for the given node
+func (t *Topology) GetNodeExtras(name string) *Extras {
+	if ndef, ok := t.Nodes[name]; ok {
+		node_extras := ndef.GetExtras()
+		if node_extras != nil {
+			return node_extras
+		}
+
+		kind_extras := t.GetKind(t.GetNodeKind(name)).GetExtras()
+		if kind_extras != nil {
+			return kind_extras
+		}
+
+		return t.GetDefaults().GetExtras()
+	}
+	return nil
+}
+
 func (t *Topology) ImportEnvs() {
 	t.Defaults.ImportEnvs()
 

@@ -95,6 +95,22 @@ INFO[0001] saved SR Linux configuration from leaf2 node. Output:
     Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
 ```
 
+#### User defined custom agents for SR Linux nodes
+SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under `/etc/opt/srlinux/appmgr/`. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
+
+```yaml
+name: srl_lab_with_custom_agents
+topology:
+  nodes:
+    srl1:
+      kind: srl
+      ...
+      extras:
+        srl-agents:
+        - path1/my_custom_agent.yml
+        - path2/my_other_agent.yml
+```
+
 ### TLS
 By default containerlab will generate TLS certificates and keys for each SR Linux node of a lab. The TLS related files that containerlab creates are located in the so-called CA directory which can be located by the `<lab-directory>/ca/` path. Here is a list of files that containerlab creates relative to the CA directory
 

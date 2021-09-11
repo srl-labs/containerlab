@@ -105,6 +105,9 @@ type NodeConfig struct {
 	// Resource requirements
 	CPU, RAM         string
 	DeploymentStatus string // status that is set by containerlab to indicate deployment stage
+
+	// Extras
+	Extras *Extras // Extra node parameters
 }
 
 // GenerateConfig generates configuration for the nodes
@@ -227,4 +230,9 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 		return nil
 	}
 	return cd.Vars
+}
+
+// Extras contains extra node parameters which are not entitled to be part of a generic node config
+type Extras struct {
+	SRLAgents []string `yaml:"srl-agents,omitempty"` // Nokia SR Linux agents. As of now just the agents spec files can be provided here
 }
