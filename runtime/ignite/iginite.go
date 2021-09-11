@@ -59,7 +59,7 @@ func init() {
 	})
 }
 
-func (c *IgniteRuntime) GetName() string               { return runtimeName }
+func (*IgniteRuntime) GetName() string                 { return runtimeName }
 func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
@@ -137,7 +137,7 @@ func (c *IgniteRuntime) DeleteNet(ctx context.Context) error {
 	return c.ctrRuntime.DeleteNet(ctx)
 }
 
-func (c *IgniteRuntime) PullImageIfRequired(ctx context.Context, imageName string) error {
+func (*IgniteRuntime) PullImageIfRequired(_ context.Context, imageName string) error {
 	ociRef, err := meta.NewOCIImageRef(imageName)
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI image ref %q: %s", imageName, err)
@@ -262,16 +262,16 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	return vmChans, utils.LinkContainerNS(node.NSPath, node.LongName)
 }
 
-func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string) error {
+func (*IgniteRuntime) StartContainer(_ context.Context, _ string) error {
 	// this is a no-op
 	return nil
 }
-func (c *IgniteRuntime) StopContainer(ctx context.Context, name string) error {
+func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 	// this is a no-op, only used by ceos at this stage
 	return nil
 }
 
-func (c *IgniteRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
+func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
 
 	var result []types.GenericContainer
 
@@ -311,7 +311,7 @@ func (c *IgniteRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	return c.produceGenericContainerList(filteredVMs)
 }
 
-func (c *IgniteRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
+func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*types.GenericContainer, error) {
 	var result *types.GenericContainer
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {
@@ -330,7 +330,7 @@ func (c *IgniteRuntime) GetContainer(ctx context.Context, containerID string) (*
 }
 
 // Transform docker-specific to generic container format
-func (c *IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]types.GenericContainer, error) {
+func (*IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for _, i := range input {
@@ -376,11 +376,11 @@ func (c *IgniteRuntime) GetNSPath(ctx context.Context, ctrId string) (string, er
 	return result, nil
 }
 
-func (c *IgniteRuntime) Exec(context.Context, string, []string) ([]byte, []byte, error) {
+func (*IgniteRuntime) Exec(context.Context, string, []string) ([]byte, []byte, error) {
 	log.Infof("Exec is not yet implemented for Ignite runtime")
 	return []byte{}, []byte{}, nil
 }
-func (c *IgniteRuntime) ExecNotWait(context.Context, string, []string) error {
+func (*IgniteRuntime) ExecNotWait(context.Context, string, []string) error {
 	log.Infof("ExecNotWait is not yet implemented for Ignite runtime")
 	return nil
 }
