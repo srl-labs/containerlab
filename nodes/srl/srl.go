@@ -152,6 +152,21 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	s.cfg.TLSCert = string(nodeCerts.Cert)
 	s.cfg.TLSKey = string(nodeCerts.Key)
 
+	// Create appmgr subdir for agent specs and copy files, if needed
+	if s.cfg.Extras != nil && len(s.cfg.Extras.SRLAgents) != 0 {
+		agents := s.cfg.Extras.SRLAgents
+		appmgr := filepath.Join(s.cfg.LabDir, "config/appmgr/")
+		utils.CreateDirectory(appmgr, 0777)
+
+		for _, fullpath := range agents {
+			basename := filepath.Base(fullpath)
+			dst := filepath.Join(appmgr, basename)
+			if err := utils.CopyFile(fullpath, dst); err != nil {
+				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
+			}
+		}
+	}
+
 	return createSRLFiles(s.cfg)
 }
 
@@ -226,7 +241,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
 	dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
 	if nodeCfg.StartupConfig != "" {
-		log.Debugf("GenerateConfig reading startup-config %s", nodeCfg.StartupConfig )
+		log.Debugf("GenerateConfig reading startup-config %s", nodeCfg.StartupConfig)
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err

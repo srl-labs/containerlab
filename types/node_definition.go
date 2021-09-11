@@ -52,6 +52,9 @@ type NodeDefinition struct {
 	CPU string `yaml:"cpu,omitempty"`
 	// Set node RAM (cgroup or hypervisor)
 	RAM string `yaml:"ram,omitempty"`
+
+	// Extra options, may be kind specific
+	Extras *Extras `yaml:"extras,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -242,6 +245,13 @@ func (n *NodeDefinition) GetExec() []string {
 		return nil
 	}
 	return n.Exec
+}
+
+func (n *NodeDefinition) GetExtras() *Extras {
+	if n == nil {
+		return nil
+	}
+	return n.Extras
 }
 
 // ImportEnvs imports all environment variales defined in the shell
