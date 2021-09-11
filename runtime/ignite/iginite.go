@@ -217,7 +217,7 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	}
 	defer os.Remove(udevFile.Name())
 
-	if _, err := udevFile.Write([]byte(strings.Join(udevRules, "\n"))); err != nil {
+	if _, err := udevFile.Write([]byte(strings.Join(udevRules, "\n") + "\n")); err != nil {
 		return nil, err
 	}
 	if err := udevFile.Close(); err != nil {
