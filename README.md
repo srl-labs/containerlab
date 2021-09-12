@@ -30,6 +30,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Cisco IOS XRv9k](https://containerlab.srlinux.dev/manual/kinds/vr-xrv9k/)
 * [Cisco Nexus 9000v](https://containerlab.srlinux.dev/manual/kinds/vr-n9kv)
 * [Cisco CSR 1000v](https://containerlab.srlinux.dev/manual/kinds/vr-csr)
+* [Dell FTOS10v](https://containerlab.srlinux.dev/manual/kinds/vr-ftosv)
 * [Arista vEOS](https://containerlab.srlinux.dev/manual/kinds/vr-veos)
 * [Palo Alto PAN](https://containerlab.srlinux.dev/manual/kinds/vr-pan)
 
