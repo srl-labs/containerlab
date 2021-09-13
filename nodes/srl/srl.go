@@ -324,13 +324,13 @@ func addDefaultConfig(_ context.Context, r runtime.ContainerRuntime, node *types
 	// defer d.Close()
 
 	cfgs := []string{
-		fmt.Sprintf("sr_cli -e set / system tls server-profile %s\"", tlsServerProfileName),
+		fmt.Sprintf("sr_cli -e set / system tls server-profile %s", tlsServerProfileName),
 		fmt.Sprintf("sr_cli -e set / system tls server-profile %s authenticate-client false", tlsServerProfileName),
 		fmt.Sprintf("sr_cli -e system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s", tlsServerProfileName),
-		"system json-rpc-server admin-state enable network-instance mgmt http admin-state enable",
+		"sr_cli -e system json-rpc-server admin-state enable network-instance mgmt http admin-state enable",
 		fmt.Sprintf("sr_cli -e system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s", tlsServerProfileName),
-		fmt.Sprintf("sr_cli -e set / system tls server-profile %s key '%s'", tlsServerProfileName, node.TLSKey),
-		fmt.Sprintf("sr_cli -e set / system tls server-profile %s certificate '%s'", tlsServerProfileName, node.TLSCert),
+		fmt.Sprintf("sr_cli -e 'set / system tls server-profile %s key %q'", tlsServerProfileName, node.TLSKey),
+		fmt.Sprintf("sr_cli -e 'set / system tls server-profile %s certificate %q'", tlsServerProfileName, node.TLSCert),
 		"sr_cli -e commit save",
 	}
 
