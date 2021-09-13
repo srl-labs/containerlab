@@ -18,7 +18,7 @@ const (
 )
 
 type ContainerRuntime interface {
-	// Intializes the Container runtime struct
+	// Initializes the Container runtime struct
 	Init(...RuntimeOption) error
 	// Adds custom configuration items to the container runtime struct
 	WithConfig(*RuntimeConfig)
@@ -33,7 +33,7 @@ type ContainerRuntime interface {
 	// Pull container image if not present
 	PullImageIfRequired(context.Context, string) error
 	// Create container returns an extra interface that can be used to receive signals
-	// about the container life-cycle after it was created, e.g. for post-deploy tassks
+	// about the container life-cycle after it was created, e.g. for post-deploy tasks
 	CreateContainer(context.Context, *types.NodeConfig) (interface{}, error)
 	// Start pre-created container by its name
 	StartContainer(context.Context, string) error
@@ -45,7 +45,7 @@ type ContainerRuntime interface {
 	GetNSPath(context.Context, string) (string, error)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
 	Exec(context.Context, string, []string) ([]byte, []byte, error)
-	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stodout/err
+	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
 	ExecNotWait(context.Context, string, []string) error
 	// Delete container by its name
 	DeleteContainer(context.Context, string) error

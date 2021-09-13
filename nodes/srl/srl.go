@@ -16,8 +16,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/google/shlex"
 	"github.com/pkg/errors"
-	"github.com/scrapli/scrapligo/driver/base"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/srl-labs/containerlab/cert"
@@ -309,50 +309,41 @@ func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
 // addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
 func addDefaultConfig(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
 	// give srlinux 5 seconds to settle internal boot sequences
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 10)
 
 	// containerd needs to sleep a bit more
 	if r.GetName() == "containerd" {
 		time.Sleep(time.Second * 10)
 	}
 
-	d, err := utils.SpawnCLIviaExec("nokia_srlinux", node.LongName, r.GetName())
-	if err != nil {
-		return err
-	}
+	// d, err := utils.SpawnCLIviaExec("nokia_srlinux", node.LongName, r.GetName())
+	// if err != nil {
+	// 	return err
+	// }
 
-	defer d.Close()
+	// defer d.Close()
 
 	cfgs := []string{
-		fmt.Sprintf("set / system tls server-profile %s", tlsServerProfileName),
-		fmt.Sprintf("set / system tls server-profile %s authenticate-client false", tlsServerProfileName),
-		fmt.Sprintf("system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s", tlsServerProfileName),
+		fmt.Sprintf("sr_cli -e set / system tls server-profile %s\"", tlsServerProfileName),
+		fmt.Sprintf("sr_cli -e set / system tls server-profile %s authenticate-client false", tlsServerProfileName),
+		fmt.Sprintf("sr_cli -e system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s", tlsServerProfileName),
 		"system json-rpc-server admin-state enable network-instance mgmt http admin-state enable",
-		fmt.Sprintf("system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s", tlsServerProfileName),
+		fmt.Sprintf("sr_cli -e system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s", tlsServerProfileName),
+		fmt.Sprintf("sr_cli -e set / system tls server-profile %s key '%s'", tlsServerProfileName, node.TLSKey),
+		fmt.Sprintf("sr_cli -e set / system tls server-profile %s certificate '%s'", tlsServerProfileName, node.TLSCert),
+		"sr_cli -e commit save",
 	}
 
-	resp, err := d.SendConfigs(cfgs, base.WithSendEager(true))
-	if err != nil {
-		return err
-	} else if resp.Failed != nil {
-		return errors.New("failed to configure tls server profile")
+	for _, cfg := range cfgs {
+		cfgparts, _ := shlex.Split(cfg)
+
+		stdout, stderr, err := r.Exec(context.Background(), node.LongName, cfgparts)
+		if err != nil {
+			return err
+		}
+
+		log.Infof("cfg: %s, stdout: %s, stderr: %s", cfg, stdout, stderr)
 	}
 
-	// key and cert are send outside of sendconfigs, because it was not working properly with `eager` option
-	// we need eager option to wait till the prompt appears without trying to match each string
-	// as each string is prepended with `...` when we paste multiline string such as key/cert
-	_, err = d.SendConfig(fmt.Sprintf("set / system tls server-profile %s key \"%s\"", tlsServerProfileName, node.TLSKey),
-		base.WithSendEager(true))
-	if err != nil {
-		return err
-	}
-	_, err = d.SendConfig(fmt.Sprintf("set / system tls server-profile %s certificate \"%s\"", tlsServerProfileName, node.TLSCert),
-		base.WithSendEager(true))
-	if err != nil {
-		return err
-	}
-
-	_, err = d.SendConfig("commit save")
-
-	return err
+	return nil
 }
