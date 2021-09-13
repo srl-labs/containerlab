@@ -54,6 +54,7 @@ var kinds = []string{
 	"ceos",
 	"crpd",
 	"sonic-vs",
+	"vr-ftosv",
 	"vr-n9kv",
 	"vr-sros",
 	"vr-vmx",

@@ -19,6 +19,7 @@ nav:
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
           - vr-csr - Cisco CSR1000v: manual/kinds/vr-csr.md
           - vr-n9kv - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
+          - vr-ftosv - Dell FTOS10v: manual/kinds/vr-ftosv.md
           - vr-veos - Arista vEOS: manual/kinds/vr-veos.md
           - vr-ros - MikroTik RouterOS: manual/kinds/vr-ros.md
           - vr-pan - Palo Alto PAN: manual/kinds/vr-pan.md

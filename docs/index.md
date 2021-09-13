@@ -27,6 +27,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vMX](manual/kinds/vr-vmx.md)
 * [Cisco IOS XRv9k](manual/kinds/vr-xrv9k.md)
 * [Cisco Nexus 9000v](manual/kinds/vr-n9kv.md)
+* [Dell FTOS10v](manual/kinds/vr-ftosv.md)
 * [Cisco CSR 1000v](manual/kinds/vr-csr.md)
 * [Arista vEOS](manual/kinds/vr-veos.md)
 * [Palo Alto PAN](manual/kinds/vr-pan.md)

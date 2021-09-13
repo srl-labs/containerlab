@@ -69,6 +69,9 @@ The images that work with containerlab will appear in the supported list gradual
 | MikroTik RouterOS | [vr-ros](kinds/vr-ros.md)     |                                            |                                                                                                                                                                                                              |
 | Palo Alto PAN     | [vr-pan](kinds/vr-pan.md)     |                                            |                                                                                                                                                                                                              |
 | Cisco Nexus 9000v | [vr-n9kv](kinds/vr-n9kv.md)   |                                            |                                                                                                                                                                                                              |
+| Dell FTOS10v      | [vr-ftosv](kinds/vr-ftosv.md) |                                            |                                                                                                                                                                                                              |
+
+
 
 
 ### Connection modes
