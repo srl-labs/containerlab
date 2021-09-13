@@ -5,6 +5,7 @@
 package srl
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"embed"
@@ -31,6 +32,8 @@ const (
 	srlDefaultType = "ixrd2"
 
 	tlsServerProfileName = "clab-profile"
+
+	readyTimeout = time.Second * 30 // max wait time for node to boot
 )
 
 var (
@@ -187,7 +190,7 @@ func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
 
-	return addDefaultConfig(ctx, s.runtime, s.cfg)
+	return s.addDefaultConfig(ctx, s.runtime, s.cfg)
 }
 
 func (*srl) Destroy(_ context.Context) error {
@@ -222,6 +225,51 @@ func (s *srl) SaveConfig(ctx context.Context) error {
 	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", s.cfg.ShortName, string(stdout))
 
 	return nil
+}
+
+// Ready returns when the node is considered to boot to the stage when it is ready to accept config commands
+// returns an error if not ready by the time readyTimeout.
+func (s *srl) Ready() error {
+	ctx, cancel := context.WithTimeout(context.Background(), readyTimeout)
+	defer cancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for SR Linux node %s to boot", s.cfg.ShortName)
+		default:
+			// two commands are checked, first if the mgmt_server is running
+			cmd1, _ := shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
+
+			stdout1, stderr, err := s.GetRuntime().Exec(context.Background(), s.cfg.LongName, cmd1)
+			if err != nil {
+				return err
+			}
+
+			if len(stderr) != 0 {
+				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+			}
+
+			// and then if the initial commit completes
+			cmd2, _ := shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
+
+			stdout2, stderr, err := s.GetRuntime().Exec(context.Background(), s.cfg.LongName, cmd2)
+			if err != nil {
+				return err
+			}
+
+			if len(stderr) != 0 {
+				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+			}
+
+			if bytes.Contains(stdout1, []byte("running")) && bytes.Contains(stdout2, []byte("complete")) {
+				return nil
+			}
+
+			log.Debugf("node %s not yet ready", s.cfg.ShortName)
+			time.Sleep(time.Second * 1)
+		}
+	}
 }
 
 //
@@ -307,43 +355,46 @@ func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
-func addDefaultConfig(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
-	// give srlinux 5 seconds to settle internal boot sequences
-	time.Sleep(time.Second * 10)
-
-	// containerd needs to sleep a bit more
-	if r.GetName() == "containerd" {
-		time.Sleep(time.Second * 10)
+func (s *srl) addDefaultConfig(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
+	// it takes at least 5 seconds to settle internal boot sequences
+	time.Sleep(time.Second * 5)
+	// then start waiting for initial commit and mgmt server ready
+	if err := s.Ready(); err != nil {
+		return err
 	}
 
-	// d, err := utils.SpawnCLIviaExec("nokia_srlinux", node.LongName, r.GetName())
-	// if err != nil {
-	// 	return err
-	// }
+	// clab config
+	cfgs := fmt.Sprintf(`set / system tls server-profile %s
+set / system tls server-profile %s authenticate-client false
+set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s
+set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
+set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s
+set / system tls server-profile %s key "%s"
+set / system tls server-profile %s certificate "%s"
+commit save`, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName,
+		node.TLSKey, tlsServerProfileName, node.TLSCert)
 
-	// defer d.Close()
+	stdout, _, err := r.Exec(context.Background(), node.LongName, []string{
+		"bash",
+		"-c",
+		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgs),
+	})
 
-	cfgs := []string{
-		fmt.Sprintf("sr_cli -e set / system tls server-profile %s", tlsServerProfileName),
-		fmt.Sprintf("sr_cli -e set / system tls server-profile %s authenticate-client false", tlsServerProfileName),
-		fmt.Sprintf("sr_cli -e system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s", tlsServerProfileName),
-		"sr_cli -e system json-rpc-server admin-state enable network-instance mgmt http admin-state enable",
-		fmt.Sprintf("sr_cli -e system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s", tlsServerProfileName),
-		fmt.Sprintf("sr_cli -e 'set / system tls server-profile %s key %q'", tlsServerProfileName, node.TLSKey),
-		fmt.Sprintf("sr_cli -e 'set / system tls server-profile %s certificate %q'", tlsServerProfileName, node.TLSCert),
-		"sr_cli -e commit save",
+	if err != nil {
+		return err
 	}
 
-	for _, cfg := range cfgs {
-		cfgparts, _ := shlex.Split(cfg)
+	stdout, stderr, err := r.Exec(context.Background(), node.LongName, []string{
+		"bash",
+		"-c",
+		"sr_cli -ed < tmp/clab-config",
+	})
 
-		stdout, stderr, err := r.Exec(context.Background(), node.LongName, cfgparts)
-		if err != nil {
-			return err
-		}
-
-		log.Infof("cfg: %s, stdout: %s, stderr: %s", cfg, stdout, stderr)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+
+	return err
 }
