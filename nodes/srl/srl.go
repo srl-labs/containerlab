@@ -374,7 +374,7 @@ set / system tls server-profile %s certificate "%s"
 commit save`, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName,
 		node.TLSKey, tlsServerProfileName, node.TLSCert)
 
-	stdout, _, err := r.Exec(context.Background(), node.LongName, []string{
+	_, _, err := r.Exec(context.Background(), node.LongName, []string{
 		"bash",
 		"-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgs),
