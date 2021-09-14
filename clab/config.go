@@ -86,6 +86,9 @@ func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 	log.Debugf("Lab name: %s", c.Config.Name)
 
+	// change to the dir of the topo file so that local paths in the topo file can be resolved
+	os.Chdir(filepath.Dir(c.TopoFile.path))
+
 	if c.Config.ConfigPath == "" {
 		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 	}
