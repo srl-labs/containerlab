@@ -175,8 +175,8 @@ func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Ge
 				Image:       cont.Image,
 				Group:       node.Config().Group,
 				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
-				IPv4Address: getContainerIPv4(cont, c.Config.Mgmt.Network),
-				IPv6Address: getContainerIPv6(cont, c.Config.Mgmt.Network),
+				IPv4Address: getContainerIPv4(cont),
+				IPv6Address: getContainerIPv6(cont),
 			})
 		}
 	}

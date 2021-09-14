@@ -46,10 +46,10 @@ var inspectCmd = &cobra.Command{
 	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.srlinux.dev/cmd/inspect/",
 	Aliases: []string{"ins", "i"},
 	PreRunE: sudoCheck,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" && topo == "" && !all {
 			fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
-			return
+			return nil
 		}
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
@@ -66,7 +66,7 @@ var inspectCmd = &cobra.Command{
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {
-			log.Errorf("could not parse the topology file: %v", err)
+			return fmt.Errorf("could not parse the topology file: %v", err)
 		}
 
 		if name == "" {
@@ -87,22 +87,24 @@ var inspectCmd = &cobra.Command{
 
 		containers, err := c.ListContainers(ctx, glabels)
 		if err != nil {
-			log.Fatalf("failed to list containers: %s", err)
+			return fmt.Errorf("failed to list containers: %s", err)
 		}
 
 		if len(containers) == 0 {
 			log.Println("no containers found")
-			return
+			return nil
 		}
 		if details {
 			b, err := json.MarshalIndent(containers, "", "  ")
 			if err != nil {
-				log.Fatalf("failed to marshal containers struct: %v", err)
+				return fmt.Errorf("failed to marshal containers struct: %v", err)
 			}
 			fmt.Println(string(b))
-			return
+			return nil
 		}
-		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
+
+		err = printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
+		return err
 	},
 }
 
@@ -126,7 +128,7 @@ func toTableData(det []containerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, bridgeName, format string) {
+func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, bridgeName, format string) error {
 	contDetails := make([]containerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
@@ -142,8 +144,8 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 			LabPath:     path,
 			Image:       cont.Image,
 			State:       cont.State,
-			IPv4Address: getContainerIPv4(cont, bridgeName),
-			IPv6Address: getContainerIPv6(cont, bridgeName),
+			IPv4Address: getContainerIPv4(cont),
+			IPv6Address: getContainerIPv6(cont),
 		}
 		cdet.ContainerID = cont.ShortID
 
@@ -162,19 +164,21 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 		}
 		contDetails = append(contDetails, cdet)
 	}
+
 	sort.Slice(contDetails, func(i, j int) bool {
 		if contDetails[i].LabName == contDetails[j].LabName {
 			return contDetails[i].Name < contDetails[j].Name
 		}
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
+
 	if format == "json" {
 		b, err := json.MarshalIndent(contDetails, "", "  ")
 		if err != nil {
-			log.Fatalf("failed to marshal container details: %v", err)
+			fmt.Errorf("failed to marshal container details: %v", err)
 		}
 		fmt.Println(string(b))
-		return
+		return nil
 	}
 	tabData := toTableData(contDetails)
 	table := tablewriter.NewWriter(os.Stdout)
@@ -201,24 +205,27 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 	table.Render()
 
 	if !printMysocket {
-		return
+		return nil
 	}
 
 	runtime := c.GlobalRuntime()
 
 	stdout, stderr, err := runtime.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
 	if err != nil {
-		log.Errorf("failed to execute cmd: %v", err)
+		return fmt.Errorf("failed to execute cmd: %v", err)
 
 	}
 	if len(stderr) > 0 {
 		log.Infof("errors during listing mysocketio sockets: %s", string(stderr))
 	}
+
 	fmt.Println("Published ports:")
 	fmt.Println(string(stdout))
+
+	return nil
 }
 
-func getContainerIPv4(ctr types.GenericContainer, bridgeName string) string {
+func getContainerIPv4(ctr types.GenericContainer) string {
 	if !ctr.NetworkSettings.Set {
 		return ""
 	}
@@ -231,7 +238,7 @@ func getContainerIPv4(ctr types.GenericContainer, bridgeName string) string {
 
 }
 
-func getContainerIPv6(ctr types.GenericContainer, bridgeName string) string {
+func getContainerIPv6(ctr types.GenericContainer) string {
 	if !ctr.NetworkSettings.Set {
 		return ""
 	}
