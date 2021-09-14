@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"strings"
 	"time"
 
 	"github.com/scrapli/scrapligo/driver/base"
@@ -17,11 +18,24 @@ var (
 		"arista_eos":    "Cli",
 		"nokia_srlinux": "sr_cli",
 	}
+
+	// map of the cli exec command and its argument per runtime
+	// which is used to spawn CLI session
+	CLIExecCommand = map[string]map[string]string{
+		"docker": {
+			"exec": "docker",
+			"open": "exec -it",
+		},
+		"containerd": {
+			"exec": "ctr",
+			"open": "-n clab task exec -t --exec-id clab",
+		},
+	}
 )
 
 // SpawnCLIviaExec spawns a CLI session over container runtime exec function
 // end ensures the CLI is available to be used for sending commands over
-func SpawnCLIviaExec(platform, contName string) (*network.Driver, error) {
+func SpawnCLIviaExec(platform, contName, runtime string) (*network.Driver, error) {
 	var d *network.Driver
 	var err error
 
@@ -33,6 +47,9 @@ func SpawnCLIviaExec(platform, contName string) (*network.Driver, error) {
 			// disable transport timeout
 			base.WithTimeoutTransport(0),
 		)
+		// jack up PtyWidth, since we use `docker exec` to enter certificate and key strings
+		// and these are lengthy
+		d.Transport.BaseTransportArgs.PtyWidth = 5000
 	default:
 		d, err = core.NewCoreDriver(
 			contName,
@@ -47,9 +64,8 @@ func SpawnCLIviaExec(platform, contName string) (*network.Driver, error) {
 		return nil, err
 	}
 
-	// TODO: implement for ctr (containerd)
-	execCmd := "docker"
-	openCmd := []string{"exec", "-it"}
+	execCmd := CLIExecCommand[runtime]["exec"]
+	openCmd := strings.Split(CLIExecCommand[runtime]["open"], " ")
 
 	t, _ := d.Transport.Impl.(transport.SystemTransport)
 	t.SetExecCmd(execCmd)

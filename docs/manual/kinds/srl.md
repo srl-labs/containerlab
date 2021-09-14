@@ -44,12 +44,12 @@ Based on the provided type, containerlab will generate the topology file that wi
 ### Node configuration
 SR Linux uses a `/etc/opt/srlinux/config.json` file to persist its configuration. By default containerlab starts nodes of `srl` kind with a basic "default" config, and with the `startup-config` parameter it is possible to provide a custom config file that will be used as a startup one.
 #### Default node configuration
-When a node is defined without the `startup-config` statement present, containerlab will generate an basic config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.cfg):
+When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.go#L38) on top of the factory config:
 
 ```yaml
 # example of a topo file that does not define a custom startup-config
-# as a result, the config will be generated from a template
-# and used by this node
+# as a result, the default configuration will be used by this node
+
 name: srl_lab
 topology:
   nodes:
@@ -93,6 +93,22 @@ INFO[0001] saved SR Linux configuration from leaf1 node. Output:
 INFO[0001] saved SR Linux configuration from leaf2 node. Output:
 /system:
     Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
+```
+
+#### User defined custom agents for SR Linux nodes
+SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under `/etc/opt/srlinux/appmgr/`. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
+
+```yaml
+name: srl_lab_with_custom_agents
+topology:
+  nodes:
+    srl1:
+      kind: srl
+      ...
+      extras:
+        srl-agents:
+        - path1/my_custom_agent.yml
+        - path2/my_other_agent.yml
 ```
 
 ### TLS

@@ -5,6 +5,7 @@
 package srl
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"embed"
@@ -14,7 +15,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
+	"github.com/google/shlex"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
@@ -27,6 +30,21 @@ import (
 
 const (
 	srlDefaultType = "ixrd2"
+
+	tlsServerProfileName = "clab-profile"
+
+	readyTimeout = time.Second * 30 // max wait time for node to boot
+
+	// additional config that clab adds on top of the factory config
+	clabConfig = `set / system tls server-profile %s
+	set / system tls server-profile %s authenticate-client false
+	set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s
+	set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
+	set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s
+	set / system tls server-profile %s key "%s"
+	set / system tls server-profile %s certificate "%s"
+	set / system lldp admin-state enable
+	commit save`
 )
 
 var (
@@ -48,9 +66,6 @@ var (
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
-
-	//go:embed srl.cfg
-	cfgTemplate string
 
 	//go:embed topology/*
 	topologies embed.FS
@@ -152,6 +167,21 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	s.cfg.TLSCert = string(nodeCerts.Cert)
 	s.cfg.TLSKey = string(nodeCerts.Key)
 
+	// Create appmgr subdir for agent specs and copy files, if needed
+	if s.cfg.Extras != nil && len(s.cfg.Extras.SRLAgents) != 0 {
+		agents := s.cfg.Extras.SRLAgents
+		appmgr := filepath.Join(s.cfg.LabDir, "config/appmgr/")
+		utils.CreateDirectory(appmgr, 0777)
+
+		for _, fullpath := range agents {
+			basename := filepath.Base(fullpath)
+			dst := filepath.Join(appmgr, basename)
+			if err := utils.CopyFile(fullpath, dst); err != nil {
+				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
+			}
+		}
+	}
+
 	return createSRLFiles(s.cfg)
 }
 
@@ -160,10 +190,18 @@ func (s *srl) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *srl) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
-	return nil
+func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+	// only perform postdeploy additional config provisioning if there is not startup nor existing config
+	if s.cfg.StartupConfig != "" || utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
+		return nil
+	}
+
+	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+
+	return s.addDefaultConfig(ctx, s.runtime, s.cfg)
 }
-func (s *srl) Destroy(ctx context.Context) error {
+
+func (*srl) Destroy(_ context.Context) error {
 	// return s.runtime.DeleteContainer(ctx, s.cfg)
 	return nil
 }
@@ -174,7 +212,7 @@ func (s *srl) GetImages() map[string]string {
 	}
 }
 
-func (s *srl) WithMgmtNet(*types.MgmtNet)             {}
+func (*srl) WithMgmtNet(*types.MgmtNet)               {}
 func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
@@ -195,6 +233,51 @@ func (s *srl) SaveConfig(ctx context.Context) error {
 	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", s.cfg.ShortName, string(stdout))
 
 	return nil
+}
+
+// Ready returns when the node is considered to boot to the stage when it is ready to accept config commands
+// returns an error if not ready by the time readyTimeout.
+func (s *srl) Ready() error {
+	ctx, cancel := context.WithTimeout(context.Background(), readyTimeout)
+	defer cancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for SR Linux node %s to boot", s.cfg.ShortName)
+		default:
+			// two commands are checked, first if the mgmt_server is running
+			cmd1, _ := shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
+
+			stdout1, stderr, err := s.GetRuntime().Exec(context.Background(), s.cfg.LongName, cmd1)
+			if err != nil {
+				return err
+			}
+
+			if len(stderr) != 0 {
+				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+			}
+
+			// and then if the initial commit completes
+			cmd2, _ := shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
+
+			stdout2, stderr, err := s.GetRuntime().Exec(context.Background(), s.cfg.LongName, cmd2)
+			if err != nil {
+				return err
+			}
+
+			if len(stderr) != 0 {
+				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+			}
+
+			if bytes.Contains(stdout1, []byte("running")) && bytes.Contains(stdout2, []byte("complete")) {
+				return nil
+			}
+
+			log.Debugf("node %s not yet ready", s.cfg.ShortName)
+			time.Sleep(time.Second * 1)
+		}
+	}
 }
 
 //
@@ -220,22 +303,27 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		return err
 	}
 
+	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
+
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
-	dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
 	if nodeCfg.StartupConfig != "" {
-		log.Debugf("GenerateConfig reading startup-config %s", nodeCfg.StartupConfig )
+		dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
+
+		log.Debugf("Reading startup-config %s", nodeCfg.StartupConfig)
+
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
-	}
-	err = nodeCfg.GenerateConfig(dst, cfgTemplate)
-	if err != nil {
-		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+
+		cfgTemplate := string(c)
+
+		err = nodeCfg.GenerateConfig(dst, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+		}
 	}
 
 	return err
@@ -245,7 +333,7 @@ type mac struct {
 	MAC string
 }
 
-func generateSRLTopologyFile(nodeType, labDir string, index int) error {
+func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
 	dst := filepath.Join(labDir, "topology.yml")
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[nodeType])
@@ -272,4 +360,44 @@ func generateSRLTopologyFile(nodeType, labDir string, index int) error {
 	}
 	defer f.Close()
 	return tpl.Execute(f, mac)
+}
+
+// addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
+func (s *srl) addDefaultConfig(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
+	// it takes at least 5 seconds to settle internal boot sequences
+	time.Sleep(time.Second * 5)
+	// then start waiting for initial commit and mgmt server ready
+	if err := s.Ready(); err != nil {
+		return err
+	}
+
+	// clab additional config to the factory config
+	cfgs := fmt.Sprintf(clabConfig, tlsServerProfileName, tlsServerProfileName,
+		tlsServerProfileName, tlsServerProfileName,
+		tlsServerProfileName, node.TLSKey,
+		tlsServerProfileName, node.TLSCert)
+
+	_, _, err := r.Exec(context.Background(), node.LongName, []string{
+		"bash",
+		"-c",
+		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgs),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	stdout, stderr, err := r.Exec(context.Background(), node.LongName, []string{
+		"bash",
+		"-c",
+		"sr_cli -ed < tmp/clab-config",
+	})
+
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+
+	return err
 }

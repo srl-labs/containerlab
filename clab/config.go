@@ -54,6 +54,7 @@ var kinds = []string{
 	"ceos",
 	"crpd",
 	"sonic-vs",
+	"vr-ftosv",
 	"vr-n9kv",
 	"vr-sros",
 	"vr-vmx",
@@ -243,6 +244,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		RAM:             c.Config.Topology.GetNodeRAM(nodeName),
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
+
+		// Extras
+		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
 
 	log.Debugf("node config: %+v", nodeCfg)
