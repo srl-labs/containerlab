@@ -65,7 +65,7 @@ Note, that if a config file exists in the lab directory for a given node, then i
 ### enforce-startup-config
 By default, containerlab will use the config file that is available in the lab directory for a given node even if the `startup config` parameter points to another file. To make a node to boot with the config set with `startup-config` parameter no matter what, set the `enforce-startup-config` to `true`.
 
-## startup-delay
+### startup-delay
 To make certain node(s) to boot/start later than others use the `startup-delay` config element that accepts the delay amount in seconds.
 
 This setting can be applied on node/kind/default levels.
