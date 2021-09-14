@@ -25,7 +25,7 @@ Ensure inspect outputs IP addresses
     @{data} =    Split String    ${line}    |
     Log    ${data}
     # verify ipv4 address
-    ${ipv4} =    String.Strip String    ${data}[8]
+    ${ipv4} =    String.Strip String    ${data}[7]
     Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
 
 *** Keywords ***
