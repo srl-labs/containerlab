@@ -22,7 +22,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210303205135-43e4633e40c1
 	github.com/pkg/errors v0.9.1
-	github.com/scrapli/scrapligo v0.1.0
+	github.com/scrapli/scrapligo v0.1.1-0.20210909232153-75c4a2e96780
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
 	github.com/srl-labs/srlinux-scrapli v0.3.0
