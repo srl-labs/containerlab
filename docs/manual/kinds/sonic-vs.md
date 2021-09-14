@@ -4,6 +4,9 @@
 
 !!!info
     `vs` in the name of a kind refers to a SONiC platform type.
+    
+!!!note
+    To build a `sonic-vs` docker image, you will need to consult the [SONiC build documentation](https://github.com/Azure/sonic-buildimage/blob/master/README.md#usage) and build the docker images with `PLATFORM=vs`
 
 sonic-vs nodes launched with containerlab comes without any additional configuration.
 
