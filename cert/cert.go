@@ -102,7 +102,7 @@ var NodeCSRTempl string = `{
 
 // GenerateRootCa function
 func GenerateRootCa(labCARoot string, csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
-	log.Info("Creating root CA")
+	log.Debug("Creating root CA")
 	// create root CA root directory
 	utils.CreateDirectory(labCARoot, 0755)
 	var err error

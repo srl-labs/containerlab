@@ -78,10 +78,10 @@ Ensure "inspect all" outputs IP addresses
     @{data} =    Split String    ${line}    |
     Log    ${data}
     # verify ipv4 address
-    ${ipv4} =    String.Strip String    ${data}[10]
+    ${ipv4} =    String.Strip String    ${data}[9]
     Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
     # verify ipv6 address
-    ${ipv6} =    String.Strip String    ${data}[11]
+    ${ipv6} =    String.Strip String    ${data}[10]
     Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+/\\d{1,2}$
 
 Verify bind mount in l1 node

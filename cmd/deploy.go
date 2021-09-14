@@ -237,7 +237,7 @@ var deployCmd = &cobra.Command{
 		newVerNotification(vCh)
 
 		// print table summary
-		printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
+		printContainerInspect(c, containers, format)
 
 		return nil
 	},
