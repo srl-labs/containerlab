@@ -15,6 +15,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	scrapliPlatformName = "cisco_iosxr"
+)
+
 func init() {
 	nodes.Register(nodes.NodeKindVrXRV9K, func() nodes.Node {
 		return new(vrXRV9K)
@@ -91,6 +95,7 @@ func (s *vrXRV9K) SaveConfig(ctx context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],
+		scrapliPlatformName,
 	)
 
 	if err != nil {
