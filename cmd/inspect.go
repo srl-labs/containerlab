@@ -175,7 +175,7 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 	if format == "json" {
 		b, err := json.MarshalIndent(contDetails, "", "  ")
 		if err != nil {
-			fmt.Errorf("failed to marshal container details: %v", err)
+			return fmt.Errorf("failed to marshal container details: %v", err)
 		}
 		fmt.Println(string(b))
 		return nil
