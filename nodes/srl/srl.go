@@ -34,6 +34,17 @@ const (
 	tlsServerProfileName = "clab-profile"
 
 	readyTimeout = time.Second * 30 // max wait time for node to boot
+
+	// additional config that clab adds on top of the factory config
+	clabConfig = `set / system tls server-profile %s
+	set / system tls server-profile %s authenticate-client false
+	set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s
+	set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
+	set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s
+	set / system tls server-profile %s key "%s"
+	set / system tls server-profile %s certificate "%s"
+	set / system lldp admin-state enable
+	commit save`
 )
 
 var (
@@ -55,9 +66,6 @@ var (
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
-
-	//go:embed srl.cfg
-	cfgTemplate string
 
 	//go:embed topology/*
 	topologies embed.FS
@@ -310,7 +318,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 			return err
 		}
 
-		cfgTemplate = string(c)
+		cfgTemplate := string(c)
 
 		err = nodeCfg.GenerateConfig(dst, cfgTemplate)
 		if err != nil {
@@ -363,16 +371,11 @@ func (s *srl) addDefaultConfig(_ context.Context, r runtime.ContainerRuntime, no
 		return err
 	}
 
-	// clab config
-	cfgs := fmt.Sprintf(`set / system tls server-profile %s
-set / system tls server-profile %s authenticate-client false
-set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile %s
-set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
-set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile %s
-set / system tls server-profile %s key "%s"
-set / system tls server-profile %s certificate "%s"
-commit save`, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName, tlsServerProfileName,
-		node.TLSKey, tlsServerProfileName, node.TLSCert)
+	// clab additional config to the factory config
+	cfgs := fmt.Sprintf(clabConfig, tlsServerProfileName, tlsServerProfileName,
+		tlsServerProfileName, tlsServerProfileName,
+		tlsServerProfileName, node.TLSKey,
+		tlsServerProfileName, node.TLSCert)
 
 	_, _, err := r.Exec(context.Background(), node.LongName, []string{
 		"bash",

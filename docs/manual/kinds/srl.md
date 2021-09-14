@@ -44,12 +44,12 @@ Based on the provided type, containerlab will generate the topology file that wi
 ### Node configuration
 SR Linux uses a `/etc/opt/srlinux/config.json` file to persist its configuration. By default containerlab starts nodes of `srl` kind with a basic "default" config, and with the `startup-config` parameter it is possible to provide a custom config file that will be used as a startup one.
 #### Default node configuration
-When a node is defined without the `startup-config` statement present, containerlab will generate an basic config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.cfg):
+When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.go#L38) on top of the factory config:
 
 ```yaml
 # example of a topo file that does not define a custom startup-config
-# as a result, the config will be generated from a template
-# and used by this node
+# as a result, the default configuration will be used by this node
+
 name: srl_lab
 topology:
   nodes:
