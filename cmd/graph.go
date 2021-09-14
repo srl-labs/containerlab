@@ -73,11 +73,9 @@ var graphCmd = &cobra.Command{
 		}
 
 		if dot {
-			if err := c.GenerateGraph(topo); err != nil {
-				return err
-			}
-			return nil
+			return c.GenerateGraph(topo)
 		}
+
 		gtopo := graphTopo{
 			Nodes: make([]containerDetails, 0, len(c.Nodes)),
 			Links: make([]link, 0, len(c.Links)),
@@ -123,7 +121,7 @@ var graphCmd = &cobra.Command{
 		log.Debugf("generating graph using data: %s", string(b))
 		topoD := topoData{
 			Name: c.Config.Name,
-			Data: template.JS(string(b)),
+			Data: template.JS(string(b)), // skipcq: GSC-G203
 		}
 		var t *template.Template
 		if tmpl != "" {

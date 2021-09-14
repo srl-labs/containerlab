@@ -103,7 +103,7 @@ var inspectCmd = &cobra.Command{
 			return nil
 		}
 
-		err = printContainerInspect(c, containers, c.Config.Mgmt.Network, format)
+		err = printContainerInspect(c, containers, format)
 		return err
 	},
 }
@@ -128,7 +128,7 @@ func toTableData(det []containerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, bridgeName, format string) error {
+func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, format string) error {
 	contDetails := make([]containerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
