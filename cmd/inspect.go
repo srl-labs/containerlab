@@ -118,10 +118,10 @@ func toTableData(det []containerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
 	for i, d := range det {
 		if all {
-			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabPath, d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabPath, d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address})
 			continue
 		}
-		tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.Name, d.ContainerID, d.Image, d.Kind, d.Group, d.State, d.IPv4Address, d.IPv6Address})
+		tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address})
 	}
 	return tabData
 }
@@ -184,7 +184,6 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, br
 		"Container ID",
 		"Image",
 		"Kind",
-		"Group",
 		"State",
 		"IPv4 Address",
 		"IPv6 Address",
