@@ -79,6 +79,7 @@ nav:
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
   - Release notes:
+      - 0.18: rn/0.18.md
       - 0.17: rn/0.17.md
       - 0.16: rn/0.16.md
       - 0.15: rn/0.15.md
