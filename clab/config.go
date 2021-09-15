@@ -27,6 +27,7 @@ import (
 const (
 	// prefix is used to distinct containerlab created files/dirs/containers
 	defaultPrefix = "clab"
+	defaultDomain = ".io"
 	// a name of a docker network that nodes management interfaces connect to
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
@@ -76,6 +77,7 @@ var kinds = []string{
 type Config struct {
 	Name       string          `json:"name,omitempty"`
 	Prefix     *string         `json:"prefix,omitempty"`
+	Domain     *string         `json:"domain,omitempty"`
 	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology   *types.Topology `json:"topology,omitempty"`
 	ConfigPath string          `yaml:"config_path,omitempty"`
@@ -92,6 +94,10 @@ func (c *CLab) parseTopology() error {
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
 		*c.Config.Prefix = defaultPrefix
+	}
+	if c.Config.Domain == nil {
+		c.Config.Domain = new(string)
+		*c.Config.Domain = defaultDomain
 	}
 
 	c.Dir = new(Directory)
@@ -219,7 +225,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg := &types.NodeConfig{
 		ShortName:       nodeName,
 		LongName:        longName,
-		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, ".io"}, "."),
+		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, c.Config.Domain}, "."),
 		LabDir:          filepath.Join(c.Dir.Lab, nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),

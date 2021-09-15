@@ -34,7 +34,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
     {{$kind}}:
       hosts:
 {{- range $nodes}}
-        {{.LongName}}:
+        {{.Fqdn}}:
           ansible_host: {{.MgmtIPv4Address}}
 {{- end}}
 {{- end}}
@@ -42,7 +42,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
     {{$name}}:
       hosts:
       {{- range $nodes}}
-        {{.LongName}}:
+        {{.Fqdn}}:
           ansible_host: {{.MgmtIPv4Address}}
       {{- end}}
 {{- end}}
