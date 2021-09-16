@@ -385,7 +385,8 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("%q:\n%s", s.cfg.ShortName, buf.String())
+
+	log.Debugf("Node %q additional config:\n%s", s.cfg.ShortName, buf.String())
 	_, _, err = s.runtime.Exec(ctx, s.cfg.LongName, []string{
 		"bash",
 		"-c",
