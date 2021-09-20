@@ -36,7 +36,7 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
 ### Types
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
-The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3` which correspond to a hardware variant of Nokia 7250/7220 IXR chassis.
+The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3`, `ixrh3` and `ixrh2` which correspond to a hardware variant of Nokia 7250/7220 IXR chassis.
 
 By default, `ixrd2` type will be used by containerlab.
 
