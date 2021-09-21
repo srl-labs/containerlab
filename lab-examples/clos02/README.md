@@ -3,7 +3,7 @@
 ### 5-stage CLOS
 https://containerlab.srlinux.dev/lab-examples/min-5clos/
 
-### Execution:
+### Execution
 ```
 chmod +x setup.sh
 ./setup.sh setup.clos02.clab.yml
@@ -16,6 +16,7 @@ chmod +x setup.sh
 4. NEs with BGP, ISIS & OSPF Network Interface (under default).
 
 ### IP Connectivity
+
 |Source     |Interface     |Towards    |IPv4          |IPv4 Prefix|IPv6                |IPv6 Prefix|
 |-----------|--------------|-----------|--------------|-----------|--------------------|-----------|
 |leaf1      |mgmt0.0       |-          |172.100.100.2 |24         |2001:172:100:100::2 |64         |
