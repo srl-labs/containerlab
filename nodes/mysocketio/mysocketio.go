@@ -26,14 +26,14 @@ func (s *mySocketIO) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error
 	for _, o := range opts {
 		o(s)
 	}
-	s.cfg.Entrypoint = "/bin/bash"
+
 	return nil
 }
 
 func (s *mySocketIO) Config() *types.NodeConfig { return s.cfg }
 
 func (s *mySocketIO) PreDeploy(configName, labCADir, labCARoot string) error {
-	// utils.CreateDirectory(s.cfg.LabDir, 0777)
+
 	return nil
 }
 func (s *mySocketIO) Deploy(ctx context.Context) error {
