@@ -1,5 +1,9 @@
-# topology documentation: http://containerlab.srlinux.dev/lab-examples/min-5clos/
 name: clos02
+
+mgmt:
+  network: br-clos02
+  ipv4_subnet: 172.100.100.0/24
+  ipv6_subnet: 2001:172:100:100::0/64
 
 topology:
   kinds:
@@ -10,62 +14,87 @@ topology:
   nodes:
     leaf1:
       kind: srl
+      mgmt_ipv4: 172.100.100.2
+      mgmt_ipv6: 2001:172:100:100::2
     leaf2:
       kind: srl
+      mgmt_ipv4: 172.100.100.3
+      mgmt_ipv6: 2001:172:100:100::3
     leaf3:
       kind: srl
+      mgmt_ipv4: 172.100.100.4
+      mgmt_ipv6: 2001:172:100:100::4
     leaf4:
       kind: srl
+      mgmt_ipv4: 172.100.100.5
+      mgmt_ipv6: 2001:172:100:100::5
 
     spine1:
       kind: srl
       type: ixr6
+      mgmt_ipv4: 172.100.100.6
+      mgmt_ipv6: 2001:172:100:100::6
     spine2:
       kind: srl
       type: ixr6
+      mgmt_ipv4: 172.100.100.7
+      mgmt_ipv6: 2001:172:100:100::7
     spine3:
       kind: srl
       type: ixr6
+      mgmt_ipv4: 172.100.100.8
+      mgmt_ipv6: 2001:172:100:100::8
     spine4:
       kind: srl
       type: ixr6
+      mgmt_ipv4: 172.100.100.9
+      mgmt_ipv6: 2001:172:100:100::9
 
     superspine1:
       kind: srl
       type: ixr6
+      mgmt_ipv4: 172.100.100.10
+      mgmt_ipv6: 2001:172:100:100::10
     superspine2:
       kind: srl
       type: ixr6
+      mgmt_ipv4: 172.100.100.11
+      mgmt_ipv6: 2001:172:100:100::11
 
     client1:
       kind: linux
+      mgmt_ipv4: 172.100.100.12
+      mgmt_ipv6: 2001:172:100:100::12
     client2:
       kind: linux
+      mgmt_ipv4: 172.100.100.13
+      mgmt_ipv6: 2001:172:100:100::13
     client3:
       kind: linux
+      mgmt_ipv4: 172.100.100.14
+      mgmt_ipv6: 2001:172:100:100::14
     client4:
       kind: linux
+      mgmt_ipv4: 172.100.100.15
+      mgmt_ipv6: 2001:172:100:100::15
 
   links:
-    # leaf to spine links POD1
     - endpoints: ["leaf1:e1-1", "spine1:e1-1"]
     - endpoints: ["leaf1:e1-2", "spine2:e1-1"]
     - endpoints: ["leaf2:e1-1", "spine1:e1-2"]
     - endpoints: ["leaf2:e1-2", "spine2:e1-2"]
-    # spine to superspine links POD1
+
     - endpoints: ["spine1:e1-3", "superspine1:e1-1"]
     - endpoints: ["spine2:e1-3", "superspine2:e1-1"]
 
-    # leaf to spine links POD2
     - endpoints: ["leaf3:e1-1", "spine3:e1-1"]
     - endpoints: ["leaf3:e1-2", "spine4:e1-1"]
     - endpoints: ["leaf4:e1-1", "spine3:e1-2"]
     - endpoints: ["leaf4:e1-2", "spine4:e1-2"]
-    # spine to superspine links POD2
+
     - endpoints: ["spine3:e1-3", "superspine1:e1-2"]
     - endpoints: ["spine4:e1-3", "superspine2:e1-2"]
 
-    # client connection links
     - endpoints: ["client1:eth1", "leaf1:e1-3"]
     - endpoints: ["client2:eth1", "leaf2:e1-3"]
     - endpoints: ["client3:eth1", "leaf3:e1-3"]

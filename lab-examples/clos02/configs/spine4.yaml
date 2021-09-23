@@ -1,0 +1,101 @@
+srl_nokia-interfaces:interface:
+  - name: ethernet-1/1
+    admin-state: enable
+    subinterface:
+      - index: 0
+        ipv4:
+          address:
+            - ip-prefix: 10.0.0.15/31
+        ipv6:
+          address:
+            - ip-prefix: 1000:10::15/127
+  - name: ethernet-1/2
+    admin-state: enable
+    subinterface:
+      - index: 0
+        ipv4:
+          address:
+            - ip-prefix: 10.0.0.19/31
+        ipv6:
+          address:
+            - ip-prefix: 1000:10::19/127
+  - name: ethernet-1/3
+    admin-state: enable
+    subinterface:
+      - index: 0
+        ipv4:
+          address:
+            - ip-prefix: 10.0.0.22/31
+        ipv6:
+          address:
+            - ip-prefix: 1000:10::22/127
+  - name: system0
+    admin-state: enable
+    subinterface:
+      - index: 0
+        ipv4:
+          address:
+            - ip-prefix: 30.0.0.8/32
+        ipv6:
+          address:
+            - ip-prefix: 3000:30::8/128
+
+srl_nokia-network-instance:network-instance:
+  - name: default
+    admin-state: enable
+    interface:
+      - name: ethernet-1/1.0
+      - name: ethernet-1/2.0
+      - name: ethernet-1/3.0
+      - name: system0.0
+    protocols:
+      srl_nokia-bgp:bgp:
+        autonomous-system: 65078
+        router-id: 30.0.0.8
+        group:
+          - group-name: clos02
+            admin-state: enable
+        neighbor:
+          - peer-address: 10.0.0.14
+            peer-as: 65003
+            peer-group: clos02
+          - peer-address: 10.0.0.18
+            peer-as: 65004
+            peer-group: clos02
+          - peer-address: 10.0.0.23
+            peer-as: 65910
+            peer-group: clos02
+      srl_nokia-isis:isis:
+        instance:
+          - name: default
+            admin-state: enable
+            level-capability: L2
+            net:
+              - 49.0001.3000.0000.0008.00
+            interface:
+              - interface-name: ethernet-1/1.0
+                circuit-type: point-to-point
+              - interface-name: ethernet-1/2.0
+                circuit-type: point-to-point
+              - interface-name: ethernet-1/3.0
+                circuit-type: point-to-point
+              - interface-name: system0.0
+            level:
+              - level-number: 2
+                metric-style: wide
+      srl_nokia-ospf:ospf:
+        instance:
+          - name: default
+            admin-state: enable
+            version: ospf-v2
+            router-id: 30.0.0.8
+            area:
+              - area-id: 0.0.0.0
+                interface:
+                  - interface-name: ethernet-1/1.0
+                    interface-type: point-to-point
+                  - interface-name: ethernet-1/2.0
+                    interface-type: point-to-point
+                  - interface-name: ethernet-1/3.0
+                    interface-type: point-to-point
+                  - interface-name: system0.0
