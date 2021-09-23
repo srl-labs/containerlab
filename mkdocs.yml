@@ -199,7 +199,8 @@ markdown_extensions:
       user: squidfunk
       repo: mkdocs-material
   - pymdownx.mark
-  - pymdownx.smartsymbols
+  - pymdownx.smartsymbols:
+      fractions: false
   - pymdownx.snippets:
       check_paths: true
   - pymdownx.superfences
