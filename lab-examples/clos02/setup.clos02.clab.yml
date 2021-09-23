@@ -14,22 +14,18 @@ topology:
   nodes:
     leaf1:
       kind: srl
-      type: ixrd2
       mgmt_ipv4: 172.100.100.2
       mgmt_ipv6: 2001:172:100:100::2
     leaf2:
       kind: srl
-      type: ixrd2
       mgmt_ipv4: 172.100.100.3
       mgmt_ipv6: 2001:172:100:100::3
     leaf3:
       kind: srl
-      type: ixrd2
       mgmt_ipv4: 172.100.100.4
       mgmt_ipv6: 2001:172:100:100::4
     leaf4:
       kind: srl
-      type: ixrd2
       mgmt_ipv4: 172.100.100.5
       mgmt_ipv6: 2001:172:100:100::5
 
