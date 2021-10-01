@@ -66,8 +66,14 @@ func createMysocketTunnels(ctx context.Context, r runtime.ContainerRuntime, node
 			tunID := strings.TrimSpace(string(stdout))
 
 			// connect tunnel
-			cmd = []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl tunnel connect --host %s -p %d -s %s -t %s > socket-%s-%s-%d.log",
-				n.Config().LongName, ms.Port, sockID, tunID, n.Config().ShortName, ms.Stype, ms.Port)}
+			// if proxy was provided via extras, add it to the connect cmd
+			var proxy string
+			if node.Extras != nil && node.Extras.MysocketProxy != "" {
+				proxy = fmt.Sprintf("--proxy %s", node.Extras.MysocketProxy)
+			}
+			cmd = []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl tunnel connect --host %s -p %d -s %s -t %s %s > socket-%s-%s-%d.log",
+				n.Config().LongName, ms.Port, sockID, tunID, proxy,
+				n.Config().ShortName, ms.Stype, ms.Port)}
 			log.Debugf("Running mysocketio command %q", cmd)
 			err = r.ExecNotWait(ctx, node.ContainerID, cmd)
 			if err != nil {
