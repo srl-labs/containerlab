@@ -30,7 +30,7 @@ vEth interface endpoint A is set with `--a-endpoint | -a` flag.
 vEth interface endpoint B is set with `--b-endpoint | -b` flag.
 
 #### mtu
-vEth interface MTU is set to `65000` by default, and can be changed with `--mtu | -m` flag.
+vEth interface MTU is set to `9500` by default, and can be changed with `--mtu | -m` flag.
 
 ### Examples
 
