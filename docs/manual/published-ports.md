@@ -106,7 +106,7 @@ topology:
     # adding mysocketio container which has mysocketctl client inside
     mysocketio:
       kind: mysocketio
-      image: ghcr.io/hellt/mysocketctl:0.4.0
+      image: ghcr.io/hellt/mysocketctl:0.5.0
       binds:
         - .mysocketio_token:/root/.mysocketio_token # bind mount API token
 ```
@@ -123,7 +123,7 @@ When a user launches a lab with published ports it will be presented with a summ
 | # |         Name          | Container ID |              Image              |    Kind    | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
 | 1 | clab-sock-r1          | 9cefd6cdb239 | srlinux:20.6.3-145              | srl        |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
-| 2 | clab-sock-mysocketctl | 8f5385beb97e | ghcr.io/hellt/mysocketctl:0.4.0 | mysocketio |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
+| 2 | clab-sock-mysocketctl | 8f5385beb97e | ghcr.io/hellt/mysocketctl:0.5.0 | mysocketio |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
 +---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
 Published ports:
 ┌──────────────────────────────────────┬──────────────────────────────────────┬─────────┬──────┬────────────┬────────────────────────┐
@@ -185,6 +185,25 @@ ssh <ssh-username>@<mysocket-tunnel-address> \
 ```
 
 As with HTTP services, a browser page will appear asking to proceed with authentication. Upon successful authentication, the SSH session will establish.
+
+## Proxy
+Mysocketio uses SSH as a dataplane to build tunnels, thus it needs to be able to have external SSH access towards the `ssh.mysocket.io` SSH server.
+
+Chances are high that in your environment external SSH access might be blocked, preventing mysocket to setup tunnels. A possible solution for such environments would be to leverage the ability to tunnel SSH traffic via HTTP(S) proxies.
+
+If your HTTP(S) proxy supports CONNECT method and is able to pass non-HTTP payloads, it is quite likely that mysocketio service will work.
+
+To configure HTTP(S) proxy for mysocketio use the `mysocket-proxy` parameter in the `extras` section of the node definition:
+
+```yaml
+    mysocketio:
+      kind: mysocketio
+      image: ghcr.io/hellt/mysocketctl:0.5.0
+      binds:
+        - .mysocketio_token:/root/.mysocketio_token
+      extras:
+        mysocket-proxy: http://192.168.0.1:8000
+```
 
 ## Troubleshooting
 To check the health status of the established tunnels execute the following command to check the logs created on mysocketio container:
