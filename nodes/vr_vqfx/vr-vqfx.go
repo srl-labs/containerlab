@@ -59,7 +59,7 @@ func (s *vrVQFX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrVQFX) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrVQFX) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrVQFX) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
@@ -69,7 +69,7 @@ func (s *vrVQFX) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *vrVQFX) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (*vrVQFX) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -87,7 +87,7 @@ func (s *vrVQFX) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrVQFX) SaveConfig(ctx context.Context) error {
+func (s *vrVQFX) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],
