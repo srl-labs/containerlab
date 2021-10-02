@@ -47,6 +47,7 @@ set / system gnmi-server admin-state enable network-instance mgmt admin-state en
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
 set / system lldp admin-state enable
+set / system aaa authentication idle-timeout 7200
 commit save`
 )
 
