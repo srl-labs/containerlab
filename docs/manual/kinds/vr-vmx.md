@@ -62,6 +62,5 @@ The following labs feature vr-vmx node:
 ## Known issues and limitations
 
 * when listing docker containers, vr-vmx container will always report unhealthy status. Do not rely on this status.
-* LACP and BPDU packets are not propagated to/from vrnetlab based routers launched with containerlab.
 * vMX requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.

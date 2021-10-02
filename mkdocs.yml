@@ -15,6 +15,7 @@ nav:
           - sonic-vs - SONiC: manual/kinds/sonic-vs.md
           - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
           - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
+          - vr-vqfx - Juniper vQFX: manual/kinds/vr-vqfx.md
           - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
           - vr-csr - Cisco CSR1000v: manual/kinds/vr-csr.md
