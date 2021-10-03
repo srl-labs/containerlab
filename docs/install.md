@@ -42,6 +42,8 @@ It is possible to install official containerlab releases via public APT/YUM repo
 
     yum install containerlab
     ```
+=== "APK"
+    Download `.apk` package from [Github releases](https://github.com/srl-labs/containerlab/releases).
 
 ??? "Manual package installation"
     Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-labs/containerlab/releases) page.
@@ -60,6 +62,42 @@ It is possible to install official containerlab releases via public APT/YUM repo
     ```
 
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
+
+### Container
+Containerlab is also available in a container packaging. The latest containerlab release can be pulled with:
+
+```
+docker pull ghcr.io/srl-labs/clab
+```
+
+To pick any of the released versions starting from release 0.19.0, use the version number as a tag, for example: `docker pull ghcr.io/srl-labs/clab:0.19.0`
+
+Since containerlab itself deploys containers and creates veth pairs, its run instructions are a bit more complex, but still it is a copy-paste-able command.
+
+For example, if your lab files are contained within the current working directory - `$(pwd)` - then you can launch containerlab container as follows:
+
+```bash
+docker run --rm -it --privileged \
+    --network host \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v /var/run/netns:/var/run/netns \
+    -v /etc/hosts:/etc/hosts \
+    --pid="host" \
+    -v $(pwd):$(pwd) \
+    -w $(pwd) \
+    ghcr.io/srl-labs/clab bash
+```
+
+Within the started container you can use the same `containerlab deploy/destroy/inspect` commands to manage your labs.
+
+!!!note
+    Containerlab' container command is itself `containerlab`, so you can deploy a lab without invoking a shell, for example:
+    ```bash
+    docker run --rm -it --privileged \
+    # <run options omitted>
+    -w $(pwd) \
+    ghcr.io/srl-labs/clab deploy -t somelab.clab.yml
+    ```
 
 ### Manual installation
 If the linux distributive can't install deb/rpm packages, containerlab can be installed from the archive:
@@ -102,8 +140,6 @@ Once installed, issue `sudo service docker start` to start the docker service in
 ### Mac OS
 Running containerlab on Mac OS is possible[^4] by means of a separate docker image with containerlab inside.
 
-The container image `ghcr.io/srl-labs/clab:latest`[^5] contains the 0.16.2 version of containerlab at the time of this writing.
-
 To use this container use the following command:
 
 ```shell linenums="1"
@@ -122,7 +158,7 @@ docker run --rm -it --privileged \
 The first command in the snippet above sets the working directory which you intend to use on your Mac OS. The `~/clab` in the example above expands to `/Users/<username>/clab` and means that we intent to have our containerlab labs to be stored in this directory.
 
 !!!note
-    1. It is best to create a directory under the `~/some/path` unless you know what to do[^6]
+    1. It is best to create a directory under the `~/some/path` unless you know what to do[^5]
     2. vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.
 
 When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use `containerlab` commands right away.
@@ -228,5 +264,4 @@ To build containerlab from source:
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
 [^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
 [^4]: kudos to Michael Kashin who [shared](https://github.com/srl-labs/containerlab/issues/577#issuecomment-895847387) this approach with us
-[^5]: later we will incorporate the container image build into our release tool chain, so that you could always get the latest containerlab inside that image. For now, if the upgraded version is needed, just do `clab version upgrade` inside the container.
-[^6]: otherwise make sure to add a custom shared directory to the docker on mac.
+[^5]: otherwise make sure to add a custom shared directory to the docker on mac.

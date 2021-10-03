@@ -12,7 +12,8 @@ on:
 env:
   GOVER: 1.16.5
   CGO_ENABLED: 0
-  MKDOCS_MATERIAL_VER: 7.2.2
+  MKDOCS_MATERIAL_VER: 7.2.8
+  GORELEASER_VER: v0.180.3
 
 jobs:
   file-changes:
@@ -227,7 +228,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
-          version: v0.155.0
+          version: ${{ env.GORELEASER_VER }}
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
