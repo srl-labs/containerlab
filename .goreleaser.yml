@@ -4,7 +4,8 @@
 
 project_name: containerlab
 builds:
-  - env:
+  - id: clab-bin
+    env:
       - CGO_ENABLED=0
     ldflags:
       - -s -w -X github.com/srl-labs/containerlab/cmd.version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
@@ -14,6 +15,15 @@ builds:
       - amd64
     hooks:
       post: upx "{{ .Path }}"
+dockers:
+  - goos: linux
+    goarch: amd64
+    image_templates:
+      # if version starts with v0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
+      - '{{ $pfx := slice .Version 0 6}}{{- if eq $pfx "v0.0.0"}}ghcr.io/srl-labs/clab:beta{{else}}ghcr.io/srl-labs/clab:latest{{- end }}'
+      - 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}'
+    dockerfile: goreleaser.dockerfile
+    skip_push: false
 archives:
   - replacements:
       linux: Linux
@@ -26,7 +36,7 @@ snapshot:
 publishers:
   - name: fury.io deb/rpm packages
     ids:
-      - containerlab # this id belongs to nfpm section and is used to only upload artifacts from nfpm
+      - containerlab-nfpms # this id belongs to nfpm section and is used to only upload artifacts from nfpm
     dir: "{{ dir .ArtifactPath }}"
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/netdevops/
 release:
@@ -39,7 +49,7 @@ changelog:
       - "^test:"
 
 nfpms:
-  - id: containerlab
+  - id: containerlab-nfpms
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     package_name: containerlab
     maintainer: Wim Henderickx <wim.henderickx@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>, Roman Dodin <dodin.roman@gmail.com>
@@ -51,12 +61,11 @@ nfpms:
     formats:
       - rpm
       - deb
+      - apk
     bindir: /usr/bin
     contents:
       - src: ./lab-examples
         dst: /etc/containerlab/lab-examples
-      # - src: ./tools
-      #   dst: /etc/containerlab/tools
       - src: ./templates
         dst: /etc/containerlab/templates
       - src: /usr/bin/containerlab
