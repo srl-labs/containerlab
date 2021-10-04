@@ -30,7 +30,7 @@ const (
 	NodeKindHOST       = "host"
 	NodeKindLinux      = "linux"
 	NodeKindMySocketIO = "mysocketio"
-	NodeKindOVS        = "bridge-ovs"
+	NodeKindOVS        = "ovs-bridge"
 	NodeKindSonic      = "sonic-vs"
 	NodeKindSRL        = "srl"
 	NodeKindVrCSR      = "vr-csr"
