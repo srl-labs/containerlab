@@ -31,7 +31,8 @@ import (
 const (
 	srlDefaultType = "ixrd2"
 
-	retryTimer = 2 * time.Second
+	readyTimeout = time.Second * 30 // max wait time for node to boot
+	retryTimer   = time.Second
 	// additional config that clab adds on top of the factory config
 	srlConfigCmdsTpl = `set / system tls server-profile clab-profile
 set / system tls server-profile clab-profile key "{{ .TLSKey }}"
@@ -242,8 +243,7 @@ func (s *srl) SaveConfig(ctx context.Context) error {
 // Ready returns when the node boot sequence reached the stage when it is ready to accept config commands
 // returns an error if not ready by the expiry of the timer readyTimeout.
 func (s *srl) Ready(ctx context.Context) error {
-	// Ready has a timeout set to the global runtime timeout
-	ctx, cancel := context.WithTimeout(ctx, s.GetRuntime().Config().Timeout)
+	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
 	var stdout, stderr []byte
 	var err error
