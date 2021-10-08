@@ -31,7 +31,7 @@ import (
 const (
 	srlDefaultType = "ixrd2"
 
-	readyTimeout = time.Second * 90 // max wait time for node to boot
+	readyTimeout = time.Minute * 2 // max wait time for node to boot
 	retryTimer   = time.Second
 	// additional config that clab adds on top of the factory config
 	srlConfigCmdsTpl = `set / system tls server-profile clab-profile

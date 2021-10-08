@@ -40,6 +40,13 @@ A global runtime can be selected with a global `--runtime | -r` flag that will s
 * `containerd`
 * `ignite`
 
+#### timeout
+A global `--timeout` flag drives the timeout of API requests that containerlab send toward external resources. Currently the only external resource is the container runtime (i.e. docker).
+
+In a busy compute the runtime may respond longer than anticipated, in that case increasing the timeout may help.
+
+The default timeout is set to 2 minutes and can be changed to values like `30s, 10m`.
+
 ### Examples
 
 ```bash
