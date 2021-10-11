@@ -312,7 +312,8 @@ func generatePetersenTopology(config *clab.Config, nodes []nodesDef) error {
     }
 
 		// add link to host on port4, TODO LAG to multiple
-		addLink(j,j+numNodes,4,1,LINUX_STAGE)
+		addLink(j,j+numNodes,4,1,LINUX_STAGE) // outer
+		addLink(j+N,j+N+numNodes,4,1,LINUX_STAGE) // inner
   }
   return nil
 }
