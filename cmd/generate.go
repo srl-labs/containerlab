@@ -40,6 +40,7 @@ const (
 	defaultSRLType     = "ixrd2"
 	defaultNodePrefix  = "node"
 	defaultGroupPrefix = "tier"
+	defaultStartupConf = "startup-config.json"
 )
 
 var errDuplicatedValue = errors.New("duplicated value definition")
@@ -52,6 +53,7 @@ var nodesFlag []string
 var license []string
 var nodePrefix string
 var groupPrefix string
+var startupConfig string // JvB added
 var file string
 var deploy bool
 var petersenSkipFactor uint
@@ -131,6 +133,7 @@ func init() {
 	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>=/path/to/file")
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
+	generateCmd.Flags().StringVarP(&startupConfig, "startup-config", "", defaultStartupConf, "startup-config file to use for each node")
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
 	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false, "deploy a fabric based on the generated topology file")
 	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
@@ -229,10 +232,18 @@ func generateClosTopology(config *clab.Config, nodes []nodesDef) {
  */
 func generatePetersenTopology(config *clab.Config, nodes []nodesDef) error {
   numStages := len(nodes)
-  if numStages != 1 {
-    return errors.New("Petersen topology requires a single stage")
+  if numStages != 2 {
+    return errors.New("Petersen topology requires 2 stages: Fabric, and Linux host(s) per node")
   }
-  numNodes := nodes[0].numNodes
+
+	NODE_STAGE := uint(0)
+	LINUX_STAGE := uint(1)
+	if nodes[0].kind == "linux" {
+		NODE_STAGE = 1
+		LINUX_STAGE = 0
+	}
+
+  numNodes := nodes[NODE_STAGE].numNodes
   if (numNodes < 6) || (numNodes % 2)==1 {
     return errors.New("Petersen topology requires an even number of nodes, minimal 6")
   }
@@ -242,36 +253,49 @@ func generatePetersenTopology(config *clab.Config, nodes []nodesDef) error {
   if (petersenSkipFactor < 1) || (petersenSkipFactor > N/2) {
     return errors.New(fmt.Sprintf("petersenSkipFactor must be >= 1 and <= %d (= N/2)", N ))
   }
-  var nodeNames = make([]string, numNodes, numNodes)
+  var nodeNames = make([]string, numNodes*2, numNodes*2) // hosts too
 
   // 1. Create nodes
   for j := uint(0); j < N; j++ {
     for r := uint(0); r < 2; r++ { // outer+inner circle
-	node1 := fmt.Sprintf("%s-%d", nodePrefix, j+1 + r*N )
-	nodeNames[ j + r*N ] = node1
-	if _, ok := config.Topology.Nodes[node1]; !ok {
-	  config.Topology.Nodes[node1] = &types.NodeDefinition{
-	    Group: fmt.Sprintf("%s-%s", groupPrefix, map[uint]string{0:"O",1:"I"} [r]),
-	    Kind:  nodes[0].kind,
-	    Type:  nodes[0].typ,
-	  }
-	}
+	    node1 := fmt.Sprintf("%s-%d", nodePrefix, j+1 + r*N )
+	    nodeNames[ j + r*N ] = node1
+	    if _, ok := config.Topology.Nodes[node1]; !ok {
+	      config.Topology.Nodes[node1] = &types.NodeDefinition{
+	        Group: fmt.Sprintf("%s-%s", groupPrefix, map[uint]string{0:"O",1:"I"} [r]),
+	        Kind:  nodes[NODE_STAGE].kind,
+	        Type:  nodes[NODE_STAGE].typ,
+	    		StartupConfig: startupConfig,
+	      }
+	    }
+
+      // Also add a Linux host (with LAG to direct neighbors)
+			// TODO iterate over nodes[LINUX_STAGE].numNodes
+	    host1 := fmt.Sprintf("host-%d", j+1 + r*N )
+	    nodeNames[ j + r*N + numNodes ] = host1
+	    if _, ok := config.Topology.Nodes[host1]; !ok {
+	      config.Topology.Nodes[host1] = &types.NodeDefinition{
+	        Group: "hosts",
+	        Kind:  nodes[LINUX_STAGE].kind,
+	      }
+	    }
+
     }
   }
 
   // 2. Add links
-  addLink := func(n1 uint,n2 uint,p1 uint,p2 uint) {
+  addLink := func(n1 uint,n2 uint,p1 uint,p2 uint,n2_stage uint) {
     config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
       Endpoints: []string{
-	nodeNames[n1] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p1),
-	nodeNames[n2] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p2),
+	      nodeNames[n1] + ":" + fmt.Sprintf(interfaceFormat[nodes[0].kind], p1),
+	      nodeNames[n2] + ":" + fmt.Sprintf(interfaceFormat[nodes[n2_stage].kind], p2),
       },
     })
   }
 
   for j := uint(0); j < N; j++ {
     // Each node has 3 links: 2 to nodes in the same circle, 1 outer<->inner
-    addLink(j,j+N,1,1) // port1 is connection between inner and outer
+    addLink(j,j+N,1,1,NODE_STAGE) // port1 is connection between inner and outer
 
     for r := uint(0); r < 2; r++ { // outer+inner circle
       b := r*N     // base ID, 0 for outer, N for inner
@@ -280,12 +304,15 @@ func generatePetersenTopology(config *clab.Config, nodes []nodesDef) error {
 
       // To avoid duplicating links, only emit when n is smaller
       if n < (n+1+skip)%N+b {
-	addLink(n,(n+1+skip)%N+b,2,3)   // port2 to next neighbor
+	      addLink(n,(n+1+skip)%N+b,2,3,NODE_STAGE)   // port2 to next neighbor
       }
       if n < (n+N-1-skip)%N+b {
-        addLink(n,(n+N-1-skip)%N+b,3,2) // port3 to prev neighbor
+        addLink(n,(n+N-1-skip)%N+b,3,2,NODE_STAGE) // port3 to prev neighbor
       }
     }
+
+		// add link to host on port4, TODO LAG to multiple
+		addLink(j,j+numNodes,4,1,LINUX_STAGE)
   }
   return nil
 }
