@@ -11,7 +11,6 @@ env:
   CGO_ENABLED: 0
   MKDOCS_MATERIAL_VER: 7.2.8
   GORELEASER_VER: v0.180.3
-  GIT_TAG: ""
 
 jobs:
   get-tag:
@@ -27,6 +26,7 @@ jobs:
         id: git_tag
         run: |
           echo "::set-output name=git_tag::$(git tag --points-at)"
+          echo ${{ steps.git_tag.outputs.git_tag }}
 
   build-and-release:
     needs: get-tag
