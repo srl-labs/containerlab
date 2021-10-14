@@ -13,7 +13,24 @@ env:
   GORELEASER_VER: v0.180.3
 
 jobs:
+  get-tag:
+    runs-on: ubuntu-20.04
+    outputs:
+      git_tag: ${{ steps.git_tag.outputs.git_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Get git tag
+        id: git_tag
+        run: |
+          echo "::set-output name=git_tag::$(git tag --points-at)"
+          echo ${{ steps.git_tag.outputs.git_tag }}
+
   build-and-release:
+    needs: get-tag
+    if: ${{ needs.get-tag.outputs.git_tag != '' }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -48,16 +65,13 @@ jobs:
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
 
   publish-docs:
-    runs-on: ubuntu-20.04
-    # skip publishing docs for releases that we consider beta builds, aka v0.0.0-0.19.0
     needs: build-and-release
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Fetch git tag
-        run: echo "GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: build docs
-        if: ${{ contains(env.GIT_TAG, '-') != true }}
+        if: ${{ contains(needs.get-tag.outputs.git_tag, '-') != true }}
         run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict
