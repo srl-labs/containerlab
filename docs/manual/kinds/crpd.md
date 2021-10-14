@@ -129,7 +129,7 @@ With such topology file containerlab is instructed to take a file `myconfig.conf
 With [`containerlab save`](../../cmd/save.md) command it's possible to save running cRPD configuration into a file. The configuration will be saved by `/config/juniper.conf` path in the relevant node directory.
 
 ### License
-cRPD containers require a license file to have some features to be activated. With a [`license`](../nodes.md#license) directive it's possible to provide a path to a license file that will be copied over to the nodes configuration directory by the `/config/license.conf` path.
+cRPD containers require a license file to have some features to be activated. With a [`license`](../nodes.md#license) directive it's possible to provide a path to a license file that will be copied over to the nodes configuration directory by the `/config/license/safenet/junos_sfnt.lic` path and will get applied automatically on boot.
 
 ## Container configuration
 To launch cRPD, containerlab uses the deployment instructions that are provided in the [TechLibrary](https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/task/crpd-linux-server-install.html) as well as leveraging some setup steps outlined by Matt Oswalt in [this blog post](https://oswalt.dev/2020/03/building-your-own-junos-router-with-crpd-and-linuxkit/).
