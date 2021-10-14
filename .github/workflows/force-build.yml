@@ -19,12 +19,17 @@ jobs:
     outputs:
       git_tag: ${{ steps.git_tag.outputs.git_tag }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Get git tag
         id: git_tag
         run: |
           echo "::set-output name=git_tag::$(git tag --points-at)"
 
   build-and-release:
+    needs: get-tag
     if: ${{ needs.get-tag.outputs.git_tag != '' }}
     runs-on: ubuntu-20.04
     steps:
