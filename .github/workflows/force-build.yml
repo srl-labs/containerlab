@@ -25,7 +25,7 @@ jobs:
           echo "::set-output name=git_tag::$(git tag --points-at)"
 
   build-and-release:
-    if: ${{ needs.get-tag.outputs.git_tag != "" }}
+    if: ${{ needs.get-tag.outputs.git_tag != '' }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
