@@ -52,7 +52,7 @@ var configCompareCmd = &cobra.Command{
 	},
 }
 
-func configRun(cmd *cobra.Command, args []string) error {
+func configRun(_ *cobra.Command, args []string) error {
 	var err error
 
 	transport.DebugCount = debugCount
@@ -96,28 +96,27 @@ func configRun(cmd *cobra.Command, args []string) error {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(configFilter))
-	for _, node := range configFilter {
-		deploy1 := func(n string) {
-			defer wg.Done()
+	deploy := func(n string) {
+		defer wg.Done()
 
-			cs, ok := allConfig[n]
-			if !ok {
-				log.Errorf("Invalid node in filter: %s", n)
-				return
-			}
-
-			err = config.Send(cs, action)
-			if err != nil {
-				log.Errorf("%s: %s", cs.TargetNode.ShortName, err)
-			}
+		cs, ok := allConfig[n]
+		if !ok {
+			log.Errorf("Invalid node in filter: %s", n)
+			return
 		}
 
+		err = config.Send(cs, action)
+		if err != nil {
+			log.Errorf("%s: %s", cs.TargetNode.ShortName, err)
+		}
+	}
+	wg.Add(len(configFilter))
+	for _, node := range configFilter {
 		// On debug this will not be executed concurrently
 		if log.IsLevelEnabled(log.DebugLevel) {
-			deploy1(node)
+			deploy(node)
 		} else {
-			go deploy1(node)
+			go deploy(node)
 		}
 	}
 	wg.Wait()

@@ -154,7 +154,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
-	c.DeleteNodes(ctx, maxWorkers, c.Nodes, serialNodes)
+	c.DeleteNodes(ctx, maxWorkers, serialNodes)
 
 	// remove the lab directories
 	if cleanup {
