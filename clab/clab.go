@@ -86,12 +86,12 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
-func WithTopoFile(file string) ClabOption {
+func WithTopoFile(file, varsFile string) ClabOption {
 	return func(c *CLab) {
 		if file == "" {
 			log.Fatal("provide a path to the clab topology file")
 		}
-		if err := c.GetTopology(file); err != nil {
+		if err := c.GetTopology(file, varsFile); err != nil {
 			log.Fatalf("failed to read topology file: %v", err)
 		}
 

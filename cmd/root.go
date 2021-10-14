@@ -19,6 +19,7 @@ var timeout time.Duration
 
 // path to the topology file
 var topo string
+var varsFile string
 var graph bool
 var rt string
 
@@ -49,6 +50,7 @@ func init() {
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
 	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "", "path to the file with topology information")
+	rootCmd.PersistentFlags().StringVarP(&varsFile, "vars", "", "", "path to the file with topology template variables")
 	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second, "timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")

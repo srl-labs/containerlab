@@ -62,7 +62,7 @@ var inspectCmd = &cobra.Command{
 			),
 		}
 		if topo != "" {
-			opts = append(opts, clab.WithTopoFile(topo))
+			opts = append(opts, clab.WithTopoFile(topo, varsFile))
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {

@@ -60,7 +60,7 @@ func configRun(cmd *cobra.Command, args []string) error {
 
 	c, err := clab.NewContainerLab(
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo),
+		clab.WithTopoFile(topo, varsFile),
 	)
 	if err != nil {
 		return err

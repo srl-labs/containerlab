@@ -23,7 +23,7 @@ var configTemplateCmd = &cobra.Command{
 
 		c, err := clab.NewContainerLab(
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
+			clab.WithTopoFile(topo, varsFile),
 		)
 		if err != nil {
 			return err
