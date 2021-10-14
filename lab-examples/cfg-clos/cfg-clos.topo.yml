@@ -1,5 +1,5 @@
 ### 4 Leaf - 2 Spine - 2 DCGW
-name: cfg-clos01
+name: cfg-clos
 
 ######### Global Variables for Config Engine #########
 topology:

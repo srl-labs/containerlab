@@ -79,7 +79,7 @@ nav:
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
-      - 5-stage CLOS with Config Engine: lab-examples/cfg-clos.md
+      - Two-Tier CLOS with Config Engine: lab-examples/cfg-clos.md
   - Release notes:
       - 0.19: rn/0.19.md
       - 0.18: rn/0.18.md
