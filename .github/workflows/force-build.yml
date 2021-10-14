@@ -1,0 +1,77 @@
+# this workflow is a workaround for docs-test job of ci-cd workflow failures
+# as github rate limits the number of HTTP requests
+# use only when you need to build the binaries/artifacts first making sure that other tests pass
+name: force-build
+on:
+  workflow_dispatch:
+
+# make sure those env vars are aligned with the ones in ci-cd.yml workflow
+env:
+  GOVER: 1.16.5
+  CGO_ENABLED: 0
+  MKDOCS_MATERIAL_VER: 7.2.8
+  GORELEASER_VER: v0.180.3
+
+jobs:
+  get-tag:
+    runs-on: ubuntu-20.04
+    outputs:
+      git_tag: ${{ steps.git_tag.outputs.git_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Get git tag
+        id: git_tag
+        run: |
+          echo "::set-output name=git_tag::$(git tag --points-at)"
+          echo ${{ steps.git_tag.outputs.git_tag }}
+
+  build-and-release:
+    needs: get-tag
+    if: ${{ needs.get-tag.outputs.git_tag != '' }}
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+
+      - name: Install upx
+        run: |
+          sudo apt update && sudo apt install -y libucl1
+          curl -L http://archive.ubuntu.com/ubuntu/pool/universe/u/upx-ucl/upx-ucl_3.96-2_amd64.deb -o /tmp/upx.deb
+          sudo dpkg -i /tmp/upx.deb
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: ${{ env.GORELEASER_VER }}
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
+
+  publish-docs:
+    needs: build-and-release
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: build docs
+        if: ${{ contains(needs.get-tag.outputs.git_tag, '-') != true }}
+        run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict
