@@ -1,0 +1,11 @@
+super-spines:
+  type: ixr6
+  num: 2
+pods:
+  num: 4
+  spines:
+    type: ixrd3 
+    num: 2
+  leaves:
+    type: ixrd2
+    num: 3

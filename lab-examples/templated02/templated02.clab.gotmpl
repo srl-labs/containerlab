@@ -1,0 +1,58 @@
+name: templated02
+
+topology:
+  defaults:
+    kind: srl
+  kinds:
+    srl:
+      image: ghcr.io/nokia/srlinux
+
+  nodes:
+{{- $numSuperSpines := (index . "super-spines" "num")}}
+{{- $numPods := (index . "pods" "num")}}
+{{- $numSpines := (index . "pods" "spines" "num")}}
+{{- $numLeaves := (index . "pods" "leaves" "num")}}
+{{- range $ssIndex := until $numSuperSpines }}
+    super-spine{{ add1 $ssIndex }}:
+      type: {{ index $ "super-spines" "type" }}
+{{- end }}
+
+{{- range $podIndex := until $numPods }}
+ {{- range $spineIndex := until $numSpines }} 
+    spine{{ add1 $podIndex }}-{{ add1 $spineIndex }}:
+      type: {{ index $ "pods" "spines" "type" }}
+  {{- end }}
+  {{- range $leafIndex := until $numLeaves }}
+    leaf{{ add1 $podIndex }}-{{ add1 $leafIndex }}:
+      type: {{ index $ "pods" "leaves" "type" }}
+  {{- end }}
+{{- end }}
+
+  links:
+{{- range $ssIndex := until $numSuperSpines }}
+  {{- range $podIndex := until $numPods }}
+    {{- range $spineIndex := until $numSpines }} 
+    - endpoints: ["super-spine{{ add1 $ssIndex }}:e1-{{ add (mul $podIndex $numSpines) (add1 $spineIndex) }}", "spine{{ add1 $podIndex }}-{{ add1 $spineIndex }}:e1-{{ (add1 $ssIndex) }}"]
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- /* 
+Set leaf port offset, this is used in case the leaves type is IXR-D2 and spines is IXR-D3
+in which case, they are interconnected using the 100G interfaces on IXR-D2.
+Those interfaces number starts at e-1/49.
+*/ -}}
+{{- $leafPortOffset := 0 }}
+{{- if eq (index $ "pods" "leaves" "type") "ixrd2" }}
+  {{- if eq (index $ "pods" "spines" "type") "ixrd3" }}
+    {{- $leafPortOffset = 48 }}
+  {{- end }}
+{{- end }}
+
+{{- range $podIndex := until $numPods }}
+  {{- range $spineIndex := until $numSpines }}
+    {{- range $leafIndex := until $numLeaves }}
+    - endpoints: ["spine{{ add1 $podIndex }}-{{ add1 $spineIndex }}:e1-{{ add (add1 $numSuperSpines) $leafIndex }}", "leaf{{ add1 $podIndex }}-{{ add1 $leafIndex }}:e1-{{ add (add1 $spineIndex) $leafPortOffset }}"]
+    {{- end }}
+  {{- end }}
+{{- end }}

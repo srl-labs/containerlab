@@ -1,0 +1,6 @@
+spines:
+  type: ixr6 
+  num: 2
+leaves:
+  type: ixrd3
+  num: 3
