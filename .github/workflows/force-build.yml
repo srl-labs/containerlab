@@ -17,13 +17,16 @@ jobs:
   get-tag:
     runs-on: ubuntu-20.04
     steps:
-      - name: Fetch git tag
+      - name: Get git tag
+        id: git_tag
         run: |
+          echo "::set-output name=git_tag::$(git tag --points-at)"
           echo "GIT_TAG=$(git tag --points-at)" >> $GITHUB_ENV
           echo ${{ env.GIT_TAG }}
+          echo ${{ jobs.get-tag.steps.git_tag.outputs.git_tag }}
 
   build-and-release:
-    if: ${{ env.GIT_TAG != "" }}
+    if: ${{ jobs.get-tag.steps.git_tag.outputs.git_tag != "" }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -66,5 +69,5 @@ jobs:
         with:
           fetch-depth: 0
       - name: build docs
-        if: ${{ contains(env.GIT_TAG, '-') != true }}
+        if: ${{ contains(jobs.get-tag.steps.git_tag.outputs.git_tag, '-') != true }}
         run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict
