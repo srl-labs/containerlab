@@ -67,13 +67,11 @@ func generateHostsEntries(containers []types.GenericContainer, labname string) [
 		if len(cont.Names) == 0 {
 			continue
 		}
-		if cont.NetworkSettings.Set {
-			if cont.NetworkSettings.IPv4addr != "" {
-				fmt.Fprintf(&entries, "%s\t%s\n", cont.NetworkSettings.IPv4addr, strings.TrimLeft(cont.Names[0], "/"))
-			}
-			if cont.NetworkSettings.IPv6addr != "" {
-				fmt.Fprintf(&v6entries, "%s\t%s\n", cont.NetworkSettings.IPv6addr, strings.TrimLeft(cont.Names[0], "/"))
-			}
+		if cont.NetworkSettings.IPv4addr != "" {
+			fmt.Fprintf(&entries, "%s\t%s\n", cont.NetworkSettings.IPv4addr, strings.TrimLeft(cont.Names[0], "/"))
+		}
+		if cont.NetworkSettings.IPv6addr != "" {
+			fmt.Fprintf(&v6entries, "%s\t%s\n", cont.NetworkSettings.IPv6addr, strings.TrimLeft(cont.Names[0], "/"))
 		}
 	}
 
