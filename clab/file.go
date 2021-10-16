@@ -14,7 +14,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
@@ -36,7 +38,9 @@ type TopoFile struct {
 func (c *CLab) GetTopology(topo, varsFile string) error {
 	fileBase := filepath.Base(topo)
 	// load the topology file/template
-	topologyTemplate, err := template.New(fileBase).Funcs(sprig.TxtFuncMap()).ParseFiles(topo)
+	topologyTemplate, err := template.New(fileBase).
+		Funcs(gomplate.Funcs(new(data.Data))).
+		ParseFiles(topo)
 	if err != nil {
 		return err
 	}
@@ -74,7 +78,7 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 		return err
 	}
 
-	file := path.Base(topo)
+	file := filepath.Base(topo)
 	c.TopoFile = &TopoFile{
 		path:     topoAbsPath,
 		fullName: file,
