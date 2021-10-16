@@ -179,16 +179,16 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	var dynIPWg *sync.WaitGroup
 	if len(staticIPNodes) > 0 {
 		log.Debug("scheduling nodes with static IPs...")
-		staticIPWg = c.createNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
+		staticIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
 	}
 	if len(dynIPNodes) > 0 {
 		log.Debug("scheduling nodes with dynamic IPs...")
-		dynIPWg = c.createNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
+		dynIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
 	}
 	return staticIPWg, dynIPWg
 }
 
-func (c *CLab) createNodes(ctx context.Context, maxWorkers int,
+func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
