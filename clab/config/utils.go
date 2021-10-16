@@ -67,7 +67,7 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 	for lIdx, link := range links {
 		varsA := make(Dict)
 		varsB := make(Dict)
-		err := prepareLinkVars(lIdx, link, varsA, varsB)
+		err := prepareLinkVars(link, varsA, varsB)
 		if err != nil {
 			log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
 		}
@@ -90,7 +90,7 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 }
 
 // Prepare variables for a specific link
-func prepareLinkVars(lIdx int, link *types.Link, varsA, varsB Dict) error {
+func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 
 	// Add a Dict for the far-end link vars and the far-end node name
 	varsA[vkFarEnd] = Dict{vkNodeName: link.B.Node.ShortName}

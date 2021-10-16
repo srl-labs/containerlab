@@ -124,7 +124,7 @@ func TestPrepareLinkVars(t *testing.T) {
 	a := make(Dict)
 	b := make(Dict)
 	l := gettestLink()
-	_ = prepareLinkVars(0, l, a, b)
+	_ = prepareLinkVars(l, a, b)
 	assert(t, a, Dict{
 		vkFarEnd:   Dict{vkLinkIP: "1.1.2.1/31", vkLinkName: "to_a", vkNodeName: "b"},
 		vkLinkIP:   "1.1.2.0/31",
@@ -139,7 +139,7 @@ func TestPrepareLinkVars(t *testing.T) {
 	l.Vars[vkLinkIP] = []string{"1.1.2.0/16", "1.1.2.1/16"}
 	l.Vars[vkLinkName] = "the_same"
 
-	_ = prepareLinkVars(0, l, a, b)
+	_ = prepareLinkVars(l, a, b)
 	assert(t, a, Dict{
 		vkFarEnd:   Dict{vkLinkIP: "1.1.2.1/16", vkLinkName: "the_same", vkNodeName: "b"},
 		vkLinkIP:   "1.1.2.0/16",
