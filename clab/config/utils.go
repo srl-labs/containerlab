@@ -228,7 +228,7 @@ func ipFarEndS(in string) (string, error) {
 		return "", fmt.Errorf("invalid ip %s", in)
 	}
 	feA := ipFarEnd(ipA)
-	if !feA.Valid() {
+	if !feA.IsValid() {
 		return "", fmt.Errorf("invalid ip %s - %v", in, feA)
 	}
 	return feA.String(), nil
