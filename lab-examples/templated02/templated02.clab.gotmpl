@@ -8,31 +8,31 @@ topology:
       image: ghcr.io/nokia/srlinux
 
   nodes:
-{{- $numSuperSpines := (index . "super-spines" "num")}}
-{{- $numPods := (index . "pods" "num")}}
-{{- $numSpines := (index . "pods" "spines" "num")}}
-{{- $numLeaves := (index . "pods" "leaves" "num")}}
-{{- range $ssIndex := until $numSuperSpines }}
-    super-spine{{ add1 $ssIndex }}:
-      type: {{ index $ "super-spines" "type" }}
+    # {{ $.super_spines.prefix }}
+{{- range $ssIndex := seq 1 $.super_spines.num }}
+    {{ $.super_spines.prefix }}{{ $ssIndex }}:
+      type: {{ $.super_spines.type}}
 {{- end }}
 
-{{- range $podIndex := until $numPods }}
- {{- range $spineIndex := until $numSpines }} 
-    spine{{ add1 $podIndex }}-{{ add1 $spineIndex }}:
-      type: {{ index $ "pods" "spines" "type" }}
+{{- range $podIndex := seq 1 $.pods.num }}
+    # pod {{ $podIndex }} {{ $.pods.spines.prefix }}
+ {{- range $spineIndex := seq 1 $.pods.spines.num }}
+    {{ $.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:
+      type: {{ $.pods.spines.type }}
   {{- end }}
-  {{- range $leafIndex := until $numLeaves }}
-    leaf{{ add1 $podIndex }}-{{ add1 $leafIndex }}:
-      type: {{ index $ "pods" "leaves" "type" }}
+    # pod {{ $podIndex }} {{ $.pods.leaves.prefix }}
+  {{- range $leafIndex := seq 1 $.pods.leaves.num }}
+    {{ $.pods.leaves.prefix }}{{ $podIndex }}-{{ $leafIndex }}:
+      type: {{ $.pods.leaves.type }}
   {{- end }}
 {{- end }}
 
   links:
-{{- range $ssIndex := until $numSuperSpines }}
-  {{- range $podIndex := until $numPods }}
-    {{- range $spineIndex := until $numSpines }} 
-    - endpoints: ["super-spine{{ add1 $ssIndex }}:e1-{{ add (mul $podIndex $numSpines) (add1 $spineIndex) }}", "spine{{ add1 $podIndex }}-{{ add1 $spineIndex }}:e1-{{ (add1 $ssIndex) }}"]
+{{- range $ssIndex := seq 1 $.super_spines.num }}
+    # {{ $.super_spines.prefix }}{{ $ssIndex }}
+  {{- range $podIndex := seq 1 $.pods.num }}
+    {{- range $spineIndex := seq 1 $.pods.spines.num }} 
+    - endpoints: ["{{ $.super_spines.prefix }}{{ $ssIndex }}:e1-{{ add (mul (add $podIndex -1) $.pods.spines.num) $spineIndex }}", "{{ $.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:e1-{{ $ssIndex }}"]
     {{- end }}
   {{- end }}
 {{- end }}
@@ -43,16 +43,17 @@ in which case, they are interconnected using the 100G interfaces on IXR-D2.
 Those interfaces number starts at e-1/49.
 */ -}}
 {{- $leafPortOffset := 0 }}
-{{- if eq (index $ "pods" "leaves" "type") "ixrd2" }}
-  {{- if eq (index $ "pods" "spines" "type") "ixrd3" }}
+{{- if eq $.pods.leaves.type "ixrd2" }}
+  {{- if eq $.pods.spines.type "ixrd3" }}
     {{- $leafPortOffset = 48 }}
   {{- end }}
 {{- end }}
 
-{{- range $podIndex := until $numPods }}
-  {{- range $spineIndex := until $numSpines }}
-    {{- range $leafIndex := until $numLeaves }}
-    - endpoints: ["spine{{ add1 $podIndex }}-{{ add1 $spineIndex }}:e1-{{ add (add1 $numSuperSpines) $leafIndex }}", "leaf{{ add1 $podIndex }}-{{ add1 $leafIndex }}:e1-{{ add (add1 $spineIndex) $leafPortOffset }}"]
+{{- range $podIndex := seq 1 $.pods.num }}
+  {{- range $spineIndex := seq 1 $.pods.spines.num }}
+    # pod {{ $podIndex }} {{ $.pods.spines.prefix }} {{ $spineIndex }}
+    {{- range $leafIndex := seq 1 $.pods.leaves.num }}
+    - endpoints: ["{{ $.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:e1-{{ add $.pods.spines.num $leafIndex }}", "{{ $.pods.leaves.prefix }}{{ $podIndex }}-{{ $leafIndex }}:e1-{{ add $spineIndex $leafPortOffset }}"]
     {{- end }}
   {{- end }}
 {{- end }}

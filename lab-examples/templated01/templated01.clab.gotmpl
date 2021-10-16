@@ -6,18 +6,23 @@ topology:
   kinds:
     srl:
       image: ghcr.io/nokia/srlinux
+
   nodes:
-{{- range $leafIndex := until (index . "leaves" "num") }}
-    leaf{{ add1 $leafIndex }}:
-      type: {{ index $ "leaves" "type" }}
+    # spines
+{{- range $spineIndex := seq 1 $.spines.num }}
+    {{ $.spines.prefix }}{{  $spineIndex }}:
+      type: {{ $.spines.type }}
 {{- end }}
-{{- range $spineIndex := until (index . "spines" "num") }}
-    spine{{ add1 $spineIndex }}:
-      type: {{ index $ "spines" "type" }}
+    # leaves
+{{- range $leafIndex := seq 1 $.leaves.num }}
+    {{ $.leaves.prefix }}{{ $leafIndex }}:
+      type: {{ $.leaves.type }}
 {{- end }}
+
   links:
-{{- range $spineIndex := until (index . "spines" "num") }}
-  {{- range $leafIndex := until (index $ "leaves" "num") }}
-    - endpoints: ["spine{{ add1 $spineIndex }}:e1-{{ add1 $leafIndex }}", "leaf{{ add1 $leafIndex}}:e1-{{ add1 $spineIndex }}"]
+{{- range $spineIndex := seq 1 $.spines.num }}
+    # {{ $.spines.prefix }}{{ $spineIndex }}
+  {{- range $leafIndex := seq 1 $.leaves.num }}
+    - endpoints: ["{{ $.spines.prefix }}{{ $spineIndex }}:e1-{{ $leafIndex }}", "{{ $.leaves.prefix }}{{ $leafIndex }}:e1-{{ $spineIndex }}"]
   {{- end }}
 {{- end }}
