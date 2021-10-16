@@ -160,6 +160,6 @@ func TestIPfarEndS(t *testing.T) {
 
 	ipA = "10.0.3.0/30"
 	feA, err = ipFarEndS(ipA)
-	assert(t, err.Error(), "invalid ip 10.0.3.0/30 - invalid IPPrefix")
+	assert(t, err.Error(), "invalid ip 10.0.3.0/30 - zero IPPrefix")
 	assert(t, feA, "")
 }
