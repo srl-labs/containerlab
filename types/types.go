@@ -92,7 +92,7 @@ type NodeConfig struct {
 	TLSKey               string
 	TLSAnchor            string
 	NSPath               string   // network namespace path for this node
-	Publish              []string //list of ports to publish with mysocketctl
+	Publish              []string // list of ports to publish with mysocketctl
 	ExtraHosts           []string // Extra /etc/hosts entries for all nodes
 	// container labels
 	Labels map[string]string
@@ -174,11 +174,10 @@ type GenericContainer struct {
 	Status          string
 	Labels          map[string]string
 	Pid             int
-	NetworkSettings *GenericMgmtIPs
+	NetworkSettings GenericMgmtIPs
 }
 
 type GenericMgmtIPs struct {
-	Set      bool
 	IPv4addr string
 	IPv4pLen int
 	IPv6addr string
