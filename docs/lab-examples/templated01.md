@@ -33,11 +33,23 @@ leaves:
 
 ## Configuration
 
+Deploy the lab
+
 ```bash
 clab deploy -t templated01.clab.gotmpl
 ```
 
-WIP
+Run `configure.sh` script to configure the lab
+
+```bash
+chmod +x 
+./configure.sh
+```
+
+The `configure.sh` script relies on [gomplate](docs.gomplate.ca) and [gnmic](gnmic.kmrd.dev).
+
+- [gomplate](docs.gomplate.ca) is used to generate the necessary configuration variables based on the number of spines and leaves, their type and prefix.
+- [gnmic](gnmic.kmrd.dev) is used to generate configuration payloads per node and push it using a gNMI Set RPC.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/templated01/templated01.clab.gotmpl
