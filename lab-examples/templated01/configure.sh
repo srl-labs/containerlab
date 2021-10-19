@@ -15,8 +15,8 @@ targets=$(docker ps -f label=clab-node-kind=srl -f label=containerlab=templated0
 # base gnmic command
 gnmic_cmd="gnmic --log -a ${targets} --skip-verify -u admin -p admin"
 
-wget -O interfaces_template.gotmpl https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/interfaces_template.gotmpl
-wget -O subinterfaces_template.gotmpl https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/subinterfaces_template.gotmpl
+wget -q -O interfaces_template.gotmpl https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/interfaces_template.gotmpl
+wget -q -O subinterfaces_template.gotmpl https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/subinterfaces_template.gotmpl
 
 # run gNMI interfaces config
 $gnmic_cmd \
