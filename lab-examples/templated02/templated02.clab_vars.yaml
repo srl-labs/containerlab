@@ -8,18 +8,18 @@ super_spines:
 
 pods:
   # number of pods
-  num: 2
+  num: 4
   spines:
     # SRL spine type
     type: ixrd3
     # number of spines per pod
     num: 2
-    # prefix of spines name: ${prefix}${index}
+    # prefix of spines name: ${prefix}${pod_index}-${index}
     prefix: spine
   leaves:
     # SRL leaf type
     type: ixrd2
     # number of leaves per pod
     num: 4
-    # prefix of leaf name: ${prefix}${index}
+    # prefix of leaf name: ${prefix}${pod_index}-${index}
     prefix: leaf

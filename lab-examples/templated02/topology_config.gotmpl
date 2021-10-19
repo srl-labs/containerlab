@@ -1,0 +1,98 @@
+{{- $input := (ds "templated02") }}
+{{- /* start super spines */}}
+{{- range $ssIndex := seq 1 $input.super_spines.num }}
+clab-templated02-{{ $input.super_spines.prefix }}{{ $ssIndex }}:
+  interfaces:
+  {{- range $podIndex := seq 1 $input.pods.num }}
+    {{- range $spineIndex := seq 1 $input.pods.spines.num }}
+    - name: ethernet-1/{{ add (mul (add $podIndex -1) $input.pods.spines.num) $spineIndex }}
+      admin_state: "enable"
+      description: to_spine{{ $podIndex }}-{{ $spineIndex}}
+      subinterface:
+        - admin_state: "enable"
+          ip_mtu: 1500
+          ipv4_address: 75.{{ $ssIndex }}.{{ add (mul (add $podIndex -1) $input.pods.spines.num) $spineIndex }}.0/31
+          ipv6_address: 2001:75:{{ $ssIndex }}:{{ add (mul (add $podIndex -1) $input.pods.spines.num) $spineIndex }}::0/127
+    {{- end }}
+  {{- end }}
+    - name: lo0
+      admin_state: "enable"
+      description: "loopback"
+      subinterface:
+        - admin_state: "enable"
+          ipv4_address: 10.{{ $ssIndex }}.0.1/32
+          # ipv6_address:
+{{- end -}}
+{{- /* end super spines */}}
+{{- /* start pods */}}
+{{- range $podIndex := seq 1 $input.pods.num  }}
+  {{/* start spines */}}
+  {{- range $spineIndex := seq 1 $input.pods.spines.num }}
+clab-templated02-{{ $input.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:
+  interfaces:
+    {{- range $ssIndex := seq 1 $input.super_spines.num  }}
+    - name: ethernet-1/{{ $ssIndex }}
+      admin_state: "enable"
+      description: to_superspine{{ $ssIndex }}
+      subinterface:
+        - admin_state: "enable"
+          ip_mtu: 1500
+          ipv4_address: 75.{{ $ssIndex }}.{{ add (mul (add $podIndex -1) $input.pods.spines.num) $spineIndex }}.1/31
+          ipv6_address: 2001:75:{{ $ssIndex }}:{{ add (mul (add $podIndex -1) $input.pods.spines.num) $spineIndex }}::1/127
+    {{- end }}
+  {{- range $leafIndex := seq 1 $input.pods.leaves.num  }}
+    - name: ethernet-1/{{ add $input.super_spines.num $leafIndex }}
+      admin_state: "enable"
+      description: to_leaf{{ $podIndex }}-{{ $leafIndex }}
+      subinterface:
+        - admin_state: "enable"
+          ip_mtu: 1500
+          ipv4_address: 76.{{ $podIndex }}.{{ add (mul (add $spineIndex -1) $input.pods.leaves.num) $leafIndex }}.1/31
+          ipv6_address: 2001:76:{{ $podIndex }}:{{ add (mul (add $spineIndex -1) $input.pods.leaves.num) $leafIndex }}::1/127
+  {{- end }}
+    - name: lo0
+      admin_state: "enable"
+      description: "loopback"
+      subinterface:
+        - admin_state: "enable"
+          ipv4_address: 10.{{ $podIndex }}.{{ $spineIndex }}.1/32
+          # ipv6_address:
+  {{- end }}
+  {{- /* end spines */}}
+  {{- /* start leaves */}}
+  {{- /* 
+Set leaf port offset, this is used in case the leaves type is IXR-D2 and spines is IXR-D3
+in which case, they are interconnected using the 100G interfaces on IXR-D2.
+Those interfaces number starts at e-1/49.
+*/ -}}
+{{- $leafPortOffset := 0 }}
+{{- if eq $input.pods.leaves.type "ixrd2" }}
+  {{- if eq $input.pods.spines.type "ixrd3" }}
+    {{- $leafPortOffset = 48 }}
+  {{- end }}
+{{- end }}
+
+  {{- range $leafIndex := seq 1 $input.pods.leaves.num }}
+clab-templated02-{{ $input.pods.leaves.prefix }}{{ $podIndex }}-{{ $leafIndex }}:
+  interfaces:
+    {{- range $spineIndex := seq 1 $input.pods.spines.num  }}
+    - name: ethernet-1/{{ add $spineIndex $leafPortOffset}}
+      admin_state: "enable"
+      description: to_spine{{ $podIndex }}-{{ $spineIndex }}
+      subinterface:
+        - admin_state: "enable"
+          ip_mtu: 1500
+          ipv4_address: 76.{{ $podIndex }}.{{ add (mul (add $spineIndex -1) $input.pods.leaves.num) $leafIndex }}.0/31
+          ipv6_address: 2001:76:{{ $podIndex }}:{{ add (mul (add $spineIndex -1) $input.pods.leaves.num) $leafIndex }}::0/127
+    {{- end }}
+    - name: lo0
+      admin_state: "enable"
+      description: "loopback"
+      subinterface:
+        - admin_state: "enable"
+          ipv4_address: 10.{{ $podIndex }}.0.{{ add $leafIndex $input.pods.spines.num }}/32
+          # ipv6_address:
+  {{- end }}
+  {{/* end leaves */ -}}  
+{{- end }}
+{{- /* end pods */ -}}
