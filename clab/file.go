@@ -56,11 +56,12 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	if err != nil {
 		return fmt.Errorf("failed to execute template: %v", err)
 	}
-
-	// create a hidden file that will contain the rendered topology
-	err = utils.CreateFile(fmt.Sprintf(".%s.yaml", fileBase[:len(fileBase)-len(filepath.Ext(topo))]), buf.String())
-	if err != nil {
-		return err
+	if !strings.HasPrefix(fileBase, ".") {
+		// create a hidden file that will contain the rendered topology
+		err = utils.CreateFile(fmt.Sprintf(".%s.yaml", fileBase[:len(fileBase)-len(filepath.Ext(topo))]), buf.String())
+		if err != nil {
+			return err
+		}
 	}
 	log.Debugf("topology:\n%s\n", buf.String())
 
