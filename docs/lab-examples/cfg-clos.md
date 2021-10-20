@@ -1,21 +1,22 @@
-|                               |                                                                                                     |
-| ----------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Description**               | A Two-Tier CLOS topology configured using Config Engine                                             |
-| **Components**                | [Nokia SR Linux][srl], Nokia SR OS                                                                  |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 4 <br/>:fontawesome-solid-memory: 12 GB                                |
-| **Lab folder**                | [lab-examples/cfg-clos][labfolder]                                                                 |
-| **Version information**       | `containerlab:0.19.0`, `srlinux:21.6.2-67`, `vr-sros:21.7.R1`                                       |
+|                               |                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| **Description**               | A 5-stage Clos topology based on SR Linux nodes configured using Config Engine |
+| **Components**                | [Nokia SR Linux][srl], Nokia SR OS                                             |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 4 <br/>:fontawesome-solid-memory: 12 GB          |
+| **Lab folder**                | [lab-examples/clos03][labfolder]                                               |
+| **Version information**       | `containerlab:0.19.0`, `srlinux:21.6.2-67`, `vr-sros:21.7.R1`                  |
+| **Authors**                   | Bastien Claeys                                                                 |
 
 ## Description
-This lab provides a Two-Tier CLOS fabric, including SR Linux leaves and spines, as well as SROS DCGWs and CE.
-In addition to the topology, this set of files handles the interface and BGP configurations, providing an environment ready for the provisioning of services/workloads.​
+This lab provides a 5-stage (two tier) CLOS fabric, including SR Linux leaves and spines, as well as SR OS acting as DC gateways and a few CE devices.
+
+In addition to the topology, the lab directory contains a set of files to handle the interface and BGP configurations, providing an environment ready for the provisioning of services/workloads.​
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:16,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
 
-This topology leverages the Configuration Engine embedded in ContainerLab. With the provided templates, configuration of nodes can be achieved in a few seconds.
+This topology leverages the Configuration Engine embedded in Containerlab. With the provided templates, configuration of nodes can be achieved in a few seconds.
 
-### Content
 The provided topology is using the following configuration :
 
 * Underlay networking achieved via eBGP
@@ -23,7 +24,7 @@ The provided topology is using the following configuration :
 
 ## Lab Walkthrough
 ### Execution
-```
+```bash
 # Deploy the topology
 $ containerlab deploy -t cfg-clos.topo.yml
 
@@ -39,10 +40,10 @@ The [Configuration Engine][cfgengine] of ContainerLab allows to prepare configur
 
 This topology contains multiple nodes, each one having its own specific aspects. Generating a different configuration for all of them at once seems a bit tricky. But with the usage of variables within the topology file, the Configuration Engine can easily customise templates for each device. Let's dissect the topology file.
 
-Multiple types of variable are used : global variables, node variables and local variables.
+Multiple types of variable are used : global variables, node variables and link variables.
 
-##### Global variable
-```
+##### Global variables
+```yaml
 topology:
   defaults:
     config:
@@ -50,8 +51,8 @@ topology:
         overlay_as: 65555
 ```
 
-##### Node variable
-```
+##### Node variables
+```yaml
 topology:
   nodes:
     dcgw1:
@@ -63,8 +64,8 @@ topology:
           as: 65030
 ```
 
-##### Link variable
-```
+##### Link variables
+```yaml
 topology:
   links:
     - endpoints: ["dcgw1:eth1","spine1:e1-31"]
@@ -75,7 +76,7 @@ topology:
 ```
 
 Those defined variables are declared in the topology and then referenced directly in the templates.
-Note the usage of a [magic variable][magic] in the link context, ``clab_ip_link``.
+Note the usage of a [magic variable][magic] in the link context, `clab_ip_link`.
 
 #### b) Generating variables
 Once the topology is defined, the full list of variables can be retrieved. It is generated using the command : 
@@ -117,9 +118,10 @@ system_ip: 10.0.0.31
 #### c) Writing templates
 Now that we have defined a topology and verified that output variables were correct, let's see how to use them in a template.
 
-This topology contains leaves and spines running on SR Linux, and DCGWs and CE running on SROS. Considering the basic configuration to be applied, only two templates have been here defined, one for each node type.
+This topology contains of leaves, spines, DCGWs and CE elements. Considering the basic configuration to be applied, only two templates have been defined, one for each node type.
 
-The below section of ``cfg-clos__srl.tmpl`` template illustrates how each set of variables can be used to generation one node's configuration.
+The below section of `cfg-clos__srl.tmpl` template illustrates how each set of variables can be used to generation one node's configuration.
+
 ```
 {{/* If the bgp_underlay flag specified under the link then configure underlay ebgp on links */}}
 {{- range $name, $link := .clab_links -}}
@@ -129,7 +131,8 @@ The below section of ``cfg-clos__srl.tmpl`` template illustrates how each set of
   {{- end }} 
 {{- end -}}
 ```
-``clab_links`` contains all the links related to a node. ``range`` iterates on that variable and for each link, the existence of ``bgp_underlay`` variable is checked. If so, a peering is defined using the remote link IP address and AS number.
+
+`clab_links` contains all the links related to a node. `range` iterates on that variable and for each link, the existence of `bgp_underlay` variable is checked. If so, a peering is defined using the remote link IP address and AS number.
 
 Feel free to navigate through the templates, they will teach you how useful variables can be in this context.
 
@@ -144,9 +147,10 @@ To directly apply the configuration on the deployed nodes, simply use :
 ```
 containerlab config -t cfg-clos.topo.yml -p . -l cfg-clos
 ```
+
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[labfolder]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/cfg-clos/
-[cfgengine]: https://github.com/hellt/clab-config-dem
+[labfolder]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos03/
+[cfgengine]: https://github.com/hellt/clab-config-demo
 [magic]: https://github.com/hellt/clab-config-demo#5-magic-variables
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
