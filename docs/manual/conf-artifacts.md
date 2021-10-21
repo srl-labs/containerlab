@@ -45,4 +45,4 @@ When a user destroys a lab without providing the [`--cleanup`](../cmd/destroy.md
 
 Moreover, when the user will deploy the same lab, containerlab will reuse the configuration artifacts if possible, which will, for example, start the nodes with the config files saved from the previous lab run.
 
-To be able to deploy a lab without reusing existing configuration artefact use the [`--reconfigure`](../cmd/deploy.md#reconfigure) flag with `deploy` command. With that setting, containerlab will first delete the Lab Directory and then will start the deployment process.
+To be able to deploy a lab without reusing existing configuration artifact use the [`--reconfigure`](../cmd/deploy.md#reconfigure) flag with `deploy` command. With that setting, containerlab will first delete the Lab Directory and then will start the deployment process.
