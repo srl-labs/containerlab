@@ -1,6 +1,6 @@
 BIN_DIR = $(shell pwd)/bin
 BINARY = $(shell pwd)/bin/containerlab
-MKDOCS_VER = 7.2.2
+MKDOCS_VER = 7.3.4
 
 all: build
 

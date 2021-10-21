@@ -10,9 +10,9 @@ on:
   pull_request:
 
 env:
-  GOVER: 1.16.5
+  GOVER: 1.17.2
   CGO_ENABLED: 0
-  MKDOCS_MATERIAL_VER: 7.2.8
+  MKDOCS_MATERIAL_VER: 7.3.4
   GORELEASER_VER: v0.180.3
 
 jobs:
