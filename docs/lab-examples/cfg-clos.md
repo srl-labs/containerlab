@@ -1,46 +1,52 @@
 |                               |                                                                                |
 | ----------------------------- | ------------------------------------------------------------------------------ |
 | **Description**               | A 5-stage Clos topology based on SR Linux nodes configured using Config Engine |
-| **Components**                | [Nokia SR Linux][srl], Nokia SR OS                                             |
+| **Components**                | [Nokia SR Linux][srl], [Nokia SR OS][sros]                                     |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 4 <br/>:fontawesome-solid-memory: 12 GB          |
-| **Lab folder**                | [lab-examples/clos03][labfolder]                                               |
+| **Lab folder**                | [lab-examples/Clos03][labfolder]                                               |
 | **Version information**       | `containerlab:0.19.0`, `srlinux:21.6.2-67`, `vr-sros:21.7.R1`                  |
 | **Authors**                   | Bastien Claeys                                                                 |
 
 ## Description
-This lab provides a 5-stage (two tier) CLOS fabric, including SR Linux leaves and spines, as well as SR OS acting as DC gateways and a few CE devices.
+This lab features a 5-stage (two tier) Clos fabric which consists of the following components:
 
-In addition to the topology, the lab directory contains a set of files to handle the interface and BGP configurations, providing an environment ready for the provisioning of services/workloads.​
+* leaf and spine elements based on Nokia SR Linux
+* DC Gateway elements running SR OS
+* CE devices emulated by a single SR OS device to allow for BGP configuration between a Leaf and a CE. 
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:16,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
+In addition to the [topology file][topofile], the lab directory contains a set of files to handle the interface and BGP configurations, providing an environment ready for the provisioning of services/workloads.​
+
+<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/topo_cfg_clos01.drawio&quot;}"></div>
 
 
 This topology leverages the Configuration Engine embedded in Containerlab. With the provided templates, configuration of nodes can be achieved in a few seconds.
 
-The provided topology is using the following configuration :
+The provided topology is using the following configuration:
 
-* Underlay networking achieved via eBGP
+* Underlay networking is achieved via eBGP
 * Overlay iBGP sessions established to exchange EVPN routes
 
 ## Lab Walkthrough
 ### Execution
 ```bash
 # Deploy the topology
-$ containerlab deploy -t cfg-clos.topo.yml
+$ containerlab deploy -t cfg-clos.clab.yml
 
 # Generate and apply the configuration from the templates
-$ containerlab config -t cfg-clos.topo.yml  -p . -l cfg-clos 
+$ containerlab config -t cfg-clos.clab.yml  -p . -l cfg-clos
 ```
 
 ### Understanding the Configuration Engine
 
-The [Configuration Engine][cfgengine] of ContainerLab allows to prepare configuration templates, such that adding a new node in a topology requires only little effort. The following steps will guide you through the files and their execution, to help understand the process behind.       
+The [Configuration Engine][cfgengine] of ContainerLab allows to prepare configuration templates, such that adding a new node in a topology requires only a little effort. The following steps will guide you through the files and their execution, to help understand the process behind it.
 
 #### a) Declaring variables
 
-This topology contains multiple nodes, each one having its own specific aspects. Generating a different configuration for all of them at once seems a bit tricky. But with the usage of variables within the topology file, the Configuration Engine can easily customise templates for each device. Let's dissect the topology file.
+This topology contains multiple nodes, each one having its own specific aspects. Generating a different configuration for all of them at once seems a bit tricky. But with the usage of variables within the topology file, the Configuration Engine can easily customize templates for each device. Let's dissect the topology file.
 
-Multiple types of variable are used : global variables, node variables and link variables.
+Several variable types are used in the topology to flexibly configure the nodes: global variables, node variables and link variables.
+
+The variables are scoped under `.vars` container which is present on all of the above mentioned levels.
 
 ##### Global variables
 ```yaml
@@ -76,14 +82,15 @@ topology:
 ```
 
 Those defined variables are declared in the topology and then referenced directly in the templates.
-Note the usage of a [magic variable][magic] in the link context, `clab_ip_link`.
+Note the usage of a [magic variable][magic] in the link context - `clab_ip_link`.
 
 #### b) Generating variables
-Once the topology is defined, the full list of variables can be retrieved. It is generated using the command : 
+Once the topology is defined and variables are placed in the relevant levels, the full list of variables can be retrieved and introspected: 
 ```
-$ containerlab config --topo cfg-clos.topo.yml template --vars
+$ containerlab config --topo cfg-clos.clab.yml template --vars
 ```
-The following output represents the variables generated for dcgw1 :
+
+The following output represents the variables generated for `dcgw1` node:
 ```
 INFO[0000] dcgw1 vars = as: 65030
 clab_links:
@@ -115,12 +122,23 @@ overlay_as: 65555
 system_ip: 10.0.0.31
 ```
 
+This output is extremely helpful for a template designer, as it shows which variables and their values can be used in the configuration template.
+
 #### c) Writing templates
 Now that we have defined a topology and verified that output variables were correct, let's see how to use them in a template.
 
-This topology contains of leaves, spines, DCGWs and CE elements. Considering the basic configuration to be applied, only two templates have been defined, one for each node type.
+This topology contains of leaves, spines, DCGWs and CE elements. Even though we have many nodes in the topology, as far as the node kinds are concerned, we only have two: srlinux and sros.
 
-The below section of `cfg-clos__srl.tmpl` template illustrates how each set of variables can be used to generation one node's configuration.
+Understandably, the configuration of SR Linux nodes differs from SR OS one, hence we will create two templates, one for SR Linux nodes and one for SR OS nodes.
+
+Containerlab config engine by default assumes that templates are created per containerlab kind, in our case, the kinds are: `srl` and `vr-sros`.
+
+So what we will do here is create two templates named `cfg-clos__srl.tmpl` and `cfg-clos_vr-sros.tmpl`. That way config engine will know which template to use against which node.
+
+!!!note
+    Notice, how node's kind is encoded in the template name by suffixing the file name with `__$kindName`.
+
+The below section of `cfg-clos__srl.tmpl` template illustrates how each set of variables can be used to generate node's configuration.
 
 ```
 {{/* If the bgp_underlay flag specified under the link then configure underlay ebgp on links */}}
@@ -139,16 +157,25 @@ Feel free to navigate through the templates, they will teach you how useful vari
 #### d) Generating configurations from templates
 Now that we have seen how variables are used, let's see the resulting configuration with :
 ```
-containerlab config -t cfg-clos.topo.yml template -p . -l cfg-clos
+containerlab config -t cfg-clos.clab.yml template -p . -l cfg-clos
 ```
+
+This command will dump the final configuration as it would be sent to the node in a later step. Make sure that the config appears to be correct before proceeding.
 
 #### e) Applying the configurations
-To directly apply the configuration on the deployed nodes, simply use :
+To apply the templated configuration on the deployed nodes, simply use :
 ```
-containerlab config -t cfg-clos.topo.yml -p . -l cfg-clos
+containerlab config -t cfg-clos.clab.yml -p . -l cfg-clos
 ```
 
+Containerlab will render the templates and use SSH client to connect to the nodes and apply the configuration.
+
+!!!note
+    Entering in the configuration mode and commit steps are carried out by containerlab and are not part of the templates.
+
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
+[sros]: https://www.nokia.com/networks/products/service-router-operating-system/
+[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos03/cfg-clos.clab.yml
 [labfolder]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos03/
 [cfgengine]: https://github.com/hellt/clab-config-demo
 [magic]: https://github.com/hellt/clab-config-demo#5-magic-variables
