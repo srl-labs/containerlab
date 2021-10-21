@@ -32,6 +32,36 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
 !!!info
     Default user credentials: `admin:admin`
 
+## Interfaces mapping
+SR Linux system expects interfaces inside the container to be named in a specific way - `eX-Y` - where `X` is the line card index, `Y` is the port.
+
+With that naming convention in mind:
+
+* `e1-1` - first ethernet interface on a line card #1
+* `e1-2` - second interface on a line card #1
+* `e2-1` - first interface on a line card #1
+
+These are the names of the interfaces that are seen in the linux shell, however, when configuring the interfaces via SR Linux CLI, the interfaces are named as `ethernet-X/Y` where `X/Y` is the `linecard/port` combination.
+
+Interfaces can be defined in a non-sequential way, for example:
+
+```yaml
+  links:
+    # srlinux port ethernet-1/5 is connected to sros port 2
+    - endpoints: ["srlinux:e1-5", "sros:eth2"]
+```
+
+### Breakout interfaces
+If the interface is intended to be configured as a breakout interface, its name must be changed accordingly.
+
+The breakout interfaces will have the name in the form of `eX-Y-Z`, where `Z` is the breakout port number. For example, if interface `ethernet-1/3` on a IXR-D3 system is intended to be configured as a breakout 100Gb to 4x25Gb then the interfaces in the topology must take this into account and use the following naming:
+
+```yaml
+  links:
+    # srlinux's first breakout port ethernet-1/3/1 is connected to sros port 2
+    - endpoints: ["srlinux:e1-3-1", "sros:eth2"]
+```
+
 ## Features and options
 ### Types
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
