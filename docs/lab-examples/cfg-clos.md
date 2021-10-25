@@ -175,8 +175,8 @@ Containerlab will render the templates and use SSH client to connect to the node
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [sros]: https://www.nokia.com/networks/products/service-router-operating-system/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos03/cfg-clos.clab.yml
-[labfolder]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos03/
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/clos03/cfg-clos.clab.yml
+[labfolder]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/clos03
 [cfgengine]: https://github.com/hellt/clab-config-demo
 [magic]: https://github.com/hellt/clab-config-demo#5-magic-variables
 
