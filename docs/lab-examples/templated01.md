@@ -42,8 +42,7 @@ clab deploy -t templated01.clab.gotmpl
 Run `configure.sh` script to configure the lab
 
 ```bash
-chmod +x 
-./configure.sh
+bash configure.sh
 ```
 
 The `configure.sh` script relies on [gomplate](docs.gomplate.ca) and [gnmic](gnmic.kmrd.dev).

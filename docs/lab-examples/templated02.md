@@ -51,8 +51,11 @@ pods:
 clab deploy -t templated02.clab.gotmpl
 ```
 
+Run `configure.sh` script to configure the lab
 
-WIP
+```bash
+bash configure.sh
+```
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/templated01/templated01.clab.gotmpl
