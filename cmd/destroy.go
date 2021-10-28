@@ -76,11 +76,12 @@ var destroyCmd = &cobra.Command{
 				topos[cont.Labels["clab-topo-file"]] = struct{}{}
 			}
 		}
-
+		log.Debugf("We got a topos struct for detroy: %+v", topos)
 		for topo := range topos {
 			opts := append(opts,
 				clab.WithTopoFile(topo, varsFile),
 			)
+			log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
 			c, err := clab.NewContainerLab(opts...)
 			if err != nil {
 				return err
@@ -167,11 +168,12 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	log.Info("Removing containerlab host entries from /etc/hosts file")
 	err = clab.DeleteEntriesFromHostsFile(c.Config.Name)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
 	// delete lab management network
 	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
+		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
 		if err = c.GlobalRuntime().DeleteNet(ctx); err != nil {
 			// do not log error message if deletion error simply says that such network doesn't exist
 			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
@@ -180,5 +182,9 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		}
 	}
 	// delete container network namespaces symlinks
-	return c.DeleteNetnsSymlinks()
+	err = c.DeleteNetnsSymlinks()
+	if err != nil {
+		return fmt.Errorf("error while deleting netns symlinks: %w", err)
+	}
+	return nil
 }
