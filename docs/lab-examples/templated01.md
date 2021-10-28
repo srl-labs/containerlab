@@ -1,14 +1,14 @@
-|                               |                                                             |
-| ----------------------------- | ----------------------------------------------------------- |
-| **Description**               | A Full Meshed **X** Leaf(s), **Y** Spine(s) CLOS topology   |
-| **Components**                | [Nokia SR Linux][srl]                                       |
-| **Topology template file**    | [templated01.clab.gotmpl][topofile]                         |
-| **Topology variable file**    | [templated01.clab_vars.yaml][topovarfile]                   |
-| **Name**                      | templated01                                                 |
+|                            |                                                           |
+| -------------------------- | --------------------------------------------------------- |
+| **Description**            | A Full Meshed **X** Leaf(s), **Y** Spine(s) Clos topology |
+| **Components**             | [Nokia SR Linux][srl]                                     |
+| **Topology template file** | [templated01.clab.gotmpl][topofile]                       |
+| **Topology variable file** | [templated01.clab_vars.yaml][topovarfile]                 |
+| **Name**                   | templated01                                               |
 
 ## Description
 
-This lab consists of a customizable Leaf and Spine CLOS topology. The number and type of SR Linux Leaf and Spine nodes is configurable, it can be set using the topology variable file `templated01.clab_vars.yaml`.
+This lab consists of a customizable Leaf and Spine Clos topology. The number and type of SR Linux Leaf and Spine nodes is configurable, it can be set using the topology variable file `templated01.clab_vars.yaml`.
 
 The type of SR Linux used and the naming prefixes can be customized as well.
 
@@ -51,8 +51,8 @@ The `configure.sh` script relies on [gomplate](https://docs.gomplate.ca) and [gn
 - [gnmic](https://gnmic.kmrd.dev) is used to generate configuration payloads per node and push it using a gNMI Set RPC.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/templated01/templated01.clab.gotmpl
-[topovarfile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/templated01/templated01.clab_vars.yaml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab.gotmpl
+[topovarfile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab_vars.yaml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 

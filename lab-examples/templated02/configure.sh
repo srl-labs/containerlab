@@ -3,9 +3,11 @@
 set -e
 
 # make sure gnmic is installed
-gnmic --help >> /dev/null
+gnmic --help > /dev/null
 # make sure gomplate is installed
-gomplate --help >> /dev/null
+gomplate --help > /dev/null
+# make sure curl is installed
+curl --help > /dev/null
 
 # generate the variables file based on the number of spines and leaves in the topology
 gomplate -f topology_config.gotmpl -d templated02.clab_vars.yaml > vars.yaml
@@ -15,8 +17,8 @@ targets=$(docker ps -f label=clab-node-kind=srl -f label=containerlab=templated0
 # base gnmic command
 gnmic_cmd="gnmic --log -a ${targets} --skip-verify -u admin -p admin"
 
-wget -q -O interfaces_template.gotmpl https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/interfaces_template.gotmpl
-wget -q -O subinterfaces_template.gotmpl https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/subinterfaces_template.gotmpl
+curl -sLO https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/interfaces_template.gotmpl
+curl -sLO https://raw.githubusercontent.com/karimra/gnmic/master/examples/set-request-templates/Nokia/SRL/1.interfaces/subinterfaces_template.gotmpl
 
 # run gNMI interfaces config
 $gnmic_cmd \

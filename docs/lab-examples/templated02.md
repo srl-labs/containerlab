@@ -1,14 +1,14 @@
-|                               |                                                                      |
-| ----------------------------- | -------------------------------------------------------------------- |
-| **Description**               | A 5-stage Clos topology with **X** Pod(s), **Y** Super Spine(s) CLOS  |
-| **Components**                | [Nokia SR Linux][srl]                                                |
-| **Topology template file**    | [templated02.clab.gotmpl][topofile]                                  |
-| **Topology variable file**    | [templated02.clab_vars.yaml][topovarfile]                          |
-| **Name**                      | templated02                                                          |
+|                            |                                                                 |
+| -------------------------- | --------------------------------------------------------------- |
+| **Description**            | A 5-stage Clos topology with **X** Pod(s), **Y** Super Spine(s) |
+| **Components**             | [Nokia SR Linux][srl]                                           |
+| **Topology template file** | [templated02.clab.gotmpl][topofile]                             |
+| **Topology variable file** | [templated02.clab_vars.yaml][topovarfile]                       |
+| **Name**                   | templated02                                                     |
 
 ## Description
 
-This lab consists of a customizable 5 stage CLOS topology.
+This lab consists of a customizable 5 stage Clos topology.
 Each pod in this lab consists of a configurable number of fully meshed spines and leaves.
 The spines in each pod are connected to a configurable number of super spines.
 
@@ -58,8 +58,8 @@ bash configure.sh
 ```
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/templated01/templated01.clab.gotmpl
-[topovarfile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/templated01/templated01.clab_vars.yaml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab.gotmpl
+[topovarfile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab_vars.yaml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 

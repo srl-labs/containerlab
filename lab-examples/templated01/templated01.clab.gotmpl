@@ -10,7 +10,7 @@ topology:
   nodes:
     # spines
 {{- range $spineIndex := seq 1 $.spines.num }}
-    {{ $.spines.prefix }}{{  $spineIndex }}:
+    {{ $.spines.prefix }}{{ $spineIndex }}:
       type: {{ $.spines.type }}
 {{- end }}
     # leaves

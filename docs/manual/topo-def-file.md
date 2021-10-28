@@ -195,4 +195,18 @@ topology:
 
 Now every node in this topology will have environment variable `MYENV` set to `VALUE`.
 
+## Generated topologies
+:warning: Advanced topic
+
+To further simplify parametrization of the topology files, containerlab allows users to template the topology files using Go Template engine.
+
+Using templating approach it is possible to create a lab template and instantiate different labs from it, by simply changing the variables in the variables file.
+
+Standard Go templating language has been extended with the functions provided in [docs.gomplate.ca](https://docs.gomplate.ca/) project, which opens the doors to a very flexible topology generation workflows.
+
+To help you get started, we created the following lab examples which demonstrate how topology templating can be used:
+
+* [Leaf-Spine topology with parametrized number of leaves/spines](lab-examples/../../lab-examples/templated01.md)
+* [5-stage Clos topology with parametrized number of pods and super-spines](lab-examples/../../lab-examples/templated02.md)
+
 [^1]: if the filename has `.clab.yml` or `-clab.yml` suffix, the YAML file will have autocompletion and linting support in VSCode editor.

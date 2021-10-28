@@ -11,7 +11,7 @@ topology:
     # {{ $.super_spines.prefix }}
 {{- range $ssIndex := seq 1 $.super_spines.num }}
     {{ $.super_spines.prefix }}{{ $ssIndex }}:
-      type: {{ $.super_spines.type}}
+      type: {{ $.super_spines.type }}
 {{- end }}
 
 {{- range $podIndex := seq 1 $.pods.num }}
