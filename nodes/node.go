@@ -106,4 +106,5 @@ var DefaultCredentials = map[string][]string{
 	"vr-vmx":   {"admin", "admin@123"},
 	"vr-vqfx":  {"admin", "admin@123"},
 	"vr-xrv9k": {"clab", "clab@123"},
+	"vr-csr":   {"admin", "admin"},
 }

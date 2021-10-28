@@ -1,12 +1,12 @@
 BIN_DIR = $(shell pwd)/bin
 BINARY = $(shell pwd)/bin/containerlab
-MKDOCS_VER = 7.2.2
+MKDOCS_VER = 7.3.4
 
 all: build
 
 build:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) main.go 
+	go build -o $(BINARY) -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$$(date)'" main.go
 
 test:
 	go test -race ./... -v

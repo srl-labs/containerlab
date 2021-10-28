@@ -20,7 +20,7 @@ import (
 
 var AEnd = ""
 var BEnd = ""
-var MTU = 65000
+var MTU = clab.DefaultVethLinkMTU
 
 func init() {
 	toolsCmd.AddCommand(vethCmd)
@@ -98,10 +98,12 @@ var vethCreateCmd = &cobra.Command{
 		endpointA := types.Endpoint{
 			Node:         aNode,
 			EndpointName: vethAEndpoint.iface,
+			MAC:          utils.GenMac(clab.ClabOUI),
 		}
 		endpointB := types.Endpoint{
 			Node:         bNode,
 			EndpointName: vethBEndpoint.iface,
+			MAC:          utils.GenMac(clab.ClabOUI),
 		}
 
 		link := &types.Link{

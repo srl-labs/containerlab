@@ -465,16 +465,14 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 
 	for _, i := range inputContainers {
 		ctr := types.GenericContainer{
-			Names:   i.Names,
-			ID:      i.ID,
-			ShortID: i.ID[:12],
-			Image:   i.Image,
-			State:   i.State,
-			Status:  i.Status,
-			Labels:  i.Labels,
-			NetworkSettings: &types.GenericMgmtIPs{
-				Set: false,
-			},
+			Names:           i.Names,
+			ID:              i.ID,
+			ShortID:         i.ID[:12],
+			Image:           i.Image,
+			State:           i.State,
+			Status:          i.Status,
+			Labels:          i.Labels,
+			NetworkSettings: types.GenericMgmtIPs{},
 		}
 		bridgeName := c.Mgmt.Network
 		// if bridgeName is "", try to find a network created by clab that the container is connected to
@@ -491,7 +489,6 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
-			ctr.NetworkSettings.Set = true
 		}
 		result = append(result, ctr)
 	}

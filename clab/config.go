@@ -34,9 +34,9 @@ const (
 	// NSPath value assigned to host interfaces
 	hostNSPath = "__host"
 	// veth link mtu
-	defaultVethLinkMTU = 9500
+	DefaultVethLinkMTU = 9500
 	// containerlab's reserved OUI
-	clabOUI = "aa:c1:ab"
+	ClabOUI = "aa:c1:ab"
 
 	// label names
 	ContainerlabLabel = "containerlab"
@@ -292,7 +292,7 @@ func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
 	return &types.Link{
 		A:      c.NewEndpoint(l.Endpoints[0]),
 		B:      c.NewEndpoint(l.Endpoints[1]),
-		MTU:    defaultVethLinkMTU,
+		MTU:    DefaultVethLinkMTU,
 		Labels: l.Labels,
 		Vars:   l.Vars,
 	}
@@ -316,7 +316,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
 	}
 	// generate unique MAC
-	endpoint.MAC = utils.GenMac(clabOUI)
+	endpoint.MAC = utils.GenMac(ClabOUI)
 
 	// search the node pointer for a node name referenced in endpoint section
 	switch nName {
