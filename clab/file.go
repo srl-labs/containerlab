@@ -6,6 +6,7 @@ package clab
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -39,7 +40,7 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	fileBase := filepath.Base(topo)
 	// load the topology file/template
 	topologyTemplate, err := template.New(fileBase).
-		Funcs(gomplate.Funcs(new(data.Data))).
+		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 		ParseFiles(topo)
 	if err != nil {
 		return err
