@@ -1,0 +1,44 @@
+{{ $input := (ds "templated01")}}
+{{- range $spineIndex := seq 1 $input.spines.num  }}
+clab-templated01-{{ $input.spines.prefix }}{{ $spineIndex }}:
+  interfaces:
+  {{- range $leafIndex := seq 1 $input.leaves.num }}
+    - name: ethernet-1/{{ $leafIndex }}
+      admin_state: "enable"
+      description: to_leaf{{ $leafIndex}}
+      subinterface:
+        - admin_state: "enable"
+          ip_mtu: 1500
+          ipv4_address: 75.{{ $spineIndex }}.{{ $leafIndex }}.0/31
+          ipv6_address: 2001:75:{{ $spineIndex }}:{{ $leafIndex }}::0/127
+    {{- end }}
+    - name: lo0
+      admin_state: "enable"
+      description: "loopback"
+      subinterface:
+        - admin_state: "enable"
+          ipv4_address: 10.{{ $spineIndex }}.0.1/32
+          # ipv6_address:
+{{- end }}
+
+{{- range $leafIndex := seq 1 $input.leaves.num  }}
+clab-templated01-{{ $input.leaves.prefix }}{{ $leafIndex }}:
+  interfaces:
+  {{- range $spineIndex := seq 1 $input.spines.num }}
+    - name: ethernet-1/{{ $spineIndex }}
+      admin_state: "enable"
+      description: to_spine{{ $spineIndex}}
+      subinterface:
+        - admin_state: "enable"
+          ip_mtu: 1500
+          ipv4_address: 75.{{ $spineIndex }}.{{ $leafIndex }}.1/31
+          ipv6_address: 2001:75:{{ $spineIndex }}:{{ $leafIndex }}::1/127
+  {{- end }}
+    - name: lo0
+      admin_state: "enable"
+      description: "loopback"
+      subinterface:
+        - admin_state: "enable"
+          ipv4_address: 10.0.{{ $leafIndex }}.1/32
+          # ipv6_address:
+{{- end }}

@@ -50,7 +50,7 @@ var deployCmd = &cobra.Command{
 		var err error
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
+			clab.WithTopoFile(topo, varsFile),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,
@@ -156,7 +156,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
-		c.CreateLinks(ctx, linkWorkers, false)
+		c.CreateLinks(ctx, linkWorkers)
 		if nodesStaticWg != nil {
 			nodesStaticWg.Wait()
 		}

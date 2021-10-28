@@ -1,0 +1,14 @@
+spines:
+  # SRL spine type
+  type: ixr6
+  # number of spines
+  num: 2
+  # prefix of spines name: ${prefix}${index}
+  prefix: spine
+leaves:
+  # SRL leaf type
+  type: ixrd3
+  # number of leaves
+  num: 4
+  # prefix of leaf name: ${prefix}${index}
+  prefix: leaf

@@ -29,7 +29,7 @@ Refer to the https://containerlab.srlinux.dev/cmd/save/ documentation to see the
 		}
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
+			clab.WithTopoFile(topo, varsFile),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,

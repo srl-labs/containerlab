@@ -79,7 +79,7 @@ var destroyCmd = &cobra.Command{
 
 		for topo := range topos {
 			opts := append(opts,
-				clab.WithTopoFile(topo),
+				clab.WithTopoFile(topo, varsFile),
 			)
 			c, err := clab.NewContainerLab(opts...)
 			if err != nil {
@@ -154,7 +154,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
-	c.DeleteNodes(ctx, maxWorkers, c.Nodes, serialNodes)
+	c.DeleteNodes(ctx, maxWorkers, serialNodes)
 
 	// remove the lab directories
 	if cleanup {

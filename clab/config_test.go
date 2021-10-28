@@ -42,7 +42,7 @@ func TestLicenseInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
@@ -89,7 +89,7 @@ func TestBindsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
@@ -181,7 +181,7 @@ func TestTypeInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
@@ -259,7 +259,7 @@ func TestEnvInit(t *testing.T) {
 			}
 
 			opts := []ClabOption{
-				WithTopoFile(tc.got),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
@@ -308,7 +308,7 @@ func TestUserInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
@@ -344,7 +344,7 @@ func TestVerifyLinks(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
@@ -429,7 +429,7 @@ func TestLabelsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
@@ -451,7 +451,7 @@ func TestLabelsInit(t *testing.T) {
 func TestVerifyRootNetnsInterfaceUniqueness(t *testing.T) {
 
 	opts := []ClabOption{
-		WithTopoFile("test_data/topo7-dup-rootnetns.yml"),
+		WithTopoFile("test_data/topo7-dup-rootnetns.yml", ""),
 	}
 	c, err := NewContainerLab(opts...)
 	if err != nil {
