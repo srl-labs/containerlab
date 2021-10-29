@@ -1,3 +1,6 @@
+//go:build linux && cgo && podman
+// +build linux,cgo,podman
+
 package podman
 
 import (
