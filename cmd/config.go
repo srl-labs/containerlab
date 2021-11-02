@@ -107,7 +107,7 @@ func configRun(_ *cobra.Command, args []string) error {
 
 		err = config.Send(cs, action)
 		if err != nil {
-			log.Errorf("%s: %s", cs.TargetNode.ShortName, err)
+			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
 	}
 	wg.Add(len(configFilter))
