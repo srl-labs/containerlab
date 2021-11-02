@@ -71,19 +71,18 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 		for _, baseN := range TemplateNames {
 			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, nc.Vars[vkRole])
 			log.Debugf("Looking up template %v", tmplN)
-			l := tmpl.Lookup(tmplN)
-			if l == nil {
+			if l := tmpl.Lookup(tmplN); l == nil {
 				err := LoadTemplates(tmpl, fmt.Sprintf("%s", nc.Vars[vkRole]))
 				if err != nil {
 					log.Warnf("Unable to load template %s; skipping", tmplN)
 					continue
 				}
 				l = tmpl.Lookup(tmplN)
-			}
-			log.Debugf("Got a lookup result %+v (of type %T)", l, l)
-			if l == nil {
-				log.Warnf("No template found for %s; skipping..", nc.TargetNode.ShortName)
-				continue
+				log.Debugf("Got a lookup result %+v (of type %T)", l, l)
+				if l == nil {
+					log.Warnf("No template found for %s; skipping..", nc.TargetNode.ShortName)
+					continue
+				}
 			}
 			var buf strings.Builder
 			err := tmpl.ExecuteTemplate(&buf, tmplN, nc.Vars)
