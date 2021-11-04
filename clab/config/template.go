@@ -38,7 +38,7 @@ func LoadTemplates(tmpl *template.Template, role string) error {
 		fn := filepath.Join(p, fmt.Sprintf("*__%s.tmpl", role))
 		_, err := tmpl.ParseGlob(fn)
 		if err != nil {
-			return fmt.Errorf("could not load templates from %s: %s", fn, err)
+			return fmt.Errorf("could not load templates from %s: %w", fn, err)
 		}
 	}
 	return nil
@@ -68,22 +68,25 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 	tmpl := template.New("").Funcs(jT.Funcs)
 
 	for _, nc := range allnodes {
-
 		for _, baseN := range TemplateNames {
 			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, nc.Vars[vkRole])
-
-			if tmpl.Lookup(tmplN) == nil {
+			log.Debugf("Looking up template %v", tmplN)
+			if l := tmpl.Lookup(tmplN); l == nil {
 				err := LoadTemplates(tmpl, fmt.Sprintf("%s", nc.Vars[vkRole]))
 				if err != nil {
-					return err
+					log.Warnf("Unable to load template %s; skipping", tmplN)
+					continue
 				}
-				if tmpl.Lookup(tmplN) == nil {
-					return fmt.Errorf("template not found %s", tmplN)
+				l = tmpl.Lookup(tmplN)
+				log.Debugf("Got a lookup result %+v (of type %T)", l, l)
+				if l == nil {
+					log.Warnf("No template found for %s; skipping..", nc.TargetNode.ShortName)
+					continue
 				}
 			}
-
 			var buf strings.Builder
 			err := tmpl.ExecuteTemplate(&buf, tmplN, nc.Vars)
+			log.Debugf("Executed a template %s with an error code %v", tmplN, err)
 			if err != nil {
 				nc.Print(true, true)
 				return err
