@@ -155,10 +155,10 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	vm := c.baseVM.DeepCopy()
 
 	// updating the node RAM if it's set
-	if node.RAM != "" {
-		ram, err := meta.NewSizeFromString(node.RAM)
+	if node.Memory != "" {
+		ram, err := meta.NewSizeFromString(node.Memory)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse %q as memory value: %s", node.RAM, err)
+			return nil, fmt.Errorf("failed to parse %q as memory value: %s", node.Memory, err)
 		}
 		vm.Spec.Memory = ram
 	}

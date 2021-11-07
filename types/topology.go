@@ -374,28 +374,41 @@ func (t *Topology) GetNodeRuntime(name string) string {
 	return ""
 }
 
-func (t *Topology) GetNodeCPU(name string) string {
+func (t *Topology) GetNodeCPU(name string) float64 {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeCPU() != "" {
+		if ndef.GetNodeCPU() != 0 {
 			return ndef.GetNodeCPU()
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeCPU() != "" {
+		if t.GetKind(t.GetNodeKind(name)).GetNodeCPU() != 0 {
 			return t.GetKind(t.GetNodeKind(name)).GetNodeCPU()
 		}
 		return t.GetDefaults().GetNodeCPU()
 	}
+	return 0
+}
+
+func (t *Topology) GetNodeCPUSet(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetNodeCPUSet() != "" {
+			return ndef.GetNodeCPUSet()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetNodeCPUSet() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeCPUSet()
+		}
+		return t.GetDefaults().GetNodeCPUSet()
+	}
 	return ""
 }
 
-func (t *Topology) GetNodeRAM(name string) string {
+func (t *Topology) GetNodeMemory(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeRAM() != "" {
-			return ndef.GetNodeRAM()
+		if ndef.GetNodeMemory() != "" {
+			return ndef.GetNodeMemory()
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeRAM() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetNodeRAM()
+		if t.GetKind(t.GetNodeKind(name)).GetNodeMemory() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetNodeMemory()
 		}
-		return t.GetDefaults().GetNodeRAM()
+		return t.GetDefaults().GetNodeMemory()
 	}
 	return ""
 }
