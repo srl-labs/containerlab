@@ -20,6 +20,7 @@ import (
 	"github.com/containernetworking/cni/libcni"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/docker/go-units"
+	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
@@ -201,7 +202,19 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	if node.User != "" {
 		opts = append(opts, oci.WithUser(node.User))
 	}
-
+	if node.Memory != "" {
+		mem, err := humanize.ParseBytes(node.Memory)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, oci.WithMemoryLimit(mem))
+	}
+	if node.CPU != 0 {
+		opts = append(opts, oci.WithCPUCFS(int64(node.CPU*100000), 100000))
+	}
+	if node.CPUSet != "" {
+		opts = append(opts, oci.WithCPUs(node.CPUSet))
+	}
 	if len(mounts) > 0 {
 		opts = append(opts, oci.WithMounts(mounts))
 	}
