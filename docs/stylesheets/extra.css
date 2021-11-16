@@ -30,7 +30,7 @@
     animation: heart 1000ms infinite;
   }
 
-/*  */
+/* classes to make iframe elements responsive */
 .iframe-container {
   position: relative;
   width: 100%;
