@@ -1,6 +1,6 @@
 BIN_DIR = $(shell pwd)/bin
 BINARY = $(shell pwd)/bin/containerlab
-MKDOCS_VER = 7.3.4
+MKDOCS_VER = 7.3.6
 
 all: build
 
@@ -19,7 +19,7 @@ clint:
 
 .PHONY: docs
 docs:
-	docker run -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:7.1.8 build --clean --strict
+	docker run -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
 
 .PHONY: site
 site:
