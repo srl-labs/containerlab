@@ -11,6 +11,7 @@ IgnoreURLs:
   - https://github.com/srl-labs/containerlab/releases/ # gh rate limiters for this particular endpoint are too aggressive
   - https://github.com/srl-labs/containerlab/pkgs/container/clab
   - https://linkedin.com/in
+  - https://www.linkedin.com/in
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
