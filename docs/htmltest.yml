@@ -10,6 +10,8 @@ IgnoreURLs:
   - https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE16113AAAATQZZA01_V1_SR%20Linux%20R20.6%20Software%20Installation.pdf
   - https://github.com/srl-labs/containerlab/releases/ # gh rate limiters for this particular endpoint are too aggressive
   - https://github.com/srl-labs/containerlab/pkgs/container/clab
+  - https://linkedin.com/in
+  - https://www.linkedin.com/in
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
