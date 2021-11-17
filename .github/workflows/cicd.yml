@@ -3,7 +3,7 @@ name: CICD
 on:
   push:
     branches:
-      - master
+      - main
       - docs-publish
     tags:
       - "v*"
