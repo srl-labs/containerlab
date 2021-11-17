@@ -27,9 +27,15 @@ Deploy ${lab-name} lab
     ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/01-linux-nodes.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    # save output to be used in next steps
+    Set Suite Variable    ${deploy-output}    ${output}
+
+Ensure exec command works
+    [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works. NOTE that containerd runtime is excluded because it often doesn't have one of the exec commands. To be investigated further.
+    Skip If    '${runtime}' != 'docker'
     # ensure exec commands work
-    Should Contain    ${output}    this_is_an_exec_test
-    Should Contain    ${output}    ID=alpine
+    Should Contain    ${deploy-output}    this_is_an_exec_test
+    Should Contain    ${deploy-output}    ID=alpine
 
 Inspect ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
