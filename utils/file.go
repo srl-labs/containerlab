@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"regexp"
 	"net/http"
+	"os"
+	"strings"
 )
 
 func FileExists(filename string) bool {
@@ -26,30 +26,33 @@ func FileExists(filename string) bool {
 // mode is the desired target file permissions, e.g. "0644"
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if m, _ := regexp.MatchString("^https?:", src); !m {
-	  sfi, err = os.Stat(src)
-	  if err != nil {
-		  return err
-	  }
-	  if !sfi.Mode().IsRegular() {
-		  // cannot copy non-regular files (e.g., directories,
-		  // symlinks, devices, etc.)
-		  return fmt.Errorf("CopyFile: non-regular source file %s (%q)", sfi.Name(), sfi.Mode().String())
-	  }
+	if isHTTP := (strings.HasPrefix("http://", src) || strings.HasPrefix("https://", src)); !isHTTP {
+		sfi, err = os.Stat(src)
+		if err != nil {
+			return err
+		}
+		if !sfi.Mode().IsRegular() {
+			// cannot copy non-regular files (e.g., directories,
+			// symlinks, devices, etc.)
+			return fmt.Errorf("CopyFile: non-regular source file %s (%q)", sfi.Name(), sfi.Mode().String())
+		}
 	}
+
 	dfi, err := os.Stat(dst)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
-	} else {
-		if !(dfi.Mode().IsRegular()) {
-			return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
-		}
-		if sfi != nil && os.SameFile(sfi, dfi) {
-			return
-		}
 	}
+
+	if !(dfi.Mode().IsRegular()) {
+		return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
+	}
+
+	if sfi != nil && os.SameFile(sfi, dfi) {
+		return
+	}
+
 	return CopyFileContents(src, dst, mode)
 }
 
@@ -59,38 +62,45 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 // of the source file.
 // src can be an http(s) URL as well
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
-  var in io.ReadCloser
-  if m, _ := regexp.MatchString("^https?:", src); m {
+	var in io.ReadCloser
+	if isHTTP := (strings.HasPrefix("http://", src) || strings.HasPrefix("https://", src)); isHTTP {
 		resp, err := http.Get(src)
+		if err != nil {
+			return fmt.Errorf("failed to fetch HTTP resource by the path %s: %v", src, err)
+		}
+
+		in = resp.Body
+	} else {
+		in, err = os.Open(src)
 		if err != nil {
 			return err
 		}
-		in = resp.Body
-	} else {
-	  in, err = os.Open(src)
-		if err != nil {
-		  return err
-		}
 	}
-  defer in.Close()
+	defer in.Close()
+
 	out, err := os.Create(dst)
 	if err != nil {
 		return
 	}
+
 	err = out.Chmod(mode)
 	if err != nil {
 		return
 	}
+
 	defer func() {
 		cerr := out.Close()
 		if err == nil {
 			err = cerr
 		}
 	}()
+
 	if _, err = io.Copy(out, in); err != nil {
 		return
 	}
+
 	err = out.Sync()
+
 	return
 }
 

@@ -186,7 +186,7 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 		for _, fullpath := range agents {
 			basename := filepath.Base(fullpath)
 			dst := filepath.Join(appmgr, basename)
-			if err := utils.CopyFile(fullpath, dst); err != nil {
+			if err := utils.CopyFile(fullpath, dst, 0644); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
@@ -305,7 +305,7 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 		// copy license file to node specific directory in lab
 		src = nodeCfg.License
 		dst = filepath.Join(nodeCfg.LabDir, "license.key")
-		if err := utils.CopyFile(src, dst); err != nil {
+		if err := utils.CopyFile(src, dst, 0644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
