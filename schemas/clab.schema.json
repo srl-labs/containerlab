@@ -174,6 +174,21 @@
                     "enum": [
                         "host"
                     ]
+                },
+                "cpu": {
+                    "type": "integer",
+                    "description": "number of vcpu to allocate for this node/container",
+                    "markdownDescription": "Allowed [CPU](https://containerlab.srlinux.dev/manual/nodes/#cpu) usage by the node/container"
+                },
+                "memory": {
+                    "type": "string",
+                    "description": "memory limit for this node/container",
+                    "markdownDescription": "Allowed [Memory](https://containerlab.srlinux.dev/manual/nodes/#memory) usage by the node/container"
+                },
+                "cpu-set": {
+                    "type": "string",
+                    "description": "CPU cores to use by this node/container",
+                    "markdownDescription": "[CPU cores](https://containerlab.srlinux.dev/manual/nodes/#cpu-set) to be used by the node/container"
                 }
             },
             "if": {

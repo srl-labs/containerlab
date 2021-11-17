@@ -243,7 +243,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
-		RAM:             c.Config.Topology.GetNodeRAM(nodeName),
+		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
+		Memory:          c.Config.Topology.GetNodeMemory(nodeName),
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 
 		// Extras
