@@ -50,7 +50,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	}
 
 	if sfi != nil && os.SameFile(sfi, dfi) {
-		return
+		return nil
 	}
 
 	return CopyFileContents(src, dst, mode)
@@ -80,12 +80,12 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 
 	out, err := os.Create(dst)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = out.Chmod(mode)
 	if err != nil {
-		return
+		return err
 	}
 
 	defer func() {
@@ -96,28 +96,23 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	}()
 
 	if _, err = io.Copy(out, in); err != nil {
-		return
+		return err
 	}
 
 	err = out.Sync()
 
-	return
+	return err
 }
 
 // CreateFile writes content to a file by path `file`
-func CreateFile(file, content string) error {
+func CreateFile(file, content string) (err error) {
 	var f *os.File
 	f, err := os.Create(file)
-	if err != nil {
-		return err
+	if err == nil {
+		defer f.Close()
+	        _, err := f.WriteString(content + "\n")
 	}
-	defer f.Close()
-
-	if _, err := f.WriteString(content + "\n"); err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // CreateDirectory creates a directory by a path with a mode/permission specified by perm.
