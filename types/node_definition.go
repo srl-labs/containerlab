@@ -50,7 +50,7 @@ type NodeDefinition struct {
 	Runtime string `yaml:"runtime,omitempty"`
 	// Set node CPU (cgroup or hypervisor)
 	CPU float64 `yaml:"cpu,omitempty"`
-	//
+	// Set node CPUs to use
 	CPUSet string `yaml:"cpu-set,omitempty"`
 	// Set node Memory (cgroup or hypervisor)
 	Memory string `yaml:"memory,omitempty"`

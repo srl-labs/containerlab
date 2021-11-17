@@ -359,9 +359,9 @@ The `exec` is particularly helpful to provide some startup configuration for lin
 ### memory
 
 By default, container runtimes do not impose any memory resource constraints[^1].
-A container can use too much of the host's memory making the host OS unstable.
+A container can use too much of the host's memory, making the host OS unstable.
 
-The `memory` parameter can be used in order to limit the amount of memory a node can use.
+The `memory` parameter can be used to limit the amount of memory a node/container can use.
 
 ```yaml
 # my-node will have access to at most 1Gb of memory.
@@ -375,13 +375,14 @@ Supported memory suffixes (case insensitive): `b`, `kib`, `kb`, `mib`, `mb`, `gi
 
 ### cpu
 
-By default, container runtimes do not impose any cpu resource constraints[^1].
+By default, container runtimes do not impose any CPU resource constraints[^1].
 A container can use as much as the host's scheduler allows.
 
-Using the `cpu` parameter it is possible to limit the number of CPUs a containerlab node can use.
+The `cpu` parameter can be used to limit the number of CPUs a node/container can use.
 
 ```yaml
-# my-node will have access to at most 1.5 of the CPUs available in the host machine.
+# my-node will have access to at most 1.5 of the CPUs
+# available in the host machine.
 my-node:
   image: alpine:3
   kind: linux
@@ -390,7 +391,7 @@ my-node:
 
 ### cpu-set
 
-The `cpu-set` parameter can be used in order to limit the node CPU usage to specific cores of the host system.
+The `cpu-set` parameter can be used to limit the node CPU usage to specific cores of the host system.
 
 Valid syntaxes:
 
