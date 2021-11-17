@@ -54,6 +54,5 @@ The `configure.sh` script relies on [gomplate](https://docs.gomplate.ca) and [gn
 [topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab.gotmpl
 [topovarfile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab_vars.yaml
 
-[^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>

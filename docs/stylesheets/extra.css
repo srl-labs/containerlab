@@ -44,3 +44,31 @@
   width: 100%;
   height: 100%;
 }
+/* this is for anchor.fm iframes */
+.iframe-audio-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 20.25%; 
+  height: 0;
+}
+.iframe-audio-container iframe {
+  position: absolute;
+  top:0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+/* this is for narrow iframe audio containers */
+.iframe-audio2-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 5.25%;
+  height: 0;
+}
+.iframe-audio2-container iframe {
+  position: absolute;
+  top:0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
