@@ -21,6 +21,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	dockerC "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
@@ -276,7 +277,22 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		NetworkMode:  container.NetworkMode(c.Mgmt.Network),
 		ExtraHosts:   node.ExtraHosts, // add static /etc/hosts entries
 	}
-
+	var resources container.Resources
+	if node.Memory != "" {
+		mem, err := humanize.ParseBytes(node.Memory)
+		if err != nil {
+			return nil, err
+		}
+		resources.Memory = int64(mem)
+	}
+	if node.CPU != 0 {
+		resources.CPUQuota = int64(node.CPU * 100000)
+		resources.CPUPeriod = 100000
+	}
+	if node.CPUSet != "" {
+		resources.CpusetCpus = node.CPUSet
+	}
+	containerHostConfig.Resources = resources
 	containerNetworkingConfig := &network.NetworkingConfig{}
 
 	switch node.NetworkMode {
@@ -465,16 +481,14 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 
 	for _, i := range inputContainers {
 		ctr := types.GenericContainer{
-			Names:   i.Names,
-			ID:      i.ID,
-			ShortID: i.ID[:12],
-			Image:   i.Image,
-			State:   i.State,
-			Status:  i.Status,
-			Labels:  i.Labels,
-			NetworkSettings: &types.GenericMgmtIPs{
-				Set: false,
-			},
+			Names:           i.Names,
+			ID:              i.ID,
+			ShortID:         i.ID[:12],
+			Image:           i.Image,
+			State:           i.State,
+			Status:          i.Status,
+			Labels:          i.Labels,
+			NetworkSettings: types.GenericMgmtIPs{},
 		}
 		bridgeName := c.Mgmt.Network
 		// if bridgeName is "", try to find a network created by clab that the container is connected to
@@ -491,7 +505,6 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
-			ctr.NetworkSettings.Set = true
 		}
 		result = append(result, ctr)
 	}

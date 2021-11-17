@@ -1,0 +1,65 @@
+{{/* Configure P-to-P interfaces */}}
+
+{{ range $name, $link := .clab_links }}
+{{ if $link.port }}
+/ interface {{ $link.port }} subinterface 0 ipv4 address {{ $link.clab_link_ip }}
+/ interface {{ $link.port }} subinterface 0 description {{ $link.clab_link_name }}
+/ network-instance default interface {{ $link.port }}.0
+{{- end }}
+{{- end }}
+
+{{/* Configure system interface */}}
+/ interface system0 admin-state enable subinterface 0 ipv4 address {{ .system_ip }}/32
+/ network-instance default type default
+/ network-instance default interface system0.0
+
+{{/* policy to allow system ip */}}
+/ routing-policy
+/ routing-policy prefix-set system_ip
+/ routing-policy prefix-set system_ip prefix {{ .system_ip }}/32 mask-length-range exact
+/ routing-policy policy system_ip 
+/ routing-policy policy system_ip statement 10
+/ routing-policy policy system_ip statement 10 match prefix-set system_ip
+/ routing-policy policy system_ip statement 10 action accept
+
+{{/* Underlay Config */}}
+/ network-instance default protocols bgp router-id {{ .system_ip }}
+/ network-instance default protocols bgp autonomous-system {{ .as }}
+/ network-instance default protocols bgp ebgp-default-policy import-reject-all false
+/ network-instance default protocols bgp ebgp-default-policy export-reject-all false
+/ network-instance default protocols bgp group underlay timers connect-retry 1
+/ network-instance default protocols bgp group underlay timers minimum-advertisement-interval 1
+/ network-instance default protocols bgp group underlay ipv4-unicast admin-state enable
+/ network-instance default protocols bgp group underlay export-policy system_ip
+
+{{/* If the bgp_underlay flag specified under the link then configure underlay ebgp on links */}}
+{{- range $name, $link := .clab_links -}}
+  {{- if .bgp_underlay }}
+/ network-instance default protocols bgp neighbor {{ ip $link.clab_far.clab_link_ip }}  peer-group underlay
+/ network-instance default protocols bgp neighbor {{ ip $link.clab_far.clab_link_ip }} peer-as {{(index $.clab_nodes $link.clab_far.clab_node).as}}
+  {{- end }} 
+{{- end -}}
+
+
+
+{{/* Overlay Config */}}
+/ network-instance default protocols bgp group overlay timers connect-retry 1
+/ network-instance default protocols bgp group overlay timers minimum-advertisement-interval 1
+/ network-instance default protocols bgp group overlay evpn admin-state enable
+/ network-instance default protocols bgp group overlay ipv4-unicast admin-state disable
+/ network-instance default protocols bgp group overlay transport local-address {{ .system_ip }}
+/ network-instance default protocols bgp group overlay peer-as {{ $.overlay_as }}
+/ network-instance default protocols bgp group overlay local-as {{ $.overlay_as }}
+
+{{- if not .cluster_id }} 
+  {{- range $name, $node := $.clab_nodes }}
+    {{- if .cluster_id }}
+/ network-instance default protocols bgp neighbor {{ $node.system_ip }} peer-group overlay
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if .cluster_id }} 
+/ network-instance default protocols bgp group overlay route-reflector client true
+/ network-instance default protocols bgp group overlay route-reflector cluster-id {{ .cluster_id }}
+/ network-instance default protocols bgp dynamic-neighbors accept match 0.0.0.0/0 peer-group overlay
+{{- end -}}

@@ -344,7 +344,7 @@ func NewSSHSession(host string, sshConfig *ssh.ClientConfig) (*SSHSession, error
 	modes := ssh.TerminalModes{
 		ssh.ECHO: 1, // disable echo
 	}
-	err = session.RequestPty("dumb", 24, 100, modes)
+	err = session.RequestPty("dumb", 24, 1000, modes)
 	if err != nil {
 		session.Close()
 		return nil, fmt.Errorf("pty request failed: %s", err)

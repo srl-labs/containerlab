@@ -355,3 +355,56 @@ my-node:
 ```
 
 The `exec` is particularly helpful to provide some startup configuration for linux nodes such as IP addressing and routing instructions.
+
+### memory
+
+By default, container runtimes do not impose any memory resource constraints[^1].
+A container can use too much of the host's memory, making the host OS unstable.
+
+The `memory` parameter can be used to limit the amount of memory a node/container can use.
+
+```yaml
+# my-node will have access to at most 1Gb of memory.
+my-node:
+  image: alpine:3
+  kind: linux
+  memory: 1Gb
+```
+
+Supported memory suffixes (case insensitive): `b`, `kib`, `kb`, `mib`, `mb`, `gib`, `gb`.
+
+### cpu
+
+By default, container runtimes do not impose any CPU resource constraints[^1].
+A container can use as much as the host's scheduler allows.
+
+The `cpu` parameter can be used to limit the number of CPUs a node/container can use.
+
+```yaml
+# my-node will have access to at most 1.5 of the CPUs
+# available in the host machine.
+my-node:
+  image: alpine:3
+  kind: linux
+  cpu: 1.5
+```
+
+### cpu-set
+
+The `cpu-set` parameter can be used to limit the node CPU usage to specific cores of the host system.
+
+Valid syntaxes:
+
+- `0-3`: Cores 0, 1, 2 and 3
+- `0,3`: Cores 0 and 3
+- `0-1,4-5`: Cores 0, 1, 4 and 5
+
+```yaml
+# my-node will have access to CPU cores 0, 1, 4 and 5.
+my-node:
+  image: alpine:3
+  kind: linux
+  cpu-set: 0-1,4-5
+```
+
+[^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).

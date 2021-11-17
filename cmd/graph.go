@@ -58,7 +58,7 @@ var graphCmd = &cobra.Command{
 
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
+			clab.WithTopoFile(topo, varsFile),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,

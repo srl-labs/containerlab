@@ -50,7 +50,7 @@ var deployCmd = &cobra.Command{
 		var err error
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo),
+			clab.WithTopoFile(topo, varsFile),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,
@@ -156,7 +156,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
-		c.CreateLinks(ctx, linkWorkers, false)
+		c.CreateLinks(ctx, linkWorkers)
 		if nodesStaticWg != nil {
 			nodesStaticWg.Wait()
 		}
@@ -260,11 +260,11 @@ func setFlags(conf *clab.Config) {
 	if mgmtNetName != "" {
 		conf.Mgmt.Network = mgmtNetName
 	}
-	if mgmtIPv4Subnet.String() != "<nil>" {
-		conf.Mgmt.IPv4Subnet = mgmtIPv4Subnet.String()
+	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
+		conf.Mgmt.IPv4Subnet = v4
 	}
-	if mgmtIPv6Subnet.String() != "<nil>" {
-		conf.Mgmt.IPv6Subnet = mgmtIPv6Subnet.String()
+	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
+		conf.Mgmt.IPv6Subnet = v6
 	}
 }
 
@@ -277,14 +277,12 @@ func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.
 			if strings.ToLower(node.Config().NetworkMode) == "host" {
 				continue
 			}
-
-			if c.NetworkSettings.Set {
+			if c.NetworkSettings != (types.GenericMgmtIPs{}) {
 				node.Config().MgmtIPv4Address = c.NetworkSettings.IPv4addr
 				node.Config().MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
 				node.Config().MgmtIPv6Address = c.NetworkSettings.IPv6addr
 				node.Config().MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
 			}
-
 			node.Config().ContainerID = c.ID
 		}
 	}

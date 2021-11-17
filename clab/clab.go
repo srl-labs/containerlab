@@ -6,6 +6,7 @@ package clab
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -40,16 +41,20 @@ type Directory struct {
 	LabGraph  string
 }
 
-type ClabOption func(c *CLab)
+type ClabOption func(c *CLab) error
 
 func WithTimeout(dur time.Duration) ClabOption {
-	return func(c *CLab) {
+	return func(c *CLab) error {
+		if dur <= 0 {
+			return errors.New("zero or negative timeouts are not allowed")
+		}
 		c.timeout = dur
+		return nil
 	}
 }
 
 func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
-	return func(c *CLab) {
+	return func(c *CLab) error {
 		// define runtime name.
 		// order of preference: cli flag -> env var -> default value of docker
 		envN := os.Getenv("CLAB_RUNTIME")
@@ -69,36 +74,34 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 				runtime.WithMgmtNet(c.Config.Mgmt),
 			)
 			if err != nil {
-				log.Fatalf("failed to init the container runtime: %s", err)
+				return fmt.Errorf("failed to init the container runtime: %v", err)
 			}
 
 			c.Runtimes[name] = r
 
-			return
+			return nil
 		}
-		log.Fatalf("unknown container runtime %q", name)
+		return fmt.Errorf("unknown container runtime %q", name)
 	}
 }
 
 func WithKeepMgmtNet() ClabOption {
-	return func(c *CLab) {
+	return func(c *CLab) error {
 		c.GlobalRuntime().WithKeepMgmtNet()
+		return nil
 	}
 }
 
-func WithTopoFile(file string) ClabOption {
-	return func(c *CLab) {
+func WithTopoFile(file, varsFile string) ClabOption {
+	return func(c *CLab) error {
 		if file == "" {
-			log.Fatal("provide a path to the clab topology file")
+			return fmt.Errorf("provide a path to the clab topology file")
 		}
-		if err := c.GetTopology(file); err != nil {
-			log.Fatalf("failed to read topology file: %v", err)
+		if err := c.GetTopology(file, varsFile); err != nil {
+			return fmt.Errorf("failed to read topology file: %v", err)
 		}
 
-		err := c.initMgmtNetwork()
-		if err != nil {
-			log.Fatalf("failed to init the management network: %s", err)
-		}
+		return c.initMgmtNetwork()
 	}
 }
 
@@ -116,8 +119,11 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Runtimes: make(map[string]runtime.ContainerRuntime),
 	}
 
-	for _, o := range opts {
-		o(c)
+	for _, opt := range opts {
+		err := opt(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var err error
@@ -173,16 +179,16 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	var dynIPWg *sync.WaitGroup
 	if len(staticIPNodes) > 0 {
 		log.Debug("scheduling nodes with static IPs...")
-		staticIPWg = c.createNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
+		staticIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
 	}
 	if len(dynIPNodes) > 0 {
 		log.Debug("scheduling nodes with dynamic IPs...")
-		dynIPWg = c.createNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
+		dynIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
 	}
 	return staticIPWg, dynIPWg
 }
 
-func (c *CLab) createNodes(ctx context.Context, maxWorkers int,
+func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
@@ -269,9 +275,7 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers int,
 }
 
 // CreateLinks creates links using the specified number of workers
-// `postdeploy` indicates the stage of links creation.
-// `postdeploy=true` means the links routine is called after nodes postdeploy tasks
-func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
+func (c *CLab) CreateLinks(ctx context.Context, workers uint) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
 	linksChan := make(chan *types.Link)
@@ -325,7 +329,7 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, postdeploy bool) {
 	wg.Wait()
 }
 
-func (c *CLab) DeleteNodes(ctx context.Context, workers uint, deleteCandidates map[string]nodes.Node, serialNodes map[string]struct{}) {
+func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
 
 	wg := new(sync.WaitGroup)
 

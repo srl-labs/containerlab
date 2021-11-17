@@ -124,6 +124,17 @@ Verify Hosts entries exist
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    6
 
+Verify Mem and CPU limits are set
+    [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker inspect clab-${lab-name}-l1 -f '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'
+    Log    ${output}
+    # cpu=1.5
+    Should Contain    ${output}    150000
+    # memory=1G
+    Should Contain    ${output}    1000000000
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup

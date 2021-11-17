@@ -155,10 +155,10 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	vm := c.baseVM.DeepCopy()
 
 	// updating the node RAM if it's set
-	if node.RAM != "" {
-		ram, err := meta.NewSizeFromString(node.RAM)
+	if node.Memory != "" {
+		ram, err := meta.NewSizeFromString(node.Memory)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse %q as memory value: %s", node.RAM, err)
+			return nil, fmt.Errorf("failed to parse %q as memory value: %s", node.Memory, err)
 		}
 		vm.Spec.Memory = ram
 	}
@@ -335,14 +335,12 @@ func (*IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]types.Gene
 
 	for _, i := range input {
 		ctr := types.GenericContainer{
-			Names:   []string{i.Name},
-			ID:      i.GetUID().String(),
-			ShortID: i.PrefixedID(),
-			Labels:  i.Labels,
-			Image:   i.Spec.Image.OCI.Normalized(),
-			NetworkSettings: &types.GenericMgmtIPs{
-				Set: false,
-			},
+			Names:           []string{i.Name},
+			ID:              i.GetUID().String(),
+			ShortID:         i.PrefixedID(),
+			Labels:          i.Labels,
+			Image:           i.Spec.Image.OCI.Normalized(),
+			NetworkSettings: types.GenericMgmtIPs{},
 		}
 
 		if i.Status.Runtime.ID != "" && len(i.Status.Runtime.ID) > 12 {
@@ -358,7 +356,6 @@ func (*IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]types.Gene
 			// TODO: figure out what to do with this
 			ctr.NetworkSettings.IPv4pLen = 24
 
-			ctr.NetworkSettings.Set = true
 			break
 		}
 

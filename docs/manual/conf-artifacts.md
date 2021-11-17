@@ -41,8 +41,8 @@ drwxrwxrwx+ 6 1002 1002   87 Dec  1 22:11 config
 -rw-r--r--  1 root root  233 Dec  1 22:11 topology.clab.yml
 ```
 
-When a user destroys a lab without providing the [`--cleanup`](../cmd/destroy.md#cleanup) flag to the `destroy` command, the Lab Directory **does not** get deleted. This means that every configuration artefact will be kept on disk.
+When a user destroys a lab without providing the [`--cleanup`](../cmd/destroy.md#cleanup) flag to the `destroy` command, the Lab Directory **does not** get deleted. This means that every configuration artifact will be kept on disk.
 
 Moreover, when the user will deploy the same lab, containerlab will reuse the configuration artifacts if possible, which will, for example, start the nodes with the config files saved from the previous lab run.
 
-To be able to deploy a lab without reusing existing configuration artefact use the [`--reconfigure`](../cmd/deploy.md#reconfigure) flag with `deploy` command. With that setting, containerlab will first delete the Lab Directory and then will start the deployment process.
+To be able to deploy a lab without reusing existing configuration artifact use the [`--reconfigure`](../cmd/deploy.md#reconfigure) flag with `deploy` command. With that setting, containerlab will first delete the Lab Directory and then will start the deployment process.

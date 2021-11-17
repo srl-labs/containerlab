@@ -14,13 +14,17 @@ var topologyTestSet = map[string]struct {
 		input: &Topology{
 			Nodes: map[string]*NodeDefinition{
 				"node1": {
-					Kind: "srl",
+					Kind:   "srl",
+					CPU:    1,
+					Memory: "1G",
 				},
 			},
 		},
 		want: map[string]*NodeDefinition{
 			"node1": {
-				Kind: "srl",
+				Kind:   "srl",
+				CPU:    1,
+				Memory: "1G",
 			},
 		},
 	},
@@ -55,6 +59,8 @@ var topologyTestSet = map[string]struct {
 						"label1": "v1",
 						"label2": "v2",
 					},
+					CPU:    1,
+					Memory: "1G",
 				},
 			},
 			Nodes: map[string]*NodeDefinition{
@@ -66,6 +72,7 @@ var topologyTestSet = map[string]struct {
 					Labels: map[string]string{
 						"label2": "notv2",
 					},
+					Memory: "2G",
 				},
 			},
 		},
@@ -99,6 +106,8 @@ var topologyTestSet = map[string]struct {
 					"label1": "v1",
 					"label2": "notv2",
 				},
+				CPU:    1,
+				Memory: "2G",
 			},
 		},
 	},
@@ -107,6 +116,7 @@ var topologyTestSet = map[string]struct {
 			Defaults: &NodeDefinition{
 				Kind: "srl",
 				User: "user1",
+				CPU:  1,
 			},
 			Kinds: map[string]*NodeDefinition{
 				"srl": {
@@ -136,6 +146,8 @@ var topologyTestSet = map[string]struct {
 						"label1": "v1",
 						"label2": "v2",
 					},
+					CPU:    2,
+					Memory: "2G",
 				},
 			},
 			Nodes: map[string]*NodeDefinition{
@@ -172,6 +184,8 @@ var topologyTestSet = map[string]struct {
 					"label1": "v1",
 					"label2": "v2",
 				},
+				CPU:    1,
+				Memory: "2G",
 			},
 		},
 	},
@@ -205,6 +219,8 @@ var topologyTestSet = map[string]struct {
 					"label1": "v1",
 					"label2": "v2",
 				},
+				CPU:    1,
+				Memory: "1G",
 			},
 			Nodes: map[string]*NodeDefinition{
 				"node1": {},
@@ -239,6 +255,8 @@ var topologyTestSet = map[string]struct {
 					"label1": "v1",
 					"label2": "v2",
 				},
+				CPU:    1,
+				Memory: "1G",
 			},
 		},
 	},

@@ -62,8 +62,9 @@ nav:
       - About: lab-examples/lab-examples.md
       - Single SR Linux node: lab-examples/single-srl.md
       - Two SR Linux nodes: lab-examples/two-srls.md
-      - 3-nodes CLOS: lab-examples/min-clos.md
-      - 5-stage CLOS: lab-examples/min-5clos.md
+      - 3-nodes Clos fabric: lab-examples/min-clos.md
+      - 5-stage Clos fabric: lab-examples/min-5clos.md
+      - 5-stage SR Linux based Clos fabric with config engine: lab-examples/cfg-clos.md
       - Nokia SR Linux and Arista cEOS: lab-examples/srl-ceos.md
       - Nokia SR Linux and Juniper cRPD: lab-examples/srl-crpd.md
       - Nokia SR Linux and SONiC: lab-examples/srl-sonic.md
@@ -79,6 +80,9 @@ nav:
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Multi-node labs: lab-examples/multinode.md
+      - Templated labs:
+          - Leaf-spine topology: lab-examples/templated01.md
+          - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
       - 0.19: rn/0.19.md
       - 0.18: rn/0.18.md

@@ -17,6 +17,9 @@ func Send(cs *NodeConfig, action string) error {
 	}
 
 	if ct == "ssh" {
+		if len(nodes.DefaultCredentials[cs.TargetNode.Kind]) < 2 {
+			return fmt.Errorf("SSH credentials for node %s of type %s not found, cannot configure", cs.TargetNode.ShortName, cs.TargetNode.Kind)
+		}
 		tx, err = transport.NewSSHTransport(
 			cs.TargetNode,
 			transport.WithUserNamePassword(

@@ -1,0 +1,28 @@
+name: templated01
+
+topology:
+  defaults:
+    kind: srl
+  kinds:
+    srl:
+      image: ghcr.io/nokia/srlinux
+
+  nodes:
+    # spines
+{{- range $spineIndex := seq 1 $.spines.num }}
+    {{ $.spines.prefix }}{{ $spineIndex }}:
+      type: {{ $.spines.type }}
+{{- end }}
+    # leaves
+{{- range $leafIndex := seq 1 $.leaves.num }}
+    {{ $.leaves.prefix }}{{ $leafIndex }}:
+      type: {{ $.leaves.type }}
+{{- end }}
+
+  links:
+{{- range $spineIndex := seq 1 $.spines.num }}
+    # {{ $.spines.prefix }}{{ $spineIndex }}
+  {{- range $leafIndex := seq 1 $.leaves.num }}
+    - endpoints: ["{{ $.spines.prefix }}{{ $spineIndex }}:e1-{{ $leafIndex }}", "{{ $.leaves.prefix }}{{ $leafIndex }}:e1-{{ $spineIndex }}"]
+  {{- end }}
+{{- end }}

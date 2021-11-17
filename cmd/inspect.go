@@ -62,7 +62,7 @@ var inspectCmd = &cobra.Command{
 			),
 		}
 		if topo != "" {
-			opts = append(opts, clab.WithTopoFile(topo))
+			opts = append(opts, clab.WithTopoFile(topo, varsFile))
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {
@@ -226,26 +226,16 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 }
 
 func getContainerIPv4(ctr types.GenericContainer) string {
-	if !ctr.NetworkSettings.Set {
-		return ""
-	}
-
 	if ctr.NetworkSettings.IPv4addr == "" {
-		return "NA"
+		return "N/A"
 	}
-
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
 
 }
 
 func getContainerIPv6(ctr types.GenericContainer) string {
-	if !ctr.NetworkSettings.Set {
-		return ""
-	}
-
 	if ctr.NetworkSettings.IPv6addr == "" {
-		return "NA"
+		return "N/A"
 	}
-
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
 }

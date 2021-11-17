@@ -49,9 +49,11 @@ type NodeDefinition struct {
 	// Override container runtime
 	Runtime string `yaml:"runtime,omitempty"`
 	// Set node CPU (cgroup or hypervisor)
-	CPU string `yaml:"cpu,omitempty"`
-	// Set node RAM (cgroup or hypervisor)
-	RAM string `yaml:"ram,omitempty"`
+	CPU float64 `yaml:"cpu,omitempty"`
+	// Set node CPUs to use
+	CPUSet string `yaml:"cpu-set,omitempty"`
+	// Set node Memory (cgroup or hypervisor)
+	Memory string `yaml:"memory,omitempty"`
 
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
@@ -226,18 +228,25 @@ func (n *NodeDefinition) GetNodeRuntime() string {
 	return n.Runtime
 }
 
-func (n *NodeDefinition) GetNodeCPU() string {
+func (n *NodeDefinition) GetNodeCPU() float64 {
 	if n == nil {
-		return ""
+		return 0
 	}
 	return n.CPU
 }
 
-func (n *NodeDefinition) GetNodeRAM() string {
+func (n *NodeDefinition) GetNodeCPUSet() string {
 	if n == nil {
 		return ""
 	}
-	return n.RAM
+	return n.CPUSet
+}
+
+func (n *NodeDefinition) GetNodeMemory() string {
+	if n == nil {
+		return ""
+	}
+	return n.Memory
 }
 
 func (n *NodeDefinition) GetExec() []string {

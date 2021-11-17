@@ -1,0 +1,59 @@
+name: templated02
+
+topology:
+  defaults:
+    kind: srl
+  kinds:
+    srl:
+      image: ghcr.io/nokia/srlinux
+
+  nodes:
+    # {{ $.super_spines.prefix }}
+{{- range $ssIndex := seq 1 $.super_spines.num }}
+    {{ $.super_spines.prefix }}{{ $ssIndex }}:
+      type: {{ $.super_spines.type }}
+{{- end }}
+
+{{- range $podIndex := seq 1 $.pods.num }}
+    # pod {{ $podIndex }} {{ $.pods.spines.prefix }}
+ {{- range $spineIndex := seq 1 $.pods.spines.num }}
+    {{ $.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:
+      type: {{ $.pods.spines.type }}
+  {{- end }}
+    # pod {{ $podIndex }} {{ $.pods.leaves.prefix }}
+  {{- range $leafIndex := seq 1 $.pods.leaves.num }}
+    {{ $.pods.leaves.prefix }}{{ $podIndex }}-{{ $leafIndex }}:
+      type: {{ $.pods.leaves.type }}
+  {{- end }}
+{{- end }}
+
+  links:
+{{- range $ssIndex := seq 1 $.super_spines.num }}
+    # {{ $.super_spines.prefix }}{{ $ssIndex }}
+  {{- range $podIndex := seq 1 $.pods.num }}
+    {{- range $spineIndex := seq 1 $.pods.spines.num }} 
+    - endpoints: ["{{ $.super_spines.prefix }}{{ $ssIndex }}:e1-{{ add (mul (add $podIndex -1) $.pods.spines.num) $spineIndex }}", "{{ $.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:e1-{{ $ssIndex }}"]
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- /* 
+Set leaf port offset, this is used in case the leaves type is IXR-D2 and spines is IXR-D3
+in which case, they are interconnected using the 100G interfaces on IXR-D2.
+Those interfaces number starts at e-1/49.
+*/ -}}
+{{- $leafPortOffset := 0 }}
+{{- if eq $.pods.leaves.type "ixrd2" }}
+  {{- if eq $.pods.spines.type "ixrd3" }}
+    {{- $leafPortOffset = 48 }}
+  {{- end }}
+{{- end }}
+
+{{- range $podIndex := seq 1 $.pods.num }}
+  {{- range $spineIndex := seq 1 $.pods.spines.num }}
+    # pod {{ $podIndex }} {{ $.pods.spines.prefix }} {{ $spineIndex }}
+    {{- range $leafIndex := seq 1 $.pods.leaves.num }}
+    - endpoints: ["{{ $.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:e1-{{ add $.pods.spines.num $leafIndex }}", "{{ $.pods.leaves.prefix }}{{ $podIndex }}-{{ $leafIndex }}:e1-{{ add $spineIndex $leafPortOffset }}"]
+    {{- end }}
+  {{- end }}
+{{- end }}

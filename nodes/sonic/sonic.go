@@ -31,6 +31,8 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
+	// the entrypoint is reset to prevent it from starting before all interfaces are connected
+	// all main sonic agents are started in a post-deploy phase
 	s.cfg.Entrypoint = "/bin/bash"
 	return nil
 }
@@ -48,22 +50,17 @@ func (s *sonic) Deploy(ctx context.Context) error {
 
 func (s *sonic) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.cfg.ShortName)
-	// TODO: change this calls to c.ExecNotWait
-	// exec `supervisord` to start sonic services
-	_, stderr, err := s.runtime.Exec(ctx, s.cfg.ContainerID, []string{"supervisord"})
+
+	err := s.runtime.ExecNotWait(ctx, s.cfg.ContainerID, []string{"supervisord"})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed post-deploy node %q: %w", s.cfg.ShortName, err)
 	}
-	if len(stderr) > 0 {
-		return fmt.Errorf("failed post-deploy node %q: %s", s.cfg.ShortName, string(stderr))
-	}
-	_, stderr, err = s.runtime.Exec(ctx, s.cfg.ContainerID, []string{"/usr/lib/frr/bgpd"})
+
+	err = s.runtime.ExecNotWait(ctx, s.cfg.ContainerID, []string{"supervisorctl start bgpd"})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed post-deploy node %q: %w", s.cfg.ShortName, err)
 	}
-	if len(stderr) > 0 {
-		return fmt.Errorf("failed post-deploy node %q: %s", s.cfg.ShortName, string(stderr))
-	}
+
 	return nil
 }
 

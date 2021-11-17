@@ -17,6 +17,8 @@ topology:
       exec:
         - echo this_is_an_exec_test
         - cat /etc/os-release
+      cpu: 1.5
+      memory: 1G
     l2:
       kind: linux
       image: nginx:stable-alpine
