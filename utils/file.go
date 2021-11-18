@@ -27,7 +27,6 @@ func FileExists(filename string) bool {
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
 	if isHTTP := (strings.HasPrefix("http://", src) || strings.HasPrefix("https://", src)); !isHTTP {
-		fmt.Println("here011")
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
