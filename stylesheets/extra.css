@@ -48,7 +48,7 @@
 .iframe-audio-container {
   position: relative;
   width: 100%;
-  padding-bottom: 20.25%; 
+  padding-bottom: 7rem;
   height: 0;
 }
 .iframe-audio-container iframe {
@@ -58,11 +58,11 @@
   width: 100%;
   height: 100%;
 }
-/* this is for narrow iframe audio containers */
+/* this is for low-height iframe audio containers */
 .iframe-audio2-container {
   position: relative;
   width: 100%;
-  padding-bottom: 5.25%;
+  padding-bottom: 2rem;
   height: 0;
 }
 .iframe-audio2-container iframe {
