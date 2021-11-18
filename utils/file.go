@@ -27,6 +27,7 @@ func FileExists(filename string) bool {
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
 	if isHTTP := (strings.HasPrefix("http://", src) || strings.HasPrefix("https://", src)); !isHTTP {
+		fmt.Println("here011")
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -43,14 +44,14 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		if !os.IsNotExist(err) {
 			return err
 		}
-	}
+	} else {
+		if !(dfi.Mode().IsRegular()) {
+			return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
+		}
 
-	if !(dfi.Mode().IsRegular()) {
-		return fmt.Errorf("CopyFile: non-regular destination file %s (%q)", dfi.Name(), dfi.Mode().String())
-	}
-
-	if sfi != nil && os.SameFile(sfi, dfi) {
-		return
+		if sfi != nil && os.SameFile(sfi, dfi) {
+			return
+		}
 	}
 
 	return CopyFileContents(src, dst, mode)
