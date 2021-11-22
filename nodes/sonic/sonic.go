@@ -78,6 +78,6 @@ func (s *sonic) GetImages() map[string]string {
 	}
 }
 
-func (s *sonic) SaveConfig(_ context.Context) error {
+func (*sonic) SaveConfig(_ context.Context) error {
 	return nil
 }
