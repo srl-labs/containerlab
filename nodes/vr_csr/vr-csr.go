@@ -56,7 +56,7 @@ func (s *vrCsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 func (s *vrCsr) Config() *types.NodeConfig { return s.cfg }
-func (s *vrCsr) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrCsr) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
@@ -64,7 +64,7 @@ func (s *vrCsr) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
 	return err
 }
-func (s *vrCsr) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *vrCsr) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -74,7 +74,7 @@ func (s *vrCsr) GetImages() map[string]string {
 	}
 }
 
-func (s *vrCsr) Destroy(ctx context.Context) error      { return nil }
+func (s *vrCsr) Destroy(_ context.Context) error        { return nil }
 func (s *vrCsr) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
 func (s *vrCsr) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrCsr) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
@@ -83,7 +83,7 @@ func (s *vrCsr) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrCsr) SaveConfig(ctx context.Context) error {
+func (s *vrCsr) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],

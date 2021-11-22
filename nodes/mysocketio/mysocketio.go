@@ -32,7 +32,7 @@ func (s *mySocketIO) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error
 
 func (s *mySocketIO) Config() *types.NodeConfig { return s.cfg }
 
-func (s *mySocketIO) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *mySocketIO) PreDeploy(_, _, _ string) error {
 
 	return nil
 }
@@ -56,7 +56,7 @@ func (s *mySocketIO) WithMgmtNet(*types.MgmtNet)             {}
 func (s *mySocketIO) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *mySocketIO) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
-func (s *mySocketIO) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
+func (s *mySocketIO) GetContainer(_ context.Context) (*types.GenericContainer, error) {
 	return nil, nil
 }
 
@@ -70,7 +70,7 @@ func (s *mySocketIO) GetImages() map[string]string {
 	}
 }
 
-func (s *mySocketIO) SaveConfig(ctx context.Context) error {
+func (s *mySocketIO) SaveConfig(_ context.Context) error {
 	return nil
 }
 
