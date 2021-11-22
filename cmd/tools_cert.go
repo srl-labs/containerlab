@@ -80,7 +80,7 @@ var signCertCmd = &cobra.Command{
 	RunE:  signCert,
 }
 
-func createCA(cmd *cobra.Command, args []string) error {
+func createCA(_ *cobra.Command, _ []string) error {
 	csr := `{
 	"CN": "{{.CommonName}}",
 	"key": {
@@ -147,7 +147,7 @@ func createCA(cmd *cobra.Command, args []string) error {
 }
 
 // create node certificate and sign it with CA
-func signCert(cmd *cobra.Command, args []string) error {
+func signCert(_ *cobra.Command, _ []string) error {
 	csr := `{
 		"CN": "{{.CommonName}}",
 		"hosts": [

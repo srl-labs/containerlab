@@ -38,7 +38,7 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 func (s *sonic) Config() *types.NodeConfig { return s.cfg }
 
-func (s *sonic) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *sonic) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 
 	return nil
@@ -48,7 +48,7 @@ func (s *sonic) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *sonic) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.cfg.ShortName)
 
 	err := s.runtime.ExecNotWait(ctx, s.cfg.ContainerID, []string{"supervisord"})
@@ -78,6 +78,6 @@ func (s *sonic) GetImages() map[string]string {
 	}
 }
 
-func (s *sonic) SaveConfig(ctx context.Context) error {
+func (s *sonic) SaveConfig(_ context.Context) error {
 	return nil
 }

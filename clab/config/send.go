@@ -7,7 +7,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 )
 
-func Send(cs *NodeConfig, action string) error {
+func Send(cs *NodeConfig, _ string) error {
 	var tx transport.Transport
 	var err error
 
