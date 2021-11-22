@@ -674,7 +674,7 @@ func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername strin
 	return err
 }
 
-func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) {
+func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { //skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)

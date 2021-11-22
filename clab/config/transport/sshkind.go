@@ -26,7 +26,7 @@ type SSHKind interface {
 // implements SShKind
 type VrSrosSSHKind struct{}
 
-func (sk *VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error {
+func (sk *VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { //skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
 	//s.debug = true
 	r := s.Run("/environment more false", 5)
@@ -63,7 +63,7 @@ func (sk *VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 // implements SShKind
 type SrlSSHKind struct{}
 
-func (sk *SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error {
+func (sk *SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { //skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
 	if transaction {
 		r0 := s.Run("enter candidate private", 5)

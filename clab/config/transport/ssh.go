@@ -376,7 +376,7 @@ func (ses *SSHSession) Close() {
 //   # - command sent
 //   | - result received
 //   ? - prompt part of the result
-func (r *SSHReply) LogString(node string, linefeed, debug bool) string {
+func (r *SSHReply) LogString(node string, linefeed, debug bool) string { //skipcq: RVV-A0005
 	ind := 12 + len(node)
 	prefix := "\n" + strings.Repeat(" ", ind)
 	s := ""

@@ -107,7 +107,7 @@ func (c *NodeConfig) String() string {
 }
 
 // Print the config
-func (c *NodeConfig) Print(vars, rendered bool) {
+func (c *NodeConfig) Print(vars, rendered bool) { //skipcq: RVV-A0005
 	var s strings.Builder
 
 	s.WriteString(c.TargetNode.ShortName)
