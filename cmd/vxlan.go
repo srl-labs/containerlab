@@ -81,11 +81,7 @@ var vxlanCreateCmd = &cobra.Command{
 			return err
 		}
 
-		if err := clab.BindIfacesWithTC(vxlanCfg.Name, cntLink); err != nil {
-			return err
-		}
-
-		return nil
+		return clab.BindIfacesWithTC(vxlanCfg.Name, cntLink)
 	},
 }
 

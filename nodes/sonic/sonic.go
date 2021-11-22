@@ -64,7 +64,7 @@ func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *sonic) WithMgmtNet(*types.MgmtNet)             {}
+func (*sonic) WithMgmtNet(*types.MgmtNet)               {}
 func (s *sonic) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *sonic) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 

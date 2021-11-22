@@ -81,7 +81,7 @@ func (s *vrSROS) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *vrSROS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*vrSROS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 

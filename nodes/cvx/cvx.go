@@ -69,7 +69,7 @@ func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (c *cvx) Config() *types.NodeConfig { return c.cfg }
 
-func (c *cvx) PreDeploy(_, _, _ string) error { return nil }
+func (*cvx) PreDeploy(_, _, _ string) error { return nil }
 
 func (c *cvx) Deploy(ctx context.Context) error {
 
@@ -107,7 +107,7 @@ func (c *cvx) GetImages() map[string]string {
 	return images
 }
 
-func (c *cvx) WithMgmtNet(*types.MgmtNet)             {}
+func (*cvx) WithMgmtNet(*types.MgmtNet)               {}
 func (c *cvx) WithRuntime(r runtime.ContainerRuntime) { c.runtime = r }
 
 func (c *cvx) Delete(ctx context.Context) error {

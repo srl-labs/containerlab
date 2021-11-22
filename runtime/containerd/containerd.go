@@ -94,10 +94,10 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 func (c *ContainerdRuntime) WithKeepMgmtNet() {
 	c.config.KeepMgmtNet = true
 }
-func (c *ContainerdRuntime) GetName() string               { return runtimeName }
+func (*ContainerdRuntime) GetName() string                 { return runtimeName }
 func (c *ContainerdRuntime) Config() runtime.RuntimeConfig { return c.config }
 
-func (c *ContainerdRuntime) CreateNet(_ context.Context) error {
+func (*ContainerdRuntime) CreateNet(_ context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
 	return nil
 }
@@ -541,7 +541,7 @@ func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string
 	return &ctrs[0], nil
 }
 
-func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
+func (*ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
 	filterstring := ""
 	delim := ","
 	for counter, filterEntry := range filter {
@@ -573,7 +573,7 @@ func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) str
 }
 
 // Transform docker-specific to generic container format
-func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, input []containerd.Container) ([]types.GenericContainer, error) {
+func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context, input []containerd.Container) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for _, i := range input {
@@ -666,15 +666,15 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
 func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, cmd []string) ([]byte, []byte, error) {
-	return c.exec(ctx, containername, cmd, false)
+	return c.internalExec(ctx, containername, cmd, false)
 }
 
 func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, cmd []string) error {
-	_, _, err := c.exec(ctx, containername, cmd, true)
+	_, _, err := c.internalExec(ctx, containername, cmd, true)
 	return err
 }
 
-func (c *ContainerdRuntime) exec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) {
+func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { //skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)

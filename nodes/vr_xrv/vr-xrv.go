@@ -68,7 +68,7 @@ func (s *vrXRV) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *vrXRV) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*vrXRV) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 

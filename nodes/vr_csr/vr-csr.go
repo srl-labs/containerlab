@@ -64,7 +64,7 @@ func (s *vrCsr) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
 	return err
 }
-func (s *vrCsr) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*vrCsr) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -74,7 +74,7 @@ func (s *vrCsr) GetImages() map[string]string {
 	}
 }
 
-func (s *vrCsr) Destroy(_ context.Context) error        { return nil }
+func (*vrCsr) Destroy(_ context.Context) error          { return nil }
 func (s *vrCsr) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
 func (s *vrCsr) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrCsr) GetRuntime() runtime.ContainerRuntime   { return s.runtime }

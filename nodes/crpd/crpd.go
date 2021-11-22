@@ -89,7 +89,7 @@ func (s *crpd) GetImages() map[string]string {
 	}
 }
 
-func (s *crpd) WithMgmtNet(*types.MgmtNet)             {}
+func (*crpd) WithMgmtNet(*types.MgmtNet)               {}
 func (s *crpd) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *crpd) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 

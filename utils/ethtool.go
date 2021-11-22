@@ -51,10 +51,10 @@ func EthtoolTXOff(name string) error {
 
 	// Request current value
 	value := EthtoolValue{Cmd: ETHTOOL_GTXCSUM}
-	request := IFReqData{Data: uintptr(unsafe.Pointer(&value))}
+	request := IFReqData{Data: uintptr(unsafe.Pointer(&value))} //skipcq: GSC-G103
 	copy(request.Name[:], name)
 
-	if err := ioctlEthtool(socket, uintptr(unsafe.Pointer(&request))); err != nil {
+	if err := ioctlEthtool(socket, uintptr(unsafe.Pointer(&request))); err != nil { //skipcq: GSC-G103
 		return err
 	}
 	if value.Data == 0 { // if already off, don't try to change
@@ -62,5 +62,5 @@ func EthtoolTXOff(name string) error {
 	}
 
 	value = EthtoolValue{ETHTOOL_STXCSUM, 0}
-	return ioctlEthtool(socket, uintptr(unsafe.Pointer(&request)))
+	return ioctlEthtool(socket, uintptr(unsafe.Pointer(&request))) //skipcq: GSC-G103
 }

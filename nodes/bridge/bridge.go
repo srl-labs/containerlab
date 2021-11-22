@@ -31,24 +31,24 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
 	return nil
 }
-func (s *bridge) Config() *types.NodeConfig      { return s.cfg }
-func (s *bridge) PreDeploy(_, _, _ string) error { return nil }
-func (s *bridge) Deploy(_ context.Context) error { return nil }
-func (s *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (s *bridge) Config() *types.NodeConfig    { return s.cfg }
+func (*bridge) PreDeploy(_, _, _ string) error { return nil }
+func (*bridge) Deploy(_ context.Context) error { return nil }
+func (*bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
-func (s *bridge) WithMgmtNet(*types.MgmtNet)             {}
+func (*bridge) WithMgmtNet(*types.MgmtNet)               {}
 func (s *bridge) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *bridge) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
-func (s *bridge) GetContainer(_ context.Context) (*types.GenericContainer, error) {
+func (*bridge) GetContainer(_ context.Context) (*types.GenericContainer, error) {
 	return nil, nil
 }
 
-func (s *bridge) SaveConfig(_ context.Context) error { return nil }
+func (*bridge) SaveConfig(_ context.Context) error { return nil }
 
-func (s *bridge) GetImages() map[string]string { return map[string]string{} }
+func (*bridge) GetImages() map[string]string { return map[string]string{} }
 
-func (s *bridge) Delete(_ context.Context) error {
+func (*bridge) Delete(_ context.Context) error {
 	return nil
 }

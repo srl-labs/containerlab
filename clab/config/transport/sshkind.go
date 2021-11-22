@@ -26,7 +26,7 @@ type SSHKind interface {
 // implements SShKind
 type VrSrosSSHKind struct{}
 
-func (sk *VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error {
+func (*VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { //skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
 	//s.debug = true
 	r := s.Run("/environment more false", 5)
@@ -40,7 +40,7 @@ func (sk *VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error {
 	}
 	return nil
 }
-func (sk *VrSrosSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
+func (*VrSrosSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	res := s.Run("commit", 10)
 	if res.result != "" {
 		return res, fmt.Errorf("could not commit %s", res.result)
@@ -48,7 +48,7 @@ func (sk *VrSrosSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	return res, nil
 }
 
-func (sk *VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
+func (*VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 	// SROS MD-CLI \r...prompt
 	r := strings.LastIndex(*in, "\r\n\r\n")
 	if r > 0 {
@@ -63,7 +63,7 @@ func (sk *VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 // implements SShKind
 type SrlSSHKind struct{}
 
-func (sk *SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error {
+func (*SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { //skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
 	if transaction {
 		r0 := s.Run("enter candidate private", 5)
@@ -76,7 +76,8 @@ func (sk *SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error {
 	}
 	return nil
 }
-func (sk *SrlSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
+
+func (*SrlSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	r := s.Run("commit now", 10)
 	if strings.Contains(r.result, "All changes have been committed") {
 		r.result = ""
@@ -85,7 +86,8 @@ func (sk *SrlSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	}
 	return r, nil
 }
-func (sk *SrlSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
+
+func (*SrlSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 	return promptParseNoSpaces(in, s.PromptChar, 2)
 }
 
