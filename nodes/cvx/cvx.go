@@ -69,7 +69,7 @@ func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (c *cvx) Config() *types.NodeConfig { return c.cfg }
 
-func (c *cvx) PreDeploy(configName, labCADir, labCARoot string) error { return nil }
+func (c *cvx) PreDeploy(_, _, _ string) error { return nil }
 
 func (c *cvx) Deploy(ctx context.Context) error {
 
@@ -85,7 +85,7 @@ func (c *cvx) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (c *cvx) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (c *cvx) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for cvx '%s' node", c.cfg.ShortName)
 	if c.vmChans == nil {
 		return nil
@@ -116,7 +116,7 @@ func (c *cvx) Delete(ctx context.Context) error {
 
 func (s *cvx) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
-func (c *cvx) SaveConfig(ctx context.Context) error {
+func (c *cvx) SaveConfig(_ context.Context) error {
 	log.Debugf("Save operation is currently not supported for %q node kind", c.cfg.Kind)
 	return nil
 }

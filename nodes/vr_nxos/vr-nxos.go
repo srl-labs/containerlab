@@ -51,7 +51,7 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrNXOS) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrNXOS) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrNXOS) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
@@ -67,7 +67,7 @@ func (s *vrNXOS) GetImages() map[string]string {
 	}
 }
 
-func (s *vrNXOS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *vrNXOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -81,6 +81,6 @@ func (s *vrNXOS) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrNXOS) SaveConfig(ctx context.Context) error {
+func (s *vrNXOS) SaveConfig(_ context.Context) error {
 	return nil
 }

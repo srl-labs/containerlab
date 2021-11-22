@@ -97,7 +97,7 @@ func (c *ContainerdRuntime) WithKeepMgmtNet() {
 func (c *ContainerdRuntime) GetName() string               { return runtimeName }
 func (c *ContainerdRuntime) Config() runtime.RuntimeConfig { return c.config }
 
-func (c *ContainerdRuntime) CreateNet(ctx context.Context) error {
+func (c *ContainerdRuntime) CreateNet(_ context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
 	return nil
 }

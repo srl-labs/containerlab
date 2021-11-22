@@ -53,7 +53,7 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 func (s *vrPan) Config() *types.NodeConfig { return s.cfg }
-func (s *vrPan) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrPan) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
@@ -61,7 +61,7 @@ func (s *vrPan) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
 	return err
 }
-func (s *vrPan) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *vrPan) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -71,7 +71,7 @@ func (s *vrPan) GetImages() map[string]string {
 	}
 }
 
-func (s *vrPan) Destroy(ctx context.Context) error      { return nil }
+func (s *vrPan) Destroy(_ context.Context) error        { return nil }
 func (s *vrPan) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
 func (s *vrPan) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrPan) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
@@ -80,6 +80,6 @@ func (s *vrPan) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrPan) SaveConfig(ctx context.Context) error {
+func (s *vrPan) SaveConfig(_ context.Context) error {
 	return nil
 }
