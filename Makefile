@@ -1,5 +1,5 @@
-BIN_DIR = $(shell pwd)/bin
-BINARY = $(shell pwd)/bin/containerlab
+BIN_DIR = $$(pwd)/bin
+BINARY = $$(pwd)/bin/containerlab
 MKDOCS_VER = 7.3.6
 
 all: build
@@ -15,7 +15,7 @@ lint:
 	golangci-lint run
 
 clint:
-	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.40.1 golangci-lint run -v
+	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.40.1 golangci-lint run --timeout 5m -v
 
 .PHONY: docs
 docs:
