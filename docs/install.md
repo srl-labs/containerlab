@@ -8,7 +8,7 @@ The following requirements must be satisfied in order to let containerlab tool r
 * Load container images (e.g. Nokia SR Linux, Arista cEOS) which are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
 ### Install script
-Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/master/get.sh) which detects the operating system type and installs the relevant package:
+Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) which detects the operating system type and installs the relevant package:
 
 !!! note
     Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.  
