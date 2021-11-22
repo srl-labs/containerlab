@@ -138,8 +138,14 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		return err
 	}
 	m[5] = m[5] + 1
-	utils.CreateFile(path.Join(node.LabDir, "flash", "system_mac_address"), m.String())
-	return nil
+
+	sysMacPath := path.Join(node.LabDir, "flash", "system_mac_address")
+
+	if !utils.FileExists(sysMacPath) {
+		err = utils.CreateFile(sysMacPath, m.String())
+	}
+
+	return err
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes
