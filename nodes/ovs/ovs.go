@@ -23,38 +23,38 @@ type ovs struct {
 	runtime runtime.ContainerRuntime
 }
 
-func (l *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	l.cfg = cfg
+func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	s.cfg = cfg
 	for _, o := range opts {
-		o(l)
+		o(s)
 	}
 	return nil
 }
 
-func (l *ovs) Config() *types.NodeConfig { return l.cfg }
+func (s *ovs) Config() *types.NodeConfig { return s.cfg }
 
-func (l *ovs) PreDeploy(_, _, _ string) error { return nil }
+func (*ovs) PreDeploy(_, _, _ string) error { return nil }
 
-func (l *ovs) Deploy(_ context.Context) error { return nil }
+func (*ovs) Deploy(_ context.Context) error { return nil }
 
-func (l *ovs) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*ovs) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
-func (l *ovs) WithMgmtNet(*types.MgmtNet)             {}
+func (*ovs) WithMgmtNet(*types.MgmtNet)               {}
 func (s *ovs) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *ovs) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
-func (s *ovs) GetContainer(_ context.Context) (*types.GenericContainer, error) {
+func (*ovs) GetContainer(_ context.Context) (*types.GenericContainer, error) {
 	return nil, nil
 }
 
-func (s *ovs) Delete(_ context.Context) error {
+func (*ovs) Delete(_ context.Context) error {
 	return nil
 }
 
-func (s *ovs) GetImages() map[string]string { return map[string]string{} }
+func (*ovs) GetImages() map[string]string { return map[string]string{} }
 
-func (s *ovs) SaveConfig(_ context.Context) error {
+func (*ovs) SaveConfig(_ context.Context) error {
 	return nil
 }

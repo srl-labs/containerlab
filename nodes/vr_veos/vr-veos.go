@@ -58,14 +58,14 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrVEOS) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrVEOS) PreDeploy(_, _, _ string) error { return nil }
+func (*vrVEOS) PreDeploy(_, _, _ string) error { return nil }
 
 func (s *vrVEOS) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
 	return err
 }
 
-func (s *vrVEOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*vrVEOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 

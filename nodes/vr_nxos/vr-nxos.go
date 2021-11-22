@@ -67,7 +67,7 @@ func (s *vrNXOS) GetImages() map[string]string {
 	}
 }
 
-func (s *vrNXOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*vrNXOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -81,6 +81,6 @@ func (s *vrNXOS) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrNXOS) SaveConfig(_ context.Context) error {
+func (*vrNXOS) SaveConfig(_ context.Context) error {
 	return nil
 }

@@ -32,28 +32,28 @@ func (s *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 func (s *host) Config() *types.NodeConfig { return s.cfg }
-func (s *host) PreDeploy(_, _, _ string) error {
+func (*host) PreDeploy(_, _, _ string) error {
 	return nil
 }
-func (s *host) Deploy(_ context.Context) error { return nil }
-func (s *host) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*host) Deploy(_ context.Context) error { return nil }
+func (*host) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
-func (s *host) GetImages() map[string]string { return map[string]string{} }
+func (*host) GetImages() map[string]string { return map[string]string{} }
 
-func (s *host) WithMgmtNet(*types.MgmtNet)             {}
+func (*host) WithMgmtNet(*types.MgmtNet)               {}
 func (s *host) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *host) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
-func (s *host) GetContainer(_ context.Context) (*types.GenericContainer, error) {
+func (*host) GetContainer(_ context.Context) (*types.GenericContainer, error) {
 	return nil, nil
 }
 
-func (s *host) Delete(_ context.Context) error {
+func (*host) Delete(_ context.Context) error {
 	return nil
 }
 
-func (s *host) SaveConfig(_ context.Context) error {
+func (*host) SaveConfig(_ context.Context) error {
 	return nil
 }

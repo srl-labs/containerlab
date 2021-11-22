@@ -94,10 +94,10 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 func (c *ContainerdRuntime) WithKeepMgmtNet() {
 	c.config.KeepMgmtNet = true
 }
-func (c *ContainerdRuntime) GetName() string               { return runtimeName }
+func (*ContainerdRuntime) GetName() string                 { return runtimeName }
 func (c *ContainerdRuntime) Config() runtime.RuntimeConfig { return c.config }
 
-func (c *ContainerdRuntime) CreateNet(_ context.Context) error {
+func (*ContainerdRuntime) CreateNet(_ context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
 	return nil
 }
@@ -541,7 +541,7 @@ func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string
 	return &ctrs[0], nil
 }
 
-func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
+func (*ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) string {
 	filterstring := ""
 	delim := ","
 	for counter, filterEntry := range filter {
@@ -573,7 +573,7 @@ func (c *ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) str
 }
 
 // Transform docker-specific to generic container format
-func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context, input []containerd.Container) ([]types.GenericContainer, error) {
+func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context, input []containerd.Container) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for _, i := range input {

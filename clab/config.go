@@ -627,7 +627,7 @@ func resolveBindPaths(binds []string, nodedir string) error {
 }
 
 // CheckResources runs container host resources check
-func (c *CLab) CheckResources() error {
+func (*CLab) CheckResources() error {
 	vcpu := runtime.NumCPU()
 	log.Debugf("Number of vcpu: %d", vcpu)
 	if vcpu < 2 {

@@ -77,7 +77,7 @@ func (s *vrXRV9K) GetImages() map[string]string {
 	}
 }
 
-func (s *vrXRV9K) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*vrXRV9K) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 

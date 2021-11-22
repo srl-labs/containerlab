@@ -69,7 +69,7 @@ func (s *vrVMX) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *vrVMX) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (*vrVMX) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
