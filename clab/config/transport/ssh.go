@@ -188,7 +188,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 			}
 
 			if ret.result == "" && ret.prompt == "" {
-				log.Fatalf("received zero?")
+				log.Error("received zero?")
 				continue
 			}
 

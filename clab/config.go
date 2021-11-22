@@ -287,7 +287,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 // NewLink initializes a new link object
 func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
 	if len(l.Endpoints) != 2 {
-		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints)
+		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
 	}
 
 	return &types.Link{
@@ -307,14 +307,14 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
 	if len(split) != 2 {
-		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904
+		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904, RVV-A0003
 	}
 	nName := split[0] // node name
 
 	// initialize the endpoint name based on the split function
 	endpoint.EndpointName = split[1] // endpoint name
 	if len(endpoint.EndpointName) > 15 {
-		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName)
+		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName) //skipcq: RVV-A0003
 	}
 	// generate unique MAC
 	endpoint.MAC = utils.GenMac(ClabOUI)
@@ -350,7 +350,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// stop the deployment if the matching node element was not found
 	// "host" node name is an exception, it may exist without a matching node
 	if endpoint.Node == nil {
-		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904
+		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904, RVV-A0003
 	}
 
 	return endpoint
