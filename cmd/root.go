@@ -57,7 +57,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
 }
 
-func sudoCheck(cmd *cobra.Command, args []string) error {
+func sudoCheck(_ *cobra.Command, _ []string) error {
 	id := os.Geteuid()
 	if id != 0 {
 		return errors.New("containerlab requires sudo privileges to run")

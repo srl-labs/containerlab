@@ -61,7 +61,7 @@ func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrXRV9K) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrXRV9K) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrXRV9K) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
@@ -77,7 +77,7 @@ func (s *vrXRV9K) GetImages() map[string]string {
 	}
 }
 
-func (s *vrXRV9K) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *vrXRV9K) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -91,7 +91,7 @@ func (s *vrXRV9K) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrXRV9K) SaveConfig(ctx context.Context) error {
+func (s *vrXRV9K) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],

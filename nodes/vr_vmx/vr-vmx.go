@@ -59,7 +59,7 @@ func (s *vrVMX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrVMX) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrVMX) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrVMX) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
@@ -69,7 +69,7 @@ func (s *vrVMX) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *vrVMX) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *vrVMX) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -87,7 +87,7 @@ func (s *vrVMX) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrVMX) SaveConfig(ctx context.Context) error {
+func (s *vrVMX) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],

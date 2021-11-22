@@ -58,14 +58,14 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrVEOS) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrVEOS) PreDeploy(configName, labCADir, labCARoot string) error { return nil }
+func (s *vrVEOS) PreDeploy(_, _, _ string) error { return nil }
 
 func (s *vrVEOS) Deploy(ctx context.Context) error {
 	_, err := s.runtime.CreateContainer(ctx, s.cfg)
 	return err
 }
 
-func (s *vrVEOS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *vrVEOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -83,7 +83,7 @@ func (s *vrVEOS) Delete(ctx context.Context) error {
 	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
 }
 
-func (s *vrVEOS) SaveConfig(ctx context.Context) error {
+func (s *vrVEOS) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],

@@ -71,7 +71,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrSROS) Config() *types.NodeConfig { return s.cfg }
 
-func (s *vrSROS) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *vrSROS) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return createVrSROSFiles(s.cfg)
 }
@@ -81,7 +81,7 @@ func (s *vrSROS) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *vrSROS) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *vrSROS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
 
@@ -99,7 +99,7 @@ func (s *vrSROS) GetImages() map[string]string {
 	}
 }
 
-func (s *vrSROS) SaveConfig(ctx context.Context) error {
+func (s *vrSROS) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
 		nodes.DefaultCredentials[s.cfg.Kind][0],
 		nodes.DefaultCredentials[s.cfg.Kind][1],

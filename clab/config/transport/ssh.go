@@ -272,7 +272,7 @@ func (t *SSHTransport) Write(data, info *string) error {
 
 // Connect to a host
 // Part of the Transport interface
-func (t *SSHTransport) Connect(host string, options ...TransportOption) error {
+func (t *SSHTransport) Connect(host string, _ ...TransportOption) error {
 	// Assign Default Values
 	if t.PromptChar == "" {
 		t.PromptChar = "#"
