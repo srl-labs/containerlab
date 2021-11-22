@@ -50,14 +50,14 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		if !os.IsNotExist(err) {
 			return err
 		}
-	}
+	} else {
+		if !(dfi.Mode().IsRegular()) {
+			return fmt.Errorf("file copy failed: destination file %s (%q): %w", dfi.Name(), dfi.Mode().String(), errNonRegularFile)
+		}
 
-	if !(dfi.Mode().IsRegular()) {
-		return fmt.Errorf("file copy failed: destination file %s (%q): %w", dfi.Name(), dfi.Mode().String(), errNonRegularFile)
-	}
-
-	if sfi != nil && os.SameFile(sfi, dfi) {
-		return nil
+		if sfi != nil && os.SameFile(sfi, dfi) {
+			return nil
+		}
 	}
 
 	return CopyFileContents(src, dst, mode)
