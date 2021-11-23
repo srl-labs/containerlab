@@ -23,4 +23,4 @@ HTTPHeaders:
   "Range": "bytes=0-10"
   "Accept": "*/*"
 CacheExpires: "96h"
-HTTPConcurrencyLimit: 8
+HTTPConcurrencyLimit: 1
