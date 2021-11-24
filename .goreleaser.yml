@@ -13,6 +13,7 @@ builds:
       - linux
     goarch:
       - amd64
+      - arm64
     hooks:
       post: upx "{{ .Path }}"
 dockers:
@@ -23,7 +24,6 @@ dockers:
       - '{{ $pfx := slice .Version 0 6}}{{- if eq $pfx "v0.0.0"}}ghcr.io/srl-labs/clab:beta{{else}}ghcr.io/srl-labs/clab:latest{{- end }}'
       - 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}'
     dockerfile: goreleaser.dockerfile
-    skip_push: false
 archives:
   - replacements:
       linux: Linux
