@@ -199,12 +199,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
+
       - name: Cache htmltest external links
         id: cache-primes
         uses: actions/cache@v2
         with:
           path: tmp/.htmltest
-          key: ${{ runner.os }}-htmltest
+          # key will contain hash of all md files to check if files have changed
+          # when files are changed, a new key name is formed, and thus a new cache will be saved
+          key: htmltest-${{ hashFiles('docs/**/*.md') }}
+          # the restore key will fetch any previously saved cache even if there is no match on key
+          # this allows to use cache from prev runs and update it
+          restore-keys: |
+            htmltest-
+
       - name: htmltest
         uses: wjdp/htmltest-action@master
         with:

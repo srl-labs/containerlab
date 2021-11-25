@@ -24,3 +24,9 @@ docs:
 .PHONY: site
 site:
 	docker run -it --rm -p 8000:8000 -v $$(pwd):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
+
+.PHONY: htmltest
+htmltest:
+	docker run --rm -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
+	docker run --rm -v $$(pwd):/test wjdp/htmltest --conf ./site/htmltest.yml
+	rm -rf ./site
