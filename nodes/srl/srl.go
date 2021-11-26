@@ -402,9 +402,9 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 			return err
 		}
 		log.Debugf("JvB node %q DeltaConfig lines:\n%s", s.cfg.ShortName, string(c) )
-    buf.WriteString( string(c) )  // append
+		buf.WriteString( string(c) )  // append
 	}
-  buf.WriteString("\ncommit save\n")
+	buf.WriteString("\ncommit save\n")
 	log.Debugf("Node %q additional config:\n%s", s.cfg.ShortName, buf.String())
 	_, _, err = s.runtime.Exec(ctx, s.cfg.LongName, []string{
 		"bash",
