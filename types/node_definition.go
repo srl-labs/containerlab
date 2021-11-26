@@ -68,20 +68,20 @@ func GetProperty(s interface{}, yaml_tag string) (bool,reflect.Value) {
 		return false,reflect.ValueOf(nil)
 	}
 	v := reflect.ValueOf(s)
-  for i := 0; i < v.NumField(); i++ {
+	for i := 0; i < v.NumField(); i++ {
 	 // Get the 'yaml' field tag value
 	 tag := v.Type().Field(i).Tag.Get("yaml")
 
 	 // Skip if tag is not defined or ignored
-   if tag == "" || tag == "-" {
-     continue
-   }
+	 if tag == "" || tag == "-" {
+		 continue
+	 }
 	 args := strings.Split(tag, ",")
 	 if (args[0]==yaml_tag) {
 		 val := v.Field(i)
 		 return !val.IsZero(), val
 	 }
-  }
+	}
 	return false,reflect.ValueOf(nil)
 }
 
