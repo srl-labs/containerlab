@@ -254,9 +254,16 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	log.Debugf("node config: %+v", nodeCfg)
 	var err error
 	// initialize config
-	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeFile(nodeCfg.ShortName,"startup-config")
 	if err != nil {
 		return nil, err
+	}
+	nodeCfg.DeltaConfig, err = c.Config.Topology.GetNodeFile(nodeCfg.ShortName,"delta-config")
+	if err != nil {
+		return nil, err
+	}
+	if (nodeCfg.StartupConfig!="" && nodeCfg.DeltaConfig!="") {
+		return nil, fmt.Errorf("Cannot specify both startup-config and delta-config")
 	}
 
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
@@ -273,6 +280,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		return nil, err
 	}
 	nodeCfg.Binds = binds
+
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
 	if err != nil {
 		return nil, err

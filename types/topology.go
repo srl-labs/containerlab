@@ -2,7 +2,10 @@ package types
 
 import (
 	"os"
+	"reflect"
 	"path/filepath"
+
+	// log "github.com/sirupsen/logrus"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/mitchellh/go-homedir"
@@ -169,6 +172,44 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 		}
 	}
 	return cfg, nil
+}
+
+func checkPath(path string) (string,error) {
+	file, err := resolvePath(path)
+	if err != nil {
+		return "", err
+	}
+	_, err = os.Stat(file)
+	return file, err
+}
+
+// JvB generalized method to walk up topology tree using struct tags
+func (t *Topology) GetNodeProperty(nodename string, yaml_prop string) (bool,reflect.Value) {
+	if ndef, ok := t.Nodes[nodename]; ok {
+		var prop reflect.Value
+		ok, prop = GetProperty(*ndef,yaml_prop)
+		// log.Infof( "GetNodeProperty node level -> %s", ok )
+		if !ok {
+			ok, prop = GetProperty(*t.GetKind(t.GetNodeKind(nodename)),yaml_prop)
+			// log.Infof( "GetNodeProperty kind level -> %s", ok )
+			if !ok {
+				ok, prop = GetProperty(*t.GetDefaults(),yaml_prop)
+				// log.Infof( "GetNodeProperty default level -> %s", ok )
+			}
+		}
+		return ok, prop
+	}
+	return false,reflect.ValueOf(nil)
+}
+
+func (t *Topology) GetNodeFile(nodename string, yaml_prop string) (string, error) {
+  ok, path := t.GetNodeProperty(nodename,yaml_prop)
+	if !ok || path.String()=="" {
+		// log.Infof( "GetNodeFile: nodename=%s yaml_prop=%s %s,path=%s",
+		//	         nodename,yaml_prop,ok,path.String() )
+		return "", nil
+	}
+	return checkPath(path.String())
 }
 
 func (t *Topology) GetNodeStartupDelay(name string) uint {
