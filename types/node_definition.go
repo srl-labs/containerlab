@@ -3,6 +3,7 @@ package types
 import (
 	"os"
 	"strings"
+	"reflect"
 )
 
 const (
@@ -15,6 +16,7 @@ type NodeDefinition struct {
 	Group                string            `yaml:"group,omitempty"`
 	Type                 string            `yaml:"type,omitempty"`
 	StartupConfig        string            `yaml:"startup-config,omitempty"`
+	DeltaConfig          string            `yaml:"delta-config,omitempty"`
 	StartupDelay         uint              `yaml:"startup-delay,omitempty"`
 	EnforceStartupConfig bool              `yaml:"enforce-startup-config,omitempty"`
 	Config               *ConfigDispatcher `yaml:"config,omitempty"`
@@ -23,6 +25,7 @@ type NodeDefinition struct {
 	Position             string            `yaml:"position,omitempty"`
 	Entrypoint           string            `yaml:"entrypoint,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
+
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
@@ -57,6 +60,29 @@ type NodeDefinition struct {
 
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
+}
+
+// JvB generalized 'getter' for string properties based on YAML struct tags
+func GetProperty(s interface{}, yaml_tag string) (bool,reflect.Value) {
+	if s == nil {
+		return false,reflect.ValueOf(nil)
+	}
+	v := reflect.ValueOf(s)
+  for i := 0; i < v.NumField(); i++ {
+	 // Get the 'yaml' field tag value
+	 tag := v.Type().Field(i).Tag.Get("yaml")
+
+	 // Skip if tag is not defined or ignored
+   if tag == "" || tag == "-" {
+     continue
+   }
+	 args := strings.Split(tag, ",")
+	 if (args[0]==yaml_tag) {
+		 val := v.Field(i)
+		 return !val.IsZero(), val
+	 }
+  }
+	return false,reflect.ValueOf(nil)
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -99,7 +125,6 @@ func (n *NodeDefinition) GetEnforceStartupConfig() bool {
 		return false
 	}
 	return n.EnforceStartupConfig
-
 }
 
 func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {

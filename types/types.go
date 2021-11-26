@@ -61,6 +61,7 @@ type NodeConfig struct {
 	Group                string
 	Kind                 string
 	StartupConfig        string // path to config template file that is used for startup config generation
+	DeltaConfig          string // Path to config instructions, incremental
 	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
 	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
 	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
@@ -77,8 +78,10 @@ type NodeConfig struct {
 	Exec                 []string
 	Env                  map[string]string
 	Binds                []string    // Bind mounts strings (src:dest:options)
+	Agents               []string    // Paths to YAML files for SRL agent extensions
 	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
 	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
+
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface

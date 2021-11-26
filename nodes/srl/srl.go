@@ -48,7 +48,7 @@ set / system json-rpc-server admin-state enable network-instance mgmt http admin
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
-commit save`
+` // JvB: removed 'commit save' from here
 )
 
 var (
@@ -145,6 +145,7 @@ func (s *srl) Config() *types.NodeConfig { return s.cfg }
 
 func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
+
 	// retrieve node certificates
 	nodeCerts, err := cert.RetrieveNodeCertData(s.cfg, labCADir)
 	// if not available on disk, create cert in next step
@@ -191,7 +192,6 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 			}
 		}
 	}
-
 	return createSRLFiles(s.cfg)
 }
 
@@ -389,6 +389,22 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
+	// JvB: auto-enable all the ports that are connected
+	log.Debugf("Node %q enable interfaces: %d", s.cfg.ShortName, len(s.cfg.Endpoints) )
+	for i,_ := range s.cfg.Endpoints {
+		buf.WriteString( fmt.Sprintf("/ set interface ethernet-1/%d admin-state enable\n",i+1) )
+	}
+
+	// JvB add user provided custom settings, if any
+	if s.cfg.DeltaConfig != "" {
+		c, err := os.ReadFile(s.cfg.DeltaConfig)
+		if err != nil {
+			return err
+		}
+		log.Debugf("JvB node %q DeltaConfig lines:\n%s", s.cfg.ShortName, string(c) )
+    buf.WriteString( string(c) )  // append
+	}
+  buf.WriteString("\ncommit save\n")
 	log.Debugf("Node %q additional config:\n%s", s.cfg.ShortName, buf.String())
 	_, _, err = s.runtime.Exec(ctx, s.cfg.LongName, []string{
 		"bash",
