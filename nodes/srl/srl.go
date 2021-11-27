@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"regexp"
 	"text/template"
 	"time"
 
@@ -261,7 +262,7 @@ func (s *srl) Ready(ctx context.Context) error {
 				continue
 			}
 			if len(stderr) != 0 {
-				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+				log.Debugf("error %s during checking SR Linux boot status: %s", string(stderr), mgmtServerRdyCmd)
 				time.Sleep(retryTimer)
 				continue
 			}
@@ -278,7 +279,7 @@ func (s *srl) Ready(ctx context.Context) error {
 			}
 
 			if len(stderr) != 0 {
-				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+				log.Debugf("error %s during checking SR Linux boot status: %s", string(stderr), commitCompleteCmd)
 				time.Sleep(retryTimer)
 				continue
 			}
@@ -391,9 +392,12 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 	// JvB: auto-enable all the ports that are connected
 	log.Debugf("Node %q enable interfaces: %d", s.cfg.ShortName, len(s.cfg.Endpoints) )
-	for i,e := range s.cfg.Endpoints {
-		log.Infof("Enabling endpoint %s",e) // TODO non-consecutive ports 
-		buf.WriteString( fmt.Sprintf("/ set interface ethernet-1/%d admin-state enable\n",i+1) )
+	eth := regexp.MustCompile("^e(\\d+)-(\\d+)$")
+	for _,e := range s.cfg.Endpoints {
+		// Supports non-consecutive ports
+		log.Debugf("Enabling %q interface %s",s.cfg.ShortName,e.EndpointName)
+		ports := eth.FindAllStringSubmatch(e.EndpointName, -1)
+		buf.WriteString( fmt.Sprintf("set / interface ethernet-%s/%s admin-state enable\n",ports[0][1],ports[0][2]) )
 	}
 
 	// JvB add user provided custom settings, if any
