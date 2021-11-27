@@ -391,7 +391,8 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 	// JvB: auto-enable all the ports that are connected
 	log.Debugf("Node %q enable interfaces: %d", s.cfg.ShortName, len(s.cfg.Endpoints) )
-	for i,_ := range s.cfg.Endpoints {
+	for i,e := range s.cfg.Endpoints {
+		log.Infof("Enabling endpoint %s",e) // TODO non-consecutive ports 
 		buf.WriteString( fmt.Sprintf("/ set interface ethernet-1/%d admin-state enable\n",i+1) )
 	}
 
