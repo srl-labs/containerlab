@@ -203,7 +203,7 @@ func (t *Topology) GetNodeProperty(nodename string, yaml_prop string) (bool,refl
 }
 
 func (t *Topology) GetNodeFile(nodename string, yaml_prop string) (string, error) {
-  ok, path := t.GetNodeProperty(nodename,yaml_prop)
+	ok, path := t.GetNodeProperty(nodename,yaml_prop)
 	if !ok || path.String()=="" {
 		// log.Infof( "GetNodeFile: nodename=%s yaml_prop=%s %s,path=%s",
 		//	         nodename,yaml_prop,ok,path.String() )
