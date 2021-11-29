@@ -238,7 +238,7 @@
                     "minItems": 2,
                     "items": {
                         "type": "string",
-                        "pattern": "^[\\w\\s-/]+:[\\w\\s-/]+$"
+                        "pattern": "^.*:[\\w\\s-/]+$"
                     },
                     "uniqueItems": true
                 }
