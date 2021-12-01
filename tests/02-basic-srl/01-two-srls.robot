@@ -15,9 +15,6 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Wait 5 seconds for srl to boot
-    Sleep    5s
-
 Verify links in node srl1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip link show e1-1"
@@ -31,6 +28,13 @@ Verify links in node srl2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+
+Verify srl2 accepted user-provided CLI config
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl2 --cmd "sr_cli 'info /system information location'"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    test123
 
 Verify saving config
     ${rc}    ${output} =    Run And Return Rc And Output
