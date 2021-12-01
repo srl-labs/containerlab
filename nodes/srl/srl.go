@@ -92,6 +92,8 @@ func init() {
 type srl struct {
 	cfg     *types.NodeConfig
 	runtime runtime.ContainerRuntime
+	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
+	startupCliCfg []byte
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -192,7 +194,7 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 		}
 	}
 
-	return createSRLFiles(s.cfg)
+	return s.createSRLFiles()
 }
 
 func (s *srl) Deploy(ctx context.Context) error {
@@ -201,14 +203,20 @@ func (s *srl) Deploy(ctx context.Context) error {
 }
 
 func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	// only perform postdeploy additional config provisioning if there is not startup nor existing config
-	if s.cfg.StartupConfig != "" || utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
+	// do not enter in the postdeploy stage if config file is found in the lab directory.
+	// This can be either if the startup-config has been mounted by that path
+	// or the config has been previously generated and saved
+	if utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
 
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
 
-	return s.addDefaultConfig(ctx)
+	if err := s.addDefaultConfig(ctx); err != nil {
+		return err
+	}
+
+	return s.addOverlayCLIConfig(ctx)
 }
 
 func (s *srl) GetImages() map[string]string {
@@ -294,17 +302,15 @@ func (s *srl) Ready(ctx context.Context) error {
 	}
 }
 
-//
-
-func createSRLFiles(nodeCfg *types.NodeConfig) error {
-	log.Debugf("Creating directory structure for SRL container: %s", nodeCfg.ShortName)
+func (s *srl) createSRLFiles() error {
+	log.Debugf("Creating directory structure for SRL container: %s", s.cfg.ShortName)
 	var src string
 	var dst string
 
-	if nodeCfg.License != "" {
+	if s.cfg.License != "" {
 		// copy license file to node specific directory in lab
-		src = nodeCfg.License
-		dst = filepath.Join(nodeCfg.LabDir, "license.key")
+		src = s.cfg.License
+		dst = filepath.Join(s.cfg.LabDir, "license.key")
 		if err := utils.CopyFile(src, dst, 0644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
@@ -312,36 +318,54 @@ func createSRLFiles(nodeCfg *types.NodeConfig) error {
 	}
 
 	// generate SRL topology file
-	err := generateSRLTopologyFile(nodeCfg.NodeType, nodeCfg.LabDir, nodeCfg.Index)
+	err := generateSRLTopologyFile(s.cfg.NodeType, s.cfg.LabDir, s.cfg.Index)
 	if err != nil {
 		return err
 	}
 
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
+	utils.CreateDirectory(path.Join(s.cfg.LabDir, "config"), 0777)
 
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
-	if nodeCfg.StartupConfig != "" {
-		dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
+	if s.cfg.StartupConfig != "" {
+		dst = filepath.Join(s.cfg.LabDir, "config", "config.json")
 
-		log.Debugf("Reading startup-config %s", nodeCfg.StartupConfig)
+		log.Debugf("Reading startup-config %s", s.cfg.StartupConfig)
 
-		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		c, err := os.ReadFile(s.cfg.StartupConfig)
 		if err != nil {
 			return err
 		}
 
+		// Determine if startup-config is a JSON file
+		// Get slice of data with optional leading whitespace removed.
+		// See RFC 7159, Section 2 for the definition of JSON whitespace.
+		x := bytes.TrimLeft(c, " \t\r\n")
+		isJSON := len(x) > 0 && x[0] == '{'
+		if !isJSON {
+			log.Debugf("startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
+				s.cfg.ShortName)
+
+			s.startupCliCfg = c
+
+			// no need to generate and mount startup-config passed in a CLI format
+			// as we will apply it over the top of a default config in the post deploy stage
+			return nil
+		}
+
 		cfgTemplate := string(c)
 
-		err = nodeCfg.GenerateConfig(dst, cfgTemplate)
+		err = s.cfg.GenerateConfig(dst, cfgTemplate)
 		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+			log.Errorf("node=%s, failed to generate config: %v", s.cfg.ShortName, err)
 		}
 	}
 
 	return err
 }
+
+//
 
 type mac struct {
 	MAC string
@@ -404,6 +428,41 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		"bash",
 		"-c",
 		"sr_cli -ed < tmp/clab-config",
+	})
+
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+
+	return nil
+}
+
+// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive
+func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
+	// start waiting for initial commit and mgmt server ready
+	if err := s.Ready(ctx); err != nil {
+		return err
+	}
+
+	cfgStr := string(s.startupCliCfg)
+
+	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.cfg.ShortName, s.cfg.StartupConfig, cfgStr)
+	_, _, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+		"bash",
+		"-c",
+		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+		"bash",
+		"-c",
+		"sr_cli -ed --post 'commit save' < tmp/clab-config",
 	})
 
 	if err != nil {
