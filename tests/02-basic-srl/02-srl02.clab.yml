@@ -13,6 +13,7 @@ topology:
       kind: srl
     srl2:
       kind: srl
+      startup-config: ./tests/02-basic-srl/srl2-startup.cli
 
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
