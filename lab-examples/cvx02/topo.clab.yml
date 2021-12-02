@@ -7,6 +7,7 @@ topology:
       image: networkop/cx:4.3.0
       runtime: docker
       binds:
+        - /lib/modules:/lib/modules:ro # for kernel modules like ebtables
         - sw1/interfaces:/etc/network/interfaces
     h1:
       kind: linux
