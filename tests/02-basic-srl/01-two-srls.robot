@@ -29,6 +29,16 @@ Verify links in node srl2
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
+Verify e1-1 interface have been admin enabled on srl1
+    [Documentation]
+    ...    This test cases ensures that e1-1 interface referenced in links section
+    ...    has been automatically admin enabled
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "sr_cli 'show interface ethernet-1/1'"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    ethernet-1/1 is up
+
 Verify srl2 accepted user-provided CLI config
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl2 --cmd "sr_cli 'info /system information location'"

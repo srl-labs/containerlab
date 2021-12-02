@@ -97,7 +97,7 @@ type NodeConfig struct {
 	// container labels
 	Labels map[string]string
 	// Slice of pointers to local endpoints
-	Endpoints []*Endpoint
+	Endpoints []Endpoint
 	// Ignite sandbox and kernel imageNames
 	Sandbox, Kernel string
 	// Configured container runtime
