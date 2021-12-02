@@ -215,14 +215,19 @@ func (s *srl) Deploy(ctx context.Context) error {
 }
 
 func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	// do not enter in the postdeploy stage if config file is found in the lab directory.
+	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+
+	// start waiting for initial commit and mgmt server ready
+	if err := s.Ready(ctx); err != nil {
+		return err
+	}
+
+	// return if config file is found in the lab directory.
 	// This can be either if the startup-config has been mounted by that path
 	// or the config has been previously generated and saved
 	if utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
-
-	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
 
 	if err := s.addDefaultConfig(ctx); err != nil {
 		return err
@@ -414,11 +419,6 @@ func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
 
 // addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
 func (s *srl) addDefaultConfig(ctx context.Context) error {
-	// start waiting for initial commit and mgmt server ready
-	if err := s.Ready(ctx); err != nil {
-		return err
-	}
-
 	buf := new(bytes.Buffer)
 	err := srlCfgTpl.Execute(buf, s.cfg)
 	if err != nil {
@@ -453,11 +453,6 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 // addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive
 func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
-	// start waiting for initial commit and mgmt server ready
-	if err := s.Ready(ctx); err != nil {
-		return err
-	}
-
 	cfgStr := string(s.startupCliCfg)
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.cfg.ShortName, s.cfg.StartupConfig, cfgStr)
