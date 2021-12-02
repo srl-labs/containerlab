@@ -73,6 +73,7 @@ By default, `ixrd2` type will be used by containerlab.
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
 ### Node configuration
 SR Linux uses a `/etc/opt/srlinux/config.json` file to persist its configuration. By default, containerlab starts nodes of `srl` kind with a basic "default" config, and with the `startup-config` parameter, it is possible to provide a custom config file that will be used as a startup one.
+
 #### Default node configuration
 When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.go#L38) on top of the factory config:
 
@@ -89,6 +90,13 @@ topology:
 ```
 
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
+
+Additional configurations that containerlab adds on top of the factory config:
+
+* enabling interfaces (`admin-state enable`) referenced in the topology's `links` section
+* enabling LLDP
+* enabling gNMI/JSON-RPC
+* creating tls server certificate
 
 #### User defined startup config
 It is possible to make SR Linux nodes boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the local config file that will be used as a startup config.
