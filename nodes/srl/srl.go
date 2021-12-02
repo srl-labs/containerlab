@@ -51,13 +51,13 @@ set / system json-rpc-server admin-state enable network-instance mgmt https admi
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 {{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
-{{ range $ep := .Endpoints }}
+{{- range $ep := .Endpoints }}
 {{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
   {{- if eq (len $parts) 3 }}
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
   {{- end }}
-{{- end }}
+{{ end -}}
 commit save`
 )
 
