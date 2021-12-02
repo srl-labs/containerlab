@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"github.com/google/shlex"
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
@@ -48,6 +50,14 @@ set / system json-rpc-server admin-state enable network-instance mgmt http admin
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
+{{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
+{{ range $ep := .Endpoints }}
+{{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
+set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
+  {{- if eq (len $parts) 3 }}
+set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
+  {{- end }}
+{{- end }}
 commit save`
 )
 
@@ -80,7 +90,9 @@ var (
 	mgmtServerRdyCmd, _  = shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
 	commitCompleteCmd, _ = shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
 
-	srlCfgTpl, _ = template.New("srl-tls-profile").Parse(srlConfigCmdsTpl)
+	srlCfgTpl, _ = template.New("srl-tls-profile").
+			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
+			Parse(srlConfigCmdsTpl)
 )
 
 func init() {
