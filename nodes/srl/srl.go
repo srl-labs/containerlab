@@ -397,8 +397,8 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 
 	// Use node index as part of a deterministically generated MAC
 	// this ensures that different srl nodes will have different macs for their ports
-	// (for labs up to 256 nodes)
-        m := fmt.Sprintf("1a:b0:%02x:00:00:00", cfg.Index )
+	// (for labs up to 4096 nodes)
+        m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index / 256, cfg.Index % 256 )
 	mac := mac{
 		MAC: m,
 	}
