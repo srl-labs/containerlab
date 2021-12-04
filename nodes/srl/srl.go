@@ -7,7 +7,6 @@ package srl
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"embed"
 	"fmt"
 	"os"
@@ -334,8 +333,8 @@ func (s *srl) createSRLFiles() error {
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
 
-	// generate SRL topology file
-	err := generateSRLTopologyFile(s.cfg.NodeType, s.cfg.LabDir, s.cfg.Index)
+	// generate SRL topology file, including base MAC
+	err := generateSRLTopologyFile(s.cfg)
 	if err != nil {
 		return err
 	}
@@ -388,23 +387,18 @@ type mac struct {
 	MAC string
 }
 
-func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
-	dst := filepath.Join(labDir, "topology.yml")
+func generateSRLTopologyFile(cfg *types.NodeConfig) error {
+	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
-	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[nodeType])
+	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
 	if err != nil {
 		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
-	// generate random bytes to use in the 2-3rd bytes of a base mac
+	// Use node index as part of a deterministically generated MAC
 	// this ensures that different srl nodes will have different macs for their ports
-	buf := make([]byte, 2)
-	_, err = rand.Read(buf)
-	if err != nil {
-		return err
-	}
-	m := fmt.Sprintf("02:%02x:%02x:00:00:00", buf[0], buf[1])
-
+	// (for labs up to 4096 nodes)
+	m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index/256, cfg.Index%256)
 	mac := mac{
 		MAC: m,
 	}
