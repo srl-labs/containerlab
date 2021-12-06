@@ -74,7 +74,7 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 			if l := tmpl.Lookup(tmplN); l == nil {
 				err := LoadTemplates(tmpl, fmt.Sprintf("%s", nc.Vars[vkRole]))
 				if err != nil {
-					log.Warnf("Unable to load template %s; skipping", tmplN)
+					log.Warnf("Unable to load template %s (%+v); skipping", tmplN, err)
 					continue
 				}
 				l = tmpl.Lookup(tmplN)
