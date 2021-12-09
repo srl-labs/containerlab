@@ -24,6 +24,7 @@ Deploy ${lab-name} lab
     ...    sudo -E containerlab deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    OperatingSystem.List Directory    ${CURDIR}/clab-${lab-name}
 
 Verify links in node srl1
     ${rc}    ${output} =    Run And Return Rc And Output
