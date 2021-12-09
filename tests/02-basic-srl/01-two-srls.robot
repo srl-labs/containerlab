@@ -21,7 +21,7 @@ Create SSH keypair
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab deploy -t ${CURDIR}/${lab-file-name}
+    ...    sudo -E containerlab deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
