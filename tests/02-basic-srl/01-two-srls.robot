@@ -15,8 +15,9 @@ Create SSH keypair
     ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
     Log    ${key-path}
     Set Suite Variable    ${key-path}
+    # Using ed25519 algo because of paramiko https://github.com/paramiko/paramiko/issues/1915
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ssh-keygen -t rsa -N "" -f ${key-path}
+    ...    ssh-keygen -t ed25519 -N "" -f ${key-path}
 
 Deploy ${lab-name} lab
     Log    ${CURDIR}
@@ -72,6 +73,10 @@ Ensure srl1 is reachable over ssh
     ...    try_for=10
 
 Ensure srl1 is reachable over ssh with public key auth
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker inspect clab-${lab-name}-srl1
+    Log    ${output}
+    Log    ${key-path}
     Common.Login via SSH with public key
     ...    address=clab-${lab-name}-srl1
     ...    username=admin
