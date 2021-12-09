@@ -154,16 +154,6 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	topoPath := filepath.Join(s.cfg.LabDir, "topology.yml")
 	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
-	// mount authorized_keys file to enable passwordless login
-	authzKeysPath := filepath.Join(filepath.Dir(s.cfg.LabDir), "authorized_keys")
-	log.Warn("authzKeysPath:", authzKeysPath)
-	if utils.FileExists(authzKeysPath) {
-		log.Warn("authzKeyFile exists, mounting")
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"))
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"))
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"))
-	}
-
 	return nil
 }
 
@@ -216,6 +206,16 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
+	}
+
+	// mount authorized_keys file to enable passwordless login
+	authzKeysPath := filepath.Join(filepath.Dir(s.cfg.LabDir), "authorized_keys")
+	log.Warn("authzKeysPath:", authzKeysPath)
+	if utils.FileExists(authzKeysPath) {
+		log.Warn("authzKeyFile exists, mounting")
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"))
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"))
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"))
 	}
 
 	return s.createSRLFiles()
