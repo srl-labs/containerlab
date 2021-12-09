@@ -30,7 +30,8 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
     HTTPS server uses the same TLS certificate as gNMI server.
 
 !!!info
-    Default user credentials: `admin:admin`
+    Default credentials: `admin:admin`  
+    Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^1].
 
 ## Interfaces mapping
 SR Linux system expects interfaces inside the container to be named in a specific way - `eX-Y` - where `X` is the line card index, `Y` is the port.
@@ -229,7 +230,7 @@ To start an SR Linux NOS containerlab uses the configuration that is described i
     `SRLINUX=1`
 
 ### File mounts
-When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `srl` kind containerlab creates directories for each node of that kind.
+When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `srl` kind, containerlab creates directories for each node of that kind.
 
 ```
 ~/clab/clab-srl02
@@ -238,11 +239,22 @@ drwxrwxrwx+ 6 1002 1002   87 Dec  1 22:11 config
 -rw-r--r--  1 root root  233 Dec  1 22:11 topology.clab.yml
 ```
 
-The `config` directory is mounted to container's `/etc/opt/srlinux/` path in `rw` mode and will effectively contain configuration that SR Linux runs of as well as the files that SR Linux keeps in its `/etc/opt/srlinux/` directory:
+The `config` directory is mounted to container's `/etc/opt/srlinux/` path in `rw` mode. It will contain configuration that SR Linux runs of as well as the files that SR Linux keeps in its `/etc/opt/srlinux/` directory:
 
 ```
 ❯ ls srl1/config
 banner  cli  config.json  devices  tls  ztp
 ```
 
-The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type` the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
+The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type`, the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
+
+#### authorized keys
+Additionally, containerlab will mount the `authorized_keys` file that will contain contents of every public key found in `~/.ssh` directory. This file will be mounted to `~/.ssh/authorized_keys` path for the following users:
+
+* `root`
+* `linuxadmin`
+* `admin`
+
+This will enable passwordless access for the users above if any public key is found in the user's directory.
+
+[^1]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access.

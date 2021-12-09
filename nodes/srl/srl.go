@@ -125,8 +125,11 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
 	}
 
-	// the addition touch is needed to support non docker runtimes
-	s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+	if s.cfg.Cmd == "" {
+		// set default Cmd if it was not provided by a user
+		// the addition touch is needed to support non docker runtimes
+		s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+	}
 
 	s.cfg.Env = utils.MergeStringMaps(srlEnv, s.cfg.Env)
 
@@ -203,6 +206,14 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
+	}
+
+	// mount authorized_keys file to enable passwordless login
+	authzKeysPath := filepath.Join(filepath.Dir(s.cfg.LabDir), "authorized_keys")
+	if utils.FileExists(authzKeysPath) {
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"))
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"))
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"))
 	}
 
 	return s.createSRLFiles()
