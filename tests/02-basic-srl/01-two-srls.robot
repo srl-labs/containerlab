@@ -1,13 +1,23 @@
 *** Settings ***
 Library           OperatingSystem
+Library           SSHLibrary
+Resource          ../common.robot
 Suite Teardown    Run Keyword    Cleanup
 
 *** Variables ***
 ${lab-name}       02-01-two-srls
 ${lab-file-name}    02-srl02.clab.yml
 ${runtime}        docker
+${key-name}       test
 
 *** Test Cases ***
+Create SSH keypair
+    ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
+    Log    ${key-path}
+    Set Suite Variable    ${key-path}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ssh-keygen -t rsa -N "" -f ${key-path}
+
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -52,6 +62,20 @@ Verify saving config
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    ERRO
+
+Ensure srl1 is reachable over ssh
+    Common.Login via SSH with username and password
+    ...    address=clab-${lab-name}-srl1
+    ...    username=admin
+    ...    password=admin
+    ...    try_for=10
+
+Ensure srl1 is reachable over ssh with public key auth
+    Common.Login via SSH with public key
+    ...    address=clab-${lab-name}-srl1
+    ...    username=admin
+    ...    keyfile=${key-path}
+    ...    try_for=10
 
 *** Keywords ***
 Cleanup
