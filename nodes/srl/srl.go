@@ -156,7 +156,9 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// mount authorized_keys file to enable passwordless login
 	authzKeysPath := filepath.Join(filepath.Dir(s.cfg.LabDir), "authorized_keys")
+	log.Warn("authzKeysPath:", authzKeysPath)
 	if utils.FileExists(authzKeysPath) {
+		log.Warn("authzKeyFile exists, mounting")
 		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"))
 		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"))
 		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"))

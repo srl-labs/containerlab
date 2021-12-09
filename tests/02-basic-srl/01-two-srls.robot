@@ -71,11 +71,18 @@ Ensure srl1 is reachable over ssh
     ...    username=admin
     ...    password=admin
     ...    try_for=10
+# Ensure srl1 is reachable over ssh with public key auth
+#    ${rc}    ${output} =    Run And Return Rc And Output
+#    ...    sudo docker inspect clab-${lab-name}-srl1
+#    Log    ${output}
+#    Log    ${key-path}
+#    Common.Login via SSH with public key
+#    ...    address=clab-${lab-name}-srl1
+#    ...    username=root
+#    ...    keyfile=${key-path}
+#    ...    try_for=10
 
 Ensure srl1 is reachable over ssh with public key auth
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker inspect clab-${lab-name}-srl1
-    Log    ${output}
     Log    ${key-path}
     Common.Login via SSH with public key
     ...    address=clab-${lab-name}-srl1

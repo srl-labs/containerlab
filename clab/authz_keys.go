@@ -46,6 +46,7 @@ func (c *CLab) CreateAuthzKeysFile() error {
 		return err
 	}
 	log.Warn(filepath.Join(c.Dir.Lab, authzFName))
+	log.Warn(b.String())
 
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
 	return os.Chmod(p, 0644)
