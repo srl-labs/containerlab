@@ -254,7 +254,8 @@
         },
         "prefix": {
             "description": "lab prefix",
-            "type": "string"
+            "type": "string",
+            "markdownDescription": "[lab prefix](https://containerlab.srlinux.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
             "description": "configuration container for management network",
