@@ -264,24 +264,29 @@
             "properties": {
                 "network": {
                     "description": "management network name",
+                    "markdownDescription": "[management network name](https://containerlab.srlinux.dev/manual/network/#network-name)",
                     "type": "string"
                 },
                 "bridge": {
-                    "description": "Define the underlaying bridge to use for the management network.",
+                    "description": "Set bridge to use for the management network (instead of the default generated bridge).",
+                    "markdownDescription": "Set [bridge](https://containerlab.srlinux.dev/manual/network/#bridge-name) to use for the management network (instead of the default generated bridge).",
                     "type": "string"
                 },
                 "ipv4_subnet": {
-                    "description": "IPv4 range to be used for the custom management network. e.g. 172.100.100.0/24",
+                    "description": "IPv4 range to use for the custom management network. e.g. 172.100.100.0/24",
+                    "markdownDescription": "[IPv4 range](https://containerlab.srlinux.dev/manual/network/#user-defined-addresses) to use for the custom management network. e.g. 172.100.100.0/24",
                     "type": "string",
                     "pattern": "^.+\/[0-9]{1,2}$"
                 },
                 "ipv6_subnet": {
-                    "description": "IPv6 range to be used for the custom management network. e.g. 2001:172:100:100::/64",
+                    "description": "IPv6 range to use for the custom management network. e.g. 2001:172:100:100::/64",
+                    "markdownDescription": "[IPv6 range](https://containerlab.srlinux.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 2001:172:100:100::/64",
                     "type": "string",
                     "pattern": "^.+\/[0-9]{1,2}$"
                 },
                 "mtu": {
                     "description": "MTU for the custom network",
+                    "markdownDescription": "[MTU](https://containerlab.srlinux.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "type": "number",
                     "maximum": 65535,
                     "minimum": 1,
