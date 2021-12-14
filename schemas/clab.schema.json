@@ -46,15 +46,32 @@
                     "description": "path to a license file",
                     "markdownDescription": "path to a [license](https://containerlab.srlinux.dev/manual/nodes/#license) file"
                 },
+                "type": {
+                    "type": "string"
+                },
                 "startup-config": {
                     "type": "string",
-                    "description": "path to a startup config file (if supported by kind)",
-                    "markdownDescription": "path to a [config file](https://containerlab.srlinux.dev/manual/nodes/#startup-config) (if supported by kind)"
+                    "description": "path to a startup config file (if supported by the kind)",
+                    "markdownDescription": "path to a startup [config file](https://containerlab.srlinux.dev/manual/nodes/#startup-config) (if supported by the kind)"
                 },
                 "startup-delay": {
                     "type": "integer",
                     "description": "Optional startup delay (seconds) to apply",
                     "markdownDescription": "Optional [startup delay](https://containerlab.srlinux.dev/manual/nodes/#startup-delay) in seconds"
+                },
+                "enforce-startup-config": {
+                    "type": "boolean",
+                    "description": "Set to `true` to make the node to boot with a startup-config even if the config file is present in the lab directory",
+                    "markdownDescription": "Set to `true` to [make the node to boot with a startup-config](https://containerlab.srlinux.dev/manual/nodes/#enforce-startup-config) even if the config file is present in the lab directory"
+                },
+                "exec": {
+                    "type": "array",
+                    "description": "list of commands to execute post deploy",
+                    "markdownDescription": "list of [commands to execute](https://containerlab.srlinux.dev/manual/nodes/#exec) post deploy",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "binds": {
                     "type": "array",
@@ -109,6 +126,11 @@
                             "minItems": 1
                         }
                     ]
+                },
+                "entrypoint": {
+                    "type": "string",
+                    "description": "container's entrypoint",
+                    "markdownDescription": "container's [entrypoint](https://containerlab.srlinux.dev/manual/nodes/#entrypoint)"
                 },
                 "cmd": {
                     "type": "string",
@@ -189,6 +211,14 @@
                     "type": "string",
                     "description": "CPU cores to use by this node/container",
                     "markdownDescription": "[CPU cores](https://containerlab.srlinux.dev/manual/nodes/#cpu-set) to be used by the node/container"
+                },
+                "sandbox": {
+                    "type": "string",
+                    "description": "ignite's sandbox image name"
+                },
+                "kernel": {
+                    "type": "string",
+                    "description": "ignite's kernel image name"
                 }
             },
             "if": {
