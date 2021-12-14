@@ -219,6 +219,10 @@
                 "kernel": {
                     "type": "string",
                     "description": "ignite's kernel image name"
+                },
+                "extras": {
+                    "type": "object",
+                    "$ref": "#/definitions/extras-config"
                 }
             },
             "if": {
@@ -272,6 +276,26 @@
                         "pattern": "^\\S+:\\S+$"
                     },
                     "uniqueItems": true
+                }
+            }
+        },
+        "extras-config": {
+            "type": "object",
+            "description": "node's extra configurations",
+            "properties": {
+                "srl-agents": {
+                    "type": "array",
+                    "description": "list of SR Linux agent's config files to be copied to the NOS filesystem",
+                    "markdownDescription": "list of [SR Linux agent's config files](https://containerlab.srlinux.dev/manual/kinds/srl/#user-defined-custom-agents-for-sr-linux-nodes) to be copied to the NOS filesystem",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "mysocket-proxy": {
+                    "type": "string",
+                    "description": "http/s proxy to be used by mysocketctl"
                 }
             }
         }
