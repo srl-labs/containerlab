@@ -105,9 +105,9 @@ PING 172.20.20.3 (172.20.20.3) 56(84) bytes of data.
 In addition to the bridge-based management network containerlab supports launching nodes in [host networking mode](https://docs.docker.com/network/host/). In this mode containers are attached to the host network namespace. Host mode is enabled with [network-mode](nodes.md#network-mode) node setting.
 
 ### configuring management network
-Most of the time there is no need to change the defaults for management network configuration, but sometimes it is needed. For example, it might be that the default network ranges are overlapping with existing addressing scheme on the lab host or it might be desirable to have predefined management IP addresses.
+Most of the time there is no need to change the defaults for management network configuration, but sometimes it is needed. For example, it might be that the default network ranges are overlapping with the existing addressing scheme on the lab host, or it might be desirable to have predefined management IP addresses.
 
-For such cases the users need to add the `mgmt` container at the top level of their topology definition file:
+For such cases, the users need to add the `mgmt` container at the top level of their topology definition file:
 
 ```yaml
 name: srl02
@@ -121,12 +121,12 @@ topology:
 # the rest of the file is omitted for brevity
 ```
 
-With this settings in place container will get their IP addresses from the specified ranges accordingly.
+With these settings in place, container will get their IP addresses from the specified ranges accordingly.
 
 #### user-defined addresses
-By default container runtime will assign the management IP addresses for the containers. But sometimes it's useful to have a user-defined addressing in the management network.
+By default, container runtime will assign the management IP addresses for the containers. But sometimes, it's helpful to have user-defined addressing in the management network.
 
-For such cases users can define the desired IPv4/6 addresses on a per-node basis:
+For such cases, users can define the desired IPv4/6 addresses on a per-node basis:
 
 ```yaml
 mgmt:
@@ -142,7 +142,7 @@ topology:
       mgmt_ipv6: 2001:172:100:100::11 # set ipv6 address on management network
 ```
 
-Users can specify either IPv4 or IPv6 or both addresses, if one of the addresses is omitted, it will be assigned by container runtime in an arbitrary fashion.
+Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses is omitted, it will be assigned by container runtime in an arbitrary fashion.
 
 !!!note
     1. If user-defined IP addresses are needed, they must be provided for all containers attached to a given network to avoid address collision.
@@ -159,8 +159,16 @@ mgmt:
 
 This will result in every interface connected to that network to inherit this MTU value.
 
+#### network name
+The default container network name is `clab`. To customize this name, users should specify a new value within the `network` element:
+
+```yaml
+mgmt:
+  network: myNetworkName
+```
+
 #### default docker network
-To make clab nodes to start in the default docker network `bridge` which uses the `docker0` bridge interface, users need to mention this explicitly in the configuration:
+To make clab nodes start in the default docker network `bridge`, which uses the `docker0` bridge interface, users need to mention this explicitly in the configuration:
 
 ```yaml
 mgmt:
