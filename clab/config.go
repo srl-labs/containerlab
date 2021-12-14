@@ -79,7 +79,7 @@ type Config struct {
 	Prefix     *string         `json:"prefix,omitempty"`
 	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology   *types.Topology `json:"topology,omitempty"`
-	ConfigPath string          `yaml:"config_path,omitempty"`
+	ConfigPath string
 }
 
 // ParseTopology parses the lab topology
