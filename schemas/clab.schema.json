@@ -223,6 +223,9 @@
                 "extras": {
                     "type": "object",
                     "$ref": "#/definitions/extras-config"
+                },
+                "config": {
+                    "$ref": "#/definitions/config-config"
                 }
             },
             "if": {
@@ -276,6 +279,11 @@
                         "pattern": "^\\S+:\\S+$"
                     },
                     "uniqueItems": true
+                },
+                "vars": {
+                    "description": "link-scoped variables used by config engine",
+                    "markdownDescription": "link-scoped variables used by config engine",
+                    "type": "object"
                 }
             }
         },
@@ -296,6 +304,17 @@
                 "mysocket-proxy": {
                     "type": "string",
                     "description": "http/s proxy to be used by mysocketctl"
+                }
+            }
+        },
+        "config-config": {
+            "type": "object",
+            "description": "containerlab config engine parameters",
+            "properties": {
+                "vars": {
+                    "type": "object",
+                    "description": "config variables passed to config engine",
+                    "markdownDescription": "config variables passed to config engine"
                 }
             }
         }
