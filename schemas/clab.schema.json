@@ -224,7 +224,8 @@
                         "markdownDescription": "node [type](https://containerlab.srlinux.dev/manual/nodes/#type)"
                     }
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "link-config": {
             "type": "object",
