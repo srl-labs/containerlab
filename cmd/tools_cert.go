@@ -175,6 +175,14 @@ func signCert(_ *cobra.Command, _ []string) error {
 		cfssllog.Level = cfssllog.LevelDebug
 	}
 
+	// Check that CA path/key is set
+	if caCertPath == "" {
+		return fmt.Errorf("CA cert path not set")
+	}
+	if caKeyPath == "" {
+		return fmt.Errorf("CA key path not set")
+	}
+	
 	if path == "" {
 		path, err = os.Getwd()
 		if err != nil {
