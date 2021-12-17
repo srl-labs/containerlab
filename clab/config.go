@@ -220,7 +220,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg := &types.NodeConfig{
 		ShortName:       nodeName,
 		LongName:        longName,
-		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, ".io"}, "."),
+		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
 		LabDir:          filepath.Join(c.Dir.Lab, nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
