@@ -67,6 +67,7 @@ jobs:
   publish-docs:
     needs: build-and-release
     runs-on: ubuntu-20.04
+    if: contains(github.ref, '-') != true # do not publish docs for beta releases which will have something like v0.0.0-0.33.0-beta
     steps:
       - name: Checkout
         uses: actions/checkout@v2

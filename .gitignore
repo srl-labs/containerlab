@@ -13,7 +13,7 @@ private
 clab-*
 clab/.*.yaml
 clab/.*.yml
-
+tmp/
 # Test binary, built with `go test -c`
 *.test
 

@@ -79,7 +79,7 @@ type Config struct {
 	Prefix     *string         `json:"prefix,omitempty"`
 	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology   *types.Topology `json:"topology,omitempty"`
-	ConfigPath string          `yaml:"config_path,omitempty"`
+	ConfigPath string
 }
 
 // ParseTopology parses the lab topology
@@ -220,7 +220,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg := &types.NodeConfig{
 		ShortName:       nodeName,
 		LongName:        longName,
-		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, ".io"}, "."),
+		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
 		LabDir:          filepath.Join(c.Dir.Lab, nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
@@ -238,7 +238,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         make(map[string]string),
-		Endpoints:       make([]*types.Endpoint, 0),
+		Endpoints:       make([]types.Endpoint, 0),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
@@ -342,7 +342,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 		c.m.Lock()
 		if n, ok := c.Nodes[nName]; ok {
 			endpoint.Node = n.Config()
-			n.Config().Endpoints = append(n.Config().Endpoints, endpoint)
+			n.Config().Endpoints = append(n.Config().Endpoints, *endpoint)
 		}
 		c.m.Unlock()
 	}
