@@ -67,7 +67,6 @@ The breakout interfaces will have the name `eX-Y-Z` where `Z` is the breakout po
 ### Types
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
-
 The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrh2` and `ixrh3`, which correspond to a hardware variant of Nokia 7250/7220 IXR chassis.
 
 By default, `ixrd2` type will be used by containerlab.
