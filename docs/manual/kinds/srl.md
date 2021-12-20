@@ -66,7 +66,7 @@ The breakout interfaces will have the name in the form of `eX-Y-Z`, where `Z` is
 ### Types
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
-The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3`, `ixrh2` and `ixrh3` which correspond to a hardware variant of Nokia 7250/7220 IXR chassis.
+The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrh2` and `ixrh3` which correspond to a hardware variant of Nokia 7250/7220 IXR chassis.
 
 By default, `ixrd2` type will be used by containerlab.
 
@@ -115,11 +115,11 @@ SR Linux node also supports the [`containerlab save -t <topo-file>`](../../cmd/s
 
 ```
 ❯ containerlab save -t quickstart.clab.yml
-INFO[0000] Parsing & checking topology file: quickstart.clab.yml 
+INFO[0000] Parsing & checking topology file: quickstart.clab.yml
 INFO[0001] saved SR Linux configuration from leaf1 node. Output:
 /system:
     Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
- 
+
 INFO[0001] saved SR Linux configuration from leaf2 node. Output:
 /system:
     Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
