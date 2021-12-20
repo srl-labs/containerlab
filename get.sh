@@ -18,7 +18,7 @@ detectArch() {
     # armv5*) ARCH="armv5" ;;
     # armv6*) ARCH="armv6" ;;
     # armv7*) ARCH="arm" ;;
-    # aarch64) ARCH="arm64" ;;
+    aarch64) ARCH="arm64" ;;
     x86) ARCH="386" ;;
     x86_64) ARCH="amd64" ;;
     i686) ARCH="386" ;;
@@ -55,7 +55,7 @@ runAsRoot() {
 
 # verifySupported checks that the os/arch combination is supported
 verifySupported() {
-    local supported="linux-amd64\nlinux-386"
+    local supported="linux-amd64\nlinux-386\nlinux-arm64"
     if ! echo "${supported}" | grep -q "${OS}-${ARCH}"; then
         echo "No prebuilt binary for ${OS}-${ARCH}."
         echo "To build from source, go to ${REPO_URL}"

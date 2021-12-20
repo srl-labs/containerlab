@@ -112,6 +112,8 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
+		c.CreateAuthzKeysFile()
+
 		// create docker network or use existing one
 		if err = c.GlobalRuntime().CreateNet(ctx); err != nil {
 			return err

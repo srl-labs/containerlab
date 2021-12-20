@@ -223,10 +223,30 @@ The following labs feature cEOS node:
 ## Known issues or limitations
 ### cgroups v1
 
-As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environment.  For many users this should not require any changes to the runtime environment.  However, some linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box, which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
+As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environment.  For many users, this should not require any changes to the runtime environment.  However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
 
-Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467). 
+Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467).
+
+??? "Switching to cgroup v1 in Ubuntu 21.04"
+    To switch back to cgroup v1 in Ubuntu 21+ users need to add a kernel parameter `systemd.unified_cgroup_hierarchy=0` to GRUB config. Below is a snippet of `/etc/default/grub` file with the added `systemd.unified_cgroup_hierarchy=0` parameter.
+
+    Note that `sudo update-grub` is needed once changes are made to the file.
+
+    ```bash
+    # If you change this file, run 'update-grub' afterwards to update
+    # /boot/grub/grub.cfg.
+    # For full documentation of the options in this file, see:
+    #   info -f grub -n 'Simple configuration'
+
+    GRUB_DEFAULT=0
+    GRUB_TIMEOUT_STYLE=hidden
+    GRUB_TIMEOUT=0
+    GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
+    GRUB_CMDLINE_LINUX_DEFAULT="transparent_hugepage=never quiet splash systemd.unified_cgroup_hierarchy=0"
+    GRUB_CMDLINE_LINUX=""
+    ```
 
 [^1]: https://eos.arista.com/ceos-lab-topo/
 [^2]: feel free to omit the IP addressing for Management interface, as it will be configured by containerlab when ceos node boots.
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
+[^4]: for example, Ubunutu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).

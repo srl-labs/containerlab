@@ -134,7 +134,7 @@ require (
 	github.com/nightlyone/lockfile v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
-	github.com/opencontainers/runc v1.0.2 // indirect
+	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/opencontainers/selinux v1.8.2 // indirect
 	github.com/otiai10/copy v1.1.1 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect

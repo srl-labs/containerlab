@@ -7,7 +7,6 @@ package srl
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"embed"
 	"fmt"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"time"
 
 	"github.com/google/shlex"
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
@@ -48,6 +49,14 @@ set / system json-rpc-server admin-state enable network-instance mgmt http admin
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
+{{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
+{{- range $ep := .Endpoints }}
+{{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
+set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
+  {{- if eq (len $parts) 3 }}
+set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
+  {{- end }}
+{{ end -}}
 commit save`
 )
 
@@ -82,7 +91,9 @@ var (
 	mgmtServerRdyCmd, _  = shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
 	commitCompleteCmd, _ = shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
 
-	srlCfgTpl, _ = template.New("srl-tls-profile").Parse(srlConfigCmdsTpl)
+	srlCfgTpl, _ = template.New("srl-tls-profile").
+			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
+			Parse(srlConfigCmdsTpl)
 )
 
 func init() {
@@ -94,6 +105,8 @@ func init() {
 type srl struct {
 	cfg     *types.NodeConfig
 	runtime runtime.ContainerRuntime
+	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
+	startupCliCfg []byte
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -114,8 +127,11 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
 	}
 
-	// the addition touch is needed to support non docker runtimes
-	s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+	if s.cfg.Cmd == "" {
+		// set default Cmd if it was not provided by a user
+		// the addition touch is needed to support non docker runtimes
+		s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+	}
 
 	s.cfg.Env = utils.MergeStringMaps(srlEnv, s.cfg.Env)
 
@@ -194,7 +210,15 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 		}
 	}
 
-	return createSRLFiles(s.cfg)
+	// mount authorized_keys file to enable passwordless login
+	authzKeysPath := filepath.Join(filepath.Dir(s.cfg.LabDir), "authorized_keys")
+	if utils.FileExists(authzKeysPath) {
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"))
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"))
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"))
+	}
+
+	return s.createSRLFiles()
 }
 
 func (s *srl) Deploy(ctx context.Context) error {
@@ -203,14 +227,25 @@ func (s *srl) Deploy(ctx context.Context) error {
 }
 
 func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	// only perform postdeploy additional config provisioning if there is not startup nor existing config
-	if s.cfg.StartupConfig != "" || utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
+	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+
+	// start waiting for initial commit and mgmt server ready
+	if err := s.Ready(ctx); err != nil {
+		return err
+	}
+
+	// return if config file is found in the lab directory.
+	// This can be either if the startup-config has been mounted by that path
+	// or the config has been previously generated and saved
+	if utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
 
-	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+	if err := s.addDefaultConfig(ctx); err != nil {
+		return err
+	}
 
-	return s.addDefaultConfig(ctx)
+	return s.addOverlayCLIConfig(ctx)
 }
 
 func (s *srl) GetImages() map[string]string {
@@ -296,76 +331,87 @@ func (s *srl) Ready(ctx context.Context) error {
 	}
 }
 
-//
-
-func createSRLFiles(nodeCfg *types.NodeConfig) error {
-	log.Debugf("Creating directory structure for SRL container: %s", nodeCfg.ShortName)
+func (s *srl) createSRLFiles() error {
+	log.Debugf("Creating directory structure for SRL container: %s", s.cfg.ShortName)
 	var src string
 	var dst string
 
-	if nodeCfg.License != "" {
+	if s.cfg.License != "" {
 		// copy license file to node specific directory in lab
-		src = nodeCfg.License
-		dst = filepath.Join(nodeCfg.LabDir, "license.key")
+		src = s.cfg.License
+		dst = filepath.Join(s.cfg.LabDir, "license.key")
 		if err := utils.CopyFile(src, dst, 0644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
 
-	// generate SRL topology file
-	err := generateSRLTopologyFile(nodeCfg.NodeType, nodeCfg.LabDir, nodeCfg.Index)
+	// generate SRL topology file, including base MAC
+	err := generateSRLTopologyFile(s.cfg)
 	if err != nil {
 		return err
 	}
 
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
+	utils.CreateDirectory(path.Join(s.cfg.LabDir, "config"), 0777)
 
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
-	if nodeCfg.StartupConfig != "" {
-		dst = filepath.Join(nodeCfg.LabDir, "config", "config.json")
+	if s.cfg.StartupConfig != "" {
+		dst = filepath.Join(s.cfg.LabDir, "config", "config.json")
 
-		log.Debugf("Reading startup-config %s", nodeCfg.StartupConfig)
+		log.Debugf("Reading startup-config %s", s.cfg.StartupConfig)
 
-		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		c, err := os.ReadFile(s.cfg.StartupConfig)
 		if err != nil {
 			return err
 		}
 
+		// Determine if startup-config is a JSON file
+		// Get slice of data with optional leading whitespace removed.
+		// See RFC 7159, Section 2 for the definition of JSON whitespace.
+		x := bytes.TrimLeft(c, " \t\r\n")
+		isJSON := len(x) > 0 && x[0] == '{'
+		if !isJSON {
+			log.Debugf("startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
+				s.cfg.ShortName)
+
+			s.startupCliCfg = c
+
+			// no need to generate and mount startup-config passed in a CLI format
+			// as we will apply it over the top of a default config in the post deploy stage
+			return nil
+		}
+
 		cfgTemplate := string(c)
 
-		err = nodeCfg.GenerateConfig(dst, cfgTemplate)
+		err = s.cfg.GenerateConfig(dst, cfgTemplate)
 		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+			log.Errorf("node=%s, failed to generate config: %v", s.cfg.ShortName, err)
 		}
 	}
 
 	return err
 }
 
+//
+
 type mac struct {
 	MAC string
 }
 
-func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
-	dst := filepath.Join(labDir, "topology.yml")
+func generateSRLTopologyFile(cfg *types.NodeConfig) error {
+	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
-	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[nodeType])
+	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
 	if err != nil {
 		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
-	// generate random bytes to use in the 2-3rd bytes of a base mac
+	// Use node index as part of a deterministically generated MAC
 	// this ensures that different srl nodes will have different macs for their ports
-	buf := make([]byte, 2)
-	_, err = rand.Read(buf)
-	if err != nil {
-		return err
-	}
-	m := fmt.Sprintf("02:%02x:%02x:00:00:00", buf[0], buf[1])
-
+	// (for labs up to 4096 nodes)
+	m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index/256, cfg.Index%256)
 	mac := mac{
 		MAC: m,
 	}
@@ -380,11 +426,6 @@ func generateSRLTopologyFile(nodeType, labDir string, _ int) error {
 
 // addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
 func (s *srl) addDefaultConfig(ctx context.Context) error {
-	// start waiting for initial commit and mgmt server ready
-	if err := s.Ready(ctx); err != nil {
-		return err
-	}
-
 	buf := new(bytes.Buffer)
 	err := srlCfgTpl.Execute(buf, s.cfg)
 	if err != nil {
@@ -406,6 +447,36 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		"bash",
 		"-c",
 		"sr_cli -ed < tmp/clab-config",
+	})
+
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+
+	return nil
+}
+
+// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive
+func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
+	cfgStr := string(s.startupCliCfg)
+
+	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.cfg.ShortName, s.cfg.StartupConfig, cfgStr)
+	_, _, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+		"bash",
+		"-c",
+		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+		"bash",
+		"-c",
+		"sr_cli -ed --post 'commit save' < tmp/clab-config",
 	})
 
 	if err != nil {
