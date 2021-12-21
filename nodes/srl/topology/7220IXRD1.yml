@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 chassis_configuration:
-    "chassis_type": 64
-    "base_mac" : {{.MAC}}
-    "cpm_card_type" : 175
+  "chassis_type": 64
+  "base_mac": "{{ .MAC }}"
+  "cpm_card_type": 175
 
 slot_configuration:
-    1:
-        "card_type": 175
-        "mda_type": 196
+  1:
+    "card_type": 175
+    "mda_type": 196
