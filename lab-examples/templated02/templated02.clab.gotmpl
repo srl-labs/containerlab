@@ -31,20 +31,20 @@ topology:
 {{- range $ssIndex := seq 1 $.super_spines.num }}
     # {{ $.super_spines.prefix }}{{ $ssIndex }}
   {{- range $podIndex := seq 1 $.pods.num }}
-    {{- range $spineIndex := seq 1 $.pods.spines.num }} 
+    {{- range $spineIndex := seq 1 $.pods.spines.num }}
     - endpoints: ["{{ $.super_spines.prefix }}{{ $ssIndex }}:e1-{{ add (mul (add $podIndex -1) $.pods.spines.num) $spineIndex }}", "{{ $.pods.spines.prefix }}{{ $podIndex }}-{{ $spineIndex }}:e1-{{ $ssIndex }}"]
     {{- end }}
   {{- end }}
 {{- end }}
 
-{{- /* 
-Set leaf port offset, this is used in case the leaves type is IXR-D2 and spines is IXR-D3
+{{- /*
+Set leaf port offset, this is used in case the leaves type is IXR-D2(l) and spines is IXR-D3(l)
 in which case, they are interconnected using the 100G interfaces on IXR-D2.
 Those interfaces number starts at e-1/49.
 */ -}}
 {{- $leafPortOffset := 0 }}
-{{- if eq $.pods.leaves.type "ixrd2" }}
-  {{- if eq $.pods.spines.type "ixrd3" }}
+{{- if or (eq $.pods.leaves.type "ixrd2") (eq $.pods.leaves.type "ixrd2l") }}
+  {{- if or (eq $.pods.spines.type "ixrd3") (eq $.pods.spines.type "ixrd3l") }}
     {{- $leafPortOffset = 48 }}
   {{- end }}
 {{- end }}

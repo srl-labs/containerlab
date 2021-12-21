@@ -71,13 +71,15 @@ var (
 	}
 
 	srlTypes = map[string]string{
-		"ixr6":  "7250IXR6.yml",
-		"ixr10": "7250IXR10.yml",
-		"ixrd1": "7220IXRD1.yml",
-		"ixrd2": "7220IXRD2.yml",
-		"ixrd3": "7220IXRD3.yml",
-		"ixrh2": "7220IXRH2.yml",
-		"ixrh3": "7220IXRH3.yml",
+		"ixr6":   "7250IXR6.yml",
+		"ixr10":  "7250IXR10.yml",
+		"ixrd1":  "7220IXRD1.yml",
+		"ixrd2":  "7220IXRD2.yml",
+		"ixrd3":  "7220IXRD3.yml",
+		"ixrd2l": "7220IXRD2L.yml",
+		"ixrd3l": "7220IXRD3L.yml",
+		"ixrh2":  "7220IXRH2.yml",
+		"ixrh3":  "7220IXRH3.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
