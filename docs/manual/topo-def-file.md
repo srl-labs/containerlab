@@ -45,36 +45,43 @@ Its user's responsibility to give labs unique names if they plan to run multiple
 
 The name is a free-formed string, though it is better not to use dashes (`-`) as they are used to separate lab names from node names.
 
-When containerlab starts the containers, their names will be generated using the following pattern: `clab-{{lab-name}}-{{node-name}}`. The lab name here is used to make the container's names unique between two different labs even if the nodes are named the same.
+When containerlab starts the containers, their names will be generated using the following pattern: `clab-{{lab-name}}-{{node-name}}`. The lab name here is used to make the container's names unique between two different labs, even if the nodes are named the same.
 
 ### Prefix
-It is possible to change the `clab` prefix that containerlab adds to node names and configuration directory by means of the `prefix` parameter. The `prefix` parameter follows the below mentioned logic:
+It is possible to change the prefix that containerlab adds to node names. The `prefix` parameter is in charge of that. It follows the below-mentioned logic:
 
-1. When `prefix` is not present in the topology file, the default `clab` prefix will apply.
-2. When set to some value, for example `cl`, this string value will be used as a prefix for container names and lab's configuration directory.
-3. When set to empty string the prefix will not be used at all, and nodes and lab directory will not have the prefix element.
+1. When `prefix` is not present in the topology file, the default prefix logic applies. Containers will be named as `clab-<lab-name>-<node-name>`.
+1. When `prefix` is set to some value, for example, `myprefix`, this string is used instead of `clab`, and the resulting container name will be: `myprefix-<lab-name>-<node-name>`.
+1. When `prefix` is set to a magic value `__lab-name` the resulting container name will not have the `clab` prefix, but will keep the lab name: `<lab-name>-<node-name>`.
+1. When set to an empty string, the node names will not be prefixed at all. If your node is named `mynode`, you will get the `mynode` container in your system.
 
-Example:
+!!!warning
+    In the case of an empty prefix, you have to keep in mind that nodes need to be named uniquely across all labs.
 
-```yaml
-name: mylab
-prefix: c
-nodes:
-  n1:
-   # <some config>
-```
+Examples:
+=== "custom prefix"
+    ```yaml
+    name: mylab
+    prefix: myprefix
+    nodes:
+      n1:
+      # <some config>
+    ```
 
-With a prefix set to `c`, the container name for node `n1` will be `c-mylab-n1`, and the lab directory will be named as `c-mylab`.
+    With a prefix set to `myprefix` the container name for node `n1` will be `myprefix-mylab-n1`.
+=== "empty prefix"
+    ```yaml
+    name: mylab
+    prefix: ""
+    nodes:
+      n1:
+      # <some config>
+    ```
 
-```yaml
-name: mylab
-prefix: ""
-nodes:
-  n1:
-   # <some config>
-```
+    When a prefix is set to an empty string, the container name will match the node name - `n1`.
 
-When prefix is set to empty string like in the example above, the container name will be `mylab-n1` and the lab directory will be named simply `mylab`
+!!!note
+    Even when you change the prefix, the lab directory is still uniformly named using the `clab-<lab-name>` pattern.
 
 ### Topology
 The topology object inside the topology definition is the core element of the file. Under the `topology` element you will find all the main building blocks of a topology such as `nodes`, `kinds`, `defaults` and `links`.

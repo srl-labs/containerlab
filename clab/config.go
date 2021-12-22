@@ -85,21 +85,19 @@ type Config struct {
 // ParseTopology parses the lab topology
 func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
-	log.Debugf("Lab name: %s", c.Config.Name)
 
 	if c.Config.ConfigPath == "" {
 		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
 	}
+
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
 		*c.Config.Prefix = defaultPrefix
 	}
 
-	c.Dir = new(Directory)
-	labDir := c.Config.Name
-	if c.Config.Prefix != nil && *c.Config.Prefix != "" {
-		labDir = strings.Join([]string{*c.Config.Prefix, c.Config.Name}, "-")
-	}
+	c.Dir = &Directory{}
+	// labDir is always named clab-$labName, regardless of the prefix
+	labDir := strings.Join([]string{"clab", c.Config.Name}, "-")
 	c.Dir.Lab = filepath.Join(c.Config.ConfigPath, labDir)
 
 	c.Dir.LabCA = filepath.Join(c.Dir.Lab, "ca")
@@ -213,13 +211,20 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 }
 
 func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx int) (*types.NodeConfig, error) {
-	longName := strings.Join([]string{c.Config.Name, nodeName}, "-")
-	if c.Config.Prefix != nil && *c.Config.Prefix != "" {
-		longName = strings.Join([]string{*c.Config.Prefix, longName}, "-")
+	// default longName follows $prefix-$lab-$nodeName pattern
+	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+
+	switch {
+	// when prefix is an empty string longName will match shortName/nodeName
+	case *c.Config.Prefix == "":
+		longName = nodeName
+	case *c.Config.Prefix == "__lab-name":
+		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
 	}
+
 	nodeCfg := &types.NodeConfig{
-		ShortName:       nodeName,
-		LongName:        longName,
+		ShortName:       nodeName, // just the node name as seen in the topo file
+		LongName:        longName, // by default clab-$labName-$nodeName
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
 		LabDir:          filepath.Join(c.Dir.Lab, nodeName),
 		Index:           idx,
