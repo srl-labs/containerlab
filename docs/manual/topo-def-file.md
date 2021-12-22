@@ -78,7 +78,10 @@ Examples:
       # <some config>
     ```
 
-    When prefix is set to an empty string, the container name will match the node name - `n1`.
+    When a prefix is set to an empty string, the container name will match the node name - `n1`.
+
+!!!note
+    Even when you change the prefix, the lab directory is still uniformly named using the `clab-<lab-name>` pattern.
 
 ### Topology
 The topology object inside the topology definition is the core element of the file. Under the `topology` element you will find all the main building blocks of a topology such as `nodes`, `kinds`, `defaults` and `links`.
