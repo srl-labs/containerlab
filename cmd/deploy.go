@@ -48,6 +48,9 @@ var deployCmd = &cobra.Command{
 	PreRunE:      sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
+
+		log.Infof("Containerlab v%s started", version)
+
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo, varsFile),
