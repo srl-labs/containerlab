@@ -23,16 +23,17 @@ var TemplatePaths []string
 // debug count
 var DebugCount int
 
+// NodeConfig stores the configuration data that is meant to be applied to the node
 type NodeConfig struct {
 	TargetNode *types.NodeConfig
 	// All the variables used to render the template
 	Vars map[string]interface{}
 	// the Rendered templates
-	Data []string
-	Info []string
+	Data []string // rendered configuration commands as a slice of strings
+	Info []string // template names used to produce the rendered config
 }
 
-// Load templates from all paths for the specific role/kind
+// LoadTemplates loads templates from all paths for the specific role/kind
 func LoadTemplates(tmpl *template.Template, role string) error {
 	for _, p := range TemplatePaths {
 		fn := filepath.Join(p, fmt.Sprintf("*__%s.tmpl", role))
@@ -44,7 +45,9 @@ func LoadTemplates(tmpl *template.Template, role string) error {
 	return nil
 }
 
-func RenderAll(allnodes map[string]*NodeConfig) error {
+// RenderAll renders all templates for all the nodes and stores the result of the templating
+// in the nodes map
+func RenderAll(nodes map[string]*NodeConfig) error {
 
 	if len(TemplatePaths) == 0 { // default is the install path
 		TemplatePaths = []string{"@"}
@@ -67,23 +70,26 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 
 	tmpl := template.New("").Funcs(jT.Funcs)
 
-	for _, nc := range allnodes {
+	for _, nc := range nodes {
 		for _, baseN := range TemplateNames {
 			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, nc.Vars[vkRole])
 			log.Debugf("Looking up template %v", tmplN)
+
 			if l := tmpl.Lookup(tmplN); l == nil {
 				err := LoadTemplates(tmpl, fmt.Sprintf("%s", nc.Vars[vkRole]))
 				if err != nil {
 					log.Warnf("Unable to load template %s (%+v); skipping", tmplN, err)
 					continue
 				}
+
 				l = tmpl.Lookup(tmplN)
-				log.Debugf("Got a lookup result %+v (of type %T)", l, l)
 				if l == nil {
 					log.Warnf("No template found for %s; skipping..", nc.TargetNode.ShortName)
 					continue
 				}
+				log.Debugf("Got a lookup result %+v (of type %T)", l, l)
 			}
+
 			var buf strings.Builder
 			err := tmpl.ExecuteTemplate(&buf, tmplN, nc.Vars)
 			log.Debugf("Executed a template %s with an error code %v", tmplN, err)
