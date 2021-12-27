@@ -98,7 +98,7 @@ func DeleteNetnsSymlink(n string) error {
 }
 
 // LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name
-func LinkIPs(ln string) (v4addrs []netlink.Addr, v6addrs []netlink.Addr, err error) {
+func LinkIPs(ln string) (v4addrs, v6addrs []netlink.Addr, err error) {
 	l, err := netlink.LinkByName(ln)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not lookup %q: %v", ln, err)

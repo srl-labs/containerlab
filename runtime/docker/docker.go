@@ -102,7 +102,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 		// check if IPv4/6 addr are assigned to a mgmt bridge
 		var v4gw, v6gw string
-		if c.Mgmt.Bridge != "" {
+		if c.Mgmt.Bridge != "" && (c.Mgmt.IPv4Subnet != "" || c.Mgmt.IPv6Subnet != "") {
 			v4gw, v6gw, err = utils.FirstLinkIPs(c.Mgmt.Bridge)
 			if err != nil {
 				return err
