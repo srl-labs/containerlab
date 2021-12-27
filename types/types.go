@@ -47,7 +47,9 @@ type MgmtNet struct {
 	Network    string `yaml:"network,omitempty"` // docker network name
 	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network (or containerd bridge net)
 	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
+	IPv4Gw     string `yaml:"ipv4-gw,omitempty"`
 	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
+	IPv6Gw     string `yaml:"ipv6-gw,omitempty"`
 	MTU        string `yaml:"mtu,omitempty"`
 }
 

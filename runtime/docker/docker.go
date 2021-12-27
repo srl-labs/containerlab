@@ -101,12 +101,14 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		var ipamConfig []network.IPAMConfig
 		if c.Mgmt.IPv4Subnet != "" {
 			ipamConfig = append(ipamConfig, network.IPAMConfig{
-				Subnet: c.Mgmt.IPv4Subnet,
+				Subnet:  c.Mgmt.IPv4Subnet,
+				Gateway: c.Mgmt.IPv4Gw,
 			})
 		}
 		if c.Mgmt.IPv6Subnet != "" {
 			ipamConfig = append(ipamConfig, network.IPAMConfig{
-				Subnet: c.Mgmt.IPv6Subnet,
+				Subnet:  c.Mgmt.IPv6Subnet,
+				Gateway: c.Mgmt.IPv6Gw,
 			})
 			enableIPv6 = true
 		}
