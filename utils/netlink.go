@@ -131,7 +131,7 @@ func FirstLinkIPs(ln string) (v4, v6 string, err error) {
 	}
 
 	if len(v6addrs) != 0 {
-		v6 = v4addrs[0].IP.String()
+		v6 = v6addrs[0].IP.String()
 
 	}
 
