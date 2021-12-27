@@ -6,15 +6,12 @@ package utils
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
-
-var LinkLookupErr = errors.New("failed to lookup interface")
 
 // BridgeByName returns a *netlink.Bridge referenced by its name
 func BridgeByName(name string) (*netlink.Bridge, error) {
