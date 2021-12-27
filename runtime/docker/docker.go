@@ -7,6 +7,7 @@ package docker
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,6 +28,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -102,10 +104,14 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 		// check if IPv4/6 addr are assigned to a mgmt bridge
 		var v4gw, v6gw string
-		if c.Mgmt.Bridge != "" && (c.Mgmt.IPv4Subnet != "" || c.Mgmt.IPv6Subnet != "") {
+		if c.Mgmt.Bridge != "" {
 			v4gw, v6gw, err = utils.FirstLinkIPs(c.Mgmt.Bridge)
 			if err != nil {
-				return err
+				// only return error if the error is not about link not found
+				// we will create the bridge if it doesn't exist
+				if !errors.As(err, &netlink.LinkNotFoundError{}) {
+					return err
+				}
 			}
 			log.Debugf("bridge %q has ipv4 adrr of %q and ipv6 addr of %q", c.Mgmt.Bridge, v4gw, v6gw)
 		}

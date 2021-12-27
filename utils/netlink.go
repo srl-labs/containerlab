@@ -6,12 +6,15 @@ package utils
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
+
+var LinkLookupErr = errors.New("failed to lookup interface")
 
 // BridgeByName returns a *netlink.Bridge referenced by its name
 func BridgeByName(name string) (*netlink.Bridge, error) {
@@ -101,7 +104,7 @@ func DeleteNetnsSymlink(n string) error {
 func LinkIPs(ln string) (v4addrs, v6addrs []netlink.Addr, err error) {
 	l, err := netlink.LinkByName(ln)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not lookup %q: %v", ln, err)
+		return nil, nil, fmt.Errorf("failed to lookup link %q: %w", ln, err)
 	}
 
 	v4addrs, err = netlink.AddrList(l, netlink.FAMILY_V4)
