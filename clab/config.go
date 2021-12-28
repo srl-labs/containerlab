@@ -230,6 +230,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
 		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
+		Driver:          c.Config.Topology.GetNodeDriverOptions(nodeName),
 		NodeType:        c.Config.Topology.GetNodeType(nodeName),
 		Position:        c.Config.Topology.GetNodePosition(nodeName),
 		Image:           c.Config.Topology.GetNodeImage(nodeName),

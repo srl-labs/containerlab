@@ -41,6 +41,11 @@
                         "host"
                     ]
                 },
+                "driver": {
+                    "type": "object",
+                    "description": "scrapligo driver options passed to config engine",
+                    "markdownDescription": "scrapligo driver options passed config engine"
+                },
                 "license": {
                     "type": "string",
                     "description": "path to a license file",
