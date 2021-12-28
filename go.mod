@@ -24,7 +24,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/pkg/errors v0.9.1
-	github.com/scrapli/scrapligo v0.1.1-0.20210909232153-75c4a2e96780
+	github.com/scrapli/scrapligo v0.1.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
 	github.com/srl-labs/srlinux-scrapli v0.3.0
@@ -58,6 +58,7 @@ require (
 	github.com/aws/smithy-go v1.8.0 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/c2h5oh/datasize v0.0.0-20200112174442-28bbd4740fee // indirect
+	github.com/carlmontanari/difflibgo v0.0.0-20210718170140-424f52054f94 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/containerd/cgroups v1.0.1 // indirect
 	github.com/containerd/console v1.0.2 // indirect
