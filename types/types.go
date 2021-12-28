@@ -60,10 +60,11 @@ type NodeConfig struct {
 	Index                int
 	Group                string
 	Kind                 string
-	StartupConfig        string // path to config template file that is used for startup config generation
-	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
-	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
-	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
+	Driver               *DriverOptions // scrapligo driver options
+	StartupConfig        string         // path to config template file that is used for startup config generation
+	StartupDelay         uint           // optional delay (in seconds) to wait before creating this node
+	EnforceStartupConfig bool           // when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	ResStartupConfig     string         // path to config file that is actually mounted to the container and is a result of templation
 	Config               *ConfigDispatcher
 	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType             string
@@ -225,6 +226,19 @@ func FilterFromLabelStrings(labels []string) []*GenericFilter {
 // after they started
 type ConfigDispatcher struct {
 	Vars map[string]interface{} `yaml:"vars,omitempty"`
+}
+
+// Inspired by the Scrapligo Driver struct
+// Allows users to tweak driver options in the yaml file
+type DriverOptions struct {
+	Port              int    `yaml:"port,omitempty" default:"22"`
+	AuthUsername      string `yaml:"username,omitempty"`
+	AuthPassword      string `yaml:"password,omitempty"`
+	AuthSecondary     string `yaml:"secondary,omitempty"`
+	AuthPrivateKey    string `yaml:"private-key,omitempty"`
+	AuthStrictKey     bool   `yaml:"strict-key,omitempty" default:"false"`
+	SSHConfigFile     string `yaml:"ssh-config-file,omitempty"`
+	SSHKnownHostsFile string `yaml:"ssh-known-hosts-file,omitempty"`
 }
 
 func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
