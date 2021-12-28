@@ -13,6 +13,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// BridgeByName returns a *netlink.Bridge referenced by its name
 func BridgeByName(name string) (*netlink.Bridge, error) {
 	l, err := netlink.LinkByName(name)
 	if err != nil {
@@ -94,4 +95,45 @@ func DeleteNetnsSymlink(n string) error {
 		log.Debug("Failed to delete netns symlink by path:", sl)
 	}
 	return nil
+}
+
+// LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name
+func LinkIPs(ln string) (v4addrs, v6addrs []netlink.Addr, err error) {
+	l, err := netlink.LinkByName(ln)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to lookup link %q: %w", ln, err)
+	}
+
+	v4addrs, err = netlink.AddrList(l, netlink.FAMILY_V4)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	v6addrs, err = netlink.AddrList(l, netlink.FAMILY_V6)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return
+}
+
+// FirstLinkIPs returns string representation of the first IPv4/v6 address
+// found for a link referenced by name
+func FirstLinkIPs(ln string) (v4, v6 string, err error) {
+	v4addrs, v6addrs, err := LinkIPs(ln)
+	if err != nil {
+		return
+	}
+
+	if len(v4addrs) != 0 {
+		v4 = v4addrs[0].IP.String()
+
+	}
+
+	if len(v6addrs) != 0 {
+		v6 = v6addrs[0].IP.String()
+
+	}
+
+	return v4, v6, err
 }
