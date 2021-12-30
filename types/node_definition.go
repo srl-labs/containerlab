@@ -12,7 +12,6 @@ const (
 // NodeDefinition represents a configuration a given node can have in the lab definition file
 type NodeDefinition struct {
 	Kind                 string            `yaml:"kind,omitempty"`
-	Driver               *DriverOptions    `yaml:"driver,omitempty"`
 	Group                string            `yaml:"group,omitempty"`
 	Type                 string            `yaml:"type,omitempty"`
 	StartupConfig        string            `yaml:"startup-config,omitempty"`
@@ -65,13 +64,6 @@ func (n *NodeDefinition) GetKind() string {
 		return ""
 	}
 	return n.Kind
-}
-
-func (n *NodeDefinition) GetDriverOptions() *DriverOptions {
-	if n == nil {
-		return nil
-	}
-	return n.Driver
 }
 
 func (n *NodeDefinition) GetGroup() string {

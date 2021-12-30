@@ -60,11 +60,10 @@ type NodeConfig struct {
 	Index                int
 	Group                string
 	Kind                 string
-	Driver               *DriverOptions // scrapligo driver options
-	StartupConfig        string         // path to config template file that is used for startup config generation
-	StartupDelay         uint           // optional delay (in seconds) to wait before creating this node
-	EnforceStartupConfig bool           // when set to true will enforce the use of startup-config, even when config is present in the lab directory
-	ResStartupConfig     string         // path to config file that is actually mounted to the container and is a result of templation
+	StartupConfig        string // path to config template file that is used for startup config generation
+	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
+	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
 	Config               *ConfigDispatcher
 	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType             string
@@ -225,12 +224,18 @@ func FilterFromLabelStrings(labels []string) []*GenericFilter {
 // that is responsible to execute configuration commands on the nodes
 // after they started
 type ConfigDispatcher struct {
-	Vars map[string]interface{} `yaml:"vars,omitempty"`
+	Vars      map[string]interface{} `yaml:"vars,omitempty"`
+	Transport *ConfigTransport       `yaml:"transport,omitempty"`
+}
+
+// Add different transports here
+type ConfigTransport struct {
+	Scrapli *Scrapli `yaml:"scrapli,omitempty"`
 }
 
 // Inspired by the Scrapligo Driver struct
-// Allows users to tweak driver options in the yaml file
-type DriverOptions struct {
+// Allows users to tweak scrapli transport options in the yaml file
+type Scrapli struct {
 	Port              int    `yaml:"port,omitempty" default:"22"`
 	AuthUsername      string `yaml:"username,omitempty"`
 	AuthPassword      string `yaml:"password,omitempty"`
@@ -246,6 +251,13 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 		return nil
 	}
 	return cd.Vars
+}
+
+func (cd *ConfigDispatcher) GetTransports() *ConfigTransport {
+	if cd == nil {
+		return nil
+	}
+	return cd.Transport
 }
 
 // Extras contains extra node parameters which are not entitled to be part of a generic node config

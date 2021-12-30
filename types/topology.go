@@ -139,8 +139,23 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 		vars := utils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
 			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars(),
 			ndef.GetConfigDispatcher().GetVars())
+		node_transports := ndef.GetConfigDispatcher().GetTransports()
+		if node_transports != nil {
+			return &ConfigDispatcher{
+				Vars:      vars,
+				Transport: node_transports,
+			}
+		}
+		kind_transports := t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetTransports()
+		if kind_transports != nil {
+			return &ConfigDispatcher{
+				Vars:      vars,
+				Transport: kind_transports,
+			}
+		}
 		return &ConfigDispatcher{
-			Vars: vars,
+			Vars:      vars,
+			Transport: t.Defaults.GetConfigDispatcher().GetTransports(),
 		}
 	}
 	return nil
@@ -409,24 +424,6 @@ func (t *Topology) GetNodeMemory(name string) string {
 		return t.GetDefaults().GetNodeMemory()
 	}
 	return ""
-}
-
-// Returns the 'driver' section for the given node
-func (t *Topology) GetNodeDriverOptions(name string) *DriverOptions {
-	if ndef, ok := t.Nodes[name]; ok {
-		node_driver_options := ndef.GetDriverOptions()
-		if node_driver_options != nil {
-			return node_driver_options
-		}
-
-		kind_driver_options := t.GetKind(t.GetNodeKind(name)).GetDriverOptions()
-		if kind_driver_options != nil {
-			return kind_driver_options
-		}
-
-		return t.GetDefaults().GetDriverOptions()
-	}
-	return nil
 }
 
 // Returns the 'extras' section for the given node

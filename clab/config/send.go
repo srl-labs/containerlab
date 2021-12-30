@@ -20,41 +20,43 @@ func Send(cs *NodeConfig, _ string) error {
 		if !ok {
 			return nil
 		}
-		driver, err := transport.GetDriver(cs.TargetNode)
-		if err != nil {
-			return fmt.Errorf("failed to create driver: %v", err)
-		}
-		err = driver.Open()
-		if err != nil {
-			return fmt.Errorf("failed to open driver: %v", err)
-		}
-		defer driver.Close()
-		c, err := cfg.NewCfgDriver(
-			driver,
-			transport.NetworkDriver[cs.TargetNode.Kind],
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create config driver: %v", err)
-		}
-		prepareErr := c.Prepare()
-		if prepareErr != nil {
-			return fmt.Errorf("failed running prepare method: %v", prepareErr)
-		}
-		// this seems a bit clunky, might need cleaned up
-		for i1, d1 := range cs.Data {
-			if len(cs.Info[i1]) != 0 {
-				_, err = c.LoadConfig(
-					string(d1),
-					false, //don't load replace. Load merge/set instead
-				)
-				if err != nil {
-					return fmt.Errorf("failed to load config: %+v", err)
+		if cs.TargetNode.Config.Transport.Scrapli != nil {
+			driver, err := transport.GetScrapliDriver(cs.TargetNode.LongName, cs.TargetNode.Kind, cs.TargetNode.Config.Transport)
+			if err != nil {
+				return fmt.Errorf("failed to create driver: %v", err)
+			}
+			err = driver.Open()
+			if err != nil {
+				return fmt.Errorf("failed to open driver: %v", err)
+			}
+			defer driver.Close()
+			c, err := cfg.NewCfgDriver(
+				driver,
+				transport.NetworkDriver[cs.TargetNode.Kind],
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create config driver: %v", err)
+			}
+			prepareErr := c.Prepare()
+			if prepareErr != nil {
+				return fmt.Errorf("failed running prepare method: %v", prepareErr)
+			}
+			// this seems a bit clunky, might need cleaned up
+			for i1, d1 := range cs.Data {
+				if len(cs.Info[i1]) != 0 {
+					_, err = c.LoadConfig(
+						string(d1),
+						false, //don't load replace. Load merge/set instead
+					)
+					if err != nil {
+						return fmt.Errorf("failed to load config: %+v", err)
+					}
 				}
 			}
-		}
-		_, err = c.CommitConfig()
-		if err != nil {
-			return fmt.Errorf("failed to commit config: %+v", err)
+			_, err = c.CommitConfig()
+			if err != nil {
+				return fmt.Errorf("failed to commit config: %+v", err)
+			}
 		}
 	} else if ct == "grpc" {
 		// NewGRPCTransport

@@ -41,11 +41,6 @@
                         "host"
                     ]
                 },
-                "driver": {
-                    "type": "object",
-                    "description": "scrapligo driver options passed to config engine",
-                    "markdownDescription": "scrapligo driver options passed config engine"
-                },
                 "license": {
                     "type": "string",
                     "description": "path to a license file",
@@ -322,6 +317,62 @@
                     "type": "object",
                     "description": "config variables passed to config engine",
                     "markdownDescription": "config variables passed to config engine"
+                },
+                "transport": {
+                    "type": "object",
+                    "description": "transport method passed to config engine",
+                    "markdownDescription": "transport method passed to config engine",
+                    "properties": {
+                        "scrapli": {
+                            "type": "object",
+                            "description": "transport via scrapligo",
+                            "markdownDescription": "<insert scrapli transport link>",
+                            "properties": {
+                                "port": {
+                                    "description": "port that scrapli should use",
+                                    "markdownDescription": "<insert scrapli port link>",
+                                    "type": "number",
+                                    "default": 22
+                                },
+                                "username": {
+                                    "description": "username that scrapli should use",
+                                    "markdownDescription": "<insert scrapli username link>",
+                                    "type": "string"
+                                },
+                                "password": {
+                                    "description": "password that scrapli should use",
+                                    "markdownDescription": "<insert scrapli password link>",
+                                    "type": "string"
+                                },
+                                "secondary": {
+                                    "description": "secondary (enable) password that scrapli should use",
+                                    "markdownDescription": "<insert scrapli secondary password link>",
+                                    "type": "string"
+                                },
+                                "private-key": {
+                                    "description": "path to ssh private key that scrapli should use",
+                                    "markdownDescription": "<insert scrapli private-key link>",
+                                    "type": "string"
+                                },
+                                "strict-key": {
+                                    "description": "whether scrapli should set ssh strict host key checking",
+                                    "markdownDescription": "<insert scrapli strict-key link>",
+                                    "type": "boolean",
+                                    "default": false
+                                },
+                                "ssh-config-file": {
+                                    "description": "path to ssh config file that scrapli should use",
+                                    "markdownDescription": "<insert scrapli ssh-config link>",
+                                    "type": "string"
+                                },
+                                "ssh-known-hosts-file": {
+                                    "description": "path to ssh known_hosts file that scrapli should use",
+                                    "markdownDescription": "<insert scrapli ssh-known-host link>",
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
