@@ -12,6 +12,7 @@ import (
 	"github.com/containers/podman/v3/pkg/bindings/network"
 	"github.com/containers/podman/v3/pkg/domain/entities"
 	"github.com/containers/podman/v3/pkg/specgen"
+	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	log "github.com/sirupsen/logrus"
@@ -106,8 +107,47 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	specCgroupConfig := specgen.ContainerCgroupConfig{
 		CgroupNS: specgen.Namespace{},
 	}
-	// Defaults for resource limits
-	specResConfig := specgen.ContainerResourceConfig{}
+	// Resource limits
+	var (
+		resLimits specs.LinuxResources
+		lMem      specs.LinuxMemory
+		lCPU      specs.LinuxCPU
+	)
+	// Memory limits
+	if cfg.Memory != "" {
+		mem, err := humanize.ParseBytes(cfg.Memory)
+		mem64 := int64(mem)
+		if err != nil {
+			log.Warnf("Unable to parse memory limit %q for node %q", cfg.Memory, cfg.LongName)
+		}
+		lMem.Limit = &mem64
+	}
+	resLimits.Memory = &lMem
+	// CPU resources limits
+	if cfg.CPU != 0 {
+		quota := int64(cfg.CPU * 100000)
+		lCPU.Quota = &quota
+		period := uint64(100000)
+		lCPU.Period = &period
+	}
+	if cfg.CPUSet != "" {
+		lCPU.Cpus = cfg.CPUSet
+	}
+	resLimits.CPU = &lCPU
+
+	specResConfig := specgen.ContainerResourceConfig{
+		ResourceLimits: &resLimits,
+		// Rlimits:                 nil,
+		// OOMScoreAdj:             nil,
+		// WeightDevice:            nil,
+		// ThrottleReadBpsDevice:   nil,
+		// ThrottleWriteBpsDevice:  nil,
+		// ThrottleReadIOPSDevice:  nil,
+		// ThrottleWriteIOPSDevice: nil,
+		// CgroupConf:              nil,
+		// CPUPeriod:               0,
+		// CPUQuota:                0,
+	}
 	// Defaults for health checks
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{}
 	// Everything below is related to network spec of a container
