@@ -326,7 +326,7 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error
 		internal   = false
 		ipv6       = false
 		disableDNS = true
-		options    map[string]string
+		options    = map[string]string{}
 		labels     = map[string]string{"containerlab": ""}
 		subnet     *net.IPNet
 		err        error
@@ -337,6 +337,10 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error
 	if err != nil {
 		return network.CreateOptions{}, err
 	}
+	if r.Mgmt.MTU != "" {
+		options["mtu"] = r.Mgmt.MTU
+	}
+
 	toReturn := network.CreateOptions{
 		DisableDNS: &disableDNS,
 		Driver:     &driver,
