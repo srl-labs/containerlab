@@ -21,7 +21,7 @@ func Send(cs *NodeConfig, _ string) error {
 			return nil
 		}
 		if cs.TargetNode.Config.Transport.Scrapli != nil {
-			driver, err := transport.GetScrapliDriver(cs.TargetNode.LongName, cs.TargetNode.Kind, cs.TargetNode.Config.Transport)
+			driver, err := transport.NewScrapliTransport(cs.TargetNode.LongName, cs.TargetNode.Kind, cs.TargetNode.Config.Transport)
 			if err != nil {
 				return fmt.Errorf("failed to create driver: %v", err)
 			}
