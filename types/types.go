@@ -230,18 +230,17 @@ type ConfigDispatcher struct {
 
 // Add different transports here
 type ConfigTransport struct {
-	Scrapli *Scrapli `yaml:"scrapli,omitempty"`
+	Scrapli *ScrapliTransport `yaml:"scrapli,omitempty"`
 }
 
-// Inspired by the Scrapligo Driver struct
-// Allows users to tweak scrapli transport options in the yaml file
-type Scrapli struct {
-	Port              int    `yaml:"port,omitempty" default:"22"`
+// ScrapliTransport allows to configure scrapligo transport
+type ScrapliTransport struct {
+	Port              int    `yaml:"port,omitempty"`
 	AuthUsername      string `yaml:"username,omitempty"`
 	AuthPassword      string `yaml:"password,omitempty"`
 	AuthSecondary     string `yaml:"secondary,omitempty"`
 	AuthPrivateKey    string `yaml:"private-key,omitempty"`
-	AuthStrictKey     bool   `yaml:"strict-key,omitempty" default:"false"`
+	AuthStrictKey     bool   `yaml:"strict-key,omitempty"`
 	SSHConfigFile     string `yaml:"ssh-config-file,omitempty"`
 	SSHKnownHostsFile string `yaml:"ssh-known-hosts-file,omitempty"`
 }
