@@ -43,7 +43,7 @@ func Send(cs *NodeConfig, _ string) error {
 			}
 			// this seems a bit clunky, might need cleaned up
 			for i1, d1 := range cs.Data {
-				if len(cs.Info[i1]) != 0 {
+				if cs.Info[i1] != "" {
 					_, err = c.LoadConfig(
 						string(d1),
 						false, //don't load replace. Load merge/set instead
