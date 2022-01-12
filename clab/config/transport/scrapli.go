@@ -27,7 +27,7 @@ var NetworkDriver = map[string]string{
 	"vr-xrv9k": "cisco_iosxr",
 }
 
-func NewScrapliTransport(name string, kind string, t *types.ConfigTransport) (*network.Driver, error) {
+func NewScrapliTransport(host, kind string, t *types.ConfigTransport) (*network.Driver, error) {
 	if t.Scrapli != nil {
 		// setting default values
 		if t.Scrapli.Port == 0 {
@@ -35,7 +35,7 @@ func NewScrapliTransport(name string, kind string, t *types.ConfigTransport) (*n
 		}
 
 		driver, err := core.NewCoreDriver(
-			name,
+			host,
 			NetworkDriver[kind],
 			base.WithPort(t.Scrapli.Port),
 			base.WithAuthStrictKey(t.Scrapli.AuthStrictKey),
@@ -53,7 +53,7 @@ func NewScrapliTransport(name string, kind string, t *types.ConfigTransport) (*n
 		return driver, nil
 	} else {
 		driver, err := core.NewCoreDriver(
-			name,
+			host,
 			NetworkDriver[kind],
 			base.WithAuthStrictKey(false),
 			base.WithTimeoutOps(5*time.Second),
