@@ -66,7 +66,7 @@ Once the lab is deployed with containerlab, use the following configuration inst
     config interface ip add Loopback0 10.10.10.2/32
     config interface startup Loopback0
     ```
-    Now when data interface has been configured, check to make sure in /etc/frr/daemon that "bgpd=yes".  Restart the frr service if required and verify that bgpd is running.
+    Now when data interface has been configured, check to make sure in /etc/frr/daemons that "bgpd=yes".  Restart the frr service if required and verify that bgpd is running.
     ```bash
     root@sonic:/# service frr restart
     [ ok ] Stopped watchfrr.
