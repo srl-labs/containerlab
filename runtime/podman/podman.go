@@ -6,6 +6,8 @@ package podman
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/containers/podman/v3/pkg/api/handlers"
 	"github.com/containers/podman/v3/pkg/bindings/containers"
 	"github.com/containers/podman/v3/pkg/bindings/images"
@@ -15,7 +17,6 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-	"time"
 )
 
 const (

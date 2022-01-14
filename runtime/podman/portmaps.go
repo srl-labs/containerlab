@@ -6,14 +6,15 @@ package podman
 import (
 	"context"
 	"fmt"
+	"net"
+	"strconv"
+	"strings"
+
 	podtypes "github.com/containers/podman/v3/libpod/network/types"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	"net"
-	"strconv"
-	"strings"
 )
 
 // Reusing parts of the code from podman specgenutil/util.go

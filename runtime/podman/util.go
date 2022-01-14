@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
+	"strings"
+
 	"github.com/containers/podman/v3/pkg/bindings"
 	"github.com/containers/podman/v3/pkg/bindings/containers"
 	"github.com/containers/podman/v3/pkg/bindings/network"
@@ -18,8 +21,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-	"net"
-	"strings"
 )
 
 type podmanWriterCloser struct {
