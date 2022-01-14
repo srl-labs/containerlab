@@ -8,6 +8,10 @@ build:
 	mkdir -p $(BIN_DIR)
 	go build -o $(BINARY) -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$$(date)'" main.go
 
+build-with-podman:
+	mkdir -p $(BIN_DIR)
+	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$$(date)'" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+
 test:
 	go test -race ./... -v
 
