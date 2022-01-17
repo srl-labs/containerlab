@@ -121,6 +121,10 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: Enable Podman API service
+        run: sudo systemctl start podman
+
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
