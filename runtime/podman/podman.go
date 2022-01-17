@@ -218,7 +218,7 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 		return "", err
 	}
 	nspath := inspect.NetworkSettings.SandboxKey
-	log.Infof("Method GetNSPath was called with a resulting nspath %q", nspath)
+	log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
 	return nspath, nil
 }
 

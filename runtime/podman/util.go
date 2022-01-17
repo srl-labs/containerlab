@@ -57,7 +57,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	}
 	// Main container specs
 	labels := cfg.Labels
-	// enconde a mgmt net name as an extra label
+	// encode a mgmt net name as an extra label
 	labels["clab-net-mgmt"] = r.Mgmt.Network
 	specBasicConfig := specgen.ContainerBasicConfig{
 		Name:       cfg.LongName,
