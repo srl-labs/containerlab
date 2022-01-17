@@ -147,7 +147,7 @@ Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
     Skip If    '${runtime}' == 'containerd'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} inspect clab-${lab-name}-l1 -f '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'
     Log    ${output}
     # cpu=1.5
     Should Contain    ${output}    150000
