@@ -32,5 +32,5 @@ site:
 .PHONY: htmltest
 htmltest:
 	docker run --rm -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
-	docker run --rm -v $$(pwd):/test wjdp/htmltest --conf ./site/htmltest.yml
+	docker run --rm -v $$(pwd):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
