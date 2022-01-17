@@ -6,6 +6,7 @@ package podman
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -21,6 +22,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+)
+
+var (
+	errInvalidBind = errors.New("invalid bind mount provided")
 )
 
 type podmanWriterCloser struct {
@@ -227,11 +232,20 @@ func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs
 	// Note: we don't do any input validation here
 	for i, mnt := range mounts {
 		mntSplit := strings.SplitN(mnt, ":", 3)
+
+		if len(mntSplit) == 1 {
+			return nil, fmt.Errorf("%w: %s", errInvalidBind, mnt)
+		}
+
 		mntSpec[i] = specs.Mount{
 			Destination: mntSplit[1],
 			Type:        "bind",
 			Source:      mntSplit[0],
-			Options:     strings.Split(mntSplit[2], ","),
+		}
+
+		// when options are provided in the bind mount spec
+		if len(mntSplit) == 3 {
+			mntSpec[i].Options = strings.Split(mntSplit[2], ",")
 		}
 	}
 	log.Debugf("convertMounts method received mounts %v and produced %+v as a result", mounts, mntSpec)
