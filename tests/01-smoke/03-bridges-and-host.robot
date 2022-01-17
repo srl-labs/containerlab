@@ -63,6 +63,8 @@ Verify management network is using user-specified bridge
 
 *** Keywords ***
 Setup
+    # skipping this test suite for podman for now
+    Skip If    '${runtime}' == 'podman'
     # ensure the bridge we about to create is deleted first
     Run    sudo ip l del ${bridge-name}
     # remove the alpine:3 container image, to test that we are able to live-pull it
