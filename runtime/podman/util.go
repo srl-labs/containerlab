@@ -362,12 +362,6 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error
 
 func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[string][]string {
 	filters := map[string][]string{}
-	// types.GenericFilter{
-	// 	FilterType: "",
-	// 	Field:      "",
-	// 	Operator:   "",
-	// 	Match:      "",
-	// }
 	for _, gF := range gFilters {
 		filterType := gF.FilterType
 		filterOp := gF.Operator

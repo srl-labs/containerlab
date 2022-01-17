@@ -45,15 +45,6 @@ func (*PodmanRuntime) convertPortMap(_ context.Context, portMap nat.PortMap) ([]
 		for _, v := range hostpmap {
 			hostIP = &v.HostIP
 			hostPort = &v.HostPort
-			// switch {
-			// case v.HostPort == "":
-			// 	hostPort = ""
-			// case len(strings.Split(v.HostPort, "-")) > 1:
-			// 	// It's a range
-			// default:
-			// 	// It's a single port, yay
-			// 	hostPort = v.HostPort
-			// }
 			podmanPortMapping, err := parseSplitPort(hostIP, hostPort, ctrPort, proto)
 			if err != nil {
 				return nil, err
@@ -61,13 +52,6 @@ func (*PodmanRuntime) convertPortMap(_ context.Context, portMap nat.PortMap) ([]
 			toReturn = append(toReturn, podmanPortMapping)
 		}
 	}
-	// test := podtypes.PortMapping{
-	// 	HostIP:        "",
-	// 	ContainerPort: 0,
-	// 	HostPort:      0,
-	// 	Range:         0,
-	// 	Protocol:      "",
-	// }
 	return toReturn, nil
 }
 
