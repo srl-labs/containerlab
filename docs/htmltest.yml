@@ -12,7 +12,7 @@ IgnoreURLs:
   - https://github.com/srl-labs/containerlab/pkgs/container/clab
   - https://linkedin.com/in
   - https://www.linkedin.com/in
-  - https://www.github.com
+  - https://*github.com/
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
