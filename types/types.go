@@ -230,11 +230,11 @@ type ConfigDispatcher struct {
 
 // Add different transports here
 type ConfigTransport struct {
-	Scrapli *ScrapliTransport `yaml:"scrapli,omitempty"`
+	Scrapli *ScrapliConfig `yaml:"scrapli,omitempty"`
 }
 
 // ScrapliTransport allows to configure scrapligo transport
-type ScrapliTransport struct {
+type ScrapliConfig struct {
 	Port              int    `yaml:"port,omitempty"`
 	AuthUsername      string `yaml:"username,omitempty"`
 	AuthPassword      string `yaml:"password,omitempty"`

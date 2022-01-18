@@ -68,7 +68,7 @@ func NewScrapliTransport(node *types.NodeConfig) (*ScrapliTransport, error) {
 	}
 	if node.Kind == "crpd" {
 		if t.Scrapli.AuthSecondary == "" {
-			t.Scrapli.AuthSecondary = "clab123"
+			t.Scrapli.AuthSecondary = nodes.DefaultCredentials[node.Kind][2]
 		}
 	}
 	options := &ScrapliOptions{
@@ -146,10 +146,11 @@ func (t *ScrapliTransport) Write(data, info *string) error {
 	if err != nil {
 		return fmt.Errorf("failed to commit config: %+v", err)
 	}
+	log.Infof("Config written to %s", t.Driver.Host)
 	return nil
 }
 
 func (t *ScrapliTransport) Close() {
 	t.Driver.Close()
-	log.Infof("Connection closed successfully")
+	log.Infof("Connection to %s closed successfully", t.Driver.Host)
 }
