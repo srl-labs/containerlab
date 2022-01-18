@@ -150,6 +150,9 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	log.Debug("Writing sshd_config succeeded")
 
 	if nodeCfg.License != "" {
+		// create license directory path /config/license/safenet
+		utils.CreateDirectory(path.Join(nodeCfg.LabDir, "/config/license/safenet"), 0777)
+
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst = filepath.Join(nodeCfg.LabDir, "/config/license/safenet/junos_sfnt.lic")
