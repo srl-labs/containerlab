@@ -75,6 +75,13 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+### Multipoint Redistribution and SR Linux
+<small>:material-text: [Blog](https://juliopdx.com/2022/01/22/multipoint-redistribution-and-sr-linux/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-01-22</small>
+
+I’ve been working my way through Optimal Routing Design by Russ White, Don Slice, and Alvaro Retana. It has been a great read so far and I highly recommend it. When I work through a book I usually try and lab up any concept I can, this helps me make it stick as much as possible. Early on in the book the authors mention redistribution and possible issues that can come with doing it at more than one point in the network. So here we are reading this post. I hope you enjoy and possibly learn something along the way.
+
+Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/1485040052811960321)
+
 ### Network Modeling: Automating Mikrotik RouterOS CHR Containerlab images
 <small>:material-text: [Blog](https://stubarea51.net/2021/12/20/network-modeling-automating-mikrotik-routeros-chr-containerlab-images/) by [@nlgotz](https://twitter.com/nlgotz) · :material-calendar: 2021-12-20</small>
 
