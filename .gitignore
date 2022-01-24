@@ -35,4 +35,4 @@ site/
 .DS_Store
 __rd*
 tests/out
-
+**/.*clab.y?ml

@@ -67,7 +67,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build containerlab
-        run: go build
+        run: CGO_ENABLED=0 go build -o containerlab -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$(date)'" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
       # store clab binary as artifact
       - uses: actions/upload-artifact@v2
         with:
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        runtime: ["docker", "containerd"]
+        runtime: ["docker", "containerd", "podman"]
     needs:
       - unit-test
       - build-containerlab
@@ -121,6 +121,10 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: Enable Podman API service
+        run: sudo systemctl start podman
+
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"

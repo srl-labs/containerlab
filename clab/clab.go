@@ -58,6 +58,7 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 		// define runtime name.
 		// order of preference: cli flag -> env var -> default value of docker
 		envN := os.Getenv("CLAB_RUNTIME")
+		log.Debugf("envN runtime var value is %v", envN)
 		switch {
 		case name != "":
 		case envN != "":
@@ -69,6 +70,7 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 
 		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
 			r := rInit()
+			log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
 			err := r.Init(
 				runtime.WithConfig(rtconfig),
 				runtime.WithMgmtNet(c.Config.Mgmt),
@@ -78,7 +80,7 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 			}
 
 			c.Runtimes[name] = r
-
+			log.Debugf("initialized a runtime with params %+v", r)
 			return nil
 		}
 		return fmt.Errorf("unknown container runtime %q", name)
@@ -136,6 +138,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 // initMgmtNetwork sets management network config
 func (c *CLab) initMgmtNetwork() error {
+	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
@@ -143,7 +146,7 @@ func (c *CLab) initMgmtNetwork() error {
 		c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
 		c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
 	}
-
+	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
 	// init docker network mtu
 	if c.Config.Mgmt.MTU == "" {
 		m, err := utils.DefaultNetMTU()

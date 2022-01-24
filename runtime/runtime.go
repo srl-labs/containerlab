@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	DockerRuntime     = "docker"
-	ContainerdRuntime = "containerd"
-	IgniteRuntime     = "ignite"
+	DockerRuntime = "docker"
+	IgniteRuntime = "ignite"
 )
 
 type ContainerRuntime interface {
