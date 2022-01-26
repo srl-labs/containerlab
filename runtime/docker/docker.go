@@ -51,6 +51,10 @@ type DockerRuntime struct {
 	Mgmt   *types.MgmtNet
 }
 
+type DockerConfig struct {
+	Auths map[string]map[string]string
+}
+
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
 	log.Debug("Runtime: Docker")
@@ -400,8 +404,25 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	}
 
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
+
+	dockerConfig, err := GetDockerConfig("")
+	if err != nil {
+		log.Infof("Unable to load docker config file, skipping authenticated pull. Error: %v", err)
+	}
+
+	authString := ""
+
+	if dockerConfig != nil {
+		authString, err = GetDockerAuth(dockerConfig, canonicalImageName)
+		if err != nil {
+			return err
+		}
+	}
+
 	log.Infof("Pulling %s Docker image", canonicalImageName)
-	reader, err := c.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{})
+	reader, err := c.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{
+		RegistryAuth: authString,
+	})
 	if err != nil {
 		return err
 	}
