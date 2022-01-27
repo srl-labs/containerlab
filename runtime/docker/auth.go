@@ -68,26 +68,31 @@ func GetDockerConfig(configPath string) (*DockerConfig, error) {
 
 func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error) {
 	imageDomain := GetImageDomainName(imageName)
+	const authStringLength = 2
+	const authStringSep = ":"
 
-	if authString, ok := dockerConfig.Auths[imageDomain]["auth"]; ok {
-		decodedAuth, err := base64.URLEncoding.DecodeString(authString)
+	if domainConfig, ok := dockerConfig.Auths[imageDomain]; ok {
+		decodedAuth, err := base64.URLEncoding.DecodeString(domainConfig.Auth)
 		if err != nil {
 			return "", err
 		}
 
-		decodedAuthSplit := strings.Split(string(decodedAuth), ":")
-		authConfig := types.AuthConfig{
-			Username: decodedAuthSplit[0],
-			Password: decodedAuthSplit[1],
-		}
+		decodedAuthSplit := strings.Split(string(decodedAuth), authStringSep)
 
-		encodedJSON, err := json.Marshal(authConfig)
-		if err != nil {
-			return "", err
-		}
+		if len(decodedAuthSplit) == authStringLength {
+			authConfig := types.AuthConfig{
+				Username: strings.TrimSpace(decodedAuthSplit[0]),
+				Password: strings.TrimSpace(decodedAuthSplit[1]),
+			}
 
-		authString := base64.URLEncoding.EncodeToString(encodedJSON)
-		return authString, nil
+			encodedJSON, err := json.Marshal(authConfig)
+			if err != nil {
+				return "", err
+			}
+
+			authString := base64.URLEncoding.EncodeToString(encodedJSON)
+			return authString, nil
+		}
 	}
 
 	return "", nil
