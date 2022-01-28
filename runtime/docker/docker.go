@@ -51,14 +51,6 @@ type DockerRuntime struct {
 	Mgmt   *types.MgmtNet
 }
 
-type DockerConfigAuth struct {
-	Auth string
-}
-
-type DockerConfig struct {
-	Auths map[string]DockerConfigAuth
-}
-
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	var err error
 	log.Debug("Runtime: Docker")

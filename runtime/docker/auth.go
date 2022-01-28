@@ -7,10 +7,18 @@ import (
 	"path"
 	"strings"
 
-	"github.com/cloudflare/cfssl/log"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
+	log "github.com/sirupsen/logrus"
 )
+
+type DockerConfigAuth struct {
+	Auth string
+}
+
+type DockerConfig struct {
+	Auths map[string]DockerConfigAuth
+}
 
 func GetImageDomainName(imageName string) string {
 	imageRef, err := reference.ParseNormalizedNamed(imageName)
@@ -43,8 +51,9 @@ func GetDockerConfigPath(configPath string) (string, error) {
 }
 
 func GetDockerConfig(configPath string) (*DockerConfig, error) {
-	dockerConfigPath, err := GetDockerConfigPath(configPath)
+	var dockerConfig DockerConfig
 
+	dockerConfigPath, err := GetDockerConfigPath(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -55,9 +64,7 @@ func GetDockerConfig(configPath string) (*DockerConfig, error) {
 		return nil, err
 	}
 
-	var dockerConfig DockerConfig
 	jsonError := json.Unmarshal(file, &dockerConfig)
-
 	if jsonError != nil {
 		log.Errorf("Unable to Unmarshal docker config, error: %v", jsonError)
 		return nil, jsonError
@@ -67,9 +74,10 @@ func GetDockerConfig(configPath string) (*DockerConfig, error) {
 }
 
 func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error) {
-	imageDomain := GetImageDomainName(imageName)
 	const authStringLength = 2
 	const authStringSep = ":"
+
+	imageDomain := GetImageDomainName(imageName)
 
 	if domainConfig, ok := dockerConfig.Auths[imageDomain]; ok {
 		decodedAuth, err := base64.URLEncoding.DecodeString(domainConfig.Auth)
