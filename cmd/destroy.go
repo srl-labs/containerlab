@@ -76,7 +76,7 @@ var destroyCmd = &cobra.Command{
 				topos[cont.Labels["clab-topo-file"]] = struct{}{}
 			}
 		}
-		log.Debugf("We got a topos struct for detroy: %+v", topos)
+		log.Debugf("We got the following topos struct for destroy: %+v", topos)
 		for topo := range topos {
 			opts := append(opts,
 				clab.WithTopoFile(topo, varsFile),
