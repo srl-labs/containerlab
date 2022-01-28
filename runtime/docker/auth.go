@@ -21,17 +21,22 @@ type DockerConfig struct {
 }
 
 func GetImageDomainName(imageName string) string {
+	var imageDomainName string
+
 	imageRef, err := reference.ParseNormalizedNamed(imageName)
 	if err != nil {
-		panic(err)
+		imageDomainName = ""
+		log.Errorf("Unable to fetch image normalized name, error: %v", err)
+	} else {
+		imageDomainName = reference.Domain(imageRef)
 	}
 
-	domainName := reference.Domain(imageRef)
-
-	return domainName
+	return imageDomainName
 }
 
 func GetDockerConfigPath(configPath string) (string, error) {
+	const dockerDefaultConfigDir = ".docker"
+	const dockerDefaultConfigFile = "config.json"
 	var dockerConfigError error
 	var dockerConfigPath string
 
@@ -42,7 +47,7 @@ func GetDockerConfigPath(configPath string) (string, error) {
 			dockerConfigError = err
 		}
 
-		dockerConfigPath = path.Join(homeDir, ".docker", "config.json")
+		dockerConfigPath = path.Join(homeDir, dockerDefaultConfigDir, dockerDefaultConfigFile)
 	} else {
 		dockerConfigPath = configPath
 	}
@@ -60,13 +65,13 @@ func GetDockerConfig(configPath string) (*DockerConfig, error) {
 
 	file, err := os.ReadFile(dockerConfigPath)
 	if err != nil {
-		log.Errorf("Unable to read docker config, error: %v", err)
+		log.Infof("Could not read docker config: %v", err)
 		return nil, err
 	}
 
 	jsonError := json.Unmarshal(file, &dockerConfig)
 	if jsonError != nil {
-		log.Errorf("Unable to Unmarshal docker config, error: %v", jsonError)
+		log.Errorf("Failed to unmarshal docker config: %v", jsonError)
 		return nil, jsonError
 	}
 

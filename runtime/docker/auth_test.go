@@ -16,6 +16,8 @@ var imageDomainNameTests = []imageDomainNameTest{
 	{imageName: "alpine", want: "docker.io"},
 	{imageName: "docker.io/alpine:3.14", want: "docker.io"},
 	{imageName: "example.com/example/alpine", want: "example.com"},
+	{imageName: ".invalid_format", want: ""},
+	{imageName: "", want: ""},
 }
 
 func TestGetImageDomainName(t *testing.T) {
