@@ -125,13 +125,18 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	if err != nil {
 		return err
 	}
-	if len(containers) == 0 {
-		return nil
-	}
 
 	var labDir string
 	if cleanup {
-		labDir = filepath.Dir(containers[0].Labels["clab-node-lab-dir"])
+		labDir = c.Dir.Lab
+		err = os.RemoveAll(labDir)
+		if err != nil {
+			log.Errorf("error deleting lab directory: %v", err)
+		}
+	}
+
+	if len(containers) == 0 {
+		return nil
 	}
 
 	if maxWorkers == 0 {
@@ -155,14 +160,6 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
 	c.DeleteNodes(ctx, maxWorkers, serialNodes)
-
-	// remove the lab directories
-	if cleanup {
-		err = os.RemoveAll(labDir)
-		if err != nil {
-			log.Errorf("error deleting lab directory: %v", err)
-		}
-	}
 
 	log.Info("Removing containerlab host entries from /etc/hosts file")
 	err = clab.DeleteEntriesFromHostsFile(c.Config.Name)
