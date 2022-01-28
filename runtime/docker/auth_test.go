@@ -22,7 +22,7 @@ var imageDomainNameTests = []imageDomainNameTest{
 
 func TestGetImageDomainName(t *testing.T) {
 	for _, test := range imageDomainNameTests {
-		if got := GetImageDomainName(test.imageName); got != test.want {
+		if got := getImageDomainName(test.imageName); got != test.want {
 			t.Errorf("Image domain names do not match, got %v, want %v", got, test.want)
 		}
 	}
@@ -30,7 +30,7 @@ func TestGetImageDomainName(t *testing.T) {
 
 func TestGetDockerConfigPath(t *testing.T) {
 	want := "/some/path/config.json"
-	got, _ := GetDockerConfigPath(want)
+	got, _ := getDockerConfigPath(want)
 
 	if got != want {
 		t.Errorf("Invalid docker config path, got %v, want %v", got, want)

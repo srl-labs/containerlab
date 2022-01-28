@@ -20,7 +20,7 @@ type DockerConfig struct {
 	Auths map[string]DockerConfigAuth
 }
 
-func GetImageDomainName(imageName string) string {
+func getImageDomainName(imageName string) string {
 	var imageDomainName string
 
 	imageRef, err := reference.ParseNormalizedNamed(imageName)
@@ -34,7 +34,7 @@ func GetImageDomainName(imageName string) string {
 	return imageDomainName
 }
 
-func GetDockerConfigPath(configPath string) (string, error) {
+func getDockerConfigPath(configPath string) (string, error) {
 	const dockerDefaultConfigDir = ".docker"
 	const dockerDefaultConfigFile = "config.json"
 	var dockerConfigError error
@@ -58,7 +58,7 @@ func GetDockerConfigPath(configPath string) (string, error) {
 func GetDockerConfig(configPath string) (*DockerConfig, error) {
 	var dockerConfig DockerConfig
 
-	dockerConfigPath, err := GetDockerConfigPath(configPath)
+	dockerConfigPath, err := getDockerConfigPath(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error)
 	const authStringLength = 2
 	const authStringSep = ":"
 
-	imageDomain := GetImageDomainName(imageName)
+	imageDomain := getImageDomainName(imageName)
 
 	if domainConfig, ok := dockerConfig.Auths[imageDomain]; ok {
 		decodedAuth, err := base64.URLEncoding.DecodeString(domainConfig.Auth)
