@@ -400,8 +400,8 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	}
 
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
-	authString := ""
 	dockerConfig, err := GetDockerConfig("")
+	authString := ""
 
 	if err != nil {
 		log.Infof("Skipping authenticated pull")
