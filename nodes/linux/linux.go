@@ -56,6 +56,13 @@ func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 func (l *linux) GetImages() map[string]string {
 	images := make(map[string]string)
 	images[nodes.ImageKey] = l.cfg.Image
+
+	// ignite runtime additonally needs a kernel and sandbox image
+	if l.runtime.GetName() != runtime.IgniteRuntime {
+		return images
+	}
+	images[nodes.KernelKey] = l.cfg.Kernel
+	images[nodes.SandboxKey] = l.cfg.Sandbox
 	return images
 }
 
