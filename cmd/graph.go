@@ -19,6 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 	tmpl    string
 	offline bool
 	dot     bool
+	asjson  bool
 
 	//go:embed graph-template.html
 	graphTemplate string
@@ -118,28 +120,41 @@ var graphCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		log.Debugf("generating graph using data: %s", string(b))
-		topoD := topoData{
-			Name: c.Config.Name,
-			Data: template.JS(string(b)), // skipcq: GSC-G203
-		}
-		var t *template.Template
-		if tmpl != "" {
-			t = template.Must(template.ParseFiles(tmpl))
+		if asjson {
+			log.Debugf("saving graph as a json file using data: %s", string(b))
+			// create graph directory
+			utils.CreateDirectory(c.Dir.Lab, 0755)
+			utils.CreateDirectory(c.Dir.LabGraph, 0755)
+
+			// create graph filename
+			jsonfile := c.Dir.LabGraph + "/" + "graph" + ".json"
+			utils.CreateFile(jsonfile, string(b))
+			log.Infof("Created %s", jsonfile)
+			return nil
 		} else {
-			t = template.Must(template.New("graph").Parse(graphTemplate))
-		}
+			log.Debugf("generating graph using data: %s", string(b))
+			topoD := topoData{
+				Name: c.Config.Name,
+				Data: template.JS(string(b)), // skipcq: GSC-G203
+			}
+			var t *template.Template
+			if tmpl != "" {
+				t = template.Must(template.ParseFiles(tmpl))
+			} else {
+				t = template.Must(template.New("graph").Parse(graphTemplate))
+			}
 
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			_ = t.Execute(w, topoD)
-		})
+			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				_ = t.Execute(w, topoD)
+			})
 
-		log.Infof("Listening on %s...", srv)
-		err = http.ListenAndServe(srv, nil)
-		if err != nil {
-			return err
+			log.Infof("Listening on %s...", srv)
+			err = http.ListenAndServe(srv, nil)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
-		return nil
 	},
 }
 
@@ -185,5 +200,6 @@ func init() {
 	graphCmd.Flags().StringVarP(&srv, "srv", "s", ":50080", "HTTP server address to view, customize and export your topology")
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false, "use only information from topo file when building graph")
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file instead of launching the web server")
+	graphCmd.Flags().BoolVarP(&asjson, "json", "", false, "generate json file instead of launching the web server")
 	graphCmd.Flags().StringVarP(&tmpl, "template", "", "", "Go html template used to generate the graph")
 }
