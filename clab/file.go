@@ -89,6 +89,11 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	return nil
 }
 
+// GetTopoName returns the name of the topology
+func (c *CLab) GetTopoName(_ string) string {
+	return c.TopoFile.name
+}
+
 func readTemplateVariables(topo, varsFile string) (interface{}, error) {
 	var templateVars interface{}
 	// variable file is not explicitly set
