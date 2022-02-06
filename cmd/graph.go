@@ -161,6 +161,12 @@ var graphCmd = &cobra.Command{
 func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
 	log.Info("building graph from topology file")
 	for _, node := range c.Nodes {
+		labels := make(map[string]string)
+		for label, value := range node.Config().Labels {
+			if strings.HasPrefix(label, "graph-") {
+				labels[label] = value
+			}
+		}
 		g.Nodes = append(g.Nodes, containerDetails{
 			Name:        node.Config().ShortName,
 			Kind:        node.Config().Kind,
@@ -169,6 +175,7 @@ func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
 			State:       "N/A",
 			IPv4Address: node.Config().MgmtIPv4Address,
 			IPv6Address: node.Config().MgmtIPv6Address,
+			Labels:      labels,
 		})
 	}
 

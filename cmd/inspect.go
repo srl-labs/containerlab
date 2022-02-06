@@ -26,16 +26,17 @@ var details bool
 var all bool
 
 type containerDetails struct {
-	LabName     string `json:"lab_name,omitempty"`
-	LabPath     string `json:"labPath,omitempty"`
-	Name        string `json:"name,omitempty"`
-	ContainerID string `json:"container_id,omitempty"`
-	Image       string `json:"image,omitempty"`
-	Kind        string `json:"kind,omitempty"`
-	Group       string `json:"group,omitempty"`
-	State       string `json:"state,omitempty"`
-	IPv4Address string `json:"ipv4_address,omitempty"`
-	IPv6Address string `json:"ipv6_address,omitempty"`
+	LabName     string            `json:"lab_name,omitempty"`
+	LabPath     string            `json:"labPath,omitempty"`
+	Name        string            `json:"name,omitempty"`
+	ContainerID string            `json:"container_id,omitempty"`
+	Image       string            `json:"image,omitempty"`
+	Kind        string            `json:"kind,omitempty"`
+	Group       string            `json:"group,omitempty"`
+	State       string            `json:"state,omitempty"`
+	IPv4Address string            `json:"ipv4_address,omitempty"`
+	IPv6Address string            `json:"ipv6_address,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
 }
 type BridgeDetails struct{}
 
