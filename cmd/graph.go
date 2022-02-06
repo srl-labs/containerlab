@@ -158,15 +158,19 @@ var graphCmd = &cobra.Command{
 	},
 }
 
+func graphLabels(l map[string]string) map[string]string {
+	labels := make(map[string]string)
+	for label, value := range l {
+		if strings.HasPrefix(label, "graph-") {
+			labels[label] = value
+		}
+	}
+	return labels
+}
+
 func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
 	log.Info("building graph from topology file")
 	for _, node := range c.Nodes {
-		labels := make(map[string]string)
-		for label, value := range node.Config().Labels {
-			if strings.HasPrefix(label, "graph-") {
-				labels[label] = value
-			}
-		}
 		g.Nodes = append(g.Nodes, containerDetails{
 			Name:        node.Config().ShortName,
 			Kind:        node.Config().Kind,
@@ -175,7 +179,7 @@ func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
 			State:       "N/A",
 			IPv4Address: node.Config().MgmtIPv4Address,
 			IPv6Address: node.Config().MgmtIPv6Address,
-			Labels:      labels,
+			Labels:      graphLabels(node.Config().Labels),
 		})
 	}
 
@@ -189,12 +193,6 @@ func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Ge
 		}
 		log.Debugf("looking for node name %s", name)
 		if node, ok := c.Nodes[name]; ok {
-			labels := make(map[string]string)
-			for label, value := range node.Config().Labels {
-				if strings.HasPrefix(label, "graph-") {
-					labels[label] = value
-				}
-			}
 			g.Nodes = append(g.Nodes, containerDetails{
 				Name:        name,
 				Kind:        node.Config().Kind,
@@ -203,7 +201,7 @@ func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Ge
 				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
 				IPv4Address: getContainerIPv4(cont),
 				IPv6Address: getContainerIPv6(cont),
-				Labels:      labels,
+				Labels:      graphLabels(node.Config().Labels),
 			})
 		}
 	}
