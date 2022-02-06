@@ -189,6 +189,12 @@ func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Ge
 		}
 		log.Debugf("looking for node name %s", name)
 		if node, ok := c.Nodes[name]; ok {
+			labels := make(map[string]string)
+			for label, value := range node.Config().Labels {
+				if strings.HasPrefix(label, "graph-") {
+					labels[label] = value
+				}
+			}
 			g.Nodes = append(g.Nodes, containerDetails{
 				Name:        name,
 				Kind:        node.Config().Kind,
@@ -197,6 +203,7 @@ func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Ge
 				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
 				IPv4Address: getContainerIPv4(cont),
 				IPv6Address: getContainerIPv6(cont),
+				Labels:      labels,
 			})
 		}
 	}
