@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -29,11 +30,23 @@ func TestGetImageDomainName(t *testing.T) {
 }
 
 func TestGetDockerConfigPath(t *testing.T) {
-	want := "/some/path/config.json"
-	got, _ := getDockerConfigPath(want)
+	td := map[string]map[string]string{
+		"fixed-path": {
+			"path": "/some/path/config.json",
+			"want": "/some/path/config.json",
+		},
+		"default": {
+			"path": "",
+			"want": "~/.docker/config.json",
+		},
+	}
 
-	if got != want {
-		t.Errorf("Invalid docker config path, got %v, want %v", got, want)
+	for _, in := range td {
+		got, _ := getDockerConfigPath(in["path"])
+		want, _ := homedir.Expand(in["want"])
+		if got != want {
+			t.Errorf("Invalid docker config path, got %v, want %v", got, in["want"])
+		}
 	}
 }
 

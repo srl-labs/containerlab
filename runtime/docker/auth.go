@@ -4,12 +4,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	dockerDefaultConfigDir  = ".docker"
+	dockerDefaultConfigFile = "config.json"
 )
 
 type DockerConfigAuth struct {
@@ -35,24 +40,17 @@ func getImageDomainName(imageName string) string {
 }
 
 func getDockerConfigPath(configPath string) (string, error) {
-	const dockerDefaultConfigDir = ".docker"
-	const dockerDefaultConfigFile = "config.json"
-	var dockerConfigError error
-	var dockerConfigPath string
-
+	var err error
 	if configPath == "" {
 		homeDir, err := os.UserHomeDir()
-
 		if err != nil {
-			dockerConfigError = err
+			return "", err
 		}
 
-		dockerConfigPath = path.Join(homeDir, dockerDefaultConfigDir, dockerDefaultConfigFile)
-	} else {
-		dockerConfigPath = configPath
+		configPath = filepath.Join(homeDir, dockerDefaultConfigDir, dockerDefaultConfigFile)
 	}
 
-	return dockerConfigPath, dockerConfigError
+	return configPath, err
 }
 
 func GetDockerConfig(configPath string) (*DockerConfig, error) {
