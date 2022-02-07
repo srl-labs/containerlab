@@ -3,6 +3,7 @@ package docker
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,8 +22,9 @@ type DockerConfigAuth struct {
 	Auth string
 }
 
+// DockerConfig represents the docker config that is typically contained within ~/.docker/config.json
 type DockerConfig struct {
-	Auths map[string]DockerConfigAuth
+	Auths map[string]DockerConfigAuth `json:"auths,omitempty"`
 }
 
 func getImageDomainName(imageName string) string {
@@ -76,35 +78,41 @@ func GetDockerConfig(configPath string) (*DockerConfig, error) {
 	return &dockerConfig, nil
 }
 
+// GetDockerAuth extracts an auth string for the given container image name based on the credentials
+// stored in docker daemon config file
 func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error) {
 	const authStringLength = 2
 	const authStringSep = ":"
 
 	imageDomain := getImageDomainName(imageName)
 
-	if domainConfig, ok := dockerConfig.Auths[imageDomain]; ok {
-		decodedAuth, err := base64.URLEncoding.DecodeString(domainConfig.Auth)
-		if err != nil {
-			return "", err
-		}
-
-		decodedAuthSplit := strings.Split(string(decodedAuth), authStringSep)
-
-		if len(decodedAuthSplit) == authStringLength {
-			authConfig := types.AuthConfig{
-				Username: strings.TrimSpace(decodedAuthSplit[0]),
-				Password: strings.TrimSpace(decodedAuthSplit[1]),
-			}
-
-			encodedJSON, err := json.Marshal(authConfig)
-			if err != nil {
-				return "", err
-			}
-
-			authString := base64.URLEncoding.EncodeToString(encodedJSON)
-			return authString, nil
-		}
+	var auth DockerConfigAuth
+	var ok bool
+	if auth, ok = dockerConfig.Auths[imageDomain]; !ok {
+		return "", nil
 	}
 
-	return "", nil
+	decodedAuth, err := base64.URLEncoding.DecodeString(auth.Auth)
+	if err != nil {
+		return "", err
+	}
+
+	decodedAuthSplit := strings.Split(string(decodedAuth), authStringSep)
+
+	if len(decodedAuthSplit) != authStringLength {
+		return "", errors.New("unexpected auth string")
+	}
+
+	authConfig := types.AuthConfig{
+		Username: strings.TrimSpace(decodedAuthSplit[0]),
+		Password: strings.TrimSpace(decodedAuthSplit[1]),
+	}
+
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		return "", err
+	}
+
+	authString := base64.URLEncoding.EncodeToString(encodedJSON)
+	return authString, nil
 }

@@ -1,8 +1,6 @@
 package docker
 
 import (
-	"encoding/base64"
-	"strings"
 	"testing"
 
 	"github.com/mitchellh/go-homedir"
@@ -19,6 +17,26 @@ var imageDomainNameTests = []imageDomainNameTest{
 	{imageName: "example.com/example/alpine", want: "example.com"},
 	{imageName: ".invalid_format", want: ""},
 	{imageName: "", want: ""},
+}
+
+var authTests = map[string]struct {
+	ConfigPath         string
+	Image              string
+	ExpectedAuthString string
+	ExpectedErr        bool
+}{
+	"valid-config-valid-auth-data": {
+		ConfigPath:         "test_data/docker.config",
+		Image:              "test.example.com/repository/alpine",
+		ExpectedAuthString: "eyJ1c2VybmFtZSI6InRlc3R1c2VyMSIsInBhc3N3b3JkIjoidGVzdHBhc3MxIn0=",
+		ExpectedErr:        false,
+	},
+	"valid-config-invalid-image-name": {
+		ConfigPath:         "test_data/docker.config",
+		Image:              "some.wrong/repo/image",
+		ExpectedAuthString: "",
+		ExpectedErr:        false,
+	},
 }
 
 func TestGetImageDomainName(t *testing.T) {
@@ -50,75 +68,21 @@ func TestGetDockerConfigPath(t *testing.T) {
 	}
 }
 
-func TestGetDockerAuthContainsExpectedUser(t *testing.T) {
-	// Verify that the resulting auth string contains the expected user for the given domain
-	imageName := utils.GetCanonicalImageName("test.example.com/repository/alpine")
-	dockerConfig, _ := GetDockerConfig("test_data/docker.config")
+func TestGetDockerAuth(t *testing.T) {
+	for _, data := range authTests {
+		img := utils.GetCanonicalImageName(data.Image)
+		cfg, _ := GetDockerConfig(data.ConfigPath)
 
-	want := "testuser1"
+		auth, err := GetDockerAuth(cfg, img)
+		if err != nil {
+			t.Error(err)
+		}
 
-	got, err := GetDockerAuth(dockerConfig, imageName)
+		t.Logf("auth string: %v", auth)
 
-	if err != nil {
-		t.Errorf("Error gettin docker auth, %v", err)
-	}
+		if auth != data.ExpectedAuthString {
+			t.Errorf("expected auth string '%s' does not match computed '%s'", data.ExpectedAuthString, auth)
+		}
 
-	if err != nil {
-		t.Errorf("Error decodeing auth string, error %v", err)
-	}
-
-	decodedAuthString, _ := base64.URLEncoding.DecodeString(got)
-	contains := strings.Contains(string(decodedAuthString), want)
-
-	if contains != true {
-		t.Errorf("Invalid docker auth, %v does not contain %v", string(decodedAuthString), want)
-	}
-}
-
-func TestGetDockerAuthGivenNoMatchingDomain(t *testing.T) {
-	imageName := utils.GetCanonicalImageName("alpine")
-	dockerConfig, _ := GetDockerConfig("test_data/docker.config")
-	want := ""
-
-	got, err := GetDockerAuth(dockerConfig, imageName)
-
-	if err != nil {
-		t.Errorf("Error gettin docker auth, %v", err)
-	}
-
-	if err != nil {
-		t.Errorf("Error decodeing auth string, error %v", err)
-	}
-
-	if got != want {
-		t.Errorf("Expected empty auth string, got %v, want %v", got, want)
-	}
-}
-
-func TestGetDockerAuthGivenMissingAuthString(t *testing.T) {
-	imageName := utils.GetCanonicalImageName("bad.example.com/alpine")
-	dockerConfig, _ := GetDockerConfig("test_data/docker.config")
-	want := ""
-
-	got, err := GetDockerAuth(dockerConfig, imageName)
-
-	if err != nil {
-		t.Errorf("Error gettin docker auth, %v", err)
-	}
-
-	if err != nil {
-		t.Errorf("Error decodeing auth string, error %v", err)
-	}
-
-	if got != want {
-		t.Errorf("Expected empty auth string, got %v, want %v", got, want)
-	}
-}
-
-func TestGetDockerAuthGivenInvalidDockerConfig(t *testing.T) {
-	got, _ := GetDockerConfig("test_data/invalid_docker.config")
-
-	if got != nil {
-		t.Errorf("Expected empty auth string, got %v, want %v", got, nil)
 	}
 }
