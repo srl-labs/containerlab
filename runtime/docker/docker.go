@@ -405,7 +405,7 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	// get docker config based on an empty path (default docker config path will be assumed)
 	dockerConfig, err := GetDockerConfig("")
 	if err != nil {
-		log.Infof("Skipping authenticated pull")
+		log.Debug("docker config file not found")
 	} else {
 		authString, err = GetDockerAuth(dockerConfig, canonicalImageName)
 		if err != nil {
