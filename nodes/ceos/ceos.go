@@ -140,31 +140,13 @@ func createCEOSFiles(node *types.NodeConfig) error {
 			return err
 		}
 		intfMapping = string(m)
-
-
-		// If the config file is already present in the node dir
-		// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
-		// this will persist the changes that users make to a running config when booted from some startup config
-		log.Debugf("generating interface mapping file for node %s from file %s", node.ShortName, node.IntfMapping)
-		tpl, err := template.New(filepath.Base(node.IntfMapping)).Parse(templ)
-		if err != nil {
-			return err
-		}
-		dstBytes := new(bytes.Buffer)
-		err = tpl.Execute(dstBytes, node)
-		if err != nil {
-			return err
-		}
-		log.Debugf("node '%s' generated mapping file: %s", node.ShortName, dstBytes.String())
-		f, err := os.Create(dst)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = f.Write(dstBytes.Bytes())
-		return err
-
 	}
+	
+	err := node.GenerateConfig(node.ResIntfMapping, intfMapping)
+	if err != nil {
+		return err
+	}
+
 
 	// sysmac is a system mac that is +1 to Ma0 mac
 	m, err := net.ParseMAC(node.MacAddress)
