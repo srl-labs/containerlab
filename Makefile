@@ -40,3 +40,4 @@ htmltest:
 .PHONY: ttl-push
 ttl-push: build-with-podman
 	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/deislabs/oras:v0.11.1 push ttl.sh/clab-$$(git rev-parse --short HEAD):1d --manifest-config /dev/null:application/vnd.acme.rocket.config ./containerlab
+	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/deislabs/oras:v0.11.1 pull ttl.sh/clab-$$(git rev-parse --short HEAD):1d"
