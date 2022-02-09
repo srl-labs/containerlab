@@ -38,6 +38,8 @@ var (
 	//go:embed ceos.cfg
 	cfgTemplate string
 
+	intfMapping string
+
 	saveCmd = []string{"Cli", "-p", "15", "-c", "wr"}
 )
 
@@ -142,9 +144,11 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		intfMapping = string(m)
 	}
 	
-	err := node.GenerateConfig(node.ResIntfMapping, intfMapping)
-	if err != nil {
-		return err
+	if intfMapping != "" {
+		err := node.GenerateConfig(node.ResIntfMapping, intfMapping)
+		if err != nil {
+			return err
+		}
 	}
 
 
