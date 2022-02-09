@@ -38,6 +38,9 @@ var reconfigure bool
 // max-workers flag
 var maxWorkers uint
 
+// skipPostDeploy flag
+var skipPostDeploy bool
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
