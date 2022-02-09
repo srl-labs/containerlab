@@ -66,6 +66,7 @@ type NodeConfig struct {
 	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
 	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
 	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
+	IntfMapping		     string // path to interface Mapping file that is use (only in cEOS)
 	Config               *ConfigDispatcher
 	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType             string
