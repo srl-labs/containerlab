@@ -34,3 +34,9 @@ htmltest:
 	docker run --rm -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
 	docker run --rm -v $$(pwd):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
+
+# build containerlab bin and push it as an OCI artifact to ttl.sh registry
+# to obtain the pushed artifact use: docker run --rm -v $(pwd):/workspace ghcr.io/deislabs/oras:v0.11.1 pull ttl.sh/<image-name>
+.PHONY: ttl-push
+ttl-push: build-with-podman
+	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/deislabs/oras:v0.11.1 push ttl.sh/clab-$$(git rev-parse --short HEAD):1d --manifest-config /dev/null:application/vnd.acme.rocket.config ./containerlab
