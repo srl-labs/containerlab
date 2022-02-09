@@ -253,7 +253,6 @@ var deployCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(deployCmd)
 	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
-	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skipPostDeploy", "s", false, "skip post deploy action")
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")

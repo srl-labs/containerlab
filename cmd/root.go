@@ -55,6 +55,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second, "timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
+	rootCmd.PersistentFlags().BoolVarP(&skipPostDeploy, "skipPostDeploy", "s", true, "skip post deploy action")
 }
 
 func sudoCheck(_ *cobra.Command, _ []string) error {
