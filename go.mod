@@ -10,6 +10,7 @@ require (
 	github.com/containernetworking/plugins v0.9.1
 	github.com/containers/podman/v3 v3.4.4
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
+	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0
@@ -92,7 +93,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
 	github.com/docker/cli v0.0.0-20200130152716-5d0cf8839492 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect

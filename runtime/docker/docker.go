@@ -400,8 +400,23 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	}
 
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
+	authString := ""
+
+	// get docker config based on an empty path (default docker config path will be assumed)
+	dockerConfig, err := GetDockerConfig("")
+	if err != nil {
+		log.Debug("docker config file not found")
+	} else {
+		authString, err = GetDockerAuth(dockerConfig, canonicalImageName)
+		if err != nil {
+			return err
+		}
+	}
+
 	log.Infof("Pulling %s Docker image", canonicalImageName)
-	reader, err := c.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{})
+	reader, err := c.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{
+		RegistryAuth: authString,
+	})
 	if err != nil {
 		return err
 	}
