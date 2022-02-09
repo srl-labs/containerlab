@@ -258,6 +258,7 @@ func init() {
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
 	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
+	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skipPostDeploy", "s", true, "skip post deploy action")
 }
 
 func setFlags(conf *clab.Config) {
