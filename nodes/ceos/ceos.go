@@ -136,6 +136,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		return err
 	}
 
+	intfMapping = ""
 	if node.IntfMapping != "" {
 		m, err := os.ReadFile(node.IntfMapping)
 		if err != nil {
