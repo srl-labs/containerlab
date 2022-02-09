@@ -263,7 +263,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
-
+	
+	nodeCfg.IntfMapping, err = c.Config.Topology.GetNodeIntfMapping(nodeCfg.ShortName)
+	if err != nil {
+		return nil, err
+	}
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
 	// initialize license field

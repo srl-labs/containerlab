@@ -171,6 +171,29 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	return cfg, nil
 }
 
+func (t *Topology) GetNodeIntfMapping(name string) (string, error) {
+	var cfg string
+	if ndef, ok := t.Nodes[name]; ok {
+		var err error
+		cfg = ndef.GetIntfMapping()
+		if t.GetKind(t.GetNodeKind(name)).GetIntfMapping() != "" && cfg == "" {
+			cfg = t.GetKind(t.GetNodeKind(name)).GetIntfMapping()
+		}
+		if cfg == "" {
+			cfg = t.GetDefaults().GetIntfMapping()
+		}
+		if cfg != "" {
+			cfg, err = resolvePath(cfg)
+			if err != nil {
+				return "", err
+			}
+			_, err = os.Stat(cfg)
+			return cfg, err
+		}
+	}
+	return cfg, nil
+}
+
 func (t *Topology) GetNodeStartupDelay(name string) uint {
 	if ndef, ok := t.Nodes[name]; ok {
 		if ndef.GetStartupDelay() != 0 {
