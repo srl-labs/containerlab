@@ -34,6 +34,12 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	if err != nil {
 		return fmt.Errorf("failed globbing the path %s", p)
 	}
+
+	if len(all) == 0 {
+		log.Debug("no public keys found")
+		return nil
+	}
+
 	log.Debugf("found public key files %q", all)
 
 	for _, fn := range all {
@@ -41,10 +47,11 @@ func (c *CLab) CreateAuthzKeysFile() error {
 		b.Write(rb)
 	}
 
-	if err := utils.CreateFile(filepath.Join(c.Dir.Lab, authzFName), b.String()); err != nil {
+	authzKeysFPath := filepath.Join(c.Dir.Lab, authzFName)
+	if err := utils.CreateFile(authzKeysFPath, b.String()); err != nil {
 		return err
 	}
 
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
-	return os.Chmod(p, 0644)
+	return os.Chmod(authzKeysFPath, 0644) // skipcq: GSC-G302
 }
