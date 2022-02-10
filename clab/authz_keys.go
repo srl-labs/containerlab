@@ -53,5 +53,5 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	}
 
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
-	return os.Chmod(authzKeysFPath, 0644)
+	return os.Chmod(authzKeysFPath, 0644) // skipcq: GSC-G302
 }
