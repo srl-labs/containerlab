@@ -163,7 +163,7 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
     }
 
     if !sourceFileStat.Mode().IsRegular() {
-    	return fmt.Errorf("%s is not a regular file", filepath.Base(node.IntfMapping))
+    	return log.Errorf("%s is not a regular file", filepath.Base(node.IntfMapping))
     }
 
 	source, err := os.Open(filepath.Base(node.IntfMapping))
@@ -178,8 +178,10 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
     }
 	defer destination.Close()
 
-	nBytes, err := io.Copy(destination, source)
-	return nBytes, err
+	if _, err := io.Copy(destination, source); err != nil {
+		log.Errorf(err)
+	}
+	return err
 }
 
 func DisableTxOffload(n *NodeConfig) error {
