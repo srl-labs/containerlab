@@ -171,27 +171,28 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	return cfg, nil
 }
 
+// Get Interface Mapping (only supported in cEOS)
 func (t *Topology) GetNodeIntfMapping(name string) (string, error) {
-	var cfg string
+	var intfmapping string
 	if ndef, ok := t.Nodes[name]; ok {
 		var err error
-		cfg = ndef.GetIntfMapping()
-		if t.GetKind(t.GetNodeKind(name)).GetIntfMapping() != "" && cfg == "" {
-			cfg = t.GetKind(t.GetNodeKind(name)).GetIntfMapping()
+		intfmapping = ndef.GetIntfMapping()
+		if t.GetKind(t.GetNodeKind(name)).GetIntfMapping() != "" && intfmapping == "" {
+			intfmapping = t.GetKind(t.GetNodeKind(name)).GetIntfMapping()
 		}
-		if cfg == "" {
-			cfg = t.GetDefaults().GetIntfMapping()
+		if intfmapping == "" {
+			intfmapping = t.GetDefaults().GetIntfMapping()
 		}
-		if cfg != "" {
-			cfg, err = resolvePath(cfg)
+		if intfmapping != "" {
+			intfmapping, err = resolvePath(intfmapping)
 			if err != nil {
 				return "", err
 			}
-			_, err = os.Stat(cfg)
-			return cfg, err
+			_, err = os.Stat(intfmapping)
+			return intfmapping, err
 		}
 	}
-	return cfg, nil
+	return intfmapping, nil
 }
 
 func (t *Topology) GetNodeStartupDelay(name string) uint {

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"io"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
@@ -66,8 +67,8 @@ type NodeConfig struct {
 	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
 	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
 	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
-	ResIntfMapping		 string // path to interface Mapping file that is use (only in cEOS)
-	IntfMapping		     string // path to interface Mapping file that is use (only in cEOS)
+	ResIntfMapping		 string // path to interface Mapping file that is actually mounted to the container and is a result of templation (only in cEOS)
+	IntfMapping		     string // path to interface Mapping file that is used for interface layout generation (only in cEOS)
 	Config               *ConfigDispatcher
 	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType             string
@@ -147,6 +148,37 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 	}
 	defer f.Close()
 	_, err = f.Write(dstBytes.Bytes())
+	return err
+}
+
+// GenerateIntfMapping generates a Interface Mapping file for the nodes (only supported in cEOS)
+func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
+
+	// The Interface Mapping file is always regenerated if it is set in the topology file
+	log.Debugf("generating interface mapping file for node %s from file %s", node.ShortName, node.IntfMapping)
+
+	sourceFileStat, err := os.Stat(filepath.Base(node.IntfMapping))
+    if err != nil {
+        return err
+    }
+
+    if !sourceFileStat.Mode().IsRegular() {
+    	return 0, fmt.Errorf("%s is not a regular file", filepath.Base(node.IntfMapping))
+    }
+
+	source, err := os.Open(filepath.Base(node.IntfMapping))
+    if err != nil {
+        return err
+    }
+    defer source.Close()
+
+	destination, err := os.Create(dst)
+    if err != nil {
+        return err
+    }
+	defer destination.Close()
+
+	nBytes, err := io.Copy(destination, source)
 	return err
 }
 
