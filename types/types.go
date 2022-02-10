@@ -178,7 +178,7 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
     }
 	defer destination.Close()
 
-	nBytes, err := io.Copy(destination, source)
+	_, err := io.Copy(destination, source)
 	return err
 }
 
