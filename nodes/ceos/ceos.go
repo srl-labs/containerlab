@@ -38,8 +38,6 @@ var (
 	//go:embed ceos.cfg
 	cfgTemplate string
 
-	intfMapping string
-
 	saveCmd = []string{"Cli", "-p", "15", "-c", "wr"}
 )
 
@@ -119,8 +117,6 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := filepath.Join(node.LabDir, "flash", "startup-config")
 	node.ResStartupConfig = cfg
-	intf := filepath.Join(node.LabDir, "flash", "EosIntfMapping.json")
-	node.ResIntfMapping = intf
 
 	// use startup config file provided by a user
 	if node.StartupConfig != "" {
@@ -134,20 +130,6 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	err := node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
-	}
-
-	intfMapping = ""
-	if node.IntfMapping != "" {
-		m, err := os.ReadFile(node.IntfMapping)
-		if err != nil {
-			return err
-		}
-		intfMapping = string(m)
-
-		err2 := node.GenerateIntfMapping(node.ResIntfMapping, intfMapping)
-                if err2 != nil {
-                        return err2
-                }
 	}
 
 	// sysmac is a system mac that is +1 to Ma0 mac
