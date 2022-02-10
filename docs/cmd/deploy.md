@@ -48,6 +48,9 @@ In a busy compute the runtime may respond longer than anticipated, in that case 
 
 The default timeout is set to 2 minutes and can be changed to values like `30s, 10m`.
 
+#### skip-post-deploy
+With `--skip-post-deploy` flag it is possible to skip post deployment actions.
+
 ### Examples
 
 ```bash

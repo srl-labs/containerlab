@@ -38,6 +38,9 @@ var reconfigure bool
 // max-workers flag
 var maxWorkers uint
 
+// skipPostDeploy flag
+var skipPostDeploy bool
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -185,19 +188,21 @@ var deployCmd = &cobra.Command{
 			return err
 		}
 
-		wg := &sync.WaitGroup{}
-		wg.Add(len(c.Nodes))
+		if !skipPostDeploy {
+			wg := &sync.WaitGroup{}
+			wg.Add(len(c.Nodes))
 
-		for _, node := range c.Nodes {
-			go func(node nodes.Node, wg *sync.WaitGroup) {
-				defer wg.Done()
-				err := node.PostDeploy(ctx, c.Nodes)
-				if err != nil {
-					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
-				}
-			}(node, wg)
+			for _, node := range c.Nodes {
+				go func(node nodes.Node, wg *sync.WaitGroup) {
+					defer wg.Done()
+					err := node.PostDeploy(ctx, c.Nodes)
+					if err != nil {
+						log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
+					}
+				}(node, wg)
+			}
+			wg.Wait()
 		}
-		wg.Wait()
 
 		// Update containers after postDeploy action
 		containers, err = c.ListContainers(ctx, labels)
@@ -256,6 +261,7 @@ func init() {
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
 	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
+	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 }
 
 func setFlags(conf *clab.Config) {
