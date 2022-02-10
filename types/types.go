@@ -157,26 +157,29 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
 	// The Interface Mapping file is always regenerated if it is set in the topology file
 	log.Debugf("generating interface mapping file for node %s from file %s", node.ShortName, node.IntfMapping)
 
-	sourceFileStat, err := os.Stat(filepath.Base(node.IntfMapping))
-    if err != nil {
-        return err
-    }
+	_, err := os.Stat(node.IntfMapping)
+	if err != nil {
+		return err
+	}
 
-	source, err := os.Open(filepath.Base(node.IntfMapping))
-    if err != nil {
-        return err
-    }
-    defer source.Close()
+	source, err := os.Open(node.IntfMapping)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
 
 	destination, err := os.Create(dst)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 	defer destination.Close()
 
 	if _, err := io.Copy(destination, source); err != nil {
 		log.Errorf("Could not generate interface mapping file for node %s from file %s", node.ShortName, node.IntfMapping)
+		return err
 	}
+	log.Debugf("node '%s' generated interface mapping: %s", node.ShortName, templ)
+
 	return err
 }
 

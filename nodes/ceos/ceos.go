@@ -143,15 +143,12 @@ func createCEOSFiles(node *types.NodeConfig) error {
 			return err
 		}
 		intfMapping = string(m)
-	}
-	
-	if intfMapping != "" {
-		err := node.GenerateIntfMapping(node.ResIntfMapping, intfMapping)
-		if err != nil {
-			return err
-		}
-	}
 
+		err2 := node.GenerateIntfMapping(node.ResIntfMapping, intfMapping)
+                if err2 != nil {
+                        return err2
+                }
+	}
 
 	// sysmac is a system mac that is +1 to Ma0 mac
 	m, err := net.ParseMAC(node.MacAddress)
