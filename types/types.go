@@ -175,7 +175,7 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
 	defer destination.Close()
 
 	if _, err := io.Copy(destination, source); err != nil {
-		log.Debugf(err)
+		log.Errorf("Could not generate interface mapping file for node %s from file %s", node.ShortName, node.IntfMapping)
 	}
 	return err
 }
