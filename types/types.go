@@ -178,8 +178,8 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
     }
 	defer destination.Close()
 
-	_, err := io.Copy(destination, source)
-	return err
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
 }
 
 func DisableTxOffload(n *NodeConfig) error {
