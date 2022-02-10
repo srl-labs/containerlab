@@ -146,7 +146,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	}
 	
 	if intfMapping != "" {
-		err := node.GenerateIntfMapping(node.ResIntfMapping, intfMapping)
+		g, err := node.GenerateIntfMapping(node.ResIntfMapping, intfMapping)
 		if err != nil {
 			return err
 		}
