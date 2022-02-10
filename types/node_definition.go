@@ -17,6 +17,7 @@ type NodeDefinition struct {
 	StartupConfig        string            `yaml:"startup-config,omitempty"`
 	StartupDelay         uint              `yaml:"startup-delay,omitempty"`
 	EnforceStartupConfig bool              `yaml:"enforce-startup-config,omitempty"`
+	IntfMapping          string            `yaml:"intf-mapping,omitempty"`
 	Config               *ConfigDispatcher `yaml:"config,omitempty"`
 	Image                string            `yaml:"image,omitempty"`
 	License              string            `yaml:"license,omitempty"`
@@ -85,6 +86,13 @@ func (n *NodeDefinition) GetStartupConfig() string {
 		return ""
 	}
 	return n.StartupConfig
+}
+
+func (n *NodeDefinition) GetIntfMapping() string {
+	if n == nil {
+		return ""
+	}
+	return n.IntfMapping
 }
 
 func (n *NodeDefinition) GetStartupDelay() uint {
