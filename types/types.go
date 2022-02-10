@@ -162,10 +162,6 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
         return err
     }
 
-    if !sourceFileStat.Mode().IsRegular() {
-    	return log.Errorf("%s is not a regular file", filepath.Base(node.IntfMapping))
-    }
-
 	source, err := os.Open(filepath.Base(node.IntfMapping))
     if err != nil {
         return err
