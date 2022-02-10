@@ -175,7 +175,7 @@ func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
 	defer destination.Close()
 
 	if _, err := io.Copy(destination, source); err != nil {
-		log.Errorf(err)
+		log.Debugf(err)
 	}
 	return err
 }
