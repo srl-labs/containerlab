@@ -160,6 +160,7 @@ The first command in the snippet above sets the working directory which you inte
 !!!note
     1. It is best to create a directory under the `~/some/path` unless you know what to do[^5]
     2. vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.
+    3. Docker Desktop for Mac introduced cgroups v2 support in 4.3.0 version; to support the images that require cgroups v1 follow [this instructions](https://github.com/docker/for-mac/issues/6073).
 
 When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use `containerlab` commands right away.
 
