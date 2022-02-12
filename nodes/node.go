@@ -45,6 +45,7 @@ const (
 	NodeKindVrXRV      = "vr-xrv"
 	NodeKindVrXRV9K    = "vr-xrv9k"
 	NodeKindVrNXOS     = "vr-nxos"
+	NodeKindIXIACONE   = "ixiac-one"
 )
 
 // a map of node kinds overriding the default global runtime
