@@ -3,11 +3,11 @@ name: nanog
 topology:
   kinds:
     ixia-c-one:
-      image: ixia-c-one:latest
+      image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2610
     ceos:
       image: ceos:4.26.1F 
   nodes:
-    ixiac-one-node1:
+    ixia-c-one-node1:
       kind: ixia-c-one
     ceos-1:
       kind: ceos
