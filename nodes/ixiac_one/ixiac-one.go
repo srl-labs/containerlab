@@ -19,10 +19,10 @@ import (
 
 var ixiacStatusConfig = struct {
 	statusSleepDuration time.Duration
-	statusInProgressMsg string
+	readyFileName       string
 }{
 	statusSleepDuration: time.Duration(time.Second * 5),
-	statusInProgressMsg: "ls: ./.ready: No such file or directory",
+	readyFileName:       "/home/keysight/ixia-c-one/init-done",
 }
 
 func init() {
@@ -81,14 +81,14 @@ func (*ixiacOne) SaveConfig(_ context.Context) error {
 func ixiacPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
 	// TODO: replace following by goroutine
 	for {
-		readyCmd := "ls ./.ready"
-		bashcmd := fmt.Sprintf("docker exec %s %s", node.LongName, readyCmd)
+		bashcmd := fmt.Sprintf("docker exec %s ls %s", node.LongName, ixiacStatusConfig.readyFileName)
 		cmd := exec.Command("/bin/sh", "-c", bashcmd)
+		statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 		//fmt.Println("---Cmd: ", cmd)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			msg := strings.TrimSuffix(string(out), "\n")
-			if msg != ixiacStatusConfig.statusInProgressMsg {
+			if msg != statusInProgressMsg {
 				return err
 			}
 			time.Sleep(ixiacStatusConfig.statusSleepDuration)
