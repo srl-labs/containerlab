@@ -1,0 +1,19 @@
+name: nanog
+
+topology:
+  kinds:
+    ixiac-one:
+      image: ixia-c-one:latest
+    ceos:
+      image: ceos:4.26.1F 
+  nodes:
+    ixiac-one-node1:
+      kind: ixiac-one
+    ceos-1:
+      kind: ceos
+      startup-config: enable_ssh_ceos.cfg
+      enforce-startup-config: true
+
+  links:
+    - endpoints: ["ixiac-one-node1:eth1", "ceos-1:eth1"]
+    - endpoints: ["ceos-1:eth2", "ixiac-one-node1:eth2"]
