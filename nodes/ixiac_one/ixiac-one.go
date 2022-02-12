@@ -6,28 +6,11 @@ package ixiac_one
 
 import (
 	"context"
-	"fmt"
-	"os/exec"
-	"strings"
-	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
-
-var ixiacStatusConfig = struct {
-	statusSleepDuration time.Duration
-	readyFileName       string
-}{
-	statusSleepDuration: time.Duration(time.Second * 5),
-	readyFileName:       "/home/keysight/ixia-c-one/init-done",
-}
-
-var execCommand = map[string]string{
-	"docker": "docker exec",
-}
 
 func init() {
 	nodes.Register(nodes.NodeKindIXIACONE, func() nodes.Node {
@@ -54,18 +37,11 @@ func (l *ixiacOne) Config() *types.NodeConfig { return l.cfg }
 func (*ixiacOne) PreDeploy(_, _, _ string) error { return nil }
 
 func (l *ixiacOne) Deploy(ctx context.Context) error {
-	cID, err := l.runtime.CreateContainer(ctx, l.cfg)
-	if err != nil {
-		return err
-	}
-	_, err = l.runtime.StartContainer(ctx, cID, l.cfg)
+	_, err := l.runtime.CreateContainer(ctx, l.cfg)
 	return err
 }
 
-func (l *ixiacOne) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	log.Infof("Running postdeploy actions for ixia-c-one '%s' node", l.cfg.ShortName)
-	return ixiacPostDeploy(ctx, l.runtime, l.cfg)
-}
+func (l *ixiacOne) PostDeploy(_ context.Context, _ map[string]nodes.Node) error { return nil }
 
 func (l *ixiacOne) GetImages() map[string]string {
 	images := make(map[string]string)
@@ -82,32 +58,5 @@ func (l *ixiacOne) Delete(ctx context.Context) error {
 }
 
 func (*ixiacOne) SaveConfig(_ context.Context) error {
-	return nil
-}
-
-// ixiacPostDeploy runs postdeploy actions which are required for ixia-c-one node
-func ixiacPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
-	runtimeCmd, ok := execCommand[r.GetName()]
-	if !ok {
-		return fmt.Errorf("runtime '%v' is not yet supported with ixia-c-one kind", r.GetName())
-	}
-
-	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
-	bashCmd := fmt.Sprintf("%s %s %s", runtimeCmd, node.LongName, ixiacOneCmd)
-	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
-	for {
-		cmd := exec.Command("/bin/sh", "-c", bashCmd)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			msg := strings.TrimSuffix(string(out), "\n")
-			if msg != statusInProgressMsg {
-				return err
-			}
-			time.Sleep(ixiacStatusConfig.statusSleepDuration)
-		} else {
-			break
-		}
-	}
-
 	return nil
 }
