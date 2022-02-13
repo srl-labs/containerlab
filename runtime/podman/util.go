@@ -158,8 +158,24 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{}
 	// Everything below is related to network spec of a container
 	specNetConfig := specgen.ContainerNetworkConfig{}
-	netns := cfg.NetworkMode
-	switch netns {
+	netns := strings.SplitN(cfg.NetworkMode, ":", 2)
+	switch netns[0] {
+	case "container":
+		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
+		if len(netns) != 2 {
+			return sg, fmt.Errorf("container network mode was specified, but no container name was found: %q", netns)
+		}
+		// also cont. ID shouldn't be empty
+		if netns[1] == "" {
+			return sg, fmt.Errorf("container network mode was specified, but no container name was found: %q", netns)
+		}
+		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
+		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
+		specNetConfig = specgen.ContainerNetworkConfig{
+			NetNS: specgen.Namespace{
+				NSMode: "container",
+				Value:  prefix + netns[1]},
+		}
 	case "host":
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{NSMode: "host"},
