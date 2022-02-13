@@ -9,7 +9,7 @@ on:
 env:
   GOVER: 1.17.2
   CGO_ENABLED: 0
-  MKDOCS_MATERIAL_VER: 7.3.4
+  MKDOCS_INS_VER: 4.8.3
   GORELEASER_VER: v0.180.3
 
 jobs:
@@ -75,4 +75,4 @@ jobs:
           fetch-depth: 0
       - name: build docs
         if: ${{ contains(needs.get-tag.outputs.git_tag, '-') != true }}
-        run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict
+        run: docker run -v $(pwd):/docs --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
