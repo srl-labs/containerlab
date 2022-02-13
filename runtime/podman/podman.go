@@ -287,6 +287,8 @@ func (r *PodmanRuntime) DeleteContainer(ctx context.Context, contName string) er
 			log.Warnf("Unable to stop %q gracefully: %v", contName, err)
 		}
 	}
+	// and do a force removal in the end
+	force = true
 	err = containers.Remove(ctx, contName, &containers.RemoveOptions{Force: &force})
 	return err
 }
