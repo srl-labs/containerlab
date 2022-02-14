@@ -185,3 +185,72 @@ func TestMergeMapsLists(t *testing.T) {
 	assert(t, MergeMaps(d1, nil), d1)
 	assert(t, MergeMaps(d1, d2), d2)
 }
+
+func TestMergeStringSlices(t *testing.T) {
+	type args struct {
+		removeDups bool
+		slices     [][]string
+	}
+	tt := map[string]struct {
+		got  args
+		want []string
+	}{
+		"three-non-empty-unique-slices": {
+			got: args{
+				removeDups: true,
+				slices:     [][]string{{"1", "2"}, {"3"}, {"4", "5"}},
+			},
+			want: []string{"1", "2", "3", "4", "5"},
+		},
+		"three-non-empty-unique-slices-no-dups-removal": {
+			got: args{
+				removeDups: false,
+				slices:     [][]string{{"1", "2"}, {"3"}, {"4", "5"}},
+			},
+			want: []string{"1", "2", "3", "4", "5"},
+		},
+		"three-non-empty-non-unique-slices-no-dups-removal": {
+			got: args{
+				removeDups: false,
+				slices:     [][]string{{"1", "2"}, {"1", "3"}, {"2", "4", "5"}},
+			},
+			want: []string{"1", "2", "1", "3", "2", "4", "5"},
+		},
+		"three-non-empty-non-unique-slices-dups-removal": {
+			got: args{
+				removeDups: true,
+				slices:     [][]string{{"1", "2"}, {"1", "3"}, {"2", "4", "5"}},
+			},
+			want: []string{"1", "2", "3", "4", "5"},
+		},
+		"three-non-unique-slices-one-empty-dups-removal": {
+			got: args{
+				removeDups: true,
+				slices:     [][]string{{"1", "2"}, {}, {"2", "4", "5"}},
+			},
+			want: []string{"1", "2", "4", "5"},
+		},
+		"empty-slices": {
+			got: args{
+				removeDups: true,
+				slices:     [][]string{{}, {}, nil},
+			},
+			want: []string{},
+		},
+		"nil-slices": {
+			got: args{
+				removeDups: true,
+				slices:     [][]string{nil, nil},
+			},
+			want: nil,
+		},
+	}
+
+	for _, tc := range tt {
+		res := MergeStringSlices(tc.got.removeDups, tc.got.slices...)
+		if !cmp.Equal(res, tc.want) {
+			t.Fatalf("wanted %q got %q", tc.want, res)
+		}
+
+	}
+}

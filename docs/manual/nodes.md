@@ -146,6 +146,8 @@ binds:
 
     Notice how `$nodeDir` hides the directory structure and node names and removes the verbosity of the previous approach.
 
+Bind defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated binds removed.
+
 ### ports
 To bind the ports between the lab host and the containers the users can populate the `ports` object inside the node:
 
