@@ -169,6 +169,48 @@ It is possible to change the default config which every ceos node will start wit
 #### Saving configuration
 In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup config file effectively calling the `write` CLI command.
 
+#### User defined interface layout (supported in cEOS >= 4.28.0F)
+It is possible to make ceos nodes to boot up with a user-defined interface layout. With a [`intf-mapping`] property a user sets the path to the interface mapping file that will be mounted to a container and used during bootup. In this file the underlying linux eth interfaces (used in the containerlab topology file) are mapped to cEOS internal interfaces. The following shows an example how this mapping file is structured:
+
+```json
+{
+  "ManagementIntf": {
+    "eth0": "Management1"
+  },
+  "EthernetIntf": {
+    "eth1": "Ethernet1/1",
+    "eth2": "Ethernet2/1",
+    "eth3": "Ethernet27/1",
+    "eth4": "Ethernet28/1",
+    "eth5": "Ethernet3/1/1",
+    "eth6": "Ethernet5/2/1"
+  }
+}
+```
+
+When a interface mapping file is passed via `intf-mapping` parameter it will be used during an initial lab deployment. It will be rewritten every time the lab is started.
+
+With such topology file containerlab is instructed to take a file `mymapping.json` from the current working directory, copy it to the lab directory for that specific node under the `/flash/EosIntfMapping.json` name and mount that dir to the container. This will result in this interface mapping to be considered during bootup of the node.
+
+1. Craft a valid interface mapping file, see example above.
+2. Use this file as a `intf-mapping` for a ceos node:
+    ```yaml
+    name: ceos
+
+    topology:
+     nodes:
+        ceos1:
+          kind: ceos
+          image: ceos:4.28.0F
+          intf-mapping: mymapping.json
+        ceos2: 
+          kind: ceos
+          image: ceos:4.28.0F
+          intf-mapping: mymapping.json
+    links:
+        - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+    ```
+
 ## Container configuration
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
 

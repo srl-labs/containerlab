@@ -265,6 +265,12 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
+	
+	// initialize Interface Mapping (supported in cEOS >= 4.28.0F)
+	nodeCfg.IntfMapping, err = c.Config.Topology.GetNodeIntfMapping(nodeCfg.ShortName)
+	if err != nil {
+		return nil, err
+	}
 
 	// initialize license field
 	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
