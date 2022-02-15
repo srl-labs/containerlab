@@ -86,8 +86,8 @@ func StringInSlice(slice []string, val string) (int, bool) {
 	return -1, false
 }
 
-// MergeStringSlices merges string slices with a switch to enable removing duplicates from the resulting slice
-func MergeStringSlices(removeDups bool, ss ...[]string) []string {
+// MergeStringSlices merges string slices with duplicates removed
+func MergeStringSlices(ss ...[]string) []string {
 	res := make([]string, 0)
 	allNils := true // switch to track if all of the passed slices are nils
 	for _, s := range ss {
@@ -102,10 +102,6 @@ func MergeStringSlices(removeDups bool, ss ...[]string) []string {
 		return nil
 	}
 
-	if !removeDups {
-		return res
-	}
-
 	m := map[string]struct{}{}
 	uniques := make([]string, 0)
 	for _, val := range res {
@@ -114,5 +110,6 @@ func MergeStringSlices(removeDups bool, ss ...[]string) []string {
 			uniques = append(uniques, val)
 		}
 	}
+
 	return uniques
 }

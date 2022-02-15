@@ -188,8 +188,7 @@ func TestMergeMapsLists(t *testing.T) {
 
 func TestMergeStringSlices(t *testing.T) {
 	type args struct {
-		removeDups bool
-		slices     [][]string
+		slices [][]string
 	}
 	tt := map[string]struct {
 		got  args
@@ -197,57 +196,38 @@ func TestMergeStringSlices(t *testing.T) {
 	}{
 		"three-non-empty-unique-slices": {
 			got: args{
-				removeDups: true,
-				slices:     [][]string{{"1", "2"}, {"3"}, {"4", "5"}},
+				slices: [][]string{{"1", "2"}, {"3"}, {"4", "5"}},
 			},
 			want: []string{"1", "2", "3", "4", "5"},
 		},
-		"three-non-empty-unique-slices-no-dups-removal": {
+		"three-non-empty-non-unique-slices": {
 			got: args{
-				removeDups: false,
-				slices:     [][]string{{"1", "2"}, {"3"}, {"4", "5"}},
+				slices: [][]string{{"1", "2"}, {"1", "3"}, {"2", "4", "5"}},
 			},
 			want: []string{"1", "2", "3", "4", "5"},
 		},
-		"three-non-empty-non-unique-slices-no-dups-removal": {
+		"three-non-unique-slices-one-empty": {
 			got: args{
-				removeDups: false,
-				slices:     [][]string{{"1", "2"}, {"1", "3"}, {"2", "4", "5"}},
-			},
-			want: []string{"1", "2", "1", "3", "2", "4", "5"},
-		},
-		"three-non-empty-non-unique-slices-dups-removal": {
-			got: args{
-				removeDups: true,
-				slices:     [][]string{{"1", "2"}, {"1", "3"}, {"2", "4", "5"}},
-			},
-			want: []string{"1", "2", "3", "4", "5"},
-		},
-		"three-non-unique-slices-one-empty-dups-removal": {
-			got: args{
-				removeDups: true,
-				slices:     [][]string{{"1", "2"}, {}, {"2", "4", "5"}},
+				slices: [][]string{{"1", "2"}, {}, {"2", "4", "5"}},
 			},
 			want: []string{"1", "2", "4", "5"},
 		},
 		"empty-slices": {
 			got: args{
-				removeDups: true,
-				slices:     [][]string{{}, {}, nil},
+				slices: [][]string{{}, {}, nil},
 			},
 			want: []string{},
 		},
 		"nil-slices": {
 			got: args{
-				removeDups: true,
-				slices:     [][]string{nil, nil},
+				slices: [][]string{nil, nil},
 			},
 			want: nil,
 		},
 	}
 
 	for _, tc := range tt {
-		res := MergeStringSlices(tc.got.removeDups, tc.got.slices...)
+		res := MergeStringSlices(tc.got.slices...)
 		if !cmp.Equal(res, tc.want) {
 			t.Fatalf("wanted %q got %q", tc.want, res)
 		}

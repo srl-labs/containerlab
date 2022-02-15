@@ -72,7 +72,7 @@ func (t *Topology) GetNodeKind(name string) string {
 func (t *Topology) GetNodeBinds(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
 		// return merge product of bind slices
-		return utils.MergeStringSlices(true,
+		return utils.MergeStringSlices(
 			ndef.GetBinds(),
 			t.GetKind(t.GetNodeKind(name)).GetBinds(),
 			t.GetDefaults().GetBinds(),
