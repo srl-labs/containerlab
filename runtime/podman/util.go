@@ -387,7 +387,6 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error
 	if r.Mgmt.IPv4Gw != "" && r.Mgmt.IPv4Gw != "0.0.0.0" {
 		toReturn.WithGateway(net.ParseIP(r.Mgmt.IPv4Gw))
 	}
-	// TODO: MTU?
 	return toReturn, nil
 }
 
