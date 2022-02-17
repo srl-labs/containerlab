@@ -13,7 +13,7 @@ env:
   GOVER: 1.17.2
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 4.8.3
-  GORELEASER_VER: v0.180.3
+  GORELEASER_VER: v1.5.0
 
 jobs:
   file-changes:
