@@ -300,8 +300,9 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
-		NetworkMode:  container.NetworkMode(c.Mgmt.Network),
-		ExtraHosts:   node.ExtraHosts, // add static /etc/hosts entries
+		// Network mode will be defined below via switch
+		NetworkMode: "",
+		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
 	}
 	var resources container.Resources
 	if node.Memory != "" {
@@ -320,10 +321,25 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	}
 	containerHostConfig.Resources = resources
 	containerNetworkingConfig := &network.NetworkingConfig{}
-
-	switch node.NetworkMode {
+	netns := strings.SplitN(node.NetworkMode, ":", 2)
+	switch netns[0] {
+	case "container":
+		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
+		if len(netns) != 2 {
+			return nil, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netns)
+		}
+		// also cont. ID shouldn't be empty
+		if netns[1] == "" {
+			return nil, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netns)
+		}
+		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
+		prefix := strings.SplitN(node.LongName, node.ShortName, 2)[0]
+		// Compile the net spec
+		containerHostConfig.NetworkMode = container.NetworkMode("container:" + prefix + netns[1])
+		// unset the hostname as it is not supported in this case
+		containerConfig.Hostname = ""
 	case "host":
-		containerHostConfig.NetworkMode = container.NetworkMode("host")
+		containerHostConfig.NetworkMode = "host"
 	default:
 		containerHostConfig.NetworkMode = container.NetworkMode(c.Mgmt.Network)
 
