@@ -308,7 +308,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v2
         with:
           version: ${{ env.GORELEASER_VER }}
-          args: release --rm-dist
+          args: release --rm-dist --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
