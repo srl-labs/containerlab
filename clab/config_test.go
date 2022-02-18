@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/containers/podman/v3/pkg/util"
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/types"
 )
 
 func TestLicenseInit(t *testing.T) {
@@ -64,7 +64,7 @@ func TestBindsInit(t *testing.T) {
 		got  string
 		want []string
 	}{
-		"node_sing_bind": {
+		"node_single_bind": {
 			got:  "test_data/topo1.yml",
 			want: []string{"test_data/node1.lic:/dst"},
 		},
@@ -72,17 +72,17 @@ func TestBindsInit(t *testing.T) {
 			got:  "test_data/topo2.yml",
 			want: []string{"test_data/node1.lic:/dst1", "test_data/kind.lic:/dst2"},
 		},
-		"kind_binds": {
+		"kind_and_node_binds": {
 			got:  "test_data/topo5.yml",
-			want: []string{"test_data/kind.lic:/dst"},
+			want: []string{"test_data/kind.lic:/dst", "test_data/node1.lic:/dst2"},
 		},
 		"default_binds": {
 			got:  "test_data/topo3.yml",
 			want: []string{"test_data/default.lic:/dst"},
 		},
-		"node_binds_override": {
+		"default_and_kind_and_node_binds": {
 			got:  "test_data/topo4.yml",
-			want: []string{"test_data/node1.lic:/dst"},
+			want: []string{"test_data/node1.lic:/dst1", "test_data/kind.lic:/dst2", "test_data/default.lic:/dst3"},
 		},
 	}
 
@@ -96,19 +96,17 @@ func TestBindsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			nodeCfg := c.Config.Topology.Nodes["node1"]
-			node := types.NodeConfig{}
-			nodeCfg.Kind = strings.ToLower(c.Config.Topology.GetNodeKind("node1"))
-
-			// binds := c.bindsInit(nodeCfg)
-			binds := c.Config.Topology.GetNodeBinds("node1")
+			binds := c.Nodes["node1"].Config().Binds
 			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
-			err = resolveBindPaths(tc.want, node.LabDir)
+			err = resolveBindPaths(tc.want, c.Nodes["node1"].Config().LabDir)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(binds, tc.want) {
-				t.Fatalf("wanted %q got %q", tc.want, binds)
+
+			for _, b := range tc.want {
+				if !util.StringInSlice(b, binds) {
+					t.Fatalf("bind %q is not found in resulting binds %q", b, binds)
+				}
 			}
 		})
 	}

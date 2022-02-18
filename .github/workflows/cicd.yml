@@ -12,8 +12,8 @@ on:
 env:
   GOVER: 1.17.2
   CGO_ENABLED: 0
-  MKDOCS_MATERIAL_VER: 7.3.6
-  GORELEASER_VER: v0.180.3
+  MKDOCS_INS_VER: 4.8.3
+  GORELEASER_VER: v1.5.0
 
 jobs:
   file-changes:
@@ -233,7 +233,15 @@ jobs:
     if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
       - uses: actions/checkout@v2
-      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER build --clean --strict
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER build --clean --strict
 
       - name: Cache htmltest external links
         uses: actions/cache@v2
@@ -300,7 +308,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v2
         with:
           version: ${{ env.GORELEASER_VER }}
-          args: release --rm-dist
+          args: release --rm-dist --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
@@ -314,7 +322,15 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
 
   # update docs allows to make the docs changes outside of the release cycle
   # it skips the code build/release and proceeds with docs publishing
@@ -328,4 +344,12 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - run: docker run -v $(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$MKDOCS_MATERIAL_VER gh-deploy --force --strict
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: docker run -v $(pwd):/docs --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict

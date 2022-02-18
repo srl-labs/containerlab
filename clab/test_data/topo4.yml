@@ -3,7 +3,7 @@ topology:
   defaults:
     license: test_data/default.lic
     binds:
-      - test_data/default.lic:/dst
+      - test_data/default.lic:/dst3
     env:
       env1: global
       env2: global
@@ -13,7 +13,7 @@ topology:
     srl:
       license: test_data/kind.lic
       binds:
-        - test_data/kind.lic:/dst
+        - test_data/kind.lic:/dst2
       env:
         env2: kind
         env4: kind
@@ -24,7 +24,7 @@ topology:
       type: ixr6
       license: test_data/node1.lic
       binds:
-        - test_data/node1.lic:/dst
+        - test_data/node1.lic:/dst1
       env:
         env1: node
         env5: node

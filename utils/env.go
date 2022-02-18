@@ -85,3 +85,31 @@ func StringInSlice(slice []string, val string) (int, bool) {
 	}
 	return -1, false
 }
+
+// MergeStringSlices merges string slices with duplicates removed
+func MergeStringSlices(ss ...[]string) []string {
+	res := make([]string, 0)
+	allNils := true // switch to track if all of the passed slices are nils
+	for _, s := range ss {
+		res = append(res, s...)
+		if s != nil {
+			allNils = false
+		}
+	}
+
+	// if all slices are nil, return nil instead of an empty slice
+	if allNils {
+		return nil
+	}
+
+	m := map[string]struct{}{}
+	uniques := make([]string, 0)
+	for _, val := range res {
+		if _, ok := m[val]; !ok {
+			m[val] = struct{}{}
+			uniques = append(uniques, val)
+		}
+	}
+
+	return uniques
+}
