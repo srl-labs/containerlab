@@ -158,8 +158,26 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{}
 	// Everything below is related to network spec of a container
 	specNetConfig := specgen.ContainerNetworkConfig{}
-	netns := cfg.NetworkMode
-	switch netns {
+
+	netMode := strings.SplitN(cfg.NetworkMode, ":", 2)
+	switch netMode[0] {
+	case "container":
+		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
+		if len(netMode) != 2 {
+			return sg, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", cfg.ShortName, netMode)
+		}
+		// also cont. ID shouldn't be empty
+		if netMode[1] == "" {
+			return sg, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", cfg.ShortName, netMode)
+		}
+		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
+		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
+		// Compile the net spec
+		specNetConfig = specgen.ContainerNetworkConfig{
+			NetNS: specgen.Namespace{
+				NSMode: "container",
+				Value:  prefix + netMode[1]},
+		}
 	case "host":
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{NSMode: "host"},
@@ -207,7 +225,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 			// NetworkOptions:      nil,
 		}
 	default:
-		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netns)
+		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
 	}
 	// Compile the final spec
 	sg = specgen.SpecGenerator{
@@ -370,7 +388,6 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error
 	if r.Mgmt.IPv4Gw != "" && r.Mgmt.IPv4Gw != "0.0.0.0" {
 		toReturn.WithGateway(net.ParseIP(r.Mgmt.IPv4Gw))
 	}
-	// TODO: MTU?
 	return toReturn, nil
 }
 

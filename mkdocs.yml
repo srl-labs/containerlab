@@ -129,6 +129,7 @@ theme:
     - navigation.tracking
     - navigation.tabs
     - search.suggest
+    - content.code.annotate
 
   language: en
   palette:

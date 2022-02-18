@@ -320,6 +320,21 @@ my-node:
 
 The `network-mode` configuration option set to `host` will launch the node in the [host networking mode](https://docs.docker.com/network/host/).
 
+Additionally, a node can join network namespace of another container - by referencing the node in the format of `container:parent_node_name`[^2]:
+
+```yaml
+# example node definition with shared network namespace
+my-node:
+  kind: linux
+sidecar-node:
+  kind: linux
+  network-mode: container:my-node # (1)
+  startup-delay: 10 # (2)
+```
+
+1.  `my-node` portion of a `network-mode` property instructs `sidecar-node` to join the network namespace of a `my-node`.
+2.  `startup-delay` is required in this case in order to properly initialize the namespace of a parent container.
+
 ### runtime
 By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman`, `containerd`, and `ignite` runtimes.
 
@@ -411,3 +426,4 @@ my-node:
 ```
 
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
+[^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.
