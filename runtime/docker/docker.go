@@ -380,7 +380,7 @@ func (c *DockerRuntime) CreateAndStartContainer(ctx context.Context, node *types
 		return nil, err
 	}
 	log.Debugf("Start container: %q", node.LongName)
-	err = c.StartContainer(ctx, cID, nil)
+	err = c.StartContainer(ctx, cID, node)
 	if err != nil {
 		return nil, err
 	}
