@@ -118,8 +118,6 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-// /
-
 func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	// create config and logs directory that will be bind mounted to crpd
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
