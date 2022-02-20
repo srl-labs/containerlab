@@ -141,6 +141,10 @@ func deployFn(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err = c.InstallIPTablesFwdRule(); err != nil {
+		return err
+	}
+
 	nodeWorkers := uint(len(c.Nodes))
 	linkWorkers := uint(len(c.Links))
 
