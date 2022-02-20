@@ -267,7 +267,7 @@ func (*IgniteRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (s
 	return "", nil
 }
 
-func (*IgniteRuntime) StartContainer(_ context.Context, _ string) error {
+func (*IgniteRuntime) StartContainer(_ context.Context, _ string, _ *types.NodeConfig) error {
 	// this is a no-op
 	return nil
 }

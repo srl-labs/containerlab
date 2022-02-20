@@ -145,7 +145,7 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *ContainerdRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (string, error) {
 	// this is a no-op
 	return "", nil
 }
@@ -285,7 +285,7 @@ func (c *ContainerdRuntime) CreateAndStartContainer(ctx context.Context, node *t
 	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
 
-	err = c.StartContainer(ctx, node.LongName)
+	err = c.StartContainer(ctx, node.LongName, node)
 	if err != nil {
 		return nil, err
 	}
@@ -427,7 +427,7 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 	}
 }
 
-func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string, _ *types.NodeConfig) error {
 	container, err := c.client.LoadContainer(ctx, containername)
 	if err != nil {
 		return err

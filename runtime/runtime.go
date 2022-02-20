@@ -37,7 +37,7 @@ type ContainerRuntime interface {
 	// about the container life-cycle after it was created, e.g. for post-deploy tasks
 	CreateAndStartContainer(context.Context, *types.NodeConfig) (interface{}, error)
 	// Start pre-created container by its name
-	StartContainer(context.Context, string) error
+	StartContainer(context.Context, string, *types.NodeConfig) error
 	// Stop running container by its name
 	StopContainer(context.Context, string) error
 	// List all containers matching labels

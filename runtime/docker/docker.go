@@ -380,24 +380,19 @@ func (c *DockerRuntime) CreateAndStartContainer(ctx context.Context, node *types
 		return nil, err
 	}
 	log.Debugf("Start container: %q", node.LongName)
-	err = c.StartContainer(ctx, cID)
+	err = c.StartContainer(ctx, cID, nil)
 	if err != nil {
 		return nil, err
 	}
 	log.Debugf("Container started: %q", node.LongName)
-
-	node.NSPath, err = c.GetNSPath(ctx, cID)
-	if err != nil {
-		return nil, err
-	}
-	return nil, utils.LinkContainerNS(node.NSPath, node.LongName)
+	return nil, nil
 }
 
 // GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container
-func (c *DockerRuntime) GetNSPath(ctx context.Context, containerId string) (string, error) {
+func (c *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, error) {
 	nctx, cancelFn := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancelFn()
-	cJSON, err := c.Client.ContainerInspect(nctx, containerId)
+	cJSON, err := c.Client.ContainerInspect(nctx, cID)
 	if err != nil {
 		return "", err
 	}
@@ -456,16 +451,32 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 }
 
 // StartContainer starts a docker container
-func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
+func (c *DockerRuntime) StartContainer(ctx context.Context, cID string, node *types.NodeConfig) error {
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
-	return c.Client.ContainerStart(nctx,
-		id,
+	err := c.Client.ContainerStart(nctx,
+		cID,
 		dockerTypes.ContainerStartOptions{
 			CheckpointID:  "",
 			CheckpointDir: "",
 		},
 	)
+	if err != nil {
+		return err
+	}
+	err = c.postStartActions(ctx, cID, node)
+	return err
+}
+
+// postStartActions performs misc. tasks that are needed after the container starts
+func (c *DockerRuntime) postStartActions(ctx context.Context, cID string, node *types.NodeConfig) error {
+	var err error
+	node.NSPath, err = c.GetNSPath(ctx, cID)
+	if err != nil {
+		return err
+	}
+	err = utils.LinkContainerNS(node.NSPath, node.LongName)
+	return err
 }
 
 // ListContainers lists all containers with labels []string
@@ -512,13 +523,13 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	return c.produceGenericContainerList(ctrs, nr)
 }
 
-func (c *DockerRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
+func (c *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.GenericContainer, error) {
 	var ctr *types.GenericContainer
 	gFilter := types.GenericFilter{
 		FilterType: "name",
 		Field:      "",
 		Operator:   "",
-		Match:      containerID,
+		Match:      cID,
 	}
 	ctrs, err := c.ListContainers(ctx, []*types.GenericFilter{&gFilter})
 	if err != nil {
@@ -581,12 +592,12 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error
-func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byte, error) {
-	cont, err := c.Client.ContainerInspect(ctx, id)
+func (c *DockerRuntime) Exec(ctx context.Context, cID string, cmd []string) ([]byte, []byte, error) {
+	cont, err := c.Client.ContainerInspect(ctx, cID)
 	if err != nil {
 		return nil, nil, err
 	}
-	execID, err := c.Client.ContainerExecCreate(ctx, id, dockerTypes.ExecConfig{
+	execID, err := c.Client.ContainerExecCreate(ctx, cID, dockerTypes.ExecConfig{
 		User:         "root",
 		AttachStderr: true,
 		AttachStdout: true,
@@ -596,7 +607,7 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 		log.Errorf("failed to create exec in container %s: %v", cont.Name, err)
 		return nil, nil, err
 	}
-	log.Debugf("%s exec created %v", cont.Name, id)
+	log.Debugf("%s exec created %v", cont.Name, cID)
 
 	rsp, err := c.Client.ContainerExecAttach(ctx, execID.ID, dockerTypes.ExecStartCheck{})
 	if err != nil {
@@ -604,7 +615,7 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 		return nil, nil, err
 	}
 	defer rsp.Close()
-	log.Debugf("%s exec attached %v", cont.Name, id)
+	log.Debugf("%s exec attached %v", cont.Name, cID)
 
 	var outBuf, errBuf bytes.Buffer
 	outputDone := make(chan error)
@@ -626,9 +637,9 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 }
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
-func (c *DockerRuntime) ExecNotWait(_ context.Context, id string, cmd []string) error {
+func (c *DockerRuntime) ExecNotWait(_ context.Context, cID string, cmd []string) error {
 	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: cmd}
-	respID, err := c.Client.ContainerExecCreate(context.Background(), id, execConfig)
+	respID, err := c.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
 		return err
 	}
@@ -642,23 +653,23 @@ func (c *DockerRuntime) ExecNotWait(_ context.Context, id string, cmd []string) 
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *DockerRuntime) DeleteContainer(ctx context.Context, containerID string) error {
+func (c *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	var err error
 	force := !c.config.GracefulShutdown
 	if c.config.GracefulShutdown {
-		log.Infof("Stopping container: %s", containerID)
-		err = c.Client.ContainerStop(ctx, containerID, &c.config.Timeout)
+		log.Infof("Stopping container: %s", cID)
+		err = c.Client.ContainerStop(ctx, cID, &c.config.Timeout)
 		if err != nil {
-			log.Errorf("could not stop container '%s': %v", containerID, err)
+			log.Errorf("could not stop container '%s': %v", cID, err)
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", strings.TrimLeft(containerID, "/"))
-	err = c.Client.ContainerRemove(ctx, containerID, dockerTypes.ContainerRemoveOptions{Force: force})
+	log.Debugf("Removing container: %s", strings.TrimLeft(cID, "/"))
+	err = c.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", strings.TrimLeft(containerID, "/"))
+	log.Infof("Removed container: %s", strings.TrimLeft(cID, "/"))
 	return nil
 }
 
