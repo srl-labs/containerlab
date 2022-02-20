@@ -145,7 +145,7 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *ContainerdRuntime) CreateAndStartContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
@@ -674,7 +674,7 @@ func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername strin
 	return err
 }
 
-func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { //skipcq: RVV-A0005
+func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)

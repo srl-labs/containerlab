@@ -61,7 +61,7 @@ func (s *vrCsr) PreDeploy(_, _, _ string) error {
 	return nil
 }
 func (s *vrCsr) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
 	return err
 }
 func (*vrCsr) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {

@@ -37,7 +37,7 @@ func (*mySocketIO) PreDeploy(_, _, _ string) error {
 	return nil
 }
 func (s *mySocketIO) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
 	return err
 }
 func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
@@ -74,4 +74,4 @@ func (*mySocketIO) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-///
+// /

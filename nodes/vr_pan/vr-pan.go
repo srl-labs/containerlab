@@ -58,7 +58,7 @@ func (s *vrPan) PreDeploy(_, _, _ string) error {
 	return nil
 }
 func (s *vrPan) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
 	return err
 }
 func (*vrPan) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {

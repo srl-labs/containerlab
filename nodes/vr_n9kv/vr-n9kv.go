@@ -56,7 +56,7 @@ func (s *vrN9kv) PreDeploy(_, _, _ string) error {
 	return nil
 }
 func (s *vrN9kv) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
 	return err
 }
 func (*vrN9kv) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {

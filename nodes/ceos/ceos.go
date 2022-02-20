@@ -83,7 +83,7 @@ func (s *ceos) PreDeploy(_, _, _ string) error {
 }
 
 func (s *ceos) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
 	return err
 }
 

@@ -65,7 +65,7 @@ func (s *crpd) PreDeploy(_, _, _ string) error {
 }
 
 func (s *crpd) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
 	return err
 }
 
@@ -118,7 +118,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-///
+// /
 
 func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	// create config and logs directory that will be bind mounted to crpd

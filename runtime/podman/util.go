@@ -40,16 +40,6 @@ func (*PodmanRuntime) connect(ctx context.Context) (context.Context, error) {
 	return bindings.NewConnection(ctx, "unix://run/podman/podman.sock")
 }
 
-func (r *PodmanRuntime) createPodmanContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
-	sg, err := r.createContainerSpec(ctx, cfg)
-	if err != nil {
-		return "", fmt.Errorf("error while trying to create a container spec: %w", err)
-	}
-	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
-	log.Debugf("Created a container with ID %v, warnings %v and error %v", res.ID, res.Warnings, err)
-	return res.ID, err
-}
-
 func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.NodeConfig) (specgen.SpecGenerator, error) {
 	sg := specgen.SpecGenerator{}
 	cmd, err := shlex.Split(cfg.Cmd)

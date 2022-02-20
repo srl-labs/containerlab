@@ -144,13 +144,24 @@ func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) e
 	return err
 }
 
-// CreateContainer creates a container based on the given NodeConfig and starts it as well
-func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (interface{}, error) {
+// CreateContainer creates a container but does not start it
+func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
+	sg, err := r.createContainerSpec(ctx, cfg)
+	if err != nil {
+		return "", fmt.Errorf("error while trying to create a container spec: %w", err)
+	}
+	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
+	log.Debugf("Created a container with ID %v, warnings %v and error %v", res.ID, res.Warnings, err)
+	return res.ID, err
+}
+
+// CreateAndStartContainer creates a container based on the given NodeConfig and starts it as well
+func (r *PodmanRuntime) CreateAndStartContainer(ctx context.Context, cfg *types.NodeConfig) (interface{}, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cID, err := r.createPodmanContainer(ctx, cfg)
+	cID, err := r.CreateContainer(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

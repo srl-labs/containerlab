@@ -150,7 +150,7 @@ func (*IgniteRuntime) PullImageIfRequired(_ context.Context, imageName string) e
 	return nil
 }
 
-func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *IgniteRuntime) CreateAndStartContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
 
 	vm := c.baseVM.DeepCopy()
 

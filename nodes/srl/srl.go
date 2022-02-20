@@ -225,7 +225,7 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 }
 
 func (s *srl) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
 	return err
 }
 

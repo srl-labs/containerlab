@@ -44,7 +44,7 @@ func (l *linux) Config() *types.NodeConfig { return l.cfg }
 func (*linux) PreDeploy(_, _, _ string) error { return nil }
 
 func (l *linux) Deploy(ctx context.Context) error {
-	_, err := l.runtime.CreateContainer(ctx, l.cfg)
+	_, err := l.runtime.CreateAndStartContainer(ctx, l.cfg)
 	return err
 }
 

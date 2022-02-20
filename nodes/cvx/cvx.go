@@ -73,7 +73,7 @@ func (*cvx) PreDeploy(_, _, _ string) error { return nil }
 
 func (c *cvx) Deploy(ctx context.Context) error {
 
-	intf, err := c.runtime.CreateContainer(ctx, c.cfg)
+	intf, err := c.runtime.CreateAndStartContainer(ctx, c.cfg)
 	if err != nil {
 		return err
 	}

@@ -260,25 +260,23 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	return nil
 }
 
-// CreateContainer creates a docker container
-func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
-	log.Infof("Creating container: %s", node.ShortName)
-
+// CreateContainer creates a docker container (but does not start it)
+func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) {
+	log.Infof("Creating container: %q", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
 	cmd, err := shlex.Split(node.Cmd)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	var entrypoint []string
 	if node.Entrypoint != "" {
 		entrypoint, err = shlex.Split(node.Entrypoint)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-
 	}
 
 	containerConfig := &container.Config{
@@ -308,7 +306,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if node.Memory != "" {
 		mem, err := humanize.ParseBytes(node.Memory)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		resources.Memory = int64(mem)
 	}
@@ -327,11 +325,11 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	case "container":
 		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
 		if len(netMode) != 2 {
-			return nil, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
+			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
 		}
 		// also cont. ID shouldn't be empty
 		if netMode[1] == "" {
-			return nil, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
+			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
 		}
 		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
 		prefix := strings.SplitN(node.LongName, node.ShortName, 2)[0]
@@ -368,25 +366,31 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		nil,
 		node.LongName,
 	)
+	log.Debugf("Container %q create response: %+v", node.ShortName, cont)
+	if err != nil {
+		return "", err
+	}
+	return cont.ID, nil
+}
+
+// CreateAndStartContainer creates a docker container
+func (c *DockerRuntime) CreateAndStartContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+	cID, err := c.CreateContainer(ctx, node)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Container '%s' create response: %v", node.ShortName, cont)
-	log.Debugf("Start container: %s", node.LongName)
-
-	err = c.StartContainer(ctx, cont.ID)
+	log.Debugf("Start container: %q", node.LongName)
+	err = c.StartContainer(ctx, cID)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Container started: %s", node.LongName)
+	log.Debugf("Container started: %q", node.LongName)
 
-	node.NSPath, err = c.GetNSPath(ctx, cont.ID)
+	node.NSPath, err = c.GetNSPath(ctx, cID)
 	if err != nil {
 		return nil, err
 	}
-
 	return nil, utils.LinkContainerNS(node.NSPath, node.LongName)
-
 }
 
 // GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container
