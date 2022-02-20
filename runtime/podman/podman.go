@@ -144,7 +144,7 @@ func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) e
 	return err
 }
 
-// CreateContainer creates a container but does not start it
+// CreateContainer creates a container, but does not start it
 func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
 	sg, err := r.createContainerSpec(ctx, cfg)
 	if err != nil {

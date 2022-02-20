@@ -145,6 +145,11 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
+func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+	// this is a no-op
+	return "", nil
+}
+
 func (c *ContainerdRuntime) CreateAndStartContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 

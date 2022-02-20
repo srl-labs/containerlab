@@ -262,6 +262,11 @@ func (c *IgniteRuntime) CreateAndStartContainer(ctx context.Context, node *types
 	return vmChans, utils.LinkContainerNS(node.NSPath, node.LongName)
 }
 
+func (*IgniteRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (string, error) {
+	// this is a no-op
+	return "", nil
+}
+
 func (*IgniteRuntime) StartContainer(_ context.Context, _ string) error {
 	// this is a no-op
 	return nil
