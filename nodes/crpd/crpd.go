@@ -65,7 +65,11 @@ func (s *crpd) PreDeploy(_, _, _ string) error {
 }
 
 func (s *crpd) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateAndStartContainer(ctx, s.cfg)
+	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
+	if err != nil {
+		return err
+	}
+	err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
 
