@@ -129,12 +129,6 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		return err
 	}
 
-	// mgmtBr is the bridge name used for management network
-	var mgmtBr string
-	if len(containers) != 0 {
-		mgmtBr = containers[0].Labels[clab.NodeMgmtNetBr]
-	}
-
 	var labDir string
 	if cleanup {
 		labDir = c.Dir.Lab
@@ -192,5 +186,5 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		return fmt.Errorf("error while deleting netns symlinks: %w", err)
 	}
 
-	return c.DeleteIPTablesFwdRule(mgmtBr)
+	return err
 }

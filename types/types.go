@@ -41,16 +41,16 @@ type Endpoint struct {
 	MAC string
 }
 
-// mgmtNet struct defines the management network options
-// it is provided via docker network object
+// MgmtNet struct defines the management network options
 type MgmtNet struct {
-	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network (or containerd bridge net)
-	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
-	IPv4Gw     string `yaml:"ipv4-gw,omitempty"`
-	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
-	IPv6Gw     string `yaml:"ipv6-gw,omitempty"`
-	MTU        string `yaml:"mtu,omitempty"`
+	Network        string `yaml:"network,omitempty"` // container runtime network name
+	Bridge         string `yaml:"bridge,omitempty"`  // linux bridge backing the runtime network
+	IPv4Subnet     string `yaml:"ipv4_subnet,omitempty"`
+	IPv4Gw         string `yaml:"ipv4-gw,omitempty"`
+	IPv6Subnet     string `yaml:"ipv6_subnet,omitempty"`
+	IPv6Gw         string `yaml:"ipv6-gw,omitempty"`
+	MTU            string `yaml:"mtu,omitempty"`
+	ExternalAccess *bool  `yaml:"external-access,omitempty"`
 }
 
 // NodeConfig is a struct that contains the information of a container element
