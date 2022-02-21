@@ -21,6 +21,7 @@ topology:
       labels:
         node-label: value
         ansible-group: extra_group
+
     node3:
       kind: srl
       license: test_data/node1.lic
@@ -29,3 +30,9 @@ topology:
       labels:
         node-label: value
         ansible-group: extra_group
+
+    node4:
+      kind: linux
+      image: alpine:3
+      mgmt_ipv4: 172.100.100.14
+
