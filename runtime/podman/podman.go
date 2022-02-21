@@ -147,7 +147,7 @@ func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) e
 func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	sg, err := r.createContainerSpec(ctx, cfg)
 	if err != nil {
