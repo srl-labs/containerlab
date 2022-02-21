@@ -63,7 +63,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 }
 
-func deployFn(cmd *cobra.Command, args []string) error {
+func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
 	log.Infof("Containerlab v%s started", version)
