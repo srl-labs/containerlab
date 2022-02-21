@@ -150,7 +150,7 @@ func (c *ContainerdRuntime) CreateContainer(_ context.Context, _ *types.NodeConf
 	return "", nil
 }
 
-func (c *ContainerdRuntime) CreateAndStartContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
@@ -285,11 +285,18 @@ func (c *ContainerdRuntime) CreateAndStartContainer(ctx context.Context, node *t
 	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
 
-	_, err = c.StartContainer(ctx, node.LongName, node)
+	container, err := c.client.LoadContainer(ctx, node.LongName)
 	if err != nil {
 		return nil, err
 	}
-
+	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+node.LongName+".log"))
+	if err != nil {
+		return nil, err
+	}
+	err = task.Start(ctx)
+	if err != nil {
+		return nil, err
+	}
 	log.Debugf("Container started: %s", node.LongName)
 
 	node.NSPath, err = c.GetNSPath(ctx, node.LongName)
@@ -427,21 +434,6 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 	}
 }
 
-func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string, _ *types.NodeConfig) (interface{}, error) {
-	container, err := c.client.LoadContainer(ctx, containername)
-	if err != nil {
-		return nil, err
-	}
-	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+containername+".log"))
-	if err != nil {
-		return nil, err
-	}
-	err = task.Start(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
-}
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
