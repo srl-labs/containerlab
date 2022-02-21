@@ -11,11 +11,17 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
 )
 
 // InstallIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network
 func (c *CLab) InstallIPTablesFwdRule() (err error) {
+	if c.GlobalRuntime().GetName() != runtime.DockerRuntime {
+		log.Debug("iptables forwarding rules management is not supported for this runtime")
+		return nil
+	}
+
 	mgmtNet := c.GlobalRuntime().Mgmt()
 	if mgmtNet.Bridge == "" {
 		log.Debug("skipping setup of iptables forwarding rules for non-bridged management network")
@@ -47,6 +53,11 @@ func (c *CLab) InstallIPTablesFwdRule() (err error) {
 
 // DeleteIPTablesFwdRule deletes `allow` rule installed with InstallIPTablesFwdRule when the bridge interface doesn't exist anymore
 func (c *CLab) DeleteIPTablesFwdRule(br string) (err error) {
+	if c.GlobalRuntime().GetName() != runtime.DockerRuntime {
+		log.Debug("iptables forwarding rules management is not supported for this runtime")
+		return nil
+	}
+
 	if br == "" || br == "docker0" {
 		log.Warn("wat1")
 		log.Debug("skipping deletion of iptables forwarding rule for non-bridged or default management network")
