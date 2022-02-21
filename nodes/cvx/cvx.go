@@ -74,6 +74,9 @@ func (*cvx) PreDeploy(_, _, _ string) error { return nil }
 func (c *cvx) Deploy(ctx context.Context) error {
 	// CreateContainer is no-op in case of ignite runtime
 	cID, err := c.runtime.CreateContainer(ctx, c.cfg)
+	if err != nil {
+		return err
+	}
 	intf, err := c.runtime.StartContainer(ctx, cID, c.cfg)
 	if err != nil {
 		return err
