@@ -47,20 +47,17 @@ var runtimePaths = []string{
 type IgniteRuntime struct {
 	config     runtime.RuntimeConfig
 	baseVM     *api.VM
-	Mgmt       *types.MgmtNet
+	mgmt       *types.MgmtNet
 	ctrRuntime runtime.ContainerRuntime
 }
 
 func init() {
 	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &IgniteRuntime{
-			Mgmt: new(types.MgmtNet),
+			mgmt: &types.MgmtNet{},
 		}
 	})
 }
-
-func (*IgniteRuntime) GetName() string                 { return runtimeName }
-func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 
@@ -112,6 +109,11 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 	return nil
 }
 
+func (c *IgniteRuntime) Mgmt() *types.MgmtNet { return c.mgmt }
+
+func (*IgniteRuntime) GetName() string                 { return runtimeName }
+func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
+
 func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	c.config.Timeout = cfg.Timeout
 	c.config.Debug = cfg.Debug
@@ -126,7 +128,7 @@ func (c *IgniteRuntime) WithKeepMgmtNet() {
 }
 
 func (c *IgniteRuntime) WithMgmtNet(n *types.MgmtNet) {
-	c.Mgmt = n
+	c.mgmt = n
 }
 
 func (c *IgniteRuntime) CreateNet(ctx context.Context) error {

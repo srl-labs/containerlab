@@ -40,7 +40,8 @@ const (
 func init() {
 	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &ContainerdRuntime{
-			Mgmt: new(types.MgmtNet)}
+			mgmt: &types.MgmtNet{},
+		}
 	})
 }
 
@@ -65,10 +66,12 @@ func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	return nil
 }
 
+func (c *ContainerdRuntime) Mgmt() *types.MgmtNet { return c.mgmt }
+
 type ContainerdRuntime struct {
 	config runtime.RuntimeConfig
 	client *containerd.Client
-	Mgmt   *types.MgmtNet
+	mgmt   *types.MgmtNet
 }
 
 func (c *ContainerdRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
@@ -88,7 +91,7 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 		}
 		n.Bridge = "br-" + netname
 	}
-	c.Mgmt = n
+	c.mgmt = n
 }
 
 func (c *ContainerdRuntime) WithKeepMgmtNet() {
@@ -103,7 +106,7 @@ func (*ContainerdRuntime) CreateNet(_ context.Context) error {
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	var err error
-	bridgename := c.Mgmt.Bridge
+	bridgename := c.mgmt.Bridge
 	brInUse := true
 	for i := 0; i < 10; i++ {
 		brInUse, err = utils.CheckBrInUse(bridgename)
@@ -237,7 +240,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	case "none":
 		// Done!
 	default:
-		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0", c.Mgmt)
+		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0", c.mgmt)
 		if err != nil {
 			return nil, err
 		}
@@ -761,7 +764,7 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 		return err
 	}
 
-	cnic, cncl, cnirc, err := cniInit(containerID, "eth0", c.Mgmt)
+	cnic, cncl, cnirc, err := cniInit(containerID, "eth0", c.mgmt)
 	if err != nil {
 		return err
 	}

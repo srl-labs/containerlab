@@ -46,6 +46,7 @@ const (
 	NodeGroupLabel    = "clab-node-group"
 	NodeLabDirLabel   = "clab-node-lab-dir"
 	TopoFileLabel     = "clab-topo-file"
+	NodeMgmtNetBr     = "clab-mgmt-net-bridge"
 )
 
 // supported kinds
