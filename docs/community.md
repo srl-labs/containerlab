@@ -82,6 +82,18 @@ I’ve been working my way through Optimal Routing Design by Russ White, Don Sli
 
 Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/1485040052811960321)
 
+### Real-time telemetry from a 5 stage Clos fabric
+<small>:material-text: [Blog](https://blog.sflow.com/2022/02/real-time-telemetry-from-5-stage-clos.html) by [Peter Phaal](https://twitter.com/sFlow) · :material-calendar: 2022-02-21</small>
+
+As Peter wrote, sFlow is a companion to the Streaming Telemetry applications. It's UDP based transport claims to be more suitable for situations where networks are congested. In this blog Peter explains how containerlab can deploy a Clos topolgy with sFlow collector and endpoints generating traffic to see the whole machinery in action.
+
+Discussions: [:material-twitter:](https://twitter.com/sFlow/status/1495804147177775104)
+
+### netsim-tools and containerlab
+<small>:material-text: [Blog](https://juliopdx.com/2022/02/13/network-simulation-tools-and-containerlab/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-02-13</small>
+
+Julio is back with another great post about combining netsim-tools with containerlab.
+
 ### Network Modeling: Automating Mikrotik RouterOS CHR Containerlab images
 <small>:material-text: [Blog](https://stubarea51.net/2021/12/20/network-modeling-automating-mikrotik-routeros-chr-containerlab-images/) by [@nlgotz](https://twitter.com/nlgotz) · :material-calendar: 2021-12-20</small>
 
