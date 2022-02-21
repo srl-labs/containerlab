@@ -91,12 +91,12 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	// linux bridge name that is used by docker network
 	bridgeName := c.Mgmt.Bridge
 
-	log.Debugf("Checking if docker network '%s' exists", c.Mgmt.Network)
+	log.Debugf("Checking if docker network %q exists", c.Mgmt.Network)
 	netResource, err := c.Client.NetworkInspect(nctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
 	switch {
 	case dockerC.IsErrNotFound(err):
-		log.Debugf("Network '%s' does not exist", c.Mgmt.Network)
-		log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s', MTU='%s'",
+		log.Debugf("Network %q does not exist", c.Mgmt.Network)
+		log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%q",
 			c.Mgmt.Network, c.Mgmt.IPv4Subnet, c.Mgmt.IPv6Subnet, c.Mgmt.MTU)
 
 		enableIPv6 := false
@@ -178,7 +178,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		}
 
 	case err == nil:
-		log.Debugf("network '%s' was found. Reusing it...", c.Mgmt.Network)
+		log.Debugf("network %q was found. Reusing it...", c.Mgmt.Network)
 		if len(netResource.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
@@ -201,7 +201,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		c.Mgmt.Bridge = bridgeName
 	}
 
-	log.Debugf("Docker network '%s', bridge name '%s'", c.Mgmt.Network, bridgeName)
+	log.Debugf("Docker network %q, bridge name %q", c.Mgmt.Network, bridgeName)
 
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
@@ -233,7 +233,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := c.Mgmt.Network
 	if network == "bridge" || c.config.KeepMgmtNet {
-		log.Debugf("Skipping deletion of '%s' network", network)
+		log.Debugf("Skipping deletion of %q network", network)
 		return nil
 	}
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
@@ -246,9 +246,9 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
 		if c.config.Debug {
-			log.Debugf("network '%s' has %d active endpoints, deletion skipped", c.Mgmt.Network, numEndpoints)
+			log.Debugf("network %q has %d active endpoints, deletion skipped", c.Mgmt.Network, numEndpoints)
 			for _, endp := range nres.Containers {
-				log.Debugf("'%s' is connected to %s", endp.Name, network)
+				log.Debugf("%q is connected to %s", endp.Name, network)
 			}
 		}
 		return nil
@@ -647,7 +647,7 @@ func (c *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 		log.Infof("Stopping container: %s", cID)
 		err = c.Client.ContainerStop(ctx, cID, &c.config.Timeout)
 		if err != nil {
-			log.Errorf("could not stop container '%s': %v", cID, err)
+			log.Errorf("could not stop container %q: %v", cID, err)
 			force = true
 		}
 	}
