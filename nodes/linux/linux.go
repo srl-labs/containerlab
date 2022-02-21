@@ -48,7 +48,7 @@ func (l *linux) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = l.runtime.StartContainer(ctx, cID, l.cfg)
+	_, err = l.runtime.StartContainer(ctx, cID, l.cfg)
 	return err
 }
 

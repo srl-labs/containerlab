@@ -147,41 +147,25 @@ func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) e
 func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
 	sg, err := r.createContainerSpec(ctx, cfg)
 	if err != nil {
-		return "", fmt.Errorf("error while trying to create a container spec: %w", err)
+		return "", fmt.Errorf("error while trying to create a container spec for node %q: %w", cfg.LongName, err)
 	}
 	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
 	log.Debugf("Created a container with ID %v, warnings %v and error %v", res.ID, res.Warnings, err)
 	return res.ID, err
 }
 
-// CreateAndStartContainer creates a container based on the given NodeConfig and starts it as well
-func (r *PodmanRuntime) CreateAndStartContainer(ctx context.Context, cfg *types.NodeConfig) (interface{}, error) {
+// StartContainer starts a previously created container by ID or its name and executes post-start actions method
+func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *types.NodeConfig) (interface{}, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
-	}
-	cID, err := r.CreateContainer(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-	err = r.StartContainer(ctx, cID, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("error during a container create/start operation: %w", err)
-	}
-	return nil, nil
-}
-
-func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *types.NodeConfig) error {
-	ctx, err := r.connect(ctx)
-	if err != nil {
-		return err
 	}
 	err = containers.Start(ctx, cID, &containers.StartOptions{})
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("error while starting a container %q: %w", cfg.LongName, err)
 	}
 	err = r.postStartActions(ctx, cID, cfg)
-	return err
+	return nil, fmt.Errorf("error while executing post-start actions for container %q: %w", cfg.LongName, err)
 }
 
 func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {

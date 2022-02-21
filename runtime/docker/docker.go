@@ -373,21 +373,6 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	return cont.ID, nil
 }
 
-// CreateAndStartContainer creates a docker container
-func (c *DockerRuntime) CreateAndStartContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
-	cID, err := c.CreateContainer(ctx, node)
-	if err != nil {
-		return nil, err
-	}
-	log.Debugf("Start container: %q", node.LongName)
-	err = c.StartContainer(ctx, cID, node)
-	if err != nil {
-		return nil, err
-	}
-	log.Debugf("Container started: %q", node.LongName)
-	return nil, nil
-}
-
 // GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container
 func (c *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, error) {
 	nctx, cancelFn := context.WithTimeout(ctx, c.config.Timeout)
@@ -451,9 +436,10 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 }
 
 // StartContainer starts a docker container
-func (c *DockerRuntime) StartContainer(ctx context.Context, cID string, node *types.NodeConfig) error {
+func (c *DockerRuntime) StartContainer(ctx context.Context, cID string, node *types.NodeConfig) (interface{}, error) {
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
+	log.Debugf("Start container: %q", node.LongName)
 	err := c.Client.ContainerStart(nctx,
 		cID,
 		dockerTypes.ContainerStartOptions{
@@ -462,10 +448,11 @@ func (c *DockerRuntime) StartContainer(ctx context.Context, cID string, node *ty
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	log.Debugf("Container started: %q", node.LongName)
 	err = c.postStartActions(ctx, cID, node)
-	return err
+	return nil, err
 }
 
 // postStartActions performs misc. tasks that are needed after the container starts

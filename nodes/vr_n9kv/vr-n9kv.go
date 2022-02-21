@@ -60,7 +60,7 @@ func (s *vrN9kv) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = s.runtime.StartContainer(ctx, cID, s.cfg)
+	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
 func (*vrN9kv) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {

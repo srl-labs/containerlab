@@ -41,7 +41,7 @@ func (s *mySocketIO) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = s.runtime.StartContainer(ctx, cID, s.cfg)
+	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
 func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {

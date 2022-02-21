@@ -150,7 +150,7 @@ func (*IgniteRuntime) PullImageIfRequired(_ context.Context, imageName string) e
 	return nil
 }
 
-func (c *IgniteRuntime) CreateAndStartContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
 
 	vm := c.baseVM.DeepCopy()
 
@@ -267,10 +267,6 @@ func (*IgniteRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (s
 	return "", nil
 }
 
-func (*IgniteRuntime) StartContainer(_ context.Context, _ string, _ *types.NodeConfig) error {
-	// this is a no-op
-	return nil
-}
 func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 	// this is a no-op, only used by ceos at this stage
 	return nil

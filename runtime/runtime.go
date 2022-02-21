@@ -33,11 +33,9 @@ type ContainerRuntime interface {
 	PullImageIfRequired(context.Context, string) error
 	// CreateContainer creates a container, but does not start it
 	CreateContainer(context.Context, *types.NodeConfig) (string, error)
-	// Create container returns an extra interface that can be used to receive signals
+	// Start pre-created container by its name. Returns an extra interface that can be used to receive signals
 	// about the container life-cycle after it was created, e.g. for post-deploy tasks
-	CreateAndStartContainer(context.Context, *types.NodeConfig) (interface{}, error)
-	// Start pre-created container by its name
-	StartContainer(context.Context, string, *types.NodeConfig) error
+	StartContainer(context.Context, string, *types.NodeConfig) (interface{}, error)
 	// Stop running container by its name
 	StopContainer(context.Context, string) error
 	// List all containers matching labels

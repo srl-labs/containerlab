@@ -285,7 +285,7 @@ func (c *ContainerdRuntime) CreateAndStartContainer(ctx context.Context, node *t
 	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
 
-	err = c.StartContainer(ctx, node.LongName, node)
+	_, err = c.StartContainer(ctx, node.LongName, node)
 	if err != nil {
 		return nil, err
 	}
@@ -427,20 +427,20 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 	}
 }
 
-func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string, _ *types.NodeConfig) error {
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string, _ *types.NodeConfig) (interface{}, error) {
 	container, err := c.client.LoadContainer(ctx, containername)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+containername+".log"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = task.Start(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string) error {
 	ctask, err := c.getContainerTask(ctx, containername)

@@ -68,7 +68,7 @@ func (s *vrXRV) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = s.runtime.StartContainer(ctx, cID, s.cfg)
+	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
 
