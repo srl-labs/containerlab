@@ -154,6 +154,18 @@ Verify Mem and CPU limits are set
     # memory=1G
     Should Contain    ${output}    1000000000
 
+Verify iptables allow rule is set
+    [Documentation]    Checking if iptables allow rule is set so that external traffic can reach containerlab management network
+    Skip If    '${runtime}' != 'docker'
+    ${br} =    Run
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{index .Config.Labels "clab-mgmt-net-bridge"}}'
+    Log    ${br}
+    Set Suite Variable    ${MgmtBr}    ${br}
+    ${ipt} =    Run
+    ...    sudo iptables -vnL DOCKER-USER
+    Log    ${ipt}
+    Should Contain    ${ipt}    'ACCEPT    all    --    *    ${MgmtBr}'
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
@@ -173,6 +185,14 @@ Verify Hosts file has same number of lines
     ...    cat /etc/hosts | wc -l
     Log    ${output}
     Should Be Equal As Integers    ${HostsFileLines}    ${output}
+
+Verify iptables allow rule are gone
+    [Documentation]    Checking if iptables allow rule is removed once the lab is destroyed
+    Skip If    '${runtime}' != 'docker'
+    ${ipt} =    Run
+    ...    sudo iptables -vnL DOCKER-USER
+    Log    ${ipt}
+    Should Not Contain    ${ipt}    ${MgmtBr}
 
 *** Keywords ***
 Setup
