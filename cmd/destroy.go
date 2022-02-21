@@ -130,7 +130,10 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// mgmtBr is the bridge name used for management network
-	mgmtBr := containers[0].Labels[clab.NodeMgmtNetBr]
+	var mgmtBr string
+	if len(containers) != 0 {
+		mgmtBr = containers[0].Labels[clab.NodeMgmtNetBr]
+	}
 
 	var labDir string
 	if cleanup {
