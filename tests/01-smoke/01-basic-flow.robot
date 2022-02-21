@@ -164,7 +164,9 @@ Verify iptables allow rule is set
     ${ipt} =    Run
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
-    Should Contain    ${ipt}    'ACCEPT    all    --    *    ${MgmtBr}'
+    Should Contain    ${ipt}    ACCEPT all -- * ${MgmtBr}
+    ...    ignore_case=True
+    ...    collapse_spaces=True
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output

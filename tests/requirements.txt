@@ -1,2 +1,2 @@
-robotframework==4.0.1
+robotframework==4.1.0
 robotframework-sshlibrary==3.8.0
