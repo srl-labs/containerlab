@@ -53,7 +53,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	// Main container specs
 	labels := cfg.Labels
 	// encode a mgmt net name as an extra label
-	labels["clab-net-mgmt"] = r.Mgmt.Network
+	labels["clab-net-mgmt"] = r.mgmt.Network
 	specBasicConfig := specgen.ContainerBasicConfig{
 		Name:       cfg.LongName,
 		Entrypoint: entrypoint,
@@ -181,7 +181,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		}
 	// Bridge will be used if none provided
 	case "bridge", "":
-		nets := []string{r.Mgmt.Network}
+		nets := []string{r.mgmt.Network}
 		mgmtv4Addr := net.ParseIP(cfg.MgmtIPv4Address)
 		mgmtv6Addr := net.ParseIP(cfg.MgmtIPv6Address)
 		mac, err := net.ParseMAC(cfg.MacAddress)
@@ -321,7 +321,7 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 func (r *PodmanRuntime) disableTXOffload(ctx context.Context) error {
 	// TX checksum disabling will be done here since the mgmt bridge
 	// may not exist in netlink before a container is attached to it
-	netIns, err := network.Inspect(ctx, r.Mgmt.Network, &network.InspectOptions{})
+	netIns, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offload; unable to retrieve the bridge name")
 		return err
@@ -344,7 +344,7 @@ func (r *PodmanRuntime) disableTXOffload(ctx context.Context) error {
 // filled with all parameters for CreateNet function
 func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error) {
 	var (
-		name       = r.Mgmt.Network
+		name       = r.mgmt.Network
 		driver     = "bridge"
 		internal   = false
 		ipv6       = false
@@ -354,14 +354,14 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error
 		subnet     *net.IPNet
 		err        error
 	)
-	if r.Mgmt.IPv4Subnet != "" {
-		_, subnet, err = net.ParseCIDR(r.Mgmt.IPv4Subnet)
+	if r.mgmt.IPv4Subnet != "" {
+		_, subnet, err = net.ParseCIDR(r.mgmt.IPv4Subnet)
 	}
 	if err != nil {
 		return network.CreateOptions{}, err
 	}
-	if r.Mgmt.MTU != "" {
-		options["mtu"] = r.Mgmt.MTU
+	if r.mgmt.MTU != "" {
+		options["mtu"] = r.mgmt.MTU
 	}
 
 	toReturn := network.CreateOptions{
@@ -375,8 +375,8 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error
 		Name:       &name,
 	}
 	// add a custom gw address if specified
-	if r.Mgmt.IPv4Gw != "" && r.Mgmt.IPv4Gw != "0.0.0.0" {
-		toReturn.WithGateway(net.ParseIP(r.Mgmt.IPv4Gw))
+	if r.mgmt.IPv4Gw != "" && r.mgmt.IPv4Gw != "0.0.0.0" {
+		toReturn.WithGateway(net.ParseIP(r.mgmt.IPv4Gw))
 	}
 	return toReturn, nil
 }

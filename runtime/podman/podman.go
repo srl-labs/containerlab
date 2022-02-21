@@ -25,14 +25,14 @@ const (
 
 type PodmanRuntime struct {
 	config *runtime.RuntimeConfig
-	Mgmt   *types.MgmtNet
+	mgmt   *types.MgmtNet
 }
 
 func init() {
 	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &PodmanRuntime{
 			config: &runtime.RuntimeConfig{},
-			Mgmt:   &types.MgmtNet{},
+			mgmt:   &types.MgmtNet{},
 		}
 	})
 }
@@ -45,6 +45,8 @@ func (r *PodmanRuntime) Init(opts ...runtime.RuntimeOption) error {
 	}
 	return nil
 }
+
+func (r *PodmanRuntime) Mgmt() *types.MgmtNet { return r.mgmt }
 
 func (r *PodmanRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	log.Debugf("Podman method WithConfig was called with cfg params: %+v", cfg)
@@ -67,11 +69,11 @@ func (r *PodmanRuntime) WithMgmtNet(net *types.MgmtNet) {
 		return
 	}
 	log.Debugf("Podman method WithMgmtNet was called with net params: %+v", net)
-	r.Mgmt = net
-	if r.Mgmt.Bridge == "" && r.Mgmt.Network != "" {
+	r.mgmt = net
+	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
 		// set bridge name = network name
 		// albeit we don't use it as of right now when creating a bridge
-		r.Mgmt.Bridge = r.Mgmt.Network
+		r.mgmt.Bridge = r.mgmt.Network
 	}
 
 }
@@ -90,9 +92,9 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("Trying to create a management network with params %+v", r.Mgmt)
+	log.Debugf("Trying to create a management network with params %+v", r.mgmt)
 	// check the network existence first
-	b, err := network.Exists(ctx, r.Mgmt.Network, &network.ExistsOptions{})
+	b, err := network.Exists(ctx, r.mgmt.Network, &network.ExistsOptions{})
 	if err != nil {
 		return err
 	}
@@ -110,7 +112,7 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 // DeleteNet deletes a clab mgmt bridge
 func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	// Skip if "keep mgmt" is set
-	log.Debugf("Method DeleteNet was called with runtime inputs %+v and net settings %+v", r, r.Mgmt)
+	log.Debugf("Method DeleteNet was called with runtime inputs %+v and net settings %+v", r, r.mgmt)
 	if r.config.KeepMgmtNet {
 		return nil
 	}
@@ -118,8 +120,8 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("Trying to delete mgmt network %v", r.Mgmt.Network)
-	_, err = network.Remove(ctx, r.Mgmt.Network, &network.RemoveOptions{})
+	log.Debugf("Trying to delete mgmt network %v", r.mgmt.Network)
+	_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
 	if err != nil {
 		return fmt.Errorf("Error while trying to remove a mgmt network %w", err)
 	}

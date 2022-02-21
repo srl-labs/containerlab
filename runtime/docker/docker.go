@@ -40,7 +40,7 @@ const (
 func init() {
 	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &DockerRuntime{
-			Mgmt: new(types.MgmtNet),
+			mgmt: new(types.MgmtNet),
 		}
 	})
 }
@@ -48,7 +48,7 @@ func init() {
 type DockerRuntime struct {
 	config runtime.RuntimeConfig
 	Client *dockerC.Client
-	Mgmt   *types.MgmtNet
+	mgmt   *types.MgmtNet
 }
 
 func (c *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
@@ -70,6 +70,9 @@ func (c *DockerRuntime) WithKeepMgmtNet() {
 func (*DockerRuntime) GetName() string                 { return runtimeName }
 func (c *DockerRuntime) Config() runtime.RuntimeConfig { return c.config }
 
+// Mgmt return management network struct of a runtime
+func (c *DockerRuntime) Mgmt() *types.MgmtNet { return c.mgmt }
+
 func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	c.config.Timeout = cfg.Timeout
 	c.config.Debug = cfg.Debug
@@ -80,7 +83,7 @@ func (c *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 }
 
 func (c *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
-	c.Mgmt = n
+	c.mgmt = n
 }
 
 // CreateDockerNet creates a docker network or reusing if it exists
@@ -89,23 +92,23 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	defer cancel()
 
 	// linux bridge name that is used by docker network
-	bridgeName := c.Mgmt.Bridge
+	bridgeName := c.mgmt.Bridge
 
-	log.Debugf("Checking if docker network %q exists", c.Mgmt.Network)
-	netResource, err := c.Client.NetworkInspect(nctx, c.Mgmt.Network, dockerTypes.NetworkInspectOptions{})
+	log.Debugf("Checking if docker network %q exists", c.mgmt.Network)
+	netResource, err := c.Client.NetworkInspect(nctx, c.mgmt.Network, dockerTypes.NetworkInspectOptions{})
 	switch {
 	case dockerC.IsErrNotFound(err):
-		log.Debugf("Network %q does not exist", c.Mgmt.Network)
+		log.Debugf("Network %q does not exist", c.mgmt.Network)
 		log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%q",
-			c.Mgmt.Network, c.Mgmt.IPv4Subnet, c.Mgmt.IPv6Subnet, c.Mgmt.MTU)
+			c.mgmt.Network, c.mgmt.IPv4Subnet, c.mgmt.IPv6Subnet, c.mgmt.MTU)
 
 		enableIPv6 := false
 		var ipamConfig []network.IPAMConfig
 
 		// check if IPv4/6 addr are assigned to a mgmt bridge
 		var v4gw, v6gw string
-		if c.Mgmt.Bridge != "" {
-			v4gw, v6gw, err = utils.FirstLinkIPs(c.Mgmt.Bridge)
+		if c.mgmt.Bridge != "" {
+			v4gw, v6gw, err = utils.FirstLinkIPs(c.mgmt.Bridge)
 			if err != nil {
 				// only return error if the error is not about link not found
 				// we will create the bridge if it doesn't exist
@@ -113,25 +116,25 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 					return err
 				}
 			}
-			log.Debugf("bridge %q has ipv4 adrr of %q and ipv6 addr of %q", c.Mgmt.Bridge, v4gw, v6gw)
+			log.Debugf("bridge %q has ipv4 adrr of %q and ipv6 addr of %q", c.mgmt.Bridge, v4gw, v6gw)
 		}
 
-		if c.Mgmt.IPv4Subnet != "" {
-			if c.Mgmt.IPv4Gw != "" {
-				v4gw = c.Mgmt.IPv4Gw
+		if c.mgmt.IPv4Subnet != "" {
+			if c.mgmt.IPv4Gw != "" {
+				v4gw = c.mgmt.IPv4Gw
 			}
 			ipamConfig = append(ipamConfig, network.IPAMConfig{
-				Subnet:  c.Mgmt.IPv4Subnet,
+				Subnet:  c.mgmt.IPv4Subnet,
 				Gateway: v4gw,
 			})
 		}
 
-		if c.Mgmt.IPv6Subnet != "" {
-			if c.Mgmt.IPv6Gw != "" {
-				v6gw = c.Mgmt.IPv6Gw
+		if c.mgmt.IPv6Subnet != "" {
+			if c.mgmt.IPv6Gw != "" {
+				v6gw = c.mgmt.IPv6Gw
 			}
 			ipamConfig = append(ipamConfig, network.IPAMConfig{
-				Subnet:  c.Mgmt.IPv6Subnet,
+				Subnet:  c.mgmt.IPv6Subnet,
 				Gateway: v6gw,
 			})
 			enableIPv6 = true
@@ -143,7 +146,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		}
 
 		netwOpts := map[string]string{
-			"com.docker.network.driver.mtu": c.Mgmt.MTU,
+			"com.docker.network.driver.mtu": c.mgmt.MTU,
 		}
 
 		if bridgeName != "" {
@@ -163,7 +166,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			Options: netwOpts,
 		}
 
-		netCreateResponse, err := c.Client.NetworkCreate(nctx, c.Mgmt.Network, opts)
+		netCreateResponse, err := c.Client.NetworkCreate(nctx, c.mgmt.Network, opts)
 		if err != nil {
 			return err
 		}
@@ -178,11 +181,11 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		}
 
 	case err == nil:
-		log.Debugf("network %q was found. Reusing it...", c.Mgmt.Network)
+		log.Debugf("network %q was found. Reusing it...", c.mgmt.Network)
 		if len(netResource.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
-		switch c.Mgmt.Network {
+		switch c.mgmt.Network {
 		case "bridge":
 			bridgeName = "docker0"
 		default:
@@ -197,11 +200,11 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		return err
 	}
 
-	if c.Mgmt.Bridge == "" {
-		c.Mgmt.Bridge = bridgeName
+	if c.mgmt.Bridge == "" {
+		c.mgmt.Bridge = bridgeName
 	}
 
-	log.Debugf("Docker network %q, bridge name %q", c.Mgmt.Network, bridgeName)
+	log.Debugf("Docker network %q, bridge name %q", c.mgmt.Network, bridgeName)
 
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
@@ -231,7 +234,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 // DeleteNet deletes a docker bridge
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
-	network := c.Mgmt.Network
+	network := c.mgmt.Network
 	if network == "bridge" || c.config.KeepMgmtNet {
 		log.Debugf("Skipping deletion of %q network", network)
 		return nil
@@ -246,7 +249,7 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
 		if c.config.Debug {
-			log.Debugf("network %q has %d active endpoints, deletion skipped", c.Mgmt.Network, numEndpoints)
+			log.Debugf("network %q has %d active endpoints, deletion skipped", c.mgmt.Network, numEndpoints)
 			for _, endp := range nres.Containers {
 				log.Debugf("%q is connected to %s", endp.Name, network)
 			}
@@ -340,10 +343,10 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	case "host":
 		containerHostConfig.NetworkMode = "host"
 	default:
-		containerHostConfig.NetworkMode = container.NetworkMode(c.Mgmt.Network)
+		containerHostConfig.NetworkMode = container.NetworkMode(c.mgmt.Network)
 
 		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
-			c.Mgmt.Network: {
+			c.mgmt.Network: {
 				IPAMConfig: &network.EndpointIPAMConfig{
 					IPv4Address: node.MgmtIPv4Address,
 					IPv6Address: node.MgmtIPv6Address,
@@ -480,7 +483,7 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		return nil, err
 	}
 	var nr []dockerTypes.NetworkResource
-	if c.Mgmt.Network == "" {
+	if c.mgmt.Network == "" {
 		nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 		defer cancel()
 		// fetch containerlab created networks
@@ -556,7 +559,7 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			Labels:          i.Labels,
 			NetworkSettings: types.GenericMgmtIPs{},
 		}
-		bridgeName := c.Mgmt.Network
+		bridgeName := c.mgmt.Network
 		// if bridgeName is "", try to find a network created by clab that the container is connected to
 		if bridgeName == "" && inputNetworkRessources != nil {
 			for _, nr := range inputNetworkRessources {
