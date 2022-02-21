@@ -16,7 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -146,45 +145,36 @@ func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) e
 	return err
 }
 
-// CreateContainer creates a container based on the given NodeConfig and starts it as well
-func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (interface{}, error) {
+// CreateContainer creates a container, but does not start it
+func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	cID, err := r.createPodmanContainer(ctx, cfg)
+	sg, err := r.createContainerSpec(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("error while trying to create a container spec for node %q: %w", cfg.LongName, err)
 	}
-	err = r.StartContainer(ctx, cID)
-	if err != nil {
-		return nil, fmt.Errorf("error during a container create/start operation: %w", err)
-	}
-
-	// Add NSpath to the node config struct
-	cfg.NSPath, err = r.GetNSPath(ctx, cID)
-	if err != nil {
-		return nil, err
-	}
-	// And setup netns alias. Not really needed with podman
-	// But currently (Oct 2021) clab depends on the specific naming scheme of veth aliases.
-	err = utils.LinkContainerNS(cfg.NSPath, cfg.LongName)
-	if err != nil {
-		return nil, err
-	}
-	// TX checksum disabling will be done here since the mgmt bridge
-	// may not exist in netlink before a container is attached to it
-	err = r.disableTXOffload(ctx)
-	return nil, err
+	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
+	log.Debugf("Created a container with ID %v, warnings %v and error %v", res.ID, res.Warnings, err)
+	return res.ID, err
 }
 
-func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string) error {
+// StartContainer starts a previously created container by ID or its name and executes post-start actions method
+func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *types.NodeConfig) (interface{}, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = containers.Start(ctx, cID, &containers.StartOptions{})
-	return err
+	if err != nil {
+		return nil, fmt.Errorf("error while starting a container %q: %w", cfg.LongName, err)
+	}
+	err = r.postStartActions(ctx, cID, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("error while starting a container %q: %w", cfg.LongName, err)
+	}
+	return nil, nil
 }
 
 func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {

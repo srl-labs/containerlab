@@ -148,7 +148,12 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *ContainerdRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (string, error) {
+	// this is a no-op
+	return "", nil
+}
+
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
@@ -283,11 +288,18 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
 
-	err = c.StartContainer(ctx, node.LongName)
+	container, err := c.client.LoadContainer(ctx, node.LongName)
 	if err != nil {
 		return nil, err
 	}
-
+	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+node.LongName+".log"))
+	if err != nil {
+		return nil, err
+	}
+	err = task.Start(ctx)
+	if err != nil {
+		return nil, err
+	}
 	log.Debugf("Container started: %s", node.LongName)
 
 	node.NSPath, err = c.GetNSPath(ctx, node.LongName)
@@ -425,21 +437,6 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 	}
 }
 
-func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
-	container, err := c.client.LoadContainer(ctx, containername)
-	if err != nil {
-		return err
-	}
-	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+containername+".log"))
-	if err != nil {
-		return err
-	}
-	err = task.Start(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
@@ -677,7 +674,7 @@ func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername strin
 	return err
 }
 
-func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { //skipcq: RVV-A0005
+func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)

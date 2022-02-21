@@ -94,12 +94,12 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	// linux bridge name that is used by docker network
 	bridgeName := c.mgmt.Bridge
 
-	log.Debugf("Checking if docker network '%s' exists", c.mgmt.Network)
+	log.Debugf("Checking if docker network %q exists", c.mgmt.Network)
 	netResource, err := c.Client.NetworkInspect(nctx, c.mgmt.Network, dockerTypes.NetworkInspectOptions{})
 	switch {
 	case dockerC.IsErrNotFound(err):
-		log.Debugf("Network '%s' does not exist", c.mgmt.Network)
-		log.Infof("Creating docker network: Name='%s', IPv4Subnet='%s', IPv6Subnet='%s', MTU='%s'",
+		log.Debugf("Network %q does not exist", c.mgmt.Network)
+		log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%q",
 			c.mgmt.Network, c.mgmt.IPv4Subnet, c.mgmt.IPv6Subnet, c.mgmt.MTU)
 
 		enableIPv6 := false
@@ -181,7 +181,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		}
 
 	case err == nil:
-		log.Debugf("network '%s' was found. Reusing it...", c.mgmt.Network)
+		log.Debugf("network %q was found. Reusing it...", c.mgmt.Network)
 		if len(netResource.ID) < 12 {
 			return fmt.Errorf("could not get bridge ID")
 		}
@@ -204,7 +204,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		c.mgmt.Bridge = bridgeName
 	}
 
-	log.Debugf("Docker network '%s', bridge name '%s'", c.mgmt.Network, bridgeName)
+	log.Debugf("Docker network %q, bridge name %q", c.mgmt.Network, bridgeName)
 
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
@@ -236,7 +236,7 @@ func (c *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := c.mgmt.Network
 	if network == "bridge" || c.config.KeepMgmtNet {
-		log.Debugf("Skipping deletion of '%s' network", network)
+		log.Debugf("Skipping deletion of %q network", network)
 		return nil
 	}
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
@@ -249,9 +249,9 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
 		if c.config.Debug {
-			log.Debugf("network '%s' has %d active endpoints, deletion skipped", c.mgmt.Network, numEndpoints)
+			log.Debugf("network %q has %d active endpoints, deletion skipped", c.mgmt.Network, numEndpoints)
 			for _, endp := range nres.Containers {
-				log.Debugf("'%s' is connected to %s", endp.Name, network)
+				log.Debugf("%q is connected to %s", endp.Name, network)
 			}
 		}
 		return nil
@@ -263,25 +263,23 @@ func (c *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	return nil
 }
 
-// CreateContainer creates a docker container
-func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
-	log.Infof("Creating container: %s", node.ShortName)
-
+// CreateContainer creates a docker container (but does not start it)
+func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) {
+	log.Infof("Creating container: %q", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
 	cmd, err := shlex.Split(node.Cmd)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	var entrypoint []string
 	if node.Entrypoint != "" {
 		entrypoint, err = shlex.Split(node.Entrypoint)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-
 	}
 
 	containerConfig := &container.Config{
@@ -311,7 +309,7 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if node.Memory != "" {
 		mem, err := humanize.ParseBytes(node.Memory)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		resources.Memory = int64(mem)
 	}
@@ -330,11 +328,11 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	case "container":
 		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
 		if len(netMode) != 2 {
-			return nil, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
+			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
 		}
 		// also cont. ID shouldn't be empty
 		if netMode[1] == "" {
-			return nil, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
+			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
 		}
 		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
 		prefix := strings.SplitN(node.LongName, node.ShortName, 2)[0]
@@ -371,32 +369,18 @@ func (c *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		nil,
 		node.LongName,
 	)
+	log.Debugf("Container %q create response: %+v", node.ShortName, cont)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	log.Debugf("Container '%s' create response: %v", node.ShortName, cont)
-	log.Debugf("Start container: %s", node.LongName)
-
-	err = c.StartContainer(ctx, cont.ID)
-	if err != nil {
-		return nil, err
-	}
-	log.Debugf("Container started: %s", node.LongName)
-
-	node.NSPath, err = c.GetNSPath(ctx, cont.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, utils.LinkContainerNS(node.NSPath, node.LongName)
-
+	return cont.ID, nil
 }
 
 // GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container
-func (c *DockerRuntime) GetNSPath(ctx context.Context, containerId string) (string, error) {
+func (c *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, error) {
 	nctx, cancelFn := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancelFn()
-	cJSON, err := c.Client.ContainerInspect(nctx, containerId)
+	cJSON, err := c.Client.ContainerInspect(nctx, cID)
 	if err != nil {
 		return "", err
 	}
@@ -455,16 +439,34 @@ func (c *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 }
 
 // StartContainer starts a docker container
-func (c *DockerRuntime) StartContainer(ctx context.Context, id string) error {
+func (c *DockerRuntime) StartContainer(ctx context.Context, cID string, node *types.NodeConfig) (interface{}, error) {
 	nctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
-	return c.Client.ContainerStart(nctx,
-		id,
+	log.Debugf("Start container: %q", node.LongName)
+	err := c.Client.ContainerStart(nctx,
+		cID,
 		dockerTypes.ContainerStartOptions{
 			CheckpointID:  "",
 			CheckpointDir: "",
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Container started: %q", node.LongName)
+	err = c.postStartActions(ctx, cID, node)
+	return nil, err
+}
+
+// postStartActions performs misc. tasks that are needed after the container starts
+func (c *DockerRuntime) postStartActions(ctx context.Context, cID string, node *types.NodeConfig) error {
+	var err error
+	node.NSPath, err = c.GetNSPath(ctx, cID)
+	if err != nil {
+		return err
+	}
+	err = utils.LinkContainerNS(node.NSPath, node.LongName)
+	return err
 }
 
 // ListContainers lists all containers with labels []string
@@ -511,13 +513,13 @@ func (c *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	return c.produceGenericContainerList(ctrs, nr)
 }
 
-func (c *DockerRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
+func (c *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.GenericContainer, error) {
 	var ctr *types.GenericContainer
 	gFilter := types.GenericFilter{
 		FilterType: "name",
 		Field:      "",
 		Operator:   "",
-		Match:      containerID,
+		Match:      cID,
 	}
 	ctrs, err := c.ListContainers(ctx, []*types.GenericFilter{&gFilter})
 	if err != nil {
@@ -580,12 +582,12 @@ func (c *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error
-func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]byte, []byte, error) {
-	cont, err := c.Client.ContainerInspect(ctx, id)
+func (c *DockerRuntime) Exec(ctx context.Context, cID string, cmd []string) ([]byte, []byte, error) {
+	cont, err := c.Client.ContainerInspect(ctx, cID)
 	if err != nil {
 		return nil, nil, err
 	}
-	execID, err := c.Client.ContainerExecCreate(ctx, id, dockerTypes.ExecConfig{
+	execID, err := c.Client.ContainerExecCreate(ctx, cID, dockerTypes.ExecConfig{
 		User:         "root",
 		AttachStderr: true,
 		AttachStdout: true,
@@ -595,7 +597,7 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 		log.Errorf("failed to create exec in container %s: %v", cont.Name, err)
 		return nil, nil, err
 	}
-	log.Debugf("%s exec created %v", cont.Name, id)
+	log.Debugf("%s exec created %v", cont.Name, cID)
 
 	rsp, err := c.Client.ContainerExecAttach(ctx, execID.ID, dockerTypes.ExecStartCheck{})
 	if err != nil {
@@ -603,7 +605,7 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 		return nil, nil, err
 	}
 	defer rsp.Close()
-	log.Debugf("%s exec attached %v", cont.Name, id)
+	log.Debugf("%s exec attached %v", cont.Name, cID)
 
 	var outBuf, errBuf bytes.Buffer
 	outputDone := make(chan error)
@@ -625,9 +627,9 @@ func (c *DockerRuntime) Exec(ctx context.Context, id string, cmd []string) ([]by
 }
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
-func (c *DockerRuntime) ExecNotWait(_ context.Context, id string, cmd []string) error {
+func (c *DockerRuntime) ExecNotWait(_ context.Context, cID string, cmd []string) error {
 	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: cmd}
-	respID, err := c.Client.ContainerExecCreate(context.Background(), id, execConfig)
+	respID, err := c.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
 		return err
 	}
@@ -641,23 +643,23 @@ func (c *DockerRuntime) ExecNotWait(_ context.Context, id string, cmd []string) 
 }
 
 // DeleteContainer tries to stop a container then remove it
-func (c *DockerRuntime) DeleteContainer(ctx context.Context, containerID string) error {
+func (c *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	var err error
 	force := !c.config.GracefulShutdown
 	if c.config.GracefulShutdown {
-		log.Infof("Stopping container: %s", containerID)
-		err = c.Client.ContainerStop(ctx, containerID, &c.config.Timeout)
+		log.Infof("Stopping container: %s", cID)
+		err = c.Client.ContainerStop(ctx, cID, &c.config.Timeout)
 		if err != nil {
-			log.Errorf("could not stop container '%s': %v", containerID, err)
+			log.Errorf("could not stop container %q: %v", cID, err)
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", strings.TrimLeft(containerID, "/"))
-	err = c.Client.ContainerRemove(ctx, containerID, dockerTypes.ContainerRemoveOptions{Force: force})
+	log.Debugf("Removing container: %s", strings.TrimLeft(cID, "/"))
+	err = c.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", strings.TrimLeft(containerID, "/"))
+	log.Infof("Removed container: %s", strings.TrimLeft(cID, "/"))
 	return nil
 }
 
