@@ -46,6 +46,20 @@ Lab nodes are grouped under their kinds in the inventory so that the users can s
               ansible_host: <mgmt-ipv4-address>
     ```
 
+When a lab node is of `kind: linux`, container additionally generates a `ansible_docker_host` variable for the inventory. This is useful when using the [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin.
+
+
+=== "ansible docker host inventory file"
+    ``` yaml
+    all:
+      children:
+        linux:
+          hosts:
+            clab-ansible-linux-host:
+              ansible_host: <mgmt-ipv4-address>
+              ansible_docker_host: clab-ansible-linux-host
+    ```
+
 ## User-defined groups
 Users can enforce custom grouping of nodes in the inventory by adding the `ansible-inventory` label to the node definition:
 
