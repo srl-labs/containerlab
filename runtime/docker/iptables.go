@@ -12,6 +12,10 @@ import (
 
 // installIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network
 func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
+	if !*d.mgmt.ExternalAccess {
+		return
+	}
+
 	if d.mgmt.Bridge == "" {
 		log.Debug("skipping setup of iptables forwarding rules for non-bridged management network")
 		return
@@ -42,6 +46,10 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 
 // deleteIPTablesFwdRule deletes `allow` rule installed with InstallIPTablesFwdRule when the bridge interface doesn't exist anymore
 func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
+	if !*d.mgmt.ExternalAccess {
+		return
+	}
+
 	if br == "" || br == "docker0" {
 		log.Debug("skipping deletion of iptables forwarding rule for non-bridged or default management network")
 		return
