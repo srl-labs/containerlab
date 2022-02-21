@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // InstallIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network
@@ -38,6 +39,32 @@ func (c *CLab) InstallIPTablesFwdRule() (err error) {
 
 	_, err = exec.Command("sudo", strings.Split(v4cmd, " ")...).Output()
 	if err != nil {
+		return
+	}
+
+	return err
+}
+
+// DeleteIPTablesFwdRule deletes `allow` rule installed with InstallIPTablesFwdRule when the bridge interface doesn't exist anymore
+func (c *CLab) DeleteIPTablesFwdRule(br string) (err error) {
+	if br == "" || br == "docker0" {
+		log.Warn("wat1")
+		log.Debug("skipping deletion of iptables forwarding rule for non-bridged or default management network")
+		return
+	}
+
+	_, err = utils.BridgeByName(br)
+	if err == nil {
+		log.Warn("here1")
+		// nil error means the bridge interface was found, hence we don't need to delete the fwd rule, as the bridge is still in use
+		return nil
+	}
+
+	v4cmd := fmt.Sprintf("iptables -D DOCKER-USER -o %s -j ACCEPT", br)
+
+	_, err = exec.Command("sudo", strings.Split(v4cmd, " ")...).Output()
+	if err != nil {
+		log.Warn(err)
 		return
 	}
 

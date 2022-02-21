@@ -136,8 +136,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// create docker network or use existing one
-	if err = c.GlobalRuntime().CreateNet(ctx); err != nil {
+	// create management network or use existing one
+	if err = c.CreateNetwork(ctx); err != nil {
 		return err
 	}
 
