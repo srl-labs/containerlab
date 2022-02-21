@@ -169,7 +169,10 @@ func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *typ
 		return nil, fmt.Errorf("error while starting a container %q: %w", cfg.LongName, err)
 	}
 	err = r.postStartActions(ctx, cID, cfg)
-	return nil, fmt.Errorf("error while executing post-start actions for container %q: %w", cfg.LongName, err)
+	if err != nil {
+		return nil, fmt.Errorf("error while starting a container %q: %w", cfg.LongName, err)
+	}
+	return nil, nil
 }
 
 func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
