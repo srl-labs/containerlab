@@ -46,18 +46,20 @@ Lab nodes are grouped under their kinds in the inventory so that the users can s
               ansible_host: <mgmt-ipv4-address>
     ```
 
-If you want to use the [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin, you can set the `ansible-no-host-var` label on a node to not generate the `ansible_host` variable in the inventory. This is useful as the connection plugin will now use the `inventory_hostname` when executing via Docker.
+## Removing `ansible_host` var
+If you want to use a plugin[^1] that doesn't play well with the `ansible_host` variable injected by containerlab in the inventory file, you can leverage the `ansible-no-host-var` label. The label can be set on per-node, kind, or default levels; if set, containerlab will not generate the `ansible_host` variable in the inventory for the nodes with that label.  
+Note that without the `ansible_host` variable, the connection plugin will use the `inventory_hostname` and resolve the name accordingly if network reachability is needed.
 
 === "topology file"
     ```yaml
     name: ansible
-    topology:
-    defaults:
-      labels:
-        ansible-no-host-var: "true"
-    nodes:
-      node1:
-      node2:
+      topology:
+        defaults:
+          labels:
+            ansible-no-host-var: "true"
+        nodes:
+          node1:
+          node2:
     ```
 === "generated ansible inventory"
     ```yaml
@@ -115,3 +117,5 @@ As a result of this configuration, the generated inventory will look like this:
         clab-custom-groups-node1:
           ansible_host: 172.100.100.11
 ```
+
+[^1]: For example [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin.
