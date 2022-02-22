@@ -70,16 +70,6 @@ Note that without the `ansible_host` variable, the connection plugin will use th
             clab-ansible-node1:
             clab-ansible-node2:
     ```
-=== "ansible docker host inventory file"
-    ``` yaml
-    all:
-      children:
-        linux:
-          hosts:
-            clab-ansible-linux-host:
-              ansible_host: <mgmt-ipv4-address>
-              ansible_docker_host: clab-ansible-linux-host
-    ```
 
 ## User-defined groups
 Users can enforce custom grouping of nodes in the inventory by adding the `ansible-inventory` label to the node definition:
