@@ -35,4 +35,6 @@ topology:
       kind: linux
       image: alpine:3
       mgmt_ipv4: 172.100.100.14
+      labels:
+        ansible-no-host-var: true
 

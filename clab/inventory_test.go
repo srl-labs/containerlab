@@ -30,13 +30,11 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 		},
 		"case2": {
 			got: "test_data/topo8_ansible_groups.yml",
-            want: `all:
+			want: `all:
   children:
     linux:
       hosts:
         clab-topo8_ansible_groups-node4:
-          ansible_host: 172.100.100.14
-          ansible_docker_host: clab-topo8_ansible_groups-node4
     srl:
       hosts:
         clab-topo8_ansible_groups-node1:

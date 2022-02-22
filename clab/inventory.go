@@ -35,10 +35,9 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
       hosts:
 {{- range $nodes}}
         {{.LongName}}:
+		{{- if (eq (index .Labels "ansible-no-host-var") "") }}
           ansible_host: {{.MgmtIPv4Address}}
-          {{- if (eq $kind "linux") }}
-          ansible_docker_host: {{.LongName}}
-		  {{- end -}}
+		{{- end -}}
 {{- end}}
 {{- end}}
 {{- range $name, $nodes := .Groups}}
