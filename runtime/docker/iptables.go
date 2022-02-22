@@ -55,6 +55,15 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 		return
 	}
 
+	// first check if a rule exists before trying to delete it
+	v4checkCmd := "iptables -vL DOCKER-USER"
+
+	res, _ := exec.Command("sudo", strings.Split(v4checkCmd, " ")...).Output()
+	if !bytes.Contains(res, []byte(d.mgmt.Bridge)) {
+		log.Debugf("external access iptables rule doesn't exist. Skipping deletion", d.mgmt.Bridge)
+		return nil
+	}
+
 	_, err = utils.BridgeByName(br)
 	if err == nil {
 		// nil error means the bridge interface was found, hence we don't need to delete the fwd rule, as the bridge is still in use
