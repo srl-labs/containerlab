@@ -30,7 +30,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	// first check if a rule already exists to not create duplicates
 	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 	if bytes.Contains(res, []byte(d.mgmt.Bridge)) {
-		log.Debug("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", d.mgmt.Bridge)
+		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", d.mgmt.Bridge)
 		return err
 	}
 
@@ -62,7 +62,7 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 	// first check if a rule exists before trying to delete it
 	res, _ := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 	if !bytes.Contains(res, []byte(d.mgmt.Bridge)) {
-		log.Debugf("external access iptables rule doesn't exist. Skipping deletion", d.mgmt.Bridge)
+		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
 	}
 
