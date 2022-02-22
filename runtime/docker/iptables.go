@@ -10,6 +10,12 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	iptCheckCmd = "-vL DOCKER-USER"
+	iptAllowCmd = "-I DOCKER-USER -o %s -j ACCEPT"
+	iptDelCmd   = "-D DOCKER-USER -o %s -j ACCEPT"
+)
+
 // installIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network
 func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
@@ -22,11 +28,9 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	}
 
 	// first check if a rule already exists to not create duplicates
-	v4checkCmd := "iptables -vL DOCKER-USER"
-
-	res, err := exec.Command("sudo", strings.Split(v4checkCmd, " ")...).Output()
+	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 	if bytes.Contains(res, []byte(d.mgmt.Bridge)) {
-		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", d.mgmt.Bridge)
+		log.Debug("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", d.mgmt.Bridge)
 		return err
 	}
 
@@ -34,9 +38,9 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 		return err
 	}
 
-	v4cmd := fmt.Sprintf("iptables -I DOCKER-USER -o %s -j ACCEPT", d.mgmt.Bridge)
+	cmd := fmt.Sprintf(iptAllowCmd, d.mgmt.Bridge)
 
-	_, err = exec.Command("sudo", strings.Split(v4cmd, " ")...).Output()
+	_, err = exec.Command("iptables", strings.Split(cmd, " ")...).Output()
 	if err != nil {
 		return
 	}
@@ -56,9 +60,7 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 	}
 
 	// first check if a rule exists before trying to delete it
-	v4checkCmd := "iptables -vL DOCKER-USER"
-
-	res, _ := exec.Command("sudo", strings.Split(v4checkCmd, " ")...).Output()
+	res, _ := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 	if !bytes.Contains(res, []byte(d.mgmt.Bridge)) {
 		log.Debugf("external access iptables rule doesn't exist. Skipping deletion", d.mgmt.Bridge)
 		return nil
@@ -70,9 +72,9 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 		return nil
 	}
 
-	v4cmd := fmt.Sprintf("iptables -D DOCKER-USER -o %s -j ACCEPT", br)
+	cmd := fmt.Sprintf(iptDelCmd, br)
 
-	_, err = exec.Command("sudo", strings.Split(v4cmd, " ")...).Output()
+	_, err = exec.Command("iptables", strings.Split(cmd, " ")...).Output()
 	if err != nil {
 		return
 	}
