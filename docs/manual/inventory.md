@@ -46,9 +46,28 @@ Lab nodes are grouped under their kinds in the inventory so that the users can s
               ansible_host: <mgmt-ipv4-address>
     ```
 
-When a lab node is of `kind: linux`, container additionally generates a `ansible_docker_host` variable for the inventory. This is useful when using the [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin.
+If you want to use the [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin, you can set the `ansible-no-host-var` label on a node to not generate the `ansible_host` variable in the inventory. This is useful as the connection plugin will now use the `inventory_hostname` when executing via Docker.
 
-
+=== "topology file"
+    ```yaml
+    name: ansible
+    topology:
+    defaults:
+      labels:
+        ansible-no-host-var: "true"
+    nodes:
+      node1:
+      node2:
+    ```
+=== "generated ansible inventory"
+    ```yaml
+    all:
+      children:
+        linux:
+          hosts:
+            clab-ansible-node1:
+            clab-ansible-node2:
+    ```
 === "ansible docker host inventory file"
     ``` yaml
     all:
