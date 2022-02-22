@@ -648,12 +648,6 @@ func (*CLab) CheckResources() error {
 
 // sets defaults after the topology has been parsed
 func (c *CLab) setDefaults() {
-	// by default external access is enabled if not set by a user
-	if c.Config.Mgmt.ExternalAccess == nil {
-		c.Config.Mgmt.ExternalAccess = new(bool)
-		*c.Config.Mgmt.ExternalAccess = true
-	}
-
 	for _, n := range c.Nodes {
 		// Injecting the env var with expected number of links
 		numLinks := map[string]string{
