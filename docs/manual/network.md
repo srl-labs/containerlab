@@ -235,8 +235,8 @@ topology:
 ???error "'missing DOCKER-USER iptables chain' error"
     Containerlab will throw an error "missing DOCKER-USER iptables chain" when this chain is not found. This error is typically caused by two factors
 
-    1. Old docker version installed. Typically seen on Centos systems.
-    2. Docker is installed via package managers with default repositories. It is recommended to follow the [official installation procedures](https://docs.docker.com/engine/install/) by selecting "Installation per distro" menu option.
+    1. Old docker version installed. Typically seen on Centos systems. Minimum required docker version is 17.06.
+    2. Docker is installed incorrectly. It is recommended to follow the [official installation procedures](https://docs.docker.com/engine/install/) by selecting "Installation per distro" menu option.
 
     When docker is correctly installed, additional iptables chains will become available and the error will not appear.
 
