@@ -238,6 +238,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	if err != nil {
 		log.Warnf("%v", err)
 	}
+
 	return nil
 }
 
@@ -276,6 +277,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	if err != nil {
 		log.Warnf("%v", err)
 	}
+
 	return nil
 }
 

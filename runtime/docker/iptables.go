@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	iptCheckCmd = "-vL DOCKER-USER"
-	iptAllowCmd = "-I DOCKER-USER -o %s -j ACCEPT"
-	iptDelCmd   = "-D DOCKER-USER -o %s -j ACCEPT"
+	dockerUserChain = "DOCKER-USER"
+	iptCheckCmd     = "-vL DOCKER-USER"
+	iptAllowCmd     = "-I DOCKER-USER -o %s -j ACCEPT"
+	iptDelCmd       = "-D DOCKER-USER -o %s -j ACCEPT"
 )
 
 // installIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network
@@ -26,6 +27,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 		log.Debug("skipping setup of iptables forwarding rules for non-bridged management network")
 		return
 	}
+
 	// first check if a rule already exists to not create duplicates
 	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 	if bytes.Contains(res, []byte(d.mgmt.Bridge)) {
@@ -33,10 +35,15 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 		return err
 	}
 	if err != nil {
-		return err
+		// non nil error typically means that DOCKER-USER chain doesn't exist
+		// this happens with old docker installations (centos7 hello) from default repos
+		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.srlinux.dev/manual/network/#external-access")
 	}
+
 	cmd := fmt.Sprintf(iptAllowCmd, d.mgmt.Bridge)
+
 	log.Debugf("Installing iptables rules for bridge %q", d.mgmt.Bridge)
+
 	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
 	if err != nil {
 		log.Warnf("Iptables install stdout/stderr result is: %s", stdOutErr)
@@ -57,10 +64,15 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 	}
 
 	// first check if a rule exists before trying to delete it
-	res, _ := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
+	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 	if !bytes.Contains(res, []byte(d.mgmt.Bridge)) {
 		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
+	}
+	if err != nil {
+		// non nil error typically means that DOCKER-USER chain doesn't exist
+		// this happens with old docker installations (centos7 hello) from default repos
+		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.srlinux.dev/manual/network/#external-access")
 	}
 
 	_, err = utils.BridgeByName(br)
