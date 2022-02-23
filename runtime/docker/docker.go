@@ -234,8 +234,11 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
 	}
-
-	return d.installIPTablesFwdRule()
+	err = d.installIPTablesFwdRule()
+	if err != nil {
+		log.Warnf("failed to install iptables rules: %v", err)
+	}
+	return nil
 }
 
 // DeleteNet deletes a docker bridge
