@@ -88,6 +88,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			topos[cont.Labels["clab-topo-file"]] = struct{}{}
 		}
 	}
+
 	log.Debugf("We got the following topos struct for destroy: %+v", topos)
 	for topo := range topos {
 		opts := append(opts,
@@ -114,10 +115,19 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			log.Errorf("Error occurred during the %s lab deletion %v", clab.Config.Name, err)
 			errs = append(errs, err)
 		}
+
+		if cleanup {
+			err = os.RemoveAll(clab.Dir.Lab)
+			if err != nil {
+				log.Errorf("error deleting lab directory: %v", err)
+			}
+		}
 	}
+
 	if len(errs) != 0 {
 		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
 	}
+
 	return nil
 }
 
@@ -127,15 +137,6 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	containers, err := c.ListContainers(ctx, labels)
 	if err != nil {
 		return err
-	}
-
-	var labDir string
-	if cleanup {
-		labDir = c.Dir.Lab
-		err = os.RemoveAll(labDir)
-		if err != nil {
-			log.Errorf("error deleting lab directory: %v", err)
-		}
 	}
 
 	if len(containers) == 0 {
