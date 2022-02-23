@@ -26,26 +26,23 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 		log.Debug("skipping setup of iptables forwarding rules for non-bridged management network")
 		return
 	}
-
 	// first check if a rule already exists to not create duplicates
 	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 	if bytes.Contains(res, []byte(d.mgmt.Bridge)) {
 		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", d.mgmt.Bridge)
 		return err
 	}
-
 	if err != nil {
 		return err
 	}
-
 	cmd := fmt.Sprintf(iptAllowCmd, d.mgmt.Bridge)
-
-	_, err = exec.Command("iptables", strings.Split(cmd, " ")...).Output()
+	log.Debugf("Installing iptables rules for bridge %q", d.mgmt.Bridge)
+	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
 	if err != nil {
-		return
+		log.Errorf("Iptables install stdout/stderr result is: %s", stdOutErr)
+		return fmt.Errorf("unable to install iptables rules: %w", err)
 	}
-
-	return err
+	return nil
 }
 
 // deleteIPTablesFwdRule deletes `allow` rule installed with InstallIPTablesFwdRule when the bridge interface doesn't exist anymore
@@ -73,11 +70,11 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 	}
 
 	cmd := fmt.Sprintf(iptDelCmd, br)
-
-	_, err = exec.Command("iptables", strings.Split(cmd, " ")...).Output()
+	log.Debugf("Removing clab iptables rules for bridge %q", br)
+	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
 	if err != nil {
-		return
+		log.Errorf("Iptables delete stdout/stderr result is: %s", stdOutErr)
+		return fmt.Errorf("unable to delete iptables rules: %w", err)
 	}
-
-	return err
+	return nil
 }

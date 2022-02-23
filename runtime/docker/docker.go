@@ -236,7 +236,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	}
 	err = d.installIPTablesFwdRule()
 	if err != nil {
-		log.Warnf("failed to install iptables rules: %v", err)
+		log.Warnf("%v", err)
 	}
 	return nil
 }
@@ -272,8 +272,11 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 
 	// bridge name associated with the network
 	br := "br-" + nres.ID[:12]
-
-	return d.deleteIPTablesFwdRule(br)
+	err = d.deleteIPTablesFwdRule(br)
+	if err != nil {
+		log.Warnf("%v", err)
+	}
+	return nil
 }
 
 // CreateContainer creates a docker container (but does not start it)
