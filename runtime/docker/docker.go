@@ -234,8 +234,12 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
 	}
+	err = d.installIPTablesFwdRule()
+	if err != nil {
+		log.Warnf("%v", err)
+	}
 
-	return d.installIPTablesFwdRule()
+	return nil
 }
 
 // DeleteNet deletes a docker bridge
@@ -269,8 +273,12 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 
 	// bridge name associated with the network
 	br := "br-" + nres.ID[:12]
+	err = d.deleteIPTablesFwdRule(br)
+	if err != nil {
+		log.Warnf("%v", err)
+	}
 
-	return d.deleteIPTablesFwdRule(br)
+	return nil
 }
 
 // CreateContainer creates a docker container (but does not start it)
