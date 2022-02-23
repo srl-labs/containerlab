@@ -11,10 +11,9 @@ import (
 )
 
 const (
-	dockerUserChain = "DOCKER-USER"
-	iptCheckCmd     = "-vL DOCKER-USER"
-	iptAllowCmd     = "-I DOCKER-USER -o %s -j ACCEPT"
-	iptDelCmd       = "-D DOCKER-USER -o %s -j ACCEPT"
+	iptCheckCmd = "-vL DOCKER-USER"
+	iptAllowCmd = "-I DOCKER-USER -o %s -j ACCEPT"
+	iptDelCmd   = "-D DOCKER-USER -o %s -j ACCEPT"
 )
 
 // installIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network
