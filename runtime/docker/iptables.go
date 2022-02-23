@@ -39,7 +39,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	log.Debugf("Installing iptables rules for bridge %q", d.mgmt.Bridge)
 	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
 	if err != nil {
-		log.Errorf("Iptables install stdout/stderr result is: %s", stdOutErr)
+		log.Warnf("Iptables install stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to install iptables rules: %w", err)
 	}
 	return nil
@@ -73,7 +73,7 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 	log.Debugf("Removing clab iptables rules for bridge %q", br)
 	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
 	if err != nil {
-		log.Errorf("Iptables delete stdout/stderr result is: %s", stdOutErr)
+		log.Warnf("Iptables delete stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to delete iptables rules: %w", err)
 	}
 	return nil
