@@ -11,7 +11,8 @@ RUN apk add --no-cache bash \
 	openssh \
 	make \
 	device-mapper \
-	e2fsprogs-extra
+	e2fsprogs-extra \
+	iptables
 
 COPY containerlab_*.apk /tmp/
 RUN apk add --allow-untrusted /tmp/containerlab_*.apk && rm -f /tmp/containerlab_*.apk

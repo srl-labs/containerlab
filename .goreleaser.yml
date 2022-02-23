@@ -24,7 +24,7 @@ dockers:
     goarch: amd64
     image_templates:
       # if version starts with v0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
-      - '{{ $pfx := slice .Version 0 6}}{{- if eq $pfx "v0.0.0"}}ghcr.io/srl-labs/clab:beta{{else}}ghcr.io/srl-labs/clab:latest{{- end }}'
+      - '{{ $pfx := slice .Version 0 5}}{{- if eq $pfx "0.0.0"}}ghcr.io/srl-labs/clab:beta{{else}}ghcr.io/srl-labs/clab:latest{{- end }}'
       - 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}'
     dockerfile: goreleaser.dockerfile
 archives:
