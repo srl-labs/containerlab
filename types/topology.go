@@ -171,30 +171,6 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	return cfg, nil
 }
 
-// Get Interface Mapping (supported in cEOS >= 4.28.0F)
-func (t *Topology) GetNodeIntfMapping(name string) (string, error) {
-	var intfmapping string
-	if ndef, ok := t.Nodes[name]; ok {
-		var err error
-		intfmapping = ndef.GetIntfMapping()
-		if t.GetKind(t.GetNodeKind(name)).GetIntfMapping() != "" && intfmapping == "" {
-			intfmapping = t.GetKind(t.GetNodeKind(name)).GetIntfMapping()
-		}
-		if intfmapping == "" {
-			intfmapping = t.GetDefaults().GetIntfMapping()
-		}
-		if intfmapping != "" {
-			intfmapping, err = resolvePath(intfmapping)
-			if err != nil {
-				return "", err
-			}
-			_, err = os.Stat(intfmapping)
-			return intfmapping, err
-		}
-	}
-	return intfmapping, nil
-}
-
 func (t *Topology) GetNodeStartupDelay(name string) uint {
 	if ndef, ok := t.Nodes[name]; ok {
 		if ndef.GetStartupDelay() != 0 {

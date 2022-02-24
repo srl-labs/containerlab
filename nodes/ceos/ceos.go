@@ -123,43 +123,42 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
 	cfg := filepath.Join(node.LabDir, "flash", "startup-config")
 	node.ResStartupConfig = cfg
-	intf := filepath.Join(node.LabDir, "flash", "EosIntfMapping.json")
-	node.ResIntfMapping = intf
 
-	// use interface mapping file provided by a user
+	// use interface mapping file to set the Management interface if it is provided in the binds section
+	// default is Management0
 	mgmtInterface = "Management0"
-	intfMapping = ""
-	if node.IntfMapping != "" {
-		m, err := os.ReadFile(node.IntfMapping)
-		if err != nil {
-			return err
-		}
-		intfMapping = string(m)
+	for _, bindelement := range node.Binds {
+		if strings.Contains(bindelement, "EosIntfMapping.json") {
+			bindsplit := strings.Split(bindelement, ":")
+			if len(bindsplit) > 1 {
+				m, err := os.ReadFile(bindsplit[0])
+				if err != nil {
+					return err
+				}
+				intfMapping = string(m)
 
-		err2 := node.GenerateIntfMapping(node.ResIntfMapping, intfMapping)
-        if err2 != nil {
-            return err2
-        }
-		
-		// Reset management interface if defined in the intfMapping file
-		var intfMappingJson map[string]interface{}
-		err3 := json.Unmarshal([]byte(intfMapping), &intfMappingJson)
-		if err3 != nil {
-			return err3
-		}
-		managementIntfMap, ok := intfMappingJson["ManagementIntf"].(map[string]interface{})
-		if !ok {
-			log.Debugf("Management interface could not be read from intfMapping file for '%s' node, the default Management0 will be used.", node.ShortName)
-		} else {	
-			if val, ok := managementIntfMap["eth0"].(string); ok {
-				mgmtInterface = val
-			} else {
-				log.Debugf("Key eth0 could not be read from intfMapping file for '%s' node, the default Management0 will be used as management interface.", node.ShortName)
+				// Reset management interface if defined in the intfMapping file
+				var intfMappingJson map[string]interface{}
+				err3 := json.Unmarshal([]byte(intfMapping), &intfMappingJson)
+				if err3 != nil {
+					return err3
+				}
+				managementIntfMap, ok := intfMappingJson["ManagementIntf"].(map[string]interface{})
+				if !ok {
+					log.Debugf("Management interface could not be read from intfMapping file for '%s' node, the default Management0 will be used.", node.ShortName)
+				} else {	
+					if val, ok := managementIntfMap["eth0"].(string); ok {
+						mgmtInterface = val
+					} else {
+						log.Debugf("Key eth0 could not be read from intfMapping file for '%s' node, the default Management0 will be used as management interface.", node.ShortName)
+					}
+				}
 			}
 		}
 	}
 	log.Debugf("Management interface for '%s' node is set to %s.", node.ShortName, mgmtInterface)
 	node.MgmtIntf = mgmtInterface
+	
 
 	// use startup config file provided by a user
 	if node.StartupConfig != "" {
@@ -201,7 +200,7 @@ func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.N
 	defer d.Close()
 
 	cfgs := []string{
-		"interface " + mgmtInterface,
+		"interface " + node.MgmtIntf,
 		"no ip address",
 		"no ipv6 address",
 	}
@@ -222,7 +221,6 @@ func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.N
 
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
-
 	resp, err := d.SendConfigs(cfgs)
 	if err != nil {
 		return err

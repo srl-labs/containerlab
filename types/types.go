@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-	"io"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
@@ -67,8 +66,6 @@ type NodeConfig struct {
 	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
 	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
 	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
-	ResIntfMapping		 string // path to interface Mapping file that is actually mounted to the container and is a result of templation (only in cEOS >= 4.28.0F)
-	IntfMapping		     string // path to interface Mapping file that is used for interface layout generation (only in cEOS >= 4.28.0F)
 	Config               *ConfigDispatcher
 	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
 	NodeType             string
@@ -87,7 +84,7 @@ type NodeConfig struct {
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface
-	MgmtIntf			 string // can be used to be rendered by the default node template 
+	MgmtIntf             string // can be used to be rendered by the default node template 
 	MgmtIPv4Address      string
 	MgmtIPv4PrefixLength int
 	MgmtIPv6Address      string
@@ -149,38 +146,6 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 	}
 	defer f.Close()
 	_, err = f.Write(dstBytes.Bytes())
-	return err
-}
-
-// GenerateIntfMapping generates a Interface Mapping file for the nodes (supported in cEOS >= 4.28.0F)
-func (node *NodeConfig) GenerateIntfMapping(dst, templ string) error {
-
-	// The Interface Mapping file is always regenerated if it is set in the topology file
-	log.Debugf("generating interface mapping file for node %s from file %s", node.ShortName, node.IntfMapping)
-
-	_, err := os.Stat(node.IntfMapping)
-	if err != nil {
-		return err
-	}
-
-	source, err := os.Open(node.IntfMapping)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-
-	if _, err := io.Copy(destination, source); err != nil {
-		log.Errorf("Could not generate interface mapping file for node %s from file %s", node.ShortName, filepath.Base(node.IntfMapping))
-		return err
-	}
-	log.Debugf("node '%s' generated interface mapping: %s", node.ShortName, templ)
-
 	return err
 }
 
