@@ -357,7 +357,7 @@
                     "description": "IPv6 range to use for the custom management network. e.g. 2001:172:100:100::/64",
                     "markdownDescription": "[IPv6 range](https://containerlab.srlinux.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 2001:172:100:100::/64",
                     "type": "string",
-                    "pattern": "^.+\/[0-9]{1,2}$"
+                    "pattern": "^.+\/[0-9]{1,3}$"
                 },
                 "ipv4-gw": {
                     "description": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
