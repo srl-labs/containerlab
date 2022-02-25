@@ -92,6 +92,12 @@ A single path `/` is served, where the graph is generated based on either a defa
 
 The `--template` flag allows to customize the HTML based graph by supplying a user defined template that will be rendered and exposed on the address specified by `--srv`.
 
+#### static-dir
+
+The `--static-dir` flag enables the embedded HTML web server to serve static files from the specified directory. This flag must be used together with the `--template` flag.
+
+With this flag, it is now possible to link to local files (JS, CSS, fonts, etc.) from the custom HTML template.    
+
 #### dot
 With `--dot` flag provided containerlab will generate the `dot` file instead of serving the topology with embedded HTTP server.
 
@@ -105,4 +111,8 @@ containerlab graph --topo /path/to/topo1.clab.yml
 
 # start an http server on :3002 where topo1 graph will be rendered using a custom template my_template.html
 containerlab graph --topo /path/to/topo1.clab.yml --srv ":3002" --template my_template.html
+
+# start an http server on default port :50080 
+# using a custom template that links to local files located at /path/to/static_files directory
+containerlab graph --topo /path/to/topo1.clab.yml --template my_template.html --static-dir /path/to/static_files
 ```

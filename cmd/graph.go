@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ var (
 	tmpl    string
 	offline bool
 	dot     bool
+	staticDir string
 
 	//go:embed graph-template.html
 	graphTemplate string
@@ -45,6 +47,10 @@ type link struct {
 type topoData struct {
 	Name string
 	Data template.JS
+}
+
+type newFileSystem struct {
+	http.Dir
 }
 
 // graphCmd represents the graph command
@@ -130,6 +136,15 @@ var graphCmd = &cobra.Command{
 			t = template.Must(template.New("graph").Parse(graphTemplate))
 		}
 
+		if staticDir != "" {
+			if tmpl == "" {
+				return fmt.Errorf("the --static-dir flag must be used with the --template flag")
+			}
+			fs := http.FileServer(newFileSystem{http.Dir(staticDir)})
+			http.Handle("/static/", http.StripPrefix("/static/", fs))
+			log.Infof("Serving static files from directory: %s", staticDir)
+		}		
+
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			_ = t.Execute(w, topoD)
 		})
@@ -141,6 +156,24 @@ var graphCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+func (nfs newFileSystem) Open(name string) (result http.File, err error) {
+    f, err := nfs.Dir.Open(name)
+    if err != nil {
+        return
+    }
+
+    stat, err := f.Stat()
+    if err != nil {
+        return
+    }
+
+    if stat.IsDir() {
+        return nil, os.ErrNotExist
+    }
+
+    return f, nil
 }
 
 func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
@@ -186,4 +219,6 @@ func init() {
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false, "use only information from topo file when building graph")
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file instead of launching the web server")
 	graphCmd.Flags().StringVarP(&tmpl, "template", "", "", "Go html template used to generate the graph")
+	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "", "Serve static files from the specified directory")
+
 }
