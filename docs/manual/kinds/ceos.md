@@ -145,26 +145,27 @@ It is possible to change the default config which every ceos node will start wit
 
 1. Craft a valid startup configuration file[^2].
 2. Use this file as a startup-config for ceos kind:
-    ```yaml
-    name: ceos
 
-    topology:
-    kinds:
-        ceos:
-        startup-config: ceos-custom-startup.cfg
-    nodes:
-        # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
-        ceos1:
-        kind: ceos
-        image: ceos:4.25.0F
-        # ceos2 will boot with its own specific startup config, as it overrides the kind variables
-        ceos2: 
-        kind: ceos
-        image: ceos:4.25.0F
-        startup-config: node-specific-startup.cfg
-    links:
-        - endpoints: ["ceos1:eth1", "ceos2:eth1"]
-    ```
+```yaml
+name: ceos
+
+topology:
+kinds:
+    ceos:
+    startup-config: ceos-custom-startup.cfg
+nodes:
+    # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
+    ceos1:
+    kind: ceos
+    image: ceos:4.25.0F
+    # ceos2 will boot with its own specific startup config, as it overrides the kind variables
+    ceos2: 
+    kind: ceos
+    image: ceos:4.25.0F
+    startup-config: node-specific-startup.cfg
+links:
+    - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+```
 
 #### Saving configuration
 In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup config file effectively calling the `write` CLI command.
