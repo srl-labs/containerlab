@@ -145,7 +145,7 @@ It is possible to change the default config which every ceos node will start wit
 
 1. Craft a valid startup configuration file[^2].
 2. Use this file as a startup-config for ceos kind:
-    ```
+    ```yaml
     name: ceos
 
     topology:
