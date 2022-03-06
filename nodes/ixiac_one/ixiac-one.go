@@ -25,6 +25,10 @@ var ixiacStatusConfig = struct {
 	readyFileName:       "/home/keysight/ixia-c-one/init-done",
 }
 
+var execCommand = map[string]string{
+	"docker": "docker exec",
+}
+
 func init() {
 	nodes.Register(nodes.NodeKindIXIACONE, func() nodes.Node {
 		return new(ixiacOne)
@@ -79,12 +83,16 @@ func (*ixiacOne) SaveConfig(_ context.Context) error {
 
 // ixiacPostDeploy runs postdeploy actions which are required for ixia-c node
 func ixiacPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
-	// TODO: replace following by goroutine
+	runtimeCmd, ok := execCommand[r.GetName()]
+	if !ok {
+		return fmt.Errorf("runtime '%v' is not yet supported with ixia-c-one kind", r.GetName())
+	}
+
+	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
+	bashCmd := fmt.Sprintf("%s %s %s", runtimeCmd, node.LongName, ixiacOneCmd)
+	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		bashcmd := fmt.Sprintf("docker exec %s ls %s", node.LongName, ixiacStatusConfig.readyFileName)
-		cmd := exec.Command("/bin/sh", "-c", bashcmd)
-		statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
-		//fmt.Println("---Cmd: ", cmd)
+		cmd := exec.Command("/bin/sh", "-c", bashCmd)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			msg := strings.TrimSuffix(string(out), "\n")
