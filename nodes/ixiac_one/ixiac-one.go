@@ -54,7 +54,11 @@ func (l *ixiacOne) Config() *types.NodeConfig { return l.cfg }
 func (*ixiacOne) PreDeploy(_, _, _ string) error { return nil }
 
 func (l *ixiacOne) Deploy(ctx context.Context) error {
-	_, err := l.runtime.CreateContainer(ctx, l.cfg)
+	cID, err := l.runtime.CreateContainer(ctx, l.cfg)
+	if err != nil {
+		return err
+	}
+	_, err = l.runtime.StartContainer(ctx, cID, l.cfg)
 	return err
 }
 
