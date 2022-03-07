@@ -59,7 +59,7 @@ func (l *ixiacOne) Deploy(ctx context.Context) error {
 }
 
 func (l *ixiacOne) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	log.Infof("Running postdeploy actions for ixia-c '%s' node", l.cfg.ShortName)
+	log.Infof("Running postdeploy actions for ixia-c-one '%s' node", l.cfg.ShortName)
 	return ixiacPostDeploy(ctx, l.runtime, l.cfg)
 }
 
@@ -81,7 +81,7 @@ func (*ixiacOne) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-// ixiacPostDeploy runs postdeploy actions which are required for ixia-c node
+// ixiacPostDeploy runs postdeploy actions which are required for ixia-c-one node
 func ixiacPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
 	runtimeCmd, ok := execCommand[r.GetName()]
 	if !ok {
