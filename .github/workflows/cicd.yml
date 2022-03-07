@@ -227,6 +227,44 @@ jobs:
           name: 02-basic-srl-log
           path: ./tests/out/*.html
 
+  ixiacone-basic-tests:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        runtime:
+          - "docker"
+          # - "containerd"
+    needs:
+      - unit-test
+      - build-containerlab
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v2
+        with:
+          name: containerlab
+      - name: Move containerlab to usr/bin
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+          cache: pip
+          cache-dependency-path: "tests/requirements.txt"
+      - name: Install robotframework
+        run: |
+          pip install -r tests/requirements.txt
+      - name: Run ixia-c-one tests
+        run: |
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/04-basic-ixiacone
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: 04-basic-ixiacone-log
+          path: ./tests/out/*.html
+
   docs-test:
     runs-on: ubuntu-20.04
     needs: file-changes
