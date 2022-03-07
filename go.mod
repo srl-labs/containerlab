@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/awalterschulze/gographviz v2.0.1+incompatible
 	github.com/cloudflare/cfssl v1.4.1
-	github.com/containerd/containerd v1.5.9
+	github.com/containerd/containerd v1.5.10
 	github.com/containernetworking/cni v0.8.1
 	github.com/containernetworking/plugins v0.9.1
 	github.com/containers/podman/v3 v3.4.4
