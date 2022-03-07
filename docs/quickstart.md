@@ -5,7 +5,7 @@ Getting containerlab is as easy as it gets. Thanks to the trivial [installation]
 
 ```bash
 # download and install the latest release (may require sudo)
-bash -c "$(curl -sL https://get-clab.srlinux.dev)"
+bash -c "$(curl -sL https://get.containerlab.dev)"
 ```
 
 ## Topology definition file
