@@ -110,7 +110,7 @@ site_description: >-
 # Repository
 repo_name: srl-labs/containerlab
 repo_url: https://github.com/srl-labs/containerlab
-site_url: "https://containerlab.srlinux.dev/"
+site_url: "https://containerlab.dev/"
 edit_uri: ""
 theme:
   name: material
