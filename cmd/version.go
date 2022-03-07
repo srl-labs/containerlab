@@ -49,7 +49,7 @@ var versionCmd = &cobra.Command{
 		fmt.Printf("     commit: %s\n", commit)
 		fmt.Printf("       date: %s\n", date)
 		fmt.Printf("     source: %s\n", repoUrl)
-		fmt.Printf(" rel. notes: https://containerlab.srlinux.dev/rn/%s\n", verSlug)
+		fmt.Printf(" rel. notes: https://containerlab.dev/rn/%s\n", verSlug)
 	},
 }
 
@@ -87,7 +87,7 @@ func newVerNotification(vc chan string) {
 	case ver, ok := <-vc:
 		if ok {
 			relSlug := docsLinkFromVer(ver)
-			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.srlinux.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.srlinux.dev/install/\n", ver, relSlug)
+			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.dev/install/\n", ver, relSlug)
 		}
 	default:
 		return

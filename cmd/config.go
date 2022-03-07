@@ -21,7 +21,7 @@ var configFilter []string
 var configCmd = &cobra.Command{
 	Use:          "config",
 	Short:        "configure a lab",
-	Long:         "configure a lab based on templates and variables from the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/config/",
+	Long:         "configure a lab based on templates and variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/",
 	Aliases:      []string{"conf"},
 	ValidArgs:    []string{"commit", "send", "compare", "template"},
 	SilenceUsage: true,

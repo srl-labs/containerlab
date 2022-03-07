@@ -20,7 +20,7 @@ A directory path under which the generated files will be placed is set with `--p
 Certificate validity period is set as a duration interval with `--expiry | -e` flag. Defaults to `87600h`, which is 10 years.
 
 #### Common Name
-Certificate Common Name (CN) field is set with `--cn` flag. Defaults to `containerlab.srlinux.dev`.
+Certificate Common Name (CN) field is set with `--cn` flag. Defaults to `containerlab.dev`.
 
 #### Country
 Certificate Country (C) field is set with `--c` flag. Defaults to `Internet`.

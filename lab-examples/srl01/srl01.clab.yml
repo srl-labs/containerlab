@@ -1,4 +1,4 @@
-# topology documentation: http://containerlab.srlinux.dev/lab-examples/single-srl/
+# topology documentation: http://containerlab.dev/lab-examples/single-srl/
 name: srl01
 
 topology:

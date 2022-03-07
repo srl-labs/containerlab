@@ -45,7 +45,7 @@ var skipPostDeploy bool
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
 	Short:        "deploy a lab",
-	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/deploy/",
+	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
 	PreRunE:      sudoCheck,

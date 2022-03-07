@@ -18,7 +18,7 @@ Containerlab doesn't create bridges on users behalf, that means that in order to
 Once the bridge is created, it needs to be referenced as a node inside the topology file:
 
 ```yaml
-# topology documentation: http://containerlab.srlinux.dev/lab-examples/ext-bridge/
+# topology documentation: http://containerlab.dev/lab-examples/ext-bridge/
 name: br01
 
 topology:
