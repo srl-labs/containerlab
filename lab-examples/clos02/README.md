@@ -1,7 +1,7 @@
 # SRL Containerlab (clos02)
 
 ### 5-stage CLOS
-https://containerlab.srlinux.dev/lab-examples/min-5clos/
+https://containerlab.dev/lab-examples/min-5clos/
 
 ### Execution
 ```

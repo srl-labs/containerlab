@@ -36,7 +36,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	if err != nil {
 		// non nil error typically means that DOCKER-USER chain doesn't exist
 		// this happens with old docker installations (centos7 hello) from default repos
-		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.srlinux.dev/manual/network/#external-access")
+		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.dev/manual/network/#external-access")
 	}
 
 	cmd := fmt.Sprintf(iptAllowCmd, d.mgmt.Bridge)
@@ -71,7 +71,7 @@ func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 	if err != nil {
 		// non nil error typically means that DOCKER-USER chain doesn't exist
 		// this happens with old docker installations (centos7 hello) from default repos
-		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.srlinux.dev/manual/network/#external-access")
+		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.dev/manual/network/#external-access")
 	}
 
 	_, err = utils.BridgeByName(br)

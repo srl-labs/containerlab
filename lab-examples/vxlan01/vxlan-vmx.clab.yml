@@ -11,6 +11,6 @@ topology:
   links:
     # we expose two sros container interfaces
     # to host namespace by using host interfaces style
-    # docs: https://containerlab.srlinux.dev/manual/network/#host-links
+    # docs: https://containerlab.dev/manual/network/#host-links
     - endpoints: ["vmx:eth1", "host:vmx-eth1"]
     - endpoints: ["vmx:eth2", "host:vmx-eth2"]

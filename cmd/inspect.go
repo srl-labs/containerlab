@@ -43,7 +43,7 @@ type BridgeDetails struct{}
 var inspectCmd = &cobra.Command{
 	Use:     "inspect",
 	Short:   "inspect lab details",
-	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.srlinux.dev/cmd/inspect/",
+	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
 	Aliases: []string{"ins", "i"},
 	PreRunE: sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {

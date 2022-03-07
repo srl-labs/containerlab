@@ -51,7 +51,7 @@ type topoData struct {
 var graphCmd = &cobra.Command{
 	Use:   "graph",
 	Short: "generate a topology graph",
-	Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.srlinux.dev/cmd/graph/",
+	Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error

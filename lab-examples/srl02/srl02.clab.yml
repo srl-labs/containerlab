@@ -1,4 +1,4 @@
-# topology documentation: http://containerlab.srlinux.dev/lab-examples/two-srls/
+# topology documentation: http://containerlab.dev/lab-examples/two-srls/
 name: srl02
 
 topology:

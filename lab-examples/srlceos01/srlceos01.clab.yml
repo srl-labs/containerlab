@@ -1,4 +1,4 @@
-# topology documentation: http://containerlab.srlinux.dev/lab-examples/srl-ceos/
+# topology documentation: http://containerlab.dev/lab-examples/srl-ceos/
 name: srlceos01
 
 topology:

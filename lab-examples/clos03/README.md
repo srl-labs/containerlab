@@ -1,5 +1,5 @@
 # Tier-2 CLOS with Config Engine (cfg-clos)
-For detailed information on this example, please refer to : https://containerlab.srlinux.dev/lab-examples/clos03/
+For detailed information on this example, please refer to : https://containerlab.dev/lab-examples/clos03/
 
 ### Execution
 ```
