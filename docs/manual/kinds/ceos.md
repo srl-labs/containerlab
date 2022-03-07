@@ -91,7 +91,7 @@ While many users will be fine with the default ceos naming of `eth`, some ceos u
 In order to align interfaces in this manner, the `INTFTYPE` environment variable must be set to `et` in the topology definition file and the links which are defined must be named `et`, as opposed to `eth`. This naming requirement does not apply to the `eth0` interface automatically created by containerlab. This is only required for links that are used for interconnection with other elements in a topology.
 
 example:
-```yml
+```yaml
 topology:
   defaults:
     env:
@@ -145,24 +145,25 @@ It is possible to change the default config which every ceos node will start wit
 
 1. Craft a valid startup configuration file[^2].
 2. Use this file as a startup-config for ceos kind:
-    ```
+
+    ```yaml
     name: ceos
 
     topology:
-    kinds:
+      kinds:
         ceos:
         startup-config: ceos-custom-startup.cfg
-    nodes:
+      nodes:
         # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
         ceos1:
-        kind: ceos
-        image: ceos:4.25.0F
+          kind: ceos
+          image: ceos:4.25.0F
         # ceos2 will boot with its own specific startup config, as it overrides the kind variables
         ceos2: 
-        kind: ceos
-        image: ceos:4.25.0F
-        startup-config: node-specific-startup.cfg
-    links:
+          kind: ceos
+          image: ceos:4.25.0F
+          startup-config: node-specific-startup.cfg
+      links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
 
