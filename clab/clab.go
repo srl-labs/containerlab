@@ -142,11 +142,18 @@ func (c *CLab) initMgmtNetwork() error {
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
+
 	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {
 		c.Config.Mgmt.IPv4Subnet = dockerNetIPv4Addr
 		c.Config.Mgmt.IPv6Subnet = dockerNetIPv6Addr
 	}
-	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
+
+	// by default external access is enabled if not set by a user
+	if c.Config.Mgmt.ExternalAccess == nil {
+		c.Config.Mgmt.ExternalAccess = new(bool)
+		*c.Config.Mgmt.ExternalAccess = true
+	}
+
 	// init docker network mtu
 	if c.Config.Mgmt.MTU == "" {
 		m, err := utils.DefaultNetMTU()
@@ -155,6 +162,8 @@ func (c *CLab) initMgmtNetwork() error {
 		}
 		c.Config.Mgmt.MTU = m
 	}
+
+	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
 
 	return nil
 }

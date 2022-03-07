@@ -84,6 +84,7 @@ nav:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
+      - "0.24": rn/0.24.md
       - "0.23": rn/0.23.md
       - "0.22": rn/0.22.md
       - "0.21": rn/0.21.md
@@ -109,7 +110,7 @@ site_description: >-
 # Repository
 repo_name: srl-labs/containerlab
 repo_url: https://github.com/srl-labs/containerlab
-site_url: "https://containerlab.srlinux.dev/"
+site_url: "https://containerlab.dev/"
 edit_uri: ""
 theme:
   name: material
@@ -129,6 +130,7 @@ theme:
     - navigation.tracking
     - navigation.tabs
     - search.suggest
+    - content.code.annotate
 
   language: en
   palette:
@@ -214,7 +216,8 @@ markdown_extensions:
   - pymdownx.snippets:
       check_paths: true
   - pymdownx.superfences
-  - pymdownx.tabbed
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde

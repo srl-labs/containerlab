@@ -47,20 +47,17 @@ var runtimePaths = []string{
 type IgniteRuntime struct {
 	config     runtime.RuntimeConfig
 	baseVM     *api.VM
-	Mgmt       *types.MgmtNet
+	mgmt       *types.MgmtNet
 	ctrRuntime runtime.ContainerRuntime
 }
 
 func init() {
 	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &IgniteRuntime{
-			Mgmt: new(types.MgmtNet),
+			mgmt: &types.MgmtNet{},
 		}
 	})
 }
-
-func (*IgniteRuntime) GetName() string                 { return runtimeName }
-func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 
@@ -112,6 +109,11 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 	return nil
 }
 
+func (c *IgniteRuntime) Mgmt() *types.MgmtNet { return c.mgmt }
+
+func (*IgniteRuntime) GetName() string                 { return runtimeName }
+func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
+
 func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	c.config.Timeout = cfg.Timeout
 	c.config.Debug = cfg.Debug
@@ -126,7 +128,7 @@ func (c *IgniteRuntime) WithKeepMgmtNet() {
 }
 
 func (c *IgniteRuntime) WithMgmtNet(n *types.MgmtNet) {
-	c.Mgmt = n
+	c.mgmt = n
 }
 
 func (c *IgniteRuntime) CreateNet(ctx context.Context) error {
@@ -150,7 +152,7 @@ func (*IgniteRuntime) PullImageIfRequired(_ context.Context, imageName string) e
 	return nil
 }
 
-func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
 
 	vm := c.baseVM.DeepCopy()
 
@@ -262,10 +264,11 @@ func (c *IgniteRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	return vmChans, utils.LinkContainerNS(node.NSPath, node.LongName)
 }
 
-func (*IgniteRuntime) StartContainer(_ context.Context, _ string) error {
+func (*IgniteRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (string, error) {
 	// this is a no-op
-	return nil
+	return "", nil
 }
+
 func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 	// this is a no-op, only used by ceos at this stage
 	return nil
