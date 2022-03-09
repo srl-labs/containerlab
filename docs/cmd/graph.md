@@ -94,9 +94,9 @@ The `--template` flag allows to customize the HTML based graph by supplying a us
 
 #### static-dir
 
-The `--static-dir` flag enables the embedded HTML web server to serve static files from the specified directory. This flag must be used together with the `--template` flag.
+The `--static-dir` flag enables the embedded HTML web-server to serve static files from the specified directory. Must be used together with the `--template` flag.
 
-With this flag, it is now possible to link to local files (JS, CSS, fonts, etc.) from the custom HTML template.    
+With this flag, it is possible to link to local files (JS, CSS, fonts, etc.) from the custom HTML template.
 
 #### dot
 With `--dot` flag provided containerlab will generate the `dot` file instead of serving the topology with embedded HTTP server.
