@@ -250,8 +250,9 @@
         },
         identityKey: 'name',
         dataProcessor: 'force',
+        // sort order consists of typical Clos hierarchy levels mixed with numerical values to help achieve auto sorting on arbitrary topologies
         layoutConfig: {
-            sortOrder: ['superspine', 'spine', 'leaf', 'server'],
+            sortOrder: ['10', '9', 'superspine', '8', 'dc-gw', '7', '6', 'spine', '5', '4', 'leaf', 'border-leaf', '3', 'server', '2', '1'],
         },
         enableSmartLabel: true,
         enableSmartNode: true,
