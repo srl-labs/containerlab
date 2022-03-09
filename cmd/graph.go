@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 
@@ -22,10 +23,11 @@ import (
 )
 
 var (
-	srv     string
-	tmpl    string
-	offline bool
-	dot     bool
+	srv       string
+	tmpl      string
+	offline   bool
+	dot       bool
+	staticDir string
 
 	//go:embed graph-template.html
 	graphTemplate string
@@ -45,6 +47,12 @@ type link struct {
 type topoData struct {
 	Name string
 	Data template.JS
+}
+
+// noListFs embeds the http.Dir to override the Open method of a filesystem
+// to prevent listing of static files, see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
+type noListFs struct {
+	http.Dir
 }
 
 // graphCmd represents the graph command
@@ -130,17 +138,49 @@ var graphCmd = &cobra.Command{
 			t = template.Must(template.New("graph").Parse(graphTemplate))
 		}
 
+		if staticDir != "" {
+			if tmpl == "" {
+				return fmt.Errorf("the --static-dir flag must be used with the --template flag")
+			}
+
+			fs := http.FileServer(noListFs{http.Dir(staticDir)})
+			http.Handle("/static/", http.StripPrefix("/static/", fs))
+			log.Infof("Serving static files from directory: %s", staticDir)
+		}
+
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			_ = t.Execute(w, topoD)
 		})
 
 		log.Infof("Listening on %s...", srv)
+
 		err = http.ListenAndServe(srv, nil)
 		if err != nil {
 			return err
 		}
+
 		return nil
 	},
+}
+
+// Open is a custom FS opener that prevents listing of the files in the filesystem
+// see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
+func (nfs noListFs) Open(name string) (result http.File, err error) {
+	f, err := nfs.Dir.Open(name)
+	if err != nil {
+		return
+	}
+
+	stat, err := f.Stat()
+	if err != nil {
+		return
+	}
+
+	if stat.IsDir() {
+		return nil, os.ErrNotExist
+	}
+
+	return f, nil
 }
 
 func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
@@ -186,4 +226,5 @@ func init() {
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false, "use only information from topo file when building graph")
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file instead of launching the web server")
 	graphCmd.Flags().StringVarP(&tmpl, "template", "", "", "Go html template used to generate the graph")
+	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "", "Serve static files from the specified directory")
 }
