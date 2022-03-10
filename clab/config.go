@@ -382,6 +382,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
+	if err = c.verifyLicFilesExist(); err != nil {
+		return err
+	}
 	return c.VerifyImages(ctx)
 }
 
@@ -415,6 +418,23 @@ func (c *CLab) verifyLinks() error {
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
+	return nil
+}
+
+// verifyLicFilesExist checks if referenced license files exist
+func (c *CLab) verifyLicFilesExist() error {
+	for _, node := range c.Nodes {
+		lic := node.Config().License
+		if lic == "" {
+			continue
+		}
+
+		rlic := utils.ResolvePath(lic, c.TopoFile.dir)
+		if !utils.FileExists(rlic) {
+			return fmt.Errorf("node's %q license file not found by the path %s", node.Config().ShortName, rlic)
+		}
+	}
+
 	return nil
 }
 
