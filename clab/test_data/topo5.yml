@@ -3,11 +3,11 @@ topology:
   kinds:
     srl:
       binds:
-        - test_data/kind.lic:/dst
+        - kind.lic:/dst
   nodes:
     node1:
       kind: srl
       type: ixr6
-      license: test_data/node1.lic
+      license: node1.lic
       binds:
-        - test_data/node1.lic:/dst2
+        - node1.lic:/dst2

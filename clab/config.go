@@ -15,7 +15,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -274,7 +273,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 	// initialize bind mounts
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
-	err = resolveBindPaths(binds, nodeCfg.LabDir)
+	err = c.resolveBindPaths(binds, nodeCfg.LabDir)
 	if err != nil {
 		return nil, err
 	}
@@ -575,45 +574,21 @@ func checkEndpoint(e string) error {
 	return nil
 }
 
-//resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
-func resolvePath(p string) (string, error) {
-	if p == "" {
-		return "", nil
-	}
-	var err error
-	switch {
-	// resolve ~/ path
-	case p[0] == '~':
-		p, err = homedir.Expand(p)
-		if err != nil {
-			return "", err
-		}
-	default:
-		p, err = filepath.Abs(p)
-		if err != nil {
-			return "", err
-		}
-	}
-	return p, nil
-}
-
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
 // it allows host path to have `~` and returns absolute path for a relative path
 // if the host path doesn't exist, the error will be returned
-func resolveBindPaths(binds []string, nodedir string) error {
+func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
 
+		// replace special $nodeDir variable
 		r := strings.NewReplacer("$nodeDir", nodedir)
 		hp := r.Replace(elems[0])
 
-		hp, err := resolvePath(hp)
-		if err != nil {
-			return err
-		}
+		hp = utils.ResolvePath(hp, c.TopoFile.dir)
 
-		_, err = os.Stat(hp)
+		_, err := os.Stat(hp)
 		if err != nil {
 			// check if the hostpath mount has a reference to ansible-inventory.yml
 			// if that is the case, we do not emit an error on missing file, since this file
@@ -629,6 +604,7 @@ func resolveBindPaths(binds []string, nodedir string) error {
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
 	}
+
 	return nil
 }
 
