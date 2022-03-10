@@ -71,17 +71,27 @@ To make certain node(s) to boot/start later than others use the `startup-delay` 
 This setting can be applied on node/kind/default levels.
 
 ### binds
-In order to expose host files to the containerized nodes a user can leverage the bind mount capability.
+Users can leverage the bind mount capability to expose host files to the containerized nodes.
 
-Provide a list of binds instructions under the `binds` container of the node configuration. The string format of those binding instructions follow the same rules as the [--volume parameter](https://docs.docker.com/storage/volumes/#choose-the--v-or---mount-flag) of the docker/podman CLI.
+Binds instructions are provided under the `binds` container of a default/kind/node configuration section. The format of those binding instructions follows the same of the docker's [--volume parameter](https://docs.docker.com/storage/volumes/#choose-the--v-or---mount-flag).
 
 ```yaml
-binds:
-  # mount a file from a host to a container (implicit RW mode)
-  - /usr/local/bin/gobgp:/root/gobgp
-  # mount a directory from a host to a container in RO mode
-  - /root/files:/root/files:ro
+topology:
+  nodes:
+    testNode:
+      kind: linux
+      # some other node parameters
+      binds:
+        - /usr/local/bin/gobgp:/root/gobgp # (1)!
+        - /root/files:/root/files:ro # (2)!
+        - somefile:/somefile # (3)!
+        - ~/.ssh/id_rsa:/root/.ssh/id_rsa # (4)!
 ```
+
+1. mount a host file found by the path `/usr/local/bin/gobgp` to a container under `/root/gobgp` (implicit RW mode)
+2. mount a `/root/files` directory from a host to a container in RO mode
+3. when a host path is given in a relative format, the path is considered relative to the topology file and not a current working directory.
+4. The `~` char will be expanded to a user's home directory.
 
 ???info "Bind variables"
     By default binds are either provided as an absolute, or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
@@ -114,7 +124,7 @@ binds:
             - cfgs/n2/conf:/conf
     ```
 
-    while this configuration is perfectly fine, it might be considered verbose as the number of nodes grow. To remove this verbosity, the users can leverage a special variable `$nodeDir` in their bind paths. This variable will expand to the node specific directory that containerlab creates for each node.
+    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can leverage a special variable `$nodeDir` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
 
     What this means is that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
 
@@ -146,7 +156,7 @@ binds:
 
     Notice how `$nodeDir` hides the directory structure and node names and removes the verbosity of the previous approach.
 
-Bind defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated binds removed.
+Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
 ### ports
 To bind the ports between the lab host and the containers the users can populate the `ports` object inside the node:
