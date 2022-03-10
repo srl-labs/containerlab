@@ -385,6 +385,10 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyLicFilesExist(); err != nil {
 		return err
 	}
+	if err = c.verifyStartupConfigFilesExist(); err != nil {
+		return err
+	}
+
 	return c.VerifyImages(ctx)
 }
 
@@ -432,6 +436,23 @@ func (c *CLab) verifyLicFilesExist() error {
 		rlic := utils.ResolvePath(lic, c.TopoFile.dir)
 		if !utils.FileExists(rlic) {
 			return fmt.Errorf("node's %q license file not found by the path %s", node.Config().ShortName, rlic)
+		}
+	}
+
+	return nil
+}
+
+// verifyStartupConfigFilesExist checks if referenced startup config files exist
+func (c *CLab) verifyStartupConfigFilesExist() error {
+	for _, node := range c.Nodes {
+		cfg := node.Config().StartupConfig
+		if cfg == "" {
+			continue
+		}
+
+		rcfg := utils.ResolvePath(cfg, c.TopoFile.dir)
+		if !utils.FileExists(rcfg) {
+			return fmt.Errorf("node's %q startup-config file not found by the path %s", node.Config().ShortName, rcfg)
 		}
 	}
 
