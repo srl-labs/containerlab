@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -84,8 +83,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return fmt.Errorf("no containerlab labs were found")
 		}
 		// get unique topo files from all labs
-		for _, cont := range containers {
-			topos[cont.Labels["clab-topo-file"]] = struct{}{}
+		for i := range containers {
+			topos[containers[i].Labels["clab-topo-file"]] = struct{}{}
 		}
 	}
 
@@ -95,17 +94,12 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			clab.WithTopoFile(topo, varsFile),
 		)
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
-		c, err := clab.NewContainerLab(opts...)
+		nc, err := clab.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
-		// change to the dir where topo file is located
-		// to resolve relative paths of license/configs in ParseTopology
-		if err = os.Chdir(filepath.Dir(topo)); err != nil {
-			return err
-		}
 
-		labs = append(labs, c)
+		labs = append(labs, nc)
 	}
 
 	var errs []error

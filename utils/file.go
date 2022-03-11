@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -144,4 +145,33 @@ func ReadFileContent(file string) ([]byte, error) {
 	b, err := ioutil.ReadFile(file)
 
 	return b, err
+}
+
+// ExpandHome expands `~` char in the path to home path of a current user in provided path p.
+func ExpandHome(p string) string {
+	userPath, _ := os.UserHomeDir()
+
+	p = strings.Replace(p, "~", userPath, 1)
+
+	return p
+}
+
+// ResolvePath resolves a string path by expanding `~` to home dir
+// or resolving a relative path by joining it with the base path
+func ResolvePath(p, base string) string {
+	if p == "" {
+		return p
+	}
+
+	switch {
+	// resolve ~/ path
+	case p[0] == '~':
+		p = ExpandHome(p)
+	case p[0] == '/':
+		return p
+	default:
+		// join relative path with the base path
+		p = filepath.Join(base, p)
+	}
+	return p
 }

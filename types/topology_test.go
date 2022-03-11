@@ -315,7 +315,7 @@ func TestGetNodeConfig(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantedConfig, err := resolvePath(item.want["node1"].StartupConfig)
+		wantedConfig := item.want["node1"].StartupConfig
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -350,7 +350,7 @@ func TestGetNodeLicense(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantedLicense, err := resolvePath(item.want["node1"].License)
+		wantedLicense := item.want["node1"].License
 		if err != nil {
 			t.Fatal(err)
 		}
