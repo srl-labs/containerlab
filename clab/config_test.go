@@ -21,7 +21,9 @@ func setupTestCase(t *testing.T) func(t *testing.T) {
 	f, _ := filepath.Abs("clab-topo2/node1/somefile")
 	os.MkdirAll("clab-topo2/node1", 0777)
 
-	os.Create(f)
+	if _, err := os.Create(f); err != nil {
+		t.Error(err)
+	}
 	// teardown function
 	return func(t *testing.T) {
 		os.RemoveAll("clab-topo2")
