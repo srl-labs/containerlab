@@ -29,9 +29,6 @@ var (
 	offline   bool
 	dot       bool
 	staticDir string
-
-	//go:embed graph-template.html
-	graphTemplate string
 )
 
 // graphCmd represents the graph command
