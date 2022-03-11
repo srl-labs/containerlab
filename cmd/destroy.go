@@ -83,8 +83,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return fmt.Errorf("no containerlab labs were found")
 		}
 		// get unique topo files from all labs
-		for _, cont := range containers {
-			topos[cont.Labels["clab-topo-file"]] = struct{}{}
+		for i := range containers {
+			topos[containers[i].Labels["clab-topo-file"]] = struct{}{}
 		}
 	}
 
