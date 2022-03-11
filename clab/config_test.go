@@ -15,6 +15,19 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+func setupTestCase(t *testing.T) func(t *testing.T) {
+	// setup function
+	// create node' labdir with a file that is used in topo2 definition for binds resolver to check path existence
+	f, _ := filepath.Abs("clab-topo2/node1/somefile")
+	os.MkdirAll("clab-topo2/node1", 0777)
+
+	os.Create(f)
+	// teardown function
+	return func(t *testing.T) {
+		os.RemoveAll("clab-topo2")
+	}
+}
+
 func TestLicenseInit(t *testing.T) {
 	tests := map[string]struct {
 		got  string
@@ -37,6 +50,9 @@ func TestLicenseInit(t *testing.T) {
 			want: "node1.lic",
 		},
 	}
+
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -89,20 +105,11 @@ func TestBindsInit(t *testing.T) {
 		},
 	}
 
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// create node labdir for tests of clabNodeDirVar replacement
-			if name == "node_many_binds" {
-				defer os.RemoveAll("clab-topo2")
-				f, _ := filepath.Abs("clab-topo2/node1/somefile")
-				os.MkdirAll("clab-topo2/node1", 0777)
-
-				_, err := os.Create(f)
-				if err != nil {
-					t.Error(err)
-				}
-			}
-
 			opts := []ClabOption{
 				WithTopoFile(tc.got, ""),
 			}
@@ -158,6 +165,9 @@ func TestTypeInit(t *testing.T) {
 			want: "ixrd2",
 		},
 	}
+
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -232,6 +242,9 @@ func TestEnvInit(t *testing.T) {
 		},
 	}
 
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			for k, v := range tc.envvar {
@@ -286,6 +299,9 @@ func TestUserInit(t *testing.T) {
 		},
 	}
 
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
@@ -321,6 +337,9 @@ func TestVerifyLinks(t *testing.T) {
 			want: "",
 		},
 	}
+
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -406,6 +425,9 @@ func TestLabelsInit(t *testing.T) {
 			},
 		},
 	}
+
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
