@@ -94,9 +94,9 @@ topology:
 4. The `~` char will be expanded to a user's home directory.
 
 ???info "Bind variables"
-    By default binds are either provided as an absolute, or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
+    By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
 
-    Consider a two-node lab `mylab.clab.yml` that has node-specific files, such as state information or some additional configuration artifacts. A user could create a directory for such files similar to that:
+    Consider a two-node lab `mylab.clab.yml` with node-specific files, such as state information or additional configuration artifacts. A user could create a directory for such files similar to that:
 
     ```
     .
@@ -124,9 +124,9 @@ topology:
             - cfgs/n2/conf:/conf
     ```
 
-    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can leverage a special variable `$nodeDir` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
+    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeDir__` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
 
-    What this means is that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
+    This means that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
 
     ```
     .
@@ -140,7 +140,7 @@ topology:
     3 directories, 3 files
     ```
 
-    With this structure in place, the clab file can leverage the `$nodeDir` variable:
+    With this structure in place, the clab file can leverage the `__clabNodeDir__` variable:
 
     ```yaml
     name: mylab
@@ -148,13 +148,13 @@ topology:
       nodes:
         n1:
           binds:
-            - $nodeDir/conf:/conf
+            - __clabNodeDir__/conf:/conf
         n2:
           binds:
-            - $nodeDir/conf:/conf
+            - __clabNodeDir__/conf:/conf
     ```
 
-    Notice how `$nodeDir` hides the directory structure and node names and removes the verbosity of the previous approach.
+    Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 

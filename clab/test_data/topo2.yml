@@ -15,6 +15,7 @@ topology:
       binds:
         - node1.lic:/dst1
         - kind.lic:/dst2
+        - __clabNodeDir__/somefile:/somefile
     node2:
       kind: srl
       type: ixr10

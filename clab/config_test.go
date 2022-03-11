@@ -68,8 +68,12 @@ func TestBindsInit(t *testing.T) {
 			want: []string{"node1.lic:/dst"},
 		},
 		"node_many_binds": {
-			got:  "test_data/topo2.yml",
-			want: []string{"node1.lic:/dst1", "kind.lic:/dst2"},
+			got: "test_data/topo2.yml",
+			want: []string{
+				"node1.lic:/dst1",
+				"kind.lic:/dst2",
+				"${PWD}/clab-topo2/node1/somefile:/somefile",
+			},
 		},
 		"kind_and_node_binds": {
 			got:  "test_data/topo5.yml",
@@ -87,71 +91,45 @@ func TestBindsInit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// create node labdir for tests of clabNodeDirVar replacement
+			if name == "node_many_binds" {
+				defer os.RemoveAll("clab-topo2")
+				f, _ := filepath.Abs("clab-topo2/node1/somefile")
+				os.MkdirAll("clab-topo2/node1", 0777)
+
+				_, err := os.Create(f)
+				if err != nil {
+					t.Error(err)
+				}
+			}
+
 			opts := []ClabOption{
 				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 
 			binds := c.Nodes["node1"].Config().Binds
+
+			// expand env vars in bind paths, this is done during topology file load by clab
+			utils.ExpandEnvVarsInStrSlice(tc.want)
+
 			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
 			err = c.resolveBindPaths(tc.want, c.Nodes["node1"].Config().LabDir)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 
 			for _, b := range tc.want {
 				if !util.StringInSlice(b, binds) {
-					t.Fatalf("bind %q is not found in resulting binds %q", b, binds)
+					t.Errorf("bind %q is not found in resulting binds %q", b, binds)
 				}
 			}
 		})
 	}
 }
-
-// func TestBindsInitNodeDir(t *testing.T) {
-// 	tests := map[string]struct {
-// 		bind    string
-// 		nodeDir string
-// 		want    string
-// 	}{
-// 		"node_binds_nodeDir": {
-// 			bind:    "$nodeDir/conf:/dst",
-// 			nodeDir: os.TempDir() + "/clab-nodeDirTest/nodeX",
-// 			want:    os.TempDir() + "/clab-nodeDirTest/nodeX/conf:/dst",
-// 		},
-// 	}
-
-// 	for name, tc := range tests {
-// 		t.Run(name, func(t *testing.T) {
-// 			defer func() {
-// 				os.RemoveAll(path.Dir(tc.nodeDir))
-// 			}()
-
-// 			opts := []ClabOption{
-// 				WithTopoFile(tc.got, ""),
-// 			}
-// 			c, err := NewContainerLab(opts...)
-// 			if err != nil {
-// 				t.Fatal(err)
-// 			}
-
-// 			// extract host filesystem path
-// 			bind_part := strings.Split(tc.want, ":")
-// 			// create folder from filesystem path
-// 			_ = os.MkdirAll(bind_part[0], os.ModePerm)
-
-// 			binds := []string{tc.bind}
-// 			c.resolveBindPaths(binds, tc.nodeDir)
-
-// 			if !cmp.Equal(binds[0], tc.want) {
-// 				t.Fatalf("wanted %q got %q", tc.want, binds[0])
-// 			}
-// 		})
-// 	}
-// }
 
 func TestTypeInit(t *testing.T) {
 	tests := map[string]struct {

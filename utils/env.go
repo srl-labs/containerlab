@@ -6,6 +6,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 )
 
@@ -112,4 +113,11 @@ func MergeStringSlices(ss ...[]string) []string {
 	}
 
 	return uniques
+}
+
+// ExpandEnvVarsInStrSlice makes an in-place expansion of env vars in a slice of strings
+func ExpandEnvVarsInStrSlice(s []string) {
+	for i, e := range s {
+		s[i] = os.ExpandEnv(e)
+	}
 }

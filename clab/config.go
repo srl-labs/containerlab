@@ -46,6 +46,9 @@ const (
 	NodeLabDirLabel   = "clab-node-lab-dir"
 	TopoFileLabel     = "clab-topo-file"
 	NodeMgmtNetBr     = "clab-mgmt-net-bridge"
+
+	// clab specific topology variables
+	nodeDirVar = "__clabNodeDir__"
 )
 
 // supported kinds
@@ -616,17 +619,17 @@ func checkEndpoint(e string) error {
 }
 
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
-// it allows host path to have `~` and returns absolute path for a relative path
+// it allows host path to have `~` and relative path to an absolute path
+// the list of binds will be changed in place.
 // if the host path doesn't exist, the error will be returned
 func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
 
-		// replace special $nodeDir variable
-		r := strings.NewReplacer("$nodeDir", nodedir)
+		// replace special variable
+		r := strings.NewReplacer(nodeDirVar, nodedir)
 		hp := r.Replace(elems[0])
-
 		hp = utils.ResolvePath(hp, c.TopoFile.dir)
 
 		_, err := os.Stat(hp)
