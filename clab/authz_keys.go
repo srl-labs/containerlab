@@ -26,20 +26,14 @@ const (
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	p, err := resolvePath(pubKeysGlob)
-	if err != nil {
-		return fmt.Errorf("failed resolving path %s", pubKeysGlob)
-	}
+	p := utils.ResolvePath(pubKeysGlob, c.TopoFile.dir)
 
 	all, err := filepath.Glob(p)
 	if err != nil {
 		return fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f, err := resolvePath(authzKeysFPath)
-	if err != nil {
-		return fmt.Errorf("failed resolving path %s", authzKeysFPath)
-	}
+	f := utils.ResolvePath(authzKeysFPath, c.TopoFile.dir)
 
 	if utils.FileExists(f) {
 		log.Debugf("%s found, adding the public keys it contains", f)
