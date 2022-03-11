@@ -18,8 +18,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
+)
+
+const (
+	defaultGraphTemplatePath = "/etc/containerlab/templates/graph/nextui/nextui.html"
+	defaultStaticPath        = "/etc/containerlab/templates/graph/nextui/static"
 )
 
 var (
@@ -133,12 +140,13 @@ func graphFn(cmd *cobra.Command, args []string) error {
 		Name: c.Config.Name,
 		Data: template.JS(string(b)), // skipcq: GSC-G203
 	}
+
 	var t *template.Template
-	if tmpl != "" {
-		t = template.Must(template.ParseFiles(tmpl))
-	} else {
-		t = template.Must(template.New("graph").Parse(graphTemplate))
+
+	if !utils.FileExists(tmpl) {
+		return fmt.Errorf("%w. Path %s", e.ErrFileNotFound, tmpl)
 	}
+	t = template.Must(template.ParseFiles(tmpl))
 
 	if staticDir != "" {
 		if tmpl == "" {
@@ -154,7 +162,7 @@ func graphFn(cmd *cobra.Command, args []string) error {
 		_ = t.Execute(w, topoD)
 	})
 
-	log.Infof("Listening on %s...", srv)
+	log.Infof("Serving topology graph on http://%s", srv)
 
 	err = http.ListenAndServe(srv, nil)
 	if err != nil {
@@ -223,9 +231,9 @@ func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.Ge
 
 func init() {
 	rootCmd.AddCommand(graphCmd)
-	graphCmd.Flags().StringVarP(&srv, "srv", "s", ":50080", "HTTP server address to view, customize and export your topology")
+	graphCmd.Flags().StringVarP(&srv, "srv", "s", "localhost:50080", "HTTP server address serving the topology view")
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false, "use only information from topo file when building graph")
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file instead of launching the web server")
-	graphCmd.Flags().StringVarP(&tmpl, "template", "", "", "Go html template used to generate the graph")
-	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "", "Serve static files from the specified directory")
+	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultGraphTemplatePath, "Go html template used to generate the graph")
+	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath, "Serve static files from the specified directory")
 }
