@@ -25,20 +25,6 @@ var format string
 var details bool
 var all bool
 
-type containerDetails struct {
-	LabName     string `json:"lab_name,omitempty"`
-	LabPath     string `json:"labPath,omitempty"`
-	Name        string `json:"name,omitempty"`
-	ContainerID string `json:"container_id,omitempty"`
-	Image       string `json:"image,omitempty"`
-	Kind        string `json:"kind,omitempty"`
-	Group       string `json:"group,omitempty"`
-	State       string `json:"state,omitempty"`
-	IPv4Address string `json:"ipv4_address,omitempty"`
-	IPv6Address string `json:"ipv6_address,omitempty"`
-}
-type BridgeDetails struct{}
-
 // inspectCmd represents the inspect command
 var inspectCmd = &cobra.Command{
 	Use:     "inspect",
@@ -116,7 +102,7 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 }
 
-func toTableData(det []containerDetails) [][]string {
+func toTableData(det []types.ContainerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
 	for i, d := range det {
 		if all {
@@ -129,7 +115,7 @@ func toTableData(det []containerDetails) [][]string {
 }
 
 func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, format string) error {
-	contDetails := make([]containerDetails, 0, len(containers))
+	contDetails := make([]types.ContainerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
 	var mysocketCID string
@@ -139,7 +125,7 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		cwd, _ := os.Getwd()
 		path, _ := filepath.Rel(cwd, cont.Labels["clab-topo-file"])
 
-		cdet := containerDetails{
+		cdet := types.ContainerDetails{
 			LabName:     cont.Labels["containerlab"],
 			LabPath:     path,
 			Image:       cont.Image,

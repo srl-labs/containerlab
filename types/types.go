@@ -241,3 +241,17 @@ type Extras struct {
 	SRLAgents     []string `yaml:"srl-agents,omitempty"`     // Nokia SR Linux agents. As of now just the agents spec files can be provided here
 	MysocketProxy string   `yaml:"mysocket-proxy,omitempty"` // Proxy address that mysocketctl will use
 }
+
+// ContainerDetails contains information that is commonly outputted to tables or graphs
+type ContainerDetails struct {
+	LabName     string `json:"lab_name,omitempty"`
+	LabPath     string `json:"labPath,omitempty"`
+	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
+	Image       string `json:"image,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Group       string `json:"group,omitempty"`
+	State       string `json:"state,omitempty"`
+	IPv4Address string `json:"ipv4_address,omitempty"`
+	IPv6Address string `json:"ipv6_address,omitempty"`
+}
