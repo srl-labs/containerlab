@@ -28,6 +28,7 @@ nav:
           - linux - Linux container: manual/kinds/linux.md
           - bridge - Linux bridge: manual/kinds/bridge.md
           - ovs-bridge - Openvswitch bridge: manual/kinds/ovs-bridge.md
+          - ixia-c-one - Ixia-c: manual/kinds/ixia-c-one.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
@@ -80,6 +81,7 @@ nav:
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
+      - Ixia-c-one and Arista cEOS: lab-examples/ixiacone-ceos.md
       - Multi-node labs: lab-examples/multinode.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
