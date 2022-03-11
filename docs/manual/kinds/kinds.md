@@ -43,5 +43,6 @@ Containerlab supports a fixed number of kinds. Within each predefined kind we st
 | **Linux bridge**    | [`bridge`](bridge.md)                 | supported    |
 | **OvS bridge**      | [`ovs-bridge`](ovs-bridge.md)         | supported    |
 | **mysocketio node** | [`mysocketio`](../published-ports.md) | supported    |
+| **Ixia-c-one**      | [`ixia-c-one`](ixia-c-one.md)         | supported    |
 
 Refer to a specific kind documentation article to see the details about it.
