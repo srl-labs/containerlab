@@ -130,8 +130,8 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 			LabPath:     path,
 			Image:       cont.Image,
 			State:       cont.State,
-			IPv4Address: getContainerIPv4(cont),
-			IPv6Address: getContainerIPv6(cont),
+			IPv4Address: cont.GetContainerIPv4(),
+			IPv6Address: cont.GetContainerIPv6(),
 		}
 		cdet.ContainerID = cont.ShortID
 
@@ -209,19 +209,4 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 	fmt.Println(string(stdout))
 
 	return nil
-}
-
-func getContainerIPv4(ctr types.GenericContainer) string {
-	if ctr.NetworkSettings.IPv4addr == "" {
-		return "N/A"
-	}
-	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
-
-}
-
-func getContainerIPv6(ctr types.GenericContainer) string {
-	if ctr.NetworkSettings.IPv6addr == "" {
-		return "N/A"
-	}
-	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
 }

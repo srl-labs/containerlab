@@ -182,6 +182,21 @@ type GenericContainer struct {
 	NetworkSettings GenericMgmtIPs
 }
 
+func (ctr *GenericContainer) GetContainerIPv4() string {
+	if ctr.NetworkSettings.IPv4addr == "" {
+		return "N/A"
+	}
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
+
+}
+
+func (ctr *GenericContainer) GetContainerIPv6() string {
+	if ctr.NetworkSettings.IPv6addr == "" {
+		return "N/A"
+	}
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
+}
+
 type GenericMgmtIPs struct {
 	IPv4addr string
 	IPv4pLen int
