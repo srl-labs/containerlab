@@ -28,7 +28,7 @@ var (
 		"CEOS":                                "1",
 		"EOS_PLATFORM":                        "ceoslab",
 		"container":                           "docker",
-		"ETBA":                                "4",
+		"ETBA":                                "1",
 		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
 		"INTFTYPE":                            "eth",
 		"MAPETH0":                             "1",
