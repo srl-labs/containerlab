@@ -60,107 +60,108 @@ var graphCmd = &cobra.Command{
 	Use:   "graph",
 	Short: "generate a topology graph",
 	Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
+	RunE:  graphFn,
+}
 
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var err error
+func graphFn(cmd *cobra.Command, args []string) error {
+	var err error
 
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo, varsFile),
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
-		}
-		c, err := clab.NewContainerLab(opts...)
+	opts := []clab.ClabOption{
+		clab.WithTimeout(timeout),
+		clab.WithTopoFile(topo, varsFile),
+		clab.WithRuntime(rt,
+			&runtime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: graceful,
+			},
+		),
+	}
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return err
+	}
+
+	if dot {
+		return c.GenerateGraph(topo)
+	}
+
+	gtopo := graphTopo{
+		Nodes: make([]containerDetails, 0, len(c.Nodes)),
+		Links: make([]link, 0, len(c.Links)),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var containers []types.GenericContainer
+	// if offline mode is not enforced, list containers matching lab name
+	if !offline {
+		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+		containers, err = c.ListContainers(ctx, labels)
 		if err != nil {
 			return err
 		}
 
-		if dot {
-			return c.GenerateGraph(topo)
-		}
+		log.Debugf("found %d containers", len(containers))
+	}
 
-		gtopo := graphTopo{
-			Nodes: make([]containerDetails, 0, len(c.Nodes)),
-			Links: make([]link, 0, len(c.Links)),
-		}
+	switch {
+	case len(containers) == 0:
+		buildGraphFromTopo(&gtopo, c)
+	case len(containers) > 0:
+		buildGraphFromDeployedLab(&gtopo, c, containers)
+	}
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		var containers []types.GenericContainer
-		// if offline mode is not enforced, list containers matching lab name
-		if !offline {
-			labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-			containers, err = c.ListContainers(ctx, labels)
-			if err != nil {
-				return err
-			}
-
-			log.Debugf("found %d containers", len(containers))
-		}
-
-		switch {
-		case len(containers) == 0:
-			buildGraphFromTopo(&gtopo, c)
-		case len(containers) > 0:
-			buildGraphFromDeployedLab(&gtopo, c, containers)
-		}
-
-		sort.Slice(gtopo.Nodes, func(i, j int) bool {
-			return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
+	sort.Slice(gtopo.Nodes, func(i, j int) bool {
+		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
+	})
+	for _, l := range c.Links {
+		gtopo.Links = append(gtopo.Links, link{
+			Source:         l.A.Node.ShortName,
+			SourceEndpoint: l.A.EndpointName,
+			Target:         l.B.Node.ShortName,
+			TargetEndpoint: l.B.EndpointName,
 		})
-		for _, l := range c.Links {
-			gtopo.Links = append(gtopo.Links, link{
-				Source:         l.A.Node.ShortName,
-				SourceEndpoint: l.A.EndpointName,
-				Target:         l.B.Node.ShortName,
-				TargetEndpoint: l.B.EndpointName,
-			})
-		}
-		b, err := json.Marshal(gtopo)
-		if err != nil {
-			return err
-		}
-		log.Debugf("generating graph using data: %s", string(b))
-		topoD := topoData{
-			Name: c.Config.Name,
-			Data: template.JS(string(b)), // skipcq: GSC-G203
-		}
-		var t *template.Template
-		if tmpl != "" {
-			t = template.Must(template.ParseFiles(tmpl))
-		} else {
-			t = template.Must(template.New("graph").Parse(graphTemplate))
+	}
+	b, err := json.Marshal(gtopo)
+	if err != nil {
+		return err
+	}
+	log.Debugf("generating graph using data: %s", string(b))
+	topoD := topoData{
+		Name: c.Config.Name,
+		Data: template.JS(string(b)), // skipcq: GSC-G203
+	}
+	var t *template.Template
+	if tmpl != "" {
+		t = template.Must(template.ParseFiles(tmpl))
+	} else {
+		t = template.Must(template.New("graph").Parse(graphTemplate))
+	}
+
+	if staticDir != "" {
+		if tmpl == "" {
+			return fmt.Errorf("the --static-dir flag must be used with the --template flag")
 		}
 
-		if staticDir != "" {
-			if tmpl == "" {
-				return fmt.Errorf("the --static-dir flag must be used with the --template flag")
-			}
+		fs := http.FileServer(noListFs{http.Dir(staticDir)})
+		http.Handle("/static/", http.StripPrefix("/static/", fs))
+		log.Infof("Serving static files from directory: %s", staticDir)
+	}
 
-			fs := http.FileServer(noListFs{http.Dir(staticDir)})
-			http.Handle("/static/", http.StripPrefix("/static/", fs))
-			log.Infof("Serving static files from directory: %s", staticDir)
-		}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_ = t.Execute(w, topoD)
+	})
 
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			_ = t.Execute(w, topoD)
-		})
+	log.Infof("Listening on %s...", srv)
 
-		log.Infof("Listening on %s...", srv)
+	err = http.ListenAndServe(srv, nil)
+	if err != nil {
+		return err
+	}
 
-		err = http.ListenAndServe(srv, nil)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
+	return nil
 }
 
 // Open is a custom FS opener that prevents listing of the files in the filesystem
