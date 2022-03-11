@@ -2,7 +2,7 @@ name: topo2
 topology:
   kinds:
     srl:
-      license: test_data/kind.lic
+      license: kind.lic
       type: ixrd2
       env:
         env1: val1
@@ -13,8 +13,9 @@ topology:
     node1:
       kind: srl
       binds:
-        - test_data/node1.lic:/dst1
-        - test_data/kind.lic:/dst2
+        - node1.lic:/dst1
+        - kind.lic:/dst2
+        - __clabNodeDir__/somefile:/somefile
     node2:
       kind: srl
       type: ixr10

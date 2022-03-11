@@ -224,9 +224,11 @@ The following labs feature cEOS node:
 ## Known issues or limitations
 ### cgroups v1
 
-As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environment.  For many users, this should not require any changes to the runtime environment.  However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
+In versions prior to EOS-4.28.0F, the ceos-lab image requires a cgroups v1 environment.  For many users, this should not require any changes to the runtime environment.  However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
 
 Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467).
+
+Starting with EOS-4.28.0F, ceos-lab will automatically determine whether the container host is using cgroups v1 or cgroups v2 and act appropriately.  No configuration is required.
 
 ??? "Switching to cgroup v1 in Ubuntu 21.04"
     To switch back to cgroup v1 in Ubuntu 21+ users need to add a kernel parameter `systemd.unified_cgroup_hierarchy=0` to GRUB config. Below is a snippet of `/etc/default/grub` file with the added `systemd.unified_cgroup_hierarchy=0` parameter.

@@ -30,6 +30,7 @@ const (
 // TopoFile type is a struct which defines parameters of the topology file
 type TopoFile struct {
 	path     string // topo file path
+	dir      string // topo file dir path
 	fullName string // file name with extension
 	name     string // file name without extension
 }
@@ -80,11 +81,13 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 		return err
 	}
 
-	file := filepath.Base(topo)
+	topoDir := filepath.Dir(topoAbsPath)
+
 	c.TopoFile = &TopoFile{
 		path:     topoAbsPath,
-		fullName: file,
-		name:     strings.TrimSuffix(file, path.Ext(file)),
+		dir:      topoDir,
+		fullName: fileBase,
+		name:     strings.TrimSuffix(fileBase, path.Ext(fileBase)),
 	}
 	return nil
 }
