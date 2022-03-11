@@ -8,20 +8,14 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"html/template"
-	"net/http"
-	"os"
 	"sort"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -39,28 +33,6 @@ var (
 	//go:embed graph-template.html
 	graphTemplate string
 )
-
-type graphTopo struct {
-	Nodes []containerDetails `json:"nodes,omitempty"`
-	Links []link             `json:"links,omitempty"`
-}
-type link struct {
-	Source         string `json:"source,omitempty"`
-	SourceEndpoint string `json:"source_endpoint,omitempty"`
-	Target         string `json:"target,omitempty"`
-	TargetEndpoint string `json:"target_endpoint,omitempty"`
-}
-
-type topoData struct {
-	Name string
-	Data template.JS
-}
-
-// noListFs embeds the http.Dir to override the Open method of a filesystem
-// to prevent listing of static files, see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
-type noListFs struct {
-	http.Dir
-}
 
 // graphCmd represents the graph command
 var graphCmd = &cobra.Command{
@@ -93,9 +65,9 @@ func graphFn(cmd *cobra.Command, args []string) error {
 		return c.GenerateGraph(topo)
 	}
 
-	gtopo := graphTopo{
-		Nodes: make([]containerDetails, 0, len(c.Nodes)),
-		Links: make([]link, 0, len(c.Links)),
+	gtopo := clab.GraphTopo{
+		Nodes: make([]types.ContainerDetails, 0, len(c.Nodes)),
+		Links: make([]clab.Link, 0, len(c.Links)),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -115,118 +87,35 @@ func graphFn(cmd *cobra.Command, args []string) error {
 
 	switch {
 	case len(containers) == 0:
-		buildGraphFromTopo(&gtopo, c)
+		c.BuildGraphFromTopo(&gtopo)
 	case len(containers) > 0:
-		buildGraphFromDeployedLab(&gtopo, c, containers)
+		c.BuildGraphFromDeployedLab(&gtopo, containers)
 	}
 
 	sort.Slice(gtopo.Nodes, func(i, j int) bool {
 		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
 	})
 	for _, l := range c.Links {
-		gtopo.Links = append(gtopo.Links, link{
+		gtopo.Links = append(gtopo.Links, clab.Link{
 			Source:         l.A.Node.ShortName,
 			SourceEndpoint: l.A.EndpointName,
 			Target:         l.B.Node.ShortName,
 			TargetEndpoint: l.B.EndpointName,
 		})
 	}
+
 	b, err := json.Marshal(gtopo)
 	if err != nil {
 		return err
 	}
+
 	log.Debugf("generating graph using data: %s", string(b))
-	topoD := topoData{
+	topoD := clab.TopoData{
 		Name: c.Config.Name,
 		Data: template.JS(string(b)), // skipcq: GSC-G203
 	}
 
-	var t *template.Template
-
-	if !utils.FileExists(tmpl) {
-		return fmt.Errorf("%w. Path %s", e.ErrFileNotFound, tmpl)
-	}
-	t = template.Must(template.ParseFiles(tmpl))
-
-	if staticDir != "" {
-		if tmpl == "" {
-			return fmt.Errorf("the --static-dir flag must be used with the --template flag")
-		}
-
-		fs := http.FileServer(noListFs{http.Dir(staticDir)})
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
-		log.Infof("Serving static files from directory: %s", staticDir)
-	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		_ = t.Execute(w, topoD)
-	})
-
-	log.Infof("Serving topology graph on http://%s", srv)
-
-	err = http.ListenAndServe(srv, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Open is a custom FS opener that prevents listing of the files in the filesystem
-// see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
-func (nfs noListFs) Open(name string) (result http.File, err error) {
-	f, err := nfs.Dir.Open(name)
-	if err != nil {
-		return
-	}
-
-	stat, err := f.Stat()
-	if err != nil {
-		return
-	}
-
-	if stat.IsDir() {
-		return nil, os.ErrNotExist
-	}
-
-	return f, nil
-}
-
-func buildGraphFromTopo(g *graphTopo, c *clab.CLab) {
-	log.Info("building graph from topology file")
-	for _, node := range c.Nodes {
-		g.Nodes = append(g.Nodes, containerDetails{
-			Name:        node.Config().ShortName,
-			Kind:        node.Config().Kind,
-			Image:       node.Config().Image,
-			Group:       node.Config().Group,
-			State:       "N/A",
-			IPv4Address: node.Config().MgmtIPv4Address,
-			IPv6Address: node.Config().MgmtIPv6Address,
-		})
-	}
-
-}
-
-func buildGraphFromDeployedLab(g *graphTopo, c *clab.CLab, containers []types.GenericContainer) {
-	for _, cont := range containers {
-		var name string
-		if len(cont.Names) > 0 {
-			name = strings.TrimPrefix(cont.Names[0], fmt.Sprintf("/clab-%s-", c.Config.Name))
-		}
-		log.Debugf("looking for node name %s", name)
-		if node, ok := c.Nodes[name]; ok {
-			g.Nodes = append(g.Nodes, containerDetails{
-				Name:        name,
-				Kind:        node.Config().Kind,
-				Image:       cont.Image,
-				Group:       node.Config().Group,
-				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
-				IPv4Address: getContainerIPv4(cont),
-				IPv6Address: getContainerIPv6(cont),
-			})
-		}
-	}
+	return c.ServeTopoGraph(tmpl, staticDir, srv, topoD)
 }
 
 func init() {

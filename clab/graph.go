@@ -6,13 +6,41 @@ package clab
 
 import (
 	"fmt"
+	"html/template"
+	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/awalterschulze/gographviz"
 	log "github.com/sirupsen/logrus"
+	e "github.com/srl-labs/containerlab/errors"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
+
+type GraphTopo struct {
+	Nodes []types.ContainerDetails `json:"nodes,omitempty"`
+	Links []Link                   `json:"links,omitempty"`
+}
+
+type Link struct {
+	Source         string `json:"source,omitempty"`
+	SourceEndpoint string `json:"source_endpoint,omitempty"`
+	Target         string `json:"target,omitempty"`
+	TargetEndpoint string `json:"target_endpoint,omitempty"`
+}
+
+type TopoData struct {
+	Name string
+	Data template.JS
+}
+
+// noListFs embeds the http.Dir to override the Open method of a filesystem
+// to prevent listing of static files, see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
+type noListFs struct {
+	http.Dir
+}
 
 var g *gographviz.Graph
 
@@ -111,4 +139,89 @@ func commandExists(cmd string) bool {
 		log.Debugf("executable %s doesn't exist!", cmd)
 	}
 	return err == nil
+}
+
+// Open is a custom FS opener that prevents listing of the files in the filesystem
+// see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
+func (nfs noListFs) Open(name string) (result http.File, err error) {
+	f, err := nfs.Dir.Open(name)
+	if err != nil {
+		return
+	}
+
+	stat, err := f.Stat()
+	if err != nil {
+		return
+	}
+
+	if stat.IsDir() {
+		return nil, os.ErrNotExist
+	}
+
+	return f, nil
+}
+
+func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
+	log.Info("building graph from topology file")
+	for _, node := range c.Nodes {
+		g.Nodes = append(g.Nodes, types.ContainerDetails{
+			Name:        node.Config().ShortName,
+			Kind:        node.Config().Kind,
+			Image:       node.Config().Image,
+			Group:       node.Config().Group,
+			State:       "N/A",
+			IPv4Address: node.Config().MgmtIPv4Address,
+			IPv6Address: node.Config().MgmtIPv6Address,
+		})
+	}
+
+}
+
+func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []types.GenericContainer) {
+	for _, cont := range containers {
+		var name string
+		if len(cont.Names) > 0 {
+			name = strings.TrimPrefix(cont.Names[0], fmt.Sprintf("/clab-%s-", c.Config.Name))
+		}
+		log.Debugf("looking for node name %s", name)
+		if node, ok := c.Nodes[name]; ok {
+			g.Nodes = append(g.Nodes, types.ContainerDetails{
+				Name:        name,
+				Kind:        node.Config().Kind,
+				Image:       cont.Image,
+				Group:       node.Config().Group,
+				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
+				IPv4Address: cont.GetContainerIPv4(),
+				IPv6Address: cont.GetContainerIPv6(),
+			})
+		}
+	}
+}
+
+func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error {
+	var t *template.Template
+
+	if !utils.FileExists(tmpl) {
+		return fmt.Errorf("%w. Path %s", e.ErrFileNotFound, tmpl)
+	}
+	t = template.Must(template.ParseFiles(tmpl))
+
+	if staticDir != "" {
+		if tmpl == "" {
+			return fmt.Errorf("the --static-dir flag must be used with the --template flag")
+		}
+
+		fs := http.FileServer(noListFs{http.Dir(staticDir)})
+		http.Handle("/static/", http.StripPrefix("/static/", fs))
+		log.Infof("Serving static files from directory: %s", staticDir)
+	}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_ = t.Execute(w, topoD)
+	})
+
+	log.Infof("Serving topology graph on http://%s", srv)
+
+	return http.ListenAndServe(srv, nil)
+
 }
