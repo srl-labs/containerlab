@@ -262,18 +262,23 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	log.Debugf("node config: %+v", nodeCfg)
 	var err error
 	// initialize config
-	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
+	// resolve the startup config path to an abs path
+	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoFile.dir)
 
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
 	// initialize license field
-	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	p, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
+	// resolve the lic path to an abs path
+	nodeCfg.License = utils.ResolvePath(p, c.TopoFile.dir)
+
 	// initialize bind mounts
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
 	err = c.resolveBindPaths(binds, nodeCfg.LabDir)
