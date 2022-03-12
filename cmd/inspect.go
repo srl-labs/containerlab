@@ -104,7 +104,9 @@ func init() {
 
 func toTableData(det []types.ContainerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
-	for i, d := range det {
+	for i := range det {
+		d := &det[i]
+
 		if all {
 			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabPath, d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address})
 			continue
@@ -120,12 +122,13 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 	printMysocket := false
 	var mysocketCID string
 
-	for _, cont := range containers {
+	for i := range containers {
+		cont := &containers[i]
 		// get topo file path relative of the cwd
 		cwd, _ := os.Getwd()
 		path, _ := filepath.Rel(cwd, cont.Labels["clab-topo-file"])
 
-		cdet := types.ContainerDetails{
+		cdet := &types.ContainerDetails{
 			LabName:     cont.Labels["containerlab"],
 			LabPath:     path,
 			Image:       cont.Image,
@@ -148,7 +151,7 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		if group, ok := cont.Labels["clab-node-group"]; ok {
 			cdet.Group = group
 		}
-		contDetails = append(contDetails, cdet)
+		contDetails = append(contDetails, *cdet)
 	}
 
 	sort.Slice(contDetails, func(i, j int) bool {
