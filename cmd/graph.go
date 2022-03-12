@@ -39,7 +39,7 @@ var graphCmd = &cobra.Command{
 	RunE:  graphFn,
 }
 
-func graphFn(cmd *cobra.Command, args []string) error {
+func graphFn(_ *cobra.Command, _ []string) error {
 	var err error
 
 	opts := []clab.ClabOption{
