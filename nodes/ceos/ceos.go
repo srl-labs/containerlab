@@ -136,6 +136,20 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		return err
 	}
 
+	// if extras have been provided copy these into the flash directory
+	if node.Extras != nil && len(node.Extras.CeosOverrides) != 0 {
+		extras := node.Extras.CeosOverrides
+		flash := filepath.Join(node.LabDir, "flash")
+
+		for _, extrapath := range extras {
+			basename := filepath.Base(extrapath)
+			dest := filepath.Join(flash, basename)
+			if err := utils.CopyFile(extrapath, dest, 0644); err != nil {
+				return fmt.Errorf("ceos-override copy %s -> %s failed %v", extrapath, dest, err)
+			}
+		}
+	}
+
 	// sysmac is a system mac that is +1 to Ma0 mac
 	m, err := net.ParseMAC(node.MacAddress)
 	if err != nil {

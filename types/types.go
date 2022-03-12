@@ -240,4 +240,5 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 type Extras struct {
 	SRLAgents     []string `yaml:"srl-agents,omitempty"`     // Nokia SR Linux agents. As of now just the agents spec files can be provided here
 	MysocketProxy string   `yaml:"mysocket-proxy,omitempty"` // Proxy address that mysocketctl will use
+	CeosOverrides []string `yaml:"ceos-overrides,omitempty"` // additional ceos-lab config options (ceos-config toggles_override, etc)
 }
