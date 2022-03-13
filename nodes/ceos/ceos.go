@@ -137,15 +137,15 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	}
 
 	// if extras have been provided copy these into the flash directory
-	if node.Extras != nil && len(node.Extras.CeosOverrides) != 0 {
-		extras := node.Extras.CeosOverrides
+	if node.Extras != nil && len(node.Extras.CeosCopyToFlash) != 0 {
+		extras := node.Extras.CeosCopyToFlash
 		flash := filepath.Join(node.LabDir, "flash")
 
 		for _, extrapath := range extras {
 			basename := filepath.Base(extrapath)
 			dest := filepath.Join(flash, basename)
 			if err := utils.CopyFile(extrapath, dest, 0644); err != nil {
-				return fmt.Errorf("ceos-override copy %s -> %s failed %v", extrapath, dest, err)
+				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
 		}
 	}

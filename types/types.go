@@ -238,7 +238,7 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 
 // Extras contains extra node parameters which are not entitled to be part of a generic node config
 type Extras struct {
-	SRLAgents     []string `yaml:"srl-agents,omitempty"`     // Nokia SR Linux agents. As of now just the agents spec files can be provided here
-	MysocketProxy string   `yaml:"mysocket-proxy,omitempty"` // Proxy address that mysocketctl will use
-	CeosOverrides []string `yaml:"ceos-overrides,omitempty"` // additional ceos-lab config options (ceos-config toggles_override, etc)
+	SRLAgents       []string `yaml:"srl-agents,omitempty"`     // Nokia SR Linux agents. As of now just the agents spec files can be provided here
+	MysocketProxy   string   `yaml:"mysocket-proxy,omitempty"` // Proxy address that mysocketctl will use
+	CeosCopyToFlash []string `yaml:"copy-to-flash,omitempty"`  // additional ceos-lab config options (ceos-config toggles_override, etc)
 }

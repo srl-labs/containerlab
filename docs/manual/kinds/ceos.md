@@ -217,7 +217,7 @@ clab-srlceos01/ceos
 ```
 ## ceos-specific overrides
 
-If there is a need to provide additional ceos-lab specific configuration or overrides to the ceos node in the topology, these can be added using the `ceos-overrides` extra.  These additional files will be copied to the node's flash directory for evaluation on startup.  
+If there is a need to provide additional ceos-lab specific configuration or overrides to the ceos node in the topology, these can be added using the `copy-to-flash` extra.  These additional files will be copied to the node's flash directory for evaluation on startup.  
 
 ```yaml
 name: ceos_lowrider
@@ -227,13 +227,13 @@ topology:
       kind: ceos
       ...
       extras:
-        ceos-overrides:
+        copy-to-flash:
         - ceos-config
         - toggle_override
 ```
 
 ## Lab examples
-The following labs feature cEOS node:
+The following labs feature a cEOS node:
 
 - [SR Linux and cEOS](../../lab-examples/srl-ceos.md)
 
