@@ -378,6 +378,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
+	if err = c.verifyDuplicateAddresses(); err != nil {
+		return err
+	}
 	if err = c.verifyRootNetnsInterfaceUniqueness(); err != nil {
 		return err
 	}
@@ -430,6 +433,30 @@ func (c *CLab) verifyLinks() error {
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
+	return nil
+}
+
+// verifyDuplicateAddresses checks that every static IP address in the topology is unique
+func (c *CLab) verifyDuplicateAddresses() error {
+	dupIps := map[string]struct{}{}
+	for _, node := range c.Nodes {
+		ips := []string{node.Config().MgmtIPv4Address, node.Config().MgmtIPv6Address}
+		if ips[0] == "" && ips[1] == "" {
+			continue
+		}
+
+		for _, ip := range ips {
+			if _, exists := dupIps[ip]; !exists {
+				if ip == "" {
+					continue
+				}
+				dupIps[ip] = struct{}{}
+			} else {
+				return fmt.Errorf("management IP address %s appeared more than once in the topology file", ip)
+			}
+		}
+	}
+
 	return nil
 }
 
