@@ -9,7 +9,7 @@
 : ${BIN_INSTALL_DIR:="/usr/bin"}
 : ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
-: ${PROJECT_URL:="https://containerlab.srlinux.dev"}
+: ${PROJECT_URL:="https://containerlab.dev"}
 
 # detectArch discovers the architecture for this system.
 detectArch() {
@@ -122,7 +122,7 @@ checkInstalledVersion() {
             echo "${BINARY_NAME} is already at ${DESIRED_VERSION:-latest ($version)}" version
             return 0
         else
-            echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.srlinux.dev/rn/${TAG_WO_VER}"
+            echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
             echo "You are running containerlab $version version"
             UPGR_NEEDED="Y"
             # check if stdin is open (i.e. capable of getting users input)

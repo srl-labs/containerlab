@@ -66,7 +66,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **Automated TLS certificates provisioning**  
     The nodes which require TLS certs will get them automatically on boot.
 * **Documentation is a first-class citizen**  
-    We do not let our users guess by making a complete, concise and clean [documentation](https://containerlab.srlinux.dev).
+    We do not let our users guess by making a complete, concise and clean [documentation](https://containerlab.dev).
 * **Lab catalog**  
    The "most-wanted" lab topologies are [documented and included](lab-examples/lab-examples.md) with containerlab installation. Based on this cherry-picked selection you can start crafting the labs answering your needs.
 

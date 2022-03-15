@@ -1,6 +1,9 @@
 BIN_DIR = $$(pwd)/bin
 BINARY = $$(pwd)/bin/containerlab
-MKDOCS_VER = 7.3.6
+MKDOCS_VER = 8.2.1
+# insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
+MKDOCS_INS_VER = 4.8.3
+
 
 all: build
 
@@ -25,9 +28,14 @@ clint:
 docs:
 	docker run -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
 
-.PHONY: site
+.PHONY: serve
 site:
 	docker run -it --rm -p 8000:8000 -v $$(pwd):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
+
+# serve the site locally using mkdocs-material insiders container
+.PHONY: serve-insiders
+serve-insiders:
+	docker run -it --rm -p 8001:8000 -v $$(pwd):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
 
 .PHONY: htmltest
 htmltest:
@@ -39,5 +47,5 @@ htmltest:
 # to obtain the pushed artifact use: docker run --rm -v $(pwd):/workspace ghcr.io/deislabs/oras:v0.11.1 pull ttl.sh/<image-name>
 .PHONY: ttl-push
 ttl-push: build-with-podman
-	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/deislabs/oras:v0.11.1 push ttl.sh/clab-$$(git rev-parse --short HEAD):1d --manifest-config /dev/null:application/vnd.acme.rocket.config ./containerlab
-	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/deislabs/oras:v0.11.1 pull ttl.sh/clab-$$(git rev-parse --short HEAD):1d"
+	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$$(git rev-parse --short HEAD):1d ./containerlab
+	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$$(git rev-parse --short HEAD):1d"

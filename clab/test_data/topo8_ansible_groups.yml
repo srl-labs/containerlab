@@ -4,9 +4,9 @@ topology:
     node1:
       kind: srl
       type: ixr6
-      license: test_data/node1.lic
+      license: node1.lic
       binds:
-        - test_data/node1.lic:/dst
+        - node1.lic:/dst
       env:
         env1: val1
         env2: val2
@@ -15,17 +15,25 @@ topology:
         ansible-group: spine
     node2:
       kind: srl
-      license: test_data/node1.lic
+      license: node1.lic
       user: custom
       mgmt_ipv4: 172.100.100.12
       labels:
         node-label: value
         ansible-group: extra_group
+
     node3:
       kind: srl
-      license: test_data/node1.lic
+      license: node1.lic
       user: custom
       mgmt_ipv4: 172.100.100.13
       labels:
         node-label: value
         ansible-group: extra_group
+
+    node4:
+      kind: linux
+      image: alpine:3
+      mgmt_ipv4: 172.100.100.14
+      labels:
+        ansible-no-host-var: true

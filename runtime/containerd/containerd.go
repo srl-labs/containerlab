@@ -40,7 +40,8 @@ const (
 func init() {
 	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
 		return &ContainerdRuntime{
-			Mgmt: new(types.MgmtNet)}
+			mgmt: &types.MgmtNet{},
+		}
 	})
 }
 
@@ -65,10 +66,12 @@ func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	return nil
 }
 
+func (c *ContainerdRuntime) Mgmt() *types.MgmtNet { return c.mgmt }
+
 type ContainerdRuntime struct {
 	config runtime.RuntimeConfig
 	client *containerd.Client
-	Mgmt   *types.MgmtNet
+	mgmt   *types.MgmtNet
 }
 
 func (c *ContainerdRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
@@ -88,7 +91,7 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 		}
 		n.Bridge = "br-" + netname
 	}
-	c.Mgmt = n
+	c.mgmt = n
 }
 
 func (c *ContainerdRuntime) WithKeepMgmtNet() {
@@ -103,7 +106,7 @@ func (*ContainerdRuntime) CreateNet(_ context.Context) error {
 }
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	var err error
-	bridgename := c.Mgmt.Bridge
+	bridgename := c.mgmt.Bridge
 	brInUse := true
 	for i := 0; i < 10; i++ {
 		brInUse, err = utils.CheckBrInUse(bridgename)
@@ -145,7 +148,12 @@ func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename s
 	return nil
 }
 
-func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (interface{}, error) {
+func (c *ContainerdRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (string, error) {
+	// this is a no-op
+	return "", nil
+}
+
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
@@ -232,7 +240,7 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	case "none":
 		// Done!
 	default:
-		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0", c.Mgmt)
+		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0", c.mgmt)
 		if err != nil {
 			return nil, err
 		}
@@ -280,11 +288,18 @@ func (c *ContainerdRuntime) CreateContainer(ctx context.Context, node *types.Nod
 	log.Debugf("Container '%s' created", node.LongName)
 	log.Debugf("Start container: %s", node.LongName)
 
-	err = c.StartContainer(ctx, node.LongName)
+	container, err := c.client.LoadContainer(ctx, node.LongName)
 	if err != nil {
 		return nil, err
 	}
-
+	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+node.LongName+".log"))
+	if err != nil {
+		return nil, err
+	}
+	err = task.Start(ctx)
+	if err != nil {
+		return nil, err
+	}
 	log.Debugf("Container started: %s", node.LongName)
 
 	node.NSPath, err = c.GetNSPath(ctx, node.LongName)
@@ -422,21 +437,6 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 	}
 }
 
-func (c *ContainerdRuntime) StartContainer(ctx context.Context, containername string) error {
-	container, err := c.client.LoadContainer(ctx, containername)
-	if err != nil {
-		return err
-	}
-	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+containername+".log"))
-	if err != nil {
-		return err
-	}
-	err = task.Start(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
@@ -674,7 +674,7 @@ func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername strin
 	return err
 }
 
-func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { //skipcq: RVV-A0005
+func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
@@ -764,7 +764,7 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 		return err
 	}
 
-	cnic, cncl, cnirc, err := cniInit(containerID, "eth0", c.Mgmt)
+	cnic, cncl, cnirc, err := cniInit(containerID, "eth0", c.mgmt)
 	if err != nil {
 		return err
 	}

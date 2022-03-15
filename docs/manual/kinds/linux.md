@@ -38,4 +38,8 @@ Containerlab tries to deliver the same level of flexibility in container configu
 * [env](../nodes.md#env) - to set environment variables
 * [user](../nodes.md#user) - to set a user that will be used inside the container system
 * [cmd](../nodes.md#cmd) - to provide a command that will be executed when the container is started
-* [publish](../nodes.md#publish) - to provide expose container' service via [myscoket.io integration](../published-ports.md)
+* [publish](../nodes.md#publish) - to expose container' service via [mysocket.io integration](../published-ports.md)
+
+!!!note
+    Nodes of `linux` kind will have a `on-failure` restart policy when run with docker runtime. This means that if container fails/exits with a non zero return code, docker will restart this container automatically.  
+    When restarted, the container will loose all non-`eth0` interfaces. These can be re-added manually with [tools veth](../../cmd/tools/veth/create.md) command.

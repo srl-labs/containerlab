@@ -13,7 +13,7 @@ var templateVarOnly bool
 var configTemplateCmd = &cobra.Command{
 	Use:          "template",
 	Short:        "render a template",
-	Long:         "render a template based on variables from the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/config/template",
+	Long:         "render a template based on variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/template",
 	Aliases:      []string{"conf"},
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {

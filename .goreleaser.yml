@@ -9,7 +9,7 @@ builds:
       - CGO_ENABLED=0
     flags:
       - -trimpath
-      - -tags="podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp"
+      - -tags=podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp
     ldflags:
       - -s -w -X github.com/srl-labs/containerlab/cmd.version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
     goos:
@@ -56,7 +56,7 @@ nfpms:
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     package_name: containerlab
     maintainer: Wim Henderickx <wim.henderickx@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>, Roman Dodin <dodin.roman@gmail.com>
-    homepage: https://containerlab.srlinux.dev
+    homepage: https://containerlab.dev
     description: |
       containerlab deploys containerized networking topologies
     vendor: Nokia

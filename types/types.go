@@ -41,16 +41,16 @@ type Endpoint struct {
 	MAC string
 }
 
-// mgmtNet struct defines the management network options
-// it is provided via docker network object
+// MgmtNet struct defines the management network options
 type MgmtNet struct {
-	Network    string `yaml:"network,omitempty"` // docker network name
-	Bridge     string `yaml:"bridge,omitempty"`  // linux bridge backing the docker network (or containerd bridge net)
-	IPv4Subnet string `yaml:"ipv4_subnet,omitempty"`
-	IPv4Gw     string `yaml:"ipv4-gw,omitempty"`
-	IPv6Subnet string `yaml:"ipv6_subnet,omitempty"`
-	IPv6Gw     string `yaml:"ipv6-gw,omitempty"`
-	MTU        string `yaml:"mtu,omitempty"`
+	Network        string `yaml:"network,omitempty"` // container runtime network name
+	Bridge         string `yaml:"bridge,omitempty"`  // linux bridge backing the runtime network
+	IPv4Subnet     string `yaml:"ipv4_subnet,omitempty"`
+	IPv4Gw         string `yaml:"ipv4-gw,omitempty"`
+	IPv6Subnet     string `yaml:"ipv6_subnet,omitempty"`
+	IPv6Gw         string `yaml:"ipv6-gw,omitempty"`
+	MTU            string `yaml:"mtu,omitempty"`
+	ExternalAccess *bool  `yaml:"external-access,omitempty"`
 }
 
 // NodeConfig is a struct that contains the information of a container element
@@ -183,6 +183,21 @@ type GenericContainer struct {
 	NetworkSettings GenericMgmtIPs
 }
 
+func (ctr *GenericContainer) GetContainerIPv4() string {
+	if ctr.NetworkSettings.IPv4addr == "" {
+		return "N/A"
+	}
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
+
+}
+
+func (ctr *GenericContainer) GetContainerIPv6() string {
+	if ctr.NetworkSettings.IPv6addr == "" {
+		return "N/A"
+	}
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
+}
+
 type GenericMgmtIPs struct {
 	IPv4addr string
 	IPv4pLen int
@@ -241,4 +256,18 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 type Extras struct {
 	SRLAgents     []string `yaml:"srl-agents,omitempty"`     // Nokia SR Linux agents. As of now just the agents spec files can be provided here
 	MysocketProxy string   `yaml:"mysocket-proxy,omitempty"` // Proxy address that mysocketctl will use
+}
+
+// ContainerDetails contains information that is commonly outputted to tables or graphs
+type ContainerDetails struct {
+	LabName     string `json:"lab_name,omitempty"`
+	LabPath     string `json:"labPath,omitempty"`
+	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
+	Image       string `json:"image,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Group       string `json:"group,omitempty"`
+	State       string `json:"state,omitempty"`
+	IPv4Address string `json:"ipv4_address,omitempty"`
+	IPv6Address string `json:"ipv6_address,omitempty"`
 }

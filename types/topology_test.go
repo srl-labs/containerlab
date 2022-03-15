@@ -114,9 +114,10 @@ var topologyTestSet = map[string]struct {
 	"node_kind_default": {
 		input: &Topology{
 			Defaults: &NodeDefinition{
-				Kind: "srl",
-				User: "user1",
-				CPU:  1,
+				Kind:  "srl",
+				User:  "user1",
+				CPU:   1,
+				Binds: []string{"x:z"},
 			},
 			Kinds: map[string]*NodeDefinition{
 				"srl": {
@@ -151,7 +152,9 @@ var topologyTestSet = map[string]struct {
 				},
 			},
 			Nodes: map[string]*NodeDefinition{
-				"node1": {},
+				"node1": {
+					Binds: []string{"e:f"},
+				},
 			},
 		},
 		want: map[string]*NodeDefinition{
@@ -170,8 +173,10 @@ var topologyTestSet = map[string]struct {
 					"bash test2.sh",
 				},
 				Binds: []string{
+					"e:f",
 					"a:b",
 					"c:d",
+					"x:z",
 				},
 				Ports: []string{
 					"80:8080",
@@ -310,7 +315,7 @@ func TestGetNodeConfig(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantedConfig, err := resolvePath(item.want["node1"].StartupConfig)
+		wantedConfig := item.want["node1"].StartupConfig
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -345,7 +350,7 @@ func TestGetNodeLicense(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantedLicense, err := resolvePath(item.want["node1"].License)
+		wantedLicense := item.want["node1"].License
 		if err != nil {
 			t.Fatal(err)
 		}

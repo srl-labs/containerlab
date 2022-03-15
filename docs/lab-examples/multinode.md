@@ -41,7 +41,7 @@ Both topology files leverage [host link](../manual/network.md#host-links) featur
   links:
     # we expose two sros container interfaces
     # to host namespace by using host interfaces style
-    # docs: https://containerlab.srlinux.dev/manual/network/#host-links
+    # docs: https://containerlab.dev/manual/network/#host-links
     - endpoints: ["sros:eth1", "host:sr-eth1"]
     - endpoints: ["sros:eth2", "host:sr-eth2"]
 ```

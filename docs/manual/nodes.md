@@ -43,6 +43,9 @@ With `type` the user sets a type of the node. Types work in combination with the
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
+### group
+`group` is a freeform string that denotes which group a node belongs to. The grouping is currently only used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
+
 ### image
 The common `image` attribute sets the container image name that will be used to start the node. The image name should be provided in a well-known format of `repository(:tag)`.
 
@@ -71,22 +74,32 @@ To make certain node(s) to boot/start later than others use the `startup-delay` 
 This setting can be applied on node/kind/default levels.
 
 ### binds
-In order to expose host files to the containerized nodes a user can leverage the bind mount capability.
+Users can leverage the bind mount capability to expose host files to the containerized nodes.
 
-Provide a list of binds instructions under the `binds` container of the node configuration. The string format of those binding instructions follow the same rules as the [--volume parameter](https://docs.docker.com/storage/volumes/#choose-the--v-or---mount-flag) of the docker/podman CLI.
+Binds instructions are provided under the `binds` container of a default/kind/node configuration section. The format of those binding instructions follows the same of the docker's [--volume parameter](https://docs.docker.com/storage/volumes/#choose-the--v-or---mount-flag).
 
 ```yaml
-binds:
-  # mount a file from a host to a container (implicit RW mode)
-  - /usr/local/bin/gobgp:/root/gobgp
-  # mount a directory from a host to a container in RO mode
-  - /root/files:/root/files:ro
+topology:
+  nodes:
+    testNode:
+      kind: linux
+      # some other node parameters
+      binds:
+        - /usr/local/bin/gobgp:/root/gobgp # (1)!
+        - /root/files:/root/files:ro # (2)!
+        - somefile:/somefile # (3)!
+        - ~/.ssh/id_rsa:/root/.ssh/id_rsa # (4)!
 ```
 
-???info "Bind variables"
-    By default binds are either provided as an absolute, or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
+1. mount a host file found by the path `/usr/local/bin/gobgp` to a container under `/root/gobgp` (implicit RW mode)
+2. mount a `/root/files` directory from a host to a container in RO mode
+3. when a host path is given in a relative format, the path is considered relative to the topology file and not a current working directory.
+4. The `~` char will be expanded to a user's home directory.
 
-    Consider a two-node lab `mylab.clab.yml` that has node-specific files, such as state information or some additional configuration artifacts. A user could create a directory for such files similar to that:
+???info "Bind variables"
+    By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
+
+    Consider a two-node lab `mylab.clab.yml` with node-specific files, such as state information or additional configuration artifacts. A user could create a directory for such files similar to that:
 
     ```
     .
@@ -114,9 +127,9 @@ binds:
             - cfgs/n2/conf:/conf
     ```
 
-    while this configuration is perfectly fine, it might be considered verbose as the number of nodes grow. To remove this verbosity, the users can leverage a special variable `$nodeDir` in their bind paths. This variable will expand to the node specific directory that containerlab creates for each node.
+    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeDir__` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
 
-    What this means is that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
+    This means that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
 
     ```
     .
@@ -130,7 +143,7 @@ binds:
     3 directories, 3 files
     ```
 
-    With this structure in place, the clab file can leverage the `$nodeDir` variable:
+    With this structure in place, the clab file can leverage the `__clabNodeDir__` variable:
 
     ```yaml
     name: mylab
@@ -138,13 +151,15 @@ binds:
       nodes:
         n1:
           binds:
-            - $nodeDir/conf:/conf
+            - __clabNodeDir__/conf:/conf
         n2:
           binds:
-            - $nodeDir/conf:/conf
+            - __clabNodeDir__/conf:/conf
     ```
 
-    Notice how `$nodeDir` hides the directory structure and node names and removes the verbosity of the previous approach.
+    Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
+
+Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
 ### ports
 To bind the ports between the lab host and the containers the users can populate the `ports` object inside the node:
@@ -318,6 +333,21 @@ my-node:
 
 The `network-mode` configuration option set to `host` will launch the node in the [host networking mode](https://docs.docker.com/network/host/).
 
+Additionally, a node can join network namespace of another container - by referencing the node in the format of `container:parent_node_name`[^2]:
+
+```yaml
+# example node definition with shared network namespace
+my-node:
+  kind: linux
+sidecar-node:
+  kind: linux
+  network-mode: container:my-node # (1)
+  startup-delay: 10 # (2)
+```
+
+1.  `my-node` portion of a `network-mode` property instructs `sidecar-node` to join the network namespace of a `my-node`.
+2.  `startup-delay` is required in this case in order to properly initialize the namespace of a parent container.
+
 ### runtime
 By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman`, `containerd`, and `ignite` runtimes.
 
@@ -409,3 +439,4 @@ my-node:
 ```
 
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
+[^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.

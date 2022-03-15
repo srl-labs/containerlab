@@ -133,7 +133,7 @@ While many users will be fine with the default ceos naming of `eth`, some ceos u
 In order to align interfaces in this manner, the `INTFTYPE` environment variable must be set to `et` in the topology definition file and the links which are defined must be named `et`, as opposed to `eth`. This naming requirement does not apply to the `eth0` interface automatically created by containerlab. This is only required for links that are used for interconnection with other elements in a topology.
 
 example:
-```yml
+```yaml
 topology:
   defaults:
     env:
@@ -187,24 +187,25 @@ It is possible to change the default config which every ceos node will start wit
 
 1. Craft a valid startup configuration file[^2].
 2. Use this file as a startup-config for ceos kind:
-    ```
+
+    ```yaml
     name: ceos
 
     topology:
-    kinds:
+      kinds:
         ceos:
         startup-config: ceos-custom-startup.cfg
-    nodes:
+      nodes:
         # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
         ceos1:
-        kind: ceos
-        image: ceos:4.25.0F
+          kind: ceos
+          image: ceos:4.25.0F
         # ceos2 will boot with its own specific startup config, as it overrides the kind variables
         ceos2: 
-        kind: ceos
-        image: ceos:4.25.0F
-        startup-config: node-specific-startup.cfg
-    links:
+          kind: ceos
+          image: ceos:4.25.0F
+          startup-config: node-specific-startup.cfg
+      links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
 
@@ -265,9 +266,11 @@ The following labs feature cEOS node:
 ## Known issues or limitations
 ### cgroups v1
 
-As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environment.  For many users, this should not require any changes to the runtime environment.  However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
+In versions prior to EOS-4.28.0F, the ceos-lab image requires a cgroups v1 environment.  For many users, this should not require any changes to the runtime environment.  However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
 
 Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467).
+
+Starting with EOS-4.28.0F, ceos-lab will automatically determine whether the container host is using cgroups v1 or cgroups v2 and act appropriately.  No configuration is required.
 
 ??? "Switching to cgroup v1 in Ubuntu 21.04"
     To switch back to cgroup v1 in Ubuntu 21+ users need to add a kernel parameter `systemd.unified_cgroup_hierarchy=0` to GRUB config. Below is a snippet of `/etc/default/grub` file with the added `systemd.unified_cgroup_hierarchy=0` parameter.
@@ -288,7 +291,15 @@ Consult your distribution's documentation for details regarding configuring cgro
     GRUB_CMDLINE_LINUX=""
     ```
 
+### WSL
+When running under WSL2 ceos datapath might appear not working. As of Feb 2022 users would need to manually enter the following iptables rules inside ceos container:
+
+```
+sudo iptables -P INPUT ACCEPT
+sudo ip6tables -P INPUT ACCEPT
+```
+
 [^1]: https://eos.arista.com/ceos-lab-topo/
 [^2]: feel free to omit the IP addressing for Management interface, as it will be configured by containerlab when ceos node boots.
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
-[^4]: for example, Ubunutu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).
+[^4]: for example, Ubuntu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).

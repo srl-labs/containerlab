@@ -1,11 +1,7 @@
 package types
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/docker/go-connections/nat"
-	"github.com/mitchellh/go-homedir"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -71,13 +67,12 @@ func (t *Topology) GetNodeKind(name string) string {
 
 func (t *Topology) GetNodeBinds(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if len(ndef.GetBinds()) > 0 {
-			return ndef.GetBinds()
-		}
-		if len(t.GetKind(t.GetNodeKind(name)).GetBinds()) > 0 {
-			return t.GetKind(t.GetNodeKind(name)).GetBinds()
-		}
-		return t.GetDefaults().GetBinds()
+		// return merge product of bind slices
+		return utils.MergeStringSlices(
+			ndef.GetBinds(),
+			t.GetKind(t.GetNodeKind(name)).GetBinds(),
+			t.GetDefaults().GetBinds(),
+		)
 	}
 	return nil
 }
@@ -151,7 +146,6 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 	var cfg string
 	if ndef, ok := t.Nodes[name]; ok {
-		var err error
 		cfg = ndef.GetStartupConfig()
 		if t.GetKind(t.GetNodeKind(name)).GetStartupConfig() != "" && cfg == "" {
 			cfg = t.GetKind(t.GetNodeKind(name)).GetStartupConfig()
@@ -159,14 +153,7 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 		if cfg == "" {
 			cfg = t.GetDefaults().GetStartupConfig()
 		}
-		if cfg != "" {
-			cfg, err = resolvePath(cfg)
-			if err != nil {
-				return "", err
-			}
-			_, err = os.Stat(cfg)
-			return cfg, err
-		}
+
 	}
 	return cfg, nil
 }
@@ -200,23 +187,18 @@ func (t *Topology) GetNodeEnforceStartupConfig(name string) bool {
 func (t *Topology) GetNodeLicense(name string) (string, error) {
 	var license string
 	if ndef, ok := t.Nodes[name]; ok {
-		var err error
+
 		license = ndef.GetLicense()
 		if t.GetKind(t.GetNodeKind(name)).GetLicense() != "" && license == "" {
 			license = t.GetKind(t.GetNodeKind(name)).GetLicense()
 		}
+
 		if license == "" {
 			license = t.GetDefaults().GetLicense()
 		}
-		if license != "" {
-			license, err = resolvePath(license)
-			if err != nil {
-				return "", err
-			}
-			_, err = os.Stat(license)
-			return license, err
-		}
+
 	}
+
 	return license, nil
 }
 
@@ -441,26 +423,4 @@ func (t *Topology) ImportEnvs() {
 	for _, n := range t.Nodes {
 		n.ImportEnvs()
 	}
-}
-
-//resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
-func resolvePath(p string) (string, error) {
-	if p == "" {
-		return "", nil
-	}
-	var err error
-	switch {
-	// resolve ~/ path
-	case p[0] == '~':
-		p, err = homedir.Expand(p)
-		if err != nil {
-			return "", err
-		}
-	default:
-		p, err = filepath.Abs(p)
-		if err != nil {
-			return "", err
-		}
-	}
-	return p, nil
 }

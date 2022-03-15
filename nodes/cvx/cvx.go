@@ -72,16 +72,18 @@ func (c *cvx) Config() *types.NodeConfig { return c.cfg }
 func (*cvx) PreDeploy(_, _, _ string) error { return nil }
 
 func (c *cvx) Deploy(ctx context.Context) error {
-
-	intf, err := c.runtime.CreateContainer(ctx, c.cfg)
+	// CreateContainer is no-op in case of ignite runtime
+	cID, err := c.runtime.CreateContainer(ctx, c.cfg)
 	if err != nil {
 		return err
 	}
-
+	intf, err := c.runtime.StartContainer(ctx, cID, c.cfg)
+	if err != nil {
+		return err
+	}
 	if vmChans, ok := intf.(*operations.VMChannels); ok {
 		c.vmChans = vmChans
 	}
-
 	return nil
 }
 

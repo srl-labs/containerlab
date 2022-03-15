@@ -37,7 +37,7 @@ func init() {
 	certCmd.AddCommand(signCertCmd)
 	CACmd.AddCommand(CACreateCmd)
 
-	CACreateCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.srlinux.dev", "Common Name")
+	CACreateCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
 	CACreateCmd.Flags().StringVarP(&country, "c", "", "Internet", "Country")
 	CACreateCmd.Flags().StringVarP(&locality, "l", "", "Server", "Location")
 	CACreateCmd.Flags().StringVarP(&organization, "o", "", "Containerlab", "Organization")
@@ -47,7 +47,7 @@ func init() {
 	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "ca", "certificate/key filename prefix")
 
 	signCertCmd.Flags().StringSliceVarP(&certHosts, "hosts", "", []string{}, "comma separate list of hosts of a certificate")
-	signCertCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.srlinux.dev", "Common Name")
+	signCertCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
 	signCertCmd.Flags().StringVarP(&caCertPath, "ca-cert", "", "", "Path to CA certificate")
 	signCertCmd.Flags().StringVarP(&caKeyPath, "ca-key", "", "", "Path to CA private key")
 	signCertCmd.Flags().StringVarP(&country, "c", "", "Internet", "Country")
@@ -182,7 +182,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	if caKeyPath == "" {
 		return fmt.Errorf("CA key path not set")
 	}
-	
+
 	if path == "" {
 		path, err = os.Getwd()
 		if err != nil {
