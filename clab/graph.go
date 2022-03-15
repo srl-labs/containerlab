@@ -174,21 +174,16 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 			IPv6Address: node.Config().MgmtIPv6Address,
 		})
 	}
-
 }
 
 func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []types.GenericContainer) {
 	for _, cont := range containers {
-		var name string
-		if len(cont.Names) > 0 {
-			name = strings.TrimPrefix(cont.Names[0], fmt.Sprintf("/clab-%s-", c.Config.Name))
-		}
-		log.Debugf("looking for node name %s", name)
-		if node, ok := c.Nodes[name]; ok {
+		log.Debugf("looking for node name %s", cont.Labels[NodeNameLabel])
+		if node, ok := c.Nodes[cont.Labels[NodeNameLabel]]; ok {
 			g.Nodes = append(g.Nodes, types.ContainerDetails{
-				Name:        name,
+				Name:        node.Config().ShortName,
 				Kind:        node.Config().Kind,
-				Image:       cont.Image,
+				Image:       node.Config().Image,
 				Group:       node.Config().Group,
 				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
 				IPv4Address: cont.GetContainerIPv4(),
