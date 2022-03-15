@@ -378,6 +378,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
+	if err = c.verifyDuplicateAddresses(); err != nil {
+		return err
+	}
 	if err = c.verifyRootNetnsInterfaceUniqueness(); err != nil {
 		return err
 	}
@@ -430,6 +433,35 @@ func (c *CLab) verifyLinks() error {
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
+	return nil
+}
+
+// verifyDuplicateAddresses checks that every static IP address in the topology is unique
+func (c *CLab) verifyDuplicateAddresses() error {
+	var ipv4_list []string
+	var ipv6_list []string
+	for _, node := range c.Nodes {
+		ipv4_addr := node.Config().MgmtIPv4Address
+		if ipv4_addr != "" {
+			for i := range ipv4_list {
+				if ipv4_list[i] == ipv4_addr {
+					return fmt.Errorf("management IPv4 address %q appeared more than once in the topology file", ipv4_addr)
+				}
+			}
+			ipv4_list = append(ipv4_list, ipv4_addr)
+		}
+
+		ipv6_addr := node.Config().MgmtIPv6Address
+		if ipv6_addr != "" {
+			for i := range ipv6_list {
+				if ipv6_list[i] == ipv6_addr {
+					return fmt.Errorf("management IPv6 address %q appeared more than once in the topology file", ipv6_addr)
+				}
+			}
+			ipv6_list = append(ipv6_list, ipv6_addr)
+		}
+	}
+
 	return nil
 }
 
