@@ -7,6 +7,7 @@ package ceos
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -14,7 +15,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -39,10 +39,6 @@ var (
 	//go:embed ceos.cfg
 	cfgTemplate string
 
-	intfMapping string
-
-	mgmtInterface string
-
 	saveCmd = []string{"Cli", "-p", "15", "-c", "wr"}
 )
 
@@ -57,7 +53,8 @@ type ceos struct {
 	runtime runtime.ContainerRuntime
 }
 
-type IntfMap struct {
+// intfMap represents interface mapping config file
+type intfMap struct {
 	ManagementIntf struct {
 		Eth0 string `json:"eth0"`
 	} `json:"ManagementIntf"`
@@ -137,9 +134,9 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	node.ResStartupConfig = cfg
 
 	// set the mgmt interface name for the node
-	err2 := setMgmtInterface(node)
-	if err2 != nil {
-		return err2
+	err := setMgmtInterface(node)
+	if err != nil {
+		return err
 	}
 
 	// use startup config file provided by a user
@@ -151,7 +148,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		cfgTemplate = string(c)
 	}
 
-	err := node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
+	err = node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -175,31 +172,36 @@ func createCEOSFiles(node *types.NodeConfig) error {
 func setMgmtInterface(node *types.NodeConfig) error {
 	// use interface mapping file to set the Management interface if it is provided in the binds section
 	// default is Management0
-	mgmtInterface = "Management0"
+	mgmtInterface := "Management0"
 	for _, bindelement := range node.Binds {
-		if strings.Contains(bindelement, "EosIntfMapping.json") {
-			bindsplit := strings.Split(bindelement, ":")
-			if len(bindsplit) > 1 {
-				m, err := os.ReadFile(bindsplit[0])
-				if err != nil {
-					return err
-				}
-				intfMapping = string(m)
-
-				// Reset management interface if defined in the intfMapping file
-				var intfMappingJson = IntfMap{}
-				err3 := json.Unmarshal([]byte(intfMapping), &intfMappingJson)
-				if err3 != nil {
-					log.Debugf("Management interface could not be read from intfMapping file for '%s' node.", node.ShortName)
-					return err3
-				}
-				mgmtInterface = intfMappingJson.ManagementIntf.Eth0
-			}
+		if !strings.Contains(bindelement, "EosIntfMapping.json") {
+			continue
 		}
+
+		bindsplit := strings.Split(bindelement, ":")
+		if len(bindsplit) < 2 {
+			return fmt.Errorf("malformed bind instruction: %s", bindelement)
+		}
+
+		var m []byte // byte representation of a map file
+		m, err := os.ReadFile(bindsplit[0])
+		if err != nil {
+			return err
+		}
+
+		// Reset management interface if defined in the intfMapping file
+		var intfMappingJson intfMap
+		err = json.Unmarshal(m, &intfMappingJson)
+		if err != nil {
+			log.Debugf("Management interface could not be read from intfMapping file for '%s' node.", node.ShortName)
+			return err
+		}
+		mgmtInterface = intfMappingJson.ManagementIntf.Eth0
+
 	}
 	log.Debugf("Management interface for '%s' node is set to %s.", node.ShortName, mgmtInterface)
 	node.MgmtIntf = mgmtInterface
-	
+
 	return nil
 }
 

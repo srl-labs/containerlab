@@ -83,8 +83,12 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
     ```
     As you see, the management interface `Ma0` inherits the IP address that docker assigned to ceos container management interface.
 
-### User defined interface mapping (supported in cEOS >= 4.28.0F)
-It is possible to make ceos nodes to boot up with a user-defined interface layout. With the [`binds`] property a user sets the path to the interface mapping file that will be mounted to a container and used during bootup. In this file the underlying linux eth interfaces (used in the containerlab topology file) are mapped to cEOS interfaces. The following shows an example how this mapping file is structured:
+### User-defined interface mapping
+
+!!!note
+    Supported in cEOS >= 4.28.0F
+
+It is possible to make ceos nodes boot up with a user-defined interface layout. With the [`binds`](../nodes.md#binds) property, a user sets the path to the interface mapping file that will be mounted to a container and used during bootup. The underlying linux `eth` interfaces (used in the containerlab topology file) are mapped to cEOS interfaces in this file. The following shows an example of how this mapping file is structured:
 
 ```json
 {
@@ -101,22 +105,22 @@ It is possible to make ceos nodes to boot up with a user-defined interface layou
   }
 }
 ```
-The linux interface of `eth0` is always used for the management interface mapping.
+Linux's `eth0` interface is always used to map the management interface.
 
-With the following topology file containerlab is instructed to take a file `mymapping.json` from the current working directory and mount that to the container as `/mnt/flash/EosIntfMapping.json`. This will result in this interface mapping to be considered during bootup of the node. The destination for that bind has to be `/mnt/flash/EosIntfMapping.json`.
+With the following topology file, containerlab is instructed to take a `mymapping.json` file located in the same directory as the topology and mount that to the container as `/mnt/flash/EosIntfMapping.json`. This will result in this interface mapping being considered during the bootup of the node. The destination for that bind has to be `/mnt/flash/EosIntfMapping.json`.
 
-1. Craft a valid interface mapping file, see example above.
-2. Use this file as a `binds` for a ceos node:
+1. Craft a valid interface mapping file.
+2. Use `binds` config option for a ceos node/kind to make this file available in the container's filesystem:
     ```yaml
     name: ceos
 
     topology:
-     nodes:
+      nodes:
         ceos1:
           kind: ceos
           image: ceos:4.28.0F
           binds:
-            - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
+            - mymapping.json:/mnt/flash/EosIntfMapping.json:ro # (1)!
         ceos2: 
           kind: ceos
           image: ceos:4.28.0F
@@ -125,6 +129,23 @@ With the following topology file containerlab is instructed to take a file `myma
     links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
+
+    1. If all ceos nodes use the same interface mapping file, it is easier to set the bind instruction on a kind level
+    ```yaml
+        topology:
+          kinds:
+            ceos:
+              binds:
+                - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
+          nodes:
+            ceos1:
+              kind: ceos
+              image: ceos:4.28.0F
+            ceos2: 
+              kind: ceos
+              image: ceos:4.28.0F
+    ```
+    This way the bind is set only once, and nodes of `ceos` kind will have these binds applied.
 
 ## Additional interface naming considerations
 
@@ -266,11 +287,11 @@ The following labs feature cEOS node:
 ## Known issues or limitations
 ### cgroups v1
 
-In versions prior to EOS-4.28.0F, the ceos-lab image requires a cgroups v1 environment.  For many users, this should not require any changes to the runtime environment.  However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
+In versions prior to EOS-4.28.0F, the ceos-lab image requires a cgroups v1 environment. For many users, this should not require any changes to the runtime environment. However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
 
 Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467).
 
-Starting with EOS-4.28.0F, ceos-lab will automatically determine whether the container host is using cgroups v1 or cgroups v2 and act appropriately.  No configuration is required.
+Starting with EOS-4.28.0F, ceos-lab will automatically determine whether the container host is using cgroups v1 or cgroups v2 and act appropriately. No configuration is required.
 
 ??? "Switching to cgroup v1 in Ubuntu 21.04"
     To switch back to cgroup v1 in Ubuntu 21+ users need to add a kernel parameter `systemd.unified_cgroup_hierarchy=0` to GRUB config. Below is a snippet of `/etc/default/grub` file with the added `systemd.unified_cgroup_hierarchy=0` parameter.
