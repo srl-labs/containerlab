@@ -7,7 +7,6 @@ package ixiac_one
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -23,10 +22,6 @@ var ixiacStatusConfig = struct {
 }{
 	statusSleepDuration: time.Duration(time.Second * 5),
 	readyFileName:       "/home/keysight/ixia-c-one/init-done",
-}
-
-var execCommand = map[string]string{
-	"docker": "docker exec",
 }
 
 func init() {
@@ -86,20 +81,17 @@ func (*ixiacOne) SaveConfig(_ context.Context) error {
 }
 
 // ixiacPostDeploy runs postdeploy actions which are required for ixia-c-one node
-func ixiacPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
-	runtimeCmd, ok := execCommand[r.GetName()]
-	if !ok {
-		return fmt.Errorf("runtime '%v' is not yet supported with ixia-c-one kind", r.GetName())
-	}
-
+func ixiacPostDeploy(ctx context.Context, r runtime.ContainerRuntime, cfg *types.NodeConfig) error {
 	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
-	bashCmd := fmt.Sprintf("%s %s %s", runtimeCmd, node.LongName, ixiacOneCmd)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		cmd := exec.Command("/bin/sh", "-c", bashCmd)
-		out, err := cmd.CombinedOutput()
+		_, stderr, err := r.Exec(ctx, cfg.LongName, []string{"bash", "-c", ixiacOneCmd})
+
 		if err != nil {
-			msg := strings.TrimSuffix(string(out), "\n")
+			return err
+		}
+		if stderr != nil {
+			msg := strings.TrimSuffix(string(stderr), "\n")
 			if msg != statusInProgressMsg {
 				return err
 			}
