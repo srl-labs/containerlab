@@ -144,7 +144,9 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		for _, extrapath := range extras {
 			basename := filepath.Base(extrapath)
 			dest := filepath.Join(flash, basename)
-			if err := utils.CopyFile(extrapath, dest, 0644); err != nil {
+
+			topoDir := filepath.Dir(filepath.Dir(node.LabDir)) // topo dir is needed to resolve extrapaths
+			if err := utils.CopyFile(utils.ResolvePath(extrapath, topoDir), dest, 0644); err != nil {
 				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
 		}

@@ -215,22 +215,24 @@ clab-srlceos01/ceos
 
 9 directories, 11 files
 ```
-## ceos-specific overrides
+## Copy to `flash`
 
-If there is a need to provide additional ceos-lab specific configuration or overrides to the ceos node in the topology, these can be added using the `copy-to-flash` extra.  These additional files will be copied to the node's flash directory for evaluation on startup.  
+If there is a need to copy ceos-specific configuration or override files to the ceos node in the topology use `.extras.ceos-copy-to-flash` config option. These files will be copied to the node's flash directory and evaluated on startup.
 
 ```yaml
-name: ceos_lowrider
+name: ceos
 topology:
   nodes:
     ceos1:
       kind: ceos
       ...
       extras:
-        copy-to-flash:
-        - ceos-config
+        ceos-copy-to-flash:
+        - ceos-config # (1)!
         - toggle_override
 ```
+
+1. Paths are relative to the topology file. Absolute paths like `~/some/path` or `/some/path` are also possible.
 
 ## Lab examples
 The following labs feature a cEOS node:
