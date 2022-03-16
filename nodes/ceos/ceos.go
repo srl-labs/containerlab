@@ -28,7 +28,7 @@ var (
 		"CEOS":                                "1",
 		"EOS_PLATFORM":                        "ceoslab",
 		"container":                           "docker",
-		"ETBA":                                "4",
+		"ETBA":                                "1",
 		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
 		"INTFTYPE":                            "eth",
 		"MAPETH0":                             "1",
@@ -134,6 +134,22 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	err := node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
+	}
+
+	// if extras have been provided copy these into the flash directory
+	if node.Extras != nil && len(node.Extras.CeosCopyToFlash) != 0 {
+		extras := node.Extras.CeosCopyToFlash
+		flash := filepath.Join(node.LabDir, "flash")
+
+		for _, extrapath := range extras {
+			basename := filepath.Base(extrapath)
+			dest := filepath.Join(flash, basename)
+
+			topoDir := filepath.Dir(filepath.Dir(node.LabDir)) // topo dir is needed to resolve extrapaths
+			if err := utils.CopyFile(utils.ResolvePath(extrapath, topoDir), dest, 0644); err != nil {
+				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
+			}
+		}
 	}
 
 	// sysmac is a system mac that is +1 to Ma0 mac

@@ -174,12 +174,12 @@ In addition to cli commands such as `write memory` user can take advantage of th
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
 
 === "Startup command"
-    `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
+    `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
 === "Environment variables"
     `CEOS:1`  
     `EOS_PLATFORM":ceoslab`  
     `container:docker`  
-    `ETBA:4`  
+    `ETBA:1`  
     `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
     `INTFTYPE:eth`  
     `MAPETH0:1`  
@@ -215,9 +215,27 @@ clab-srlceos01/ceos
 
 9 directories, 11 files
 ```
+## Copy to `flash`
+
+If there is a need to copy ceos-specific configuration or override files to the ceos node in the topology use `.extras.ceos-copy-to-flash` config option. These files will be copied to the node's flash directory and evaluated on startup.
+
+```yaml
+name: ceos
+topology:
+  nodes:
+    ceos1:
+      kind: ceos
+      ...
+      extras:
+        ceos-copy-to-flash:
+        - ceos-config # (1)!
+        - toggle_override
+```
+
+1. Paths are relative to the topology file. Absolute paths like `~/some/path` or `/some/path` are also possible.
 
 ## Lab examples
-The following labs feature cEOS node:
+The following labs feature a cEOS node:
 
 - [SR Linux and cEOS](../../lab-examples/srl-ceos.md)
 
