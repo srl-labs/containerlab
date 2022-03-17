@@ -84,6 +84,7 @@ type NodeConfig struct {
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface
+	MgmtIntf             string // can be used to be rendered by the default node template 
 	MgmtIPv4Address      string
 	MgmtIPv4PrefixLength int
 	MgmtIPv6Address      string

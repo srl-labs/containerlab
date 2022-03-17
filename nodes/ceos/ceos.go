@@ -7,6 +7,7 @@ package ceos
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -50,6 +51,16 @@ func init() {
 type ceos struct {
 	cfg     *types.NodeConfig
 	runtime runtime.ContainerRuntime
+}
+
+// intfMap represents interface mapping config file
+type intfMap struct {
+	ManagementIntf struct {
+		Eth0 string `json:"eth0"`
+	} `json:"ManagementIntf"`
+	EthernetIntf struct {
+		eth map[string]string
+	} `json:"EthernetIntf"`
 }
 
 func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -122,6 +133,12 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	cfg := filepath.Join(node.LabDir, "flash", "startup-config")
 	node.ResStartupConfig = cfg
 
+	// set the mgmt interface name for the node
+	err := setMgmtInterface(node)
+	if err != nil {
+		return err
+	}
+
 	// use startup config file provided by a user
 	if node.StartupConfig != "" {
 		c, err := os.ReadFile(node.StartupConfig)
@@ -131,7 +148,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 		cfgTemplate = string(c)
 	}
 
-	err := node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
+	err = node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -168,6 +185,42 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	return err
 }
 
+func setMgmtInterface(node *types.NodeConfig) error {
+	// use interface mapping file to set the Management interface if it is provided in the binds section
+	// default is Management0
+	mgmtInterface := "Management0"
+	for _, bindelement := range node.Binds {
+		if !strings.Contains(bindelement, "EosIntfMapping.json") {
+			continue
+		}
+
+		bindsplit := strings.Split(bindelement, ":")
+		if len(bindsplit) < 2 {
+			return fmt.Errorf("malformed bind instruction: %s", bindelement)
+		}
+
+		var m []byte // byte representation of a map file
+		m, err := os.ReadFile(bindsplit[0])
+		if err != nil {
+			return err
+		}
+
+		// Reset management interface if defined in the intfMapping file
+		var intfMappingJson intfMap
+		err = json.Unmarshal(m, &intfMappingJson)
+		if err != nil {
+			log.Debugf("Management interface could not be read from intfMapping file for '%s' node.", node.ShortName)
+			return err
+		}
+		mgmtInterface = intfMappingJson.ManagementIntf.Eth0
+
+	}
+	log.Debugf("Management interface for '%s' node is set to %s.", node.ShortName, mgmtInterface)
+	node.MgmtIntf = mgmtInterface
+
+	return nil
+}
+
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes
 func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
 	d, err := utils.SpawnCLIviaExec("arista_eos", node.LongName, r.GetName())
@@ -178,7 +231,7 @@ func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.N
 	defer d.Close()
 
 	cfgs := []string{
-		"interface management 0",
+		"interface " + node.MgmtIntf,
 		"no ip address",
 		"no ipv6 address",
 	}
@@ -199,7 +252,6 @@ func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.N
 
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
-
 	resp, err := d.SendConfigs(cfgs)
 	if err != nil {
 		return err
