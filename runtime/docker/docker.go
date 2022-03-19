@@ -335,11 +335,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	var rlimit unix.Rlimit
 	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &rlimit); err != nil {
 		log.Warnf("Unable to retrieve rlimit_NOFILE value: %v", err)
-		rlimit.Cur = rLimitMaxValue
 		rlimit.Max = rLimitMaxValue
-	}
-	if rlimit.Cur > rLimitMaxValue {
-		rlimit.Cur = rLimitMaxValue
 	}
 	if rlimit.Max > rLimitMaxValue {
 		rlimit.Max = rLimitMaxValue
@@ -347,7 +343,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	ulimit := units.Ulimit{
 		Name: "nofile",
 		Hard: int64(rlimit.Max),
-		Soft: int64(rlimit.Cur),
+		Soft: int64(rlimit.Max),
 	}
 	resources.Ulimits = []*units.Ulimit{&ulimit}
 	containerHostConfig := &container.HostConfig{
