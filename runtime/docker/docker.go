@@ -9,6 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/docker/go-units"
+	"golang.org/x/sys/unix"
 	"io"
 	"io/ioutil"
 	"path"
@@ -35,6 +37,7 @@ const (
 	runtimeName    = "docker"
 	sysctlBase     = "/proc/sys"
 	defaultTimeout = 30 * time.Second
+	rLimitMaxValue = 1048576
 )
 
 func init() {
@@ -314,15 +317,6 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		ExposedPorts: node.PortSet,
 		MacAddress:   node.MacAddress,
 	}
-	containerHostConfig := &container.HostConfig{
-		Binds:        node.Binds,
-		PortBindings: node.PortBindings,
-		Sysctls:      node.Sysctls,
-		Privileged:   true,
-		// Network mode will be defined below via switch
-		NetworkMode: "",
-		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
-	}
 	var resources container.Resources
 	if node.Memory != "" {
 		mem, err := humanize.ParseBytes(node.Memory)
@@ -338,7 +332,34 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if node.CPUSet != "" {
 		resources.CpusetCpus = node.CPUSet
 	}
-	containerHostConfig.Resources = resources
+	var rlimit unix.Rlimit
+	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &rlimit); err != nil {
+		log.Warnf("Unable to retrieve rlimit_NOFILE value: %v", err)
+		rlimit.Cur = rLimitMaxValue
+		rlimit.Max = rLimitMaxValue
+	}
+	if rlimit.Cur > rLimitMaxValue {
+		rlimit.Cur = rLimitMaxValue
+	}
+	if rlimit.Max > rLimitMaxValue {
+		rlimit.Max = rLimitMaxValue
+	}
+	ulimit := units.Ulimit{
+		Name: "nofile",
+		Hard: int64(rlimit.Max),
+		Soft: int64(rlimit.Cur),
+	}
+	resources.Ulimits = []*units.Ulimit{&ulimit}
+	containerHostConfig := &container.HostConfig{
+		Binds:        node.Binds,
+		PortBindings: node.PortBindings,
+		Sysctls:      node.Sysctls,
+		Privileged:   true,
+		// Network mode will be defined below via switch
+		NetworkMode: "",
+		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
+		Resources:   resources,
+	}
 	containerNetworkingConfig := &network.NetworkingConfig{}
 
 	netMode := strings.SplitN(node.NetworkMode, ":", 2)
