@@ -584,7 +584,9 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkResources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
-	for _, i := range inputContainers {
+	for idx := range inputContainers {
+		i := inputContainers[idx]
+
 		ctr := types.GenericContainer{
 			Names:           i.Names,
 			ID:              i.ID,
@@ -598,7 +600,9 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 		bridgeName := d.mgmt.Network
 		// if bridgeName is "", try to find a network created by clab that the container is connected to
 		if bridgeName == "" && inputNetworkResources != nil {
-			for _, nr := range inputNetworkResources {
+			for idx := range inputNetworkResources {
+				nr := inputNetworkResources[idx]
+
 				if _, ok := i.NetworkSettings.Networks[nr.Name]; ok {
 					bridgeName = nr.Name
 					break
