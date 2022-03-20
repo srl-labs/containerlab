@@ -7,6 +7,7 @@ package clab
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -685,16 +686,21 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 }
 
 // CheckResources runs container host resources check
-func (*CLab) CheckResources() error {
+func (c *CLab) CheckResources() error {
 	vcpu := runtime.NumCPU()
 	log.Debugf("Number of vcpu: %d", vcpu)
 	if vcpu < 2 {
 		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
+		if c.HasKind(nodes.NodeKindSRL) {
+			return errors.New("not enough vcpus. Nokia SR Linux nodes require at least 2 vcpus")
+		}
 	}
+
 	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
 	if freeMemG < 1 {
 		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", freeMemG)
 	}
+
 	return nil
 }
 
@@ -738,4 +744,16 @@ func getShortName(labName, containerName string) (string, error) {
 		return "", fmt.Errorf("failed to parse container name %q", containerName)
 	}
 	return result[1], nil
+}
+
+// HasKind returns true if kind k is found in the list of nodes
+func (c *CLab) HasKind(k string) bool {
+	for _, n := range c.Nodes {
+		if n.Config().Kind == k {
+			log.Warn("found")
+			return true
+		}
+	}
+
+	return false
 }
