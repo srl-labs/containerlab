@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -400,6 +401,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyStartupConfigFilesExist(); err != nil {
 		return err
 	}
+	if err = c.checkIfSignatures(); err != nil {
+		return err
+	}
 
 	return c.VerifyImages(ctx)
 }
@@ -637,6 +641,25 @@ func (c *CLab) verifyVirtSupport() error {
 	}
 
 	return fmt.Errorf("virtualization seems to be not supported and it is required for VM based nodes. Check if virtualization can be enabled")
+}
+
+// checkIfSignatures ensures that users provide valid endpoint names
+// mostly this is useful for srlinux nodes which require special naming convention to be followed
+func (c *CLab) checkIfSignatures() error {
+	for _, node := range c.Nodes {
+		switch {
+		case node.Config().Kind == nodes.NodeKindSRL:
+			// regexp to match srlinux endpoint names
+			srlIfRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+			for _, e := range node.Config().Endpoints {
+				if !srlIfRe.MatchString(e.EndpointName) {
+					return fmt.Errorf("nokia sr linux endpoint %q doesn't match required pattern. SR Linux endpoints should be named as e1-1 or e1-1-1", e.EndpointName)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // checkEndpoint runs checks on the endpoint syntax
