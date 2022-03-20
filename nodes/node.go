@@ -23,28 +23,29 @@ const (
 var NodeKind string
 
 const (
-	NodeKindBridge     = "bridge"
-	NodeKindCEOS       = "ceos"
-	NodeKindCVX        = "cvx"
-	NodeKindCRPD       = "crpd"
-	NodeKindHOST       = "host"
-	NodeKindLinux      = "linux"
-	NodeKindMySocketIO = "mysocketio"
-	NodeKindOVS        = "ovs-bridge"
-	NodeKindSonic      = "sonic-vs"
-	NodeKindSRL        = "srl"
-	NodeKindVrCSR      = "vr-csr"
-	NodeKindVrPAN      = "vr-pan"
-	NodeKindVrN9KV     = "vr-n9kv"
-	NodeKindVrFTOSV    = "vr-ftosv"
-	NodeKindVrROS      = "vr-ros"
-	NodeKindVrSROS     = "vr-sros"
-	NodeKindVrVEOS     = "vr-veos"
-	NodeKindVrVMX      = "vr-vmx"
-	NodeKindVrVQFX     = "vr-vqfx"
-	NodeKindVrXRV      = "vr-xrv"
-	NodeKindVrXRV9K    = "vr-xrv9k"
-	NodeKindVrNXOS     = "vr-nxos"
+	NodeKindBridge          = "bridge"
+	NodeKindCEOS            = "ceos"
+	NodeKindCVX             = "cvx"
+	NodeKindCRPD            = "crpd"
+	NodeKindHOST            = "host"
+	NodeKindLinux           = "linux"
+	NodeKindMySocketIO      = "mysocketio"
+	NodeKindOVS             = "ovs-bridge"
+	NodeKindSonic           = "sonic-vs"
+	NodeKindSRL             = "srl"
+	NodeKindVrCSR           = "vr-csr"
+	NodeKindVrPAN           = "vr-pan"
+	NodeKindVrN9KV          = "vr-n9kv"
+	NodeKindVrFTOSV         = "vr-ftosv"
+	NodeKindVrROS           = "vr-ros"
+	NodeKindVrSROS          = "vr-sros"
+	NodeKindVrVEOS          = "vr-veos"
+	NodeKindVrVMX           = "vr-vmx"
+	NodeKindVrVQFX          = "vr-vqfx"
+	NodeKindVrXRV           = "vr-xrv"
+	NodeKindVrXRV9K         = "vr-xrv9k"
+	NodeKindVrNXOS          = "vr-nxos"
+	NodeKindIPInfusionOCNOS = "ipinfusion-ocnos"
 )
 
 // a map of node kinds overriding the default global runtime
@@ -98,13 +99,14 @@ var DefaultConfigTemplates = map[string]string{
 
 // DefaultCredentials holds default username and password per each kind
 var DefaultCredentials = map[string][]string{
-	"srl":      {"admin", "admin"},
-	"vr-pan":   {"admin", "Admin@123"},
-	"vr-n9kv":  {"admin", "admin"},
-	"vr-ftosv": {"admin", "admin"},
-	"vr-sros":  {"admin", "admin"},
-	"vr-vmx":   {"admin", "admin@123"},
-	"vr-vqfx":  {"admin", "admin@123"},
-	"vr-xrv9k": {"clab", "clab@123"},
-	"vr-csr":   {"admin", "admin"},
+	"srl":                   {"admin", "admin"},
+	"vr-pan":                {"admin", "Admin@123"},
+	"vr-n9kv":               {"admin", "admin"},
+	"vr-ftosv":              {"admin", "admin"},
+	"vr-sros":               {"admin", "admin"},
+	"vr-vmx":                {"admin", "admin@123"},
+	"vr-vqfx":               {"admin", "admin@123"},
+	"vr-xrv9k":              {"clab", "clab@123"},
+	"vr-csr":                {"admin", "admin"},
+	NodeKindIPInfusionOCNOS: {"admin", "admin"},
 }
