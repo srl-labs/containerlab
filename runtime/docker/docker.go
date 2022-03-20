@@ -9,14 +9,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/docker/go-units"
-	"golang.org/x/sys/unix"
 	"io"
 	"io/ioutil"
 	"path"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/docker/go-units"
+	"golang.org/x/sys/unix"
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -580,7 +581,7 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 }
 
 // Transform docker-specific to generic container format
-func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkRessources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
+func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkResources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for _, i := range inputContainers {
@@ -596,8 +597,8 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 		}
 		bridgeName := d.mgmt.Network
 		// if bridgeName is "", try to find a network created by clab that the container is connected to
-		if bridgeName == "" && inputNetworkRessources != nil {
-			for _, nr := range inputNetworkRessources {
+		if bridgeName == "" && inputNetworkResources != nil {
+			for _, nr := range inputNetworkResources {
 				if _, ok := i.NetworkSettings.Networks[nr.Name]; ok {
 					bridgeName = nr.Name
 					break
