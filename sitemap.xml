@@ -2,462 +2,472 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://containerlab.dev/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/community/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/install/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/quickstart/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/completion/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/deploy/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/destroy/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/exec/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/generate/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/graph/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/inspect/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/save/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/tools/disable-tx-offload/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/tools/cert/sign/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/tools/cert/ca/create/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/tools/mysocketio/login/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/tools/veth/create/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/tools/vxlan/create/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/cmd/tools/vxlan/delete/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/bgp-vpls-nok-jun/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/cfg-clos/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/cvx01/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/cvx02/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/ext-bridge/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/frr01/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/lab-examples/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/min-5clos/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/min-clos/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/multinode/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/single-srl/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/srl-ceos/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/srl-crpd/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/srl-frr/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/srl-sonic/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/templated01/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/templated02/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/two-srls/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/vr-sros/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/vr-vmx/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/vr-xrv/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/vr-xrv9k/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/lab-examples/wan/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/cert/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/conf-artifacts/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/images/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/inventory/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/multi-node/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/network/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/nodes/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/published-ports/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/topo-def-file/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/vrnetlab/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/wireshark/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/bridge/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/ceos/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/crpd/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/cvx/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://containerlab.dev/manual/kinds/ipinfusion-ocnos/</loc>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/kinds/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/linux/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/ovs-bridge/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/sonic-vs/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/srl/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-csr/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-ftosv/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-n9kv/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-nxos/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-pan/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-ros/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-sros/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-veos/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-vmx/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-vqfx/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-xrv/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/manual/kinds/vr-xrv9k/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.11.0/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.12.0/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.13.0/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.14.0/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.14.1/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.14.2/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.14.3/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.14.4/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.15/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.16/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.17/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.18/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.19/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.20/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.21/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.22/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.23/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://containerlab.dev/rn/0.24/</loc>
-         <lastmod>2022-03-07</lastmod>
+         <lastmod>2022-03-20</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://containerlab.dev/rn/0.25/</loc>
+         <lastmod>2022-03-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
