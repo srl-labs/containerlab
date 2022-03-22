@@ -240,7 +240,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	}
 	err = d.installIPTablesFwdRule()
 	if err != nil {
-		log.Warnf("%v", err)
+		log.Warnf("errors during iptables rules install: %v", err)
 	}
 
 	return nil
@@ -279,7 +279,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	br := "br-" + nres.ID[:12]
 	err = d.deleteIPTablesFwdRule(br)
 	if err != nil {
-		log.Warnf("%v", err)
+		log.Warnf("errors during iptables rules removal: %v", err)
 	}
 
 	return nil
