@@ -16,13 +16,11 @@ import (
 
 // GenerateExports generate various export files and writes it to a lab location
 func (c *CLab) GenerateExports() error {
-
 	topologyGraphFPath := filepath.Join(c.Dir.Lab, "topology-graph.json")
-	_, err = os.Create(topologyGraphFPath)
+	f, err := os.Create(topologyGraphFPath)
 	if err != nil {
 		return err
 	}
-
 	return c.generateTopologyGraph(f)
 }
 
