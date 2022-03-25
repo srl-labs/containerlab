@@ -124,6 +124,13 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// in an similar fashion, create an empty topology graph file
+	topologyGraphFPath := filepath.Join(c.Dir.Lab, "topology-graph.json")
+	_, err = os.Create(topologyGraphFPath)
+	if err != nil {
+		return err
+	}
+
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
 		cfssllog.Level = cfssllog.LevelDebug
@@ -201,6 +208,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	enrichNodes(containers, c.Nodes)
 
 	if err := c.GenerateInventories(); err != nil {
+		return err
+	}
+
+	if err := c.GenerateExports(); err != nil {
 		return err
 	}
 
