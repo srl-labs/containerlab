@@ -54,10 +54,7 @@ func (c *CLab) exportTopologyData(w io.Writer) error {
 	}
 
 	for _, n := range c.Nodes {
-		cfg := n.Config()
-		// Empty NodeConfig.Endpoints slice to avoid cyclic references incompatible with json.Marshal()
-		cfg.Endpoints = make([]types.Endpoint, 0, 0)
-		d.Nodes[n.Config().ShortName] = cfg
+		d.Nodes[n.Config().ShortName] = n.Config()
 	}
 
 	for _, l := range c.Links {

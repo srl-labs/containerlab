@@ -55,65 +55,62 @@ type MgmtNet struct {
 
 // NodeConfig is a struct that contains the information of a container element
 type NodeConfig struct {
-	ShortName            string // name of the Node inside topology YAML
-	LongName             string // containerlab-prefixed unique container name
-	Fqdn                 string
-	LabDir               string // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index                int
-	Group                string
-	Kind                 string
-	StartupConfig        string // path to config template file that is used for startup config generation
-	StartupDelay         uint   // optional delay (in seconds) to wait before creating this node
-	EnforceStartupConfig bool   // when set to true will enforce the use of startup-config, even when config is present in the lab directory
-	ResStartupConfig     string // path to config file that is actually mounted to the container and is a result of templation
-	Config               *ConfigDispatcher
-	ResConfig            string // path to config file that is actually mounted to the container and is a result of templation
-	NodeType             string
-	Position             string
-	License              string
-	Image                string
-	Sysctls              map[string]string
-	User                 string
-	Entrypoint           string
-	Cmd                  string
-	Exec                 []string
-	Env                  map[string]string
-	Binds                []string    // Bind mounts strings (src:dest:options)
-	PortBindings         nat.PortMap // PortBindings define the bindings between the container ports and host ports
-	PortSet              nat.PortSet // PortSet define the ports that should be exposed on a container
-	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
-	NetworkMode          string
-	MgmtNet              string // name of the docker network this node is connected to with its first interface
-	MgmtIntf             string // can be used to be rendered by the default node template 
-	MgmtIPv4Address      string
-	MgmtIPv4PrefixLength int
-	MgmtIPv6Address      string
-	MgmtIPv6PrefixLength int
-	MacAddress           string
-	ContainerID          string
-	TLSCert              string
-	TLSKey               string
-	TLSAnchor            string
-	NSPath               string   // network namespace path for this node
-	Publish              []string // list of ports to publish with mysocketctl
-	ExtraHosts           []string // Extra /etc/hosts entries for all nodes
-	// container labels
-	Labels map[string]string
-	// Slice of pointers to local endpoints
-	Endpoints []Endpoint
+	ShortName            string            `json:"shortname,omitempty"` // name of the Node inside topology YAML
+	LongName             string            `json:"longname,omitempty"`  // containerlab-prefixed unique container name
+	Fqdn                 string            `json:"fqdn,omitempty"`
+	LabDir               string            `json:"labdir,omitempty"` // LabDir is a directory related to the node, it contains config items and/or other persistent state
+	Index                int               `json:"index,omitempty"`
+	Group                string            `json:"group,omitempty"`
+	Kind                 string            `json:"kind,omitempty"`
+	StartupConfig        string            `json:"startupconfig,omitempty"`        // path to config template file that is used for startup config generation
+	StartupDelay         uint              `json:"startupdelay,omitempty"`         // optional delay (in seconds) to wait before creating this node
+	EnforceStartupConfig bool              `json:"enforcestartupconfig,omitempty"` // when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	ResStartupConfig     string            `json:"resstartupconfig,omitempty"`     // path to config file that is actually mounted to the container and is a result of templation
+	Config               *ConfigDispatcher `json:"-"`                              // Do not marshal into JSON - internals
+	ResConfig            string            `json:"resconfig,omitempty"`            // path to config file that is actually mounted to the container and is a result of templation
+	NodeType             string            `json:"nodetype,omitempty"`
+	Position             string            `json:"position,omitempty"`
+	License              string            `json:"license,omitempty"`
+	Image                string            `json:"image,omitempty"`
+	Sysctls              map[string]string `json:"-"` // Do not marshal into JSON - internals
+	User                 string            `json:"user,omitempty"`
+	Entrypoint           string            `json:"entrypoint,omitempty"`
+	Cmd                  string            `json:"cmd,omitempty"`
+	Exec                 []string          `json:"-"`                      // Do not marshal into JSON - potentially high volume of low value data
+	Env                  map[string]string `json:"-"`                      // Do not marshal into JSON - potentially highly sensitive data like passwords
+	Binds                []string          `json:"-"`                      // Bind mounts strings (src:dest:options). Do not marshal into JSON - potentially sensitive data
+	PortBindings         nat.PortMap       `json:"portbindings,omitempty"` // PortBindings define the bindings between the container ports and host ports
+	PortSet              nat.PortSet       `json:"portset,omitempty"`      // PortSet define the ports that should be exposed on a container
+	NetworkMode          string            `json:"networkmode,omitempty"`  // container networking mode. if set to `host` the host networking will be used for this node, else bridged network
+	MgmtNet              string            `json:"mgmtnet,omitempty"`      // name of the docker network this node is connected to with its first interface
+	MgmtIntf             string            `json:"mgmtintf,omitempty"`     // can be used to be rendered by the default node template
+	MgmtIPv4Address      string            `json:"mgmtipv4address,omitempty"`
+	MgmtIPv4PrefixLength int               `json:"mgmtipv4prefixLength,omitempty"`
+	MgmtIPv6Address      string            `json:"mgmtipv6address,omitempty"`
+	MgmtIPv6PrefixLength int               `json:"mgmtipv6prefixLength,omitempty"`
+	MacAddress           string            `json:"macaddress,omitempty"`
+	ContainerID          string            `json:"containerid,omitempty"`
+	TLSCert              string            `json:"-"`                 // Do not marshal into JSON - highly sensitive data
+	TLSKey               string            `json:"-"`                 // Do not marshal into JSON - highly sensitive data
+	TLSAnchor            string            `json:"-"`                 // Do not marshal into JSON - highly sensitive data
+	NSPath               string            `json:"nspath,omitempty"`  // network namespace path for this node
+	Publish              []string          `json:"publish,omitempty"` // list of ports to publish with mysocketctl
+	ExtraHosts           []string          `json:"-"`                 // Extra /etc/hosts entries for all nodes. Do not marshal – redundant information
+	Labels               map[string]string `json:"labels,omitempty"`  // container labels
+	Endpoints            []Endpoint        `json:"-"`                 // Slice of pointers to local endpoints, do not marshal into JSON as it creates cyclical error
 	// Ignite sandbox and kernel imageNames
-	Sandbox, Kernel string
+	Sandbox, Kernel string `json:"-"` // Do not marshal into JSON - internals
 	// Configured container runtime
-	Runtime string
+	Runtime string `json:"runtime,omitempty"`
 	// Resource requirements
-	CPU    float64
-	CPUSet string
-	Memory string
+	CPU    float64 `json:"cpu,omitempty"`
+	CPUSet string  `json:"cpuset,omitempty"`
+	Memory string  `json:"memory,omitempty"`
 
-	DeploymentStatus string // status that is set by containerlab to indicate deployment stage
+	DeploymentStatus string `json:"deploymentstatus,omitempty"` // status that is set by containerlab to indicate deployment stage
 
 	// Extras
-	Extras *Extras // Extra node parameters
+	Extras *Extras `json:"-"` // Extra node parameters, do not marshal into JSON as they are kind-specific
 }
 
 // GenerateConfig generates configuration for the nodes
