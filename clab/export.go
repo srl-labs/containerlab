@@ -13,24 +13,24 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-type topoGraph struct {
+type topoData struct {
 	Nodes map[string]*types.NodeConfig `json:"nodes,omitempty"`
 	Links []Link                       `json:"links,omitempty"`
 }
 
 // GenerateExports generate various export files and writes it to a lab location
 func (c *CLab) GenerateExports() error {
-	topologyGraphFPath := filepath.Join(c.Dir.Lab, "topology-graph.json")
-	f, err := os.Create(topologyGraphFPath)
+	topoDataFPath := filepath.Join(c.Dir.Lab, "topology-data.json")
+	f, err := os.Create(topoDataFPath)
 	if err != nil {
 		return err
 	}
-	return c.generateTopologyGraph(f)
+	return c.exportTopologyData(f)
 }
 
-// generateTopologyGraph generates and writes topology graph file to w
-func (c *CLab) generateTopologyGraph(w io.Writer) error {
-	g := topoGraph{
+// generates and writes topology data file to w
+func (c *CLab) exportTopologyData(w io.Writer) error {
+	d := topoData{
 		Nodes: make(map[string]*types.NodeConfig),
 		Links: make([]Link, 0, len(c.Links)),
 	}
@@ -39,11 +39,11 @@ func (c *CLab) generateTopologyGraph(w io.Writer) error {
 		cfg := n.Config()
 		// Empty NodeConfig.Endpoints slice to avoid cyclic references incompatible with json.Marshal()
 		cfg.Endpoints = make([]types.Endpoint, 0, 0)
-		g.Nodes[n.Config().ShortName] = cfg
+		d.Nodes[n.Config().ShortName] = cfg
 	}
 
 	for _, l := range c.Links {
-		g.Links = append(g.Links, Link{
+		d.Links = append(d.Links, Link{
 			Source:         l.A.Node.ShortName,
 			SourceEndpoint: l.A.EndpointName,
 			Target:         l.B.Node.ShortName,
@@ -51,7 +51,7 @@ func (c *CLab) generateTopologyGraph(w io.Writer) error {
 		})
 	}
 
-	b, err := json.Marshal(g)
+	b, err := json.Marshal(d)
 	if err != nil {
 		return err
 	}
