@@ -25,9 +25,30 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
     get --path /system/name/host-name
     ```
 === "JSON-RPC"
-    SR Linux has a JSON-RPC interface over port 80/443 for HTTP/HTTPS schemas accordingly.
+    SR Linux has a JSON-RPC interface running over ports 80/443 for HTTP/HTTPS schemas.
 
     HTTPS server uses the same TLS certificate as gNMI server.
+
+    Here is an example of getting version information with JSON-RPC:
+    ```shell
+    curl http://admin:admin@clab-srl-srl/jsonrpc -d @- << EOF
+    {
+        "jsonrpc": "2.0",
+        "id": 0,
+        "method": "get",
+        "params":
+        {
+            "commands":
+            [
+                {
+                    "path": "/system/information/version",
+                    "datastore": "state"
+                }
+            ]
+        }
+    }
+    EOF
+    ```
 
 !!!info
     Default credentials: `admin:admin`  
