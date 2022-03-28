@@ -14,15 +14,11 @@ import (
 )
 
 type topoData struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	//	Config topoConfig                   `json:"configuration,omitempty"`
-	Nodes map[string]*types.NodeConfig `json:"nodes,omitempty"`
-	Links []Link                       `json:"links,omitempty"`
-}
-
-type topoConfig struct {
-	Name string `json:"name,omitempty"`
+	Name   string                       `json:"name"`
+	Type   string                       `json:"type"`
+	Config *Config                      `json:"configuration,omitempty"`
+	Nodes  map[string]*types.NodeConfig `json:"nodes,omitempty"`
+	Links  []Link                       `json:"links,omitempty"`
 }
 
 // GenerateExports generate various export files and writes it to a lab location
@@ -38,10 +34,11 @@ func (c *CLab) GenerateExports() error {
 // generates and writes topology data file to w
 func (c *CLab) exportTopologyData(w io.Writer) error {
 	d := topoData{
-		Name:  c.Config.Name,
-		Type:  "clab",
-		Nodes: make(map[string]*types.NodeConfig),
-		Links: make([]Link, 0, len(c.Links)),
+		Name:   c.Config.Name,
+		Type:   "clab",
+		Config: c.Config,
+		Nodes:  make(map[string]*types.NodeConfig),
+		Links:  make([]Link, 0, len(c.Links)),
 	}
 
 	for _, n := range c.Nodes {
