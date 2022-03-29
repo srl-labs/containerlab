@@ -131,7 +131,7 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	if s.cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
-		// the addition touch is needed to support non docker runtimes
+		// the additional touch is needed to support non docker runtimes
 		s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
