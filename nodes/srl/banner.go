@@ -12,13 +12,13 @@ const banner = `................................................................
 :              Open Network OS for the NetOps era.             :
 :                                                              :
 :    This is a freely distributed official container image.    :
-:                    Use it - Share it                         :
+:                      Use it - Share it                       :
 :                                                              :
 : Get started: https://learn.srlinux.dev                       :
 : Container:   https://go.srlinux.dev/container-image          :
 : Docs:        https://doc.srlinux.dev/%s-%s                   :
 : Rel. notes:  https://doc.srlinux.dev/rn%s-%s-%s               :
-: Discord:     https://discord.gg/tZvgjQ6PZf                   :
+: Discord:     https://go.srlinux.dev/discord                  :
 : Contact:     https://go.srlinux.dev/contact-sales            :
 ................................................................
 `
