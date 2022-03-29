@@ -128,12 +128,6 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
 	}
 
-	if s.cfg.Cmd == "" {
-		// set default Cmd if it was not provided by a user
-		// the addition touch is needed to support non docker runtimes
-		s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
-	}
-
 	s.cfg.Env = utils.MergeStringMaps(srlEnv, s.cfg.Env)
 
 	// if user was not initialized to a value, use root
