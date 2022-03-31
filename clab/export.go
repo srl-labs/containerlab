@@ -13,18 +13,24 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-type topoData struct {
+type TopologyData struct {
 	Name       string                       `json:"name"`
 	Type       string                       `json:"type"`
 	ClabConfig ClabConfig                   `json:"clabconfig,omitempty"`
 	Nodes      map[string]*types.NodeConfig `json:"nodes,omitempty"`
-	Links      []Link                       `json:"links,omitempty"`
+	Links      []map[string]NodeInterface   `json:"links,omitempty"`
 }
 
 type ClabConfig struct {
 	Prefix     *string        `json:"prefix,omitempty"`
 	Mgmt       *types.MgmtNet `json:"mgmt,omitempty"`
 	ConfigPath string         `json:"config-path,omitempty"`
+}
+
+type NodeInterface struct {
+	Node      string `json:"node,omitempty"`
+	Interface string `json:"interface,omitempty"`
+	MAC       string `json:"mac,omitempty"`
 }
 
 // GenerateExports generate various export files and writes it to a lab location
@@ -45,12 +51,12 @@ func (c *CLab) exportTopologyData(w io.Writer) error {
 		c.Config.ConfigPath,
 	}
 
-	d := topoData{
+	d := TopologyData{
 		Name:       c.Config.Name,
 		Type:       "clab",
 		ClabConfig: cc,
 		Nodes:      make(map[string]*types.NodeConfig),
-		Links:      make([]Link, 0, len(c.Links)),
+		Links:      make([]map[string]NodeInterface, 0, len(c.Links)),
 	}
 
 	for _, n := range c.Nodes {
@@ -58,12 +64,18 @@ func (c *CLab) exportTopologyData(w io.Writer) error {
 	}
 
 	for _, l := range c.Links {
-		d.Links = append(d.Links, Link{
-			Source:         l.A.Node.ShortName,
-			SourceEndpoint: l.A.EndpointName,
-			Target:         l.B.Node.ShortName,
-			TargetEndpoint: l.B.EndpointName,
-		})
+		intmap := make(map[string]NodeInterface)
+		intmap["a"] = NodeInterface{
+			Node:      l.A.Node.ShortName,
+			Interface: l.A.EndpointName,
+			MAC:       l.A.MAC,
+		}
+		intmap["z"] = NodeInterface{
+			Node:      l.B.Node.ShortName,
+			Interface: l.B.EndpointName,
+			MAC:       l.B.MAC,
+		}
+		d.Links = append(d.Links, intmap)
 	}
 
 	b, err := json.Marshal(d)
