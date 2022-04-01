@@ -159,6 +159,20 @@ topology:
 
     Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
 
+    Another special variable the clab file can use is `__clabDir__`. In the example above, it would expand into `clab-mylab` folder. With `__clabDir__` variable it becomes convenient to bind files like `ansible-inventory.yml` or `topology-data.json` that clab automatically creates:
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        ansible:
+          binds:
+            - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
+        graphite:
+          binds:
+            - __clabDir__/topology-data.json::/var/www/localhost/htdocs/clab/topology-data.json:ro
+    ```
+
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
 ### ports
