@@ -84,7 +84,6 @@ type NodeConfig struct {
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface
-	MgmtIntf             string // can be used to be rendered by the default node template 
 	MgmtIPv4Address      string
 	MgmtIPv4PrefixLength int
 	MgmtIPv6Address      string
@@ -183,21 +182,6 @@ type GenericContainer struct {
 	NetworkSettings GenericMgmtIPs
 }
 
-func (ctr *GenericContainer) GetContainerIPv4() string {
-	if ctr.NetworkSettings.IPv4addr == "" {
-		return "N/A"
-	}
-	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
-
-}
-
-func (ctr *GenericContainer) GetContainerIPv6() string {
-	if ctr.NetworkSettings.IPv6addr == "" {
-		return "N/A"
-	}
-	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
-}
-
 type GenericMgmtIPs struct {
 	IPv4addr string
 	IPv4pLen int
@@ -254,21 +238,6 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 
 // Extras contains extra node parameters which are not entitled to be part of a generic node config
 type Extras struct {
-	SRLAgents       []string `yaml:"srl-agents,omitempty"`         // Nokia SR Linux agents. As of now just the agents spec files can be provided here
-	MysocketProxy   string   `yaml:"mysocket-proxy,omitempty"`     // Proxy address that mysocketctl will use
-	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"` // paths to files which are to be copied to ceos flash dir
-}
-
-// ContainerDetails contains information that is commonly outputted to tables or graphs
-type ContainerDetails struct {
-	LabName     string `json:"lab_name,omitempty"`
-	LabPath     string `json:"labPath,omitempty"`
-	Name        string `json:"name,omitempty"`
-	ContainerID string `json:"container_id,omitempty"`
-	Image       string `json:"image,omitempty"`
-	Kind        string `json:"kind,omitempty"`
-	Group       string `json:"group,omitempty"`
-	State       string `json:"state,omitempty"`
-	IPv4Address string `json:"ipv4_address,omitempty"`
-	IPv6Address string `json:"ipv6_address,omitempty"`
+	SRLAgents     []string `yaml:"srl-agents,omitempty"`     // Nokia SR Linux agents. As of now just the agents spec files can be provided here
+	MysocketProxy string   `yaml:"mysocket-proxy,omitempty"` // Proxy address that mysocketctl will use
 }

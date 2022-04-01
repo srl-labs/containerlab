@@ -48,14 +48,7 @@
                     "markdownDescription": "path to a [license](https://containerlab.dev/manual/nodes/#license) file"
                 },
                 "type": {
-                    "type": "string",
-                    "description": "type is a per-node property that can select a special type of a node",
-                    "markdownDescription": "node's [type](https://containerlab.dev/manual/nodes/#type) file"
-                },
-                "group": {
-                    "type": "string",
-                    "description": "grouping parameter of a node. A free form string that is mainly used in sorting elements when graphing",
-                    "markdownDescription": "path to a [license](https://containerlab.dev/manual/nodes/#group) file"
+                    "type": "string"
                 },
                 "startup-config": {
                     "type": "string",
