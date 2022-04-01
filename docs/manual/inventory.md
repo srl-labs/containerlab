@@ -108,4 +108,131 @@ As a result of this configuration, the generated inventory will look like this:
           ansible_host: 172.100.100.11
 ```
 
+## Topology Data
+Every time a user runs a `deploy` command, clab automatically exports comprehensive information about the topology into `topology-data.json` file in the lab directory.
+
+The topology data file contains the following top-level sections, or keys:
+
+```json
+{
+  "name": "<topology name>",
+  "type": "clab",
+  "clabconfig": {<top-level information about the lab, like management network details>},
+  "nodes": {<detailed information about every node in the topology, including dynamic information like management IP addresses>},
+  "links": [<entries for every link between nopology nodes, including interface names and allocated MAC addresses>]
+}
+````
+
+
+=== "topology file srl02.clab.yml"
+    ```yaml
+    name: srl02
+
+    topology:
+      kinds:
+        srl:
+          type: ixr6
+          image: ghcr.io/nokia/srlinux
+      nodes:
+        srl1:
+          kind: srl
+        srl2:
+          kind: srl
+
+      links:
+        - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+    ```
+=== "sample generated topology-data.json"
+    ```json
+    {
+      "name": "srl02",
+      "type": "clab",
+      "clabconfig": {
+        "prefix": "clab",
+        "mgmt": {
+          "network": "clab",
+          "bridge": "br-<...>",
+          "ipv4_subnet": "172.20.20.0/24",
+          "ipv6_subnet": "2001:172:20:20::/64",
+          "mtu": "1500",
+          "external-access": true
+        },
+        "config-path": "<full path to a directory with srl02.clab.yml>"
+      },
+      "nodes": {
+        "srl1": {
+          "shortname": "srl1",
+          "longname": "clab-srl02-srl1",
+          "fqdn": "srl1.srl02.io",
+          "labdir": "<full path to the lab node directory>",
+          "kind": "srl",
+          "nodetype": "ixr6",
+          "image": "ghcr.io/nokia/srlinux",
+          "user": "0:0",
+          "cmd": "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'",
+          "mgmtipv4address": "172.20.20.2",
+          "mgmtipv4prefixLength": 24,
+          "mgmtipv6address": "2001:172:20:20::2",
+          "mgmtipv6prefixLength": 64,
+          "containerid": "<container id>",
+          "nspath": "/proc/<...>/ns/net",
+          "labels": {
+            "clab-mgmt-net-bridge": "br-<...>",
+            "clab-node-group": "",
+            "clab-node-kind": "srl",
+            "clab-node-lab-dir": "<full path to the lab node directory>",
+            "clab-node-name": "srl1",
+            "clab-node-type": "ixr6",
+            "clab-topo-file": "<full path to the srl02.clab.yml file>",
+            "containerlab": "srl02"
+          },
+          "deploymentstatus": "created"
+        },
+        "srl2": {
+          "shortname": "srl2",
+          "longname": "clab-srl02-srl2",
+          "fqdn": "srl2.srl02.io",
+          "labdir": "<full path to the lab node directory>",,
+          "index": 1,
+          "kind": "srl",
+          "nodetype": "ixr6",
+          "image": "ghcr.io/nokia/srlinux",
+          "user": "0:0",
+          "cmd": "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'",
+          "mgmtipv4address": "172.20.20.3",
+          "mgmtipv4prefixLength": 24,
+          "mgmtipv6address": "2001:172:20:20::3",
+          "mgmtipv6prefixLength": 64,
+          "containerid": "<container id>",
+          "nspath": "/proc/<...>/ns/net",
+          "labels": {
+            "clab-mgmt-net-bridge": "br-<...>",
+            "clab-node-group": "",
+            "clab-node-kind": "srl",
+            "clab-node-lab-dir": "<full path to the lab node directory>",
+            "clab-node-name": "srl2",
+            "clab-node-type": "ixr6",
+            "clab-topo-file": "<full path to the srl02.clab.yml file>",
+            "containerlab": "srl02"
+          },
+          "deploymentstatus": "created"
+        }
+      },
+      "links": [
+        {
+          "a": {
+            "node": "srl1",
+            "interface": "e1-1",
+            "mac": "<mac address>"
+          },
+          "z": {
+            "node": "srl2",
+            "interface": "e1-1",
+            "mac": "<mac address>"
+          }
+        }
+      ]
+    }
+    ```
+
 [^1]: For example [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin.
