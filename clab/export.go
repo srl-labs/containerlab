@@ -31,6 +31,7 @@ type NodeInterface struct {
 	Node      string `json:"node,omitempty"`
 	Interface string `json:"interface,omitempty"`
 	MAC       string `json:"mac,omitempty"`
+	Peer      string `json:"peer,omitempty"`
 }
 
 // GenerateExports generate various export files and writes it to a lab location
@@ -69,11 +70,13 @@ func (c *CLab) exportTopologyData(w io.Writer) error {
 			Node:      l.A.Node.ShortName,
 			Interface: l.A.EndpointName,
 			MAC:       l.A.MAC,
+			Peer:      "z",
 		}
 		intmap["z"] = NodeInterface{
 			Node:      l.B.Node.ShortName,
 			Interface: l.B.EndpointName,
 			MAC:       l.B.MAC,
+			Peer:      "a",
 		}
 		d.Links = append(d.Links, intmap)
 	}
