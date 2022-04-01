@@ -224,11 +224,13 @@ The topology data file contains the following top-level sections, or keys:
             "node": "srl1",
             "interface": "e1-1",
             "mac": "<mac address>"
+            "peer": "z"
           },
           "z": {
             "node": "srl2",
             "interface": "e1-1",
             "mac": "<mac address>"
+            "peer": "a"
           }
         }
       ]
