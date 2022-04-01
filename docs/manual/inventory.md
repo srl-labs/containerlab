@@ -117,9 +117,9 @@ The topology data file contains the following top-level sections, or keys:
 {
   "name": "<topology name>",
   "type": "clab",
-  "clabconfig": {<top-level information about the lab, like management network details>},
-  "nodes": {<detailed information about every node in the topology, including dynamic information like management IP addresses>},
-  "links": [<entries for every link between nopology nodes, including interface names and allocated MAC addresses>]
+  "clabconfig": {"<top-level information about the lab, like management network details>"},
+  "nodes": {"<detailed information about every node in the topology, including dynamic information like management IP addresses>"},
+  "links": ["<entries for every link between nopology nodes, including interface names and allocated MAC addresses>"]
 }
 ````
 
