@@ -32,6 +32,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Cisco CSR 1000v](manual/kinds/vr-csr.md)
 * [Arista vEOS](manual/kinds/vr-veos.md)
 * [Palo Alto PAN](manual/kinds/vr-pan.md)
+* [IPInfusion OcNOS](manual/kinds/ipinfusion-ocnos.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span all the needed variants of nodes:
 

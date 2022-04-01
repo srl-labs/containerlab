@@ -75,6 +75,27 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+### Containerlab-based DDOS testbed
+<small>:material-text: [Blog](https://blog.sflow.com/2022/03/containerlab-ddos-testbed.html) by [Peter Phaal](https://twitter.com/sFlow) · :material-calendar: 2022-03-16</small>
+
+Real-time telemetry from a 5 stage Clos fabric describes lightweight emulation of realistic data center switch topologies using Containerlab. This article extends the testbed to experiment with distributed denial of service (DDoS) detection and mitigation techniques described in Real-time DDoS mitigation using BGP RTBH and FlowSpec.
+
+### Multi-vendor EVPN VXLAN setup with Containerlab
+<small>:material-text: [Blog](https://www.theasciiconstruct.com/post/multivendor-evpn-vxlan-l2-overlay/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-03-12</small>
+
+In this post, we deploy a multivendor EVPN L2 overlay fabric, with BGP in the underlay as well. The entire fabric deployment is automated with Ansible, and Containerlab is used to define and deploy the actual topology.
+
+### Network Simulation Tools and Containerlab
+<small>:material-text: [Blog](https://juliopdx.com/2022/02/13/network-simulation-tools-and-containerlab/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-02-13</small>
+
+I’ve been progressing through a series of technical books, some of which I’ve shared on other blogs. A few of them focus on BGP. BGP being so broad, I decided to create a challenge lab. Creating the challenge/troubleshooting labs has really made more concepts stick. I’m trying to use the principle of teaching someone to make the learning last. These have been incredibly fun to create and the community interaction has been amazing. One brave soul(Jeroen van Bemmel) shared his solution. I was fascinated on his solution and how he created his topology with Containerlab and net-sim tools.
+
+### Juniper vQFX and containerlab
+<small>:material-text: [Blog](https://www.theasciiconstruct.com/post/junos-vqfx-containerlab/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-02-06</small>
+
+In this post, we look at how Containerlab can be used to quickly spin up vQFX topologies for network validation and testing. We’ll walk through the entire process - how to build docker images from vQFX images, what happens behind the scenes when bringing these containers up and how to build/verify your topology.
+
+
 ### Multipoint Redistribution and SR Linux
 <small>:material-text: [Blog](https://juliopdx.com/2022/01/22/multipoint-redistribution-and-sr-linux/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-01-22</small>
 
@@ -88,11 +109,6 @@ Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/148504005
 As Peter wrote, sFlow is a companion to the Streaming Telemetry applications. It's UDP based transport claims to be more suitable for situations where networks are congested. In this blog Peter explains how containerlab can deploy a Clos topolgy with sFlow collector and endpoints generating traffic to see the whole machinery in action.
 
 Discussions: [:material-twitter:](https://twitter.com/sFlow/status/1495804147177775104)
-
-### netsim-tools and containerlab
-<small>:material-text: [Blog](https://juliopdx.com/2022/02/13/network-simulation-tools-and-containerlab/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-02-13</small>
-
-Julio is back with another great post about combining netsim-tools with containerlab.
 
 ### Network Modeling: Automating Mikrotik RouterOS CHR Containerlab images
 <small>:material-text: [Blog](https://stubarea51.net/2021/12/20/network-modeling-automating-mikrotik-routeros-chr-containerlab-images/) by [@nlgotz](https://twitter.com/nlgotz) · :material-calendar: 2021-12-20</small>
