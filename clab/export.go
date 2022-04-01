@@ -78,7 +78,7 @@ func (c *CLab) exportTopologyData(w io.Writer) error {
 		d.Links = append(d.Links, intmap)
 	}
 
-	b, err := json.Marshal(d)
+	b, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
 		return err
 	}
