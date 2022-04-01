@@ -34,27 +34,12 @@ detectOS() {
     # Minimalist GNU for Windows
     mingw*) OS='windows' ;;
     esac
-    
-    if [ -f /etc/os-release ]; then
-        OS_ID="$(. /etc/os-release && echo "$ID")"
+
+    if type "rpm" &>/dev/null; then
+        PKG_FORMAT="rpm"
+    elif type "dpkg" &>/dev/null; then
+        PKG_FORMAT="deb"
     fi
-    case "${OS_ID}" in
-        ubuntu|debian|raspbian)
-            PKG_FORMAT="deb"
-        ;;
-        
-        centos|rhel|sles)
-            PKG_FORMAT="rpm"
-        ;;
-        
-        *)
-            if type "rpm" &>/dev/null; then
-                PKG_FORMAT="rpm"
-            elif type "dpkg" &>/dev/null; then
-                PKG_FORMAT="deb"
-            fi
-        ;;
-    esac
 }
 
 # runs the given command as root (detects if we are root already)

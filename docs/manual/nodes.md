@@ -43,9 +43,6 @@ With `type` the user sets a type of the node. Types work in combination with the
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
-### group
-`group` is a freeform string that denotes which group a node belongs to. The grouping is currently only used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
-
 ### image
 The common `image` attribute sets the container image name that will be used to start the node. The image name should be provided in a well-known format of `repository(:tag)`.
 

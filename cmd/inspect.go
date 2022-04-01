@@ -25,6 +25,20 @@ var format string
 var details bool
 var all bool
 
+type containerDetails struct {
+	LabName     string `json:"lab_name,omitempty"`
+	LabPath     string `json:"labPath,omitempty"`
+	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
+	Image       string `json:"image,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Group       string `json:"group,omitempty"`
+	State       string `json:"state,omitempty"`
+	IPv4Address string `json:"ipv4_address,omitempty"`
+	IPv6Address string `json:"ipv6_address,omitempty"`
+}
+type BridgeDetails struct{}
+
 // inspectCmd represents the inspect command
 var inspectCmd = &cobra.Command{
 	Use:     "inspect",
@@ -102,11 +116,9 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 }
 
-func toTableData(det []types.ContainerDetails) [][]string {
+func toTableData(det []containerDetails) [][]string {
 	tabData := make([][]string, 0, len(det))
-	for i := range det {
-		d := &det[i]
-
+	for i, d := range det {
 		if all {
 			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabPath, d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address})
 			continue
@@ -117,24 +129,23 @@ func toTableData(det []types.ContainerDetails) [][]string {
 }
 
 func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, format string) error {
-	contDetails := make([]types.ContainerDetails, 0, len(containers))
+	contDetails := make([]containerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
 	var mysocketCID string
 
-	for i := range containers {
-		cont := &containers[i]
+	for _, cont := range containers {
 		// get topo file path relative of the cwd
 		cwd, _ := os.Getwd()
 		path, _ := filepath.Rel(cwd, cont.Labels["clab-topo-file"])
 
-		cdet := &types.ContainerDetails{
+		cdet := containerDetails{
 			LabName:     cont.Labels["containerlab"],
 			LabPath:     path,
 			Image:       cont.Image,
 			State:       cont.State,
-			IPv4Address: cont.GetContainerIPv4(),
-			IPv6Address: cont.GetContainerIPv6(),
+			IPv4Address: getContainerIPv4(cont),
+			IPv6Address: getContainerIPv6(cont),
 		}
 		cdet.ContainerID = cont.ShortID
 
@@ -151,7 +162,7 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		if group, ok := cont.Labels["clab-node-group"]; ok {
 			cdet.Group = group
 		}
-		contDetails = append(contDetails, *cdet)
+		contDetails = append(contDetails, cdet)
 	}
 
 	sort.Slice(contDetails, func(i, j int) bool {
@@ -212,4 +223,19 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 	fmt.Println(string(stdout))
 
 	return nil
+}
+
+func getContainerIPv4(ctr types.GenericContainer) string {
+	if ctr.NetworkSettings.IPv4addr == "" {
+		return "N/A"
+	}
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
+
+}
+
+func getContainerIPv6(ctr types.GenericContainer) string {
+	if ctr.NetworkSettings.IPv6addr == "" {
+		return "N/A"
+	}
+	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
 }
