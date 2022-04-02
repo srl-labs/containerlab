@@ -52,14 +52,14 @@ ip routing
 === "ixia-c-one"
 
 Two workarounds are needed that will be removed in a future version of ixia-c-one once it supports ARP/ND:  
-#1: To set an IPv4 address on the clab data interface on the ixia-c-one Rx port ( so that is responds to ARP requests)
+1: To set an IPv4 address on the clab data interface on the ixia-c-one Rx port ( so that is responds to ARP requests)
 ```bash
 docker exec -it clab-ixia-c-ixia-c-one bash
 bash-5.1# bash set ipv4 eth2 2.2.2.2 24
 
 [Note: Use bash unset ipv4 eth2 2.2.2.2 24 if you want to remove the IP e.g. to change the IP]
 ```
-#2: To get the DUT MAC to set as the Dst MAC of data packets :  
+2: To get the DUT MAC to set as the Dst MAC of data packets :  
 (In an automation environment , it can also be programmatically fetched using ssh or gnmi)
 ```bash
 docker exec -it clab-ixia-c-ceos Cli

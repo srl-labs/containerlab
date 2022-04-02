@@ -73,11 +73,11 @@ The following labs feature ixia-c-one node:
 - [Ixia-c-one and Arista cEOS](../../lab-examples/ixiacone-ceos.md)
 
 ## Known issues or limitations
-#1: For L3 traffic tests using the free version , there is no in-built support of ARP and ND.  
+1: For L3 traffic tests using the free version , there is no in-built support of ARP and ND.  
 This can be worked around by manually setting IP address on the receive interface (as explained in Interfaces mapping section above) and by learning the MAC of the connected DUT using external means such as gnmi/ssh/reading it from CLI and using it when generating packets.  
 This limitation will be removed in the ixia-c-one free version in future releases where it is planned to support ARP/ND Request and Reply for emulated interfaces.  
 
-#2: Every time a clab with an ixia-c-one node is removed, it leaves behind a peristent storage.  
+2: Every time a clab with an ixia-c-one node is removed, it leaves behind a peristent storage.  
 If there are no other persistent unlinked storages on your system, you can remove it by removing all unlinked persistent storages by giving the command:
 ```bash
 docker volume prune
