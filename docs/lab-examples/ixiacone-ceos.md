@@ -9,7 +9,12 @@
 
 ## Description
 This lab consists of an Ixia-c-one node with 2 ports connected to 2 ports on an Arista cEOS node via two point-to-point ethernet links. Both nodes are also connected with their management interfaces to the `containerlab` docker network.  
-`<TBD:Image might have to moved to diagram folder to be viewable correctly from the web page. It is currently kept in the ../images folder>`
+
+[`**TBD`:  
+  Image has to be moved to diagram folder to be viewable correctly from the web page.   
+  It is currently kept in the ../images folder so that it is visible during PR review.  
+  Probably the two paths below should change from `../images/ixia-c-one-ceos.drawio` to `https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ixia-c-one-ceos.drawio>` once ixia-c-one-ceos.drawio is uploaded to the correct directory for the drawio files.]  
+
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;../images/ixia-c-one-ceos.drawio&quot;}"></div>
 
@@ -407,12 +412,12 @@ FAIL    example/test    20.146s
 Note: If the clab is destroyed after the test, please use `docker volume prune` to remove 500MB+ of persistent volume storage
 which is left behind after ixia-c-one docker container is removed.
 
-<TBD: link for ixia-c-one below>
-[ixia-c]: https://github.com/open-traffic-generator/ixia-c
-[ceos]: https://www.arista.com/en/products/software-controlled-container-networking
+<`TBD: link for ixia-c-one below. Probably there will be no specific link for ixia-c-one but we will point to ixia-c itself?`>  
+[ixia-c]: https://github.com/open-traffic-generator/ixia-c  
+[ceos]: https://www.arista.com/en/products/software-controlled-container-networking  
 [topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/ixiac/ixiaconeceos.clab.yaml
 
-[^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
+[^1]: Resource requirements are provisional. Consult with the installation guides for additional information.  
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
