@@ -51,16 +51,26 @@ ixia-c-one container uses the following mapping for its linux interfaces:
 
 When containerlab launches ixia-c-one node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ixia-c-one node will boot with that addresses configured.  
 
-Data interfaces `eth1+` need to be configured with IP addressing manually if needed ( as in the Layer3 forwarding test example)
+Data interfaces `eth1+` need to be configured with IP addressing manually if needed ( as in the Layer3 forwarding test example).
+This is needed when the test port needs to reply to ARP/ND queries from the Device Under Test.
 
 To configure an IPv4 address on any data link e.g. eth2 [Could be eth1 or eth3 as well, but never on eth0]:
 ```bash
 docker exec -it clab-ixia-c-ixia-c-one bash
-bash-5.1# bash set ipv4 eth1 2.2.2.2
+bash-5.1# bash set ipv4 eth2 2.2.2.2 24
 ```
 To unset an IPv4 address on any data link e.g. eth2
 ```bash
-bash-5.1# bash unset ipv4 eth1 2.2.2.2 24
+bash-5.1# bash unset ipv4 eth2 2.2.2.2 24
+```
+To configure an IPv6 address on any data link e.g. eth1 :
+```bash
+docker exec -it clab-ixia-c-ixia-c-one bash
+bash-5.1# bash set ipv6 eth1 11::1 64
+```
+To unset an IPv4 address on any data link e.g. eth2
+```bash
+bash-5.1# bash unset ipv6 eth1 11::1 64
 ```
 ## Features and options
 The free version of ixia-c supports generation of L2 and L3 traffic to test forwarding of Ethernet, IPv4 and IPv6 traffic by switches and routers. For technical support and queries , please log requests at https://github.com/open-traffic-generator/ixia-c/issues or contact us @ https://ixia-c.slack.com/signup#/domain-signup .
