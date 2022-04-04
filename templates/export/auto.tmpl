@@ -1,13 +1,13 @@
 {
-  "name": "{{ .Config.Name }}",
-  "type": "clab",
+  "name": "{{ .Name }}",
+  "type": "{{ .Type }}",
   "clabconfig": {
-    "prefix": "{{ .Config.Prefix }}",
-    "mgmt": {{ marshal .Config.Mgmt }},
-    "config-path": "{{ .Config.ConfigPath }}"
+    "prefix": "{{ .Clab.Config.Prefix }}",
+    "mgmt": {{ marshal .Clab.Config.Mgmt }},
+    "config-path": "{{ .Clab.Config.ConfigPath }}"
   },
-  "nodes": {{ marshal .Nodes }},
-  "links": [{{range $i, $l := .Links}}{{if $i}},{{end}}
+  "nodes": {{ marshal .NodeConfigs }},
+  "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
     {
       "a": {
         "node": "{{ $l.A.Node.ShortName }}",
@@ -22,6 +22,5 @@
         "peer": "a"
       }
     }{{end}}
-  ],
-  "clab": {{ marshal . }}
+  ]
 }

@@ -93,6 +93,15 @@ func (c *CLab) exportTopologyData(w io.Writer) error {
 	return nil
 }
 
+// This struct will hold a combination of CLab structure, which is mostly derived from topology.yaml,
+// and map of NodeConfig types, which expands Node definitions with dynamically created values
+type TopologyExport struct {
+	Name        string                       `json:"name"`
+	Type        string                       `json:"type"`
+	Clab        *CLab                        `json:"clab,omitempty"`
+	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
+}
+
 // generates and writes topology data file to w using a template
 func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) error {
 	t, err := template.New(n).Funcs(template.FuncMap{
@@ -106,7 +115,18 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) e
 		return err
 	}
 
-	err = t.Execute(w, c)
+	e := TopologyExport{
+		Name:        c.Config.Name,
+		Type:        "clab",
+		Clab:        c,
+		NodeConfigs: make(map[string]*types.NodeConfig),
+	}
+
+	for _, n := range c.Nodes {
+		e.NodeConfigs[n.Config().ShortName] = n.Config()
+	}
+
+	err = t.Execute(w, e)
 	if err != nil {
 		return err
 	}
