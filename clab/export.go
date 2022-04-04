@@ -91,6 +91,10 @@ func (c *CLab) exportTopologyDataWithDefaultTemplate(w io.Writer) error {
 }`
 
 	t, err := template.New("default").Parse(tdef)
+	if err != nil {
+		return err
+	}
+
 	e := TopologyExport{
 		Name: c.Config.Name,
 		Type: "clab",
