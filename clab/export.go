@@ -109,6 +109,10 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) e
 			a, _ := json.Marshal(v)
 			return string(a)
 		},
+		"marshal_indent": func(v interface{}, prefix string, indent string) string {
+			a, _ := json.MarshalIndent(v, prefix, indent)
+			return string(a)
+		},
 	}).ParseFiles(p)
 
 	if err != nil {

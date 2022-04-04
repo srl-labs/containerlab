@@ -3,10 +3,10 @@
   "type": "{{ .Type }}",
   "clabconfig": {
     "prefix": "{{ .Clab.Config.Prefix }}",
-    "mgmt": {{ marshal .Clab.Config.Mgmt }},
+    "mgmt": {{ marshal_indent .Clab.Config.Mgmt "    " "  " }},
     "config-path": "{{ .Clab.Config.ConfigPath }}"
   },
-  "nodes": {{ marshal .NodeConfigs }},
+  "nodes": {{ marshal_indent .NodeConfigs "  " "  " }},
   "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
     {
       "a": {
