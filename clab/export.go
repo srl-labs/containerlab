@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"text/template"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -21,7 +22,20 @@ func (c *CLab) GenerateExports() error {
 	if err != nil {
 		return err
 	}
-	return c.exportTopologyDataWithTemplate(f, "auto.tmpl", "/etc/containerlab/templates/export/auto.tmpl")
+
+	p := "/etc/containerlab/templates/export/auto.tmpl"
+	// Name for the template, has to match the file name part of the full path above
+	n := "auto.tmpl"
+	err = c.exportTopologyDataWithTemplate(f, n, p)
+	if err != nil {
+		log.Warningf("Cannot parse export template %s", p)
+		log.Warningf("Details: %s", err)
+		err = c.exportTopologyDataWithDefaultTemplate(f)
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }
 
 // This struct will hold a combination of CLab structure, which is mostly derived from topology.yaml,
@@ -59,6 +73,27 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) e
 
 	for _, n := range c.Nodes {
 		e.NodeConfigs[n.Config().ShortName] = n.Config()
+	}
+
+	err = t.Execute(w, e)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// generates and writes topology data file to w using a default built-in template
+func (c *CLab) exportTopologyDataWithDefaultTemplate(w io.Writer) error {
+	tdef :=
+		`{
+  "name": "{{ .Name }}",
+  "type": "{{ .Type }}"
+}`
+
+	t, err := template.New("default").Parse(tdef)
+	e := TopologyExport{
+		Name: c.Config.Name,
+		Type: "clab",
 	}
 
 	err = t.Execute(w, e)
