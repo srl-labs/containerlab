@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/srl-labs/containerlab/types"
 )
@@ -41,7 +42,8 @@ func (c *CLab) GenerateExports() error {
 	if err != nil {
 		return err
 	}
-	return c.exportTopologyData(f)
+	//return c.exportTopologyData(f)
+	return c.exportTopologyDataWithTemplate(f, "auto.tmpl", "/etc/containerlab/templates/export/auto.tmpl")
 }
 
 // generates and writes topology data file to w
@@ -89,4 +91,24 @@ func (c *CLab) exportTopologyData(w io.Writer) error {
 	w.Write(b)
 
 	return nil
+}
+
+// generates and writes topology data file to w using a template
+func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) error {
+	t, err := template.New(n).Funcs(template.FuncMap{
+		"marshal": func(v interface{}) string {
+			a, _ := json.Marshal(v)
+			return string(a)
+		},
+	}).ParseFiles(p)
+
+	if err != nil {
+		return err
+	}
+
+	err = t.Execute(w, c)
+	if err != nil {
+		return err
+	}
+	return err
 }
