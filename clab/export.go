@@ -15,6 +15,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+const defaultTopologyExportTemplate = "/etc/containerlab/templates/export/auto.tmpl"
+
 // GenerateExports generate various export files and writes it to a lab location
 func (c *CLab) GenerateExports() error {
 	topoDataFPath := filepath.Join(c.Dir.Lab, "topology-data.json")
@@ -23,9 +25,9 @@ func (c *CLab) GenerateExports() error {
 		return err
 	}
 
-	p := "/etc/containerlab/templates/export/auto.tmpl"
+	p := defaultTopologyExportTemplate
 	// Name for the template, has to match the file name part of the full path above
-	n := "auto.tmpl"
+	n := filepath.Base(p)
 	err = c.exportTopologyDataWithTemplate(f, n, p)
 	if err != nil {
 		log.Warningf("Cannot parse export template %s", p)

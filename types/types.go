@@ -45,9 +45,9 @@ type Endpoint struct {
 type MgmtNet struct {
 	Network        string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
 	Bridge         string `yaml:"bridge,omitempty" json:"bridge,omitempty"`   // linux bridge backing the runtime network
-	IPv4Subnet     string `yaml:"ipv4_subnet,omitempty" json:"ipv4_subnet,omitempty"`
+	IPv4Subnet     string `yaml:"ipv4_subnet,omitempty" json:"ipv4-subnet,omitempty"`
 	IPv4Gw         string `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
-	IPv6Subnet     string `yaml:"ipv6_subnet,omitempty" json:"ipv6_subnet,omitempty"`
+	IPv6Subnet     string `yaml:"ipv6_subnet,omitempty" json:"ipv6-subnet,omitempty"`
 	IPv6Gw         string `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
 	MTU            string `yaml:"mtu,omitempty" json:"mtu,omitempty"`
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
@@ -62,13 +62,13 @@ type NodeConfig struct {
 	Index                int               `json:"index,omitempty"`
 	Group                string            `json:"group,omitempty"`
 	Kind                 string            `json:"kind,omitempty"`
-	StartupConfig        string            `json:"startupconfig,omitempty"`        // path to config template file that is used for startup config generation
-	StartupDelay         uint              `json:"startupdelay,omitempty"`         // optional delay (in seconds) to wait before creating this node
-	EnforceStartupConfig bool              `json:"enforcestartupconfig,omitempty"` // when set to true will enforce the use of startup-config, even when config is present in the lab directory
-	ResStartupConfig     string            `json:"resstartupconfig,omitempty"`     // path to config file that is actually mounted to the container and is a result of templation
-	Config               *ConfigDispatcher `json:"-"`                              // Do not marshal into JSON - internals
-	ResConfig            string            `json:"resconfig,omitempty"`            // path to config file that is actually mounted to the container and is a result of templation
-	NodeType             string            `json:"nodetype,omitempty"`
+	StartupConfig        string            `json:"startup-config,omitempty"`          // path to config template file that is used for startup config generation
+	StartupDelay         uint              `json:"startup-delay,omitempty"`           // optional delay (in seconds) to wait before creating this node
+	EnforceStartupConfig bool              `json:"enforce-startup-config,omitempty"`  // when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	ResStartupConfig     string            `json:"startup-config-abs-path,omitempty"` // path to config file that is actually mounted to the container and is a result of templation
+	Config               *ConfigDispatcher `json:"-"`                                 // Do not marshal into JSON - internals
+	ResConfig            string            `json:"config-abs-path,omitempty"`         // path to config file that is actually mounted to the container and is a result of templation
+	NodeType             string            `json:"type,omitempty"`
 	Position             string            `json:"position,omitempty"`
 	License              string            `json:"license,omitempty"`
 	Image                string            `json:"image,omitempty"`
