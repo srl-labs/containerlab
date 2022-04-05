@@ -82,13 +82,13 @@ type NodeConfig struct {
 	PortBindings         nat.PortMap       `json:"portbindings,omitempty"` // PortBindings define the bindings between the container ports and host ports
 	PortSet              nat.PortSet       `json:"portset,omitempty"`      // PortSet define the ports that should be exposed on a container
 	NetworkMode          string            `json:"networkmode,omitempty"`  // container networking mode. if set to `host` the host networking will be used for this node, else bridged network
-	MgmtNet              string            `json:"mgmtnet,omitempty"`      // name of the docker network this node is connected to with its first interface
-	MgmtIntf             string            `json:"mgmtintf,omitempty"`     // can be used to be rendered by the default node template
-	MgmtIPv4Address      string            `json:"mgmtipv4address,omitempty"`
-	MgmtIPv4PrefixLength int               `json:"mgmtipv4prefixLength,omitempty"`
-	MgmtIPv6Address      string            `json:"mgmtipv6address,omitempty"`
-	MgmtIPv6PrefixLength int               `json:"mgmtipv6prefixLength,omitempty"`
-	MacAddress           string            `json:"macaddress,omitempty"`
+	MgmtNet              string            `json:"mgmt-net,omitempty"`     // name of the docker network this node is connected to with its first interface
+	MgmtIntf             string            `json:"mgmt-intf,omitempty"`    // can be used to be rendered by the default node template
+	MgmtIPv4Address      string            `json:"mgmt-ipv4-address,omitempty"`
+	MgmtIPv4PrefixLength int               `json:"mgmt-ipv4-prefix-length,omitempty"`
+	MgmtIPv6Address      string            `json:"mgmt-ipv6-address,omitempty"`
+	MgmtIPv6PrefixLength int               `json:"mgmt-ipv6-prefix-length,omitempty"`
+	MacAddress           string            `json:"mac-address,omitempty"`
 	ContainerID          string            `json:"containerid,omitempty"`
 	TLSCert              string            `json:"tls-cert,omitempty"`
 	TLSKey               string            `json:"-"` // Do not marshal into JSON - highly sensitive data

@@ -3,12 +3,29 @@
   "type": "{{ .Type }}",
   "clabconfig": {
     "prefix": "{{ .Clab.Config.Prefix }}",
-    {{ $input := .Clab.Config.Mgmt }}
-    "mgmt": {{ data.ToJSONPretty " " $input }},
+    {{ $input := .Clab.Config.Mgmt }}"mgmt": {{ data.ToJSONPretty "      " $input }},
     "config-path": "{{ .Clab.Config.ConfigPath }}"
   },
-  {{ $input := .NodeConfigs }}
-  "nodes": {{ data.ToJSONPretty " " $input }},
+  "nodes": { {{$i:=0}}{{range $n, $c := .NodeConfigs}}{{if $i}},{{end}}
+    "{{$n}}": {
+      "index": "{{$c.Index}}",
+      "shortname": "{{$c.ShortName}}",
+      "longname": "{{$c.LongName}}",
+      "fqdn": "{{$c.Fqdn}}",
+      "group": "{{$c.Group}}",
+      "labdir": "{{$c.LabDir}}",
+      "kind": "{{$c.Kind}}",
+      "image": "{{$c.Image}}",
+      "mgmt-net": "{{$c.MgmtNet}}",
+      "mgmt-intf": "{{$c.MgmtIntf}}",
+      "mgmt-ipv4-address": "{{$c.MgmtIPv4Address}}",
+      "mgmt-ipv4-prefix-length": {{$c.MgmtIPv4PrefixLength}},
+      "mgmt-ipv6-address": "{{$c.MgmtIPv6Address}}",
+      "mgmt-ipv6-prefix-length": {{$c.MgmtIPv6PrefixLength}},
+      "mac-address": "{{$c.MacAddress}}",
+      {{ $input := $c.Labels }}"labels": {{ data.ToJSONPretty "        " $input }}
+    }{{$i = add $i 1}}{{end}}
+  },
   "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
     {
       "a": {
