@@ -3,10 +3,12 @@
   "type": "{{ .Type }}",
   "clabconfig": {
     "prefix": "{{ .Clab.Config.Prefix }}",
-    "mgmt": {{ marshal_indent .Clab.Config.Mgmt "    " "  " }},
+    {{ $input := .Clab.Config.Mgmt }}
+    "mgmt": {{ data.ToJSONPretty " " $input }},
     "config-path": "{{ .Clab.Config.ConfigPath }}"
   },
-  "nodes": {{ marshal_indent .NodeConfigs "  " "  " }},
+  {{ $input := .NodeConfigs }}
+  "nodes": {{ data.ToJSONPretty " " $input }},
   "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
     {
       "a": {
