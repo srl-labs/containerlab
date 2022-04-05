@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 )
 
 // convertEnvs convert env variables passed as a map to a list of them
@@ -120,4 +121,16 @@ func ExpandEnvVarsInStrSlice(s []string) {
 	for i, e := range s {
 		s[i] = os.ExpandEnv(e)
 	}
+}
+
+// ConvertToEnvKey remove specual chars etc. from a string, to be used as environment variable key
+func ConvertToEnvKey(s string) string {
+	// match spechial chars to later replace with "_"
+	regreplace, _ := regexp.Compile("[+-./]")
+	result := regreplace.ReplaceAllString(s, "_")
+	// match only valid env var chars
+	regAllowed, _ := regexp.Compile("[^a-zA-Z0-9_]+")
+	result = regAllowed.ReplaceAllString(result, "")
+
+	return result
 }

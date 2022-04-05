@@ -292,7 +292,20 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
+
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
+
+	// add labels as env vars as well
+	// need to init nodeCfg.Env if is nil and label are present
+	if len(nodeCfg.Labels) > 0 && nodeCfg.Env == nil {
+		nodeCfg.Env = map[string]string{}
+	}
+
+	// Add labels to env vars
+	for k, v := range nodeCfg.Labels {
+		// add the value to the node env with a prefixed and specialchars cleaned up key
+		nodeCfg.Env["CLAB_"+utils.ConvertToEnvKey(k)] = v
+	}
 
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
 
