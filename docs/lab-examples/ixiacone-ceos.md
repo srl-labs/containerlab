@@ -1,7 +1,7 @@
 |                               |                                                                                     |
 | ----------------------------- | ------------------------------------------------------------------------------------|
 | **Description**               | A Keysight ixia-c-one node connected back-to-back with Arista cEOS                  |
-| **Components**                | [Ixia-c-one][ixia-c], [Arista cEOS][ceos]                                           |
+| **Components**                | [Keysight ixia-c-one][keysight-ixia_c_one], [Arista cEOS][ceos]                     |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                |
 | **Topology file**             | [ixiaconeceos.clab.yaml][topofile]                                                  |
 | **Name**                      | srlceos01                                                                           |
@@ -28,7 +28,7 @@ This lab allows users to test an IPv4 traffic forwarding scenario between Keysig
 This lab demonstrates a simple Layer 3 traffic forwarding scenario where the 2 Keysight ixia-c-one ports act as the transmit and recieve ports and Arista cEOS is configured to forward the traffic using static route configuration.
 
 #### Configuration
-Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration on Arista cEOS and configure the ixia-c-one ports to forward and receive traffic from the Device Under Test.  
+Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration on Arista cEOS and configure the Keysight ixia-c-one ports to forward and receive traffic from the Device Under Test.  
 
 
 ===Arista cEOS
@@ -398,8 +398,8 @@ func LogWarnings(warnings []string) {
 ===
 
 #### Verification
-The success/failure of the test will be based on ixia-c-one traffic flow stats.
-The test program will check whether all transmitted packets are recieved on eth2 of ixia-c-one.
+The success/failure of the test will be based on Keysight ixia-c-one traffic flow stats.
+The test program will check whether all transmitted packets are recieved on eth2 of Keysight ixia-c-one.
 If the packets are recieved, the test will indicate Pass status like below:
 ```bash
 PASS

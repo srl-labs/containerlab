@@ -1,10 +1,10 @@
 # Keysight ixia-c-one
 
-ixia-c-one is a re-packaged (as a single-container) flavor of multi-container application [ixia-c] (https://github.com/open-traffic-generator/ixia-c).
-It is identified with `ixia-c-one` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `ixia-c-one` node.
+Keysight ixia-c-one is a re-packaged (as a single-container) flavor of multi-container application [ixia-c] (https://github.com/open-traffic-generator/ixia-c).
+It is identified with `keysight_ixia-c-one` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `keysight_ixia-c-one` node.
 
 
-## Managing ixia-c-one nodes
+## Managing Keysight ixia-c-one nodes
 Ixia-c-one node launched with containerlab can be managed by generating stubs in a language of your choice from .proto files provided for Open Traffic Generator model at 
 https://github.com/open-traffic-generator/models/releases
 and then writing test programs in that language to congfigure and access the test ports.
@@ -17,7 +17,7 @@ Please see the example for an actual step-by-step example of how to use it.
 
 === "gosnappi"
 
-ixia-c-one is configured by using Rest APIs. It can be configured using multiple language sdks.  
+keysight_ixia-c-one is configured by using Rest APIs. It can be configured using multiple language sdks.
 In this example, steps are provided to setup the test with gosnappi sdk.
 
 Ensure go is installed on the system and confirm using `go version` that the version is at least `go1.17.3` . 
@@ -33,7 +33,7 @@ go get github.com/open-traffic-generator/snappi/gosnappi@v0.7.18
 ```
 
 3. Create any go file with suffix in the name as 'test', example l3_forward_test.go   
-Create the go program to program the ixia-c-one ports using gosnappi APIs.  
+Create the go program to program the keysight_ixia-c-one ports using gosnappi APIs.
 Import the github.com/open-traffic-generator/snappi/gosnappi to get access to the gosnappi client sdk APIs.
 Use these APIs to configure the test ports as per the needs of the test.  
 For this refer to the example provided as well as at https://github.com/open-traffic-generator/snappi/tree/main/gosnappi
@@ -44,12 +44,12 @@ go test -run=<Test Function> -v| tee out.log
 ```
 
 ## Interfaces mapping
-ixia-c-one container uses the following mapping for its linux interfaces:
+keysight_ixia-c-one container uses the following mapping for its linux interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
 * The other interfaces are the data interfaces which are created using same name as provided in the clab topology yaml file. 
 
-When containerlab launches ixia-c-one node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ixia-c-one node will boot with that addresses configured.  
+When containerlab launches keysight_ixia-c-one node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and keysight_ixia-c-one node will boot with that addresses configured.
 
 Data interfaces `eth1+` need to be configured with IP addressing manually if needed ( as in the Layer3 forwarding test example).
 This is needed when the test port needs to reply to ARP/ND queries from the Device Under Test.
