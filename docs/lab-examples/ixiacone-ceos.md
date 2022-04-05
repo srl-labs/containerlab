@@ -1,6 +1,6 @@
 |                               |                                                                                     |
 | ----------------------------- | ------------------------------------------------------------------------------------|
-| **Description**               | A Ixia-c-one node connected back-to-back with Arista cEOS                           |
+| **Description**               | A Keysight ixia-c-one node connected back-to-back with Arista cEOS                  |
 | **Components**                | [Ixia-c-one][ixia-c], [Arista cEOS][ceos]                                           |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                |
 | **Topology file**             | [ixiaconeceos.clab.yaml][topofile]                                                  |
@@ -8,7 +8,7 @@
 | **Version information**[^2]   | `containerlab:0.24.2`, `ixia-c-one:0.0.1-2738`, `ceos:4.26.0F`, `docker-ce:20.10.12`|
 
 ## Description
-This lab consists of an Ixia-c-one node with 2 ports connected to 2 ports on an Arista cEOS node via two point-to-point ethernet links. Both nodes are also connected with their management interfaces to the `containerlab` docker network.  
+This lab consists of a Keysight ixia-c-one node with 2 ports connected to 2 ports on an Arista cEOS node via two point-to-point ethernet links. Both nodes are also connected with their management interfaces to the `containerlab` docker network.  
 
 [`**TBD`:  
   Image has to be moved to diagram folder to be viewable correctly from the web page.   
@@ -19,13 +19,13 @@ This lab consists of an Ixia-c-one node with 2 ports connected to 2 ports on an 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;../images/ixia-c-one-ceos.drawio&quot;}"></div>
 
 ## Use cases
-This lab allows users to test an IPv4 traffic forwarding scenario between Ixia-c-one and Arista cEOS.
+This lab allows users to test an IPv4 traffic forwarding scenario between Keysight ixia-c-one and Arista cEOS.
 
 
 ### Layer 3 Traffic forwarding.
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;../images/ixia-c-one-ceos.drawio&quot;}"></div>
 
-This lab demonstrates a simple Layer 3 traffic forwarding scenario where the 2 Ixia-c-one ports act as the transmit and recieve ports and Arista cEOS is configured to forward the traffic using static route configuration.
+This lab demonstrates a simple Layer 3 traffic forwarding scenario where the 2 Keysight ixia-c-one ports act as the transmit and recieve ports and Arista cEOS is configured to forward the traffic using static route configuration.
 
 #### Configuration
 Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration on Arista cEOS and configure the ixia-c-one ports to forward and receive traffic from the Device Under Test.  
@@ -54,7 +54,7 @@ ip route 20.20.20.0/24 2.2.2.2
 ip routing
 !
 ```
-=== "ixia-c-one"
+=== "Keysight ixia-c-one"
 
 Two workarounds are needed that will be removed in a future version of ixia-c-one once it supports ARP/ND:  
 1: To set an IPv4 address on the clab data interface on the ixia-c-one Rx port ( so that is responds to ARP requests)

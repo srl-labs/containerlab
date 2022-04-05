@@ -1,4 +1,4 @@
-# Ixia-c-one
+# Keysight ixia-c-one
 
 ixia-c-one is a re-packaged (as a single-container) flavor of multi-container application [ixia-c] (https://github.com/open-traffic-generator/ixia-c).
 It is identified with `ixia-c-one` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `ixia-c-one` node.
@@ -78,9 +78,9 @@ The free version of ixia-c supports generation of L2 and L3 traffic to test forw
 The commercial version of ixia-c supports ARP/ND/Auto destination MAC resolution in data traffic, IPv4 and IPv6 BGP with IPv4 and IPv6 Routes and ISIS with IPv4 and IPv6 routes. Please contact Keysight support for further information regarding this if needed.
 
 ## Lab examples
-The following labs feature ixia-c-one node:
+The following labs feature Keysight ixia-c-one node:
 
-- [Ixia-c-one and Arista cEOS](../../lab-examples/ixiacone-ceos.md)
+- [Keysight ixia-c-one and Arista cEOS](../../lab-examples/ixiacone-ceos.md)
 
 ## Known issues or limitations
 1: For L3 traffic tests using the free version , there is no in-built support of ARP and ND.  

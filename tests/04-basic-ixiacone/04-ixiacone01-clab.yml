@@ -6,11 +6,11 @@ name: 04-01-ixiacone
 
 topology:
   kinds:
-    ixia-c-one:
+    keysight_ixia-c-one:
       image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2610
   nodes:
     n1:
-      kind: ixia-c-one
+      kind: keysight_ixia-c-one
 
   links:
     - endpoints: ["n1:eth1", "n1:eth2"]

@@ -2,13 +2,13 @@ name: ixiaconeceos
 
 topology:
   kinds:
-    ixia-c-one:
+    keysight_ixia-c-one:
       image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2610
     ceos:
       image: ceos:4.26.1F 
   nodes:
     ixia-c-one-node1:
-      kind: ixia-c-one
+      kind: keysight_ixia-c-one
     ceos-1:
       kind: ceos
       startup-config: enable_ssh_ceos.cfg

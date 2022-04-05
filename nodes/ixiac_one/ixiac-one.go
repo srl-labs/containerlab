@@ -58,7 +58,7 @@ func (l *ixiacOne) Deploy(ctx context.Context) error {
 }
 
 func (l *ixiacOne) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	log.Infof("Running postdeploy actions for ixia-c-one '%s' node", l.cfg.ShortName)
+	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.cfg.ShortName)
 	return ixiacPostDeploy(ctx, l.runtime, l.cfg)
 }
 
@@ -80,7 +80,7 @@ func (*ixiacOne) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-// ixiacPostDeploy runs postdeploy actions which are required for ixia-c-one node
+// ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node
 func ixiacPostDeploy(ctx context.Context, r runtime.ContainerRuntime, cfg *types.NodeConfig) error {
 	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
