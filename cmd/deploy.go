@@ -126,7 +126,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// in an similar fashion, create an empty topology graph file
 	topoDataFPath := filepath.Join(c.Dir.Lab, "topology-data.json")
-	_, err = os.Create(topoDataFPath)
+	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if err := c.GenerateExports(); err != nil {
+	if err := c.GenerateExports(topoDataF); err != nil {
 		return err
 	}
 

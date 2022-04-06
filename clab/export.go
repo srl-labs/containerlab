@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"os"
 	"path/filepath"
 	"text/template"
 
@@ -22,16 +21,10 @@ import (
 const defaultTopologyExportTemplate = "/etc/containerlab/templates/export/auto.tmpl"
 
 // GenerateExports generate various export files and writes it to a lab location
-func (c *CLab) GenerateExports() error {
-	topoDataFPath := filepath.Join(c.Dir.Lab, "topology-data.json")
-	f, err := os.Create(topoDataFPath)
-	if err != nil {
-		return err
-	}
-
+func (c *CLab) GenerateExports(f io.Writer) error {
 	p := defaultTopologyExportTemplate
 	n := filepath.Base(p)
-	err = c.exportTopologyDataWithTemplate(f, n, p)
+	err := c.exportTopologyDataWithTemplate(f, n, p)
 	if err != nil {
 		log.Warningf("Cannot parse export template %s", p)
 		log.Warningf("Details: %s", err)
