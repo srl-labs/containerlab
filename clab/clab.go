@@ -22,16 +22,16 @@ import (
 )
 
 type CLab struct {
-	Config        *Config
-	TopoFile      *TopoFile
-	m             *sync.RWMutex
-	Nodes         map[string]nodes.Node
-	Links         map[int]*types.Link
-	Runtimes      map[string]runtime.ContainerRuntime
-	globalRuntime string
-	Dir           *Directory
+	Config        *Config                             `json:"config,omitempty"`
+	TopoFile      *TopoFile                           `json:"topofile,omitempty"`
+	m             *sync.RWMutex                       `json:"m,omitempty"`
+	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
+	Links         map[int]*types.Link                 `json:"links,omitempty"`
+	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
+	globalRuntime string                              `json:"global-runtime,omitempty"`
+	Dir           *Directory                          `json:"dir,omitempty"`
 
-	timeout time.Duration
+	timeout time.Duration `json:"timeout,omitempty"`
 }
 
 type Directory struct {

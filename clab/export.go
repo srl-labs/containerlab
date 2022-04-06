@@ -6,6 +6,7 @@ package clab
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -55,6 +56,16 @@ type TopologyExport struct {
 func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) error {
 	t, err := template.New(n).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
+		Funcs(template.FuncMap{
+			"ToJSON": func(v interface{}) string {
+				a, _ := json.Marshal(v)
+				return string(a)
+			},
+			"ToJSONPretty": func(v interface{}, prefix string, indent string) string {
+				a, _ := json.MarshalIndent(v, prefix, indent)
+				return string(a)
+			},
+		}).
 		ParseFiles(p)
 
 	if err != nil {
