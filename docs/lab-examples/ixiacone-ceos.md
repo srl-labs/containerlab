@@ -1,421 +1,244 @@
 |                               |                                                                                     |
 | ----------------------------- | ------------------------------------------------------------------------------------|
 | **Description**               | A Keysight ixia-c-one node connected back-to-back with Arista cEOS                  |
-| **Components**                | [Keysight ixia-c-one][keysight-ixia_c_one], [Arista cEOS][ceos]                     |
+| **Components**                | [Keysight ixia-c-one][ixia-c], [Arista cEOS][ceos]                     |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                |
-| **Topology file**             | [ixiaconeceos.clab.yaml][topofile]                                                  |
-| **Name**                      | srlceos01                                                                           |
-| **Version information**[^2]   | `containerlab:0.24.2`, `ixia-c-one:0.0.1-2738`, `ceos:4.26.0F`, `docker-ce:20.10.12`|
+| **Topology file**             | [ixiacone-ceos.clab.yaml][topofile]                                                  |
+| **Name**                      | ixiacone-ceos                                                                           |
+| **Version information**[^2]   | `containerlab:0.24.2`, `ixia-c-one:0.0.1-2738`, `ceos:4.26.1F`, `docker-ce:20.10.12`|
 
 ## Description
 This lab consists of a Keysight ixia-c-one node with 2 ports connected to 2 ports on an Arista cEOS node via two point-to-point ethernet links. Both nodes are also connected with their management interfaces to the `containerlab` docker network.  
 
-[`**TBD`:  
-  Image has to be moved to diagram folder to be viewable correctly from the web page.   
-  It is currently kept in the ../images folder so that it is visible during PR review.  
-  Probably the two paths below should change from `../images/ixia-c-one-ceos.drawio` to `https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ixia-c-one-ceos.drawio>` once ixia-c-one-ceos.drawio is uploaded to the correct directory for the drawio files.]  
-
+Keysight ixia-c-one is a single-container distribution of [ixia-c][ixia-c], which in turn is Keysight's reference implementation of [Open Traffic Generator API][otg].
+We'll be using a Go client SDK [gosnappi][gosnappi] to configure ixia-c-one.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;../images/ixia-c-one-ceos.drawio&quot;}"></div>
 
 ## Use cases
-This lab allows users to test an IPv4 traffic forwarding scenario between Keysight ixia-c-one and Arista cEOS.
+This lab allows users to:
+- Validate an IPv4 traffic forwarding scenario between Keysight ixia-c-one and Arista cEOS.
+- Validate a BGP forwarding plane between Keysight ixia-c-one and Arista cEOS.
 
-
-### Layer 3 Traffic forwarding.
+### IPv4 Traffic forwarding.
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;../images/ixia-c-one-ceos.drawio&quot;}"></div>
 
-This lab demonstrates a simple Layer 3 traffic forwarding scenario where the 2 Keysight ixia-c-one ports act as the transmit and recieve ports and Arista cEOS is configured to forward the traffic using static route configuration.
+This lab demonstrates a simple IPv4 traffic forwarding scenario where
+- One Keysight ixia-c-one port acts as a transmit port (IP 1.1.1.1) and the other as receive port (IP 2.2.2.2)
+- Arista cEOS is configured to forward the traffic destined for 20.20.20.0/24 to 2.2.2.2 using static route configuration
 
 #### Configuration
-Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration on Arista cEOS and configure the Keysight ixia-c-one ports to forward and receive traffic from the Device Under Test.  
+Once the lab is deployed with containerlab, use the following configuration instructions to configure interfaces on Arista cEOS and configure the Keysight ixia-c-one ports to forward and receive traffic from the Device Under Test.  
 
+> If the topology is destroyed after the test, please use `docker volume prune` to remove 500MB+ of persistent volume storage which is left behind after ixia-c-one docker container is removed.
 
-===Arista cEOS
-
-Enter the Arista cEOS cli by running following command:
+=== "Arista cEOS"
+Get into cEOS CLI with `docker exec -it clab-ixia-c-ceos Cli` and start configuration
 ```bash
-docker exec -it clab-ixia-c-ceos Cli
-```
-
-Now execute the following commands to configure the Arista cEOS to forward IPv4 data traffic:
-```bash
-config terminal
+enable
+configure terminal
 interface Ethernet1
-   no switchport
-   ip address 1.1.1.2/24
-!
+        no switchport
+        ip address 1.1.1.2/24
+exit
 interface Ethernet2
-   no switchport
-   ip address 2.2.2.1/24
-!
+        no switchport
+        ip address 2.2.2.1/24
+exit
 ip route 20.20.20.0/24 2.2.2.2
-!
 ip routing
-!
+exit
+exit
 ```
 === "Keysight ixia-c-one"
-
-Two workarounds are needed that will be removed in a future version of ixia-c-one once it supports ARP/ND:  
-1: To set an IPv4 address on the clab data interface on the ixia-c-one Rx port ( so that is responds to ARP requests)
+Setup to and run `ipv4_forwarding.go`
 ```bash
-docker exec -it clab-ixia-c-ixia-c-one bash
-bash-5.1# bash set ipv4 eth2 2.2.2.2 24
+# configure IPv4 address on rx port of ixia-c-one (replace `add` with `del`
+# to undo this)
+docker exec -it clab-ixia-c-ixia-c-one bash -c "./ifcfg add eth2 2.2.2.2 24"
+# note down MAC address of DUT interface connected to tx port of ixia-c-one
+docker exec -it clab-ixia-c-ceos bash -c "ifconfig eth1 | grep ether"
 
-[Note: Use bash unset ipv4 eth2 2.2.2.2 24 if you want to remove the IP e.g. to change the IP]
-```
-2: To get the DUT MAC to set as the Dst MAC of data packets :  
-(In an automation environment , it can also be programmatically fetched using ssh or gnmi)
-```bash
-docker exec -it clab-ixia-c-ceos Cli
-show interfaces Ethernet1 | incl Hardware
-```
+# The docker commands above shall not be required for upcoming releases
+# of ixia-c-one (which will have ARP/ND capability).
 
-ixia-c-one is configured by using Rest APIs. It can be configured using multiple language sdks.  
-In this example, steps are provided to setup the test with gosnappi sdk.
-
-Ensure go is installed on the system and confirm using `go version` that the version is at least `go1.17.3` . 
-1. Set up a go module :
-```bash
-$ go mod init example/test
-```
-
-2. This test needs a gosnappi module , the version of which should match the ixia-c-one version being used.
-The correct matching version can be found at https://github.com/open-traffic-generator/ixia-c/releases
-```bash
+# install go from https://go.dev/doc/install since we'll need it to run the test
+# and setup test environment
+mkdir tests && cd tests
+go mod init tests
+# gosnappi version needs to be compatible to a given release of ixia-c-one and
+# can be checked from https://github.com/open-traffic-generator/ixia-c/releases
 go get github.com/open-traffic-generator/snappi/gosnappi@v0.7.18
+# manually create a test file from the snippet or download it
+curl -kLO https://raw.githubusercontent.com/open-traffic-generator/snappi-tests/main/scripts/ipv4_forwarding.go
+# run the test with MAC address obtained in previous step
+go run ipv4_forwarding.go -dstMac="<MAC address>"
 ```
-
-3. Create any go file with suffix in the name as 'test', example l3_forward_test.go 
-Copy the contents of the below go code into the file. 
-
-4. Now , run the test using the command :
-`go test -run=TestL3Traffic -dmac="<DUT MAC>" -v| tee out.log`  
-Note that the DUT MAC should be in format `"aa:bb:cc:dd:ee:ff"` 
-```bash
-e.g. 
-$ go test -run=TestL3Traffic -dmac="aa:c1:ab:fe:3a:c2" -v  | tee out.txt
-```
-
-
-
-Test contents:
+=== "ipv4_forwarding.go"
 ```go
-/* Test L3 Traffic
-Topology:
-IXIA (1.1.1.1/24) -----> (1.1.1.2)ARISTA(2.2.2.1) ------> IXIA (2.2.2.2/24)
-Flows:
-- tcp: 10.10.10.1 -> 20.20.20.1+
+/*
+Test IPv4 Forwarding with
+- Endpoints: OTG 1.1.1.1 -----> 1.1.1.2 DUT 2.2.2.1 ------> OTG 2.2.2.2
+- Static Route on DUT: 20.20.20.0/24 -> 2.2.2.2
+- TCP flow from OTG: 10.10.10.1 -> 20.20.20.1+
+
+To run: go run ipv4_forwarding.go -dstMac=<MAC of 1.1.1.2>
 */
 
-package tests
+package main
 
 import (
-        "testing"
-        "log"
-        "fmt"
         "flag"
+        "log"
         "time"
-        "os"
-        "os/exec"
-        "runtime"
-        "strings"
 
-        /* go get github.com/open-traffic-generator/snappi/gosnappi@v0.7.18 ,
-           this version much match with the ixia-c-one version in the clab file i.e ixia-c-one:0.0.1-2738
-           Matching gosnappi version @ https://github.com/open-traffic-generator/ixia-c/releases */
         "github.com/open-traffic-generator/snappi/gosnappi"
 )
 
-var dmac string
-/* Set the MAC of Arista eth1 interface here or pass with with parameter -dmac="<MAC>" when running go test */
-func init() {
-        flag.StringVar(&dmac, "dmac", "00:00:00:00:00:00", "Connected DUT MAC")
-}
-
+// hostname and interfaces of ixia-c-one node from containerlab topology
 const (
-        otgHttpLocation  = "https://clab-ixia-c-ixia-c-one"  //Name of ixia-c-one node in the clab topo file
-        otgPort1Location = "ixia-c-port-eth1:5555"           //ixia-c-port-<clab topo link name>:5555
-        otgPort2Location = "ixia-c-port-eth2:5555"
-        optsClearPrevious = false                             //true: Clear stats on every iteration
+        otgHost  = "https://clab-ixia-c-ixia-c-one"
+        otgPort1 = "eth1"
+        otgPort2 = "eth2"
 )
 
-/* Run as: go test -run=TestL3Traffic -dmac="00:2f:04:02:34:34" -v where dmac is the MAC of connected DUT.
-   To automate the test completely, DUT MAC can be fetched using ssh or gnmi libraries from the DUT.
-   And DUT config can also be set using ssh or gnmi library */
-func TestL3Traffic(t *testing.T) {
+var (
+        dstMac   = "ff:ff:ff:ff:ff:ff"
+        srcMac   = "00:00:00:00:00:aa"
+        pktCount = 1000
+)
 
-        log.Printf("Dest MAC to be used when sending data packets to Arista :[%s]", dmac)
-        /* Connect to ixia-c-one controller */
-        client, err := NewClient(otgHttpLocation)
-        if err != nil {
-                t.Fatal(err)
-        }
+func main() {
+        // replace value of dstMac with actual MAC of DUT interface connected to otgPort1
+        flag.StringVar(&dstMac, "dstMac", dstMac, "Destination MAC address to be used for all packets")
+        flag.Parse()
 
-        /* Create test config with one L3 traffic flow */
-        config, expected := trafficConfigL3(client)
+        api, config := newConfig()
 
-        /* Apply config on ixia-c-one ports */
-        res,err := client.Api().SetConfig(config)
-        if err != nil {
-                t.Fatal(err)
-        }
-        LogWarnings(res.Warnings())
+        // push traffic configuration to otgHost
+        res, err := api.SetConfig(config)
+        checkResponse(res, err)
 
-        /* Start traffic */
-        res,err = client.Api().SetTransmitState(client.Api().NewTransmitState().
-                                                         SetState(gosnappi.TransmitStateState.START))
-        if err != nil {
-                t.Fatal(err)
-        }
-        LogWarnings(res.Warnings())
+        // start transmitting configured flows
+        ts := api.NewTransmitState().SetState(gosnappi.TransmitStateState.START)
+        res, err = api.SetTransmitState(ts)
+        checkResponse(res, err)
 
-        /* Check for 20s if traffic is successfully forwarded by DUT.
-           Test will FAIL if condition is not achieved within that time */
-        waitForOpts := WaitForOpts{"for data traffic to be forwarded", /* Wait Condition */
-                                   1000 * time.Millisecond,            /* Check after every Interval  ms */
-                                   20 * time.Second}                   /* Fail test if not true after Timeout s*/
-        WaitFor(t, func() (bool, error) { return client.FlowMetricsOk(expected) }, &waitForOpts)
+        // fetch flow metrics and wait for received frame count to be correct
+        mr := api.NewMetricsRequest()
+        mr.Flow()
+        waitFor(
+                func() bool {
+                        res, err := api.GetMetrics(mr)
+                        checkResponse(res, err)
 
-        /* Stop traffic */
-        res,err = client.Api().SetTransmitState(client.Api().NewTransmitState().
-                                                         SetState(gosnappi.TransmitStateState.STOP))
-                if err != nil {
-                t.Fatal(err)
-        }
-        LogWarnings(res.Warnings())
-        /* Test is successful. Same setup can be used for next test e.g. in a batch run */
+                        fm := res.FlowMetrics().Items()[0]
+                        return fm.Transmit() == gosnappi.FlowMetricTransmit.STOPPED && fm.FramesRx() == int64(pktCount)
+                },
+                10*time.Second,
+        )
 }
 
-type ApiClient struct {
-        api gosnappi.GosnappiApi
+func checkResponse(res interface{}, err error) {
+        if err != nil {
+                log.Fatal(err)
+        }
+        switch v := res.(type) {
+        case gosnappi.MetricsResponse:
+                log.Printf("Metrics Response:\n%s\n", v)
+        case gosnappi.ResponseWarning:
+                for _, w := range v.Warnings() {
+                        log.Println("WARNING:", w)
+                }
+        default:
+                log.Fatal("Unknown response type:", v)
+        }
 }
 
-func trafficConfigL3(client *ApiClient) (gosnappi.Config, ExpectedState) {
-        config := client.Api().NewConfig()
+func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
+        // create a new API handle to make API calls against otgHost
+        api := gosnappi.NewApi()
+        api.NewHttpTransport().SetLocation(otgHost).SetVerify(false)
 
-        port1 := config.Ports().Add().SetName("ixia-c-port1").SetLocation(otgPort1Location)
-        port2 := config.Ports().Add().SetName("ixia-c-port2").SetLocation(otgPort2Location)
+        // create an empty traffic configuration
+        config := api.NewConfig()
+        // create traffic endpoints
+        p1 := config.Ports().Add().SetName("p1").SetLocation(otgPort1)
+        p2 := config.Ports().Add().SetName("p2").SetLocation(otgPort2)
+        // create a flow and set the endpoints
+        f1 := config.Flows().Add().SetName("p1.v4.p2")
+        f1.TxRx().Port().SetTxName(p1.Name()).SetRxName(p2.Name())
 
-        // OTG traffic configuration
-        f1 := config.Flows().Add().SetName("p1.tcp.v4.p2")
+        // enable per flow metrics tracking
         f1.Metrics().SetEnable(true)
-        f1.TxRx().Port().
-                SetTxName(port1.Name()).
-                SetRxName(port2.Name())
+        // set size, count and transmit rate for all packets in the flow
         f1.Size().SetFixed(512)
         f1.Rate().SetPps(500)
-        f1.Duration().FixedPackets().SetPackets(1000)
-        e1 := f1.Packet().Add().Ethernet()
-        e1.Src().SetValue("00:00:00:00:00:AA")
-        e1.Dst().SetValue(dmac) // Provided by user. Must match with connected DUT MAC for present topology.
-        v4 := f1.Packet().Add().Ipv4()
-        v4.Src().SetValue("10.10.10.1")
-        v4.Dst().Increment().SetStart("20.20.20.1").SetStep("0.0.0.1").SetCount(5)
-        tc := f1.Packet().Add().Tcp()
-        tc.SrcPort().SetValue(3250)
-        tc.DstPort().Decrement().SetStart(8070).SetStep(2).SetCount(10)
+        f1.Duration().FixedPackets().SetPackets(int32(pktCount))
 
-        expected := ExpectedState{  //helpers.ExpectedState
-                Flow: map[string]ExpectedFlowMetrics{
-                        f1.Name(): {FramesRx: 1000, FramesRxRate: 0},
-                },
-        }
+        // configure headers for all packets in the flow
+        eth := f1.Packet().Add().Ethernet()
+        ip := f1.Packet().Add().Ipv4()
+        tcp := f1.Packet().Add().Tcp()
 
-        return config, expected
+        eth.Src().SetValue(srcMac)
+        eth.Dst().SetValue(dstMac)
+
+        ip.Src().SetValue("10.10.10.1")
+        ip.Dst().Increment().SetStart("20.20.20.1").SetStep("0.0.0.1").SetCount(5)
+
+        tcp.SrcPort().SetValue(3250)
+        tcp.DstPort().Decrement().SetStart(8070).SetStep(2).SetCount(10)
+
+        log.Printf("OTG configuration:\n%s\n", config)
+        return api, config
 }
 
-
-func NewClient(location string) (*ApiClient, error) {
-        client := &ApiClient{
-                api: gosnappi.NewApi(),
-        }
-
-        log.Printf("Creating gosnappi client for HTTP server %s ...\n", location)
-        client.api.NewHttpTransport().
-                SetVerify(false).
-                SetLocation(location)
-        return client, nil
-}
-
-func (client *ApiClient) Api() gosnappi.GosnappiApi {
-        return client.api
-}
-
-type ExpectedFlowMetrics struct {
-        FramesRx     int64
-        FramesRxRate float32
-}
-type ExpectedState struct {
-        Flow map[string]ExpectedFlowMetrics
-}
-
-func (client *ApiClient) FlowMetricsOk(expectedState ExpectedState) (bool, error) {
-        dNames := []string{}
-        for name := range expectedState.Flow {
-                dNames = append(dNames, name)
-        }
-
-        req := client.Api().NewMetricsRequest()
-        req.Flow().SetFlowNames(dNames)
-
-        res, err := client.Api().GetMetrics(req)
-        if err != nil {
-                fmt.Errorf("could not GetMetrics: %v", err)
-                return false, err
-        }
-        fMetrics := res.FlowMetrics()
-
-        /* If ClearPrevious: true , clear the screen after every iteration*/
-        PrintMetricsTable(&MetricsTableOpts{
-                ClearPrevious: optsClearPrevious,
-                FlowMetrics: fMetrics,
-        })
-
-        expected := true
-        for _, f := range fMetrics.Items() {
-                expectedMetrics := expectedState.Flow[f.Name()]
-                if f.FramesRx() != expectedMetrics.FramesRx || f.FramesRxRate() != expectedMetrics.FramesRxRate {
-                        expected = false
-                }
-        }
-
-        return expected, nil
-}
-
-
-
-type WaitForOpts struct {
-        Condition string
-        Interval  time.Duration
-        Timeout   time.Duration
-}
-
-/* Check for condition to be true every opts.Interval ms (default 500ms)
-   and fail the test is condition is false even after opts.Timeout s (default 30s)*/
-func WaitFor(t *testing.T, fn func() (bool, error), opts *WaitForOpts) error {
-        if opts == nil {
-                opts = &WaitForOpts{
-                        Condition: "condition to be true",
-                }
-        }
-        defer Timer(time.Now(), fmt.Sprintf("Waiting for %s", opts.Condition))
-
-        if opts.Interval == 0 {
-                opts.Interval = 500 * time.Millisecond
-        }
-        if opts.Timeout == 0 {
-                opts.Timeout = 30 * time.Second
-        }
-
+func waitFor(fn func() bool, timeout time.Duration) {
         start := time.Now()
-        log.Printf("Waiting for %s ...\n", opts.Condition)
-
         for {
-                done, err := fn()
-                if err != nil {
-                        t.Fatal(fmt.Errorf("error waiting for %s: %v", opts.Condition, err))
+                if fn() {
+                        return
                 }
-                if done {
-                        log.Printf("Done waiting for %s\n", opts.Condition)
-                        return nil
+                if time.Since(start) > timeout {
+                        log.Fatal("Timeout occurred !")
                 }
 
-                if time.Since(start) > opts.Timeout {
-                        t.Fatal(fmt.Errorf("timeout occurred while waiting for %s", opts.Condition))
-                }
-                time.Sleep(opts.Interval)
+                time.Sleep(500 * time.Millisecond)
         }
 }
-
-type MetricsTableOpts struct {
-        ClearPrevious bool
-        FlowMetrics   gosnappi.MetricsResponseFlowMetricIter
-}
-
-/* if optsClearPrevious is true (default false), clear the screen after every iteration */
-func PrintMetricsTable(opts *MetricsTableOpts) {
-        if opts == nil {
-                return
-        }
-        out := "\n"
-
-        if opts.FlowMetrics != nil {
-                border := strings.Repeat("-", 25*4+5)
-                out += "\nFlow Metrics\n" + border + "\n"
-                out += fmt.Sprintf("%-25s%-25s%-25s%-25s%-25s\n", "Name","Frames Tx", "Frames Rx","FPS Tx", "FPS Rx")
-                                for _, m := range opts.FlowMetrics.Items() {
-                        if m != nil {
-                                name := m.Name()
-                                tx := m.FramesTx()
-                                rx := m.FramesRx()
-                                txRate := m.FramesTxRate()
-                                rxRate := m.FramesRxRate()
-                                out += fmt.Sprintf("%-25v%-25v%-25v%-25v%-25v\n", name, tx, rx, txRate, rxRate)
-                        }
-                }
-                out += border + "\n\n"
-        }
-
-        if opts.ClearPrevious {
-                ClearScreen()
-        }
-        log.Println(out)
-}
-
-func ClearScreen() {
-        switch runtime.GOOS {
-        case "darwin":
-                fallthrough
-        case "linux":
-                cmd := exec.Command("clear")
-                cmd.Stdout = os.Stdout
-                cmd.Run()
-        case "windows":
-                cmd := exec.Command("cmd", "/c", "cls")
-                cmd.Stdout = os.Stdout
-                cmd.Run()
-        default:
-                return
-        }
-}
-
-func Timer(start time.Time, name string) {
-        elapsed := time.Since(start)
-        log.Printf("%s took %d ms", name, elapsed.Milliseconds())
-}
-
-
-func LogWarnings(warnings []string) {
-        for _, w := range warnings {
-                log.Printf("WARNING: %v", w)
-        }
-}
-
 ```
-
-   
-===
 
 #### Verification
-The success/failure of the test will be based on Keysight ixia-c-one traffic flow stats.
-The test program will check whether all transmitted packets are recieved on eth2 of Keysight ixia-c-one.
-If the packets are recieved, the test will indicate Pass status like below:
-```bash
-PASS
-ok      example/test    3.099s
-```
-If the packets have not been transmitted within 20s ( timeout in the test) , it will indicate Fail status like below:
-```bash
-FAIL    example/test    20.146s
-```
-Note: If the clab is destroyed after the test, please use `docker volume prune` to remove 500MB+ of persistent volume storage
-which is left behind after ixia-c-one docker container is removed.
+The test that we ran above will continuously keep checking flow metrics to ensure packet count received on rx port of ixia-c-one are as expected.
+If the condition is not met in 10 seconds, the test will timeout, hence indicating failure.  
 
-<`TBD: link for ixia-c-one below. Probably there will be no specific link for ixia-c-one but we will point to ixia-c itself?`>  
+Upon success, flow metrics should be as noted below.
+
+```yaml
+choice: flow_metrics
+flow_metrics:
+- bytes_rx: "512000"
+  bytes_tx: "0"
+  frames_rx: "1000"
+  frames_rx_rate: 499
+  frames_tx: "1000"
+  frames_tx_rate: 500
+  name: p1.v4.p2
+  transmit: stopped
+```
+
+### BGPv4 Forwarding Plane
+
+This section will soon be update with appropriate details.
+
+> Support for protocols like BGP and IS-IS is not supported by free distribution of ixia-c-one. Please contact Keysight Support for more details.
+
 [ixia-c]: https://github.com/open-traffic-generator/ixia-c  
+[otg]: https://github.com/open-traffic-generator/models  
+[gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi  
 [ceos]: https://www.arista.com/en/products/software-controlled-container-networking  
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/ixiac/ixiaconeceos.clab.yaml
+[topofile]: ../../lab-examples/ixiac/ixiacone-ceos.clab.yaml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.  
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
