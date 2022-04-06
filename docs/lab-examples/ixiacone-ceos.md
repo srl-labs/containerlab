@@ -235,7 +235,7 @@ This section will soon be update with appropriate details.
 > Support for protocols like BGP and IS-IS is not supported by free distribution of ixia-c-one. Please contact Keysight Support for more details.
 
 [ixia-c]: https://github.com/open-traffic-generator/ixia-c  
-[otg]: https://github.com/open-traffic-generator/models  
+[otg]: https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/open-traffic-generator/models/master/artifacts/openapi.yaml  
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi  
 [ceos]: https://www.arista.com/en/products/software-controlled-container-networking  
 [topofile]: ../../lab-examples/ixiac/ixiacone-ceos.clab.yaml
