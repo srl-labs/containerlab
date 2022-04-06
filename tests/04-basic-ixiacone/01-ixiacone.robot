@@ -26,14 +26,14 @@ Get node mgmt IP
     ...    sudo docker inspect clab-${lab-name}-${node1-name} -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
     Should Be Equal As Integers    ${rc}    0
 
-Verify link eth1 in ixia-c-one node n1
+Verify link eth1 in keysight_ixia-c-one node n1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=n1 --cmd "docker exec -t ixia-c-port-dp-${ifc1-name} ip link show ${ixiacone-ns-ifc-name}"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
-Verify link eth2 in ixia-c-one node n1
+Verify link eth2 in keysight_ixia-c-one node n1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=n1 --cmd "docker exec -t ixia-c-port-dp-${ifc2-name} ip link show ${ixiacone-ns-ifc-name}"
     Log    ${output}

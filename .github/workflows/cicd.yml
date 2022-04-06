@@ -255,7 +255,7 @@ jobs:
       - name: Install robotframework
         run: |
           pip install -r tests/requirements.txt
-      - name: Run ixia-c-one tests
+      - name: Run keysight_ixia-c-one tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/04-basic-ixiacone
       # upload test reports as a zip file
