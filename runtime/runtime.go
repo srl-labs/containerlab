@@ -40,6 +40,10 @@ type ContainerRuntime interface {
 	StartContainer(context.Context, string, *types.NodeConfig) (interface{}, error)
 	// Stop running container by its name
 	StopContainer(context.Context, string) error
+	// Pause a container identified by its name
+	PauseContainer(context.Context, string) error
+	// UnPause / resume a container identified by its name
+	UnpauseContainer(context.Context, string) error
 	// List all containers matching labels
 	ListContainers(context.Context, []*types.GenericFilter) ([]types.GenericContainer, error)
 	// Get a netns path using the pid of a container

@@ -350,6 +350,28 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	return nil, nil
 }
 
+func (c *ContainerdRuntime) PauseContainer(ctx context.Context, cID string) error {
+	ctask, err := c.getContainerTask(ctx, cID)
+	if err != nil {
+		log.Debugf("container %s: %v", cID, err)
+		return nil
+	}
+
+	err = ctask.Pause(ctx)
+	return err
+}
+
+func (c *ContainerdRuntime) UnpauseContainer(ctx context.Context, cID string) error {
+	ctask, err := c.getContainerTask(ctx, cID)
+	if err != nil {
+		log.Debugf("container %s: %v", cID, err)
+		return nil
+	}
+
+	err = ctask.Resume(ctx)
+	return err
+}
+
 func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
 	// allow overwriting cni plugin binary path via ENV var
 

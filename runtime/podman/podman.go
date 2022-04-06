@@ -177,6 +177,22 @@ func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *typ
 	return nil, nil
 }
 
+func (r *PodmanRuntime) PauseContainer(ctx context.Context, cID string) error {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return err
+	}
+	return containers.Pause(ctx, cID, &containers.PauseOptions{})
+}
+
+func (r *PodmanRuntime) UnpauseContainer(ctx context.Context, cID string) error {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return err
+	}
+	return containers.Unpause(ctx, cID, &containers.UnpauseOptions{})
+}
+
 func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {

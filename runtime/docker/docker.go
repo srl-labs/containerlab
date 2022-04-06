@@ -285,6 +285,16 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	return nil
 }
 
+// PauseContainer Pauses a container identified by its name
+func (d *DockerRuntime) PauseContainer(ctx context.Context, cID string) error {
+	return d.Client.ContainerPause(ctx, cID)
+}
+
+// UnpauseContainer UnPauses / resumes a container identified by its name
+func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error {
+	return d.Client.ContainerUnpause(ctx, cID)
+}
+
 // CreateContainer creates a docker container (but does not start it)
 func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) {
 	log.Infof("Creating container: %q", node.ShortName)
