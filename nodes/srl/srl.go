@@ -63,6 +63,7 @@ commit save`
 )
 
 var (
+	kindnames = []string{"srl", "nokia-srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",
@@ -99,9 +100,13 @@ var (
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindSRL, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(srl)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, "admin", "admin")
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type srl struct {
@@ -113,6 +118,9 @@ type srl struct {
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg = cfg
+	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
+	// to not rely on certain kind names
+	s.cfg.Kind = nodes.NodeKindSRL
 	for _, o := range opts {
 		o(s)
 	}

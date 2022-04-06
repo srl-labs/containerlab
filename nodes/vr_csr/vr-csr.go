@@ -15,14 +15,24 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-csr"}
+)
+
 const (
 	scrapliPlatformName = "cisco_iosxe"
+	defaultUser         = "admin"
+	defaultPassword     = "admin"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrCSR, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrCsr)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrCsr struct {
@@ -89,8 +99,8 @@ func (s *vrCsr) Delete(ctx context.Context) error {
 
 func (s *vrCsr) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 

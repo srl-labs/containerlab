@@ -14,10 +14,20 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-nxos"}
+)
+
+const (
+	defaultUser     = "admin"
+	defaultPassword = "admin"
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindVrNXOS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrNXOS)
 	})
+	nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
 }
 
 type vrNXOS struct {
@@ -33,8 +43,8 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "4096",

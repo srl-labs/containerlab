@@ -15,8 +15,12 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"sonic-vs"}
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindSonic, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(sonic)
 	})
 }

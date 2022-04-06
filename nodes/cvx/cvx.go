@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	kindnames                 = []string{"cvx"}
 	defaultCvxKernelImageRef  = "docker.io/networkop/kernel:4.19"
 	defaultIgniteSandboxImage = "networkop/ignite:dev"
 )
@@ -23,9 +24,10 @@ var memoryReqs = map[string]string{
 }
 
 func init() {
-	nodes.Register(nodes.NodeKindCVX, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(cvx)
 	})
+	nodes.SetNonDefaultRuntimePerKind(kindnames, runtime.IgniteRuntime)
 }
 
 type cvx struct {

@@ -8,16 +8,30 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-pan"}
+)
+
+const (
+	defaultUser     = "admin"
+	defaultPassword = "Admin@123"
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindVrPAN, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrPan)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrPan struct {
@@ -33,8 +47,8 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "admin",
-		"PASSWORD":           "Admin@123",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "6144",

@@ -28,6 +28,7 @@ const (
 )
 
 var (
+	kindnames = []string{"ceos", "arista-ceos"}
 	// defined env vars for the ceos
 	ceosEnv = map[string]string{
 		"CEOS":                                "1",
@@ -47,9 +48,10 @@ var (
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindCEOS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(ceos)
 	})
+
 }
 
 type ceos struct {
