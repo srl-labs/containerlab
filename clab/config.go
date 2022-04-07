@@ -263,7 +263,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	var err error
 
 	// Load content of the EnvVarFiles
-	envFileContent, err := utils.LoadEnvVarFiles(c.Config.Topology.GetNodeEnvFiles(nodeName))
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoFile.dir, c.Config.Topology.GetNodeEnvFiles(nodeName))
 	if err != nil {
 		return nil, err
 	}
