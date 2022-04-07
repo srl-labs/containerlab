@@ -241,12 +241,14 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// exec commands specified for containers with `exec` parameter
 	execJSONResult := make(map[string]map[string]map[string]interface{})
-	for _, cont := range containers {
+	for i := range containers {
+		cont := &containers[i]
+
 		name := cont.Labels[clab.NodeNameLabel]
 		if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
 			rt := node.GetRuntime()
 			contName := strings.TrimLeft(cont.Names[0], "/")
-			if execJSONResult[contName], err = execCmds(ctx, cont, rt, node.Config().Exec, format); err != nil {
+			if execJSONResult[contName], err = execCmds(ctx, *cont, rt, node.Config().Exec, format); err != nil {
 				log.Errorf("Failed to exec commands for node %s", name)
 			}
 		}
@@ -284,7 +286,9 @@ func setFlags(conf *clab.Config) {
 }
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
-	for _, c := range containers {
+	for i := range containers {
+		c := &containers[i]
+
 		name = c.Labels[clab.NodeNameLabel]
 		if node, ok := nodesMap[name]; ok {
 			// add network information
