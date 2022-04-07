@@ -5,10 +5,12 @@
 package utils
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -145,6 +147,26 @@ func ReadFileContent(file string) ([]byte, error) {
 	b, err := ioutil.ReadFile(file)
 
 	return b, err
+}
+
+func ReadFileLines(file string) ([]string, error) {
+	// check file exists
+	if !FileExists(file) {
+		return nil, fmt.Errorf("%w: %s", errFileNotExist, file)
+	}
+	content, err := os.Open(file)
+	if err != nil {
+		log.Fatalf("failed opening file: %s", err)
+	}
+
+	scanner := bufio.NewScanner(content)
+	scanner.Split(bufio.ScanLines)
+	var result []string
+
+	for scanner.Scan() {
+		result = append(result, scanner.Text())
+	}
+	return result, nil
 }
 
 // ExpandHome expands `~` char in the path to home path of a current user in provided path p.

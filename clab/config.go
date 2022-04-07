@@ -260,9 +260,17 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		// Extras
 		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
+	var err error
+
+	// Load content of the EnvVarFiles
+	envFileContent, err := utils.LoadEnvVarFiles(c.Config.Topology.GetNodeEnvFiles(nodeName))
+	if err != nil {
+		return nil, err
+	}
+	// Merge EnvVarFiles content and the existing env variable
+	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
 
 	log.Debugf("node config: %+v", nodeCfg)
-	var err error
 	// initialize config
 	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
