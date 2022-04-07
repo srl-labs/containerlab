@@ -84,7 +84,7 @@ type NodeConfig struct {
 	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode          string
 	MgmtNet              string // name of the docker network this node is connected to with its first interface
-	MgmtIntf             string // can be used to be rendered by the default node template 
+	MgmtIntf             string // can be used to be rendered by the default node template
 	MgmtIPv4Address      string
 	MgmtIPv4PrefixLength int
 	MgmtIPv6Address      string
@@ -106,9 +106,10 @@ type NodeConfig struct {
 	// Configured container runtime
 	Runtime string
 	// Resource requirements
-	CPU    float64
-	CPUSet string
-	Memory string
+	CPU          float64
+	CPUSet       string
+	Memory       string
+	SSE3Required bool
 
 	DeploymentStatus string // status that is set by containerlab to indicate deployment stage
 

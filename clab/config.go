@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/klauspost/cpuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -404,6 +405,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.checkIfSignatures(); err != nil {
 		return err
 	}
+	if err = c.checkSSE3CPURequiredAndAvailable(); err != nil {
+		return err
+	}
 
 	return c.VerifyImages(ctx)
 }
@@ -417,6 +421,21 @@ func (c *CLab) verifyBridgesExist() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (c *CLab) checkSSE3CPURequiredAndAvailable() error {
+	if cpuid.CPU.SSE3() {
+		log.Debug("SSE3 instructionset available on CPU")
+		return nil
+	}
+	log.Debug("SSE3 instructionset not available on CPU")
+	for _, n := range c.Nodes {
+		if n.Config().SSE3Required {
+			return fmt.Errorf("SSE3 CPU instruction set required by kind '%s' but not available", n.Config().Kind)
+		}
+	}
+	log.Debug("no SSE3 CPU instructions required, continuing")
 	return nil
 }
 
