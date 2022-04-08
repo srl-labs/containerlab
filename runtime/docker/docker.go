@@ -16,9 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/go-units"
-	"golang.org/x/sys/unix"
-
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -259,7 +256,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	}
 	err = d.installIPTablesFwdRule()
 	if err != nil {
-		log.Warnf("errors during iptables rules install: %v", err)
+		log.Warnf("%v", err)
 	}
 
 	return nil
@@ -298,7 +295,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	br := "br-" + nres.ID[:12]
 	err = d.deleteIPTablesFwdRule(br)
 	if err != nil {
-		log.Warnf("errors during iptables rules removal: %v", err)
+		log.Warnf("%v", err)
 	}
 
 	return nil
@@ -337,6 +334,15 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		ExposedPorts: node.PortSet,
 		MacAddress:   node.MacAddress,
 	}
+	containerHostConfig := &container.HostConfig{
+		Binds:        node.Binds,
+		PortBindings: node.PortBindings,
+		Sysctls:      node.Sysctls,
+		Privileged:   true,
+		// Network mode will be defined below via switch
+		NetworkMode: "",
+		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
+	}
 	var resources container.Resources
 	if node.Memory != "" {
 		mem, err := humanize.ParseBytes(node.Memory)
@@ -352,30 +358,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if node.CPUSet != "" {
 		resources.CpusetCpus = node.CPUSet
 	}
-	var rlimit unix.Rlimit
-	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &rlimit); err != nil {
-		log.Warnf("Unable to retrieve rlimit_NOFILE value: %v", err)
-		rlimit.Max = rLimitMaxValue
-	}
-	if rlimit.Max > rLimitMaxValue {
-		rlimit.Max = rLimitMaxValue
-	}
-	ulimit := units.Ulimit{
-		Name: "nofile",
-		Hard: int64(rlimit.Max),
-		Soft: int64(rlimit.Max),
-	}
-	resources.Ulimits = []*units.Ulimit{&ulimit}
-	containerHostConfig := &container.HostConfig{
-		Binds:        node.Binds,
-		PortBindings: node.PortBindings,
-		Sysctls:      node.Sysctls,
-		Privileged:   true,
-		// Network mode will be defined below via switch
-		NetworkMode: "",
-		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
-		Resources:   resources,
-	}
+	containerHostConfig.Resources = resources
 	containerNetworkingConfig := &network.NetworkingConfig{}
 
 	netMode := strings.SplitN(node.NetworkMode, ":", 2)
@@ -600,12 +583,10 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 }
 
 // Transform docker-specific to generic container format
-func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkResources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
+func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkRessources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
-	for idx := range inputContainers {
-		i := inputContainers[idx]
-
+	for _, i := range inputContainers {
 		ctr := types.GenericContainer{
 			Names:           i.Names,
 			ID:              i.ID,
@@ -618,10 +599,8 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 		}
 		bridgeName := d.mgmt.Network
 		// if bridgeName is "", try to find a network created by clab that the container is connected to
-		if bridgeName == "" && inputNetworkResources != nil {
-			for idx := range inputNetworkResources {
-				nr := inputNetworkResources[idx]
-
+		if bridgeName == "" && inputNetworkRessources != nil {
+			for _, nr := range inputNetworkRessources {
 				if _, ok := i.NetworkSettings.Networks[nr.Name]; ok {
 					bridgeName = nr.Name
 					break

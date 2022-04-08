@@ -24,10 +24,10 @@ nav:
           - vr-veos - Arista vEOS: manual/kinds/vr-veos.md
           - vr-ros - MikroTik RouterOS: manual/kinds/vr-ros.md
           - vr-pan - Palo Alto PAN: manual/kinds/vr-pan.md
-          - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
           - linux - Linux container: manual/kinds/linux.md
           - bridge - Linux bridge: manual/kinds/bridge.md
           - ovs-bridge - Openvswitch bridge: manual/kinds/ovs-bridge.md
+          - keysight_ixia-c-one - Keysight ixia-c-one: manual/kinds/ixia-c-one.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
@@ -80,12 +80,12 @@ nav:
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
+      - Keysight ixia-c-one and Arista cEOS: lab-examples/ixiacone-ceos.md
       - Multi-node labs: lab-examples/multinode.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
-      - "0.25": rn/0.25.md
       - "0.24": rn/0.24.md
       - "0.23": rn/0.23.md
       - "0.22": rn/0.22.md

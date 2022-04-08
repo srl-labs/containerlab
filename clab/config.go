@@ -7,11 +7,9 @@ package clab
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -76,6 +74,7 @@ var kinds = []string{
 	"mysocketio",
 	"host",
 	"cvx",
+	"keysight_ixia-c-one",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
@@ -380,9 +379,6 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
-	if err = c.verifyDuplicateAddresses(); err != nil {
-		return err
-	}
 	if err = c.verifyRootNetnsInterfaceUniqueness(); err != nil {
 		return err
 	}
@@ -399,9 +395,6 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 	if err = c.verifyStartupConfigFilesExist(); err != nil {
-		return err
-	}
-	if err = c.checkIfSignatures(); err != nil {
 		return err
 	}
 
@@ -438,30 +431,6 @@ func (c *CLab) verifyLinks() error {
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
-	return nil
-}
-
-// verifyDuplicateAddresses checks that every static IP address in the topology is unique
-func (c *CLab) verifyDuplicateAddresses() error {
-	dupIps := map[string]struct{}{}
-	for _, node := range c.Nodes {
-		ips := []string{node.Config().MgmtIPv4Address, node.Config().MgmtIPv6Address}
-		if ips[0] == "" && ips[1] == "" {
-			continue
-		}
-
-		for _, ip := range ips {
-			if _, exists := dupIps[ip]; !exists {
-				if ip == "" {
-					continue
-				}
-				dupIps[ip] = struct{}{}
-			} else {
-				return fmt.Errorf("management IP address %s appeared more than once in the topology file", ip)
-			}
-		}
-	}
-
 	return nil
 }
 
@@ -643,25 +612,6 @@ func (c *CLab) verifyVirtSupport() error {
 	return fmt.Errorf("virtualization seems to be not supported and it is required for VM based nodes. Check if virtualization can be enabled")
 }
 
-// checkIfSignatures ensures that users provide valid endpoint names
-// mostly this is useful for srlinux nodes which require special naming convention to be followed
-func (c *CLab) checkIfSignatures() error {
-	for _, node := range c.Nodes {
-		switch {
-		case node.Config().Kind == nodes.NodeKindSRL:
-			// regexp to match srlinux endpoint names
-			srlIfRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
-			for _, e := range node.Config().Endpoints {
-				if !srlIfRe.MatchString(e.EndpointName) {
-					return fmt.Errorf("nokia sr linux endpoint %q doesn't match required pattern. SR Linux endpoints should be named as e1-1 or e1-1-1", e.EndpointName)
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
 // checkEndpoint runs checks on the endpoint syntax
 func checkEndpoint(e string) error {
 	split := strings.Split(e, ":")
@@ -709,21 +659,16 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 }
 
 // CheckResources runs container host resources check
-func (c *CLab) CheckResources() error {
+func (*CLab) CheckResources() error {
 	vcpu := runtime.NumCPU()
 	log.Debugf("Number of vcpu: %d", vcpu)
 	if vcpu < 2 {
 		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
-		if c.HasKind(nodes.NodeKindSRL) {
-			return errors.New("not enough vcpus. Nokia SR Linux nodes require at least 2 vcpus")
-		}
 	}
-
 	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
 	if freeMemG < 1 {
 		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", freeMemG)
 	}
-
 	return nil
 }
 
@@ -767,16 +712,4 @@ func getShortName(labName, containerName string) (string, error) {
 		return "", fmt.Errorf("failed to parse container name %q", containerName)
 	}
 	return result[1], nil
-}
-
-// HasKind returns true if kind k is found in the list of nodes
-func (c *CLab) HasKind(k string) bool {
-	for _, n := range c.Nodes {
-		if n.Config().Kind == k {
-			log.Warn("found")
-			return true
-		}
-	}
-
-	return false
 }
