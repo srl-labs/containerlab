@@ -22,7 +22,7 @@ Create SSH keypair
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E containerlab deploy -t ${CURDIR}/${lab-file-name}
+    ...    sudo -E containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -80,4 +80,4 @@ Ensure srl1 is reachable over ssh with public key auth
 
 *** Keywords ***
 Cleanup
-    Run    sudo containerlab destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

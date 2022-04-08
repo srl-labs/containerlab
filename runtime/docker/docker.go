@@ -35,6 +35,9 @@ const (
 	runtimeName    = "docker"
 	sysctlBase     = "/proc/sys"
 	defaultTimeout = 30 * time.Second
+	rLimitMaxValue = 1048576
+	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating containers
+	defaultDockerNetwork = "bridge"
 )
 
 func init() {
@@ -84,6 +87,23 @@ func (d *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 
 func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	d.mgmt = n
+	// return if MTU value was set by a user via config file
+	if n.MTU != "" {
+		return
+	}
+
+	// detect default MTU if this config parameter was not provided in the clab file
+	d0, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
+	if err != nil {
+		d.mgmt.MTU = "1500"
+		log.Debugf("an error occured when trying to detect docker default network mtu")
+	}
+
+	if mtu, ok := d0.Options["com.docker.network.driver.mtu"]; ok {
+		log.Debugf("detected docker network mtu value - %s", mtu)
+		d.mgmt.MTU = mtu
+	}
+
 }
 
 // CreateDockerNet creates a docker network or reusing if it exists

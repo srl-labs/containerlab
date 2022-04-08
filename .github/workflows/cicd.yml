@@ -107,7 +107,10 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        runtime: ["docker", "containerd", "podman"]
+        runtime:
+          - "docker"
+          - "podman"
+        # - "containerd"
     needs:
       - unit-test
       - build-containerlab
@@ -195,7 +198,7 @@ jobs:
       matrix:
         runtime:
           - "docker"
-          # - "containerd"
+          - "podman"
     needs:
       - unit-test
       - build-containerlab
@@ -209,6 +212,10 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: Enable Podman API service
+        run: sudo systemctl start podman
+
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
