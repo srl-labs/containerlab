@@ -36,6 +36,7 @@ jobs:
               - 'types/**'
               - 'utils/**'
               - '.github/workflows/cicd.yml'
+              - 'go.mod'
             docs:
               - "docs/**"
               - "lab-examples/**"
