@@ -22,9 +22,9 @@ import (
 )
 
 type CLab struct {
-	Config        *Config                             `json:"config,omitempty"`
-	TopoFile      *TopoFile                           `json:"topofile,omitempty"`
-	m             *sync.RWMutex                       `json:"m,omitempty"`
+	Config        *Config   `json:"config,omitempty"`
+	TopoFile      *TopoFile `json:"topofile,omitempty"`
+	m             *sync.RWMutex
 	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
 	Links         map[int]*types.Link                 `json:"links,omitempty"`
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
