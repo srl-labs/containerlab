@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -156,7 +155,7 @@ func ReadFileLines(file string) ([]string, error) {
 	}
 	content, err := os.Open(file)
 	if err != nil {
-		log.Fatalf("failed opening file: %s", err)
+		return nil, err
 	}
 
 	scanner := bufio.NewScanner(content)
