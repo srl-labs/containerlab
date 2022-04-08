@@ -81,20 +81,17 @@ var kinds = []string{
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string          `json:"name,omitempty"`
-	Prefix     *string         `json:"prefix,omitempty"`
-	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
-	Topology   *types.Topology `json:"topology,omitempty"`
-	ConfigPath string          `json:"config-path,omitempty"`
+	Name     string          `json:"name,omitempty"`
+	Prefix   *string         `json:"prefix,omitempty"`
+	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
+	Topology *types.Topology `json:"topology,omitempty"`
 }
 
 // ParseTopology parses the lab topology
 func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 
-	if c.Config.ConfigPath == "" {
-		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
-	}
+	cwd, _ := filepath.Abs(os.Getenv("PWD"))
 
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
@@ -104,7 +101,7 @@ func (c *CLab) parseTopology() error {
 	c.Dir = &Directory{}
 	// labDir is always named clab-$labName, regardless of the prefix
 	labDir := strings.Join([]string{"clab", c.Config.Name}, "-")
-	c.Dir.Lab = filepath.Join(c.Config.ConfigPath, labDir)
+	c.Dir.Lab = filepath.Join(cwd, labDir)
 
 	c.Dir.LabCA = filepath.Join(c.Dir.Lab, "ca")
 	c.Dir.LabCARoot = filepath.Join(c.Dir.LabCA, "root")
