@@ -234,13 +234,12 @@ jobs:
           name: 02-basic-srl-log
           path: ./tests/out/*.html
 
-  ixiacone-basic-tests:
+  ixiac-one-basic-tests:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
         runtime:
           - "docker"
-          # - "containerd"
     needs:
       - unit-test
       - build-containerlab
