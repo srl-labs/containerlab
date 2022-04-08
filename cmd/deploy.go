@@ -70,7 +70,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,
@@ -78,6 +77,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithTopoFile(topo, varsFile),
 	}
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
@@ -241,7 +241,9 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// exec commands specified for containers with `exec` parameter
 	execJSONResult := make(map[string]map[string]map[string]interface{})
-	for _, cont := range containers {
+	for i := range containers {
+		cont := containers[i]
+
 		name := cont.Labels[clab.NodeNameLabel]
 		if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
 			rt := node.GetRuntime()
@@ -284,7 +286,9 @@ func setFlags(conf *clab.Config) {
 }
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
-	for _, c := range containers {
+	for i := range containers {
+		c := &containers[i]
+
 		name = c.Labels[clab.NodeNameLabel]
 		if node, ok := nodesMap[name]; ok {
 			// add network information

@@ -41,16 +41,6 @@ func LinkContainerNS(nspath, containerName string) error {
 	return nil
 }
 
-// getDefaultDockerMTU gets the MTU of a docker0 bridge interface
-// if fails to get the MTU of docker0, returns "1500"
-func DefaultNetMTU() (string, error) {
-	b, err := BridgeByName("docker0")
-	if err != nil {
-		return "1500", err
-	}
-	return fmt.Sprint(b.MTU), nil
-}
-
 func CheckBrInUse(brname string) (bool, error) {
 	InUse := false
 	l, err := netlink.LinkList()
