@@ -25,6 +25,12 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	// file name of a topology export data
+	topoExportFName            = "topology-data.json"
+	defaultExportTemplateFPath = "/etc/containerlab/templates/export/auto.tmpl"
+)
+
 // name of the container management network
 var mgmtNetName string
 
@@ -64,7 +70,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
 	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
-	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", "", "template file for topology data export")
+	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", defaultExportTemplateFPath, "template file for topology data export")
 }
 
 func deployFn(_ *cobra.Command, _ []string) error {
@@ -129,7 +135,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// in an similar fashion, create an empty topology data file
-	topoDataFPath := filepath.Join(c.Dir.Lab, "topology-data.json")
+	topoDataFPath := filepath.Join(c.Dir.Lab, topoExportFName)
 	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
 		return err

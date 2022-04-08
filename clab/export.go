@@ -18,14 +18,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-const defaultTopologyExportTemplate = "/etc/containerlab/templates/export/auto.tmpl"
-
 // GenerateExports generate various export files and writes it to a lab location
 func (c *CLab) GenerateExports(f io.Writer, p string) error {
-	if p == "" {
-		p = defaultTopologyExportTemplate
-	}
-
 	n := filepath.Base(p)
 	err := c.exportTopologyDataWithTemplate(f, n, p)
 	if err != nil {
