@@ -21,8 +21,11 @@ import (
 const defaultTopologyExportTemplate = "/etc/containerlab/templates/export/auto.tmpl"
 
 // GenerateExports generate various export files and writes it to a lab location
-func (c *CLab) GenerateExports(f io.Writer) error {
-	p := defaultTopologyExportTemplate
+func (c *CLab) GenerateExports(f io.Writer, p string) error {
+	if p == "" {
+		p = defaultTopologyExportTemplate
+	}
+
 	n := filepath.Base(p)
 	err := c.exportTopologyDataWithTemplate(f, n, p)
 	if err != nil {
@@ -80,6 +83,8 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) e
 	if err != nil {
 		return err
 	}
+	log.Debugf("Exported topology data using %s template", p)
+
 	return err
 }
 
@@ -105,5 +110,6 @@ func (c *CLab) exportTopologyDataWithDefaultTemplate(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	log.Debug("Exported topology data using built-in template")
 	return err
 }

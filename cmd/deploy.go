@@ -41,6 +41,9 @@ var maxWorkers uint
 // skipPostDeploy flag
 var skipPostDeploy bool
 
+// template file for topology data export
+var exportTemplate string
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -61,6 +64,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
 	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
+	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", "", "template file for topology data export")
 }
 
 func deployFn(_ *cobra.Command, _ []string) error {
@@ -124,7 +128,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// in an similar fashion, create an empty topology graph file
+	// in an similar fashion, create an empty topology data file
 	topoDataFPath := filepath.Join(c.Dir.Lab, "topology-data.json")
 	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
@@ -211,7 +215,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if err := c.GenerateExports(topoDataF); err != nil {
+	if err := c.GenerateExports(topoDataF, exportTemplate); err != nil {
 		return err
 	}
 
