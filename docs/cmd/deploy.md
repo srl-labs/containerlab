@@ -29,7 +29,7 @@ Without this flag present, containerlab will reuse the available configuration a
 Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get more information on the lab directory contents.
 
 #### max-workers
-With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.
+With `--max-workers` flag, it is possible to limit the number of concurrent workers that create containers or wire virtual links. By default, the number of workers equals the number of nodes/links to create.
 
 #### runtime
 Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman`, `containerd`, and `ignite` runtimes.
@@ -49,10 +49,10 @@ In a busy compute the runtime may respond longer than anticipated, in that case 
 The default timeout is set to 2 minutes and can be changed to values like `30s, 10m`.
 
 #### export-template
-The local `--export-template` flag allows a user to specify a custom Go template to be used as a schema for exporting topology data into `topology-data.json` under the lab directory. Without this flag, the default template path is `/etc/containerlab/templates/export/auto.tmpl`. For example, to export full topology data instead of a subset of fields exported by default, use `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory. If not set, the default template path is `/etc/containerlab/templates/export/auto.tmpl`.
 
-#### max-workers
-With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.
+To export full topology data instead of a subset of fields exported by default, use `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+
 
 ### Examples
 
