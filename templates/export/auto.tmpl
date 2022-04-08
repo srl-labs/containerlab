@@ -4,7 +4,7 @@
   "clab": {
     "config": {
       "prefix": "{{ .Clab.Config.Prefix }}",
-      "mgmt": {{ ToJSONPretty .Clab.Config.Mgmt "      " "  "}},
+      "mgmt": {{ ToJSONPretty .Clab.Config.Mgmt "      " "  "}}
     }
   },
   "nodes": { {{- $i:=0 }}{{range $n, $c := .NodeConfigs}}{{if $i}},{{end}}
