@@ -18,14 +18,13 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-// GenerateExports generate various export files and writes it to a lab location
+// GenerateExports generates various export files and writes it to a lab location
 func (c *CLab) GenerateExports(f io.Writer, p string) error {
-	n := filepath.Base(p)
-	err := c.exportTopologyDataWithTemplate(f, n, p)
+	err := c.exportTopologyDataWithTemplate(f, p)
 	if err != nil {
-		log.Warningf("Cannot parse export template %s", p)
-		log.Warningf("Details: %s", err)
-		err = c.exportTopologyDataWithDefaultTemplate(f)
+		log.Warningf("Cannot parse export template %s: %v", p, err)
+		// a minimal topology data file that just provides the name of a lab that failed to generate a proper export data
+		err = c.exportTopologyDataWithMinimalTemplate(f)
 		if err != nil {
 			return err
 		}
@@ -33,8 +32,8 @@ func (c *CLab) GenerateExports(f io.Writer, p string) error {
 	return err
 }
 
-// This struct will hold a combination of CLab structure, which is mostly derived from topology.yaml,
-// and map of NodeConfig types, which expands Node definitions with dynamically created values
+// TopologyExport holds a combination of CLab structure and map of NodeConfig types,
+// which expands Node definitions with dynamically created values
 type TopologyExport struct {
 	Name        string                       `json:"name"`
 	Type        string                       `json:"type"`
@@ -42,8 +41,9 @@ type TopologyExport struct {
 	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
 }
 
-// generates and writes topology data file to w using a template
-func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) error {
+// exportTopologyDataWithTemplate generates and writes topology data file to w using a template
+func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
+	n := filepath.Base(p)
 	t, err := template.New(n).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 		Funcs(template.FuncMap{
@@ -83,7 +83,7 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, n string, p string) e
 }
 
 // generates and writes topology data file to w using a default built-in template
-func (c *CLab) exportTopologyDataWithDefaultTemplate(w io.Writer) error {
+func (c *CLab) exportTopologyDataWithMinimalTemplate(w io.Writer) error {
 	tdef :=
 		`{
   "name": "{{ .Name }}",
