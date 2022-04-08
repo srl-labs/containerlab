@@ -18,7 +18,6 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 type CLab struct {
@@ -152,15 +151,6 @@ func (c *CLab) initMgmtNetwork() error {
 	if c.Config.Mgmt.ExternalAccess == nil {
 		c.Config.Mgmt.ExternalAccess = new(bool)
 		*c.Config.Mgmt.ExternalAccess = true
-	}
-
-	// init docker network mtu
-	if c.Config.Mgmt.MTU == "" {
-		m, err := utils.DefaultNetMTU()
-		if err != nil {
-			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
-		}
-		c.Config.Mgmt.MTU = m
 	}
 
 	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
