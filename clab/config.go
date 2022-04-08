@@ -76,6 +76,7 @@ var kinds = []string{
 	"mysocketio",
 	"host",
 	"cvx",
+	"keysight_ixia-c-one",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
