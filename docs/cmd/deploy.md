@@ -48,8 +48,11 @@ In a busy compute the runtime may respond longer than anticipated, in that case 
 
 The default timeout is set to 2 minutes and can be changed to values like `30s, 10m`.
 
-#### skip-post-deploy
-With `--skip-post-deploy` flag it is possible to skip post deployment actions.
+#### export-template
+The local `--export-template` flag allows a user to specify a custom Go template to be used as a schema for exporting topology data into `topology-data.json` under the lab directory. Without this flag, the default template path is `/etc/containerlab/templates/export/auto.tmpl`. For example, to export full topology data instead of a subset of fields exported by default, use `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+
+#### max-workers
+With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.
 
 ### Examples
 

@@ -109,20 +109,22 @@ As a result of this configuration, the generated inventory will look like this:
 ```
 
 ## Topology Data
-Every time a user runs a `deploy` command, clab automatically exports comprehensive information about the topology into `topology-data.json` file in the lab directory.
+Every time a user runs a `deploy` command, containerlab automatically exports information about the topology into `topology-data.json` file in the lab directory. Schema of exported data is determined based on a Go template specified in `--export-template` parameter, or a default template `/etc/containerlab/templates/export/auto.tmpl`, if the parameter is not provided.
 
-The topology data file contains the following top-level sections, or keys:
+Containerlab internal data that is submitted for export via the template, has the following structure:
 
-```json
-{
-  "name": "<topology name>",
-  "type": "clab",
-  "clabconfig": {"<top-level information about the lab, like management network details>"},
-  "nodes": {"<detailed information about every node in the topology, including dynamic information like management IP addresses>"},
-  "links": ["<entries for every link between nopology nodes, including interface names and allocated MAC addresses>"]
+```golang
+type TopologyExport struct {
+	Name        string                       `json:"name"`                  // Containerlab topology name
+	Type        string                       `json:"type"`                  // Always 'clab'
+	Clab        *CLab                        `json:"clab,omitempty"`        // Data parsed from a topology definitions yaml file
+	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"` // Definitions of nodes expanded with dynamically created data
 }
-````
+```
 
+To get the full list of fields available for export, you can export topology data with the following template `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+
+Example of exported data when using default `auto.tmpl` template:
 
 === "topology file srl02.clab.yml"
     ```yaml
@@ -147,35 +149,37 @@ The topology data file contains the following top-level sections, or keys:
     {
       "name": "srl02",
       "type": "clab",
-      "clabconfig": {
-        "prefix": "clab",
-        "mgmt": {
-          "network": "clab",
-          "bridge": "br-<...>",
-          "ipv4_subnet": "172.20.20.0/24",
-          "ipv6_subnet": "2001:172:20:20::/64",
-          "mtu": "1500",
-          "external-access": true
-        },
-        "config-path": "<full path to a directory with srl02.clab.yml>"
+      "clab": {
+        "config": {
+          "prefix": "clab",
+          "mgmt": {
+            "network": "clab",
+            "bridge": "br-<...>",
+            "ipv4-subnet": "172.20.20.0/24",
+            "ipv6-subnet": "2001:172:20:20::/64",
+            "mtu": "1500",
+            "external-access": true
+          },
+          "config-path": "<full path to a directory with srl02.clab.yml>"
+        }
       },
       "nodes": {
         "srl1": {
+          "index": "0",
           "shortname": "srl1",
           "longname": "clab-srl02-srl1",
           "fqdn": "srl1.srl02.io",
+          "group": "",
           "labdir": "<full path to the lab node directory>",
           "kind": "srl",
-          "nodetype": "ixr6",
           "image": "ghcr.io/nokia/srlinux",
-          "user": "0:0",
-          "cmd": "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'",
-          "mgmtipv4address": "172.20.20.2",
-          "mgmtipv4prefixLength": 24,
-          "mgmtipv6address": "2001:172:20:20::2",
-          "mgmtipv6prefixLength": 64,
-          "containerid": "<container id>",
-          "nspath": "/proc/<...>/ns/net",
+          "mgmt-net": "",
+          "mgmt-intf": "",
+          "mgmt-ipv4-address": "172.20.20.3",
+          "mgmt-ipv4-prefix-length": 24,
+          "mgmt-ipv6-address": "2001:172:20:20::3",
+          "mgmt-ipv6-prefix-length": 64,
+          "mac-address": "",
           "labels": {
             "clab-mgmt-net-bridge": "br-<...>",
             "clab-node-group": "",
@@ -185,26 +189,24 @@ The topology data file contains the following top-level sections, or keys:
             "clab-node-type": "ixr6",
             "clab-topo-file": "<full path to the srl02.clab.yml file>",
             "containerlab": "srl02"
-          },
-          "deploymentstatus": "created"
+          }
         },
         "srl2": {
+          "index": "1",
           "shortname": "srl2",
           "longname": "clab-srl02-srl2",
           "fqdn": "srl2.srl02.io",
-          "labdir": "<full path to the lab node directory>",,
-          "index": 1,
+          "group": "",
+          "labdir": "<full path to the lab node directory>",
           "kind": "srl",
-          "nodetype": "ixr6",
           "image": "ghcr.io/nokia/srlinux",
-          "user": "0:0",
-          "cmd": "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'",
-          "mgmtipv4address": "172.20.20.3",
-          "mgmtipv4prefixLength": 24,
-          "mgmtipv6address": "2001:172:20:20::3",
-          "mgmtipv6prefixLength": 64,
-          "containerid": "<container id>",
-          "nspath": "/proc/<...>/ns/net",
+          "mgmt-net": "",
+          "mgmt-intf": "",
+          "mgmt-ipv4-address": "172.20.20.2",
+          "mgmt-ipv4-prefix-length": 24,
+          "mgmt-ipv6-address": "2001:172:20:20::2",
+          "mgmt-ipv6-prefix-length": 64,
+          "mac-address": "",
           "labels": {
             "clab-mgmt-net-bridge": "br-<...>",
             "clab-node-group": "",
@@ -214,8 +216,7 @@ The topology data file contains the following top-level sections, or keys:
             "clab-node-type": "ixr6",
             "clab-topo-file": "<full path to the srl02.clab.yml file>",
             "containerlab": "srl02"
-          },
-          "deploymentstatus": "created"
+          }
         }
       },
       "links": [
@@ -223,13 +224,13 @@ The topology data file contains the following top-level sections, or keys:
           "a": {
             "node": "srl1",
             "interface": "e1-1",
-            "mac": "<mac address>"
+            "mac": "<mac address>",
             "peer": "z"
           },
           "z": {
             "node": "srl2",
             "interface": "e1-1",
-            "mac": "<mac address>"
+            "mac": "<mac address>",
             "peer": "a"
           }
         }
