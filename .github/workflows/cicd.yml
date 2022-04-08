@@ -107,7 +107,10 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        runtime: ["docker", "containerd", "podman"]
+        runtime:
+          - "docker"
+          - "podman"
+        # - "containerd"
     needs:
       - unit-test
       - build-containerlab
@@ -195,7 +198,7 @@ jobs:
       matrix:
         runtime:
           - "docker"
-          # - "containerd"
+          - "podman"
     needs:
       - unit-test
       - build-containerlab
