@@ -287,7 +287,7 @@ func setFlags(conf *clab.Config) {
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
 	for i := range containers {
-		c := &containers[i]
+		c := containers[i]
 
 		name = c.Labels[clab.NodeNameLabel]
 		if node, ok := nodesMap[name]; ok {
