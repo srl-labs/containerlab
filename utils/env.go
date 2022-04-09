@@ -123,9 +123,9 @@ func ExpandEnvVarsInStrSlice(s []string) {
 	}
 }
 
-// ConvertToEnvKey remove specual chars etc. from a string, to be used as environment variable key
+// ConvertToEnvKey removes special chars etc. from a string, to be used as environment variable key
 func ConvertToEnvKey(s string) string {
-	// match spechial chars to later replace with "_"
+	// match special chars to later replace with "_"
 	regreplace, _ := regexp.Compile("[+-./]")
 	result := regreplace.ReplaceAllString(s, "_")
 	// match only valid env var chars
