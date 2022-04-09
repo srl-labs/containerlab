@@ -1,0 +1,16 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: 04-01-ixiacone
+
+topology:
+  kinds:
+    keysight_ixia-c-one:
+      image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2738
+  nodes:
+    n1:
+      kind: keysight_ixia-c-one
+
+  links:
+    - endpoints: ["n1:eth1", "n1:eth2"]
