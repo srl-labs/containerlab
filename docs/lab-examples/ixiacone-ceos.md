@@ -1,11 +1,11 @@
-|                               |                                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------|
-| **Description**               | A Keysight ixia-c-one node connected back-to-back with Arista cEOS                  |
-| **Components**                | [Keysight ixia-c-one][ixia-c], [Arista cEOS][ceos]                     |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                |
+|                               |                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| **Description**               | A Keysight ixia-c-one node connected back-to-back with Arista cEOS                   |
+| **Components**                | [Keysight ixia-c-one][ixia-c], [Arista cEOS][ceos]                                   |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                 |
 | **Topology file**             | [ixiacone-ceos.clab.yaml][topofile]                                                  |
-| **Name**                      | ixiacone-ceos                                                                           |
-| **Version information**[^2]   | `containerlab:0.24.2`, `ixia-c-one:0.0.1-2738`, `ceos:4.26.1F`, `docker-ce:20.10.12`|
+| **Name**                      | ixiacone-ceos                                                                        |
+| **Version information**[^2]   | `containerlab:0.24.2`, `ixia-c-one:0.0.1-2738`, `ceos:4.26.1F`, `docker-ce:20.10.12` |
 
 ## Description
 This lab consists of a Keysight ixia-c-one node with 2 ports connected to 2 ports on an Arista cEOS node via two point-to-point ethernet links. Both nodes are also connected with their management interfaces to the `containerlab` docker network.  
@@ -238,7 +238,7 @@ This section will soon be update with appropriate details.
 [otg]: https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/open-traffic-generator/models/master/artifacts/openapi.yaml  
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi  
 [ceos]: https://www.arista.com/en/products/software-controlled-container-networking  
-[topofile]: ../../lab-examples/ixiac/ixiacone-ceos.clab.yaml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/ixiac/ixiacone-ceos.clab.yaml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.  
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
