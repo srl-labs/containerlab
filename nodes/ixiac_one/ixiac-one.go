@@ -25,7 +25,7 @@ var ixiacStatusConfig = struct {
 }
 
 func init() {
-	nodes.Register(nodes.NodeKindIXIACONE, func() nodes.Node {
+	nodes.Register(nodes.NodeKindKeysightIxiaCOne, func() nodes.Node {
 		return new(ixiacOne)
 	})
 }
