@@ -6,9 +6,13 @@ name: 04-01-ixiacone
 
 topology:
   nodes:
-    n1:
+    ixia:
       kind: keysight_ixia-c-one
       image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2610
+    linux:
+      kind: linux
+      image: alpine:3
 
   links:
-    - endpoints: ["n1:eth1", "n1:eth2"]
+    - endpoints: ["ixia:eth1", "linux:eth1"]
+    - endpoints: ["ixia:eth2", "linux:eth2"]
