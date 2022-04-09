@@ -192,7 +192,7 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(node.LabDir, "flash", "if-wait.sh")
 	utils.CreateFile(ifScriptP, utils.IfWaitScript)
-	os.Chmod(ifScriptP, 0777)
+	os.Chmod(ifScriptP, 0777) // skipcq: GSC-G302
 
 	return err
 }
