@@ -399,8 +399,8 @@ func (c *CLab) ListContainers(ctx context.Context, labels []*types.GenericFilter
 	return containers, nil
 }
 
-func (c *CLab) GetNodeRuntime(query string) (runtime.ContainerRuntime, error) {
-	shortName, err := getShortName(c.Config.Name, query)
+func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error) {
+	shortName, err := getShortName(c.Config.Name, c.Config.Prefix, contName)
 	if err != nil {
 		return nil, err
 	}
@@ -409,5 +409,5 @@ func (c *CLab) GetNodeRuntime(query string) (runtime.ContainerRuntime, error) {
 		return node.GetRuntime(), nil
 	}
 
-	return nil, fmt.Errorf("could not find a container matching name %q", query)
+	return nil, fmt.Errorf("could not find a container matching name %q", contName)
 }
