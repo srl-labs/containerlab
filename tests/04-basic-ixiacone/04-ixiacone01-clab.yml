@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: 04-01-ixiacone
+prefix: ""
 
 topology:
   nodes:

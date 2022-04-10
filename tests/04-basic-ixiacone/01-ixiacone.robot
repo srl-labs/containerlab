@@ -22,14 +22,14 @@ Deploy ${lab-name} lab
 
 Verify link eth1 in keysight_ixia-c-one node n1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=clab-${lab-name}-${ixia-node-name} --cmd "docker exec -t ixia-c-port-dp-${ifc1-name} ip link show eth1"
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${ixia-node-name} --cmd "docker exec -t ixia-c-port-dp-${ifc1-name} ip link show eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify link eth2 in keysight_ixia-c-one node n1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=clab-${lab-name}-${ixia-node-name} --cmd "docker exec -t ixia-c-port-dp-${ifc2-name} ip link show eth1"
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${ixia-node-name} --cmd "docker exec -t ixia-c-port-dp-${ifc2-name} ip link show eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
