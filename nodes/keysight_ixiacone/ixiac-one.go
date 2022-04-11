@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package ixiac_one
+package keysight_ixiacone
 
 import (
 	"context"
