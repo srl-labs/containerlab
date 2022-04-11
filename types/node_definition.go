@@ -54,7 +54,8 @@ type NodeDefinition struct {
 	CPUSet string `yaml:"cpu-set,omitempty"`
 	// Set node Memory (cgroup or hypervisor)
 	Memory string `yaml:"memory,omitempty"`
-
+	// Set the nodes Sysctl
+	Sysctls map[string]string `yaml:"sysctls,omitempty"`
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
 }
@@ -254,6 +255,13 @@ func (n *NodeDefinition) GetExec() []string {
 		return nil
 	}
 	return n.Exec
+}
+
+func (n *NodeDefinition) GetSysctls() map[string]string {
+	if n == nil {
+		return nil
+	}
+	return n.Sysctls
 }
 
 func (n *NodeDefinition) GetExtras() *Extras {

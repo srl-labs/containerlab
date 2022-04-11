@@ -395,6 +395,17 @@ func (t *Topology) GetNodeMemory(name string) string {
 	return ""
 }
 
+// Return the Sysctl configuration for the given node
+func (t *Topology) GetSysCtl(name string) map[string]string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return utils.MergeStringMaps(
+			utils.MergeStringMaps(t.GetDefaults().GetSysctls(),
+				t.GetKind(t.GetNodeKind(name)).GetSysctls()),
+			ndef.GetSysctls())
+	}
+	return nil
+}
+
 // Returns the 'extras' section for the given node
 func (t *Topology) GetNodeExtras(name string) *Extras {
 	if ndef, ok := t.Nodes[name]; ok {
