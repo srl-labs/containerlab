@@ -99,7 +99,7 @@ Examples below show how test designer can configure IP address on eth1 data port
     ```
 
 ## Features and options
-The free version of ixia-c supports generation of L2 and L3 traffic to test forwarding of Ethernet, IPv4 and IPv6 traffic by switches and routers. For technical support and queries , please log requests at [open-traffic-generator/ixia-c](https://github.com/open-traffic-generator/ixia-c/issues) or contact us at https://ixia-c.slack.com/signup#/domain-signup.
+The free version of ixia-c supports generation of L2 and L3 traffic to test forwarding of Ethernet, IPv4 and IPv6 traffic by switches and routers. For technical support and queries , please log requests at [open-traffic-generator/ixia-c](https://github.com/open-traffic-generator/ixia-c/issues) or contact us via [Slack](https://ixia-c.slack.com/signup#/domain-signup).
 
 The commercial version of ixia-c supports ARP/ND/Auto destination MAC resolution in data traffic, IPv4 and IPv6 BGP with IPv4 and IPv6 Routes and ISIS with IPv4 and IPv6 routes. Please contact Keysight support for further information regarding this if needed.
 
