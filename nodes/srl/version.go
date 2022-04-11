@@ -17,7 +17,8 @@ func (*srl) parseVersionString(s string) *SrlVersion {
 	v := re.FindStringSubmatch(s)
 	// 6 matches must be returned if all goes well
 	if len(v) != 6 {
-		return nil
+		// return all zeroes if failed to parse
+		return &SrlVersion{"0", "0", "0", "0", "0"}
 	}
 
 	return &SrlVersion{v[1], v[2], v[3], v[4], v[5]}
