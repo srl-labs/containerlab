@@ -258,8 +258,8 @@ func (n *NodeDefinition) GetExec() []string {
 }
 
 func (n *NodeDefinition) GetSysctls() map[string]string {
-	if n == nil {
-		return nil
+	if n == nil || n.Sysctls == nil {
+		return map[string]string{}
 	}
 	return n.Sysctls
 }
