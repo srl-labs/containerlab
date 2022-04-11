@@ -452,5 +452,31 @@ my-node:
   cpu-set: 0-1,4-5
 ```
 
+### sysctls
+The sysctl setting of containers can be adjusted via the `sysctls` knob under the `defaults`, `kind` and `node` levels.
+
+The sysctl values will be merged. Also certain kinds already setup sysctl values and these take precidence over the user defined entries.
+
+The following is an example on how to setup the sysctls.
+```yaml
+topology:
+  defaults:
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv6.icmp.ratelimi: 100
+  kinds:
+    srl:
+      sysctls:
+        net.ipv4.ip_forward: 0
+        
+  nodes:
+    node1:
+      sysctls:
+        net.ipv6.icmp.ratelimit: 1000
+```
+
+
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.
+
+
