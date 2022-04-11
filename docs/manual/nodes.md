@@ -202,6 +202,29 @@ topology:
 
 You can also specify a magic ENV VAR - `__IMPORT_ENVS: true` - which will import all environment variables defined in your shell to the relevant topology level.
 
+### env-files
+To add environment variables defined in files to a node use the `env-files` container that can be added at `defaults`, `kind` and `node` levels.
+
+The variable definitions of all the specified files are merged. More specific definitions (default -> kind -> node) will overwrite less specific.
+Files can either be specified with their absolute path, but also with a relative path. The base path for the relative path resolution is the directory that holds the clab.yml topology definition
+
+```yaml
+topology:
+  defaults:
+    env-files:
+      - envfiles/defaults
+      - /home/user/clab/default-env
+  kinds:
+    srl:
+      env-files:
+        - envfiles/common
+        - envfiles/spines
+  nodes:
+    node1:
+      env-files:
+        - /home/user/somefile
+```
+
 ### user
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.
 

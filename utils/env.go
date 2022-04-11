@@ -9,7 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 // convertEnvs convert env variables passed as a map to a list of them
@@ -91,45 +92,25 @@ func StringInSlice(slice []string, val string) (int, bool) {
 
 // load EnvVars from files
 func LoadEnvVarFiles(baseDir string, files []string) (map[string]string, error) {
-	result := map[string]string{}
+	resolvedfiles := []string{}
 	// iterate over filesnames
 	for _, file := range files {
 		// if not a root based path, we take it relative from the xyz.clab.yml file
 		if file[0] != '/' {
 			file = filepath.Join(baseDir, file)
 		}
+		resolvedfiles = append(resolvedfiles, file)
+	}
+	if len(resolvedfiles) == 0 {
+		return map[string]string{}, nil
+	}
 
-		// read file content
-		lines, err := ReadFileLines(file)
-		if err != nil {
-			return nil, err
-		}
-		// disect the string slices into maps with environment keys and values
-		envMap, err := envVarLineToMap(lines)
-		if err != nil {
-			return nil, err
-		}
-		// merge the actual file content with the overall result
-		result = MergeStringMaps(result, envMap)
+	result, err := godotenv.Read(resolvedfiles...)
+	if err != nil {
+		return nil, err
 	}
 	return result, nil
-}
 
-// envVarLineToMap splits the env variable definiton lines into key and value
-func envVarLineToMap(lines []string) (map[string]string, error) {
-	result := map[string]string{}
-	// iterate over lines
-	for _, line := range lines {
-		// split on the = sign
-		splitSlice := strings.Split(line, "=")
-		// we expect to see at least two elements in the slice (one = sign present)
-		if len(splitSlice) < 2 {
-			return nil, fmt.Errorf("issue with format of env file line '%s'", line)
-		}
-		// take the first element as the key and join the rest back with = as the value
-		result[splitSlice[0]] = strings.Join(splitSlice[1:], "=")
-	}
-	return result, nil
 }
 
 // MergeStringSlices merges string slices with duplicates removed
