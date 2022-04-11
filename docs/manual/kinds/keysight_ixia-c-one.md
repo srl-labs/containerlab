@@ -7,9 +7,11 @@ Keysight ixia-c-one is a single-container distribution of [ixia-c][ixia-c], whic
 
     It is available **for free** and distributed / deployed as a multi-container application consisting of a [controller](https://hub.docker.com/r/ixiacom/ixia-c-controller), a [traffic-engine](https://hub.docker.com/r/ixiacom/ixia-c-traffic-engine) and an [app-usage-reporter](https://hub.docker.com/r/ixiacom/ixia-c-app-usage-reporter).
 
+Users can pull ixia-c-one container image from [Github Container Registry](https://github.com/orgs/open-traffic-generator/packages/container/package/ixia-c-one).
+
 The corresponding node in containerlab is identified with `keysight_ixia-c-one` kind in the [topology file](../topo-def-file.md). Upon boot up, it comes up with:
 
-- management interface `eth0` configured with IPv4/6 addresses as assigned by container runtime
+- management interface `eth0` configured with IPv4/6 addresses as assigned by the container runtime
 - hostname assigned to the node name
 - HTTPS service enabled on port 443 (for client SDK to push configuration and fetch metrics)
 
@@ -17,8 +19,9 @@ The corresponding node in containerlab is identified with `keysight_ixia-c-one` 
 
 ixia-c-one is a "docker in docker" container hosting two kinds of [ixia-c][ixia-c] containers internally:
 
-- A set of containers acting as API endpoint and managing configuration across multiple test ports
-- A set of containers bound to network interface (created by containerlab), treating it as a test port (i.e. for generating or processing traffic, emulating protocols, etc.)
+- A container actings as an API endpoint and managing configuration across multiple test ports. This container has a name `ixia-c-controller`.
+- A set of containers acting as test ports (i.e., for generating or processing traffic, emulating protocols, etc.). Each container represents a traffic generator's port and gets created for each endpoint defined in containerlab file.  
+  These containers are named as `ixia-c-port-dp-ethX`, where X matches the interface number given in clab file.
 
 Request and response to the API endpoint is driven by [Open Traffic Generator API][otg], and can be exercised in following two ways:
 
@@ -76,7 +79,7 @@ ixia-c-one container uses the following mapping for its linux interfaces:
 
 When containerlab launches ixia-c-one node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ixia-c-one node will boot with that addresses configured.
 
-Data interfaces `eth1+` need to be configured with IP addressing manually if needed (as in the Layer3 forwarding test example).
+Data interfaces `eth1+` have to be configured with IP addressing manually if needed (as in the Layer3 forwarding test example).
 IP addresses are required when the test port needs to reply to ARP/ND queries from the Device Under Test. These addresses can be configured on non-`eth0` ports.
 
 Examples below show how test designer can configure IP address on eth1 data port of a parent container named `ixiac-one`:
@@ -84,11 +87,13 @@ Examples below show how test designer can configure IP address on eth1 data port
 === "IPv4 configuration"
     ```bash
     # set ipv4 addr
-    docker exec -it ixiac-one bash -c "./ifcfg add eth2 2.2.2.2 24"
+    docker exec -it ixiac-one bash -c "./ifcfg add eth2 2.2.2.2 24" # (1)!
 
     # remove ipv4 addr
     docker exec -it ixiac-one bash -c "./ifcfg del eth2 2.2.2.2 24"
     ```
+
+    1. Note the relative path for `./ifcfg` script. This is important, as there is a global script that is available by the `ifcfg` path.
 === "IPv6 configuration"
     ```bash
     # set ipv6 addr on eth1 iface
