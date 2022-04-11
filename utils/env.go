@@ -7,7 +7,6 @@ package utils
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 
 	"github.com/joho/godotenv"
@@ -90,27 +89,27 @@ func StringInSlice(slice []string, val string) (int, bool) {
 	return -1, false
 }
 
-// load EnvVars from files
-func LoadEnvVarFiles(baseDir string, files []string) (map[string]string, error) {
-	resolvedfiles := []string{}
-	// iterate over filesnames
+// LoadEnvVarFiles load EnvVars from the given files, resolving relative paths
+func LoadEnvVarFiles(basefolder string, files []string) (map[string]string, error) {
+	resolvedPaths := []string{}
+	// resolve given paths, relative (to topology definition file)
 	for _, file := range files {
-		// if not a root based path, we take it relative from the xyz.clab.yml file
-		if file[0] != '/' {
-			file = filepath.Join(baseDir, file)
+		resolved := ResolvePath(file, basefolder)
+		if !FileExists(resolved) {
+			return nil, fmt.Errorf("env-file %s not found (path resolved to %s)", file, resolved)
 		}
-		resolvedfiles = append(resolvedfiles, file)
+		resolvedPaths = append(resolvedPaths, resolved)
 	}
-	if len(resolvedfiles) == 0 {
+
+	if len(resolvedPaths) == 0 {
 		return map[string]string{}, nil
 	}
 
-	result, err := godotenv.Read(resolvedfiles...)
+	result, err := godotenv.Read(resolvedPaths...)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
-
 }
 
 // MergeStringSlices merges string slices with duplicates removed
