@@ -1,41 +1,60 @@
-# Keysight ixia-c-one
+# Keysight IXIA-C One
 
 Keysight ixia-c-one is a single-container distribution of [ixia-c][ixia-c], which in turn is Keysight's reference implementation of [Open Traffic Generator API][otg].
-Client SDK for configuring ixia-c-one is available in various languages, most prevalent being [gosnappi][gosnappi].  
+
+!!!info "What is IXIA-C?"
+    Ixia-c is a modern, powerful and API-driven traffic generator designed to cater to the needs of hyperscalers, network hardware vendors and hobbyists alike.
+
+    It is available **for free** and distributed / deployed as a multi-container application consisting of a [controller](https://hub.docker.com/r/ixiacom/ixia-c-controller), a [traffic-engine](https://hub.docker.com/r/ixiacom/ixia-c-traffic-engine) and an [app-usage-reporter](https://hub.docker.com/r/ixiacom/ixia-c-app-usage-reporter).
 
 The corresponding node in containerlab is identified with `keysight_ixia-c-one` kind in the [topology file](../topo-def-file.md). Upon boot up, it comes up with:
-- management interface `eth0` configured with IPv4/6 addresses as assigned by docker
+
+- management interface `eth0` configured with IPv4/6 addresses as assigned by container runtime
 - hostname assigned to the node name
 - HTTPS service enabled on port 443 (for client SDK to push configuration and fetch metrics)
 
 ## Managing ixia-c-one nodes
 
-ixia-c-one is a `docker:dind` container hosting two kinds of [ixia-c][ixia-c] containers internally:
+ixia-c-one is a "docker in docker" container hosting two kinds of [ixia-c][ixia-c] containers internally:
+
 - A set of containers acting as API endpoint and managing configuration across multiple test ports
 - A set of containers bound to network interface (created by containerlab), treating it as a test port (i.e. for generating or processing traffic, emulating protocols, etc.)
 
 Request and response to the API endpoint is driven by [Open Traffic Generator API][otg], and can be exercised in following two ways:
-- Using client SDK
+
+=== "Using SDK"
+    The example below uses Go-based [gosnappi][gosnappi] SDK client.
+
+    1. [install](https://go.dev/doc/install) go and init a module
     ```bash
-    # install go from https://go.dev/doc/install since we'll need it to run the test
-    # and setup test environment
     mkdir tests && cd tests
     go mod init tests
-    # gosnappi version needs to be compatible to a given release of ixia-c-one and
-    # can be checked from https://github.com/open-traffic-generator/ixia-c/releases
+    ```
+    1. Download gosnappi release. gosnappi version needs to be compatible to a given release of ixia-c and
+    can be checked at https://github.com/open-traffic-generator/ixia-c/releases
+    ```bash
     go get github.com/open-traffic-generator/snappi/gosnappi@v0.7.18
-    # download a basic IPv4 forwarding test
-    curl -kLO https://raw.githubusercontent.com/open-traffic-generator/snappi-tests/main/scripts/ipv4_forwarding.go
-    # run the test with MAC address obtained in previous step
+    ```
+    3. download a basic IPv4 forwarding test
+    ```
+    curl -LO https://raw.githubusercontent.com/open-traffic-generator/snappi-tests/main/scripts/ipv4_forwarding.go
+    ```
+    1. run the test with MAC address obtained in previous step
+    ```
     go run ipv4_forwarding.go -dstMac="<MAC address>"
     ```
-- Using curl and JSON payloads
+=== "Using `curl`"
     ```bash
     # fetch configuration that was last pushed to ixia-c-one
+    # clab-ixia-c-ixia-c-one is a container name allocated by clab for ixia node
     curl -kL https://clab-ixia-c-ixia-c-one/config
+
     # fetch flow metrics
     curl -kL https://clab-ixia-c-ixia-c-one/results/metrics -d '{"choice": "flow"}'
     ```
+
+## SDK
+Client SDK for configuring ixia-c is available in various languages, most prevalent being [gosnappi][gosnappi] and [snappi][snappi].
 
 ## Interfaces mapping
 ixia-c-one container uses the following mapping for its linux interfaces:
@@ -110,4 +129,4 @@ The following labs feature Keysight ixia-c-one node:
 [ixia-c]: https://github.com/open-traffic-generator/ixia-c  
 [otg]: https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/open-traffic-generator/models/master/artifacts/openapi.yaml  
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi  
-
+[snappi]: https://pypi.org/project/snappi/
