@@ -77,6 +77,7 @@ var kinds = []string{
 	"mysocketio",
 	"host",
 	"cvx",
+	"keysight_ixia-c-one",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
@@ -759,7 +760,11 @@ func sysMemory(v string) uint64 {
 }
 
 // returns nodeCfg.ShortName based on the provided containerName and labName
-func getShortName(labName, containerName string) (string, error) {
+func getShortName(labName string, labPrefix *string, containerName string) (string, error) {
+	if *labPrefix == "" {
+		return containerName, nil
+	}
+
 	result := strings.Split(containerName, "-"+labName+"-")
 	if len(result) != 2 {
 		return "", fmt.Errorf("failed to parse container name %q", containerName)
