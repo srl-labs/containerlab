@@ -203,10 +203,11 @@ topology:
 You can also specify a magic ENV VAR - `__IMPORT_ENVS: true` - which will import all environment variables defined in your shell to the relevant topology level.
 
 ### env-files
-To add environment variables defined in files to a node use the `env-files` container that can be added at `defaults`, `kind` and `node` levels.
+To add environment variables defined in a file use the `env-files` property that can be defined at `defaults`, `kind` and `node` levels.
 
-The variable definitions of all the specified files are merged. More specific definitions (default -> kind -> node) will overwrite less specific.
-Files can either be specified with their absolute path, but also with a relative path. The base path for the relative path resolution is the directory that holds the clab.yml topology definition
+The variable defined in the files are merged across all of them wtit more specific definitions overwriting less specific. Node level is the most specific one.
+
+Files can either be specified with their absolute path or a relative path. The base path for the relative path resolution is the directory that holds the topology definition file.
 
 ```yaml
 topology:
@@ -218,7 +219,7 @@ topology:
     srl:
       env-files:
         - envfiles/common
-        - envfiles/spines
+        - ~/spines
   nodes:
     node1:
       env-files:
