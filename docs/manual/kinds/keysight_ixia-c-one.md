@@ -19,14 +19,14 @@ The corresponding node in containerlab is identified with `keysight_ixia-c-one` 
 
 ixia-c-one is a "docker in docker" container hosting two kinds of [ixia-c][ixia-c] containers internally:
 
-- A container actings as an API endpoint and managing configuration across multiple test ports. This container has a name `ixia-c-controller`.
-- A set of containers acting as test ports (i.e., for generating or processing traffic, emulating protocols, etc.). Each container represents a traffic generator's port and gets created for each endpoint defined in containerlab file.  
-  These containers are named as `ixia-c-port-dp-ethX`, where X matches the interface number given in clab file.
+- API endpoint container that also manages configuration across multiple test ports. This container has the name `ixia-c-controller`.
+- A set of containers acting as test ports (i.e., for generating or processing traffic, emulating protocols, etc.). Each container represents a traffic generator's port and gets created for each endpoint defined in the containerlab file.  
+  These containers are named `ixia-c-port-dp-ethX`, where `X` matches the interface number given in the clab file.
 
-Request and response to the API endpoint is driven by [Open Traffic Generator API][otg], and can be exercised in following two ways:
+Request and response to the API endpoint are driven by [Open Traffic Generator API][otg] and can be exercised in the following two ways:
 
 === "Using SDK"
-    Using SDK is the preferred way of interacting with OTG devices. Implementations listed in the [SDK](#sdk) chapter below provides references to SDK clients in different languages along with the examples.
+    Using SDK is the preferred way of interacting with OTG devices. Implementations listed in the [SDK](#sdk) chapter below provide references to SDK clients in different languages along with examples.
 
     Test case designers create test cases using SDK in one of the supported languages and leverage native language toolchain to test/execute the tests. Being API-first, Open Traffic Generator compliant implementations provide full configuration flexibility over the API.
 
@@ -44,7 +44,7 @@ Request and response to the API endpoint is driven by [Open Traffic Generator AP
 ## SDK
 Client SDK for configuring ixia-c is available in various languages, most prevalent being [gosnappi][gosnappi] and [snappi][snappi].
 
-The example below demonstrates how [gosnappi][gosnappi] - Go-based SDK client - can be used to configure/run a traffic test along with evaluating results.
+The example below demonstrates how [gosnappi][gosnappi] - A Go-based SDK client - can be used to configure/run a traffic test and evaluate results.
 
 IPv4 Forwarding test is setup in the following way:
 
@@ -66,7 +66,7 @@ go get github.com/open-traffic-generator/snappi/gosnappi@v0.7.18
 ```
 curl -LO https://raw.githubusercontent.com/open-traffic-generator/snappi-tests/main/scripts/ipv4_forwarding.go
 ```
-1. run the test with MAC address of the `1.1.1.2` interface which is located on the DUT as per the test diagram.
+1. run the test with the MAC address of the `1.1.1.2` interface, which is located on the DUT as per the test diagram.
 ```
 go run ipv4_forwarding.go -dstMac="<MAC address>"
 ```
@@ -104,9 +104,9 @@ Examples below show how test designer can configure IP address on eth1 data port
     ```
 
 ## Features and options
-The free version of ixia-c supports generation of L2 and L3 traffic to test forwarding of Ethernet, IPv4 and IPv6 traffic by switches and routers. For technical support and queries , please log requests at [open-traffic-generator/ixia-c](https://github.com/open-traffic-generator/ixia-c/issues) or contact us via [Slack](https://ixia-c.slack.com/signup#/domain-signup).
+The free version of ixia-c supports generation of L2 and L3 traffic to test forwarding of Ethernet, IPv4 and IPv6 traffic by switches and routers. For technical support and queries, please log requests at [open-traffic-generator/ixia-c](https://github.com/open-traffic-generator/ixia-c/issues) or contact us via [Slack](https://ixia-c.slack.com/signup#/domain-signup).
 
-The commercial version of ixia-c supports ARP/ND/Auto destination MAC resolution in data traffic, IPv4 and IPv6 BGP with IPv4 and IPv6 Routes and ISIS with IPv4 and IPv6 routes. Please contact Keysight support for further information regarding this if needed.
+The commercial version of ixia-c supports ARP/ND/Auto destination MAC resolution in data traffic, IPv4 and IPv6 BGP with IPv4 and IPv6 Routes and ISIS with IPv4 and IPv6 routes[^1].
 
 ## Lab examples
 The following labs feature Keysight ixia-c-one node:
@@ -118,6 +118,7 @@ The following labs feature Keysight ixia-c-one node:
    This can be worked around by manually setting IP address on the receive interface (as explained in Interfaces mapping section above) and by learning the MAC of the connected DUT using external means such as gnmi/ssh/reading it from CLI and using it when generating packets.  
    This limitation will be removed in the ixia-c-one free version in future releases where it is planned to support ARP/ND Request and Reply for emulated interfaces.  
 
+[^1]: Please contact Keysight support for further information regarding this if needed.
 
 
 [ixia-c]: https://github.com/open-traffic-generator/ixia-c  
