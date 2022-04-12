@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+
+	"github.com/joho/godotenv"
 )
 
 // convertEnvs convert env variables passed as a map to a list of them
@@ -85,6 +87,29 @@ func StringInSlice(slice []string, val string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// LoadEnvVarFiles load EnvVars from the given files, resolving relative paths
+func LoadEnvVarFiles(basefolder string, files []string) (map[string]string, error) {
+	resolvedPaths := []string{}
+	// resolve given paths, relative (to topology definition file)
+	for _, file := range files {
+		resolved := ResolvePath(file, basefolder)
+		if !FileExists(resolved) {
+			return nil, fmt.Errorf("env-file %s not found (path resolved to %s)", file, resolved)
+		}
+		resolvedPaths = append(resolvedPaths, resolved)
+	}
+
+	if len(resolvedPaths) == 0 {
+		return map[string]string{}, nil
+	}
+
+	result, err := godotenv.Read(resolvedPaths...)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // MergeStringSlices merges string slices with duplicates removed
