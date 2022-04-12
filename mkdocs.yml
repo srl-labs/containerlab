@@ -81,7 +81,7 @@ nav:
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
-      - Keysight ixia-c-one and Arista cEOS: lab-examples/ixiacone-ceos.md
+      - Keysight IXIA-C and Nokia SR Linux: lab-examples/ixiacone-srl.md
       - Multi-node labs: lab-examples/multinode.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md

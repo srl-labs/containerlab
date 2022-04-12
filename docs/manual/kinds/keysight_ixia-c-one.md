@@ -111,7 +111,7 @@ The commercial version of ixia-c supports ARP/ND/Auto destination MAC resolution
 ## Lab examples
 The following labs feature Keysight ixia-c-one node:
 
-- [Keysight ixia-c-one and Arista cEOS](../../lab-examples/ixiacone-ceos.md)
+- [Keysight ixia-c-one and Arista cEOS](../../lab-examples/ixiacone-srl.md)
 
 ## Known issues or limitations
 1. For L3 traffic tests using the free version , there is no in-built support of ARP and ND.  

@@ -1,0 +1,20 @@
+name: ixiac01
+
+topology:
+  nodes:
+    ixia-c:
+      kind: keysight_ixia-c-one
+      image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2755
+      exec:
+        - "./ifcfg add eth1 10.10.10.1 24"
+        - "./ifcfg add eth2 10.20.20.1 24"
+    srl:
+      kind: srl
+      image: ghcr.io/nokia/srlinux
+      startup-config: srl.cfg
+      exec:
+        - bash -c "ip l show e1-1 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | head -1"
+
+  links:
+    - endpoints: ["ixia-c:eth1", "srl:e1-1"]
+    - endpoints: ["ixia-c:eth2", "srl:e1-2"]
