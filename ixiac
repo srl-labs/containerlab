@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2022-04-12T08:57:34.222Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36" etag="6lzij7BROihQK2vJPfSg" version="17.2.4" type="github" pages="2">
+<mxfile host="app.diagrams.net" modified="2022-04-12T09:02:47.916Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36" etag="4GubJOu1kDXVhLbsqibo" version="17.2.4" type="github" pages="2">
   <diagram id="3_zKztBFhm4ZAykGLBfE" name="[0] ixiac-srl">
     <mxGraphModel dx="1148" dy="645" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
@@ -412,10 +412,13 @@
           <mxGeometry x="275" y="301.25" width="59" height="15" as="geometry" />
         </mxCell>
         <mxCell id="wTvNP578jJFRJUSxW7GL-29" value="" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;fontSize=8;fillColor=#EDF3F5;position2=0;size=30;position=0.11;strokeColor=none;" vertex="1" parent="zDJArAnaMwm5IaJZyra1-1">
-          <mxGeometry x="421" y="218" width="118" height="69" as="geometry" />
+          <mxGeometry x="421" y="218" width="141" height="69" as="geometry" />
         </mxCell>
-        <mxCell id="wTvNP578jJFRJUSxW7GL-4" value="&lt;div style=&quot;font-size: 9px;&quot;&gt;&lt;font style=&quot;font-size: 9px;&quot;&gt;ip route&lt;br style=&quot;font-size: 9px;&quot;&gt;20.20.20.0/24 2.2.2.2&lt;/font&gt;&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=9;fontFamily=Fira Code;fontColor=#001135;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DFira%2BCode;connectable=0;rotation=0;opacity=60;" vertex="1" parent="zDJArAnaMwm5IaJZyra1-1">
-          <mxGeometry x="421" y="222" width="125" height="27" as="geometry" />
+        <mxCell id="wTvNP578jJFRJUSxW7GL-4" value="&lt;div style=&quot;font-size: 9px&quot;&gt;&lt;font style=&quot;font-size: 9px&quot;&gt;route&lt;br style=&quot;font-size: 9px&quot;&gt;20.20.20.0/24 via 2.2.2.2&lt;/font&gt;&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=9;fontFamily=Fira Code;fontColor=#001135;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DFira%2BCode;connectable=0;rotation=0;opacity=60;" vertex="1" parent="zDJArAnaMwm5IaJZyra1-1">
+          <mxGeometry x="421" y="222" width="146" height="27" as="geometry" />
+        </mxCell>
+        <mxCell id="wTvNP578jJFRJUSxW7GL-30" value="src: 10.10.10.1&lt;br style=&quot;font-size: 8px;&quot;&gt;dst: 20.20.20.1" style="html=1;shadow=0;dashed=0;align=center;verticalAlign=middle;shape=mxgraph.arrows2.arrow;dy=0.4;dx=24.27;notch=10.27;fontSize=8;fontColor=#EDF3F5;fillColor=#00C9FF;fontFamily=Fira Code;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DFira%2BCode;strokeColor=none;" vertex="1" parent="zDJArAnaMwm5IaJZyra1-1">
+          <mxGeometry x="196" y="218" width="124" height="32" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
