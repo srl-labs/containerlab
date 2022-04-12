@@ -107,7 +107,7 @@ func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
 	eth.Dst().SetValue(dstMac)
 
 	ip.Src().SetValue("10.10.10.1")
-	ip.Dst().Increment().SetStart("20.20.20.1").SetStep("0.0.0.1").SetCount(5)
+	ip.Dst().Increment().SetStart("10.20.20.1").SetStep("0.0.0.1").SetCount(5)
 
 	tcp.SrcPort().SetValue(3250)
 	tcp.DstPort().Decrement().SetStart(8070).SetStep(2).SetCount(10)

@@ -56,21 +56,40 @@ Run the test with MAC address obtained in previous step:
 go run ipv4_forwarding.go -dstMac="<MAC address>"
 ```
 
-#### Verification
-The test that we ran above will continuously keep checking flow metrics to ensure packet count received on rx port of ixia-c-one are as expected.
-If the condition is not met in 10 seconds, the test will timeout, hence indicating failure.  
+The test is configured to send 100 IPv4 packets with a rate 10pps from `10.10.10.1` to `10.20.20.x`, where `x` is changed from 1 to 5. Once 100 packets are sent, the test script checks that we received all the sent packets.
 
-Upon success, flow metrics should be as noted below.
+During the test run you will see flow metrics reported each second with the current flow data such as:
 
-```yaml
+```
+2022/04/12 16:28:10 Metrics Response:
 choice: flow_metrics
 flow_metrics:
-- bytes_rx: "512000"
+- bytes_rx: "44032"
   bytes_tx: "0"
-  frames_rx: "1000"
-  frames_rx_rate: 499
-  frames_tx: "1000"
-  frames_tx_rate: 500
+  frames_rx: "86"
+  frames_rx_rate: 10
+  frames_tx: "86"
+  frames_tx_rate: 9
+  name: p1.v4.p2
+  transmit: started
+```
+
+#### Verification
+The test that we ran above will continuously keep checking flow metrics to ensure packet count received on rx port of ixia-c-one are as expected.
+If the condition is not met in 10 seconds, the test will timeout, hence indicating failure.
+
+Upon success, last flow metrics output will indicate the latest status with `transmit` set to `stopped`.
+
+```yaml
+2022/04/12 16:28:11 Metrics Response:
+choice: flow_metrics
+flow_metrics:
+- bytes_rx: "51200"
+  bytes_tx: "0"
+  frames_rx: "100"
+  frames_rx_rate: 9
+  frames_tx: "100"
+  frames_tx_rate: 10
   name: p1.v4.p2
   transmit: stopped
 ```
