@@ -50,6 +50,7 @@ const (
 	NodeMgmtNetBr     = "clab-mgmt-net-bridge"
 
 	// clab specific topology variables
+	clabDirVar = "__clabDir__"
 	nodeDirVar = "__clabNodeDir__"
 )
 
@@ -76,24 +77,22 @@ var kinds = []string{
 	"mysocketio",
 	"host",
 	"cvx",
+	"keysight_ixia-c-one",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string          `json:"name,omitempty"`
-	Prefix     *string         `json:"prefix,omitempty"`
-	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
-	Topology   *types.Topology `json:"topology,omitempty"`
-	ConfigPath string          `json:"config-path,omitempty"`
+	Name     string          `json:"name,omitempty"`
+	Prefix   *string         `json:"prefix,omitempty"`
+	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
+	Topology *types.Topology `json:"topology,omitempty"`
 }
 
 // ParseTopology parses the lab topology
 func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 
-	if c.Config.ConfigPath == "" {
-		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
-	}
+	cwd, _ := filepath.Abs(os.Getenv("PWD"))
 
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
@@ -103,7 +102,7 @@ func (c *CLab) parseTopology() error {
 	c.Dir = &Directory{}
 	// labDir is always named clab-$labName, regardless of the prefix
 	labDir := strings.Join([]string{"clab", c.Config.Name}, "-")
-	c.Dir.Lab = filepath.Join(c.Config.ConfigPath, labDir)
+	c.Dir.Lab = filepath.Join(cwd, labDir)
 
 	c.Dir.LabCA = filepath.Join(c.Dir.Lab, "ca")
 	c.Dir.LabCARoot = filepath.Join(c.Dir.LabCA, "root")
@@ -260,9 +259,17 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		// Extras
 		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
+	var err error
+
+	// Load content of the EnvVarFiles
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoFile.dir, c.Config.Topology.GetNodeEnvFiles(nodeName))
+	if err != nil {
+		return nil, err
+	}
+	// Merge EnvVarFiles content and the existing env variable
+	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
 
 	log.Debugf("node config: %+v", nodeCfg)
-	var err error
 	// initialize config
 	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
@@ -697,20 +704,20 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		elems := strings.Split(binds[i], ":")
 
 		// replace special variable
-		r := strings.NewReplacer(nodeDirVar, nodedir)
+		r := strings.NewReplacer(clabDirVar, c.Dir.Lab, nodeDirVar, nodedir)
 		hp := r.Replace(elems[0])
 		hp = utils.ResolvePath(hp, c.TopoFile.dir)
 
 		_, err := os.Stat(hp)
 		if err != nil {
-			// check if the hostpath mount has a reference to ansible-inventory.yml
-			// if that is the case, we do not emit an error on missing file, since this file
+			// check if the hostpath mount has a reference to ansible-inventory.yml or topology-data.json
+			// if that is the case, we do not emit an error on missing file, since these files
 			// will be created by containerlab upon lab deployment
 			labdir := filepath.Base(filepath.Dir(nodedir))
 			s := strings.Split(hp, string(os.PathSeparator))
 			// creating a path from last two elements of a resolved host path
 			h := filepath.Join(s[len(s)-2], s[len(s)-1])
-			if h != filepath.Join(labdir, "ansible-inventory.yml") {
+			if h != filepath.Join(labdir, "ansible-inventory.yml") && h != filepath.Join(labdir, "topology-data.json") {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
@@ -774,7 +781,11 @@ func sysMemory(v string) uint64 {
 }
 
 // returns nodeCfg.ShortName based on the provided containerName and labName
-func getShortName(labName, containerName string) (string, error) {
+func getShortName(labName string, labPrefix *string, containerName string) (string, error) {
+	if *labPrefix == "" {
+		return containerName, nil
+	}
+
 	result := strings.Split(containerName, "-"+labName+"-")
 	if len(result) != 2 {
 		return "", fmt.Errorf("failed to parse container name %q", containerName)
