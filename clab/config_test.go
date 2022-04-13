@@ -5,6 +5,7 @@
 package clab
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -448,6 +449,18 @@ func TestLabelsInit(t *testing.T) {
 
 			if !cmp.Equal(labels, tc.want) {
 				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, labels)
+			}
+
+			// test that labels were propagated to env vars as CLAB_LABEL_<label-name>:<label-value>
+			env := c.Nodes[tc.node].Config().Env
+			fmt.Printf("%v\n", env)
+			for k, v := range tc.want {
+				// sanitize label key to be used as an env key
+				sk := utils.ToEnvKey(k)
+				// fail if env vars map doesn't have env var with key CLAB_LABEL_<label-name> and label value matches env value
+				if val, exists := env["CLAB_LABEL_"+sk]; !exists || val != v {
+					t.Errorf("env var %q promoted from a label %q was not found", "CLAB_LABEL_"+sk, k)
+				}
 			}
 		})
 	}

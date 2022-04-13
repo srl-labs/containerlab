@@ -200,16 +200,11 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
 
-	n.Config().Labels = utils.MergeStringMaps(n.Config().Labels, map[string]string{
-		ContainerlabLabel: c.Config.Name,
-		NodeNameLabel:     n.Config().ShortName,
-		NodeKindLabel:     n.Config().Kind,
-		NodeTypeLabel:     n.Config().NodeType,
-		NodeGroupLabel:    n.Config().Group,
-		NodeLabDirLabel:   n.Config().LabDir,
-		TopoFileLabel:     c.TopoFile.path,
-	})
 	c.Nodes[nodeName] = n
+
+	c.addDefaultLabels(n)
+
+	labelsToEnvVars(n.Config())
 
 	return nil
 }
@@ -301,18 +296,6 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
-
-	// add labels as env vars as well
-	// need to init nodeCfg.Env if is nil and label are present
-	if len(nodeCfg.Labels) > 0 && nodeCfg.Env == nil {
-		nodeCfg.Env = map[string]string{}
-	}
-
-	// Add labels to env vars
-	for k, v := range nodeCfg.Labels {
-		// add the value to the node env with a prefixed and specialchars cleaned up key
-		nodeCfg.Env["CLAB_"+utils.ConvertToEnvKey(k)] = v
-	}
 
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
 
@@ -803,4 +786,25 @@ func (c *CLab) HasKind(k string) bool {
 	}
 
 	return false
+}
+
+// addDefaultLabels adds default labels to node's config struct
+func (c *CLab) addDefaultLabels(n nodes.Node) {
+	cfg := n.Config()
+	cfg.Labels[ContainerlabLabel] = c.Config.Name
+	cfg.Labels[NodeNameLabel] = cfg.ShortName
+	cfg.Labels[NodeKindLabel] = cfg.Kind
+	cfg.Labels[NodeTypeLabel] = cfg.NodeType
+	cfg.Labels[NodeGroupLabel] = cfg.Group
+	cfg.Labels[NodeLabDirLabel] = cfg.LabDir
+	cfg.Labels[TopoFileLabel] = c.TopoFile.path
+}
+
+func labelsToEnvVars(n *types.NodeConfig) {
+	// Add labels to env vars with CLAB_LABEL_ prefix added to label keys
+	// and sanitizing the label key value
+	for k, v := range n.Labels {
+		// add the value to the node env with a prefixed and specialchars cleaned up key
+		n.Env["CLAB_LABEL_"+utils.ToEnvKey(k)] = v
+	}
 }

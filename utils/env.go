@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -74,9 +75,7 @@ func MergeStringMaps(maps ...map[string]string) map[string]string {
 			res[k] = v
 		}
 	}
-	if len(res) == 0 {
-		return nil
-	}
+
 	return res
 }
 
@@ -148,8 +147,8 @@ func ExpandEnvVarsInStrSlice(s []string) {
 	}
 }
 
-// ConvertToEnvKey removes special chars etc. from a string, to be used as environment variable key
-func ConvertToEnvKey(s string) string {
+// ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key
+func ToEnvKey(s string) string {
 	// match special chars to later replace with "_"
 	regreplace, _ := regexp.Compile("[+-./]")
 	result := regreplace.ReplaceAllString(s, "_")
@@ -157,5 +156,5 @@ func ConvertToEnvKey(s string) string {
 	regAllowed, _ := regexp.Compile("[^a-zA-Z0-9_]+")
 	result = regAllowed.ReplaceAllString(result, "")
 
-	return result
+	return strings.ToUpper(result)
 }
