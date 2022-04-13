@@ -316,6 +316,9 @@ label2: value2 # inherited from defaults section
 label3: value3 # inherited from kinds section
 ```
 
+!!!note
+    Both user-defined and containerlab-assigned labels also promoted to environment variables prefixed with `CLAB_LABEL_` prefix.
+
 ### mgmt_ipv4
 To make a node to boot with a user-specified management IPv4 address, the `mgmt_ipv4` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
 
