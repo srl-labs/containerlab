@@ -76,6 +76,10 @@ func MergeStringMaps(maps ...map[string]string) map[string]string {
 		}
 	}
 
+	if len(res) == 0 {
+		return nil
+	}
+
 	return res
 }
 

@@ -791,6 +791,10 @@ func (c *CLab) HasKind(k string) bool {
 // addDefaultLabels adds default labels to node's config struct
 func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg := n.Config()
+	if cfg.Labels == nil {
+		cfg.Labels = map[string]string{}
+	}
+
 	cfg.Labels[ContainerlabLabel] = c.Config.Name
 	cfg.Labels[NodeNameLabel] = cfg.ShortName
 	cfg.Labels[NodeKindLabel] = cfg.Kind
@@ -801,6 +805,9 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 }
 
 func labelsToEnvVars(n *types.NodeConfig) {
+	if n.Env == nil {
+		n.Env = map[string]string{}
+	}
 	// Add labels to env vars with CLAB_LABEL_ prefix added to label keys
 	// and sanitizing the label key value
 	for k, v := range n.Labels {
