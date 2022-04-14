@@ -108,4 +108,134 @@ As a result of this configuration, the generated inventory will look like this:
           ansible_host: 172.100.100.11
 ```
 
+## Topology Data
+Every time a user runs a `deploy` command, containerlab automatically exports information about the topology into `topology-data.json` file in the lab directory. Schema of exported data is determined based on a Go template specified in `--export-template` parameter, or a default template `/etc/containerlab/templates/export/auto.tmpl`, if the parameter is not provided.
+
+Containerlab internal data that is submitted for export via the template, has the following structure:
+
+```golang
+type TopologyExport struct {
+	Name        string                       `json:"name"`                  // Containerlab topology name
+	Type        string                       `json:"type"`                  // Always 'clab'
+	Clab        *CLab                        `json:"clab,omitempty"`        // Data parsed from a topology definitions yaml file
+	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"` // Definitions of nodes expanded with dynamically created data
+}
+```
+
+To get the full list of fields available for export, you can export topology data with the following template `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+
+Example of exported data when using default `auto.tmpl` template:
+
+=== "topology file srl02.clab.yml"
+    ```yaml
+    name: srl02
+
+    topology:
+      kinds:
+        srl:
+          type: ixr6
+          image: ghcr.io/nokia/srlinux
+      nodes:
+        srl1:
+          kind: srl
+        srl2:
+          kind: srl
+
+      links:
+        - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+    ```
+=== "sample generated topology-data.json"
+    ```json
+    {
+      "name": "srl02",
+      "type": "clab",
+      "clab": {
+        "config": {
+          "prefix": "clab",
+          "mgmt": {
+            "network": "clab",
+            "bridge": "br-<...>",
+            "ipv4-subnet": "172.20.20.0/24",
+            "ipv6-subnet": "2001:172:20:20::/64",
+            "mtu": "1500",
+            "external-access": true
+          },
+          "config-path": "<full path to a directory with srl02.clab.yml>"
+        }
+      },
+      "nodes": {
+        "srl1": {
+          "index": "0",
+          "shortname": "srl1",
+          "longname": "clab-srl02-srl1",
+          "fqdn": "srl1.srl02.io",
+          "group": "",
+          "labdir": "<full path to the lab node directory>",
+          "kind": "srl",
+          "image": "ghcr.io/nokia/srlinux",
+          "mgmt-net": "",
+          "mgmt-intf": "",
+          "mgmt-ipv4-address": "172.20.20.3",
+          "mgmt-ipv4-prefix-length": 24,
+          "mgmt-ipv6-address": "2001:172:20:20::3",
+          "mgmt-ipv6-prefix-length": 64,
+          "mac-address": "",
+          "labels": {
+            "clab-mgmt-net-bridge": "br-<...>",
+            "clab-node-group": "",
+            "clab-node-kind": "srl",
+            "clab-node-lab-dir": "<full path to the lab node directory>",
+            "clab-node-name": "srl1",
+            "clab-node-type": "ixr6",
+            "clab-topo-file": "<full path to the srl02.clab.yml file>",
+            "containerlab": "srl02"
+          }
+        },
+        "srl2": {
+          "index": "1",
+          "shortname": "srl2",
+          "longname": "clab-srl02-srl2",
+          "fqdn": "srl2.srl02.io",
+          "group": "",
+          "labdir": "<full path to the lab node directory>",
+          "kind": "srl",
+          "image": "ghcr.io/nokia/srlinux",
+          "mgmt-net": "",
+          "mgmt-intf": "",
+          "mgmt-ipv4-address": "172.20.20.2",
+          "mgmt-ipv4-prefix-length": 24,
+          "mgmt-ipv6-address": "2001:172:20:20::2",
+          "mgmt-ipv6-prefix-length": 64,
+          "mac-address": "",
+          "labels": {
+            "clab-mgmt-net-bridge": "br-<...>",
+            "clab-node-group": "",
+            "clab-node-kind": "srl",
+            "clab-node-lab-dir": "<full path to the lab node directory>",
+            "clab-node-name": "srl2",
+            "clab-node-type": "ixr6",
+            "clab-topo-file": "<full path to the srl02.clab.yml file>",
+            "containerlab": "srl02"
+          }
+        }
+      },
+      "links": [
+        {
+          "a": {
+            "node": "srl1",
+            "interface": "e1-1",
+            "mac": "<mac address>",
+            "peer": "z"
+          },
+          "z": {
+            "node": "srl2",
+            "interface": "e1-1",
+            "mac": "<mac address>",
+            "peer": "a"
+          }
+        }
+      ]
+    }
+    ```
+
 [^1]: For example [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin.

@@ -23,6 +23,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	ifWaitScriptContainerPath = "/mnt/flash/if-wait.sh"
+)
+
 var (
 	// defined env vars for the ceos
 	ceosEnv = map[string]string{
@@ -72,11 +76,14 @@ func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg.Env = utils.MergeStringMaps(ceosEnv, s.cfg.Env)
 
 	// the node.Cmd should be aligned with the environment.
+	// prepending original Cmd with if-wait.sh script to make sure that interfaces are available
+	// before init process starts
 	var envSb strings.Builder
-	envSb.WriteString("/sbin/init ")
+	envSb.WriteString("bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init ")
 	for k, v := range s.cfg.Env {
 		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
 	}
+	envSb.WriteString("'")
 	s.cfg.Cmd = envSb.String()
 	s.cfg.MacAddress = utils.GenMac("00:1c:73")
 
@@ -181,6 +188,11 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	if !utils.FileExists(sysMacPath) {
 		err = utils.CreateFile(sysMacPath, m.String())
 	}
+
+	// adding if-wait.sh script to flash dir
+	ifScriptP := path.Join(node.LabDir, "flash", "if-wait.sh")
+	utils.CreateFile(ifScriptP, utils.IfWaitScript)
+	os.Chmod(ifScriptP, 0777) // skipcq: GSC-G302
 
 	return err
 }

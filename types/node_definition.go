@@ -37,6 +37,8 @@ type NodeDefinition struct {
 	Publish []string `yaml:"publish,omitempty"`
 	// environment variables
 	Env map[string]string `yaml:"env,omitempty"`
+	// external file containing environment variables
+	EnvFiles []string `yaml:"env-files,omitempty"`
 	// linux user used in a container
 	User string `yaml:"user,omitempty"`
 	// container labels
@@ -184,6 +186,13 @@ func (n *NodeDefinition) GetEnv() map[string]string {
 		return nil
 	}
 	return n.Env
+}
+
+func (n *NodeDefinition) GetEnvFiles() []string {
+	if n == nil {
+		return nil
+	}
+	return n.EnvFiles
 }
 
 func (n *NodeDefinition) GetUser() string {

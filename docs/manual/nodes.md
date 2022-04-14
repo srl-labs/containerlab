@@ -159,6 +159,20 @@ topology:
 
     Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
 
+    Another special variable the containerlab topology file can use is `__clabDir__`. In the example above, it would expand into `clab-mylab` folder. With `__clabDir__` variable it becomes convenient to bind files like `ansible-inventory.yml` or `topology-data.json` that containerlab automatically creates:
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        ansible:
+          binds:
+            - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
+        graphite:
+          binds:
+            - __clabDir__/topology-data.json::/htdocs/clab/topology-data.json:ro
+    ```
+
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
 ### ports
@@ -201,6 +215,30 @@ topology:
 ```
 
 You can also specify a magic ENV VAR - `__IMPORT_ENVS: true` - which will import all environment variables defined in your shell to the relevant topology level.
+
+### env-files
+To add environment variables defined in a file use the `env-files` property that can be defined at `defaults`, `kind` and `node` levels.
+
+The variable defined in the files are merged across all of them wtit more specific definitions overwriting less specific. Node level is the most specific one.
+
+Files can either be specified with their absolute path or a relative path. The base path for the relative path resolution is the directory that holds the topology definition file.
+
+```yaml
+topology:
+  defaults:
+    env-files:
+      - envfiles/defaults
+      - /home/user/clab/default-env
+  kinds:
+    srl:
+      env-files:
+        - envfiles/common
+        - ~/spines
+  nodes:
+    node1:
+      env-files:
+        - /home/user/somefile
+```
 
 ### user
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.

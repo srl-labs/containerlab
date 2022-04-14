@@ -1,0 +1,19 @@
+# Copyright 2022 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: 04-01-ixiacone
+prefix: ""
+
+topology:
+  nodes:
+    ixia:
+      kind: keysight_ixia-c-one
+      image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2755
+    linux:
+      kind: linux
+      image: alpine:3
+
+  links:
+    - endpoints: ["ixia:eth1", "linux:eth1"]
+    - endpoints: ["ixia:eth2", "linux:eth2"]

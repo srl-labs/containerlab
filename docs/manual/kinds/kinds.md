@@ -26,22 +26,23 @@ topology:
 Containerlab supports a fixed number of kinds. Within each predefined kind we store the necessary information that is used to launch the container successfully. The following kinds are supported or in the roadmap of containerlab:
 
 
-| Name                | Kind                                  | Status       |
-| ------------------- | ------------------------------------- | ------------ |
-| **Nokia SR Linux**  | [`srl`](srl.md)                       | supported    |
-| **Nokia SR OS**     | [`vr-sros`](vr-sros.md)               | supported    |
-| **Arista cEOS**     | [`ceos`](ceos.md)                     | supported    |
-| **Arista vEOS**     | [`vr-veos`](vr-veos.md)               | supported    |
-| **Juniper cRPD**    | [`crpd`](crpd.md)                     | supported    |
-| **Juniper vMX**     | [`vr-vmx`](vr-vmx.md)                 | supported    |
-| **Juniper vQFX**    | [`vr-vqfx`](vr-vqfx.md)               | experimental |
-| **Cisco XRv9k**     | [`vr-xrv9k`](vr-xrv9k.md)             | supported    |
-| **Cisco XRv**       | [`vr-xrv`](vr-xrv.md)                 | supported    |
-| **Dell FTOS**       | [`vr-ftosv`](vr-ftosv.md)             | supported    |
-| **SONiC**           | [`sonic`](sonic-vs.md)                | supported    |
-| **Linux container** | [`linux`](linux.md)                   | supported    |
-| **Linux bridge**    | [`bridge`](bridge.md)                 | supported    |
-| **OvS bridge**      | [`ovs-bridge`](ovs-bridge.md)         | supported    |
-| **mysocketio node** | [`mysocketio`](../published-ports.md) | supported    |
+| Name                    | Kind                                            | Status       |
+| ----------------------- | ----------------------------------------------- | ------------ |
+| **Nokia SR Linux**      | [`srl`](srl.md)                                 | supported    |
+| **Nokia SR OS**         | [`vr-sros`](vr-sros.md)                         | supported    |
+| **Arista cEOS**         | [`ceos`](ceos.md)                               | supported    |
+| **Arista vEOS**         | [`vr-veos`](vr-veos.md)                         | supported    |
+| **Juniper cRPD**        | [`crpd`](crpd.md)                               | supported    |
+| **Juniper vMX**         | [`vr-vmx`](vr-vmx.md)                           | supported    |
+| **Juniper vQFX**        | [`vr-vqfx`](vr-vqfx.md)                         | experimental |
+| **Cisco XRv9k**         | [`vr-xrv9k`](vr-xrv9k.md)                       | supported    |
+| **Cisco XRv**           | [`vr-xrv`](vr-xrv.md)                           | supported    |
+| **Dell FTOS**           | [`vr-ftosv`](vr-ftosv.md)                       | supported    |
+| **SONiC**               | [`sonic`](sonic-vs.md)                          | supported    |
+| **Linux container**     | [`linux`](linux.md)                             | supported    |
+| **Linux bridge**        | [`bridge`](bridge.md)                           | supported    |
+| **OvS bridge**          | [`ovs-bridge`](ovs-bridge.md)                   | supported    |
+| **mysocketio node**     | [`mysocketio`](../published-ports.md)           | supported    |
+| **Keysight ixia-c-one** | [`keysight_ixia-c-one`](keysight_ixia-c-one.md) | supported    |
 
 Refer to a specific kind documentation article to see the details about it.

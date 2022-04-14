@@ -11,8 +11,8 @@ rpm/*
 dist
 private
 clab-*
-clab/.*.yaml
-clab/.*.yml
+.*.y*ml
+
 tmp/
 # Test binary, built with `go test -c`
 *.test

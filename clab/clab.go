@@ -18,20 +18,19 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 type CLab struct {
-	Config        *Config
-	TopoFile      *TopoFile
+	Config        *Config   `json:"config,omitempty"`
+	TopoFile      *TopoFile `json:"topofile,omitempty"`
 	m             *sync.RWMutex
-	Nodes         map[string]nodes.Node
-	Links         map[int]*types.Link
-	Runtimes      map[string]runtime.ContainerRuntime
-	globalRuntime string
-	Dir           *Directory
+	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
+	Links         map[int]*types.Link                 `json:"links,omitempty"`
+	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
+	globalRuntime string                              `json:"global-runtime,omitempty"`
+	Dir           *Directory                          `json:"dir,omitempty"`
 
-	timeout time.Duration
+	timeout time.Duration `json:"timeout,omitempty"`
 }
 
 type Directory struct {
@@ -152,15 +151,6 @@ func (c *CLab) initMgmtNetwork() error {
 	if c.Config.Mgmt.ExternalAccess == nil {
 		c.Config.Mgmt.ExternalAccess = new(bool)
 		*c.Config.Mgmt.ExternalAccess = true
-	}
-
-	// init docker network mtu
-	if c.Config.Mgmt.MTU == "" {
-		m, err := utils.DefaultNetMTU()
-		if err != nil {
-			log.Warnf("Error occurred during getting the default docker MTU: %v", err)
-		}
-		c.Config.Mgmt.MTU = m
 	}
 
 	log.Debugf("New mgmt params are %+v", c.Config.Mgmt)
@@ -409,8 +399,8 @@ func (c *CLab) ListContainers(ctx context.Context, labels []*types.GenericFilter
 	return containers, nil
 }
 
-func (c *CLab) GetNodeRuntime(query string) (runtime.ContainerRuntime, error) {
-	shortName, err := getShortName(c.Config.Name, query)
+func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error) {
+	shortName, err := getShortName(c.Config.Name, c.Config.Prefix, contName)
 	if err != nil {
 		return nil, err
 	}
@@ -419,5 +409,5 @@ func (c *CLab) GetNodeRuntime(query string) (runtime.ContainerRuntime, error) {
 		return node.GetRuntime(), nil
 	}
 
-	return nil, fmt.Errorf("could not find a container matching name %q", query)
+	return nil, fmt.Errorf("could not find a container matching name %q", contName)
 }

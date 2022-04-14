@@ -25,6 +25,12 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	// file name of a topology export data
+	topoExportFName            = "topology-data.json"
+	defaultExportTemplateFPath = "/etc/containerlab/templates/export/auto.tmpl"
+)
+
 // name of the container management network
 var mgmtNetName string
 
@@ -40,6 +46,9 @@ var maxWorkers uint
 
 // skipPostDeploy flag
 var skipPostDeploy bool
+
+// template file for topology data export
+var exportTemplate string
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
@@ -61,6 +70,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
 	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
+	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", defaultExportTemplateFPath, "template file for topology data export")
 }
 
 func deployFn(_ *cobra.Command, _ []string) error {
@@ -70,7 +80,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,
@@ -78,6 +87,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithTopoFile(topo, varsFile),
 	}
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
@@ -120,6 +130,13 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
 	ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
 	_, err = os.Create(ansibleInvFPath)
+	if err != nil {
+		return err
+	}
+
+	// in an similar fashion, create an empty topology data file
+	topoDataFPath := filepath.Join(c.Dir.Lab, topoExportFName)
+	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
 		return err
 	}
@@ -204,6 +221,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if err := c.GenerateExports(topoDataF, exportTemplate); err != nil {
+		return err
+	}
+
 	if !skipPostDeploy {
 		wg := &sync.WaitGroup{}
 		wg.Add(len(c.Nodes))
@@ -241,7 +262,9 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// exec commands specified for containers with `exec` parameter
 	execJSONResult := make(map[string]map[string]map[string]interface{})
-	for _, cont := range containers {
+	for i := range containers {
+		cont := containers[i]
+
 		name := cont.Labels[clab.NodeNameLabel]
 		if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
 			rt := node.GetRuntime()
@@ -284,7 +307,9 @@ func setFlags(conf *clab.Config) {
 }
 
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
-	for _, c := range containers {
+	for i := range containers {
+		c := &containers[i]
+
 		name = c.Labels[clab.NodeNameLabel]
 		if node, ok := nodesMap[name]; ok {
 			// add network information
