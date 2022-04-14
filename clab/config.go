@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/klauspost/cpuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -408,6 +409,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.checkIfSignatures(); err != nil {
 		return err
 	}
+	if err = c.checkHostRequirements(); err != nil {
+		return err
+	}
 
 	return c.VerifyImages(ctx)
 }
@@ -421,6 +425,17 @@ func (c *CLab) verifyBridgesExist() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (c *CLab) checkHostRequirements() error {
+	for _, n := range c.Nodes {
+		// sse3 instruction set check
+		if n.Config().HostRequirements.SSE3 && !cpuid.CPU.SSE3() {
+			return fmt.Errorf("SSE3 CPU instruction set is required by kind '%s' but not available. If containerlab runs in a VM, check if that VM has been launched with full host-cpu support", n.Config().Kind)
+		}
+	}
+
 	return nil
 }
 
