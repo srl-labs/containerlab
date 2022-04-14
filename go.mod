@@ -20,6 +20,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hairyhenderson/gomplate/v3 v3.10.0
 	github.com/hashicorp/go-version v1.2.1
+	github.com/joho/godotenv v1.4.0
 	github.com/jsimonetti/rtnetlink v0.0.0-20210226120601-1b79e63a70a0
 	github.com/kellerza/template v0.0.5
 	github.com/mitchellh/go-homedir v1.1.0
@@ -146,7 +147,6 @@ require (
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jinzhu/copier v0.3.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/josharian/native v0.0.0-20200817173448-b6b71def0850 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.1.0 // indirect

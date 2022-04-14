@@ -105,6 +105,16 @@ func (t *Topology) GetNodeEnv(name string) map[string]string {
 	return nil
 }
 
+func (t *Topology) GetNodeEnvFiles(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return utils.MergeStringSlices(
+			utils.MergeStringSlices(t.GetDefaults().GetEnvFiles(),
+				t.GetKind(t.GetNodeKind(name)).GetEnvFiles()),
+			ndef.GetEnvFiles())
+	}
+	return nil
+}
+
 func (t *Topology) GetNodePublish(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if len(ndef.GetPublish()) > 0 {

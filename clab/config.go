@@ -77,6 +77,7 @@ var kinds = []string{
 	"mysocketio",
 	"host",
 	"cvx",
+	"keysight_ixia-c-one",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
@@ -262,9 +263,17 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if nodeCfg.Sysctls == nil {
 		nodeCfg.Sysctls = map[string]string{}
 	}
+	var err error
+
+	// Load content of the EnvVarFiles
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoFile.dir, c.Config.Topology.GetNodeEnvFiles(nodeName))
+	if err != nil {
+		return nil, err
+	}
+	// Merge EnvVarFiles content and the existing env variable
+	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
 
 	log.Debugf("node config: %+v", nodeCfg)
-	var err error
 	// initialize config
 	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
@@ -763,7 +772,11 @@ func sysMemory(v string) uint64 {
 }
 
 // returns nodeCfg.ShortName based on the provided containerName and labName
-func getShortName(labName, containerName string) (string, error) {
+func getShortName(labName string, labPrefix *string, containerName string) (string, error) {
+	if *labPrefix == "" {
+		return containerName, nil
+	}
+
 	result := strings.Split(containerName, "-"+labName+"-")
 	if len(result) != 2 {
 		return "", fmt.Errorf("failed to parse container name %q", containerName)
