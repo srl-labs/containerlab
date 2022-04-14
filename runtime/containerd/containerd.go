@@ -353,8 +353,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 func (c *ContainerdRuntime) PauseContainer(ctx context.Context, cID string) error {
 	ctask, err := c.getContainerTask(ctx, cID)
 	if err != nil {
-		log.Debugf("container %s: %v", cID, err)
-		return nil
+		return err
 	}
 
 	err = ctask.Pause(ctx)
@@ -364,8 +363,7 @@ func (c *ContainerdRuntime) PauseContainer(ctx context.Context, cID string) erro
 func (c *ContainerdRuntime) UnpauseContainer(ctx context.Context, cID string) error {
 	ctask, err := c.getContainerTask(ctx, cID)
 	if err != nil {
-		log.Debugf("container %s: %v", cID, err)
-		return nil
+		return err
 	}
 
 	err = ctask.Resume(ctx)
@@ -462,8 +460,7 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
-		log.Debugf("container %s: %v", containername, err)
-		return nil
+		return err
 	}
 	taskstatus, err := ctask.Status(ctx)
 	if err != nil {

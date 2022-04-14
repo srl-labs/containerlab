@@ -8,9 +8,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -42,24 +39,6 @@ func LinkContainerNS(nspath, containerName string) error {
 		return err
 	}
 	return nil
-}
-
-// ContainerNSToPID resolves the name of a container via
-// the "/run/netns/<CONTAINERNAME>" to its PID
-func ContainerNSToPID(cID string) (int, error) {
-	pnns, err := filepath.EvalSymlinks("/run/netns/" + cID)
-	if err != nil {
-		return 0, err
-	}
-	pathElem := strings.Split(pnns, "/")
-	if len(pathElem) != 4 {
-		return 0, fmt.Errorf("unexpected result looking up container PID")
-	}
-	pid, err := strconv.Atoi(pathElem[1])
-	if err != nil {
-		return 0, fmt.Errorf("error converting the string part of the namespace link to int")
-	}
-	return pid, nil
 }
 
 // getDefaultDockerMTU gets the MTU of a docker0 bridge interface
