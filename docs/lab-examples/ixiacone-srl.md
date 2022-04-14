@@ -99,7 +99,7 @@ flow_metrics:
 [otg]: https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/open-traffic-generator/models/master/artifacts/openapi.yaml
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/ixiac/ixiac-srl.clab.yaml
+[topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ixiac01.clab.yml
 [srlcfg]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/srl.cfg
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.  
