@@ -63,19 +63,29 @@ func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 
 // merge all string maps and return a new map
 // maps that are passed for merging will not be changed
+// merging to empty maps return an empty map
+// merging nils return nil
 func MergeStringMaps(maps ...map[string]string) map[string]string {
-	res := make(map[string]string)
+	res := map[string]string{}
+
+	nonNilMapSeen := false // flag to monitor if a non nil map was passed
 	for _, m := range maps {
 		if m == nil {
 			continue
 		}
+
+		nonNilMapSeen = true
+
 		for k, v := range m {
 			res[k] = v
 		}
 	}
-	if len(res) == 0 {
+
+	// return nil nil instead of an empty map if all maps were nil
+	if !nonNilMapSeen {
 		return nil
 	}
+
 	return res
 }
 

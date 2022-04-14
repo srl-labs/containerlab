@@ -270,6 +270,7 @@ func (n *NodeDefinition) GetSysctls() map[string]string {
 	if n == nil || n.Sysctls == nil {
 		return map[string]string{}
 	}
+	
 	return n.Sysctls
 }
 

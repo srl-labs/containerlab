@@ -259,10 +259,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		// Extras
 		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
-	// init sysctl as empty map if nil
-	if nodeCfg.Sysctls == nil {
-		nodeCfg.Sysctls = map[string]string{}
-	}
+
 	var err error
 
 	// Load content of the EnvVarFiles
