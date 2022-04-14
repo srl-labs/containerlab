@@ -480,9 +480,9 @@ my-node:
 ```
 
 ### sysctls
-The sysctl setting of containers can be adjusted via the `sysctls` knob under the `defaults`, `kind` and `node` levels.
+The sysctl container' setting can be set via the `sysctls` knob under the `defaults`, `kind` and `node` levels.
 
-The sysctl values will be merged. Also certain kinds already setup sysctl values and these take precidence over the user defined entries.
+The sysctl values will be merged. Certain kinds already set up sysctl values in the background, which take precedence over the user-defined values.
 
 The following is an example on how to setup the sysctls.
 ```yaml
@@ -505,5 +505,3 @@ topology:
 
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.
-
-
