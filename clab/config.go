@@ -241,7 +241,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
-		Sysctls:         make(map[string]string),
+		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
 		Endpoints:       make([]types.Endpoint, 0),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
@@ -254,6 +254,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		// Extras
 		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
+
 	var err error
 
 	// Load content of the EnvVarFiles
