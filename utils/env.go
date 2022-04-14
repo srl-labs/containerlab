@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -155,4 +157,16 @@ func ExpandEnvVarsInStrSlice(s []string) {
 	for i, e := range s {
 		s[i] = os.ExpandEnv(e)
 	}
+}
+
+// ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key
+func ToEnvKey(s string) string {
+	// match special chars to later replace with "_"
+	regreplace, _ := regexp.Compile("[+-./]")
+	result := regreplace.ReplaceAllString(s, "_")
+	// match only valid env var chars
+	regAllowed, _ := regexp.Compile("[^a-zA-Z0-9_]+")
+	result = regAllowed.ReplaceAllString(result, "")
+
+	return strings.ToUpper(result)
 }
