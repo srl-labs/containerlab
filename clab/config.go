@@ -412,7 +412,7 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.checkIfSignatures(); err != nil {
 		return err
 	}
-	if err = c.checkSSE3CPURequiredAndAvailable(); err != nil {
+	if err = c.checkHostRequirements(); err != nil {
 		return err
 	}
 
@@ -431,18 +431,14 @@ func (c *CLab) verifyBridgesExist() error {
 	return nil
 }
 
-func (c *CLab) checkSSE3CPURequiredAndAvailable() error {
-	if cpuid.CPU.SSE3() {
-		log.Debug("SSE3 instructionset available on CPU")
-		return nil
-	}
-	log.Debug("SSE3 instructionset not available on CPU")
+func (c *CLab) checkHostRequirements() error {
 	for _, n := range c.Nodes {
-		if n.Config().SSE3Required {
-			return fmt.Errorf("SSE3 CPU instruction set required by kind '%s' but not available", n.Config().Kind)
+		// sse3 instruction set check
+		if n.Config().HostRequirements.SSE3 && !cpuid.CPU.SSE3() {
+			return fmt.Errorf("SSE3 CPU instruction set is required by kind '%s' but not available. If containerlab runs in a VM, check if that VM has been launched with full host-cpu support", n.Config().Kind)
 		}
 	}
-	log.Debug("no SSE3 CPU instructions required, continuing")
+
 	return nil
 }
 

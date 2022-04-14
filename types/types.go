@@ -103,16 +103,21 @@ type NodeConfig struct {
 	Kernel  string `json:"kernel,omitempty"`
 	// Configured container runtime
 	Runtime string `json:"runtime,omitempty"`
-	// Resource requirements
-	CPU          float64 `json:"cpu,omitempty"`
-	CPUSet       string  `json:"cpuset,omitempty"`
-	Memory       string  `json:"memory,omitempty"`
-	SSE3Required bool    `json:"sse3,omitempty"`
+	// Resource limits
+	CPU    float64 `json:"cpu,omitempty"`
+	CPUSet string  `json:"cpuset,omitempty"`
+	Memory string  `json:"memory,omitempty"`
+	// Host requirements
+	HostRequirements HostRequirements `json:"host-requirements,omitempty"`
 
 	DeploymentStatus string `json:"deployment-status,omitempty"` // status that is set by containerlab to indicate deployment stage
 
 	// Extras
 	Extras *Extras `json:"extras,omitempty"` // Extra node parameters
+}
+
+type HostRequirements struct {
+	SSE3 bool `json:"sse3,omitempty"` // sse3 cpu instruction
 }
 
 // GenerateConfig generates configuration for the nodes
