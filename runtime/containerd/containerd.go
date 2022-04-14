@@ -350,6 +350,26 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	return nil, nil
 }
 
+func (c *ContainerdRuntime) PauseContainer(ctx context.Context, cID string) error {
+	ctask, err := c.getContainerTask(ctx, cID)
+	if err != nil {
+		return err
+	}
+
+	err = ctask.Pause(ctx)
+	return err
+}
+
+func (c *ContainerdRuntime) UnpauseContainer(ctx context.Context, cID string) error {
+	ctask, err := c.getContainerTask(ctx, cID)
+	if err != nil {
+		return err
+	}
+
+	err = ctask.Resume(ctx)
+	return err
+}
+
 func cniInit(cId, ifName string, mgmtNet *types.MgmtNet) (*libcni.CNIConfig, *libcni.NetworkConfigList, *libcni.RuntimeConf, error) {
 	// allow overwriting cni plugin binary path via ENV var
 
@@ -440,8 +460,7 @@ func WithSysctls(sysctls map[string]string) oci.SpecOpts {
 func (c *ContainerdRuntime) StopContainer(ctx context.Context, containername string) error {
 	ctask, err := c.getContainerTask(ctx, containername)
 	if err != nil {
-		log.Debugf("container %s: %v", containername, err)
-		return nil
+		return err
 	}
 	taskstatus, err := ctask.Status(ctx)
 	if err != nil {
