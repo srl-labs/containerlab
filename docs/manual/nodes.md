@@ -170,7 +170,7 @@ topology:
             - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
         graphite:
           binds:
-            - __clabDir__/topology-data.json::/htdocs/clab/topology-data.json:ro
+            - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
     ```
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
