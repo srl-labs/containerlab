@@ -131,7 +131,7 @@ func (c *CLab) RemoveHostVeth(l *types.Link) (err error) {
 		}
 		err = netlink.LinkDel(link)
 		if err != nil {
-			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
+			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
 		}
 	case l.B.Node.Kind == "host":
 		log.Debugf("Removing virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
