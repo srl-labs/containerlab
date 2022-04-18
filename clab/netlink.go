@@ -118,7 +118,7 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 
 }
 
-// VethCleanup tries to remove veths connected to the host network namespace
+// RemoveHostVeth tries to remove veths connected to the host network namespace
 // And does nothing in case they are not found
 func (c *CLab) RemoveHostVeth(l *types.Link) (err error) {
 	switch {
