@@ -118,6 +118,37 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 
 }
 
+// VethCleanup tries to remove veths connected to the host network namespace
+// And does nothing in case they are not found
+func (c *CLab) RemoveHostVeth(l *types.Link) (err error) {
+	switch {
+	case l.A.Node.Kind == "host":
+		log.Debugf("Removing virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
+		link, err := netlink.LinkByName(l.A.EndpointName)
+		if err != nil {
+			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
+			break
+		}
+		err = netlink.LinkDel(link)
+		if err != nil {
+			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
+		}
+	case l.B.Node.Kind == "host":
+		log.Debugf("Removing virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
+		link, err := netlink.LinkByName(l.B.EndpointName)
+		if err != nil {
+			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
+			break
+		}
+		err = netlink.LinkDel(link)
+		if err != nil {
+			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
+		}
+	default:
+	}
+	return nil
+}
+
 // createVethIface takes two veth endpoint structs and create a veth pair and return
 // veth interface links.
 func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAddr) (linkA, linkB netlink.Link, err error) {
