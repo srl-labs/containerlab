@@ -20,6 +20,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	licDir = "/config/license/safenet"
+)
+
 var (
 	//go:embed crpd.cfg
 	cfgTemplate string
@@ -154,7 +158,12 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
-		dst = filepath.Join(nodeCfg.LabDir, "/config/license/safenet/junos_sfnt.lic")
+		dst = filepath.Join(nodeCfg.LabDir, licDir, "junos_sfnt.lic")
+
+		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir), 0777); err != nil { // skipcq: GSC-G302
+			return err
+		}
+
 		if err = utils.CopyFile(src, dst, 0644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
