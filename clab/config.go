@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/klauspost/cpuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -178,16 +179,11 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
 
-	n.Config().Labels = utils.MergeStringMaps(n.Config().Labels, map[string]string{
-		ContainerlabLabel: c.Config.Name,
-		NodeNameLabel:     n.Config().ShortName,
-		NodeKindLabel:     n.Config().Kind,
-		NodeTypeLabel:     n.Config().NodeType,
-		NodeGroupLabel:    n.Config().Group,
-		NodeLabDirLabel:   n.Config().LabDir,
-		TopoFileLabel:     c.TopoFile.path,
-	})
 	c.Nodes[nodeName] = n
+
+	c.addDefaultLabels(n)
+
+	labelsToEnvVars(n.Config())
 
 	return nil
 }
@@ -224,7 +220,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
-		Sysctls:         make(map[string]string),
+		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
 		Endpoints:       make([]types.Endpoint, 0),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
@@ -238,8 +234,17 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
 
-	log.Debugf("node config: %+v", nodeCfg)
 	var err error
+
+	// Load content of the EnvVarFiles
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoFile.dir, c.Config.Topology.GetNodeEnvFiles(nodeName))
+	if err != nil {
+		return nil, err
+	}
+	// Merge EnvVarFiles content and the existing env variable
+	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
+
+	log.Debugf("node config: %+v", nodeCfg)
 	// initialize config
 	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 	if err != nil {
@@ -269,6 +274,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
+
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
@@ -381,6 +387,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.checkIfSignatures(); err != nil {
 		return err
 	}
+	if err = c.checkHostRequirements(); err != nil {
+		return err
+	}
 
 	return c.VerifyImages(ctx)
 }
@@ -394,6 +403,17 @@ func (c *CLab) verifyBridgesExist() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (c *CLab) checkHostRequirements() error {
+	for _, n := range c.Nodes {
+		// sse3 instruction set check
+		if n.Config().HostRequirements.SSE3 && !cpuid.CPU.SSE3() {
+			return fmt.Errorf("SSE3 CPU instruction set is required by kind '%s' but not available. If containerlab runs in a VM, check if that VM has been launched with full host-cpu support", n.Config().Kind)
+		}
+	}
+
 	return nil
 }
 
@@ -738,7 +758,11 @@ func sysMemory(v string) uint64 {
 }
 
 // returns nodeCfg.ShortName based on the provided containerName and labName
-func getShortName(labName, containerName string) (string, error) {
+func getShortName(labName string, labPrefix *string, containerName string) (string, error) {
+	if *labPrefix == "" {
+		return containerName, nil
+	}
+
 	result := strings.Split(containerName, "-"+labName+"-")
 	if len(result) != 2 {
 		return "", fmt.Errorf("failed to parse container name %q", containerName)
@@ -756,4 +780,32 @@ func (c *CLab) HasKind(k string) bool {
 	}
 
 	return false
+}
+
+// addDefaultLabels adds default labels to node's config struct
+func (c *CLab) addDefaultLabels(n nodes.Node) {
+	cfg := n.Config()
+	if cfg.Labels == nil {
+		cfg.Labels = map[string]string{}
+	}
+
+	cfg.Labels[ContainerlabLabel] = c.Config.Name
+	cfg.Labels[NodeNameLabel] = cfg.ShortName
+	cfg.Labels[NodeKindLabel] = cfg.Kind
+	cfg.Labels[NodeTypeLabel] = cfg.NodeType
+	cfg.Labels[NodeGroupLabel] = cfg.Group
+	cfg.Labels[NodeLabDirLabel] = cfg.LabDir
+	cfg.Labels[TopoFileLabel] = c.TopoFile.path
+}
+
+func labelsToEnvVars(n *types.NodeConfig) {
+	if n.Env == nil {
+		n.Env = map[string]string{}
+	}
+	// Add labels to env vars with CLAB_LABEL_ prefix added to label keys
+	// and sanitizing the label key value
+	for k, v := range n.Labels {
+		// add the value to the node env with a prefixed and specialchars cleaned up key
+		n.Env["CLAB_LABEL_"+utils.ToEnvKey(k)] = v
+	}
 }

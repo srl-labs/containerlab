@@ -105,6 +105,16 @@ func (t *Topology) GetNodeEnv(name string) map[string]string {
 	return nil
 }
 
+func (t *Topology) GetNodeEnvFiles(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return utils.MergeStringSlices(
+			utils.MergeStringSlices(t.GetDefaults().GetEnvFiles(),
+				t.GetKind(t.GetNodeKind(name)).GetEnvFiles()),
+			ndef.GetEnvFiles())
+	}
+	return nil
+}
+
 func (t *Topology) GetNodePublish(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if len(ndef.GetPublish()) > 0 {
@@ -393,6 +403,17 @@ func (t *Topology) GetNodeMemory(name string) string {
 		return t.GetDefaults().GetNodeMemory()
 	}
 	return ""
+}
+
+// Return the Sysctl configuration for the given node
+func (t *Topology) GetSysCtl(name string) map[string]string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return utils.MergeStringMaps(
+			utils.MergeStringMaps(t.GetDefaults().GetSysctls(),
+				t.GetKind(t.GetNodeKind(name)).GetSysctls()),
+			ndef.GetSysctls())
+	}
+	return nil
 }
 
 // Returns the 'extras' section for the given node

@@ -18,10 +18,12 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
-* [Nokia SR-Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/)
-* [Arista cEOS](https://www.arista.com/en/products/software-controlled-container-networking)
-* [Azure SONiC](https://azure.github.io/SONiC/)
-* [Juniper cRPD](https://www.juniper.net/documentation/en_US/crpd/topics/concept/understanding-crpd.html)
+* [Nokia SR-Linux](https://containerlab.dev/manual/kinds/srl/)
+* [Arista cEOS](https://containerlab.dev/manual/kinds/ceos/)
+* [Azure SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
+* [Juniper cRPD](https://containerlab.dev/manual/kinds/crpd/)
+* [Cumulus VX](https://containerlab.dev/manual/kinds/cvx/)
+* [Keysight IXIA-C](https://containerlab.dev/manual/kinds/keysight_ixia-c-one/)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](https://containerlab.dev/manual/vrnetlab/):
 

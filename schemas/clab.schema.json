@@ -38,7 +38,8 @@
                         "bridge",
                         "ovs-bridge",
                         "mysocketio",
-                        "host"
+                        "host",
+                        "keysight_ixia-c-one"
                     ]
                 },
                 "license": {
@@ -456,6 +457,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "host": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "keysight_ixia-c-one": {
                             "$ref": "#/definitions/node-config"
                         }
                     }

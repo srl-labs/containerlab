@@ -170,7 +170,7 @@ topology:
             - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
         graphite:
           binds:
-            - __clabDir__/topology-data.json::/htdocs/clab/topology-data.json:ro
+            - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
     ```
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
@@ -215,6 +215,30 @@ topology:
 ```
 
 You can also specify a magic ENV VAR - `__IMPORT_ENVS: true` - which will import all environment variables defined in your shell to the relevant topology level.
+
+### env-files
+To add environment variables defined in a file use the `env-files` property that can be defined at `defaults`, `kind` and `node` levels.
+
+The variable defined in the files are merged across all of them wtit more specific definitions overwriting less specific. Node level is the most specific one.
+
+Files can either be specified with their absolute path or a relative path. The base path for the relative path resolution is the directory that holds the topology definition file.
+
+```yaml
+topology:
+  defaults:
+    env-files:
+      - envfiles/defaults
+      - /home/user/clab/default-env
+  kinds:
+    srl:
+      env-files:
+        - envfiles/common
+        - ~/spines
+  nodes:
+    node1:
+      env-files:
+        - /home/user/somefile
+```
 
 ### user
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.
@@ -291,6 +315,9 @@ label1: node_value1 # most specific label wins
 label2: value2 # inherited from defaults section
 label3: value3 # inherited from kinds section
 ```
+
+!!!note
+    Both user-defined and containerlab-assigned labels also promoted to environment variables prefixed with `CLAB_LABEL_` prefix.
 
 ### mgmt_ipv4
 To make a node to boot with a user-specified management IPv4 address, the `mgmt_ipv4` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
@@ -451,6 +478,30 @@ my-node:
   kind: linux
   cpu-set: 0-1,4-5
 ```
+
+### sysctls
+The sysctl container' setting can be set via the `sysctls` knob under the `defaults`, `kind` and `node` levels.
+
+The sysctl values will be merged. Certain kinds already set up sysctl values in the background, which take precedence over the user-defined values.
+
+The following is an example on how to setup the sysctls.
+```yaml
+topology:
+  defaults:
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv6.icmp.ratelimi: 100
+  kinds:
+    srl:
+      sysctls:
+        net.ipv4.ip_forward: 0
+        
+  nodes:
+    node1:
+      sysctls:
+        net.ipv6.icmp.ratelimit: 1000
+```
+
 
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.
