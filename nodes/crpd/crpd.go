@@ -160,7 +160,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 		src := nodeCfg.License
 		dst = filepath.Join(nodeCfg.LabDir, licDir, "junos_sfnt.lic")
 
-		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir), 0777); err != nil { // skipcq: GSC-G302
+		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir), 0777); err != nil { // skipcq: GSC-G301
 			return err
 		}
 
