@@ -144,7 +144,6 @@ func (c *CLab) RemoveHostVeth(l *types.Link) (err error) {
 		if err != nil {
 			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
 		}
-	default:
 	}
 	return nil
 }
