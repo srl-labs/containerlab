@@ -28,10 +28,11 @@ var interfaceFormat = map[string]string{
 	"bridge":   "veth%d",
 	"vr-sros":  "eth%d",
 	"vr-vmx":   "eth%d",
+	"vr-vqfx":  "eth%d",
 	"vr-xrv9k": "eth%d",
 	"vr-veos":  "eth%d",
 }
-var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-xrv9k"}
+var supportedKinds = []string{"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-vqfx", "vr-xrv9k"}
 
 const (
 	defaultSRLType     = "ixrd2"
@@ -257,35 +258,31 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 		}
 		def.numNodes = uint(i)
 		switch len(items) {
+		// num_nodes notation
+		// kind is assumed to be `srl` or set with --kind
 		case 1:
 			if kind == "" {
 				log.Errorf("no kind specified for nodes '%s'", n)
 				return nil, errSyntax
 			}
 			def.kind = kind
-			if kind == "srl" {
-				def.typ = defaultSRLType
-			}
+		// num_nodes:kind notation
 		case 2:
-			switch items[1] {
-			case "ceos", "linux", "bridge", "sonic", "crpd":
-				def.kind = items[1]
-			case "srl":
-				def.kind = items[1]
-				def.typ = defaultSRLType
-			default:
-				// assume second item is a type if kind set using --kind
-				if kind == "" {
-					log.Errorf("no kind specified for nodes '%s'", n)
-					return nil, errSyntax
-				}
-				def.kind = kind
-				def.typ = items[1]
+			if kind == "" {
+				log.Errorf("no kind specified for nodes '%s'", n)
+				return nil, errSyntax
 			}
-		case 3:
-			// srl with #nodes, kind and type
-			def.numNodes = uint(i)
 			def.kind = items[1]
+
+		// num_nodes:kind:type notation
+		case 3:
+			def.numNodes = uint(i)
+			def.kind = kind
+
+			if items[1] != "" {
+				def.kind = items[1]
+			}
+
 			def.typ = items[2]
 		}
 		result[idx] = def
