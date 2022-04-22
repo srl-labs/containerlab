@@ -1,12 +1,15 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"text/template"
 
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	jT "github.com/kellerza/template"
 
 	log "github.com/sirupsen/logrus"
@@ -65,7 +68,9 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
 
-	tmpl := template.New("").Funcs(jT.Funcs)
+	tmpl := template.New("").
+		Funcs(jT.Funcs).
+		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data)))
 
 	for _, nc := range allnodes {
 		for _, baseN := range TemplateNames {
