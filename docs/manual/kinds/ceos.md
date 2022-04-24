@@ -246,7 +246,15 @@ Consult your distribution's documentation for details regarding configuring cgro
     GRUB_CMDLINE_LINUX=""
     ```
 
+### WSL
+When running under WSL2 ceos datapath might appear not working. As of Feb 2022 users would need to manually enter the following iptables rules inside ceos container:
+
+```
+sudo iptables -P INPUT ACCEPT
+sudo ip6tables -P INPUT ACCEPT
+```
+
 [^1]: https://eos.arista.com/ceos-lab-topo/
 [^2]: feel free to omit the IP addressing for Management interface, as it will be configured by containerlab when ceos node boots.
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
-[^4]: for example, Ubunutu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).
+[^4]: for example, Ubuntu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).

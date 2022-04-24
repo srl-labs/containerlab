@@ -9,3 +9,5 @@ topology:
       kind: srl
       type: ixr6
       license: test_data/node1.lic
+      binds:
+        - test_data/node1.lic:/dst2

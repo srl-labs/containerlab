@@ -44,7 +44,11 @@ func (l *linux) Config() *types.NodeConfig { return l.cfg }
 func (*linux) PreDeploy(_, _, _ string) error { return nil }
 
 func (l *linux) Deploy(ctx context.Context) error {
-	_, err := l.runtime.CreateContainer(ctx, l.cfg)
+	cID, err := l.runtime.CreateContainer(ctx, l.cfg)
+	if err != nil {
+		return err
+	}
+	_, err = l.runtime.StartContainer(ctx, cID, l.cfg)
 	return err
 }
 
@@ -56,6 +60,13 @@ func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 func (l *linux) GetImages() map[string]string {
 	images := make(map[string]string)
 	images[nodes.ImageKey] = l.cfg.Image
+
+	// ignite runtime additonally needs a kernel and sandbox image
+	if l.runtime.GetName() != runtime.IgniteRuntime {
+		return images
+	}
+	images[nodes.KernelKey] = l.cfg.Kernel
+	images[nodes.SandboxKey] = l.cfg.Sandbox
 	return images
 }
 

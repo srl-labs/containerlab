@@ -61,7 +61,11 @@ func (s *vrVEOS) Config() *types.NodeConfig { return s.cfg }
 func (*vrVEOS) PreDeploy(_, _, _ string) error { return nil }
 
 func (s *vrVEOS) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
+	if err != nil {
+		return err
+	}
+	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
 

@@ -7,6 +7,9 @@ builds:
   - id: clab-bin
     env:
       - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - -tags=podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp
     ldflags:
       - -s -w -X github.com/srl-labs/containerlab/cmd.version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
     goos:

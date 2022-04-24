@@ -1,3 +1,6 @@
+//go:build !podman
+// +build !podman
+
 package all
 
 import (

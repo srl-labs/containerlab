@@ -38,6 +38,9 @@ var reconfigure bool
 // max-workers flag
 var maxWorkers uint
 
+// skipPostDeploy flag
+var skipPostDeploy bool
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -46,145 +49,162 @@ var deployCmd = &cobra.Command{
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
 	PreRunE:      sudoCheck,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var err error
+	RunE:         deployFn,
+}
 
-		log.Infof("Containerlab v%s started", version)
+func init() {
+	rootCmd.AddCommand(deployCmd)
+	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
+	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
+	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
+	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
+	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
+	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
+}
 
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo, varsFile),
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
-		}
-		c, err := clab.NewContainerLab(opts...)
+func deployFn(_ *cobra.Command, _ []string) error {
+	var err error
+
+	log.Infof("Containerlab v%s started", version)
+
+	opts := []clab.ClabOption{
+		clab.WithTimeout(timeout),
+		clab.WithTopoFile(topo, varsFile),
+		clab.WithRuntime(rt,
+			&runtime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: graceful,
+			},
+		),
+	}
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	setFlags(c.Config)
+	log.Debugf("lab Conf: %+v", c.Config)
+
+	// latest version channel
+	vCh := make(chan string)
+	go getLatestVersion(vCh)
+
+	if reconfigure {
 		if err != nil {
 			return err
 		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		setFlags(c.Config)
-		log.Debugf("lab Conf: %+v", c.Config)
-
-		// latest version channel
-		vCh := make(chan string)
-		go getLatestVersion(vCh)
-
-		if reconfigure {
-			if err != nil {
-				return err
-			}
-			_ = destroyLab(ctx, c)
-			log.Infof("Removing %s directory...", c.Dir.Lab)
-			if err := os.RemoveAll(c.Dir.Lab); err != nil {
-				return err
-			}
-		}
-
-		if err = c.CheckTopologyDefinition(ctx); err != nil {
+		_ = destroyLab(ctx, c)
+		log.Infof("Removing %s directory...", c.Dir.Lab)
+		if err := os.RemoveAll(c.Dir.Lab); err != nil {
 			return err
 		}
+	}
 
-		if err = c.CheckResources(); err != nil {
-			return err
+	if err = c.CheckTopologyDefinition(ctx); err != nil {
+		return err
+	}
+
+	if err = c.CheckResources(); err != nil {
+		return err
+	}
+
+	log.Info("Creating lab directory: ", c.Dir.Lab)
+	utils.CreateDirectory(c.Dir.Lab, 0755)
+
+	// create an empty ansible inventory file that will get populated later
+	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
+	ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
+	_, err = os.Create(ansibleInvFPath)
+	if err != nil {
+		return err
+	}
+
+	cfssllog.Level = cfssllog.LevelError
+	if debug {
+		cfssllog.Level = cfssllog.LevelDebug
+	}
+	if err := cert.CreateRootCA(c.Config.Name, c.Dir.LabCARoot, c.Nodes); err != nil {
+		return err
+	}
+
+	if err := c.CreateAuthzKeysFile(); err != nil {
+		return err
+	}
+
+	// create management network or use existing one
+	if err = c.CreateNetwork(ctx); err != nil {
+		return err
+	}
+
+	nodeWorkers := uint(len(c.Nodes))
+	linkWorkers := uint(len(c.Links))
+
+	if maxWorkers > 0 && maxWorkers < nodeWorkers {
+		nodeWorkers = maxWorkers
+	}
+
+	if maxWorkers > 0 && maxWorkers < linkWorkers {
+		linkWorkers = maxWorkers
+	}
+
+	// a set of workers that do not support concurrency
+	serialNodes := make(map[string]struct{})
+
+	// extraHosts holds host entries for nodes with static IPv4/6 addresses
+	// these entries will be used by container runtime to populate /etc/hosts file
+	extraHosts := make([]string, 0, len(c.Nodes))
+
+	for _, n := range c.Nodes {
+		if n.GetRuntime().GetName() == runtime.IgniteRuntime {
+			serialNodes[n.Config().LongName] = struct{}{}
 		}
 
-		log.Info("Creating lab directory: ", c.Dir.Lab)
-		utils.CreateDirectory(c.Dir.Lab, 0755)
-
-		// create an empty ansible inventory file that will get populated later
-		// we create it here first, so that bind mounts of ansible-inventory.yml file could work
-		ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
-		_, err = os.Create(ansibleInvFPath)
-		if err != nil {
-			return err
+		if n.Config().MgmtIPv4Address != "" {
+			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address)
+			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
 		}
 
-		cfssllog.Level = cfssllog.LevelError
-		if debug {
-			cfssllog.Level = cfssllog.LevelDebug
+		if n.Config().MgmtIPv6Address != "" {
+			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address)
+			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
 		}
-		if err := cert.CreateRootCA(c.Config.Name, c.Dir.LabCARoot, c.Nodes); err != nil {
-			return err
-		}
+	}
 
-		c.CreateAuthzKeysFile()
+	for _, n := range c.Nodes {
+		n.Config().ExtraHosts = extraHosts
+	}
 
-		// create docker network or use existing one
-		if err = c.GlobalRuntime().CreateNet(ctx); err != nil {
-			return err
-		}
+	nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
+	c.CreateLinks(ctx, linkWorkers)
+	if nodesStaticWg != nil {
+		nodesStaticWg.Wait()
+	}
+	if nodesDynWg != nil {
+		nodesDynWg.Wait()
+	}
 
-		nodeWorkers := uint(len(c.Nodes))
-		linkWorkers := uint(len(c.Links))
+	log.Debug("containers created, retrieving state and IP addresses...")
 
-		if maxWorkers > 0 && maxWorkers < nodeWorkers {
-			nodeWorkers = maxWorkers
-		}
+	// Building list of generic containers
+	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+	containers, err := c.ListContainers(ctx, labels)
+	if err != nil {
+		return err
+	}
 
-		if maxWorkers > 0 && maxWorkers < linkWorkers {
-			linkWorkers = maxWorkers
-		}
+	log.Debug("enriching nodes with IP information...")
+	enrichNodes(containers, c.Nodes)
 
-		// a set of workers that do not support concurrency
-		serialNodes := make(map[string]struct{})
+	if err := c.GenerateInventories(); err != nil {
+		return err
+	}
 
-		// extraHosts holds host entries for nodes with static IPv4/6 addresses
-		// these entries will be used by container runtime to populate /etc/hosts file
-		extraHosts := make([]string, 0, len(c.Nodes))
-
-		for _, n := range c.Nodes {
-			if n.GetRuntime().GetName() == runtime.IgniteRuntime {
-				serialNodes[n.Config().LongName] = struct{}{}
-			}
-
-			if n.Config().MgmtIPv4Address != "" {
-				log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address)
-				extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
-			}
-
-			if n.Config().MgmtIPv6Address != "" {
-				log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address)
-				extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
-			}
-		}
-
-		for _, n := range c.Nodes {
-			n.Config().ExtraHosts = extraHosts
-		}
-
-		nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
-		c.CreateLinks(ctx, linkWorkers)
-		if nodesStaticWg != nil {
-			nodesStaticWg.Wait()
-		}
-		if nodesDynWg != nil {
-			nodesDynWg.Wait()
-		}
-
-		log.Debug("containers created, retrieving state and IP addresses...")
-
-		// Building list of generic containers
-		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-		containers, err := c.ListContainers(ctx, labels)
-		if err != nil {
-			return err
-		}
-
-		log.Debug("enriching nodes with IP information...")
-		enrichNodes(containers, c.Nodes)
-
-		if err := c.GenerateInventories(); err != nil {
-			return err
-		}
-
+	if !skipPostDeploy {
 		wg := &sync.WaitGroup{}
 		wg.Add(len(c.Nodes))
 
@@ -198,64 +218,54 @@ var deployCmd = &cobra.Command{
 			}(node, wg)
 		}
 		wg.Wait()
+	}
 
-		// Update containers after postDeploy action
-		containers, err = c.ListContainers(ctx, labels)
+	// Update containers after postDeploy action
+	containers, err = c.ListContainers(ctx, labels)
+	if err != nil {
+		return err
+	}
+
+	// generate graph of the lab topology
+	if graph {
+		if err = c.GenerateGraph(topo); err != nil {
+			log.Error(err)
+		}
+	}
+
+	log.Info("Adding containerlab host entries to /etc/hosts file")
+	err = clab.AppendHostsFileEntries(containers, c.Config.Name)
+	if err != nil {
+		log.Errorf("failed to create hosts file: %v", err)
+	}
+
+	// exec commands specified for containers with `exec` parameter
+	execJSONResult := make(map[string]map[string]map[string]interface{})
+	for _, cont := range containers {
+		name := cont.Labels[clab.NodeNameLabel]
+		if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
+			rt := node.GetRuntime()
+			contName := strings.TrimLeft(cont.Names[0], "/")
+			if execJSONResult[contName], err = execCmds(ctx, cont, rt, node.Config().Exec, format); err != nil {
+				log.Errorf("Failed to exec commands for node %s", name)
+			}
+		}
+	}
+	if format == "json" && (len(execJSONResult) > 0) {
+		result, err := json.Marshal(execJSONResult)
 		if err != nil {
-			return err
+			log.Errorf("Issue converting exec results to json %v", err)
 		}
+		fmt.Println(string(result))
+	}
 
-		// generate graph of the lab topology
-		if graph {
-			if err = c.GenerateGraph(topo); err != nil {
-				log.Error(err)
-			}
-		}
+	// log new version availability info if ready
+	newVerNotification(vCh)
 
-		log.Info("Adding containerlab host entries to /etc/hosts file")
-		err = clab.AppendHostsFileEntries(containers, c.Config.Name)
-		if err != nil {
-			log.Errorf("failed to create hosts file: %v", err)
-		}
+	// print table summary
+	printContainerInspect(c, containers, format)
 
-		// exec commands specified for containers with `exec` parameter
-		execJSONResult := make(map[string]map[string]map[string]interface{})
-		for _, cont := range containers {
-			name := cont.Labels[clab.NodeNameLabel]
-			if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
-				rt := node.GetRuntime()
-				contName := strings.TrimLeft(cont.Names[0], "/")
-				if execJSONResult[contName], err = execCmds(ctx, cont, rt, node.Config().Exec, format); err != nil {
-					log.Errorf("Failed to exec commands for node %s", name)
-				}
-			}
-		}
-		if format == "json" && (len(execJSONResult) > 0) {
-			result, err := json.Marshal(execJSONResult)
-			if err != nil {
-				log.Errorf("Issue converting exec results to json %v", err)
-			}
-			fmt.Println(string(result))
-		}
-
-		// log new version availability info if ready
-		newVerNotification(vCh)
-
-		// print table summary
-		printContainerInspect(c, containers, format)
-
-		return nil
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
-	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
-	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
+	return nil
 }
 
 func setFlags(conf *clab.Config) {

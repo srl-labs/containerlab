@@ -54,6 +54,7 @@ set / system aaa authentication idle-timeout 7200
 {{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
   {{- if eq (len $parts) 3 }}
+set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num-channels 4 channel-speed 25G
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
   {{- end }}
 {{ end -}}
@@ -213,16 +214,22 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	// mount authorized_keys file to enable passwordless login
 	authzKeysPath := filepath.Join(filepath.Dir(s.cfg.LabDir), "authorized_keys")
 	if utils.FileExists(authzKeysPath) {
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"))
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"))
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"))
+		s.cfg.Binds = append(s.cfg.Binds,
+			fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"),
+			fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"),
+			fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"),
+		)
 	}
 
 	return s.createSRLFiles()
 }
 
 func (s *srl) Deploy(ctx context.Context) error {
-	_, err := s.runtime.CreateContainer(ctx, s.cfg)
+	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
+	if err != nil {
+		return err
+	}
+	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
 

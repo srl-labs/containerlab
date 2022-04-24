@@ -46,6 +46,7 @@ const (
 	NodeGroupLabel    = "clab-node-group"
 	NodeLabDirLabel   = "clab-node-lab-dir"
 	TopoFileLabel     = "clab-topo-file"
+	NodeMgmtNetBr     = "clab-mgmt-net-bridge"
 )
 
 // supported kinds
@@ -79,7 +80,7 @@ type Config struct {
 	Prefix     *string         `json:"prefix,omitempty"`
 	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology   *types.Topology `json:"topology,omitempty"`
-	ConfigPath string
+	ConfigPath string          `json:"config-path,omitempty"`
 }
 
 // ParseTopology parses the lab topology
@@ -426,9 +427,9 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 
 	for _, node := range c.Nodes {
 
-		for _, imageName := range node.GetImages() {
+		for imageKey, imageName := range node.GetImages() {
 			if imageName == "" {
-				return fmt.Errorf("missing required image for node %q", node.Config().ShortName)
+				return fmt.Errorf("missing required %q image for node %q", imageKey, node.Config().ShortName)
 			}
 			images[imageName] = node.GetRuntime().GetName()
 		}
@@ -648,7 +649,6 @@ func (*CLab) CheckResources() error {
 // sets defaults after the topology has been parsed
 func (c *CLab) setDefaults() {
 	for _, n := range c.Nodes {
-
 		// Injecting the env var with expected number of links
 		numLinks := map[string]string{
 			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", len(n.Config().Endpoints)),

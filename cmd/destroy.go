@@ -30,83 +30,7 @@ var destroyCmd = &cobra.Command{
 	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.srlinux.dev/cmd/destroy/",
 	Aliases: []string{"des"},
 	PreRunE: sudoCheck,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var err error
-		var labs []*clab.CLab
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
-		}
-
-		if keepMgmtNet {
-			opts = append(opts, clab.WithKeepMgmtNet())
-		}
-
-		topos := map[string]struct{}{}
-
-		switch {
-		case !all:
-			topos[topo] = struct{}{}
-		case all:
-			c, err := clab.NewContainerLab(opts...)
-			if err != nil {
-				return err
-			}
-			// list all containerlab containers
-			labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "exists"}}
-			containers, err := c.ListContainers(ctx, labels)
-			if err != nil {
-				return err
-			}
-
-			if len(containers) == 0 {
-				return fmt.Errorf("no containerlab labs were found")
-			}
-			// get unique topo files from all labs
-			for _, cont := range containers {
-				topos[cont.Labels["clab-topo-file"]] = struct{}{}
-			}
-		}
-
-		for topo := range topos {
-			opts := append(opts,
-				clab.WithTopoFile(topo, varsFile),
-			)
-			c, err := clab.NewContainerLab(opts...)
-			if err != nil {
-				return err
-			}
-			// change to the dir where topo file is located
-			// to resolve relative paths of license/configs in ParseTopology
-			if err = os.Chdir(filepath.Dir(topo)); err != nil {
-				return err
-			}
-
-			labs = append(labs, c)
-		}
-
-		var errs []error
-		for _, clab := range labs {
-			err = destroyLab(ctx, clab)
-			if err != nil {
-				log.Errorf("Error occurred during the %s lab deletion %v", clab.Config.Name, err)
-				errs = append(errs, err)
-			}
-		}
-		if len(errs) != 0 {
-			return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
-		}
-		return nil
-	},
+	RunE:    destroyFn,
 }
 
 func init() {
@@ -118,6 +42,95 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
 }
 
+func destroyFn(_ *cobra.Command, _ []string) error {
+	var err error
+	var labs []*clab.CLab
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	opts := []clab.ClabOption{
+		clab.WithTimeout(timeout),
+		clab.WithRuntime(rt,
+			&runtime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: graceful,
+			},
+		),
+	}
+
+	if keepMgmtNet {
+		opts = append(opts, clab.WithKeepMgmtNet())
+	}
+
+	topos := map[string]struct{}{}
+
+	switch {
+	case !all:
+		topos[topo] = struct{}{}
+	case all:
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
+		// list all containerlab containers
+		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "exists"}}
+		containers, err := c.ListContainers(ctx, labels)
+		if err != nil {
+			return err
+		}
+
+		if len(containers) == 0 {
+			return fmt.Errorf("no containerlab labs were found")
+		}
+		// get unique topo files from all labs
+		for _, cont := range containers {
+			topos[cont.Labels["clab-topo-file"]] = struct{}{}
+		}
+	}
+
+	log.Debugf("We got the following topos struct for destroy: %+v", topos)
+	for topo := range topos {
+		opts := append(opts,
+			clab.WithTopoFile(topo, varsFile),
+		)
+		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
+		// change to the dir where topo file is located
+		// to resolve relative paths of license/configs in ParseTopology
+		if err = os.Chdir(filepath.Dir(topo)); err != nil {
+			return err
+		}
+
+		labs = append(labs, c)
+	}
+
+	var errs []error
+	for _, clab := range labs {
+		err = destroyLab(ctx, clab)
+		if err != nil {
+			log.Errorf("Error occurred during the %s lab deletion %v", clab.Config.Name, err)
+			errs = append(errs, err)
+		}
+
+		if cleanup {
+			err = os.RemoveAll(clab.Dir.Lab)
+			if err != nil {
+				log.Errorf("error deleting lab directory: %v", err)
+			}
+		}
+	}
+
+	if len(errs) != 0 {
+		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
+	}
+
+	return nil
+}
+
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 
 	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
@@ -125,13 +138,9 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	if err != nil {
 		return err
 	}
+
 	if len(containers) == 0 {
 		return nil
-	}
-
-	var labDir string
-	if cleanup {
-		labDir = filepath.Dir(containers[0].Labels["clab-node-lab-dir"])
 	}
 
 	if maxWorkers == 0 {
@@ -156,22 +165,15 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	log.Infof("Destroying lab: %s", c.Config.Name)
 	c.DeleteNodes(ctx, maxWorkers, serialNodes)
 
-	// remove the lab directories
-	if cleanup {
-		err = os.RemoveAll(labDir)
-		if err != nil {
-			log.Errorf("error deleting lab directory: %v", err)
-		}
-	}
-
 	log.Info("Removing containerlab host entries from /etc/hosts file")
 	err = clab.DeleteEntriesFromHostsFile(c.Config.Name)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
 	// delete lab management network
 	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
+		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
 		if err = c.GlobalRuntime().DeleteNet(ctx); err != nil {
 			// do not log error message if deletion error simply says that such network doesn't exist
 			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
@@ -180,5 +182,10 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		}
 	}
 	// delete container network namespaces symlinks
-	return c.DeleteNetnsSymlinks()
+	err = c.DeleteNetnsSymlinks()
+	if err != nil {
+		return fmt.Errorf("error while deleting netns symlinks: %w", err)
+	}
+
+	return err
 }

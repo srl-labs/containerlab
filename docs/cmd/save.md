@@ -6,10 +6,12 @@ The `save` command perform configuration save for all the containers running in 
 
 The exact command that performs configuration save depends on a given kind. The below table explains the method used for each kind:
 
-| Kind               | Command                                                    | Notes                                       |
-| ------------------ | ---------------------------------------------------------- | ------------------------------------------- |
-| **Nokia SR Linux** | `sr_cli -d tools system configuration generate-checkpoint` | configuration is saved in a checkpoint file |
-| **Arista cEOS**    | not yet implemented                                        |                                             |
+| Kind               | Command                                     | Notes                                                   |
+| ------------------ | ------------------------------------------- | ------------------------------------------------------- |
+| **Nokia SR Linux** | `sr_cli -d tools system configuration save` |                                                         |
+| **Nokia SR OS**    |                                             | delivered via netconf RPC `copy-config running startup` |
+| **Arista cEOS**    | `Cli -p 15 -c wr`                           |                                                         |
+
 
 ### Usage
 

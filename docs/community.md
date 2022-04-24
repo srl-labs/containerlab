@@ -75,6 +75,25 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+### Multipoint Redistribution and SR Linux
+<small>:material-text: [Blog](https://juliopdx.com/2022/01/22/multipoint-redistribution-and-sr-linux/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-01-22</small>
+
+I’ve been working my way through Optimal Routing Design by Russ White, Don Slice, and Alvaro Retana. It has been a great read so far and I highly recommend it. When I work through a book I usually try and lab up any concept I can, this helps me make it stick as much as possible. Early on in the book the authors mention redistribution and possible issues that can come with doing it at more than one point in the network. So here we are reading this post. I hope you enjoy and possibly learn something along the way.
+
+Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/1485040052811960321)
+
+### Real-time telemetry from a 5 stage Clos fabric
+<small>:material-text: [Blog](https://blog.sflow.com/2022/02/real-time-telemetry-from-5-stage-clos.html) by [Peter Phaal](https://twitter.com/sFlow) · :material-calendar: 2022-02-21</small>
+
+As Peter wrote, sFlow is a companion to the Streaming Telemetry applications. It's UDP based transport claims to be more suitable for situations where networks are congested. In this blog Peter explains how containerlab can deploy a Clos topolgy with sFlow collector and endpoints generating traffic to see the whole machinery in action.
+
+Discussions: [:material-twitter:](https://twitter.com/sFlow/status/1495804147177775104)
+
+### netsim-tools and containerlab
+<small>:material-text: [Blog](https://juliopdx.com/2022/02/13/network-simulation-tools-and-containerlab/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-02-13</small>
+
+Julio is back with another great post about combining netsim-tools with containerlab.
+
 ### Network Modeling: Automating Mikrotik RouterOS CHR Containerlab images
 <small>:material-text: [Blog](https://stubarea51.net/2021/12/20/network-modeling-automating-mikrotik-routeros-chr-containerlab-images/) by [@nlgotz](https://twitter.com/nlgotz) · :material-calendar: 2021-12-20</small>
 
@@ -106,6 +125,13 @@ Discussions: [:material-twitter:](https://twitter.com/stubarea51/status/14632179
 Alperen did a great job explaining how to build a DC fabric topology using containerlab. This was the first post in the series, making it an excellent intro to containerlab, especially when you follow the [screencast](https://youtu.be/d2f1SYRyj0I) and watch the topology buildup live.
 
 In a [subsequent post](https://networkcloudandeverything.com/configuring-srlinux-nodes-in-a-3-tier-data-center/), Alperen explains how to configure the SR Linux fabric he just built.
+
+### How to consistently run a temporary VM on AWS to run Containerlab
+<small>:material-text: [Blog](https://nleiva.medium.com/how-you-can-consistently-run-temporary-workloads-in-the-cloud-37140b4b5e55#8d6d) by [@_nleiva](https://twitter.com/_nleiva) · :material-calendar: 2021-07-12</small>
+
+Create and then destroy a cloud environment ready to Containerlab with pre-loaded topology files, which just work if you use FRR and SR Linux. If you need to run Arista's cEOS, see: [Getting cEOS image](https://github.com/nleiva/aws-testbed/blob/main/lab/get_arista_ceos.md).
+
+This post describes the benefits of running any temporary workload in the cloud to then focus on Containerlab, so skip to the “Network testing challenges” section if you want to get to the meat of it. More details on the labs included at [Network Labs](https://github.com/nleiva/aws-testbed/tree/main/lab#network-labs).
 
 [rdodin-twitter]: https://twitter.com/ntdvps
 [rdodin-linkedin]: https://linkedin.com/in/rdodin

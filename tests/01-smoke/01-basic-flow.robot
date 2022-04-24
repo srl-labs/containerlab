@@ -32,7 +32,7 @@ Deploy ${lab-name} lab
 
 Ensure exec command works
     [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works. NOTE that containerd runtime is excluded because it often doesn't have one of the exec commands. To be investigated further.
-    Skip If    '${runtime}' != 'docker'
+    Skip If    '${runtime}' == 'containerd'
     # ensure exec commands work
     Should Contain    ${deploy-output}    this_is_an_exec_test
     Should Contain    ${deploy-output}    ID=alpine
@@ -46,6 +46,9 @@ Inspect ${lab-name} lab
 Define runtime exec command
     IF    "${runtime}" == "containerd"
         Set Suite Variable    ${runtime-cli-exec-cmd}    sudo ctr -n clab t exec --exec-id clab
+    END
+    IF    "${runtime}" == "podman"
+        Set Suite Variable    ${runtime-cli-exec-cmd}    sudo podman exec
     END
 
 Verify links in node l1
@@ -86,9 +89,8 @@ Ensure "inspect all" outputs IP addresses
     # verify ipv4 address
     ${ipv4} =    String.Strip String    ${data}[9]
     Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
-    # verify ipv6 address
-    ${ipv6} =    String.Strip String    ${data}[10]
-    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+/\\d{1,2}$
+    # verify ipv6 address. Not implemented for podman, as podman doesn't have IPv6 network support yet
+    Run Keyword If    '${runtime}' != 'podman'    Match IPv6 Address    ${data}[10]
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -104,12 +106,16 @@ Verify port forwarding for node l2
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Thank you for using nginx
 
-Verify static mgmt addressing for l2
-    Skip If    '${runtime}' != 'docker'
+Verify static ipv4 mgmt addressing for l2
+    Skip If    '${runtime}' == 'containerd'
     ${rc}    ${ipv4} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -4 a sh eth0 | cut -d ' ' -f7
     Log    ${ipv4}
     Should Be Equal As Strings    ${ipv4}    ${n2-ipv4}
+
+Verify static ipv6 mgmt addressing for l2
+    # skipping for containerd and podman. Podman doesn't implement ipv6 network yet
+    Skip If    '${runtime}' == 'containerd' or '${runtime}' == 'podman'
     ${rc}    ${ipv6} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -6 a sh eth0 | cut -d ' ' -f7 | head -1
     Log    ${ipv6}
@@ -124,22 +130,43 @@ Verify l1 environment has MYVAR variable set
 
 Verify Hosts entries exist
     [Documentation]    Verification that the expected /etc/hosts entries are created. We are also checking for the HEADER and FOOTER values here, which also contain the lab name.
+    # log host entries for tshooting
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    cat /etc/hosts | grep "${lab-name}"
+    Log    ${output}
+    # not get number of lines related to the current lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep "${lab-name}" | wc -l
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    6
+    # podman only has ipv4 networks support so far, thus only ipv4 host entries are expected
+    Run Keyword If    '${runtime}' == 'podman'    Should Contain    ${output}    4
+    Run Keyword If    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
-    Skip If    '${runtime}' != 'docker'
+    Skip If    '${runtime}' == 'containerd'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    docker inspect clab-${lab-name}-l1 -f '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'
     Log    ${output}
     # cpu=1.5
     Should Contain    ${output}    150000
     # memory=1G
     Should Contain    ${output}    1000000000
+
+Verify iptables allow rule is set
+    [Documentation]    Checking if iptables allow rule is set so that external traffic can reach containerlab management network
+    Skip If    '${runtime}' != 'docker'
+    ${br} =    Run
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{index .Config.Labels "clab-mgmt-net-bridge"}}'
+    Log    ${br}
+    Set Suite Variable    ${MgmtBr}    ${br}
+    ${ipt} =    Run
+    ...    sudo iptables -vnL DOCKER-USER
+    Log    ${ipt}
+    Should Contain    ${ipt}    ACCEPT all -- * ${MgmtBr}
+    ...    ignore_case=True
+    ...    collapse_spaces=True
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -161,7 +188,21 @@ Verify Hosts file has same number of lines
     Log    ${output}
     Should Be Equal As Integers    ${HostsFileLines}    ${output}
 
+Verify iptables allow rule are gone
+    [Documentation]    Checking if iptables allow rule is removed once the lab is destroyed
+    Skip If    '${runtime}' != 'docker'
+    ${ipt} =    Run
+    ...    sudo iptables -vnL DOCKER-USER
+    Log    ${ipt}
+    Should Not Contain    ${ipt}    ${MgmtBr}
+
 *** Keywords ***
 Setup
     Run    rm -rf ${bind-orig-path}
     OperatingSystem.Create File    ${bind-orig-path}    Hello, containerlab
+
+Match IPv6 Address
+    [Arguments]
+    ...    ${address}=${None}
+    ${ipv6} =    String.Strip String    ${address}
+    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+/\\d{1,2}$

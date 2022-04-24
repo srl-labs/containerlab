@@ -249,7 +249,7 @@ banner  cli  config.json  devices  tls  ztp
 The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type`, the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
 
 #### authorized keys
-Additionally, containerlab will mount the `authorized_keys` file that will contain contents of every public key found in `~/.ssh` directory. This file will be mounted to `~/.ssh/authorized_keys` path for the following users:
+Additionally, containerlab will mount the `authorized_keys` file that will have contents of every public key found in `~/.ssh` directory as well as the contents of a `~/.ssh/authorized_keys` file if it exists[^2]. This file will be mounted to `~/.ssh/authorized_keys` path for the following users:
 
 * `root`
 * `linuxadmin`
@@ -258,3 +258,4 @@ Additionally, containerlab will mount the `authorized_keys` file that will conta
 This will enable passwordless access for the users above if any public key is found in the user's directory.
 
 [^1]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access.
+[^2]: If running with `sudo`, add `-E` flag to sudo to preserve user' home directory for this feature to work as expected.

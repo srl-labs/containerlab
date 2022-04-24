@@ -24,7 +24,7 @@ This lab demonstrates a simple iBGP peering scenario between Nokia SR Linux and 
 Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration and enable BGP on both nodes.
 
 === "srl"
-    Get into SR Linux CLI with `docker exec -it clab-srlsonic01-srl sr_cli` and start configuration
+    Get into SR Linux CLI with `docker exec -it clab-sonic01-srl sr_cli` and start configuration
     ```bash
     # enter candidate datastore
     enter candidate
@@ -57,13 +57,30 @@ Once the lab is deployed with containerlab, use the following configuration inst
     commit now
     ```
 === "sonic"
-    Get into sonic container shell with `docker exec -it clab-srlsonic01-sonic bash` and configure the so-called _front-panel_ ports.  
-    Since we defined only one data interface for our sonic/srl nodes, we need to confgure a single port:
+    Get into sonic container shell with `docker exec -it clab-sonic01-sonic bash` and configure the so-called _front-panel_ ports.  
+    Since we defined only one data interface for our sonic/srl nodes, we need to confgure a single port and a loopback interface:
     ```bash
     config interface ip add Ethernet0 192.168.1.2/24
     config interface startup Ethernet0
+    config loopback add Loopback0
+    config interface ip add Loopback0 10.10.10.2/32
+    config interface startup Loopback0
     ```
-    Now when data interface has been configured, enter in the FRR shell to configure BGP by typing `vtysh` command inside the sonic container.
+    Now when data interface has been configured, check to make sure in /etc/frr/daemons that "bgpd=yes".  Restart the frr service if required and verify that bgpd is running.
+    ```bash
+    root@sonic:/# service frr restart
+    [ ok ] Stopped watchfrr.
+    [ ok . Stopped staticd[....] Stopped zebra[....] Stopped bgpd
+    .
+    .
+    [ ok ] Started watchfrr.
+    root@sonic:/# service frr status
+    [ ok ] Status of watchfrr: running.
+    [ ok ] Status of zebra: running.
+    [ ok ] Status of bgpd: running.
+    [ ok ] Status of staticd: running.
+    ```
+    Then enter in the FRR shell to configure BGP by typing `vtysh` command inside the sonic container.
     ```bash
     # enter configuration mode
     configure
@@ -99,6 +116,7 @@ Once BGP peering is established, the routes can be seen in GRT of both nodes:
 
     K>* 0.0.0.0/0 [0/0] via 172.20.20.1, eth0, 00:20:55
     B>* 10.10.10.1/32 [200/0] via 192.168.1.1, Ethernet0, 00:01:51
+    C>* 10.10.10.2/32 is directly connected, Loopback0, 00:00:53
     C>* 172.20.20.0/24 is directly connected, eth0, 00:20:55
     B   192.168.1.0/24 [200/0] via 192.168.1.0 inactive, 00:01:51
     C>* 192.168.1.0/24 is directly connected, Ethernet0, 00:03:50
