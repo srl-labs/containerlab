@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -56,6 +57,25 @@ func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 		}
 	}
 	return res
+}
+
+func MergeStructConfigs(defaults, kind, node interface{}) interface{} {
+	// marshal kind struct to json and unmarshal to defaults
+	kindB, _ := json.Marshal(kind)
+	err := json.Unmarshal(kindB, defaults)
+	if err != nil {
+		fmt.Printf("Unable to unmarshal Kind struct, returning 'defaults'")
+		return defaults
+	}
+
+	// marshal node struct to json and unmarshal to defaults which by now has kinds settings merged
+	nodeB, _ := json.Marshal(node)
+	err = json.Unmarshal(nodeB, defaults)
+	if err != nil {
+		fmt.Printf("Unable to unmarshal Node struct, returning 'defaults and kind'")
+		return defaults
+	}
+	return defaults
 }
 
 // merge all string maps and return a new map

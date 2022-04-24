@@ -120,7 +120,7 @@ func (d *ScrapliTransport) Connect(host string, _ ...TransportOption) error {
 	return nil
 }
 
-func (t *ScrapliTransport) Write(data, info *string) error {
+func (t *ScrapliTransport) Write(data, _ *string) error {
 	if *data == "" {
 		return nil
 	}

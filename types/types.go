@@ -256,7 +256,18 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 
 func (cd *ConfigDispatcher) GetTransports() *ConfigTransport {
 	if cd == nil {
-		return nil
+		return &ConfigTransport{
+			Scrapli: &ScrapliConfig{
+				Port:              22,
+				AuthUsername:      "",
+				AuthPassword:      "",
+				AuthSecondary:     "",
+				AuthPrivateKey:    "",
+				AuthStrictKey:     false,
+				SSHConfigFile:     "",
+				SSHKnownHostsFile: "",
+			},
+		}
 	}
 	return cd.Transport
 }

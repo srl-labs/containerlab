@@ -138,23 +138,13 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 		vars := utils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
 			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars(),
 			ndef.GetConfigDispatcher().GetVars())
-		node_transports := ndef.GetConfigDispatcher().GetTransports()
-		if node_transports != nil {
-			return &ConfigDispatcher{
-				Vars:      vars,
-				Transport: node_transports,
-			}
-		}
-		kind_transports := t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetTransports()
-		if kind_transports != nil {
-			return &ConfigDispatcher{
-				Vars:      vars,
-				Transport: kind_transports,
-			}
-		}
+		config_transports := utils.MergeStructConfigs(
+			t.Defaults.GetConfigDispatcher().GetTransports(),
+			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetTransports(),
+			ndef.GetConfigDispatcher().GetTransports()).(*ConfigTransport)
 		return &ConfigDispatcher{
 			Vars:      vars,
-			Transport: t.Defaults.GetConfigDispatcher().GetTransports(),
+			Transport: config_transports,
 		}
 	}
 	return nil
