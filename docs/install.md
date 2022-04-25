@@ -16,13 +16,13 @@ Containerlab can be installed using the [installation script](https://github.com
 
 ```bash
 # download and install the latest release (may require sudo)
-bash -c "$(curl -sL https://get-clab.srlinux.dev)"
+bash -c "$(curl -sL https://get.containerlab.dev)"
 
 # download a specific version - 0.10.3 (may require sudo)
-bash -c "$(curl -sL https://get-clab.srlinux.dev)" -- -v 0.10.3
+bash -c "$(curl -sL https://get.containerlab.dev)" -- -v 0.10.3
 
 # with wget
-bash -c "$(wget -qO - https://get-clab.srlinux.dev)"
+bash -c "$(wget -qO - https://get.containerlab.dev)"
 ```
 
 ### Package managers

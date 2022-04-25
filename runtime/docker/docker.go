@@ -16,6 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/go-units"
+	"golang.org/x/sys/unix"
+
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -35,6 +38,9 @@ const (
 	runtimeName    = "docker"
 	sysctlBase     = "/proc/sys"
 	defaultTimeout = 30 * time.Second
+	rLimitMaxValue = 1048576
+	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating containers
+	defaultDockerNetwork = "bridge"
 )
 
 func init() {
@@ -84,6 +90,23 @@ func (d *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 
 func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	d.mgmt = n
+	// return if MTU value was set by a user via config file
+	if n.MTU != "" {
+		return
+	}
+
+	// detect default MTU if this config parameter was not provided in the clab file
+	d0, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
+	if err != nil {
+		d.mgmt.MTU = "1500"
+		log.Debugf("an error occured when trying to detect docker default network mtu")
+	}
+
+	if mtu, ok := d0.Options["com.docker.network.driver.mtu"]; ok {
+		log.Debugf("detected docker network mtu value - %s", mtu)
+		d.mgmt.MTU = mtu
+	}
+
 }
 
 // CreateDockerNet creates a docker network or reusing if it exists
@@ -236,7 +259,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	}
 	err = d.installIPTablesFwdRule()
 	if err != nil {
-		log.Warnf("%v", err)
+		log.Warnf("errors during iptables rules install: %v", err)
 	}
 
 	return nil
@@ -275,10 +298,20 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	br := "br-" + nres.ID[:12]
 	err = d.deleteIPTablesFwdRule(br)
 	if err != nil {
-		log.Warnf("%v", err)
+		log.Warnf("errors during iptables rules removal: %v", err)
 	}
 
 	return nil
+}
+
+// PauseContainer Pauses a container identified by its name
+func (d *DockerRuntime) PauseContainer(ctx context.Context, cID string) error {
+	return d.Client.ContainerPause(ctx, cID)
+}
+
+// UnpauseContainer UnPauses / resumes a container identified by its name
+func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error {
+	return d.Client.ContainerUnpause(ctx, cID)
 }
 
 // CreateContainer creates a docker container (but does not start it)
@@ -314,15 +347,6 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		ExposedPorts: node.PortSet,
 		MacAddress:   node.MacAddress,
 	}
-	containerHostConfig := &container.HostConfig{
-		Binds:        node.Binds,
-		PortBindings: node.PortBindings,
-		Sysctls:      node.Sysctls,
-		Privileged:   true,
-		// Network mode will be defined below via switch
-		NetworkMode: "",
-		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
-	}
 	var resources container.Resources
 	if node.Memory != "" {
 		mem, err := humanize.ParseBytes(node.Memory)
@@ -338,7 +362,30 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if node.CPUSet != "" {
 		resources.CpusetCpus = node.CPUSet
 	}
-	containerHostConfig.Resources = resources
+	var rlimit unix.Rlimit
+	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &rlimit); err != nil {
+		log.Warnf("Unable to retrieve rlimit_NOFILE value: %v", err)
+		rlimit.Max = rLimitMaxValue
+	}
+	if rlimit.Max > rLimitMaxValue {
+		rlimit.Max = rLimitMaxValue
+	}
+	ulimit := units.Ulimit{
+		Name: "nofile",
+		Hard: int64(rlimit.Max),
+		Soft: int64(rlimit.Max),
+	}
+	resources.Ulimits = []*units.Ulimit{&ulimit}
+	containerHostConfig := &container.HostConfig{
+		Binds:        node.Binds,
+		PortBindings: node.PortBindings,
+		Sysctls:      node.Sysctls,
+		Privileged:   true,
+		// Network mode will be defined below via switch
+		NetworkMode: "",
+		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
+		Resources:   resources,
+	}
 	containerNetworkingConfig := &network.NetworkingConfig{}
 
 	netMode := strings.SplitN(node.NetworkMode, ":", 2)
@@ -563,10 +610,12 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 }
 
 // Transform docker-specific to generic container format
-func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkRessources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
+func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkResources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
-	for _, i := range inputContainers {
+	for idx := range inputContainers {
+		i := inputContainers[idx]
+
 		ctr := types.GenericContainer{
 			Names:           i.Names,
 			ID:              i.ID,
@@ -579,8 +628,10 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 		}
 		bridgeName := d.mgmt.Network
 		// if bridgeName is "", try to find a network created by clab that the container is connected to
-		if bridgeName == "" && inputNetworkRessources != nil {
-			for _, nr := range inputNetworkRessources {
+		if bridgeName == "" && inputNetworkResources != nil {
+			for idx := range inputNetworkResources {
+				nr := inputNetworkResources[idx]
+
 				if _, ok := i.NetworkSettings.Networks[nr.Name]; ok {
 					bridgeName = nr.Name
 					break
@@ -673,7 +724,7 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 		}
 	}
 	log.Debugf("Removing container: %s", strings.TrimLeft(cID, "/"))
-	err = d.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force})
+	err = d.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force, RemoveVolumes: true})
 	if err != nil {
 		return err
 	}

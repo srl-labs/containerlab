@@ -58,6 +58,7 @@ set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
   {{- end }}
 {{ end -}}
+set / system banner login-banner "{{ .Banner }}"
 commit save`
 )
 
@@ -130,7 +131,7 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	if s.cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
-		// the addition touch is needed to support non docker runtimes
+		// the additional touch is needed to support non docker runtimes
 		s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
@@ -157,6 +158,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	topoPath := filepath.Join(s.cfg.LabDir, "topology.yml")
 	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
+	// SSE3 cpu instruction set is required
+	s.cfg.HostRequirements.SSE3 = true
 	return nil
 }
 
@@ -431,10 +434,25 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	return tpl.Execute(f, mac)
 }
 
-// addDefaultConfig adds srl default configuration such as tls certs and gnmi/json-rpc
+// addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner
 func (s *srl) addDefaultConfig(ctx context.Context) error {
+
+	b, err := s.banner(ctx)
+	if err != nil {
+		return err
+	}
+
+	// struct that holds data used in templating of the default config snippet
+	tplData := struct {
+		*types.NodeConfig
+		Banner string
+	}{
+		s.cfg,
+		b,
+	}
+
 	buf := new(bytes.Buffer)
-	err := srlCfgTpl.Execute(buf, s.cfg)
+	err = srlCfgTpl.Execute(buf, tplData)
 	if err != nil {
 		return err
 	}

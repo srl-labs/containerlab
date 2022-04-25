@@ -15,11 +15,12 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
-* [Nokia SR-Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/)
-* [Arista cEOS](https://www.arista.com/en/products/software-controlled-container-networking)
-* [Azure SONiC](https://azure.github.io/SONiC/)
-* [Juniper cRPD](https://www.juniper.net/documentation/en_US/crpd/topics/concept/understanding-crpd.html)
-* [Cumulus VX](https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/)
+* [Nokia SR-Linux](manual/kinds/srl.md)
+* [Arista cEOS](manual/kinds/ceos.md)
+* [Azure SONiC](manual/kinds/sonic-vs.md)
+* [Juniper cRPD](manual/kinds/crpd.md)
+* [Cumulus VX](manual/kinds/cvx.md)
+* [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](manual/vrnetlab.md):
 
@@ -32,6 +33,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Cisco CSR 1000v](manual/kinds/vr-csr.md)
 * [Arista vEOS](manual/kinds/vr-veos.md)
 * [Palo Alto PAN](manual/kinds/vr-pan.md)
+* [IPInfusion OcNOS](manual/kinds/ipinfusion-ocnos.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span all the needed variants of nodes:
 
@@ -66,7 +68,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **Automated TLS certificates provisioning**  
     The nodes which require TLS certs will get them automatically on boot.
 * **Documentation is a first-class citizen**  
-    We do not let our users guess by making a complete, concise and clean [documentation](https://containerlab.srlinux.dev).
+    We do not let our users guess by making a complete, concise and clean [documentation](https://containerlab.dev).
 * **Lab catalog**  
    The "most-wanted" lab topologies are [documented and included](lab-examples/lab-examples.md) with containerlab installation. Based on this cherry-picked selection you can start crafting the labs answering your needs.
 

@@ -1,0 +1,46 @@
+{
+  "name": "{{ .Name }}",
+  "type": "{{ .Type }}",
+  "clab": {
+    "config": {
+      "prefix": "{{ .Clab.Config.Prefix }}",
+      "mgmt": {{ ToJSONPretty .Clab.Config.Mgmt "      " "  "}}
+    }
+  },
+  "nodes": { {{- $i:=0 }}{{range $n, $c := .NodeConfigs}}{{if $i}},{{end}}
+    "{{$n}}": {
+      "index": "{{$c.Index}}",
+      "shortname": "{{$c.ShortName}}",
+      "longname": "{{$c.LongName}}",
+      "fqdn": "{{$c.Fqdn}}",
+      "group": "{{$c.Group}}",
+      "labdir": "{{$c.LabDir}}",
+      "kind": "{{$c.Kind}}",
+      "image": "{{$c.Image}}",
+      "mgmt-net": "{{$c.MgmtNet}}",
+      "mgmt-intf": "{{$c.MgmtIntf}}",
+      "mgmt-ipv4-address": "{{$c.MgmtIPv4Address}}",
+      "mgmt-ipv4-prefix-length": {{$c.MgmtIPv4PrefixLength}},
+      "mgmt-ipv6-address": "{{$c.MgmtIPv6Address}}",
+      "mgmt-ipv6-prefix-length": {{$c.MgmtIPv6PrefixLength}},
+      "mac-address": "{{$c.MacAddress}}",
+      "labels": {{ToJSONPretty $c.Labels "      " "  "}}
+    }{{$i = add $i 1}}{{end}}
+  },
+  "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
+    {
+      "a": {
+        "node": "{{ $l.A.Node.ShortName }}",
+        "interface": "{{ $l.A.EndpointName }}",
+        "mac": "{{ $l.A.MAC }}",
+        "peer": "z"
+      },
+      "z": {
+        "node": "{{ $l.B.Node.ShortName }}",
+        "interface": "{{ $l.B.EndpointName }}",
+        "mac": "{{ $l.B.MAC }}",
+        "peer": "a"
+      }
+    }{{end}}
+  ]
+}

@@ -7,7 +7,12 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
+	"regexp"
+	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 // convertEnvs convert env variables passed as a map to a list of them
@@ -80,19 +85,29 @@ func MergeStructConfigs(defaults, kind, node interface{}) interface{} {
 
 // merge all string maps and return a new map
 // maps that are passed for merging will not be changed
+// merging to empty maps return an empty map
+// merging nils return nil
 func MergeStringMaps(maps ...map[string]string) map[string]string {
-	res := make(map[string]string)
+	res := map[string]string{}
+
+	nonNilMapSeen := false // flag to monitor if a non nil map was passed
 	for _, m := range maps {
 		if m == nil {
 			continue
 		}
+
+		nonNilMapSeen = true
+
 		for k, v := range m {
 			res[k] = v
 		}
 	}
-	if len(res) == 0 {
+
+	// return nil nil instead of an empty map if all maps were nil
+	if !nonNilMapSeen {
 		return nil
 	}
+
 	return res
 }
 
@@ -104,6 +119,29 @@ func StringInSlice(slice []string, val string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// LoadEnvVarFiles load EnvVars from the given files, resolving relative paths
+func LoadEnvVarFiles(basefolder string, files []string) (map[string]string, error) {
+	resolvedPaths := []string{}
+	// resolve given paths, relative (to topology definition file)
+	for _, file := range files {
+		resolved := ResolvePath(file, basefolder)
+		if !FileExists(resolved) {
+			return nil, fmt.Errorf("env-file %s not found (path resolved to %s)", file, resolved)
+		}
+		resolvedPaths = append(resolvedPaths, resolved)
+	}
+
+	if len(resolvedPaths) == 0 {
+		return map[string]string{}, nil
+	}
+
+	result, err := godotenv.Read(resolvedPaths...)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // MergeStringSlices merges string slices with duplicates removed
@@ -132,4 +170,23 @@ func MergeStringSlices(ss ...[]string) []string {
 	}
 
 	return uniques
+}
+
+// ExpandEnvVarsInStrSlice makes an in-place expansion of env vars in a slice of strings
+func ExpandEnvVarsInStrSlice(s []string) {
+	for i, e := range s {
+		s[i] = os.ExpandEnv(e)
+	}
+}
+
+// ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key
+func ToEnvKey(s string) string {
+	// match special chars to later replace with "_"
+	regreplace, _ := regexp.Compile("[+-./]")
+	result := regreplace.ReplaceAllString(s, "_")
+	// match only valid env var chars
+	regAllowed, _ := regexp.Compile("[^a-zA-Z0-9_]+")
+	result = regAllowed.ReplaceAllString(result, "")
+
+	return strings.ToUpper(result)
 }

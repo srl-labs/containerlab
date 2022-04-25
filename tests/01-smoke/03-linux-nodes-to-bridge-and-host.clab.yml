@@ -19,5 +19,5 @@ topology:
     - endpoints: ["l1:eth1", "br-01-03-clab:l1-eth1"]
     - endpoints: ["br-01-03-clab:l1-eth2", "l1:eth2"]
     # l1:eth3 is connected to host via host link
-    # https://containerlab.srlinux.dev/manual/network/#host-links
+    # https://containerlab.dev/manual/network/#host-links
     - endpoints: ["l1:eth3", "host:l1-01-03-eth3"]

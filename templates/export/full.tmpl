@@ -1,0 +1,24 @@
+{
+  "name": "{{ .Name }}",
+  "type": "{{ .Type }}",
+  "clab": {{ ToJSONPretty .Clab "  " "  "}},
+  "nodes": { {{- $i:=0 }}{{range $n, $c := .NodeConfigs}}{{if $i}},{{end}}{{ $k := dict "tls-key" $c.TLSKey }}
+    "{{$n}}":{{ $cj := $c | data.ToJSON | data.JSON }} {{ $dst := coll.Merge $cj $k }}{{ ToJSONPretty $dst "    " "  " }}{{$i = add $i 1}}{{end}}
+  },
+  "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
+    {
+      "a": {
+        "node": "{{ $l.A.Node.ShortName }}",
+        "interface": "{{ $l.A.EndpointName }}",
+        "mac": "{{ $l.A.MAC }}",
+        "peer": "z"
+      },
+      "z": {
+        "node": "{{ $l.B.Node.ShortName }}",
+        "interface": "{{ $l.B.EndpointName }}",
+        "mac": "{{ $l.B.MAC }}",
+        "peer": "a"
+      }
+    }{{end}}
+  ]
+}

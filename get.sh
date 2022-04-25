@@ -9,7 +9,7 @@
 : ${BIN_INSTALL_DIR:="/usr/bin"}
 : ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
-: ${PROJECT_URL:="https://containerlab.srlinux.dev"}
+: ${PROJECT_URL:="https://containerlab.dev"}
 
 # detectArch discovers the architecture for this system.
 detectArch() {
@@ -34,12 +34,27 @@ detectOS() {
     # Minimalist GNU for Windows
     mingw*) OS='windows' ;;
     esac
-
-    if type "rpm" &>/dev/null; then
-        PKG_FORMAT="rpm"
-    elif type "dpkg" &>/dev/null; then
-        PKG_FORMAT="deb"
+    
+    if [ -f /etc/os-release ]; then
+        OS_ID="$(. /etc/os-release && echo "$ID")"
     fi
+    case "${OS_ID}" in
+        ubuntu|debian|raspbian)
+            PKG_FORMAT="deb"
+        ;;
+        
+        centos|rhel|sles)
+            PKG_FORMAT="rpm"
+        ;;
+        
+        *)
+            if type "rpm" &>/dev/null; then
+                PKG_FORMAT="rpm"
+            elif type "dpkg" &>/dev/null; then
+                PKG_FORMAT="deb"
+            fi
+        ;;
+    esac
 }
 
 # runs the given command as root (detects if we are root already)
@@ -122,7 +137,7 @@ checkInstalledVersion() {
             echo "${BINARY_NAME} is already at ${DESIRED_VERSION:-latest ($version)}" version
             return 0
         else
-            echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.srlinux.dev/rn/${TAG_WO_VER}"
+            echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
             echo "You are running containerlab $version version"
             UPGR_NEEDED="Y"
             # check if stdin is open (i.e. capable of getting users input)

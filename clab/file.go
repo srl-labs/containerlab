@@ -30,6 +30,7 @@ const (
 // TopoFile type is a struct which defines parameters of the topology file
 type TopoFile struct {
 	path     string // topo file path
+	dir      string // topo file dir path
 	fullName string // file name with extension
 	name     string // file name without extension
 }
@@ -38,28 +39,43 @@ type TopoFile struct {
 // as well as populates the TopoFile structure with the topology file related information
 func (c *CLab) GetTopology(topo, varsFile string) error {
 	fileBase := filepath.Base(topo)
+
+	topoAbsPath, err := filepath.Abs(topo)
+	if err != nil {
+		return err
+	}
+
+	topoDir := filepath.Dir(topoAbsPath)
+
 	// load the topology file/template
 	topologyTemplate, err := template.New(fileBase).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
-		ParseFiles(topo)
+		ParseFiles(topoAbsPath)
 	if err != nil {
 		return err
 	}
+
 	// read template variables
-	templateVars, err := readTemplateVariables(topo, varsFile)
+	templateVars, err := readTemplateVariables(topoAbsPath, varsFile)
 	if err != nil {
 		return err
 	}
+
 	log.Debugf("template variables: %v", templateVars)
 	// execute template
 	buf := new(bytes.Buffer)
+
 	err = topologyTemplate.Execute(buf, templateVars)
 	if err != nil {
 		return fmt.Errorf("failed to execute template: %v", err)
 	}
+
+	// create a hidden file that will contain the rendered topology
 	if !strings.HasPrefix(fileBase, ".") {
-		// create a hidden file that will contain the rendered topology
-		err = utils.CreateFile(fmt.Sprintf(".%s.yaml", fileBase[:len(fileBase)-len(filepath.Ext(topo))]), buf.String())
+		backupFPath := filepath.Join(topoDir,
+			fmt.Sprintf(".%s.yml", fileBase[:len(fileBase)-len(filepath.Ext(topoAbsPath))]))
+
+		err = utils.CreateFile(backupFPath, buf.String())
 		if err != nil {
 			return err
 		}
@@ -75,16 +91,11 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 
 	c.Config.Topology.ImportEnvs()
 
-	topoAbsPath, err := filepath.Abs(topo)
-	if err != nil {
-		return err
-	}
-
-	file := filepath.Base(topo)
 	c.TopoFile = &TopoFile{
 		path:     topoAbsPath,
-		fullName: file,
-		name:     strings.TrimSuffix(file, path.Ext(file)),
+		dir:      topoDir,
+		fullName: fileBase,
+		name:     strings.TrimSuffix(fileBase, path.Ext(fileBase)),
 	}
 	return nil
 }

@@ -7,15 +7,17 @@ package clab
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
 	"syscall"
 
-	"github.com/mitchellh/go-homedir"
+	"github.com/klauspost/cpuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -47,6 +49,10 @@ const (
 	NodeLabDirLabel   = "clab-node-lab-dir"
 	TopoFileLabel     = "clab-topo-file"
 	NodeMgmtNetBr     = "clab-mgmt-net-bridge"
+
+	// clab specific topology variables
+	clabDirVar = "__clabDir__"
+	nodeDirVar = "__clabNodeDir__"
 )
 
 // supported kinds
@@ -72,24 +78,22 @@ var kinds = []string{
 	"mysocketio",
 	"host",
 	"cvx",
+	"keysight_ixia-c-one",
 }
 
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
-	Name       string          `json:"name,omitempty"`
-	Prefix     *string         `json:"prefix,omitempty"`
-	Mgmt       *types.MgmtNet  `json:"mgmt,omitempty"`
-	Topology   *types.Topology `json:"topology,omitempty"`
-	ConfigPath string          `json:"config-path,omitempty"`
+	Name     string          `json:"name,omitempty"`
+	Prefix   *string         `json:"prefix,omitempty"`
+	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
+	Topology *types.Topology `json:"topology,omitempty"`
 }
 
 // ParseTopology parses the lab topology
 func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 
-	if c.Config.ConfigPath == "" {
-		c.Config.ConfigPath, _ = filepath.Abs(os.Getenv("PWD"))
-	}
+	cwd, _ := filepath.Abs(os.Getenv("PWD"))
 
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
@@ -99,7 +103,7 @@ func (c *CLab) parseTopology() error {
 	c.Dir = &Directory{}
 	// labDir is always named clab-$labName, regardless of the prefix
 	labDir := strings.Join([]string{"clab", c.Config.Name}, "-")
-	c.Dir.Lab = filepath.Join(c.Config.ConfigPath, labDir)
+	c.Dir.Lab = filepath.Join(cwd, labDir)
 
 	c.Dir.LabCA = filepath.Join(c.Dir.Lab, "ca")
 	c.Dir.LabCARoot = filepath.Join(c.Dir.LabCA, "root")
@@ -197,16 +201,11 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
 
-	n.Config().Labels = utils.MergeStringMaps(n.Config().Labels, map[string]string{
-		ContainerlabLabel: c.Config.Name,
-		NodeNameLabel:     n.Config().ShortName,
-		NodeKindLabel:     n.Config().Kind,
-		NodeTypeLabel:     n.Config().NodeType,
-		NodeGroupLabel:    n.Config().Group,
-		NodeLabDirLabel:   n.Config().LabDir,
-		TopoFileLabel:     c.TopoFile.path,
-	})
 	c.Nodes[nodeName] = n
+
+	c.addDefaultLabels(n)
+
+	labelsToEnvVars(n.Config())
 
 	return nil
 }
@@ -243,7 +242,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
-		Sysctls:         make(map[string]string),
+		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
 		Endpoints:       make([]types.Endpoint, 0),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
@@ -257,24 +256,38 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Extras: c.Config.Topology.GetNodeExtras(nodeName),
 	}
 
-	log.Debugf("node config: %+v", nodeCfg)
 	var err error
-	// initialize config
-	nodeCfg.StartupConfig, err = c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+
+	// Load content of the EnvVarFiles
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoFile.dir, c.Config.Topology.GetNodeEnvFiles(nodeName))
 	if err != nil {
 		return nil, err
 	}
+	// Merge EnvVarFiles content and the existing env variable
+	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
+
+	log.Debugf("node config: %+v", nodeCfg)
+	// initialize config
+	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+	if err != nil {
+		return nil, err
+	}
+	// resolve the startup config path to an abs path
+	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoFile.dir)
 
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
 	// initialize license field
-	nodeCfg.License, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	p, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
+	// resolve the lic path to an abs path
+	nodeCfg.License = utils.ResolvePath(p, c.TopoFile.dir)
+
 	// initialize bind mounts
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
-	err = resolveBindPaths(binds, nodeCfg.LabDir)
+	err = c.resolveBindPaths(binds, nodeCfg.LabDir)
 	if err != nil {
 		return nil, err
 	}
@@ -283,6 +296,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
+
 	nodeCfg.Labels = c.Config.Topology.GetNodeLabels(nodeCfg.ShortName)
 
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
@@ -371,6 +385,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
+	if err = c.verifyDuplicateAddresses(); err != nil {
+		return err
+	}
 	if err = c.verifyRootNetnsInterfaceUniqueness(); err != nil {
 		return err
 	}
@@ -383,6 +400,19 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
+	if err = c.verifyLicFilesExist(); err != nil {
+		return err
+	}
+	if err = c.verifyStartupConfigFilesExist(); err != nil {
+		return err
+	}
+	if err = c.checkIfSignatures(); err != nil {
+		return err
+	}
+	if err = c.checkHostRequirements(); err != nil {
+		return err
+	}
+
 	return c.VerifyImages(ctx)
 }
 
@@ -395,6 +425,17 @@ func (c *CLab) verifyBridgesExist() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (c *CLab) checkHostRequirements() error {
+	for _, n := range c.Nodes {
+		// sse3 instruction set check
+		if n.Config().HostRequirements.SSE3 && !cpuid.CPU.SSE3() {
+			return fmt.Errorf("SSE3 CPU instruction set is required by kind '%s' but not available. If containerlab runs in a VM, check if that VM has been launched with full host-cpu support", n.Config().Kind)
+		}
+	}
+
 	return nil
 }
 
@@ -416,6 +457,64 @@ func (c *CLab) verifyLinks() error {
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
+	return nil
+}
+
+// verifyDuplicateAddresses checks that every static IP address in the topology is unique
+func (c *CLab) verifyDuplicateAddresses() error {
+	dupIps := map[string]struct{}{}
+	for _, node := range c.Nodes {
+		ips := []string{node.Config().MgmtIPv4Address, node.Config().MgmtIPv6Address}
+		if ips[0] == "" && ips[1] == "" {
+			continue
+		}
+
+		for _, ip := range ips {
+			if _, exists := dupIps[ip]; !exists {
+				if ip == "" {
+					continue
+				}
+				dupIps[ip] = struct{}{}
+			} else {
+				return fmt.Errorf("management IP address %s appeared more than once in the topology file", ip)
+			}
+		}
+	}
+
+	return nil
+}
+
+// verifyLicFilesExist checks if referenced license files exist
+func (c *CLab) verifyLicFilesExist() error {
+	for _, node := range c.Nodes {
+		lic := node.Config().License
+		if lic == "" {
+			continue
+		}
+
+		rlic := utils.ResolvePath(lic, c.TopoFile.dir)
+		if !utils.FileExists(rlic) {
+			return fmt.Errorf("node's %q license file not found by the path %s", node.Config().ShortName, rlic)
+		}
+	}
+
+	return nil
+}
+
+// verifyStartupConfigFilesExist checks if referenced startup config files exist
+func (c *CLab) verifyStartupConfigFilesExist() error {
+	for _, node := range c.Nodes {
+		cfg := node.Config().StartupConfig
+		if cfg == "" {
+			continue
+		}
+
+		rcfg := utils.ResolvePath(cfg, c.TopoFile.dir)
+		if !utils.FileExists(rcfg) {
+			return fmt.Errorf("node's %q startup-config file not found by the path %s", node.Config().ShortName, rcfg)
+		}
+	}
+
 	return nil
 }
 
@@ -563,6 +662,25 @@ func (c *CLab) verifyVirtSupport() error {
 	return fmt.Errorf("virtualization seems to be not supported and it is required for VM based nodes. Check if virtualization can be enabled")
 }
 
+// checkIfSignatures ensures that users provide valid endpoint names
+// mostly this is useful for srlinux nodes which require special naming convention to be followed
+func (c *CLab) checkIfSignatures() error {
+	for _, node := range c.Nodes {
+		switch {
+		case node.Config().Kind == nodes.NodeKindSRL:
+			// regexp to match srlinux endpoint names
+			srlIfRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+			for _, e := range node.Config().Endpoints {
+				if !srlIfRe.MatchString(e.EndpointName) {
+					return fmt.Errorf("nokia sr linux endpoint %q doesn't match required pattern. SR Linux endpoints should be named as e1-1 or e1-1-1", e.EndpointName)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // checkEndpoint runs checks on the endpoint syntax
 func checkEndpoint(e string) error {
 	split := strings.Split(e, ":")
@@ -575,74 +693,56 @@ func checkEndpoint(e string) error {
 	return nil
 }
 
-//resolvePath resolves a string path by expanding `~` to home dir or getting Abs path for the given path
-func resolvePath(p string) (string, error) {
-	if p == "" {
-		return "", nil
-	}
-	var err error
-	switch {
-	// resolve ~/ path
-	case p[0] == '~':
-		p, err = homedir.Expand(p)
-		if err != nil {
-			return "", err
-		}
-	default:
-		p, err = filepath.Abs(p)
-		if err != nil {
-			return "", err
-		}
-	}
-	return p, nil
-}
-
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
-// it allows host path to have `~` and returns absolute path for a relative path
+// it allows host path to have `~` and relative path to an absolute path
+// the list of binds will be changed in place.
 // if the host path doesn't exist, the error will be returned
-func resolveBindPaths(binds []string, nodedir string) error {
+func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
 
-		r := strings.NewReplacer("$nodeDir", nodedir)
+		// replace special variable
+		r := strings.NewReplacer(clabDirVar, c.Dir.Lab, nodeDirVar, nodedir)
 		hp := r.Replace(elems[0])
+		hp = utils.ResolvePath(hp, c.TopoFile.dir)
 
-		hp, err := resolvePath(hp)
+		_, err := os.Stat(hp)
 		if err != nil {
-			return err
-		}
-
-		_, err = os.Stat(hp)
-		if err != nil {
-			// check if the hostpath mount has a reference to ansible-inventory.yml
-			// if that is the case, we do not emit an error on missing file, since this file
+			// check if the hostpath mount has a reference to ansible-inventory.yml or topology-data.json
+			// if that is the case, we do not emit an error on missing file, since these files
 			// will be created by containerlab upon lab deployment
 			labdir := filepath.Base(filepath.Dir(nodedir))
 			s := strings.Split(hp, string(os.PathSeparator))
 			// creating a path from last two elements of a resolved host path
 			h := filepath.Join(s[len(s)-2], s[len(s)-1])
-			if h != filepath.Join(labdir, "ansible-inventory.yml") {
+			if h != filepath.Join(labdir, "ansible-inventory.yml") && h != filepath.Join(labdir, "topology-data.json") {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
 	}
+
 	return nil
 }
 
 // CheckResources runs container host resources check
-func (*CLab) CheckResources() error {
+func (c *CLab) CheckResources() error {
 	vcpu := runtime.NumCPU()
 	log.Debugf("Number of vcpu: %d", vcpu)
 	if vcpu < 2 {
 		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
+		if c.HasKind(nodes.NodeKindSRL) {
+			return errors.New("not enough vcpus. Nokia SR Linux nodes require at least 2 vcpus")
+		}
 	}
+
 	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
 	if freeMemG < 1 {
 		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", freeMemG)
 	}
+
 	return nil
 }
 
@@ -680,10 +780,54 @@ func sysMemory(v string) uint64 {
 }
 
 // returns nodeCfg.ShortName based on the provided containerName and labName
-func getShortName(labName, containerName string) (string, error) {
+func getShortName(labName string, labPrefix *string, containerName string) (string, error) {
+	if *labPrefix == "" {
+		return containerName, nil
+	}
+
 	result := strings.Split(containerName, "-"+labName+"-")
 	if len(result) != 2 {
 		return "", fmt.Errorf("failed to parse container name %q", containerName)
 	}
 	return result[1], nil
+}
+
+// HasKind returns true if kind k is found in the list of nodes
+func (c *CLab) HasKind(k string) bool {
+	for _, n := range c.Nodes {
+		if n.Config().Kind == k {
+			log.Warn("found")
+			return true
+		}
+	}
+
+	return false
+}
+
+// addDefaultLabels adds default labels to node's config struct
+func (c *CLab) addDefaultLabels(n nodes.Node) {
+	cfg := n.Config()
+	if cfg.Labels == nil {
+		cfg.Labels = map[string]string{}
+	}
+
+	cfg.Labels[ContainerlabLabel] = c.Config.Name
+	cfg.Labels[NodeNameLabel] = cfg.ShortName
+	cfg.Labels[NodeKindLabel] = cfg.Kind
+	cfg.Labels[NodeTypeLabel] = cfg.NodeType
+	cfg.Labels[NodeGroupLabel] = cfg.Group
+	cfg.Labels[NodeLabDirLabel] = cfg.LabDir
+	cfg.Labels[TopoFileLabel] = c.TopoFile.path
+}
+
+func labelsToEnvVars(n *types.NodeConfig) {
+	if n.Env == nil {
+		n.Env = map[string]string{}
+	}
+	// Add labels to env vars with CLAB_LABEL_ prefix added to label keys
+	// and sanitizing the label key value
+	for k, v := range n.Labels {
+		// add the value to the node env with a prefixed and specialchars cleaned up key
+		n.Env["CLAB_LABEL_"+utils.ToEnvKey(k)] = v
+	}
 }

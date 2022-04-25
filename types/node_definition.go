@@ -37,6 +37,8 @@ type NodeDefinition struct {
 	Publish []string `yaml:"publish,omitempty"`
 	// environment variables
 	Env map[string]string `yaml:"env,omitempty"`
+	// external file containing environment variables
+	EnvFiles []string `yaml:"env-files,omitempty"`
 	// linux user used in a container
 	User string `yaml:"user,omitempty"`
 	// container labels
@@ -54,7 +56,8 @@ type NodeDefinition struct {
 	CPUSet string `yaml:"cpu-set,omitempty"`
 	// Set node Memory (cgroup or hypervisor)
 	Memory string `yaml:"memory,omitempty"`
-
+	// Set the nodes Sysctl
+	Sysctls map[string]string `yaml:"sysctls,omitempty"`
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
 }
@@ -185,6 +188,13 @@ func (n *NodeDefinition) GetEnv() map[string]string {
 	return n.Env
 }
 
+func (n *NodeDefinition) GetEnvFiles() []string {
+	if n == nil {
+		return nil
+	}
+	return n.EnvFiles
+}
+
 func (n *NodeDefinition) GetUser() string {
 	if n == nil {
 		return ""
@@ -253,6 +263,14 @@ func (n *NodeDefinition) GetExec() []string {
 		return nil
 	}
 	return n.Exec
+}
+
+func (n *NodeDefinition) GetSysctls() map[string]string {
+	if n == nil || n.Sysctls == nil {
+		return map[string]string{}
+	}
+	
+	return n.Sysctls
 }
 
 func (n *NodeDefinition) GetExtras() *Extras {

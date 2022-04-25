@@ -1,22 +1,22 @@
 {
-    "$id": "https://containerlab.srlinux.dev/clab.schema.json",
+    "$id": "https://containerlab.dev/clab.schema.json",
     "$schema": "https://json-schema.org/draft-07/schema#",
     "title": "Containerlab topology definition file",
     "definitions": {
         "node-config": {
             "type": "object",
             "description": "topology node configuration container",
-            "markdownDescription": "topology [node](https://containerlab.srlinux.dev/manual/nodes/) configuration container",
+            "markdownDescription": "topology [node](https://containerlab.dev/manual/nodes/) configuration container",
             "properties": {
                 "image": {
                     "type": "string",
                     "description": "container image to use for this node",
-                    "markdownDescription": "container [image](https://containerlab.srlinux.dev/manual/nodes/#image) to use for this node"
+                    "markdownDescription": "container [image](https://containerlab.dev/manual/nodes/#image) to use for this node"
                 },
                 "kind": {
                     "type": "string",
                     "description": "kind of this node",
-                    "markdownDescription": "[kind](https://containerlab.srlinux.dev/manual/nodes/#kind) of this node",
+                    "markdownDescription": "[kind](https://containerlab.dev/manual/nodes/#kind) of this node",
                     "enum": [
                         "srl",
                         "ceos",
@@ -38,36 +38,44 @@
                         "bridge",
                         "ovs-bridge",
                         "mysocketio",
-                        "host"
+                        "host",
+                        "keysight_ixia-c-one"
                     ]
                 },
                 "license": {
                     "type": "string",
                     "description": "path to a license file",
-                    "markdownDescription": "path to a [license](https://containerlab.srlinux.dev/manual/nodes/#license) file"
+                    "markdownDescription": "path to a [license](https://containerlab.dev/manual/nodes/#license) file"
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "type is a per-node property that can select a special type of a node",
+                    "markdownDescription": "node's [type](https://containerlab.dev/manual/nodes/#type) file"
+                },
+                "group": {
+                    "type": "string",
+                    "description": "grouping parameter of a node. A free form string that is mainly used in sorting elements when graphing",
+                    "markdownDescription": "path to a [license](https://containerlab.dev/manual/nodes/#group) file"
                 },
                 "startup-config": {
                     "type": "string",
                     "description": "path to a startup config file (if supported by the kind)",
-                    "markdownDescription": "path to a startup [config file](https://containerlab.srlinux.dev/manual/nodes/#startup-config) (if supported by the kind)"
+                    "markdownDescription": "path to a startup [config file](https://containerlab.dev/manual/nodes/#startup-config) (if supported by the kind)"
                 },
                 "startup-delay": {
                     "type": "integer",
                     "description": "Optional startup delay (seconds) to apply",
-                    "markdownDescription": "Optional [startup delay](https://containerlab.srlinux.dev/manual/nodes/#startup-delay) in seconds"
+                    "markdownDescription": "Optional [startup delay](https://containerlab.dev/manual/nodes/#startup-delay) in seconds"
                 },
                 "enforce-startup-config": {
                     "type": "boolean",
                     "description": "Set to `true` to make the node to boot with a startup-config even if the config file is present in the lab directory",
-                    "markdownDescription": "Set to `true` to [make the node to boot with a startup-config](https://containerlab.srlinux.dev/manual/nodes/#enforce-startup-config) even if the config file is present in the lab directory"
+                    "markdownDescription": "Set to `true` to [make the node to boot with a startup-config](https://containerlab.dev/manual/nodes/#enforce-startup-config) even if the config file is present in the lab directory"
                 },
                 "exec": {
                     "type": "array",
                     "description": "list of commands to execute post deploy",
-                    "markdownDescription": "list of [commands to execute](https://containerlab.srlinux.dev/manual/nodes/#exec) post deploy",
+                    "markdownDescription": "list of [commands to execute](https://containerlab.dev/manual/nodes/#exec) post deploy",
                     "minItems": 1,
                     "items": {
                         "type": "string"
@@ -76,7 +84,7 @@
                 "binds": {
                     "type": "array",
                     "description": "list of file/directory bindings",
-                    "markdownDescription": "list of file/directory [bindings](https://containerlab.srlinux.dev/manual/nodes/#binds)",
+                    "markdownDescription": "list of file/directory [bindings](https://containerlab.dev/manual/nodes/#binds)",
                     "minItems": 1,
                     "items": {
                         "type": "string"
@@ -86,7 +94,7 @@
                 "ports": {
                     "type": "array",
                     "description": "list of port mappings",
-                    "markdownDescription": "list of [port](https://containerlab.srlinux.dev/manual/nodes/#ports) mappings",
+                    "markdownDescription": "list of [port](https://containerlab.dev/manual/nodes/#ports) mappings",
                     "minItems": 1,
                     "items": {
                         "type": "string",
@@ -97,7 +105,7 @@
                 "env": {
                     "type": "object",
                     "description": "environment variables",
-                    "markdownDescription": "[environment variables](https://containerlab.srlinux.dev/manual/nodes/#env)",
+                    "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
                     "patternProperties": {
                         ".+": {
                             "anyOf": [
@@ -115,7 +123,7 @@
                 },
                 "user": {
                     "description": "user to use within the container",
-                    "markdownDescription": "[user](https://containerlab.srlinux.dev/manual/nodes/#user) to use within the container",
+                    "markdownDescription": "[user](https://containerlab.dev/manual/nodes/#user) to use within the container",
                     "anyOf": [
                         {
                             "type": "string",
@@ -130,17 +138,17 @@
                 "entrypoint": {
                     "type": "string",
                     "description": "container's entrypoint",
-                    "markdownDescription": "container's [entrypoint](https://containerlab.srlinux.dev/manual/nodes/#entrypoint)"
+                    "markdownDescription": "container's [entrypoint](https://containerlab.dev/manual/nodes/#entrypoint)"
                 },
                 "cmd": {
                     "type": "string",
                     "description": "command to launch container with",
-                    "markdownDescription": "[command](https://containerlab.srlinux.dev/manual/nodes/#cmd) to launch container with"
+                    "markdownDescription": "[command](https://containerlab.dev/manual/nodes/#cmd) to launch container with"
                 },
                 "publish": {
                     "type": "array",
                     "description": "list of ports to publish",
-                    "markdownDescription": "list of ports to [publish](https://containerlab.srlinux.dev/manual/nodes/#publish)",
+                    "markdownDescription": "list of ports to [publish](https://containerlab.dev/manual/nodes/#publish)",
                     "minItems": 1,
                     "items": {
                         "type": "string",
@@ -151,7 +159,7 @@
                 "labels": {
                     "type": "object",
                     "description": "container labels",
-                    "markdownDescription": "container [labels](https://containerlab.srlinux.dev/manual/nodes/#labels)",
+                    "markdownDescription": "container [labels](https://containerlab.dev/manual/nodes/#labels)",
                     "patternProperties": {
                         ".+": {
                             "anyOf": [
@@ -170,7 +178,7 @@
                 "runtime": {
                     "type": "string",
                     "description": "Runtime used to launch the container node",
-                    "markdownDescription": "[Runtime](https://containerlab.srlinux.dev/manual/nodes/#runtime) for the node",
+                    "markdownDescription": "[Runtime](https://containerlab.dev/manual/nodes/#runtime) for the node",
                     "enum": [
                         "docker",
                         "containerd",
@@ -180,19 +188,19 @@
                 "mgmt_ipv4": {
                     "type": "string",
                     "description": "IPv4 management address of the node (e.g. 172.10.10.11)",
-                    "markdownDescription": "[IPv4 management address](https://containerlab.srlinux.dev/manual/nodes/#mgmt-ipv4) of the node (e.g. 172.10.10.11)",
+                    "markdownDescription": "[IPv4 management address](https://containerlab.dev/manual/nodes/#mgmt-ipv4) of the node (e.g. 172.10.10.11)",
                     "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?$"
                 },
                 "mgmt_ipv6": {
                     "type": "string",
                     "description": "IPv6 management address of the node (e.g. 172.10.10.11)",
-                    "markdownDescription": "[IPv6 management address](https://containerlab.srlinux.dev/manual/nodes/#mgmt-ipv6) of the node (e.g. 172.10.10.11)",
+                    "markdownDescription": "[IPv6 management address](https://containerlab.dev/manual/nodes/#mgmt-ipv6) of the node (e.g. 172.10.10.11)",
                     "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
                 },
                 "network-mode": {
                     "type": "string",
                     "description": "node network mode (can only be set host, defaults to bridge)",
-                    "markdownDescription": "node [network mode](https://containerlab.srlinux.dev/manual/nodes/#network-mode) (can only be set host, defaults to bridge)",
+                    "markdownDescription": "node [network mode](https://containerlab.dev/manual/nodes/#network-mode) (can only be set host, defaults to bridge)",
                     "enum": [
                         "host"
                     ]
@@ -200,17 +208,17 @@
                 "cpu": {
                     "type": "integer",
                     "description": "number of vcpu to allocate for this node/container",
-                    "markdownDescription": "Allowed [CPU](https://containerlab.srlinux.dev/manual/nodes/#cpu) usage by the node/container"
+                    "markdownDescription": "Allowed [CPU](https://containerlab.dev/manual/nodes/#cpu) usage by the node/container"
                 },
                 "memory": {
                     "type": "string",
                     "description": "memory limit for this node/container",
-                    "markdownDescription": "Allowed [Memory](https://containerlab.srlinux.dev/manual/nodes/#memory) usage by the node/container"
+                    "markdownDescription": "Allowed [Memory](https://containerlab.dev/manual/nodes/#memory) usage by the node/container"
                 },
                 "cpu-set": {
                     "type": "string",
                     "description": "CPU cores to use by this node/container",
-                    "markdownDescription": "[CPU cores](https://containerlab.srlinux.dev/manual/nodes/#cpu-set) to be used by the node/container"
+                    "markdownDescription": "[CPU cores](https://containerlab.dev/manual/nodes/#cpu-set) to be used by the node/container"
                 },
                 "sandbox": {
                     "type": "string",
@@ -240,7 +248,7 @@
                     "type": {
                         "type": "string",
                         "description": "type of a node",
-                        "markdownDescription": "node [type](https://containerlab.srlinux.dev/manual/nodes/#type)",
+                        "markdownDescription": "node [type](https://containerlab.dev/manual/nodes/#type)",
                         "enum": [
                             "ixr6",
                             "ixr10",
@@ -260,7 +268,7 @@
                     "type": {
                         "type": "string",
                         "description": "type of a node",
-                        "markdownDescription": "node [type](https://containerlab.srlinux.dev/manual/nodes/#type)"
+                        "markdownDescription": "node [type](https://containerlab.dev/manual/nodes/#type)"
                     }
                 }
             },
@@ -296,7 +304,7 @@
                 "srl-agents": {
                     "type": "array",
                     "description": "list of SR Linux agent's config files to be copied to the NOS filesystem",
-                    "markdownDescription": "list of [SR Linux agent's config files](https://containerlab.srlinux.dev/manual/kinds/srl/#user-defined-custom-agents-for-sr-linux-nodes) to be copied to the NOS filesystem",
+                    "markdownDescription": "list of [SR Linux agent's config files](https://containerlab.dev/manual/kinds/srl/#user-defined-custom-agents-for-sr-linux-nodes) to be copied to the NOS filesystem",
                     "minItems": 1,
                     "items": {
                         "type": "string"
@@ -386,34 +394,34 @@
         "prefix": {
             "description": "lab prefix",
             "type": "string",
-            "markdownDescription": "[lab prefix](https://containerlab.srlinux.dev/manual/topo-def-file/#prefix)"
+            "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
             "description": "configuration container for management network",
-            "markdownDescription": "configuration container for [management network](https://containerlab.srlinux.dev/manual/network/#management-network)",
+            "markdownDescription": "configuration container for [management network](https://containerlab.dev/manual/network/#management-network)",
             "type": "object",
             "properties": {
                 "network": {
                     "description": "management network name",
-                    "markdownDescription": "[management network name](https://containerlab.srlinux.dev/manual/network/#network-name)",
+                    "markdownDescription": "[management network name](https://containerlab.dev/manual/network/#network-name)",
                     "type": "string"
                 },
                 "bridge": {
                     "description": "Set bridge to use for the management network (instead of the default generated bridge).",
-                    "markdownDescription": "Set [bridge](https://containerlab.srlinux.dev/manual/network/#bridge-name) to use for the management network (instead of the default generated bridge).",
+                    "markdownDescription": "Set [bridge](https://containerlab.dev/manual/network/#bridge-name) to use for the management network (instead of the default generated bridge).",
                     "type": "string"
                 },
                 "ipv4_subnet": {
                     "description": "IPv4 range to use for the custom management network. e.g. 172.100.100.0/24",
-                    "markdownDescription": "[IPv4 range](https://containerlab.srlinux.dev/manual/network/#user-defined-addresses) to use for the custom management network. e.g. 172.100.100.0/24",
+                    "markdownDescription": "[IPv4 range](https://containerlab.dev/manual/network/#user-defined-addresses) to use for the custom management network. e.g. 172.100.100.0/24",
                     "type": "string",
                     "pattern": "^.+\/[0-9]{1,2}$"
                 },
                 "ipv6_subnet": {
                     "description": "IPv6 range to use for the custom management network. e.g. 2001:172:100:100::/64",
-                    "markdownDescription": "[IPv6 range](https://containerlab.srlinux.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 2001:172:100:100::/64",
+                    "markdownDescription": "[IPv6 range](https://containerlab.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 2001:172:100:100::/64",
                     "type": "string",
-                    "pattern": "^.+\/[0-9]{1,2}$"
+                    "pattern": "^.+\/[0-9]{1,3}$"
                 },
                 "ipv4-gw": {
                     "description": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
@@ -429,7 +437,7 @@
                 },
                 "mtu": {
                     "description": "MTU for the custom network",
-                    "markdownDescription": "[MTU](https://containerlab.srlinux.dev/manual/network/#mtu) in Bytes for the custom management network",
+                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "type": "number",
                     "maximum": 65535,
                     "minimum": 1,
@@ -440,12 +448,12 @@
         },
         "topology": {
             "description": "topology configuration container",
-            "markdownDescription": "[topology](https://containerlab.srlinux.dev/manual/topo-def-file/) configuration container",
+            "markdownDescription": "[topology](https://containerlab.dev/manual/topo-def-file/) configuration container",
             "type": "object",
             "properties": {
                 "nodes": {
                     "description": "topology nodes configuration container",
-                    "markdownDescription": "topology [nodes](https://containerlab.srlinux.dev/manual/nodes/) configuration container",
+                    "markdownDescription": "topology [nodes](https://containerlab.dev/manual/nodes/) configuration container",
                     "type": "object",
                     "patternProperties": {
                         ".*": {
@@ -462,7 +470,7 @@
                 },
                 "kinds": {
                     "description": "topology kinds configuration container",
-                    "markdownDescription": "topology [kinds](https://containerlab.srlinux.dev/manual/topo-def-file/#kinds) configuration container",
+                    "markdownDescription": "topology [kinds](https://containerlab.dev/manual/topo-def-file/#kinds) configuration container",
                     "type": "object",
                     "properties": {
                         "srl": {
@@ -506,6 +514,9 @@
                         },
                         "host": {
                             "$ref": "#/definitions/node-config"
+                        },
+                        "keysight_ixia-c-one": {
+                            "$ref": "#/definitions/node-config"
                         }
                     }
                 },
@@ -515,7 +526,7 @@
                 "links": {
                     "type": "array",
                     "description": "topology links section",
-                    "markdownDescription": "[topology links](https://containerlab.srlinux.dev/manual/topo-def-file/#links)",
+                    "markdownDescription": "[topology links](https://containerlab.dev/manual/topo-def-file/#links)",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/link-config"

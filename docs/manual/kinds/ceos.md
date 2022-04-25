@@ -83,6 +83,69 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
     ```
     As you see, the management interface `Ma0` inherits the IP address that docker assigned to ceos container management interface.
 
+### User-defined interface mapping
+
+!!!note
+    Supported in cEOS >= 4.28.0F
+
+It is possible to make ceos nodes boot up with a user-defined interface layout. With the [`binds`](../nodes.md#binds) property, a user sets the path to the interface mapping file that will be mounted to a container and used during bootup. The underlying linux `eth` interfaces (used in the containerlab topology file) are mapped to cEOS interfaces in this file. The following shows an example of how this mapping file is structured:
+
+```json
+{
+  "ManagementIntf": {
+    "eth0": "Management1"
+  },
+  "EthernetIntf": {
+    "eth1": "Ethernet1/1",
+    "eth2": "Ethernet2/1",
+    "eth3": "Ethernet27/1",
+    "eth4": "Ethernet28/1",
+    "eth5": "Ethernet3/1/1",
+    "eth6": "Ethernet5/2/1"
+  }
+}
+```
+Linux's `eth0` interface is always used to map the management interface.
+
+With the following topology file, containerlab is instructed to take a `mymapping.json` file located in the same directory as the topology and mount that to the container as `/mnt/flash/EosIntfMapping.json`. This will result in this interface mapping being considered during the bootup of the node. The destination for that bind has to be `/mnt/flash/EosIntfMapping.json`.
+
+1. Craft a valid interface mapping file.
+2. Use `binds` config option for a ceos node/kind to make this file available in the container's filesystem:
+    ```yaml
+    name: ceos
+
+    topology:
+      nodes:
+        ceos1:
+          kind: ceos
+          image: ceos:4.28.0F
+          binds:
+            - mymapping.json:/mnt/flash/EosIntfMapping.json:ro # (1)!
+        ceos2: 
+          kind: ceos
+          image: ceos:4.28.0F
+          binds:
+            - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
+    links:
+        - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+    ```
+
+    1. If all ceos nodes use the same interface mapping file, it is easier to set the bind instruction on a kind level
+    ```yaml
+        topology:
+          kinds:
+            ceos:
+              binds:
+                - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
+          nodes:
+            ceos1:
+              kind: ceos
+              image: ceos:4.28.0F
+            ceos2: 
+              kind: ceos
+              image: ceos:4.28.0F
+    ```
+    This way the bind is set only once, and nodes of `ceos` kind will have these binds applied.
 
 ## Additional interface naming considerations
 
@@ -91,7 +154,7 @@ While many users will be fine with the default ceos naming of `eth`, some ceos u
 In order to align interfaces in this manner, the `INTFTYPE` environment variable must be set to `et` in the topology definition file and the links which are defined must be named `et`, as opposed to `eth`. This naming requirement does not apply to the `eth0` interface automatically created by containerlab. This is only required for links that are used for interconnection with other elements in a topology.
 
 example:
-```yml
+```yaml
 topology:
   defaults:
     env:
@@ -145,24 +208,25 @@ It is possible to change the default config which every ceos node will start wit
 
 1. Craft a valid startup configuration file[^2].
 2. Use this file as a startup-config for ceos kind:
-    ```
+
+    ```yaml
     name: ceos
 
     topology:
-    kinds:
+      kinds:
         ceos:
         startup-config: ceos-custom-startup.cfg
-    nodes:
+      nodes:
         # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
         ceos1:
-        kind: ceos
-        image: ceos:4.25.0F
+          kind: ceos
+          image: ceos:4.25.0F
         # ceos2 will boot with its own specific startup config, as it overrides the kind variables
         ceos2: 
-        kind: ceos
-        image: ceos:4.25.0F
-        startup-config: node-specific-startup.cfg
-    links:
+          kind: ceos
+          image: ceos:4.25.0F
+          startup-config: node-specific-startup.cfg
+      links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
 
@@ -173,12 +237,12 @@ In addition to cli commands such as `write memory` user can take advantage of th
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
 
 === "Startup command"
-    `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=4 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
+    `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
 === "Environment variables"
     `CEOS:1`  
     `EOS_PLATFORM":ceoslab`  
     `container:docker`  
-    `ETBA:4`  
+    `ETBA:1`  
     `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
     `INTFTYPE:eth`  
     `MAPETH0:1`  
@@ -214,18 +278,38 @@ clab-srlceos01/ceos
 
 9 directories, 11 files
 ```
+## Copy to `flash`
+
+If there is a need to copy ceos-specific configuration or override files to the ceos node in the topology use `.extras.ceos-copy-to-flash` config option. These files will be copied to the node's flash directory and evaluated on startup.
+
+```yaml
+name: ceos
+topology:
+  nodes:
+    ceos1:
+      kind: ceos
+      ...
+      extras:
+        ceos-copy-to-flash:
+        - ceos-config # (1)!
+        - toggle_override
+```
+
+1. Paths are relative to the topology file. Absolute paths like `~/some/path` or `/some/path` are also possible.
 
 ## Lab examples
-The following labs feature cEOS node:
+The following labs feature a cEOS node:
 
 - [SR Linux and cEOS](../../lab-examples/srl-ceos.md)
 
 ## Known issues or limitations
 ### cgroups v1
 
-As of this writing (22-June, 2021), ceos-lab image requires a cgroups v1 environment.  For many users, this should not require any changes to the runtime environment.  However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
+In versions prior to EOS-4.28.0F, the ceos-lab image requires a cgroups v1 environment. For many users, this should not require any changes to the runtime environment. However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
 
 Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467).
+
+Starting with EOS-4.28.0F, ceos-lab will automatically determine whether the container host is using cgroups v1 or cgroups v2 and act appropriately. No configuration is required.
 
 ??? "Switching to cgroup v1 in Ubuntu 21.04"
     To switch back to cgroup v1 in Ubuntu 21+ users need to add a kernel parameter `systemd.unified_cgroup_hierarchy=0` to GRUB config. Below is a snippet of `/etc/default/grub` file with the added `systemd.unified_cgroup_hierarchy=0` parameter.

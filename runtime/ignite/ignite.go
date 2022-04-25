@@ -261,12 +261,31 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 	if err != nil {
 		return nil, err
 	}
+
 	return vmChans, utils.LinkContainerNS(node.NSPath, node.LongName)
 }
 
-func (*IgniteRuntime) CreateContainer(_ context.Context, _ *types.NodeConfig) (string, error) {
+func (*IgniteRuntime) CreateContainer(_ context.Context, node *types.NodeConfig) (string, error) {
 	// this is a no-op
-	return "", nil
+	return node.LongName, nil
+}
+
+func (i *IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
+	pid, err := utils.ContainerNSToPID(cID)
+	if err != nil {
+		return err
+	}
+
+	return utils.PauseProcessGroup(pid)
+}
+
+func (i *IgniteRuntime) UnpauseContainer(_ context.Context, cID string) error {
+	pid, err := utils.ContainerNSToPID(cID)
+	if err != nil {
+		return err
+	}
+
+	return utils.UnpauseProcessGroup(pid)
 }
 
 func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {

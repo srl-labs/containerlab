@@ -1,4 +1,4 @@
-# topology documentation: http://containerlab.srlinux.dev/lab-examples/srl-crpd/
+# topology documentation: http://containerlab.dev/lab-examples/srl-crpd/
 name: srlcrpd01
 topology:
   nodes:
