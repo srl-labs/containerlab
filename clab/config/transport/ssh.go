@@ -286,10 +286,8 @@ func (t *SSHTransport) Connect(host string, _ ...TransportOption) error {
 
 	// Start some client config
 	host = fmt.Sprintf("%s:%d", host, t.Port)
-	//sshConfig := &ssh.ClientConfig{}
-	//SSHConfigWithUserNamePassword(sshConfig, "admin", "admin")
 
-	t.Target = strings.Split(strings.Split(host, ":")[0], "-")[2]
+	t.Target = host
 
 	ses_, err := NewSSHSession(host, t.SSHConfig)
 	if err != nil || ses_ == nil {
