@@ -10,6 +10,17 @@ Everybody is welcome to join and chat with our community members about all thing
 ## In The Media
 We are always happy to showcase containerlab and demonstrate its powers. Luckily, the network engineering community has lots of events worldwide, and we participated in some. Below you will find recordings of containerlab talks in different formats and on various venues listed in reverse chronological order[^1].
 
+### Telco podcast
+<small>:material-podcast: [Networking Topology As Code](https://anchor.fm/thetelcopodcast/episodes/Network-topology-as-code---interview-with-Roman-Dodin--PLM-in-Nokia-and-maintainer-of-Containerlabs-e1hfcdl) · :material-calendar: 2022-04-21</small>
+
+A year in the making; containerlab made lots of waves in the community threading its way to engineers hearts through simple and lightweight abstractions tailored to networking labs problem space. In this podcast Maciej and Anton from The Telco podcast interviewed [Roman Dodin][rdodin-twitter] on containerlab' current state and many more.
+
+<div class="iframe-audio-container">
+<iframe src="https://anchor.fm/thetelcopodcast/embed/episodes/Network-topology-as-code---interview-with-Roman-Dodin--PLM-in-Nokia-and-maintainer-of-Containerlabs-e1hfcdl/a-a7lt09f" height="102px" width="400px" frameborder="0" scrolling="no"></iframe>
+</div>
+
+Participants: [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+
 ### Packet Pushers Tech Bytes
 <small>:material-podcast: [Containerlab Makes Container And VM Networking Labs Easy](https://packetpushers.net/podcast/tech-bytes-containerlab-makes-container-and-vm-networking-labs-easy-sponsored/) · :material-calendar: 2021-11-15</small>
 
