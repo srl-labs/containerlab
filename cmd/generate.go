@@ -131,7 +131,7 @@ func init() {
 	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 }
 
-func generateTopologyConfig(name, network, ipv4range, ipv6range string, images map[string]string, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
+func generateTopologyConfig(name, network, ipv4range, ipv6range string, images, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
 	numStages := len(nodes)
 	config := &clab.Config{
 		Name: name,
@@ -291,7 +291,7 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 }
 
 func saveTopoFile(path string, data []byte) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
