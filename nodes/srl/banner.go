@@ -18,6 +18,7 @@ const banner = `................................................................
 : Container:   https://go.srlinux.dev/container-image          :
 : Docs:        https://doc.srlinux.dev/%s-%s                   :
 : Rel. notes:  https://doc.srlinux.dev/rn%s-%s-%s               :
+: YANG:        https://yang.srlinux.dev/v%s.%s.%s               :
 : Discord:     https://go.srlinux.dev/discord                  :
 : Contact:     https://go.srlinux.dev/contact-sales            :
 ................................................................
@@ -37,13 +38,16 @@ func (s *srl) banner(ctx context.Context) (string, error) {
 
 	v := s.parseVersionString(string(stdout))
 
-	// massage minor version to have extra whitespace if it is a single digit
-	// this is needed to have banner table aligned nicely
+	// if minor is a single digit value, we need to add extra space to patch version
+	// to have banner table aligned nicely
 	if len(v.minor) == 1 {
-		v.minor = v.minor + " "
+		v.patch = v.patch + " "
 	}
 
-	b := fmt.Sprintf(banner, v.major, v.minor, v.major, v.minor, v.patch)
+	b := fmt.Sprintf(banner,
+		v.major, v.minor,
+		v.major, v.minor, v.patch,
+		v.major, v.minor, v.patch)
 
 	return b, nil
 }
