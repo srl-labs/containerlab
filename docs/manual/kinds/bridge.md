@@ -13,7 +13,7 @@ For example, by connecting a lab node to a bridge we can:
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:8,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
 ## Using bridge kind
-Containerlab doesn't create bridges on users behalf, that means that in order to use a bridge in the [topology definition file](../topo-def-file.md), the bridge needs to be created first.
+Containerlab doesn't create bridges on users behalf, that means that in order to use a bridge in the [topology definition file](../topo-def-file.md), the bridge needs to be created and enabled first.
 
 Once the bridge is created, it needs to be referenced as a node inside the topology file:
 
@@ -59,5 +59,13 @@ br-clab         8000.6281eb7133d2       no              eth1
                                                         eth2
                                                         eth3
 ```
+
+Containerlab automatically adds an iptables rule for the referenced bridges to allow forwarding over them. Namely, for a given bridge named `br-clab` containerlab will attempt to call the following iptables command during the lab deployment:
+
+```
+iptables -I FORWARD -i br-clab -j ACCEPT
+```
+
+This will ensure that traffic is forwarded when passing this particular bridge. Note, that once you destroy the lab, the rule will stay.
 
 Check out ["External bridge"](../../lab-examples/ext-bridge.md) lab for a ready-made example on how to use bridges.
