@@ -71,9 +71,9 @@ func configRun(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	allConfig := config.PrepareVars(c.Nodes, c.Links)
+	configs := config.PrepareVars(c.Nodes, c.Links)
 
-	err = config.RenderAll(allConfig)
+	err = config.RenderAll(configs)
 	if err != nil {
 		return err
 	}
@@ -96,10 +96,10 @@ func configRun(_ *cobra.Command, args []string) error {
 	}
 
 	var wg sync.WaitGroup
-	deploy := func(n string) {
+	configFn := func(n string) {
 		defer wg.Done()
 
-		cs, ok := allConfig[n]
+		cs, ok := configs[n]
 		if !ok {
 			log.Errorf("Invalid node in filter: %s", n)
 			return
@@ -110,13 +110,14 @@ func configRun(_ *cobra.Command, args []string) error {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
 	}
+
 	wg.Add(len(configFilter))
 	for _, node := range configFilter {
 		// On debug this will not be executed concurrently
 		if log.IsLevelEnabled(log.DebugLevel) {
-			deploy(node)
+			configFn(node)
 		} else {
-			go deploy(node)
+			go configFn(node)
 		}
 	}
 	wg.Wait()
@@ -148,7 +149,7 @@ func init() {
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
-	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{}, "comma separated list of nodes to include")
+	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{}, "comma separated list of nodes to include")
 	configCmd.Flags().SortFlags = false
 
 	configCmd.AddCommand(configSendCmd)
