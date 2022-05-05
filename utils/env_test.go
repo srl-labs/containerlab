@@ -4,9 +4,18 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/AlekSi/pointer"
 	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v2"
 )
+
+type TestConfig struct {
+	FirstField  string                 `json:"first,omitempty"`
+	SecondField *bool                  `json:"second,omitempty"`
+	ThirdField  *int                   `json:"last,omitempty"`
+	MapField    map[string]interface{} `json:"map,omitempty"`
+	ArrayField  []interface{}          `json:"array,omitempty"`
+}
 
 func assert(t *testing.T, val, exp interface{}) {
 	if !cmp.Equal(val, exp) {
@@ -96,6 +105,38 @@ func TestMapify(t *testing.T) {
 	assert(t, ismap, true)
 	t.Logf("%v", b)
 	assert(t, b, map[string]interface{}{"key": "val"})
+}
+
+func TestMergeStructConfigs(t *testing.T) {
+	// default config
+	d := &TestConfig{
+		FirstField: "set in default",
+		ThirdField: pointer.ToInt(1),
+		MapField:   map[string]interface{}{"a": 123, "c": map[string]interface{}{"z": 321}},
+		ArrayField: []interface{}{1, 2},
+	}
+	// kind sets the 2nd
+	k := &TestConfig{
+		SecondField: pointer.ToBool(true),
+		MapField:    map[string]interface{}{"b": 456, "c": map[string]interface{}{"y": 654}}}
+	// node overwrites 1st and 3rd fields
+	n := &TestConfig{
+		FirstField: "set in node",
+		ThirdField: pointer.ToInt(3),
+		ArrayField: []interface{}{1, 3}}
+
+	r := MergeStructConfigs(d, k, n).(*TestConfig)
+
+	// json unmarshalling apparently converts literal integers to floats
+	// reference: https://github.com/square/go-jose/issues/351
+	exp := &TestConfig{
+		FirstField:  "set in node",
+		SecondField: pointer.ToBool(true),
+		ThirdField:  pointer.ToInt(3),
+		MapField:    map[string]interface{}{"a": int(123), "b": float64(456), "c": map[string]interface{}{"y": float64(654)}},
+		ArrayField:  []interface{}{float64(1), float64(3)},
+	}
+	assert(t, r, exp)
 }
 
 func TestMergeMapsFromYaml(t *testing.T) {

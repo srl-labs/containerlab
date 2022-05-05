@@ -3,6 +3,7 @@ module github.com/srl-labs/containerlab
 go 1.17
 
 require (
+	github.com/AlekSi/pointer v1.2.0
 	github.com/awalterschulze/gographviz v2.0.1+incompatible
 	github.com/cloudflare/cfssl v1.4.1
 	github.com/containerd/containerd v1.5.10
