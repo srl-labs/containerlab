@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -23,7 +24,8 @@ var errHTTPFetch = errors.New("failed to fetch http(s) resource")
 // FileExists returns true if a file referenced by filename exists
 func FileExists(filename string) bool {
 	f, err := os.Stat(filename)
-	if os.IsNotExist(err) {
+	if err != nil {
+		log.Debugf("error while trying to access file %v: %v", filename, err)
 		return false
 	}
 
