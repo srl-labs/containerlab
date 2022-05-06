@@ -144,7 +144,7 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 		return err
 	}
 	log.Debugf("node '%s' generated config: %s", node.ShortName, dstBytes.String())
-	f, err := os.Create(dst)
+	f, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return err
 	}

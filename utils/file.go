@@ -21,7 +21,8 @@ var errNonRegularFile = errors.New("non-regular file")
 var errFileNotExist = errors.New("file does not exist")
 var errHTTPFetch = errors.New("failed to fetch http(s) resource")
 
-// FileExists returns true if a file referenced by filename exists
+// FileExists returns true if a file referenced by filename exists & accessible
+//
 func FileExists(filename string) bool {
 	f, err := os.Stat(filename)
 	if err != nil {
