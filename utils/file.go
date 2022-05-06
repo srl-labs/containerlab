@@ -9,7 +9,6 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -139,14 +138,8 @@ func CreateDirectory(path string, perm os.FileMode) {
 }
 
 func ReadFileContent(file string) ([]byte, error) {
-	// check file exists
-	if !FileExists(file) {
-		return nil, fmt.Errorf("%w: %s", errFileNotExist, file)
-	}
-
-	// read and return file content
-	b, err := ioutil.ReadFile(file)
-
+	// try to read and return file content, or return an error
+	b, err := os.ReadFile(file)
 	return b, err
 }
 
