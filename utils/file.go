@@ -132,8 +132,9 @@ func CreateFile(file, content string) (err error) {
 // CreateDirectory creates a directory by a path with a mode/permission specified by perm.
 // If directory exists, the function does not do anything.
 func CreateDirectory(path string, perm os.FileMode) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		_ = os.MkdirAll(path, perm)
+	err := os.MkdirAll(path, perm)
+	if err != nil {
+		log.Debugf("error while creating a directory path %v: %v", path, err)
 	}
 }
 
