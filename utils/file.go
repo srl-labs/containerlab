@@ -5,11 +5,10 @@
 package utils
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,13 +16,14 @@ import (
 )
 
 var errNonRegularFile = errors.New("non-regular file")
-var errFileNotExist = errors.New("file does not exist")
 var errHTTPFetch = errors.New("failed to fetch http(s) resource")
 
-// FileExists returns true if a file referenced by filename exists
+// FileExists returns true if a file referenced by filename exists & accessible
+//
 func FileExists(filename string) bool {
 	f, err := os.Stat(filename)
-	if os.IsNotExist(err) {
+	if err != nil {
+		log.Debugf("error while trying to access file %v: %v", filename, err)
 		return false
 	}
 
@@ -131,41 +131,16 @@ func CreateFile(file, content string) (err error) {
 // CreateDirectory creates a directory by a path with a mode/permission specified by perm.
 // If directory exists, the function does not do anything.
 func CreateDirectory(path string, perm os.FileMode) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		_ = os.MkdirAll(path, perm)
+	err := os.MkdirAll(path, perm)
+	if err != nil {
+		log.Debugf("error while creating a directory path %v: %v", path, err)
 	}
 }
 
 func ReadFileContent(file string) ([]byte, error) {
-	// check file exists
-	if !FileExists(file) {
-		return nil, fmt.Errorf("%w: %s", errFileNotExist, file)
-	}
-
-	// read and return file content
-	b, err := ioutil.ReadFile(file)
-
+	// try to read and return file content, or return an error
+	b, err := os.ReadFile(file)
 	return b, err
-}
-
-func ReadFileLines(file string) ([]string, error) {
-	// check file exists
-	if !FileExists(file) {
-		return nil, fmt.Errorf("%w: %s", errFileNotExist, file)
-	}
-	content, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-
-	scanner := bufio.NewScanner(content)
-	scanner.Split(bufio.ScanLines)
-	var result []string
-
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-	return result, nil
 }
 
 // ExpandHome expands `~` char in the path to home path of a current user in provided path p.
