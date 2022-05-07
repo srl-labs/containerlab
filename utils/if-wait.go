@@ -10,7 +10,7 @@ SLEEP=0
 int_calc () 
 {
     index=0
-    for i in $(ls -1v /sys/class/net/ | grep 'eth\|ens\|eno\|^e[0-9]'); do
+    for i in $(ls -1v /sys/class/net/ | grep -E '^et|^ens|^eno|^e[0-9]'); do
       let index=index+1
     done
     MYINT=$index
