@@ -1,6 +1,6 @@
 # SONiC
 
-[SONiC](https://azure.github.io/SONiC/) is identified with `sonic-vs` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vs` node.
+[SONiC](https://sonic-net.github.io/SONiC/) is identified with `sonic-vs` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vs` node.
 
 !!!note
     To build a `sonic-vs` docker image:
