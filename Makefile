@@ -43,9 +43,14 @@ htmltest:
 	docker run --rm -v $$(pwd):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 
-# build containerlab bin and push it as an OCI artifact to ttl.sh registry
+# build containerlab bin and push it as an OCI artifact to ttl.sh and ghcr registries
 # to obtain the pushed artifact use: docker run --rm -v $(pwd):/workspace ghcr.io/deislabs/oras:v0.11.1 pull ttl.sh/<image-name>
 .PHONY: ttl-push
-ttl-push: build-with-podman
+oci-push: build-with-podman
+# push to ttl.sh
 	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$$(git rev-parse --short HEAD):1d ./containerlab
 	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$$(git rev-parse --short HEAD):1d"
+# push to ghcr.io
+	@echo ""
+	docker run --rm -v $$(pwd)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v0.12.0 push ghcr.io/srl-labs/clab-oci:$$(git rev-parse --short HEAD) ./containerlab
+	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ghcr.io/srl-labs/clab-oci:$$(git rev-parse --short HEAD)"
