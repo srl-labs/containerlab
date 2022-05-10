@@ -262,6 +262,20 @@ To build containerlab from source:
     goreleaser --snapshot --skip-publish --rm-dist
     ```
 
+### Uninstall
+To uninstall containerlab when it was installed via installation script or packages:
+
+=== "Debian-based system"
+    ```
+    apt remove containerlab
+    ```
+=== "RPM-based systems"
+    ```
+    yum remove containerlab
+    ```
+=== "Manual removal"
+    Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
+
 [^1]: only available if installed from packages
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
 [^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
