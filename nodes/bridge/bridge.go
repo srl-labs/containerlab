@@ -77,9 +77,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 		return err
 	}
 	if err != nil {
-		// non nil error typically means that DOCKER-USER chain doesn't exist
-		// this happens with old docker installations (centos7 hello) from default repos
-		return fmt.Errorf("failed to add iptables forwarding rule for bridge %q", b.cfg.ShortName)
+		return fmt.Errorf("failed to add iptables forwarding rule for bridge %q: %w", b.cfg.ShortName, err)
 	}
 
 	cmd := fmt.Sprintf(iptAllowCmd, b.cfg.ShortName)
