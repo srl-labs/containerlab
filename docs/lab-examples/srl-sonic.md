@@ -133,7 +133,7 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[sonic]: https://azure.github.io/SONiC/
+[sonic]: https://sonic-net.github.io/SONiC/
 [topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/sonic01/sonic01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
