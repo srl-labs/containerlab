@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	iptCheckCmd = "-vL FORWARD"
-	iptAllowCmd = "-I FORWARD -i %s -j ACCEPT"
+	iptCheckCmd = "-vL FORWARD -w 5"
+	iptAllowCmd = "-I FORWARD -i %s -j ACCEPT -w 5"
 )
 
 func init() {
@@ -77,9 +77,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 		return err
 	}
 	if err != nil {
-		// non nil error typically means that DOCKER-USER chain doesn't exist
-		// this happens with old docker installations (centos7 hello) from default repos
-		return fmt.Errorf("failed to add iptables forwarding rule for bridge %q", b.cfg.ShortName)
+		return fmt.Errorf("failed to add iptables forwarding rule for bridge %q: %w", b.cfg.ShortName, err)
 	}
 
 	cmd := fmt.Sprintf(iptAllowCmd, b.cfg.ShortName)
@@ -87,9 +85,13 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	log.Debugf("Installing iptables rules for bridge %q", b.cfg.ShortName)
 
 	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
+
+	log.Debugf("iptables install stdout for bridge %s:%s", b.cfg.ShortName, stdOutErr)
+
 	if err != nil {
 		log.Warnf("iptables install stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to create iptables rules: %w", err)
 	}
+
 	return nil
 }
