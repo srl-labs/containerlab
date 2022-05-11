@@ -276,3 +276,17 @@ type ContainerDetails struct {
 	IPv4Address string `json:"ipv4_address,omitempty"`
 	IPv6Address string `json:"ipv6_address,omitempty"`
 }
+
+type MySocketIoEntry struct {
+	SocketId  *string `json:"socket_id,omitempty"`
+	DnsName   *string `json:"dns_name,omitempty"`
+	Ports     []int   `json:"ports,omitempty"`
+	Type      *string `json:"type,omitempty"`
+	CloudAuth bool    `json:"cloud_auth,omitempty"`
+	Name      *string `json:"name,omitempty"`
+}
+
+type JsonInspect struct {
+	ContainerData  []ContainerDetails `json:"container_data"`
+	MySocketIoData []*MySocketIoEntry `json:"mysocketio_data"`
+}

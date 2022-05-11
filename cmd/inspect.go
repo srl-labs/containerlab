@@ -11,14 +11,17 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
+	"github.com/srl-labs/containerlab/utils/mysocketio"
 )
 
 var format string
@@ -76,10 +79,6 @@ var inspectCmd = &cobra.Command{
 			return fmt.Errorf("failed to list containers: %s", err)
 		}
 
-		if len(containers) == 0 {
-			log.Println("no containers found")
-			return nil
-		}
 		if details {
 			b, err := json.MarshalIndent(containers, "", "  ")
 			if err != nil {
@@ -120,7 +119,6 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
-	var mysocketCID string
 
 	for i := range containers {
 		cont := &containers[i]
@@ -145,7 +143,6 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 			cdet.Kind = kind
 			if kind == "mysocketio" {
 				printMysocket = true
-				mysocketCID = cont.ID
 			}
 		}
 		if group, ok := cont.Labels["clab-node-group"]; ok {
@@ -162,7 +159,22 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 	})
 
 	if format == "json" {
-		b, err := json.MarshalIndent(contDetails, "", "  ")
+		resultJson := &types.JsonInspect{ContainerData: contDetails, MySocketIoData: []*types.MySocketIoEntry{}}
+		if printMysocket {
+			// search for the mysocketio token file by deducing it from the topology config binds section
+			tokenFile, err := deduceMySocketIoTokenFileFromBindMounts(c.Nodes, c.TopoFile.GetDir())
+			if err != nil {
+				return err
+			}
+			// retrieve the MySocketIO Data
+			socketdata, err := getMySocketIoData(tokenFile)
+			if err != nil {
+				return fmt.Errorf("error when processing mysocketio data: %v", err)
+			}
+			resultJson.MySocketIoData = socketdata
+		}
+
+		b, err := json.MarshalIndent(resultJson, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal container details: %v", err)
 		}
@@ -197,19 +209,97 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		return nil
 	}
 
-	runtime := c.GlobalRuntime()
-
-	stdout, stderr, err := runtime.Exec(context.Background(), mysocketCID, []string{"mysocketctl", "socket", "ls"})
+	// search for the mysocketio token file by deducing it from the topology config binds section
+	tokenFile, err := deduceMySocketIoTokenFileFromBindMounts(c.Nodes, c.TopoFile.GetDir())
 	if err != nil {
-		return fmt.Errorf("failed to execute cmd: %v", err)
-
+		return err
 	}
-	if len(stderr) > 0 {
-		log.Infof("errors during listing mysocketio sockets: %s", string(stderr))
+	// retrieve the MySocketIO Data
+	socketdata, err := getMySocketIoData(tokenFile)
+	if err != nil {
+		return fmt.Errorf("error when processing mysocketio data: %v", err)
 	}
 
+	// prepare data for table
+	var tabDataMySocketIo [][]string
+	for _, entry := range socketdata {
+		var portstrarr []string
+		for _, port := range entry.Ports {
+			portstrarr = append(portstrarr, strconv.Itoa(port))
+		}
+		tabDataMySocketIo = append(tabDataMySocketIo, []string{*entry.SocketId, *entry.DnsName, strings.Join(portstrarr, ", "), *entry.Type, strconv.FormatBool(entry.CloudAuth), *entry.Name})
+	}
+	tableMySocketIo := tablewriter.NewWriter(os.Stdout)
+	headerMySocketIo := []string{
+		"Socket ID",
+		"DNS Name",
+		"Ports",
+		"Type",
+		"Cloud Auth",
+		"Name",
+	}
+	// configure table output
+	tableMySocketIo.SetHeader(headerMySocketIo)
+	tableMySocketIo.SetAutoFormatHeaders(false)
+	tableMySocketIo.SetAutoWrapText(false)
+	tableMySocketIo.AppendBulk(tabDataMySocketIo)
 	fmt.Println("Published ports:")
-	fmt.Println(string(stdout))
+	tableMySocketIo.Render()
 
 	return nil
+}
+
+// getMySocketioData uses the mysocketio.http client to retrieve the socket data
+func getMySocketIoData(tokenfile string) ([]*types.MySocketIoEntry, error) {
+	result := []*types.MySocketIoEntry{}
+
+	client, err := mysocketio.NewClient(tokenfile)
+	if err != nil {
+		return nil, err
+	}
+
+	sockets := []mysocketio.Socket{}
+	err = client.Request("GET", "connect", &sockets, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range sockets {
+		newentry := &types.MySocketIoEntry{
+			SocketId:  &sockets[i].SocketID,
+			DnsName:   &sockets[i].Dnsname,
+			Ports:     sockets[i].SocketTcpPorts,
+			Type:      &sockets[i].SocketType,
+			CloudAuth: sockets[i].CloudAuthEnabled,
+			Name:      &sockets[i].Name,
+		}
+		result = append(result, newentry)
+	}
+	return result, nil
+}
+
+// deduceMySocketIoTokenFileFromBindMounts searches through the topology to find a node of kind mysocketio.
+// if that is found, the bindmounts are searched for ".mysocketio_token" and the path is being converted into an
+// absolute path and returned.
+// If the
+func deduceMySocketIoTokenFileFromBindMounts(nodes map[string]nodes.Node, configPath string) (string, error) {
+	for _, node := range nodes {
+		// search for mysocketio kind in topology config
+		if node.Config().Kind == "mysocketio" {
+			// iterate through bind mounts
+			for _, bind := range node.Config().Binds {
+				// watch out for ".mysocketio_token"
+				if strings.Contains(bind, ".mysocketio_token") {
+					// split the bindmount and resolve the path to an absolute path
+					deduced_absfilepath := utils.ResolvePath(strings.Split(bind, ":")[0], configPath)
+					// check file existence before returning
+					if !utils.FileExists(deduced_absfilepath) {
+						return "", fmt.Errorf(".mysocketio_token resolved to %s, but that file doesn't exist", deduced_absfilepath)
+					}
+					return deduced_absfilepath, nil
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("unable to find \".mysocketio_token\"")
 }
