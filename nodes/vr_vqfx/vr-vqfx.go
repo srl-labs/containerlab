@@ -7,6 +7,9 @@ package vr_vqfx
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -46,6 +49,8 @@ func (s *vrVQFX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
 
+	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, "startup-config"), ":/startup-config"))
+
 	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
 		s.cfg.Binds = append(s.cfg.Binds, "/dev:/dev")
@@ -61,7 +66,7 @@ func (s *vrVQFX) Config() *types.NodeConfig { return s.cfg }
 
 func (s *vrVQFX) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return nil
+	return createVrvQFXFiles(s.cfg)
 }
 
 func (s *vrVQFX) Deploy(ctx context.Context) error {
@@ -103,5 +108,27 @@ func (s *vrVQFX) SaveConfig(_ context.Context) error {
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", s.cfg.ShortName)
+	return nil
+}
+
+func createVrvQFXFiles(node *types.NodeConfig) error {
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	utils.CreateDirectory(path.Join(node.LabDir, "startup-config"), 0777)
+
+	if node.StartupConfig != "" {
+		cfg := filepath.Join(node.LabDir, "startup-config", "config.txt")
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(cfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+		}
+	}
 	return nil
 }
