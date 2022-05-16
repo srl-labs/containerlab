@@ -160,7 +160,8 @@ The first command in the snippet above sets the working directory which you inte
 !!!note
     1. It is best to create a directory under the `~/some/path` unless you know what to do[^5]
     2. vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.
-    3. Docker Desktop for Mac introduced cgroups v2 support in 4.3.0 version; to support the images that require cgroups v1 follow [this instructions](https://github.com/docker/for-mac/issues/6073).
+    3. Docker Desktop for Mac introduced cgroups v2 support in 4.3.0 version; to support the images that require cgroups v1 follow [these instructions](https://github.com/docker/for-mac/issues/6073).
+    4. Docker Desktop relies on a LinuxKit based HyperKit VM. Unfortunately, it is shipped with a minimalist kernel, and some modules such as VRF are disabled by default. Follow [these instructions](https://medium.com/@notsinge/making-your-own-linuxkit-with-docker-for-mac-5c1234170fb1) to rebuild it with more modules. 
 
 When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use `containerlab` commands right away.
 
@@ -260,6 +261,20 @@ To build containerlab from source:
     ```
     goreleaser --snapshot --skip-publish --rm-dist
     ```
+
+### Uninstall
+To uninstall containerlab when it was installed via installation script or packages:
+
+=== "Debian-based system"
+    ```
+    apt remove containerlab
+    ```
+=== "RPM-based systems"
+    ```
+    yum remove containerlab
+    ```
+=== "Manual removal"
+    Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
 
 [^1]: only available if installed from packages
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.

@@ -365,7 +365,7 @@ func (*IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]types.Gene
 			NetworkSettings: types.GenericMgmtIPs{},
 		}
 
-		if i.Status.Runtime.ID != "" && len(i.Status.Runtime.ID) > 12 {
+		if i.Status.Runtime != nil && i.Status.Runtime.ID != "" && len(i.Status.Runtime.ID) > 12 {
 			ctr.ShortID = i.Status.Runtime.ID[:12]
 		}
 
