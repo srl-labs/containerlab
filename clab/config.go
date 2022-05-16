@@ -164,6 +164,7 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	// Init
 	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
 	if !ok {
+		// collect all kind names registered by the nodes in a slice
 		kinds := make([]string, 0, len(nodes.Nodes))
 		for k := range nodes.Nodes {
 			kinds = append(kinds, k)

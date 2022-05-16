@@ -34,7 +34,7 @@ const (
 // a map of node kinds overriding the default global runtime
 var NonDefaultRuntimes = map[string]string{}
 
-// DefaultCredentialsAdd register default credentials per provided kindname
+// SetNonDefaultRuntimePerKind sets a non default runtime for kinds that requires that (see cvx)
 func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 	for _, kindname := range kindnames {
 		if _, exists := NonDefaultRuntimes[kindname]; exists {
@@ -59,6 +59,7 @@ type Node interface {
 	GetRuntime() runtime.ContainerRuntime
 }
 
+// Nodes is a map of all supported kinds and their init functions
 var Nodes = map[string]Initializer{}
 
 type Initializer func() Node
@@ -111,7 +112,7 @@ func SetDefaultCredentials(kindnames []string, user, password string) error {
 // GetDefaultCredentialsForKind retrieve the default credentials for a certain kind
 // the first element in the slice is the Username, the second is the password
 func GetDefaultCredentialsForKind(kind string) ([]string, error) {
-	if _, exists := defaultCredentials[kind]; exists {
+	if _, exists := defaultCredentials[kind]; !exists {
 		return nil, fmt.Errorf("default credentials entry for kind %s does not exist", kind)
 	}
 	return defaultCredentials[kind], nil
