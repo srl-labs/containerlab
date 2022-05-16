@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	kindnames = []string{"vr-xrv"}
+	kindnames = []string{"vr-xrv", "vr-cisco_xrv"}
 )
 
 const (

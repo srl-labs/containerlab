@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	kindnames                 = []string{"cvx"}
+	kindnames                 = []string{"cvx", "cumulus_cvx"}
 	defaultCvxKernelImageRef  = "docker.io/networkop/kernel:4.19"
 	defaultIgniteSandboxImage = "networkop/ignite:dev"
 )

@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	kindnames = []string{"vr-pan"}
+	kindnames = []string{"vr-pan", "vr-paloalto_panos"}
 )
 
 const (

@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	kindnames = []string{"vr-ftosv"}
+	kindnames = []string{"vr-ftosv", "vr-dell_ftosv"}
 )
 
 const (

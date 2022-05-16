@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	kindnames = []string{"ipinfusion-ocnos"}
+	kindnames = []string{"ipinfusion_ocnos"}
 )
 
 const (

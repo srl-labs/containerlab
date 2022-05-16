@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	kindnames = []string{"vr-ros"}
+	kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
 )
 
 const (

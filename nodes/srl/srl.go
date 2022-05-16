@@ -63,7 +63,7 @@ commit save`
 )
 
 var (
-	kindnames = []string{"srl", "nokia-srlinux"}
+	kindnames = []string{"srl", "nokia_srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",

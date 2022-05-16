@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	kindnames = []string{"ceos", "arista-ceos"}
+	kindnames = []string{"ceos", "arista_ceos"}
 	// defined env vars for the ceos
 	ceosEnv = map[string]string{
 		"CEOS":                                "1",

@@ -1,10 +1,10 @@
 # IPInfusion OcNOS
 
-IPInfusion OcNOS virtualized router is identified with `ipinfusion-ocnos` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
+IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
 
-ipinfusion-ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
+ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
 
-## Managing ipinfusion-ocnos nodes
+## Managing ipinfusion_ocnos nodes
 
 !!!note
     Containers with OcNOS inside will take ~3min to fully boot.  
@@ -13,7 +13,7 @@ ipinfusion-ocnos nodes launched with containerlab come up pre-provisioned with S
 IPInfusion OcNOS node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
-    to connect to a `bash` shell of a running ipinfusion-ocnos container:
+    to connect to a `bash` shell of a running ipinfusion_ocnos container:
     ```bash
     docker exec -it <container-name/id> bash
     ```
@@ -32,12 +32,12 @@ IPInfusion OcNOS node launched with containerlab can be managed via the followin
     Default user credentials: `ocnos:ocnos`
 
 ## Interfaces mapping
-ipinfusion-ocnos container can have up to 144 interfaces and uses the following mapping rules:
+ipinfusion_ocnos container can have up to 144 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1` - first data interface, mapped to first data port of OcNOS line card
 * `eth2+` - second and subsequent data interface
 
-When containerlab launches ipinfusion-ocnos node, it will assign IPv4 address to the `eth0` interface. This address can be used to reach management plane of the router.
+When containerlab launches ipinfusion_ocnos node, it will assign IPv4 address to the `eth0` interface. This address can be used to reach management plane of the router.
 
 Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
