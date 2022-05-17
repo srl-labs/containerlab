@@ -15,14 +15,24 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-vmx", "vr-juniper_vmx"}
+)
+
 const (
 	scrapliPlatformName = "juniper_junos"
+	defaultUser         = "admin"
+	defaultPassword     = "admin@123"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrVMX, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrVMX)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrVMX struct {
@@ -38,8 +48,8 @@ func (s *vrVMX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin@123",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
@@ -93,8 +103,8 @@ func (s *vrVMX) Delete(ctx context.Context) error {
 
 func (s *vrVMX) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 

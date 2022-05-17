@@ -55,32 +55,6 @@ const (
 	nodeDirVar = "__clabNodeDir__"
 )
 
-// supported kinds
-var kinds = []string{
-	"srl",
-	"ceos",
-	"crpd",
-	"sonic-vs",
-	"vr-ftosv",
-	"vr-n9kv",
-	"vr-sros",
-	"vr-vmx",
-	"vr-vqfx",
-	"vr-xrv",
-	"vr-xrv9k",
-	"vr-veos",
-	"vr-pan",
-	"vr-csr",
-	"vr-ros",
-	"linux",
-	"bridge",
-	"ovs-bridge",
-	"mysocketio",
-	"host",
-	"cvx",
-	"keysight_ixia-c-one",
-}
-
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
 	Name     string          `json:"name,omitempty"`
@@ -190,6 +164,11 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	// Init
 	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
 	if !ok {
+		// collect all kind names registered by the nodes in a slice
+		kinds := make([]string, 0, len(nodes.Nodes))
+		for k := range nodes.Nodes {
+			kinds = append(kinds, k)
+		}
 		return fmt.Errorf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
 	}
 	n := nodeInitializer()

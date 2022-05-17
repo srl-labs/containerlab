@@ -6,6 +6,7 @@ package nodes
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -23,35 +24,25 @@ const (
 var NodeKind string
 
 const (
-	NodeKindBridge           = "bridge"
-	NodeKindCEOS             = "ceos"
-	NodeKindCVX              = "cvx"
-	NodeKindCRPD             = "crpd"
-	NodeKindHOST             = "host"
-	NodeKindLinux            = "linux"
-	NodeKindMySocketIO       = "mysocketio"
-	NodeKindOVS              = "ovs-bridge"
-	NodeKindSonic            = "sonic-vs"
-	NodeKindSRL              = "srl"
-	NodeKindVrCSR            = "vr-csr"
-	NodeKindVrPAN            = "vr-pan"
-	NodeKindVrN9KV           = "vr-n9kv"
-	NodeKindVrFTOSV          = "vr-ftosv"
-	NodeKindVrROS            = "vr-ros"
-	NodeKindVrSROS           = "vr-sros"
-	NodeKindVrVEOS           = "vr-veos"
-	NodeKindVrVMX            = "vr-vmx"
-	NodeKindVrVQFX           = "vr-vqfx"
-	NodeKindVrXRV            = "vr-xrv"
-	NodeKindVrXRV9K          = "vr-xrv9k"
-	NodeKindVrNXOS           = "vr-nxos"
-	NodeKindIPInfusionOCNOS  = "ipinfusion-ocnos"
-	NodeKindKeysightIxiaCOne = "keysight_ixia-c-one"
+	NodeKindBridge = "bridge"
+
+	NodeKindHOST = "host"
+	NodeKindOVS  = "ovs-bridge"
+	NodeKindSRL  = "srl"
 )
 
 // a map of node kinds overriding the default global runtime
-var NonDefaultRuntimes = map[string]string{
-	NodeKindCVX: runtime.IgniteRuntime,
+var NonDefaultRuntimes = map[string]string{}
+
+// SetNonDefaultRuntimePerKind sets a non default runtime for kinds that requires that (see cvx)
+func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
+	for _, kindname := range kindnames {
+		if _, exists := NonDefaultRuntimes[kindname]; exists {
+			return fmt.Errorf("non default runtime config for kind with the name '%s' exists already", kindname)
+		}
+		NonDefaultRuntimes[kindname] = runtime
+	}
+	return nil
 }
 
 type Node interface {
@@ -68,12 +59,15 @@ type Node interface {
 	GetRuntime() runtime.ContainerRuntime
 }
 
+// Nodes is a map of all supported kinds and their init functions
 var Nodes = map[string]Initializer{}
 
 type Initializer func() Node
 
-func Register(name string, initFn Initializer) {
-	Nodes[name] = initFn
+func Register(names []string, initFn Initializer) {
+	for _, name := range names {
+		Nodes[name] = initFn
+	}
 }
 
 type NodeOption func(Node)
@@ -99,15 +93,27 @@ var DefaultConfigTemplates = map[string]string{
 }
 
 // DefaultCredentials holds default username and password per each kind
-var DefaultCredentials = map[string][]string{
-	"srl":                   {"admin", "admin"},
-	"vr-pan":                {"admin", "Admin@123"},
-	"vr-n9kv":               {"admin", "admin"},
-	"vr-ftosv":              {"admin", "admin"},
-	"vr-sros":               {"admin", "admin"},
-	"vr-vmx":                {"admin", "admin@123"},
-	"vr-vqfx":               {"admin", "admin@123"},
-	"vr-xrv9k":              {"clab", "clab@123"},
-	"vr-csr":                {"admin", "admin"},
-	NodeKindIPInfusionOCNOS: {"admin", "admin"},
+var defaultCredentials = map[string][]string{}
+
+// SetDefaultCredentials register default credentials per provided kindname
+func SetDefaultCredentials(kindnames []string, user, password string) error {
+	// iterate over the kindnames
+	for _, kindname := range kindnames {
+		// check the default credentials for the kindname is not yet already registed
+		if _, exists := defaultCredentials[kindname]; exists {
+			return fmt.Errorf("kind with the name '%s' exists already", kindname)
+		}
+		// register the credentials
+		defaultCredentials[kindname] = []string{user, password}
+	}
+	return nil
+}
+
+// GetDefaultCredentialsForKind retrieve the default credentials for a certain kind
+// the first element in the slice is the Username, the second is the password
+func GetDefaultCredentialsForKind(kind string) ([]string, error) {
+	if _, exists := defaultCredentials[kind]; !exists {
+		return nil, fmt.Errorf("default credentials entry for kind %s does not exist", kind)
+	}
+	return defaultCredentials[kind], nil
 }

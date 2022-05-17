@@ -16,6 +16,10 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+var (
+	kindnames = []string{"keysight_ixia-c-one"}
+)
+
 var ixiacStatusConfig = struct {
 	statusSleepDuration time.Duration
 	readyFileName       string
@@ -25,7 +29,7 @@ var ixiacStatusConfig = struct {
 }
 
 func init() {
-	nodes.Register(nodes.NodeKindKeysightIxiaCOne, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(ixiacOne)
 	})
 }
