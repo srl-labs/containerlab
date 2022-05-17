@@ -18,8 +18,17 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
+)
+
+const (
+	defaultUser     = "admin"
+	defaultPassword = "admin"
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindVrROS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrRos)
 	})
 }
@@ -37,8 +46,8 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
 	}

@@ -18,15 +18,25 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-sros", "vr-nokia_sros"}
+)
+
 const (
 	vrsrosDefaultType   = "sr-1"
 	scrapliPlatformName = "nokia_sros"
+	defaultUser         = "admin"
+	defaultPassword     = "admin"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrSROS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrSROS)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrSROS struct {
@@ -105,8 +115,8 @@ func (s *vrSROS) GetImages() map[string]string {
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 
@@ -119,7 +129,6 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 }
 
 //
-
 func createVrSROSFiles(node *types.NodeConfig) error {
 	// create config directory that will be bind mounted to vrnetlab container at / path
 	utils.CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)

@@ -25,6 +25,7 @@ const (
 )
 
 var (
+	kindnames = []string{"crdp", "juniper_crpd"}
 	//go:embed crpd.cfg
 	cfgTemplate string
 
@@ -35,7 +36,7 @@ var (
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindCRPD, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(crpd)
 	})
 }

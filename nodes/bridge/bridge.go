@@ -17,13 +17,18 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+
+var (
+	kindnames = []string{"bridge"}
+)
+
 const (
 	iptCheckCmd = "-vL FORWARD -w 5"
 	iptAllowCmd = "-I FORWARD -i %s -j ACCEPT -w 5"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindBridge, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(bridge)
 	})
 }

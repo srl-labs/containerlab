@@ -12,8 +12,12 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+var (
+	kindnames = []string{"host"}
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindHOST, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(host)
 	})
 }

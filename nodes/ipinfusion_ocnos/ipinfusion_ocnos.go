@@ -15,14 +15,24 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"ipinfusion_ocnos"}
+)
+
 const (
 	scrapliPlatformName = "ipinfusion_ocnos"
+	defaultUser         = "admin"
+	defaultPassword     = "admin"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindIPInfusionOCNOS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(IPInfusionOcNOS)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type IPInfusionOcNOS struct {
@@ -39,8 +49,8 @@ func (s *IPInfusionOcNOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) 
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           nodes.DefaultCredentials[s.cfg.Kind][0],
-		"PASSWORD":           nodes.DefaultCredentials[s.cfg.Kind][1],
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
 	}
@@ -84,8 +94,8 @@ func (s *IPInfusionOcNOS) Delete(ctx context.Context) error {
 
 func (s *IPInfusionOcNOS) SaveConfig(_ context.Context) error {
 	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 

@@ -13,8 +13,12 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+var (
+	kindnames = []string{"linux"}
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindLinux, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(linux)
 	})
 }
