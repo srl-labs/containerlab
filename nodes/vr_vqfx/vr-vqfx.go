@@ -118,7 +118,8 @@ func createVrvQFXFiles(node *types.NodeConfig) error {
 	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
 
 	if node.StartupConfig != "" {
-		cfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
+		// dstCfg is a path to a file on the clab host that will have rendered configuration
+		dstCfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
 
 		c, err := os.ReadFile(node.StartupConfig)
 		if err != nil {
@@ -127,7 +128,7 @@ func createVrvQFXFiles(node *types.NodeConfig) error {
 
 		cfgTemplate := string(c)
 
-		err = node.GenerateConfig(cfg, cfgTemplate)
+		err = node.GenerateConfig(dstCfg, cfgTemplate)
 		if err != nil {
 			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
 		}
