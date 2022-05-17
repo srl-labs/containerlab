@@ -20,6 +20,8 @@ import (
 
 const (
 	scrapliPlatformName = "juniper_junos"
+	configDirName       = "config"
+	startupCfgFName     = "startup-config.cfg"
 )
 
 func init() {
@@ -49,7 +51,7 @@ func (s *vrVQFX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
 
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, "startup-config"), ":/startup-config"))
+	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, configDirName), ":/config"))
 
 	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
@@ -113,10 +115,10 @@ func (s *vrVQFX) SaveConfig(_ context.Context) error {
 
 func createVrvQFXFiles(node *types.NodeConfig) error {
 	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(node.LabDir, "startup-config"), 0777)
+	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
 
 	if node.StartupConfig != "" {
-		cfg := filepath.Join(node.LabDir, "startup-config", "config.txt")
+		cfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
 
 		c, err := os.ReadFile(node.StartupConfig)
 		if err != nil {
