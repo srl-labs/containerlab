@@ -17,11 +17,11 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/mysocketio"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/srl-labs/containerlab/utils/mysocketio"
 )
 
 var format string
@@ -284,20 +284,21 @@ func getMySocketIoData(tokenfile string) ([]*types.MySocketIoEntry, error) {
 // If the
 func deduceMySocketIoTokenFileFromBindMounts(nodes map[string]nodes.Node, configPath string) (string, error) {
 	for _, node := range nodes {
-		// search for mysocketio kind in topology config
-		if node.Config().Kind == "mysocketio" {
-			// iterate through bind mounts
-			for _, bind := range node.Config().Binds {
-				// watch out for ".mysocketio_token"
-				if strings.Contains(bind, ".mysocketio_token") {
-					// split the bindmount and resolve the path to an absolute path
-					deduced_absfilepath := utils.ResolvePath(strings.Split(bind, ":")[0], configPath)
-					// check file existence before returning
-					if !utils.FileExists(deduced_absfilepath) {
-						return "", fmt.Errorf(".mysocketio_token resolved to %s, but that file doesn't exist", deduced_absfilepath)
-					}
-					return deduced_absfilepath, nil
+		// if not mysocketio kind then continue
+		if node.Config().Kind != "mysocketio" {
+			continue
+		}
+		// if "mysocketio" kind then iterate through bind mounts
+		for _, bind := range node.Config().Binds {
+			// watch out for ".mysocketio_token"
+			if strings.Contains(bind, ".mysocketio_token") {
+				// split the bindmount and resolve the path to an absolute path
+				deduced_absfilepath := utils.ResolvePath(strings.Split(bind, ":")[0], configPath)
+				// check file existence before returning
+				if !utils.FileExists(deduced_absfilepath) {
+					return "", fmt.Errorf(".mysocketio_token resolved to %s, but that file doesn't exist", deduced_absfilepath)
 				}
+				return deduced_absfilepath, nil
 			}
 		}
 	}
