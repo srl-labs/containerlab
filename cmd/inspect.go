@@ -116,10 +116,17 @@ func toTableData(det []types.ContainerDetails) [][]string {
 }
 
 func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, format string) error {
+
+	if len(containers) == 0 && format == "table" {
+		fmt.Println("no containers found")
+		return nil
+	}
+
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
 
+	// Gather details of each container
 	for i := range containers {
 		cont := &containers[i]
 		// get topo file path relative of the cwd
@@ -158,7 +165,8 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
 
-	if format == "json" {
+	switch format {
+	case "json":
 		resultJson := &types.JsonInspect{ContainerData: contDetails, MySocketIoData: []*types.MySocketIoEntry{}}
 		if printMysocket {
 			// search for the mysocketio token file by deducing it from the topology config binds section
@@ -180,72 +188,75 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		}
 		fmt.Println(string(b))
 		return nil
-	}
-	tabData := toTableData(contDetails)
-	table := tablewriter.NewWriter(os.Stdout)
-	header := []string{
-		"Lab Name",
-		"Name",
-		"Container ID",
-		"Image",
-		"Kind",
-		"State",
-		"IPv4 Address",
-		"IPv6 Address",
-	}
-	if all {
-		table.SetHeader(append([]string{"#", "Topo Path"}, header...))
-	} else {
-		table.SetHeader(append([]string{"#"}, header[1:]...))
-	}
-	table.SetAutoFormatHeaders(false)
-	table.SetAutoWrapText(false)
-	// merge cells with lab name and topo file path
-	table.SetAutoMergeCellsByColumnIndex([]int{1, 2})
-	table.AppendBulk(tabData)
-	table.Render()
 
-	if !printMysocket {
+	case "table":
+		tabData := toTableData(contDetails)
+		table := tablewriter.NewWriter(os.Stdout)
+		header := []string{
+			"Lab Name",
+			"Name",
+			"Container ID",
+			"Image",
+			"Kind",
+			"State",
+			"IPv4 Address",
+			"IPv6 Address",
+		}
+		if all {
+			table.SetHeader(append([]string{"#", "Topo Path"}, header...))
+		} else {
+			table.SetHeader(append([]string{"#"}, header[1:]...))
+		}
+		table.SetAutoFormatHeaders(false)
+		table.SetAutoWrapText(false)
+		// merge cells with lab name and topo file path
+		table.SetAutoMergeCellsByColumnIndex([]int{1, 2})
+		table.AppendBulk(tabData)
+		table.Render()
+
+		if !printMysocket {
+			return nil
+		}
+
+		// search for the mysocketio token file by deducing it from the topology config binds section
+		tokenFile, err := deduceMySocketIoTokenFileFromBindMounts(c.Nodes, c.TopoFile.GetDir())
+		if err != nil {
+			return err
+		}
+		// retrieve the MySocketIO Data
+		socketdata, err := getMySocketIoData(tokenFile)
+		if err != nil {
+			return fmt.Errorf("error when processing mysocketio data: %v", err)
+		}
+
+		// prepare data for table
+		var tabDataMySocketIo [][]string
+		for _, entry := range socketdata {
+			var portstrarr []string
+			for _, port := range entry.Ports {
+				portstrarr = append(portstrarr, strconv.Itoa(port))
+			}
+			tabDataMySocketIo = append(tabDataMySocketIo, []string{*entry.SocketId, *entry.DnsName, strings.Join(portstrarr, ", "), *entry.Type, strconv.FormatBool(entry.CloudAuth), *entry.Name})
+		}
+		tableMySocketIo := tablewriter.NewWriter(os.Stdout)
+		headerMySocketIo := []string{
+			"Socket ID",
+			"DNS Name",
+			"Ports",
+			"Type",
+			"Cloud Auth",
+			"Name",
+		}
+		// configure table output
+		tableMySocketIo.SetHeader(headerMySocketIo)
+		tableMySocketIo.SetAutoFormatHeaders(false)
+		tableMySocketIo.SetAutoWrapText(false)
+		tableMySocketIo.AppendBulk(tabDataMySocketIo)
+		fmt.Println("Published ports:")
+		tableMySocketIo.Render()
+
 		return nil
 	}
-
-	// search for the mysocketio token file by deducing it from the topology config binds section
-	tokenFile, err := deduceMySocketIoTokenFileFromBindMounts(c.Nodes, c.TopoFile.GetDir())
-	if err != nil {
-		return err
-	}
-	// retrieve the MySocketIO Data
-	socketdata, err := getMySocketIoData(tokenFile)
-	if err != nil {
-		return fmt.Errorf("error when processing mysocketio data: %v", err)
-	}
-
-	// prepare data for table
-	var tabDataMySocketIo [][]string
-	for _, entry := range socketdata {
-		var portstrarr []string
-		for _, port := range entry.Ports {
-			portstrarr = append(portstrarr, strconv.Itoa(port))
-		}
-		tabDataMySocketIo = append(tabDataMySocketIo, []string{*entry.SocketId, *entry.DnsName, strings.Join(portstrarr, ", "), *entry.Type, strconv.FormatBool(entry.CloudAuth), *entry.Name})
-	}
-	tableMySocketIo := tablewriter.NewWriter(os.Stdout)
-	headerMySocketIo := []string{
-		"Socket ID",
-		"DNS Name",
-		"Ports",
-		"Type",
-		"Cloud Auth",
-		"Name",
-	}
-	// configure table output
-	tableMySocketIo.SetHeader(headerMySocketIo)
-	tableMySocketIo.SetAutoFormatHeaders(false)
-	tableMySocketIo.SetAutoWrapText(false)
-	tableMySocketIo.AppendBulk(tabDataMySocketIo)
-	fmt.Println("Published ports:")
-	tableMySocketIo.Render()
-
 	return nil
 }
 
