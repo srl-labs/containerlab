@@ -5,7 +5,6 @@ This suite tests:
 
 *** Settings ***
 Library           OperatingSystem
-Library         RPA.JSON
 Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy --all --cleanup
 
 *** Variables ***
@@ -42,9 +41,6 @@ Destroy all labs
 
 Check all labs have been removed
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} inspect --all -f json
+    ...    sudo containerlab --runtime ${runtime} inspect --all
     Log    ${output}
-    ${json}=          Convert String to JSON    ${output}
-    @{containers}=         Get Value From Json     ${json}            $.container_data
-    ${length}         Get length          ${containers} 
-    Should Be Equal As Integers     0     ${length}
+    Should Contain    ${output}    no containers found
