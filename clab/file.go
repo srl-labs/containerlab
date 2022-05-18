@@ -35,6 +35,7 @@ type TopoFile struct {
 	name     string // file name without extension
 }
 
+// GetDir returns the path of a directory that contains topology file
 func (tf *TopoFile) GetDir() string {
 	return tf.dir
 }

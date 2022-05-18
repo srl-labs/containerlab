@@ -165,23 +165,29 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
 
+	resultJson := &types.LabData{Containers: contDetails, MySocketIo: []*types.MySocketIoEntry{}}
+	var socketdata []*types.MySocketIoEntry
+	var tokenFile string
+	var err error
+
+	// fetch mysocketio data if mysocketio node is detected to present in a list of nodes and nodes are not empty
+	// nodes are not populated when `inspect --all` is used, since we don't read topology files
+	if printMysocket && len(c.Nodes) != 0 {
+		// get mysocketio token file path by fetching it from the mysocketio node' binds section
+		tokenFile, err = mySocketIoTokenFileFromBindMounts(c.Nodes, c.TopoFile.GetDir())
+		if err != nil {
+			return err
+		}
+		// retrieve the MySocketIO Data
+		socketdata, err = getMySocketIoData(tokenFile)
+		if err != nil {
+			return fmt.Errorf("error when processing mysocketio data: %v", err)
+		}
+		resultJson.MySocketIo = socketdata
+	}
+
 	switch format {
 	case "json":
-		resultJson := &types.JsonInspect{ContainerData: contDetails, MySocketIoData: []*types.MySocketIoEntry{}}
-		if printMysocket {
-			// search for the mysocketio token file by deducing it from the topology config binds section
-			tokenFile, err := deduceMySocketIoTokenFileFromBindMounts(c.Nodes, c.TopoFile.GetDir())
-			if err != nil {
-				return err
-			}
-			// retrieve the MySocketIO Data
-			socketdata, err := getMySocketIoData(tokenFile)
-			if err != nil {
-				return fmt.Errorf("error when processing mysocketio data: %v", err)
-			}
-			resultJson.MySocketIoData = socketdata
-		}
-
 		b, err := json.MarshalIndent(resultJson, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal container details: %v", err)
@@ -214,19 +220,10 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		table.AppendBulk(tabData)
 		table.Render()
 
-		if !printMysocket {
+		// do not print mysocket data if printMysocket is false or we don't have nodes populated
+		// nodes are not populated when `inspect --all` is used, since we don't read topology files
+		if !printMysocket || len(c.Nodes) == 0 {
 			return nil
-		}
-
-		// search for the mysocketio token file by deducing it from the topology config binds section
-		tokenFile, err := deduceMySocketIoTokenFileFromBindMounts(c.Nodes, c.TopoFile.GetDir())
-		if err != nil {
-			return err
-		}
-		// retrieve the MySocketIO Data
-		socketdata, err := getMySocketIoData(tokenFile)
-		if err != nil {
-			return fmt.Errorf("error when processing mysocketio data: %v", err)
 		}
 
 		// prepare data for table
@@ -289,29 +286,30 @@ func getMySocketIoData(tokenfile string) ([]*types.MySocketIoEntry, error) {
 	return result, nil
 }
 
-// deduceMySocketIoTokenFileFromBindMounts searches through the topology to find a node of kind mysocketio.
+// mySocketIoTokenFileFromBindMounts finds a node of kind mysocketio.
 // if that is found, the bindmounts are searched for ".mysocketio_token" and the path is being converted into an
 // absolute path and returned.
-// If the
-func deduceMySocketIoTokenFileFromBindMounts(nodes map[string]nodes.Node, configPath string) (string, error) {
-	for _, node := range nodes {
-		// if not mysocketio kind then continue
-		if node.Config().Kind != "mysocketio" {
-			continue
-		}
-		// if "mysocketio" kind then iterate through bind mounts
-		for _, bind := range node.Config().Binds {
-			// watch out for ".mysocketio_token"
-			if strings.Contains(bind, ".mysocketio_token") {
-				// split the bindmount and resolve the path to an absolute path
-				deduced_absfilepath := utils.ResolvePath(strings.Split(bind, ":")[0], configPath)
-				// check file existence before returning
-				if !utils.FileExists(deduced_absfilepath) {
-					return "", fmt.Errorf(".mysocketio_token resolved to %s, but that file doesn't exist", deduced_absfilepath)
-				}
-				return deduced_absfilepath, nil
+func mySocketIoTokenFileFromBindMounts(_nodes map[string]nodes.Node, configPath string) (string, error) {
+	// if not mysocketio kind then continue
+	var mysocketNode nodes.Node
+	var ok bool
+
+	if mysocketNode, ok = _nodes["mysocketio"]; !ok {
+		return "", fmt.Errorf("no mysocketio node found")
+	}
+	// if "mysocketio" kind then iterate through bind mounts
+	for _, bind := range mysocketNode.Config().Binds {
+		// look for ".mysocketio_token"
+		if strings.Contains(bind, ".mysocketio_token") {
+			// split the bindmount and resolve the path to an absolute path
+			deduced_absfilepath := utils.ResolvePath(strings.Split(bind, ":")[0], configPath)
+			// check file existence before returning
+			if !utils.FileExists(deduced_absfilepath) {
+				return "", fmt.Errorf(".mysocketio_token resolved to %s, but that file doesn't exist", deduced_absfilepath)
 			}
+			return deduced_absfilepath, nil
 		}
 	}
+
 	return "", fmt.Errorf("unable to find \".mysocketio_token\"")
 }

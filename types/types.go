@@ -185,6 +185,12 @@ type GenericContainer struct {
 	Labels          map[string]string
 	Pid             int
 	NetworkSettings GenericMgmtIPs
+	Mounts          []ContainerMount
+}
+
+type ContainerMount struct {
+	Source      string
+	Destination string
 }
 
 func (ctr *GenericContainer) GetContainerIPv4() string {
@@ -286,7 +292,7 @@ type MySocketIoEntry struct {
 	Name      *string `json:"name,omitempty"`
 }
 
-type JsonInspect struct {
-	ContainerData  []ContainerDetails `json:"container_data"`
-	MySocketIoData []*MySocketIoEntry `json:"mysocketio_data"`
+type LabData struct {
+	Containers []ContainerDetails `json:"containers"`
+	MySocketIo []*MySocketIoEntry `json:"mysocketio"`
 }

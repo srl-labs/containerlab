@@ -644,6 +644,15 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
 		}
+
+		// populating mounts information
+		var mount types.ContainerMount
+		for _, m := range i.Mounts {
+			mount.Source = m.Source
+			mount.Destination = m.Destination
+		}
+		ctr.Mounts = append(ctr.Mounts, mount)
+
 		result = append(result, ctr)
 	}
 
