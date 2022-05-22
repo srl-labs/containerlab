@@ -2,17 +2,15 @@
 name: srl02
 
 topology:
-  kinds:
-    srl:
-      type: ixr6 # See https://www.nokia.com/networks/products/7250-interconnect-router/
-      image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
       kind: srl
-      startup-config: srl1.cfg.json
+      image: ghcr.io/nokia/srlinux
+      startup-config: srl1.cfg
     srl2:
       kind: srl
-      startup-config: srl2.cfg.json
+      image: ghcr.io/nokia/srlinux
+      startup-config: srl2.cfg
 
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
