@@ -13,6 +13,7 @@ IgnoreURLs:
   - https://linkedin.com/in
   - https://www.linkedin.com/in
   - https://*github.com/
+  - https://twitter.com/ntdvps
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
