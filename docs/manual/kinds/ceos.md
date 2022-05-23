@@ -1,6 +1,6 @@
 # Arista cEOS
 
-[Arista cEOS](https://www.arista.com/en/products/software-controlled-container-networking) is identified with `ceos` or `arista_ceos` kind in the [topology file](../topo-def-file.md). The `ceos` kind defines a supported feature set and a startup procedure of a `ceos` node.
+Arista cEOS is identified with `ceos` or `arista_ceos` kind in the [topology file](../topo-def-file.md). The `ceos` kind defines a supported feature set and a startup procedure of a `ceos` node.
 
 cEOS nodes launched with containerlab comes up with
 
