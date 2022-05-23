@@ -441,7 +441,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	return cont.ID, nil
 }
 
-// GetNSPath inspects a container by its name/id and returns an netns path using the pid of a container
+// GetNSPath inspects a container by its name/id and returns a netns path using the pid of a container
 func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, error) {
 	nctx, cancelFn := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancelFn()
@@ -739,4 +739,15 @@ func setSysctl(sysctl string, newVal int) error {
 
 func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
 	return d.Client.ContainerKill(ctx, name, "kill")
+}
+
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, error) {
+	inspect, err := d.Client.ContainerInspect(ctx, cID)
+	if err != nil {
+		return "", err
+	}
+	hostsPath := inspect.HostsPath
+	log.Debugf("Method GetHostsPath was called with a resulting path %q", hostsPath)
+	return hostsPath, nil
 }

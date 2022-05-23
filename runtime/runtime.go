@@ -57,6 +57,8 @@ type ContainerRuntime interface {
 	// Getter for runtime config options
 	Config() RuntimeConfig
 	GetName() string
+	// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+	GetHostsPath(context.Context, string) (string, error)
 }
 
 type Initializer func() ContainerRuntime

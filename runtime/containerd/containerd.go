@@ -808,3 +808,9 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 
 	return nil
 }
+
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+// TODO: do we need it here? currently no-op
+func (c *ContainerdRuntime) GetHostsPath(context.Context, string) (string, error) {
+	return "", nil
+}

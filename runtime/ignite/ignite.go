@@ -433,3 +433,9 @@ func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string)
 
 	return nil
 }
+
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+// no-op for ignite
+func (c *IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
+	return "", nil
+}
