@@ -1,7 +1,7 @@
 |                               |                                                                                  |
 | ----------------------------- | -------------------------------------------------------------------------------- |
 | **Description**               | A Nokia SR Linux connected back-to-back with Arista cEOS                         |
-| **Components**                | [Nokia SR Linux][srl], [Arista cEOS][ceos]                                       |
+| **Components**                | [Nokia SR Linux][srl], Arista cEOS                                               |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB             |
 | **Topology file**             | [srlceos01.clab.yml][topofile]                                                   |
 | **Name**                      | srlceos01                                                                        |
@@ -125,7 +125,7 @@ PING 10.10.10.2 (10.10.10.2) 56(84) bytes of data.
 
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[ceos]: https://www.arista.com/en/products/software-controlled-container-networking
+[ceos]:
 [topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlceos01/srlceos01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
