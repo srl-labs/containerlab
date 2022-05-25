@@ -35,7 +35,7 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 	if err != nil {
 		return err
 	}
-	data := GenerateHostsEntries(containers, labname)
+	data := generateHostsEntries(containers, labname)
 	if len(data) == 0 {
 		return nil
 	}
@@ -54,8 +54,8 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 	return nil
 }
 
-// GenerateHostsEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
-func GenerateHostsEntries(containers []types.GenericContainer, labname string) []byte {
+// generateHostsEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
+func generateHostsEntries(containers []types.GenericContainer, labname string) []byte {
 
 	entries := bytes.Buffer{}
 	v6entries := bytes.Buffer{}
