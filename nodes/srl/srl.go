@@ -95,8 +95,8 @@ var (
 	commitCompleteCmd, _ = shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
 
 	srlCfgTpl, _ = template.New("srl-tls-profile").
-			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
-			Parse(srlConfigCmdsTpl)
+		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
+		Parse(srlConfigCmdsTpl)
 )
 
 func init() {
@@ -244,8 +244,13 @@ func (s *srl) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+
+	// Populate /etc/hosts for service discovery on mgmt interface
+	if err := s.populateHosts(ctx, nodes); err != nil {
+		log.Warnf("Unable to populate hosts for node %q: %v", s.Config().ShortName, err)
+	}
 
 	// start waiting for initial commit and mgmt server ready
 	if err := s.Ready(ctx); err != nil {
@@ -517,6 +522,41 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+
+	return nil
+}
+
+func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+	hosts, err := s.runtime.GetHostsPath(ctx, s.Config().LongName)
+	if err != nil {
+		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.Config().ShortName, err)
+		return err
+	}
+	var entriesv4, entriesv6 bytes.Buffer
+	for node, params := range nodes {
+		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
+			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
+		}
+		if v6 := params.Config().MgmtIPv4Address; v6 != "" {
+			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
+		}
+	}
+
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.Config().ShortName, err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(entriesv4.Bytes())
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(entriesv6.Bytes())
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
