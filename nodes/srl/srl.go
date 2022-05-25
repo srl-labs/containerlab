@@ -549,8 +549,8 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
 		}
 	}
-	fmt.Fprintf(&entriesv4, "\n%s\n", v4Suffix)
-	fmt.Fprintf(&entriesv6, "\n%s\n", v6Suffix)
+	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
+	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
 	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
