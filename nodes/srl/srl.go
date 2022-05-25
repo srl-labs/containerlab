@@ -249,7 +249,7 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 
 	// Populate /etc/hosts for service discovery on mgmt interface
 	if err := s.populateHosts(ctx, nodes); err != nil {
-		log.Warnf("Unable to populate hosts for node %q: %v", s.Config().ShortName, err)
+		log.Warnf("Unable to populate hosts for node %q: %v", s.cfg.ShortName, err)
 	}
 
 	// start waiting for initial commit and mgmt server ready
@@ -282,7 +282,7 @@ func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *srl) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
@@ -527,9 +527,9 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 }
 
 func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
-	hosts, err := s.runtime.GetHostsPath(ctx, s.Config().LongName)
+	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
 	if err != nil {
-		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.Config().ShortName, err)
+		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
 		return err
 	}
 	var entriesv4, entriesv6 bytes.Buffer
@@ -554,7 +554,7 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.Config().ShortName, err)
+		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
 		return err
 	}
 	defer file.Close()

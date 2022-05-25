@@ -69,7 +69,7 @@ func (*mySocketIO) GetContainer(_ context.Context) (*types.GenericContainer, err
 }
 
 func (s *mySocketIO) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *mySocketIO) GetImages() map[string]string {

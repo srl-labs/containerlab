@@ -77,7 +77,7 @@ func (s *sonic) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *sonic) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *sonic) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *sonic) GetImages() map[string]string {

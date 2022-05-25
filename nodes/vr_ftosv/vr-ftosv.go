@@ -93,7 +93,7 @@ func (s *vrFtosv) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrFtosv) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrFtosv) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (*vrFtosv) SaveConfig(_ context.Context) error {
