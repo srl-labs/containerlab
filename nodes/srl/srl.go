@@ -533,6 +533,14 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 		return err
 	}
 	var entriesv4, entriesv6 bytes.Buffer
+	const (
+		v4Prefix = "###### CLAB-v4-START ######"
+		v4Suffix = "###### CLAB-v4-END ######"
+		v6Prefix = "###### CLAB-v6-START ######"
+		v6Suffix = "###### CLAB-v6-END ######"
+	)
+	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
+	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
 	for node, params := range nodes {
 		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
 			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
@@ -541,6 +549,8 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
 		}
 	}
+	fmt.Fprintf(&entriesv4, "\n%s\n", v4Suffix)
+	fmt.Fprintf(&entriesv6, "\n%s\n", v6Suffix)
 
 	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
