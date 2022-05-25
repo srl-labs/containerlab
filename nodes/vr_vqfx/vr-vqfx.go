@@ -25,12 +25,11 @@ var (
 const (
 	scrapliPlatformName = "juniper_junos"
 
-	configDirName       = "config"
-	startupCfgFName     = "startup-config.cfg"
+	configDirName   = "config"
+	startupCfgFName = "startup-config.cfg"
 
-	defaultUser         = "admin"
-	defaultPassword     = "admin@123"
-
+	defaultUser     = "admin"
+	defaultPassword = "admin@123"
 )
 
 func init() {
@@ -108,7 +107,7 @@ func (s *vrVQFX) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrVQFX) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrVQFX) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *vrVQFX) SaveConfig(_ context.Context) error {

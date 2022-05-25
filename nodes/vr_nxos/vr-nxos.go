@@ -92,7 +92,7 @@ func (s *vrNXOS) WithRuntime(r runtime.ContainerRuntime) {
 func (s *vrNXOS) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *vrNXOS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (*vrNXOS) SaveConfig(_ context.Context) error {

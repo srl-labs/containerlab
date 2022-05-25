@@ -283,5 +283,5 @@ func (s *ceos) GetImages() map[string]string {
 }
 
 func (s *ceos) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }

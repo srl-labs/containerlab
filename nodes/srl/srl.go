@@ -95,8 +95,8 @@ var (
 	commitCompleteCmd, _ = shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
 
 	srlCfgTpl, _ = template.New("srl-tls-profile").
-			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
-			Parse(srlConfigCmdsTpl)
+		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
+		Parse(srlConfigCmdsTpl)
 )
 
 func init() {
@@ -244,8 +244,13 @@ func (s *srl) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+
+	// Populate /etc/hosts for service discovery on mgmt interface
+	if err := s.populateHosts(ctx, nodes); err != nil {
+		log.Warnf("Unable to populate hosts for node %q: %v", s.cfg.ShortName, err)
+	}
 
 	// start waiting for initial commit and mgmt server ready
 	if err := s.Ready(ctx); err != nil {
@@ -277,7 +282,7 @@ func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *srl) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
@@ -517,6 +522,51 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+
+	return nil
+}
+
+func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
+	if err != nil {
+		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
+		return err
+	}
+	var entriesv4, entriesv6 bytes.Buffer
+	const (
+		v4Prefix = "###### CLAB-v4-START ######"
+		v4Suffix = "###### CLAB-v4-END ######"
+		v6Prefix = "###### CLAB-v6-START ######"
+		v6Suffix = "###### CLAB-v6-END ######"
+	)
+	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
+	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
+	for node, params := range nodes {
+		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
+			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
+		}
+		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
+			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
+		}
+	}
+	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
+	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
+
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(entriesv4.Bytes())
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(entriesv6.Bytes())
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

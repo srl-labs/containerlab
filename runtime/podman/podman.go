@@ -310,3 +310,18 @@ func (r *PodmanRuntime) Config() runtime.RuntimeConfig {
 func (r *PodmanRuntime) GetName() string {
 	return runtimeName
 }
+
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+func (r *PodmanRuntime) GetHostsPath(ctx context.Context, cID string) (string, error) {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return "", err
+	}
+	inspect, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
+	if err != nil {
+		return "", err
+	}
+	hostsPath := inspect.HostsPath
+	log.Debugf("Method GetHostsPath was called with a resulting path %q", hostsPath)
+	return hostsPath, nil
+}

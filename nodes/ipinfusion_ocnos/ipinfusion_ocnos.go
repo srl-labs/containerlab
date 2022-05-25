@@ -89,7 +89,7 @@ func (s *IPInfusionOcNOS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = 
 func (s *IPInfusionOcNOS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *IPInfusionOcNOS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *IPInfusionOcNOS) SaveConfig(_ context.Context) error {
