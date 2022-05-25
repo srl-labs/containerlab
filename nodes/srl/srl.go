@@ -537,7 +537,7 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
 			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
 		}
-		if v6 := params.Config().MgmtIPv4Address; v6 != "" {
+		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
 			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
 		}
 	}
