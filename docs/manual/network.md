@@ -19,7 +19,7 @@ name: srl02
 topology:
   kinds:
     srl:
-      type: ixr6
+      type: ixrd3
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:

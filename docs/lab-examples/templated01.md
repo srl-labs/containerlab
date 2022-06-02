@@ -15,7 +15,7 @@ The type of SR Linux used and the naming prefixes can be customized as well.
 ```yaml
 spines:
   # SRL spine type
-  type: ixr6
+  type: ixrd3
   # number of spines
   num: 2
   # prefix of spines name: ${prefix}${index}

@@ -21,7 +21,7 @@ topology:
   nodes:
     node1:
       kind: srl
-      type: ixr6
+      type: ixrd3
       license: node1.lic
       binds:
         - node1.lic:/dst1
