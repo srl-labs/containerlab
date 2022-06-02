@@ -13,6 +13,6 @@ topology:
   nodes:
     node1:
       kind: srl
-      type: ixr6
+      type: ixrd3
     node2:
       kind: srl

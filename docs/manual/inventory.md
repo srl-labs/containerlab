@@ -133,7 +133,7 @@ Example of exported data when using default `auto.tmpl` template:
     topology:
       kinds:
         srl:
-          type: ixr6
+          type: ixrd3
           image: ghcr.io/nokia/srlinux
       nodes:
         srl1:
@@ -186,7 +186,7 @@ Example of exported data when using default `auto.tmpl` template:
             "clab-node-kind": "srl",
             "clab-node-lab-dir": "<full path to the lab node directory>",
             "clab-node-name": "srl1",
-            "clab-node-type": "ixr6",
+            "clab-node-type": "ixrd3",
             "clab-topo-file": "<full path to the srl02.clab.yml file>",
             "containerlab": "srl02"
           }
@@ -213,7 +213,7 @@ Example of exported data when using default `auto.tmpl` template:
             "clab-node-kind": "srl",
             "clab-node-lab-dir": "<full path to the lab node directory>",
             "clab-node-name": "srl2",
-            "clab-node-type": "ixr6",
+            "clab-node-type": "ixrd3",
             "clab-topo-file": "<full path to the srl02.clab.yml file>",
             "containerlab": "srl02"
           }

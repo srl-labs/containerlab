@@ -17,7 +17,7 @@ The topology template is rendered using the variable file shown below:
 ```yaml
 super_spines:
   # SRL super spine type
-  type: ixr6
+  type: ixrd3
   # number of super spines
   num: 2
   # prefix of super spines name: ${prefix}${index}

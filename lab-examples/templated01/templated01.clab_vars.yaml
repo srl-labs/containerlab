@@ -1,6 +1,6 @@
 spines:
   # SRL spine type
-  type: ixr6
+  type: ixrd3
   # number of spines
   num: 2
   # prefix of spines name: ${prefix}${index}

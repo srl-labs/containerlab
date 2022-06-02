@@ -31,33 +31,33 @@ topology:
 
     spine1:
       kind: srl
-      type: ixr6
+      type: ixrd3
       mgmt_ipv4: 172.100.100.6
       mgmt_ipv6: 2001:172:100:100::6
     spine2:
       kind: srl
-      type: ixr6
+      type: ixrd3
       mgmt_ipv4: 172.100.100.7
       mgmt_ipv6: 2001:172:100:100::7
     spine3:
       kind: srl
-      type: ixr6
+      type: ixrd3
       mgmt_ipv4: 172.100.100.8
       mgmt_ipv6: 2001:172:100:100::8
     spine4:
       kind: srl
-      type: ixr6
+      type: ixrd3
       mgmt_ipv4: 172.100.100.9
       mgmt_ipv6: 2001:172:100:100::9
 
     superspine1:
       kind: srl
-      type: ixr6
+      type: ixrd3
       mgmt_ipv4: 172.100.100.10
       mgmt_ipv6: 2001:172:100:100::10
     superspine2:
       kind: srl
-      type: ixr6
+      type: ixrd3
       mgmt_ipv4: 172.100.100.11
       mgmt_ipv6: 2001:172:100:100::11
 

@@ -27,12 +27,12 @@ The user configures the CLOS fabric topology by using the `--nodes` flag. The fl
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
-For example, the following flag value will define a 2-tier CLOS fabric with tier1 (leafs) consists of 4x SR Linux containers of IXR6 type and the 2x Arista cEOS spines:
+For example, the following flag value will define a 2-tier CLOS fabric with tier1 (leafs) consists of 4x SR Linux containers of IXR-D3 type and the 2x Arista cEOS spines:
 ```
-4:srl:ixr6,2:ceos
+4:srl:ixrd3,2:ceos
 ```
 
-Note, that the default kind is `srl`, so you can omit the kind for SR Linux node. The same nodes value can be expressed like that: `4:ixr6,2:ceos`
+Note, that the default kind is `srl`, so you can omit the kind for SR Linux node. The same nodes value can be expressed like that: `4:ixrd3,2:ceos`
 
 #### kind
 
