@@ -72,7 +72,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/containerd/cgroups v1.0.1 // indirect
-	github.com/containerd/console v1.0.2 // indirect
+	github.com/containerd/console v1.0.3 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/containerd/fifo v1.0.0 // indirect
 	github.com/containerd/go-cni v1.0.2 // indirect
@@ -165,7 +165,7 @@ require (
 	github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible // indirect
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/moby/sys/mountinfo v0.4.1 // indirect
+	github.com/moby/sys/mountinfo v0.5.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -173,9 +173,9 @@ require (
 	github.com/nightlyone/lockfile v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20211202193544-a5463b7f9c84 // indirect
-	github.com/opencontainers/runc v1.0.3 // indirect
+	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/opencontainers/runtime-tools v0.9.0 // indirect
-	github.com/opencontainers/selinux v1.9.1 // indirect
+	github.com/opencontainers/selinux v1.10.0 // indirect
 	github.com/ostreedev/ostree-go v0.0.0-20190702140239-759a8c1ac913 // indirect
 	github.com/otiai10/copy v1.1.1 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
