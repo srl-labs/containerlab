@@ -44,6 +44,8 @@ It is possible to install official containerlab releases via public APT/YUM repo
     ```
 === "APK"
     Download `.apk` package from [Github releases](https://github.com/srl-labs/containerlab/releases).
+=== "AUR"
+    Arch Linux users can download a package from this [AUR repository](https://aur.archlinux.org/packages/containerlab-bin).
 
 ??? "Manual package installation"
     Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-labs/containerlab/releases) page.
