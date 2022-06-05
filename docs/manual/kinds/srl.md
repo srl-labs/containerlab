@@ -2,6 +2,16 @@
 
 [Nokia SR Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `srl` or `nokia_srlinux` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
 
+## Getting SR Linux image
+Nokia SR Linux is the first commercial Network OS with a free and open distribution model. Everyone can pull SR Linux container from a public registry:
+
+```bash
+# pull latest available release
+docker pull ghcr.io/nokia/srlinux
+```
+
+To pull a specific version, use tags that match the released version and are listed in the [srlinux-container-image](https://github.com/nokia/srlinux-container-image) repo.
+
 ## Managing SR Linux nodes
 There are many ways to manage SR Linux nodes, ranging from classic CLI management all the way up to the gNMI programming.
 
