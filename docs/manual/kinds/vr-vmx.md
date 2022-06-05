@@ -2,7 +2,7 @@
 
 [Juniper vMX](https://www.juniper.net/us/en/products/routers/mx-series/vmx-virtual-router-software.html) virtualized router is identified with `vr-vmx` or `vr-juniper_vmx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-vmx nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
+vr-vmx nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## Managing vr-vmx nodes
 
@@ -42,12 +42,12 @@ Juniper vMX node launched with containerlab can be managed via the following int
 vr-vmx container can have up to 90 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to first data port of vMX line card
+* `eth1` - first data interface, mapped to a first data port of vMX line card
 * `eth2+` - second and subsequent data interface
 
-When containerlab launches vr-vmx node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
+When containerlab launches vr-vmx node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach the management plane of the router.
 
-Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
+Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
 
 
 ## Features and options
@@ -76,6 +76,6 @@ The following labs feature vr-vmx node:
 
 ## Known issues and limitations
 
-* when listing docker containers, vr-vmx container will always report unhealthy status. Do not rely on this status.
+* when listing docker containers, vr-vmx containers will always report unhealthy status. Do not rely on this status.
 * vMX requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.
