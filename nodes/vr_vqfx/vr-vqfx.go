@@ -63,6 +63,7 @@ func (s *vrVQFX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
 
+	// mount config dir to support startup-config functionality
 	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, configDirName), ":/config"))
 
 	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
