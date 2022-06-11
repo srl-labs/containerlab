@@ -11,6 +11,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/weaveworks/ignite/pkg/operations"
 )
 
 var (
@@ -26,6 +27,7 @@ func init() {
 type linux struct {
 	cfg     *types.NodeConfig
 	runtime runtime.ContainerRuntime
+	vmChans *operations.VMChannels
 }
 
 func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -52,13 +54,25 @@ func (l *linux) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = l.runtime.StartContainer(ctx, cID, l.cfg)
+	intf, err := l.runtime.StartContainer(ctx, cID, l.cfg)
+
+	if vmChans, ok := intf.(*operations.VMChannels); ok {
+		l.vmChans = vmChans
+	}
+
 	return err
 }
 
 func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", l.cfg.ShortName)
-	return types.DisableTxOffload(l.cfg)
+	if err := types.DisableTxOffload(l.cfg); err != nil {
+		return err
+	}
+
+	if l.vmChans == nil {
+		return nil
+	}
+	return <-l.vmChans.SpawnFinished
 }
 
 func (l *linux) GetImages() map[string]string {
