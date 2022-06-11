@@ -69,17 +69,19 @@ func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 		return err
 	}
 
-	if l.vmChans == nil {
-		return nil
+	// when ignite runtime is in use
+	if l.vmChans != nil {
+		return <-l.vmChans.SpawnFinished
 	}
-	return <-l.vmChans.SpawnFinished
+
+	return nil
 }
 
 func (l *linux) GetImages() map[string]string {
 	images := make(map[string]string)
 	images[nodes.ImageKey] = l.cfg.Image
 
-	// ignite runtime additonally needs a kernel and sandbox image
+	// ignite runtime additionally needs a kernel and sandbox image
 	if l.runtime.GetName() != runtime.IgniteRuntime {
 		return images
 	}
