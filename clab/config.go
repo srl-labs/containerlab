@@ -628,13 +628,10 @@ func (c *CLab) verifyVirtSupport() error {
 	// if it doesn't, we are in a container
 	scanner := bufio.NewScanner(f)
 
-	for scanner.Scan() {
-		if !strings.Contains(scanner.Text(), "kthreadd") {
-			log.Debugf("proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
-			return nil
-		}
-
-		break
+	scanner.Scan()
+	if !strings.Contains(scanner.Text(), "kthreadd") {
+		log.Debugf("proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
+		return nil
 	}
 
 	virtRequired := false
