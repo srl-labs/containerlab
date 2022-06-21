@@ -76,6 +76,10 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.cfg.ShortName,
 		s.cfg.NodeType,
 	)
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
 

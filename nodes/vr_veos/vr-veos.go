@@ -60,6 +60,10 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
 
