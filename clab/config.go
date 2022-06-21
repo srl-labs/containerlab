@@ -618,7 +618,7 @@ func (c *CLab) verifyVirtSupport() error {
 
 	f, err := os.Open("/proc/2/status")
 	if err != nil {
-		log.Debugf("proc/2/status file was not found. This means we run in a container and no virt checks are possible")
+		log.Debug("proc/2/status file was not found. This means we run in a container and no virt checks are possible")
 		return nil
 	}
 
@@ -630,7 +630,7 @@ func (c *CLab) verifyVirtSupport() error {
 
 	scanner.Scan()
 	if !strings.Contains(scanner.Text(), "kthreadd") {
-		log.Debugf("proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
+		log.Debug("proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
 		return nil
 	}
 
@@ -638,6 +638,9 @@ func (c *CLab) verifyVirtSupport() error {
 	for _, n := range c.Nodes {
 		if n.Config().HostRequirements.VirtRequired {
 			virtRequired = true
+
+			log.Debug("detected virtualization required")
+
 			break
 		}
 	}
@@ -656,6 +659,9 @@ func (c *CLab) verifyVirtSupport() error {
 
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "vmx") || strings.Contains(scanner.Text(), "svm") {
+
+			log.Debug("virtualization support found")
+
 			return nil
 		}
 	}
