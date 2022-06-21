@@ -58,13 +58,20 @@ func (s *IPInfusionOcNOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) 
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
+
 func (s *IPInfusionOcNOS) Config() *types.NodeConfig { return s.cfg }
+
 func (s *IPInfusionOcNOS) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
+
 func (s *IPInfusionOcNOS) Deploy(ctx context.Context) error {
 	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
 	if err != nil {
@@ -73,6 +80,7 @@ func (s *IPInfusionOcNOS) Deploy(ctx context.Context) error {
 	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
+
 func (*IPInfusionOcNOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
