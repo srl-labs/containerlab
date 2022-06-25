@@ -69,9 +69,9 @@ func preRunFn(cmd *cobra.Command, args []string) error {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	// for inspect --all command we don't proceed with topo files search process/
+	// for inspect/destroy --all command we don't proceed with topo files search process/
 	// as it is not required
-	if cmd.Name() == "inspect" && cmd.Flag("all").Value.String() == "true" {
+	if (cmd.Name() == "inspect" || cmd.Name() == "destroy") && cmd.Flag("all").Value.String() == "true" {
 		return nil
 	}
 
