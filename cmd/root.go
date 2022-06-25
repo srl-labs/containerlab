@@ -61,7 +61,7 @@ func sudoCheck(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func preRunFn(cmd *cobra.Command, args []string) error {
+func preRunFn(cmd *cobra.Command, _ []string) error {
 
 	// set debug level when required
 	debug = debugCount > 0
