@@ -69,18 +69,23 @@ func preRunFn(cmd *cobra.Command, args []string) error {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	// for inspect/destroy --all command we don't proceed with topo files search process/
-	// as it is not required
-	if (cmd.Name() == "inspect" || cmd.Name() == "destroy") && cmd.Flag("all").Value.String() == "true" {
-		return nil
-	}
-
-	return getTopoFilePath()
+	return getTopoFilePath(cmd)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory if the files was note specified using flags
 // errors if more than one file is found by the glob path
-func getTopoFilePath() error {
+func getTopoFilePath(cmd *cobra.Command) error {
+	// set commands which may use topo file find functionality, the rest don't need it
+	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" || cmd.Name() == "save" || cmd.Name() == "graph" || cmd.Name() == "exec") {
+		return nil
+	}
+
+	// inspect and destroy commands with --all flag don't use file find functionality
+	if (cmd.Name() == "inspect" || cmd.Name() == "destroy") && cmd.Flag("all").Value.String() == "true" {
+		return nil
+	}
+
+	// if topo or name flags have been provided, don't try to derive the topo file
 	if topo != "" || name != "" {
 		return nil
 	}
