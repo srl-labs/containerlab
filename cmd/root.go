@@ -61,12 +61,18 @@ func sudoCheck(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func preRunFn(_ *cobra.Command, _ []string) error {
+func preRunFn(cmd *cobra.Command, args []string) error {
 
 	// set debug level when required
 	debug = debugCount > 0
 	if debug {
 		log.SetLevel(log.DebugLevel)
+	}
+
+	// for inspect --all command we don't proceed with topo files search process/
+	// as it is not required
+	if cmd.Name() == "inspect" && cmd.Flag("all").Value.String() == "true" {
+		return nil
 	}
 
 	return getTopoFilePath()
@@ -75,7 +81,7 @@ func preRunFn(_ *cobra.Command, _ []string) error {
 // getTopoFilePath finds *.clab.y*ml file in the current working directory if the files was note specified using flags
 // errors if more than one file is found by the glob path
 func getTopoFilePath() error {
-	if topo != "" {
+	if topo != "" || name != "" {
 		return nil
 	}
 
