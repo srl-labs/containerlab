@@ -73,6 +73,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", defaultExportTemplateFPath, "template file for topology data export")
 }
 
+// deployFn function runs deploy sub command
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 

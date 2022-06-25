@@ -16,6 +16,8 @@ This command does exactly the same thing as `docker exec` does, but it allows to
 
 With the global `--topo | -t` flag a user specifies from which lab to take the containers and perform the exec command.
 
+When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+
 #### cmd
 The command to be executed on the nodes is provided with `--cmd` flag. The command is provided as a string, thus it needs to be quoted to accommodate for spaces or special characters.
 
