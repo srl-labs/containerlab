@@ -23,6 +23,8 @@ The exact command that performs configuration save depends on a given kind. The 
 
 With the global `--topo | -t` or `--name | -n` flag a user specifies from which lab to take the containers and perform the save configuration task.
 
+When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+
 ### Examples
 
 ```bash

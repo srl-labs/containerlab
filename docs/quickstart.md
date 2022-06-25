@@ -66,6 +66,11 @@ The image name follows the same rules as the images you use with, for example, D
 
     For example: `docker tag srlinux:20.6.1-286 srlinux:latest`
 
+!!!warning "Images availability"
+    Quickstart lab includes Nokia SR Linux and Arista cEOS images. While Nokia SR Linux is a publicly available image and can be pulled by anyone, its counterpart Arista cEOS images needs to be downloaded by the users first.
+
+    This means that you have to login with Arista website and download the image, then import it to docker image store before proceeding with this lab. Or you can swap the ceos image with another SR Linux image and enjoy the freedom of labbing.
+
 ## Deploying a lab
 Now when we know what a basic topology file consists of and sorted out the container image name and node's license file, we can proceed with deploying this lab. To keep things easy and guessable, the command to deploy a lab is called [`deploy`](cmd/deploy.md).
 
@@ -80,9 +85,12 @@ REPOSITORY             TAG                 IMAGE ID            CREATED          
 ghcr.io/nokia/srlinux  latest              79019d14cfc7        3 months ago        1.32GB
 ceos                   4.25.0F             15a5f97fe8e8        3 months ago        1.76GB
 
-# start the lab deployment by referencing the topology file
-containerlab deploy --topo srlceos01.clab.yml
+# start the lab deployment
+containerlab deploy # (1)!
 ```
+
+1. `deploy` command will automatically lookup a file matching the `*.clab.y*ml` patter to select it.  
+  If you have several files and want to pick a specific one, use `--topo <path>` flag.
 
 After a couple of seconds you will see the summary of the deployed nodes:
 

@@ -16,6 +16,8 @@ The `deploy` command spins up a lab using the topology expressed via [topology d
 
 With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to spin up a lab.
 
+When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+
 #### name
 
 With the global `--name | -n` flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.
