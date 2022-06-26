@@ -278,6 +278,23 @@ To uninstall containerlab when it was installed via installation script or packa
 === "Manual removal"
     Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
 
+
+### SELinux
+When SELinux set to enforced mode containerlab binary might fail to execute with `Segmentation fault (core dumped)` error. This might be because containerlab binary is compressed with [upx](https://upx.github.io/) and selinux prevents it from being decompressed by default.
+
+To fix this:
+
+```
+sudo semanage fcontext -a -t textrel_shlib_t $(which containerlab)
+sudo restorecon $(which containerlab)
+```
+
+or more globally:
+
+```
+sudo setsebool -P selinuxuser_execmod 1
+```
+
 [^1]: only available if installed from packages
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
 [^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
