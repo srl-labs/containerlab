@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Openvswitch bridge
 Similar to [linux bridge](bridge.md) capability, containerlab allows to connect nodes to an Openvswitch (Ovs) bridge. Ovs bridges offers even more connectivity options compared to classic Linux bridge, as well as it allows to create stretched L2 domain by means of tunneled interfaces (vxlan).
 

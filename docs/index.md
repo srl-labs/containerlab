@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 <p align=center><object type="image/svg+xml" data=https://cdn.jsdelivr.net/gh/srl-labs/containerlab@master/docs/images/containerlab_export_white_ink_js.svg ></object></p>
 
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)

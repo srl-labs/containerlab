@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 Containerlab openness and focus on multivendor labs was a key to its success and adoption. With more than a dozen Network Operating Systems spread across several networking vendors and opensource teams, it is a tool that can answer the needs of a broad network engineers community.
 
 ## Discord Server

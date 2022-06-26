@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Cisco NXOS
 
 [Cisco NXOS](https://www.cisco.com/c/en/us/products/ios-nx-os-software/nx-os/index.html) virtual appliance is identified with `vr-nxos` or `vr-cisco_nxos` kind in the [topology file](../topo-def-file.md). It is built using [hellt/vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.

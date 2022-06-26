@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # SONiC
 
 [SONiC](https://sonic-net.github.io/SONiC/) is identified with `sonic-vs` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vs` node.

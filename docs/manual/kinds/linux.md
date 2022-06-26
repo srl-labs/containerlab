@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
 # Linux container

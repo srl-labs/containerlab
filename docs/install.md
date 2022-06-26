@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 Containerlab is distributed as a Linux deb/rpm package and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
 
 ### Pre-requisites

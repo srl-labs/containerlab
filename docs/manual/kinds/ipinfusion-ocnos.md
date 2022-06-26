@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # IPInfusion OcNOS
 
 IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
