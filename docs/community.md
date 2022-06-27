@@ -90,6 +90,11 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+### Containerlab with Inmanta
+<small>:material-youtube: [screencast](https://www.youtube.com/watch?v=dL-P1ebTu_0) by [Inmanta](https://www.youtube.com/channel/UCuhO5ol5yTBhlr-p4xfNYhA) · :material-calendar: 2022-03-20</small>
+
+Inmanta is a network orchestration and automation platform. In these [YouTube series](https://www.youtube.com/watch?v=dL-P1ebTu_0), Inmanta's engineer explains how this platform can help you manage network infrastructure provided by Containerlab. Make sure to check subsequent videos in their channel where multiple angles of containerlab are shown. 
+
 ### Containerlab-based DDOS testbed
 <small>:material-text: [Blog](https://blog.sflow.com/2022/03/containerlab-ddos-testbed.html) by [Peter Phaal](https://twitter.com/sFlow) · :material-calendar: 2022-03-16</small>
 
