@@ -182,13 +182,23 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		}
 	// Bridge will be used if none provided
 	case "bridge", "":
-		nets := []string{r.mgmt.Network}
 		mgmtv4Addr := net.ParseIP(cfg.MgmtIPv4Address)
 		mgmtv6Addr := net.ParseIP(cfg.MgmtIPv6Address)
 		mac, err := net.ParseMAC(cfg.MacAddress)
 		if err != nil && cfg.MacAddress != "" {
 			return sg, err
 		}
+		// Podman uses a custom type for mac addresses, so we need to convert it first
+		hwAddr := netTypes.HardwareAddr(mac)
+
+		// Static IPs & Macs are properties of a network attachment
+		nets := map[string]netTypes.PerNetworkOptions{r.mgmt.Network: {
+			StaticIPs:     []net.IP{mgmtv4Addr, mgmtv6Addr},
+			Aliases:       nil,
+			StaticMAC:     hwAddr,
+			InterfaceName: "",
+		}}
+
 		portmap, err := r.convertPortMap(ctx, cfg.PortBindings)
 		if err != nil {
 			return sg, err
@@ -198,22 +208,18 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 			return sg, err
 		}
 		specNetConfig = specgen.ContainerNetworkConfig{
-			// Aliases:             nil,
 			NetNS:               specgen.Namespace{NSMode: "bridge"},
-			StaticIP:            &mgmtv4Addr,
-			StaticIPv6:          &mgmtv6Addr,
-			StaticMAC:           &mac,
 			PortMappings:        portmap,
 			PublishExposedPorts: false,
 			Expose:              expose,
-			CNINetworks:         nets,
-			// UseImageResolvConf:  false,
-			// DNSServers:          nil,
-			// DNSSearch:           nil,
-			// DNSOptions:          nil,
+			Networks:            nets,
+			//UseImageResolvConf:  false,
+			//DNSServers:          nil,
+			//DNSSearch:           nil,
+			//DNSOptions:          nil,
 			UseImageHosts: false,
 			HostAdd:       cfg.ExtraHosts,
-			// NetworkOptions:      nil,
+			//NetworkOptions:      nil,
 		}
 	default:
 		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
