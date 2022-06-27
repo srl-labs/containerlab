@@ -8,17 +8,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	netTypes "github.com/containers/common/libnetwork/types"
+	"github.com/containers/podman/v4/pkg/bindings/containers"
+	"github.com/containers/podman/v4/pkg/bindings/network"
+	"github.com/containers/podman/v4/pkg/domain/entities"
+	"github.com/containers/podman/v4/pkg/specgen"
+	"github.com/dustin/go-humanize"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"net"
 	"strings"
 
-	"github.com/containers/podman/v3/pkg/bindings"
-	"github.com/containers/podman/v3/pkg/bindings/containers"
-	"github.com/containers/podman/v3/pkg/bindings/network"
-	"github.com/containers/podman/v3/pkg/domain/entities"
-	"github.com/containers/podman/v3/pkg/specgen"
-	"github.com/dustin/go-humanize"
+	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/google/shlex"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -342,41 +343,59 @@ func (r *PodmanRuntime) disableTXOffload(ctx context.Context) error {
 
 // netOpts is an accessory function that returns a network.CreateOptions struct
 // filled with all parameters for CreateNet function
-func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error) {
+func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	var (
-		name       = r.mgmt.Network
-		driver     = "bridge"
-		internal   = false
-		ipv6       = false
-		disableDNS = true
-		options    = map[string]string{}
-		labels     = map[string]string{"containerlab": ""}
-		subnet     *net.IPNet
-		err        error
+		name        = r.mgmt.Network
+		intName     = r.mgmt.Bridge
+		driver      = "bridge"
+		internal    = false
+		ipv6        = false
+		dnsEnabled  = false
+		options     = map[string]string{}
+		labels      = map[string]string{"containerlab": ""}
+		err         error
+		ipamOptions = map[string]string{}
+		v4subnet    = netTypes.Subnet{}
+		v6subnet    = netTypes.Subnet{}
+		subnets     = []netTypes.Subnet{v4subnet, v6subnet}
 	)
+	// parse mgmt subnets
 	if r.mgmt.IPv4Subnet != "" {
-		_, subnet, err = net.ParseCIDR(r.mgmt.IPv4Subnet)
+		v4subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv4Subnet)
 	}
 	if err != nil {
-		return network.CreateOptions{}, err
+		return netTypes.Network{}, err
 	}
-	if r.mgmt.MTU != "" {
-		options["mtu"] = r.mgmt.MTU
+	if r.mgmt.IPv6Subnet != "" {
+		v6subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv4Subnet)
+		ipv6 = true
 	}
-
-	toReturn := network.CreateOptions{
-		DisableDNS: &disableDNS,
-		Driver:     &driver,
-		Internal:   &internal,
-		Labels:     labels,
-		Subnet:     subnet,
-		IPv6:       &ipv6,
-		Options:    options,
-		Name:       &name,
+	if err != nil {
+		return netTypes.Network{}, err
 	}
 	// add a custom gw address if specified
 	if r.mgmt.IPv4Gw != "" && r.mgmt.IPv4Gw != "0.0.0.0" {
-		toReturn.WithGateway(net.ParseIP(r.mgmt.IPv4Gw))
+		v4subnet.Gateway = net.ParseIP(r.mgmt.IPv4Gw)
+	}
+	if r.mgmt.IPv6Gw != "" && r.mgmt.IPv6Gw != "::" {
+		v6subnet.Gateway = net.ParseIP(r.mgmt.IPv6Gw)
+	}
+	// add custom mtu if defined
+	if r.mgmt.MTU != "" {
+		options["mtu"] = r.mgmt.MTU
+	}
+	// compile the resulting struct
+	toReturn := netTypes.Network{
+		DNSEnabled:       dnsEnabled,
+		Driver:           driver,
+		Internal:         internal,
+		Labels:           labels,
+		Subnets:          subnets,
+		IPv6Enabled:      ipv6,
+		Options:          options,
+		Name:             name,
+		IPAMOptions:      ipamOptions,
+		NetworkInterface: intName,
 	}
 	return toReturn, nil
 }

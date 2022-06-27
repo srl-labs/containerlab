@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/containers/podman/v3/pkg/api/handlers"
-	"github.com/containers/podman/v3/pkg/bindings/containers"
-	"github.com/containers/podman/v3/pkg/bindings/images"
-	"github.com/containers/podman/v3/pkg/bindings/network"
+	"github.com/containers/podman/v4/pkg/api/handlers"
+	"github.com/containers/podman/v4/pkg/bindings/containers"
+	"github.com/containers/podman/v4/pkg/bindings/images"
+	"github.com/containers/podman/v4/pkg/bindings/network"
 	dockerTypes "github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
@@ -297,7 +297,8 @@ func (r *PodmanRuntime) DeleteContainer(ctx context.Context, contName string) er
 	}
 	// and do a force removal in the end
 	force = true
-	err = containers.Remove(ctx, contName, &containers.RemoveOptions{Force: &force})
+	depend := true
+	_, err = containers.Remove(ctx, contName, &containers.RemoveOptions{Force: &force, Depend: &depend})
 	return err
 }
 

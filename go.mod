@@ -8,7 +8,7 @@ require (
 	github.com/containerd/containerd v1.5.13
 	github.com/containernetworking/cni v0.8.1
 	github.com/containernetworking/plugins v0.9.1
-	github.com/containers/podman/v3 v3.4.4
+	github.com/containers/podman/v4 v4.1.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/docker/distribution v2.8.0+incompatible
 	github.com/docker/docker v20.10.14+incompatible

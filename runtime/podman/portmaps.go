@@ -6,11 +6,11 @@ package podman
 import (
 	"context"
 	"fmt"
+	podtypes "github.com/containers/podman/v4/libpod/network/types"
 	"net"
 	"strconv"
 	"strings"
 
-	podtypes "github.com/containers/podman/v3/libpod/network/types"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
