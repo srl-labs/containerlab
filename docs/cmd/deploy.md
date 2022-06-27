@@ -24,7 +24,7 @@ With the global `--name | -n` flag a user sets a lab name. This value will overr
 
 #### reconfigure
 
-The local `--reconfigure` flag instructs containerlab to first **destroy** the lab and all its directories and then start the deployment process. That will result in a clean (re)deployment where every configuration artefact will be generated (TLS, node config) from scratch.
+The local `--reconfigure | -c` flag instructs containerlab to first **destroy** the lab and all its directories and then start the deployment process. That will result in a clean (re)deployment where every configuration artefact will be generated (TLS, node config) from scratch.
 
 Without this flag present, containerlab will reuse the available configuration artifacts found in the lab directory.
 
