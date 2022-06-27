@@ -7,28 +7,28 @@ nav:
       - Topology definition: manual/topo-def-file.md
       - Nodes: manual/nodes.md
       - Kinds:
-          - About: manual/kinds/kinds.md
-          - srl - Nokia SR Linux: manual/kinds/srl.md
-          - crpd - Juniper cRPD: manual/kinds/crpd.md
-          - ceos - Arista cEOS: manual/kinds/ceos.md
-          - cvx - Cumulus VX: manual/kinds/cvx.md
-          - sonic-vs - SONiC: manual/kinds/sonic-vs.md
-          - vr-sros - Nokia SR OS: manual/kinds/vr-sros.md
-          - vr-vmx - Juniper vMX: manual/kinds/vr-vmx.md
-          - vr-vqfx - Juniper vQFX: manual/kinds/vr-vqfx.md
-          - vr-xrv9k - Cisco XRv9k: manual/kinds/vr-xrv9k.md
-          - vr-xrv - Cisco XRv: manual/kinds/vr-xrv.md
-          - vr-csr - Cisco CSR1000v: manual/kinds/vr-csr.md
-          - vr-n9kv - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
-          - vr-ftosv - Dell FTOS10v: manual/kinds/vr-ftosv.md
-          - vr-veos - Arista vEOS: manual/kinds/vr-veos.md
-          - vr-ros - MikroTik RouterOS: manual/kinds/vr-ros.md
-          - vr-pan - Palo Alto PAN: manual/kinds/vr-pan.md
+          - manual/kinds/index.md
+          - Nokia SR Linux: manual/kinds/srl.md
+          - Nokia SR OS: manual/kinds/vr-sros.md
+          - Arista cEOS: manual/kinds/ceos.md
+          - Arista vEOS: manual/kinds/vr-veos.md
+          - Juniper cRPD: manual/kinds/crpd.md
+          - Juniper vMX: manual/kinds/vr-vmx.md
+          - Juniper vQFX: manual/kinds/vr-vqfx.md
+          - Cisco XRv9k: manual/kinds/vr-xrv9k.md
+          - Cisco XRv: manual/kinds/vr-xrv.md
+          - Cisco CSR1000v: manual/kinds/vr-csr.md
+          - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
+          - Cumulus VX: manual/kinds/cvx.md
+          - SONiC: manual/kinds/sonic-vs.md
+          - Dell FTOS10v: manual/kinds/vr-ftosv.md
+          - MikroTik RouterOS: manual/kinds/vr-ros.md
+          - Palo Alto PAN: manual/kinds/vr-pan.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
-          - linux - Linux container: manual/kinds/linux.md
-          - bridge - Linux bridge: manual/kinds/bridge.md
-          - ovs-bridge - Openvswitch bridge: manual/kinds/ovs-bridge.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
+          - Linux bridge: manual/kinds/bridge.md
+          - Linux container: manual/kinds/linux.md
+          - Openvswitch bridge: manual/kinds/ovs-bridge.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
@@ -138,6 +138,7 @@ theme:
     - content.code.annotate
     - toc.follow
     - content.tooltips
+    - navigation.indexes
 
   language: en
   palette:
