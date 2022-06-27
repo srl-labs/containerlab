@@ -10,7 +10,6 @@ import (
 	"fmt"
 	netTypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
-	"github.com/containers/podman/v4/pkg/bindings/network"
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/dustin/go-humanize"
@@ -325,20 +324,13 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 	return toReturn, nil
 }
 
-func (r *PodmanRuntime) disableTXOffload(ctx context.Context) error {
+func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
 	// TX checksum disabling will be done here since the mgmt bridge
 	// may not exist in netlink before a container is attached to it
-	netIns, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
-	if err != nil {
-		log.Warnf("failed to disable TX checksum offload; unable to retrieve the bridge name")
-		return err
-	}
-	log.Debugf("Network Inspect result for the created net: type %T and values %+v", netIns, netIns)
-	// Extract details for the bridge assuming that only 1 bridge was created for the network
-	brName := netIns[0]["plugins"].([]interface{})[0].(map[string]interface{})["bridge"].(string)
+	brName := r.mgmt.Bridge
 	log.Debugf("Got a bridge name %q", brName)
 	// Disable checksum calculation hw offload
-	err = utils.EthtoolTXOff(brName)
+	err := utils.EthtoolTXOff(brName)
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offload for interface %q: %v", brName, err)
 		return err
