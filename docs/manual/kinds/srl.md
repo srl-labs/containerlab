@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Nokia SR Linux
 
 [Nokia SR Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `srl` or `nokia_srlinux` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.

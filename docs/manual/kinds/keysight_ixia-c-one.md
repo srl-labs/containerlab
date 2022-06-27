@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Keysight IXIA-C One
 
 Keysight ixia-c-one is a single-container distribution of [ixia-c][ixia-c], which in turn is Keysight's reference implementation of [Open Traffic Generator API (OTG)][otg].

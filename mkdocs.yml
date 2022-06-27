@@ -133,10 +133,11 @@ theme:
   features:
     - navigation.top
     - navigation.instant
-    - navigation.tracking
     - navigation.tabs
     - search.suggest
     - content.code.annotate
+    - toc.follow
+    - content.tooltips
 
   language: en
   palette:
@@ -165,9 +166,16 @@ theme:
 
 # Plugins
 plugins:
-  - search
+  - search:
+      separator: '[\s\-\_]'
   - minify:
       minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+  # - git-committers:
+  #     repository: srl-labs/containerlab
+  #     token: !ENV GH_TOKEN
   - redirects:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/

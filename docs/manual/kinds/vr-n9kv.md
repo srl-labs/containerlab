@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Cisco Nexus 9000v
 
 Cisco Nexus900v virtualized router is identified with `vr-n9kv` or `vr-cisco_n9kv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.

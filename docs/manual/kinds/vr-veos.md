@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Arista vEOS
 
 [Arista vEOS](https://www.arista.com/en/cg-veos-router/veos-router-overview) virtualized router is identified with `vr-veos` or `vr-arista_veos` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.

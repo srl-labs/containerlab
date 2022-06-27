@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Arista cEOS
 
 Arista cEOS is identified with `ceos` or `arista_ceos` kind in the [topology file](../topo-def-file.md). The `ceos` kind defines a supported feature set and a startup procedure of a `ceos` node.

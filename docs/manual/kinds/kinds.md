@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Kinds
 
 Containerlab launches, wires up and manages container based labs. The steps required to launch a vanilla `debian` or `centos` container image aren't at all different. On the other hand, Nokia SR Linux launching procedure is nothing like the one for Arista cEOS.

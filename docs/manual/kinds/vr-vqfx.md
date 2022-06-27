@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Juniper vQFX
 
 [Juniper vQFX](https://www.juniper.net/us/en/dm/free-vqfx10000-software.html) virtualized router is identified with `vr-vqfx` or `vr-juniper_vqfx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.

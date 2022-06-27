@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Palo Alto PA-VM
 
 Palo Alto PA-VM virtualized firewall is identified with `vr-pan` or `vr-paloalto_panos` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
