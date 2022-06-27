@@ -54,8 +54,8 @@ A [topology definition deep-dive](manual/topo-def-file.md) document provides a c
 * Each lab has a `name`.
 * The lab topology is defined under the `topology` element.
 * Topology is a set of [`nodes`](manual/nodes.md) and [`links`](manual/topo-def-file.md#links) between them.
-* The nodes are always of a certain [`kind`](manual/kinds/kinds.md). The `kind` defines the node configuration and behavior.
-* Containerlab supports a fixed number of `kinds`. In the example above, the `srl` and `ceos` are one of the [supported kinds](manual/kinds/kinds.md).
+* The nodes are always of a certain [`kind`](manual/kinds/index.md). The `kind` defines the node configuration and behavior.
+* Containerlab supports a fixed number of `kinds`. In the example above, the `srl` and `ceos` are one of the [supported kinds](manual/kinds/index.md).
 * The actual [nodes](manual/nodes.md) of the topology are defined in the `nodes` section which holds a map of node names. In the example above, nodes with names `srl` and `ceos` are defined.
 * Node elements must have a `kind` parameter to indicate which kind this node belongs to. Under the nodes section you typically provide node-specific parameters. This lab uses a node-specific parameters - `image`.  
 * `nodes` are interconnected with `links`. Each `link` is [defined](manual/topo-def-file.md#links) by a set of `endpoints`.
