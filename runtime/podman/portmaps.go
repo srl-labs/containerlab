@@ -6,7 +6,7 @@ package podman
 import (
 	"context"
 	"fmt"
-	podtypes "github.com/containers/podman/v4/libpod/network/types"
+	netTypes "github.com/containers/common/libnetwork/types"
 	"net"
 	"strconv"
 	"strings"
@@ -22,9 +22,9 @@ import (
 // Licensed under apache 2.0 license https://github.com/containers/podman/blob/54c630aa0a4dbbddb04ac07b223687aeaa6daefd/LICENSE
 
 // convertPortMap takes a nat.PortMap Docker type and produces a podman-compatible PortMapping
-func (*PodmanRuntime) convertPortMap(_ context.Context, portMap nat.PortMap) ([]podtypes.PortMapping, error) {
+func (*PodmanRuntime) convertPortMap(_ context.Context, portMap nat.PortMap) ([]netTypes.PortMapping, error) {
 	log.Debugf("Method convertPortMap was called with inputs %+v", portMap)
-	toReturn := make([]podtypes.PortMapping, 0, len(portMap))
+	toReturn := make([]netTypes.PortMapping, 0, len(portMap))
 	for port, hostpmap := range portMap {
 		var (
 			ctrPort  string
@@ -81,8 +81,8 @@ func (*PodmanRuntime) convertExpose(_ context.Context, exposePorts nat.PortSet) 
 	return toReturn, nil
 }
 
-func parseSplitPort(hostIP, hostPort *string, ctrPort string, protocol *string) (podtypes.PortMapping, error) {
-	newPort := podtypes.PortMapping{}
+func parseSplitPort(hostIP, hostPort *string, ctrPort string, protocol *string) (netTypes.PortMapping, error) {
+	newPort := netTypes.PortMapping{}
 	if ctrPort == "" {
 		return newPort, errors.Errorf("must provide a non-empty container port to publish")
 	}
