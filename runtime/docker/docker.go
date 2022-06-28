@@ -99,7 +99,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	d0, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
 	if err != nil {
 		d.mgmt.MTU = "1500"
-		log.Debugf("an error occured when trying to detect docker default network mtu")
+		log.Debugf("an error occurred when trying to detect docker default network mtu")
 	}
 
 	if mtu, ok := d0.Options["com.docker.network.driver.mtu"]; ok {
@@ -128,8 +128,8 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		enableIPv6 := false
 		var ipamConfig []network.IPAMConfig
 
-		// check if IPv4/6 addr are assigned to a mgmt bridge
 		var v4gw, v6gw string
+		// check if IPv4/6 addr are assigned to a mgmt bridge
 		if d.mgmt.Bridge != "" {
 			v4gw, v6gw, err = utils.FirstLinkIPs(d.mgmt.Bridge)
 			if err != nil {
@@ -226,6 +226,16 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	if d.mgmt.Bridge == "" {
 		d.mgmt.Bridge = bridgeName
 	}
+
+	// get management bridge v4/6 addresses and save it under mgmt struct
+	// so that nodes can use this information prior to being deployed
+	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
+	var v4 string
+	if v4, _, err = utils.FirstLinkIPs(bridgeName); err != nil {
+		return err
+	}
+
+	d.mgmt.IPv4Gw = v4
 
 	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 
@@ -643,6 +653,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
+			ctr.NetworkSettings.IPv4Gw = ifcfg.Gateway
 		}
 		result = append(result, ctr)
 	}

@@ -69,109 +69,115 @@ type intfMap struct {
 	} `json:"EthernetIntf"`
 }
 
-func (s *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	s.cfg = cfg
+func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	n.cfg = cfg
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
 
-	s.cfg.Env = utils.MergeStringMaps(ceosEnv, s.cfg.Env)
+	n.cfg.Env = utils.MergeStringMaps(ceosEnv, n.cfg.Env)
 
 	// the node.Cmd should be aligned with the environment.
 	// prepending original Cmd with if-wait.sh script to make sure that interfaces are available
 	// before init process starts
 	var envSb strings.Builder
 	envSb.WriteString("bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init ")
-	for k, v := range s.cfg.Env {
+	for k, v := range n.cfg.Env {
 		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
 	}
 	envSb.WriteString("'")
-	s.cfg.Cmd = envSb.String()
-	s.cfg.MacAddress = utils.GenMac("00:1c:73")
+	n.cfg.Cmd = envSb.String()
+	n.cfg.MacAddress = utils.GenMac("00:1c:73")
 
 	// mount config dir
-	cfgPath := filepath.Join(s.cfg.LabDir, "flash")
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
+	cfgPath := filepath.Join(n.cfg.LabDir, "flash")
+	n.cfg.Binds = append(n.cfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
 	return nil
 }
 
-func (s *ceos) Config() *types.NodeConfig { return s.cfg }
+func (n *ceos) Config() *types.NodeConfig { return n.cfg }
 
-func (s *ceos) PreDeploy(_, _, _ string) error {
-	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return createCEOSFiles(s.cfg)
+func (n *ceos) PreDeploy(_, _, _ string) error {
+	utils.CreateDirectory(n.cfg.LabDir, 0777)
+	return n.createCEOSFiles()
 }
 
-func (s *ceos) Deploy(ctx context.Context) error {
-	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
+func (n *ceos) Deploy(ctx context.Context) error {
+	cID, err := n.runtime.CreateContainer(ctx, n.cfg)
 	if err != nil {
 		return err
 	}
-	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
+	_, err = n.runtime.StartContainer(ctx, cID, n.cfg)
 	return err
 }
 
-func (s *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", s.cfg.ShortName)
-	return ceosPostDeploy(ctx, s.runtime, s.cfg)
+func (n *ceos) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.cfg.ShortName)
+	return n.ceosPostDeploy()
 }
 
 func (*ceos) WithMgmtNet(*types.MgmtNet)               {}
-func (s *ceos) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *ceos) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
+func (n *ceos) WithRuntime(r runtime.ContainerRuntime) { n.runtime = r }
+func (n *ceos) GetRuntime() runtime.ContainerRuntime   { return n.runtime }
 
-func (s *ceos) SaveConfig(ctx context.Context) error {
-	_, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
+func (n *ceos) SaveConfig(ctx context.Context) error {
+	_, stderr, err := n.runtime.Exec(ctx, n.cfg.LongName, saveCmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
+		return fmt.Errorf("%s: failed to execute cmd: %v", n.cfg.ShortName, err)
 	}
 
 	if len(stderr) > 0 {
-		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
+		return fmt.Errorf("%s errors: %s", n.cfg.ShortName, string(stderr))
 	}
 
-	confPath := s.cfg.LabDir + "/flash/startup-config"
-	log.Infof("saved cEOS configuration from %s node to %s\n", s.cfg.ShortName, confPath)
+	confPath := n.cfg.LabDir + "/flash/startup-config"
+	log.Infof("saved cEOS configuration from %s node to %s\n", n.cfg.ShortName, confPath)
 
 	return nil
 }
 
-func createCEOSFiles(node *types.NodeConfig) error {
+func (n *ceos) createCEOSFiles() error {
+	nodeCfg := n.Config()
 	// generate config directory
-	utils.CreateDirectory(path.Join(node.LabDir, "flash"), 0777)
-	cfg := filepath.Join(node.LabDir, "flash", "startup-config")
-	node.ResStartupConfig = cfg
+	utils.CreateDirectory(path.Join(n.cfg.LabDir, "flash"), 0777)
+	cfg := filepath.Join(n.cfg.LabDir, "flash", "startup-config")
+	nodeCfg.ResStartupConfig = cfg
+
+	// set mgmt ipv4 gateway as it is already known by now
+	// since the container network has been created before we launch nodes
+	// and mgmt gateway can be used in ceos.cfg template to configure default route for mgmt
+	nodeCfg.MgmtIPv4Gateway = n.runtime.Mgmt().IPv4Gw
 
 	// set the mgmt interface name for the node
-	err := setMgmtInterface(node)
+	err := setMgmtInterface(nodeCfg)
 	if err != nil {
 		return err
 	}
 
 	// use startup config file provided by a user
-	if node.StartupConfig != "" {
-		c, err := os.ReadFile(node.StartupConfig)
+	if nodeCfg.StartupConfig != "" {
+		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
 		cfgTemplate = string(c)
 	}
 
-	err = node.GenerateConfig(node.ResStartupConfig, cfgTemplate)
+	err = nodeCfg.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
 
 	// if extras have been provided copy these into the flash directory
-	if node.Extras != nil && len(node.Extras.CeosCopyToFlash) != 0 {
-		extras := node.Extras.CeosCopyToFlash
-		flash := filepath.Join(node.LabDir, "flash")
+	if nodeCfg.Extras != nil && len(nodeCfg.Extras.CeosCopyToFlash) != 0 {
+		extras := nodeCfg.Extras.CeosCopyToFlash
+		flash := filepath.Join(nodeCfg.LabDir, "flash")
 
 		for _, extrapath := range extras {
 			basename := filepath.Base(extrapath)
 			dest := filepath.Join(flash, basename)
 
-			topoDir := filepath.Dir(filepath.Dir(node.LabDir)) // topo dir is needed to resolve extrapaths
+			topoDir := filepath.Dir(filepath.Dir(nodeCfg.LabDir)) // topo dir is needed to resolve extrapaths
 			if err := utils.CopyFile(utils.ResolvePath(extrapath, topoDir), dest, 0644); err != nil {
 				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
@@ -179,20 +185,20 @@ func createCEOSFiles(node *types.NodeConfig) error {
 	}
 
 	// sysmac is a system mac that is +1 to Ma0 mac
-	m, err := net.ParseMAC(node.MacAddress)
+	m, err := net.ParseMAC(nodeCfg.MacAddress)
 	if err != nil {
 		return err
 	}
 	m[5] = m[5] + 1
 
-	sysMacPath := path.Join(node.LabDir, "flash", "system_mac_address")
+	sysMacPath := path.Join(nodeCfg.LabDir, "flash", "system_mac_address")
 
 	if !utils.FileExists(sysMacPath) {
 		err = utils.CreateFile(sysMacPath, m.String())
 	}
 
 	// adding if-wait.sh script to flash dir
-	ifScriptP := path.Join(node.LabDir, "flash", "if-wait.sh")
+	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
 	utils.CreateFile(ifScriptP, utils.IfWaitScript)
 	os.Chmod(ifScriptP, 0777) // skipcq: GSC-G302
 
@@ -236,8 +242,9 @@ func setMgmtInterface(node *types.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes
-func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.NodeConfig) error {
-	d, err := utils.SpawnCLIviaExec("arista_eos", node.LongName, r.GetName())
+func (n *ceos) ceosPostDeploy() error {
+	nodeCfg := n.Config()
+	d, err := utils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.runtime.GetName())
 	if err != nil {
 		return err
 	}
@@ -245,22 +252,22 @@ func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.N
 	defer d.Close()
 
 	cfgs := []string{
-		"interface " + node.MgmtIntf,
+		"interface " + nodeCfg.MgmtIntf,
 		"no ip address",
 		"no ipv6 address",
 	}
 
 	// adding ipv4 address to configs
-	if node.MgmtIPv4Address != "" {
+	if nodeCfg.MgmtIPv4Address != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ip address %s/%d", node.MgmtIPv4Address, node.MgmtIPv4PrefixLength),
+			fmt.Sprintf("ip address %s/%d", nodeCfg.MgmtIPv4Address, nodeCfg.MgmtIPv4PrefixLength),
 		)
 	}
 
 	// adding ipv6 address to configs
-	if node.MgmtIPv6Address != "" {
+	if nodeCfg.MgmtIPv6Address != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ipv6 address %s/%d", node.MgmtIPv6Address, node.MgmtIPv6PrefixLength),
+			fmt.Sprintf("ipv6 address %s/%d", nodeCfg.MgmtIPv6Address, nodeCfg.MgmtIPv6PrefixLength),
 		)
 	}
 
@@ -276,12 +283,12 @@ func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.N
 	return err
 }
 
-func (s *ceos) GetImages() map[string]string {
+func (n *ceos) GetImages() map[string]string {
 	return map[string]string{
-		nodes.ImageKey: s.cfg.Image,
+		nodes.ImageKey: n.cfg.Image,
 	}
 }
 
-func (s *ceos) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
+func (n *ceos) Delete(ctx context.Context) error {
+	return n.runtime.DeleteContainer(ctx, n.cfg.LongName)
 }

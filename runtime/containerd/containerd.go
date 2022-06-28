@@ -323,13 +323,14 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 		}
 		result, _ := current.NewResultFromResult(res)
 
-		ipv4, ipv6 := "", ""
+		ipv4, ipv6, ipv4Gw := "", "", ""
 		ipv4nm, ipv6nm := 0, 0
 		for _, ip := range result.IPs {
 			switch ip.Version {
 			case "4":
 				ipv4 = ip.Address.IP.String()
 				ipv4nm, _ = ip.Address.Mask.Size()
+				ipv4Gw = ip.Gateway.String()
 			case "6":
 				ipv6 = ip.Address.IP.String()
 				ipv6nm, _ = ip.Address.Mask.Size()
@@ -341,6 +342,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 			"clab.ipv4.netmask": strconv.Itoa(ipv4nm),
 			"clab.ipv6.addr":    ipv6,
 			"clab.ipv6.netmask": strconv.Itoa(ipv6nm),
+			"clab.ipv4.gateway": ipv4Gw,
 		}
 		_, err = newContainer.SetLabels(ctx, additionalLabels)
 		if err != nil {
@@ -669,7 +671,7 @@ func extractIPInfoFromLabels(labels map[string]string) (types.GenericMgmtIPs, er
 			return types.GenericMgmtIPs{}, err
 		}
 	}
-	return types.GenericMgmtIPs{IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask}, nil
+	return types.GenericMgmtIPs{IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask, IPv4Gw: labels["clab.ipv4.gateway"]}, nil
 }
 
 func timeSinceInHuman(since time.Time) string {
