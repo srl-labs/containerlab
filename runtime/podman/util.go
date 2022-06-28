@@ -300,17 +300,17 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 	toReturn := types.GenericMgmtIPs{}
 	inspectRes, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
 	if err != nil {
-		log.Warnf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
+		log.Debugf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
 	}
 	// Extract the data only for a specific CNI. Network name is taken from a container's label
 	netName, ok := inspectRes.Config.Labels["clab-net-mgmt"]
 	if !ok || netName == "" {
-		log.Warnf("Couldn't extract mgmt net data for container %q", cID)
+		log.Debugf("Couldn't extract mgmt net data for container %q", cID)
 		return toReturn, nil
 	}
 	mgmtData, ok := inspectRes.NetworkSettings.Networks[netName]
 	if !ok || mgmtData == nil {
-		log.Warnf("Couldn't extract mgmt IPs for container %q and net %q", cID, netName)
+		log.Debugf("Couldn't extract mgmt IPs for container %q and net %q", cID, netName)
 		return toReturn, nil
 	}
 	log.Debugf("extractMgmtIPs was called and we got a struct %T %+v", mgmtData, mgmtData)
