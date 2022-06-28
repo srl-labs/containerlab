@@ -643,6 +643,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
+			ctr.NetworkSettings.IPv4Gw = ifcfg.Gateway
 		}
 		result = append(result, ctr)
 	}

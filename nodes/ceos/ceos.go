@@ -263,6 +263,12 @@ func ceosPostDeploy(_ context.Context, r runtime.ContainerRuntime, node *types.N
 			fmt.Sprintf("ipv6 address %s/%d", node.MgmtIPv6Address, node.MgmtIPv6PrefixLength),
 		)
 	}
+	// adding ipv4 gateway to configs
+	if node.MgmtIPv4Gateway != "" {
+		cfgs = append(cfgs,
+			fmt.Sprintf("ip route 0.0.0.0/0 %s", node.MgmtIPv4Gateway),
+		)
+	}
 
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
