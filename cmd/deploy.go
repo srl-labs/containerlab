@@ -307,6 +307,7 @@ func setFlags(conf *clab.Config) {
 	}
 }
 
+// enrichNodes add container runtime assigned information (such as dynamically assigned IP addresses) to the nodes
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
 	for i := range containers {
 		c := &containers[i]
