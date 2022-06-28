@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Dell FTOSv (OS10) / ftosv
 
 Dell FTOSv (OS10) virtualized router/switch is identified with `vr-ftosv` or `vr-dell_ftosv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.

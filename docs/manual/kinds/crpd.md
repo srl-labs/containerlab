@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Juniper cRPD
 
 [Juniper cRPD](https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/concept/understanding-crpd.html) is identified with `crpd` or `juniper_crpd` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `crpd` node.

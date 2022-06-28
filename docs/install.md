@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 Containerlab is distributed as a Linux deb/rpm package and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
 
 ### Pre-requisites
@@ -277,6 +281,23 @@ To uninstall containerlab when it was installed via installation script or packa
     ```
 === "Manual removal"
     Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
+
+
+### SELinux
+When SELinux set to enforced mode containerlab binary might fail to execute with `Segmentation fault (core dumped)` error. This might be because containerlab binary is compressed with [upx](https://upx.github.io/) and selinux prevents it from being decompressed by default.
+
+To fix this:
+
+```
+sudo semanage fcontext -a -t textrel_shlib_t $(which containerlab)
+sudo restorecon $(which containerlab)
+```
+
+or more globally:
+
+```
+sudo setsebool -P selinuxuser_execmod 1
+```
 
 [^1]: only available if installed from packages
 [^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.

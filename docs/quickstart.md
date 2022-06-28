@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
 
 ## Installation
@@ -50,8 +54,8 @@ A [topology definition deep-dive](manual/topo-def-file.md) document provides a c
 * Each lab has a `name`.
 * The lab topology is defined under the `topology` element.
 * Topology is a set of [`nodes`](manual/nodes.md) and [`links`](manual/topo-def-file.md#links) between them.
-* The nodes are always of a certain [`kind`](manual/kinds/kinds.md). The `kind` defines the node configuration and behavior.
-* Containerlab supports a fixed number of `kinds`. In the example above, the `srl` and `ceos` are one of the [supported kinds](manual/kinds/kinds.md).
+* The nodes are always of a certain [`kind`](manual/kinds/index.md). The `kind` defines the node configuration and behavior.
+* Containerlab supports a fixed number of `kinds`. In the example above, the `srl` and `ceos` are one of the [supported kinds](manual/kinds/index.md).
 * The actual [nodes](manual/nodes.md) of the topology are defined in the `nodes` section which holds a map of node names. In the example above, nodes with names `srl` and `ceos` are defined.
 * Node elements must have a `kind` parameter to indicate which kind this node belongs to. Under the nodes section you typically provide node-specific parameters. This lab uses a node-specific parameters - `image`.  
 * `nodes` are interconnected with `links`. Each `link` is [defined](manual/topo-def-file.md#links) by a set of `endpoints`.
@@ -65,6 +69,11 @@ The image name follows the same rules as the images you use with, for example, D
     Some lab examples use the images without a tag, i.e. `image: srlinux`. This means that the image with a `latest` tag must exist. A user needs to tag the image if the `latest` tag is missing.
 
     For example: `docker tag srlinux:20.6.1-286 srlinux:latest`
+
+!!!warning "Images availability"
+    Quickstart lab includes Nokia SR Linux and Arista cEOS images. While Nokia SR Linux is a publicly available image and can be pulled by anyone, its counterpart Arista cEOS images needs to be downloaded by the users first.
+
+    This means that you have to login with Arista website and download the image, then import it to docker image store before proceeding with this lab. Or you can swap the ceos image with another SR Linux image and enjoy the freedom of labbing.
 
 ## Deploying a lab
 Now when we know what a basic topology file consists of and sorted out the container image name and node's license file, we can proceed with deploying this lab. To keep things easy and guessable, the command to deploy a lab is called [`deploy`](cmd/deploy.md).
@@ -80,9 +89,12 @@ REPOSITORY             TAG                 IMAGE ID            CREATED          
 ghcr.io/nokia/srlinux  latest              79019d14cfc7        3 months ago        1.32GB
 ceos                   4.25.0F             15a5f97fe8e8        3 months ago        1.76GB
 
-# start the lab deployment by referencing the topology file
-containerlab deploy --topo srlceos01.clab.yml
+# start the lab deployment
+containerlab deploy # (1)!
 ```
+
+1. `deploy` command will automatically lookup a file matching the `*.clab.y*ml` patter to select it.  
+  If you have several files and want to pick a specific one, use `--topo <path>` flag.
 
 After a couple of seconds you will see the summary of the deployed nodes:
 

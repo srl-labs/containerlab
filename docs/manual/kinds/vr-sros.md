@@ -1,3 +1,7 @@
+---
+search:
+  boost: 4
+---
 # Nokia SR OS
 
 [Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `vr-sros` or `vr-nokia_sros` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.

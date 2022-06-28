@@ -1,4 +1,8 @@
-# MikroTik RouterOS/Cloud-hosted router
+---
+search:
+  boost: 4
+---
+# MikroTik RouterOS Cloud-hosted router
 
 [MikroTik RouterOS](https://mikrotik.com/download) cloud hosted router is identified with `vr-ros` or `vr-mikrotik_ros` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
