@@ -181,23 +181,27 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		}
 	// Bridge will be used if none provided
 	case "bridge", "":
-		mgmtv4Addr := net.ParseIP(cfg.MgmtIPv4Address)
-		mgmtv6Addr := net.ParseIP(cfg.MgmtIPv6Address)
+		netName := r.mgmt.Network
 		mac, err := net.ParseMAC(cfg.MacAddress)
 		if err != nil && cfg.MacAddress != "" {
 			return sg, err
 		}
 		// Podman uses a custom type for mac addresses, so we need to convert it first
 		hwAddr := netTypes.HardwareAddr(mac)
-
+		staticIPs := make([]net.IP, 0)
+		if mgmtv4Addr := net.ParseIP(cfg.MgmtIPv4Address); mgmtv4Addr != nil {
+			staticIPs = append(staticIPs, mgmtv4Addr)
+		}
+		if mgmtv6Addr := net.ParseIP(cfg.MgmtIPv6Address); mgmtv6Addr != nil {
+			staticIPs = append(staticIPs, mgmtv6Addr)
+		}
 		// Static IPs & Macs are properties of a network attachment
-		nets := map[string]netTypes.PerNetworkOptions{r.mgmt.Network: {
-			StaticIPs:     []net.IP{mgmtv4Addr, mgmtv6Addr},
+		nets := map[string]netTypes.PerNetworkOptions{netName: {
+			StaticIPs:     staticIPs,
 			Aliases:       nil,
 			StaticMAC:     hwAddr,
 			InterfaceName: "",
 		}}
-
 		portmap, err := r.convertPortMap(ctx, cfg.PortBindings)
 		if err != nil {
 			return sg, err
@@ -342,6 +346,10 @@ func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
 // netOpts is an accessory function that returns a network.CreateOptions struct
 // filled with all parameters for CreateNet function
 func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
+	// set bridge name = network name if explicit name was not provided
+	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
+		r.mgmt.Bridge = r.mgmt.Network
+	}
 	var (
 		name        = r.mgmt.Network
 		intName     = r.mgmt.Bridge
@@ -355,29 +363,37 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 		ipamOptions = map[string]string{}
 		v4subnet    = netTypes.Subnet{}
 		v6subnet    = netTypes.Subnet{}
-		subnets     = []netTypes.Subnet{v4subnet, v6subnet}
+		subnets     = make([]netTypes.Subnet, 0)
 	)
 	// parse mgmt subnets
+	// check if v4 is defined
 	if r.mgmt.IPv4Subnet != "" {
 		v4subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv4Subnet)
+		if err != nil {
+			return netTypes.Network{}, err
+		}
+		// add a custom gw address if specified
+		if r.mgmt.IPv4Gw != "" && r.mgmt.IPv4Gw != "0.0.0.0" {
+			v4subnet.Gateway = net.ParseIP(r.mgmt.IPv4Gw)
+		}
+		subnets = append(subnets, v4subnet)
+		log.Debugf("Added v4 subnet info to the net definion: \n%v, \n%v\n", subnets, v4subnet)
 	}
-	if err != nil {
-		return netTypes.Network{}, err
-	}
+	// check if v6 is defined
 	if r.mgmt.IPv6Subnet != "" {
-		v6subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv4Subnet)
+		v6subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv6Subnet)
+		if err != nil {
+			return netTypes.Network{}, err
+		}
 		ipv6 = true
+		// add a custom gw address if specified
+		if r.mgmt.IPv6Gw != "" && r.mgmt.IPv6Gw != "::" {
+			v6subnet.Gateway = net.ParseIP(r.mgmt.IPv6Gw)
+		}
+		subnets = append(subnets, v6subnet)
+		log.Debugf("Added v6 subnet info to the net definion: \n%v, \n%v\n", subnets, v6subnet)
 	}
-	if err != nil {
-		return netTypes.Network{}, err
-	}
-	// add a custom gw address if specified
-	if r.mgmt.IPv4Gw != "" && r.mgmt.IPv4Gw != "0.0.0.0" {
-		v4subnet.Gateway = net.ParseIP(r.mgmt.IPv4Gw)
-	}
-	if r.mgmt.IPv6Gw != "" && r.mgmt.IPv6Gw != "::" {
-		v6subnet.Gateway = net.ParseIP(r.mgmt.IPv6Gw)
-	}
+
 	// add custom mtu if defined
 	if r.mgmt.MTU != "" {
 		options["mtu"] = r.mgmt.MTU
