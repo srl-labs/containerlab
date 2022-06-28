@@ -111,7 +111,7 @@ func (n *ceos) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (n *ceos) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.cfg.ShortName)
 	return n.ceosPostDeploy()
 }
