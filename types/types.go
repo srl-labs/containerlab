@@ -207,9 +207,9 @@ func (ctr *GenericContainer) GetContainerIPv6() string {
 type GenericMgmtIPs struct {
 	IPv4addr string
 	IPv4pLen int
+	IPv4Gw   string
 	IPv6addr string
 	IPv6pLen int
-	IPv4Gw   string
 }
 
 type GenericFilter struct {
