@@ -10,6 +10,7 @@ RUN apk add --no-cache bash \
 	git \
 	openssh \
 	make \
+	iptables \
 	device-mapper \
 	e2fsprogs-extra
 
