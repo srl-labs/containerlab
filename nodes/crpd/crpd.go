@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	kindnames = []string{"crdp", "juniper_crpd"}
+	kindnames = []string{"crpd", "juniper_crpd"}
 	//go:embed crpd.cfg
 	cfgTemplate string
 
