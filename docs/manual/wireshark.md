@@ -10,7 +10,7 @@ Consider the following lab topology which highlights the typical points of packe
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:13,&quot;zoom&quot;:2,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 Since containerlab leverages linux network devices, users are free to use whatever tool of choice to sniff from any of them. This article will provide examples for `tcpdump` and `wireshark` tools.
 
