@@ -60,7 +60,7 @@ func SpawnCLIviaExec(platformName, contName, runtime string) (*network.Driver, e
 	p, err := platform.NewPlatform(
 		platformName,
 		contName,
-		options.WithAuthBypass(),
+		opts...,
 	)
 	if err != nil {
 		log.Errorf("failed to fetch platform instance for device %s; error: %+v\n", err, contName)
