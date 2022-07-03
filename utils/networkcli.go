@@ -1,13 +1,13 @@
 package utils
 
 import (
+	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/util"
 	"strings"
 	"time"
 
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
-	"github.com/scrapli/scrapligo/platform"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,9 +35,6 @@ var (
 // SpawnCLIviaExec spawns a CLI session over container runtime exec function
 // end ensures the CLI is available to be used for sending commands over
 func SpawnCLIviaExec(platformName, contName, runtime string) (*network.Driver, error) {
-	var d *network.Driver
-	var err error
-
 	opts := []util.Option{
 		options.WithAuthBypass(),
 		options.WithSystemTransportOpenBin(CLIExecCommand[runtime]["exec"]),
@@ -57,32 +54,37 @@ func SpawnCLIviaExec(platformName, contName, runtime string) (*network.Driver, e
 		opts = append(opts, options.WithTermWidth(5000))
 	}
 
-	p, err := platform.NewPlatform(
-		platformName,
-		contName,
-		opts...,
-	)
-	if err != nil {
-		log.Errorf("failed to fetch platform instance for device %s; error: %+v\n", err, contName)
-		return nil, err
-	}
+	var p *platform.Platform
 
-	d, err = p.GetNetworkDriver()
-	if err != nil {
-		log.Errorf("failed to create driver for device %s; error: %+v\n", err, contName)
-		return nil, err
-	}
+	var d *network.Driver
 
-	transportReady := false
-	for !transportReady {
+	var err error
+
+	for {
+		p, err = platform.NewPlatform(
+			platformName,
+			contName,
+			opts...,
+		)
+		if err != nil {
+			log.Errorf("failed to fetch platform instance for device %s; error: %+v\n", err, contName)
+			return nil, err
+		}
+
+		d, err = p.GetNetworkDriver()
+		if err != nil {
+			log.Errorf("failed to create driver for device %s; error: %+v\n", err, contName)
+			return nil, err
+		}
+
 		if err = d.Open(); err != nil {
 			log.Debugf("%s - Cli not ready (%s) - waiting.", contName, err)
 			time.Sleep(time.Second * 2)
 			continue
 		}
-		transportReady = true
-		log.Debugf("%s - Cli ready.", contName)
-	}
 
-	return d, err
+		log.Debugf("%s - Cli ready.", contName)
+
+		return d, nil
+	}
 }
