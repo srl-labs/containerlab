@@ -77,7 +77,7 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 
 		err = utils.CreateFile(backupFPath, buf.String())
 		if err != nil {
-			return err
+			log.Warnf("Could not write rendered topology: %v", err)
 		}
 	}
 	log.Debugf("topology:\n%s\n", buf.String())
