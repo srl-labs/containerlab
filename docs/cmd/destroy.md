@@ -20,7 +20,7 @@ When the topology file flag is omitted, containerlab will try to find the matchi
 
 #### cleanup
 
-The local `--cleanup` flag instructs containerlab to remove the lab directory and all its content.
+The local `--cleanup | -c` flag instructs containerlab to remove the lab directory and all its content.
 
 Without this flag present, containerlab will keep the lab directory and all files inside of it.
 
