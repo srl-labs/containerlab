@@ -55,7 +55,8 @@
                         "mysocketio",
                         "host",
                         "keysight_ixia-c-one",
-                        "ipinfusion_ocnos"
+                        "ipinfusion_ocnos",
+                        "checkpoint_cloudguard"
                     ]
                 },
                 "license": {
@@ -512,6 +513,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "keysight_ixia-c-one": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "checkpoint_cloudguard": {
                             "$ref": "#/definitions/node-config"
                         }
                     }
