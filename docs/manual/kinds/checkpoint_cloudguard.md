@@ -6,6 +6,9 @@ search:
 
 Checkpoint Cloudguard virtualized security appliance is identified with `checkpoint_cloudguard` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
 
+## Getting Cloudguard image
+Users can obtain the qcow2 disk image for Checkpoint Cloudguard VM from the [official download site](https://supportcenter.checkpoint.com/supportcenter/portal?eventSubmit_doGoviewsolutiondetails=&solutionid=sk158292). To build a containerlab-compatible container use [boxen](https://github.com/carlmontanari/boxen) project.
+
 ## Managing Checkpoint Cloudguard nodes
 
 !!!note
