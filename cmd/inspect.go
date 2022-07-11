@@ -43,7 +43,7 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 }
 
-func inspectFn(cmd *cobra.Command, args []string) error {
+func inspectFn(_ *cobra.Command, _ []string) error {
 	if name == "" && topo == "" && !all {
 		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
 		return nil
