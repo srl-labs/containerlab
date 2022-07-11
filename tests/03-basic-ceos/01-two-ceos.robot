@@ -46,6 +46,13 @@ Ensure IPv6 default route is in the config file
     Log    ${f}
     Should Contain    ${f}    ipv6 route
 
+Ensure MGMT VRF is present
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ... sudo docker exec -it clab-${lab-name}-${node1-name} /bin/Cli -p 15 -c "show vrf MGMT"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain  ${output}   MGMT
+
 Ensure n1 is reachable over ssh
     Common.Login via SSH with username and password
     ...    address=${n1-mgmt-ip}

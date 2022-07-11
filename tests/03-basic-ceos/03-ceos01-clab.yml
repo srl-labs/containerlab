@@ -8,6 +8,8 @@ topology:
   kinds:
     ceos:
       image: ceos:4.25.0F
+      env:
+        CLAB_MGMT_VRF: MGMT
   nodes:
     n1:
       kind: ceos
