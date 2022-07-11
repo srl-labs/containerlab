@@ -32,66 +32,7 @@ var inspectCmd = &cobra.Command{
 	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
 	Aliases: []string{"ins", "i"},
 	PreRunE: sudoCheck,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if name == "" && topo == "" && !all {
-			fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
-			return nil
-		}
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
-		}
-		if topo != "" {
-			opts = append(opts, clab.WithTopoFile(topo, varsFile))
-		}
-		c, err := clab.NewContainerLab(opts...)
-		if err != nil {
-			return fmt.Errorf("could not parse the topology file: %v", err)
-		}
-
-		if name == "" {
-			name = c.Config.Name
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		var glabels []*types.GenericFilter
-		if all {
-			glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
-		} else {
-			if name != "" {
-				glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
-			} else if topo != "" {
-				glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-			}
-		}
-
-		containers, err := c.ListContainers(ctx, glabels)
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %s", err)
-		}
-
-		if len(containers) == 0 {
-			log.Println("no containers found")
-			return nil
-		}
-		if details {
-			b, err := json.MarshalIndent(containers, "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal containers struct: %v", err)
-			}
-			fmt.Println(string(b))
-			return nil
-		}
-
-		err = printContainerInspect(c, containers, format)
-		return err
-	},
+	RunE:    inspectFn,
 }
 
 func init() {
@@ -100,6 +41,71 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&format, "format", "f", "table", "output format. One of [table, json]")
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
+}
+
+func inspectFn(_ *cobra.Command, _ []string) error {
+	if name == "" && topo == "" && !all {
+		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
+		return nil
+	}
+	opts := []clab.ClabOption{
+		clab.WithTimeout(timeout),
+		clab.WithRuntime(rt,
+			&runtime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: graceful,
+			},
+		),
+	}
+
+	if topo != "" {
+		opts = append(opts, clab.WithTopoFile(topo, varsFile))
+	}
+
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return fmt.Errorf("could not parse the topology file: %v", err)
+	}
+
+	if name == "" {
+		name = c.Config.Name
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var glabels []*types.GenericFilter
+	if all {
+		glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
+	} else {
+		if name != "" {
+			glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
+		} else if topo != "" {
+			glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+		}
+	}
+
+	containers, err := c.ListContainers(ctx, glabels)
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %s", err)
+	}
+
+	if len(containers) == 0 {
+		log.Println("no containers found")
+		return nil
+	}
+	if details {
+		b, err := json.MarshalIndent(containers, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal containers struct: %v", err)
+		}
+		fmt.Println(string(b))
+		return nil
+	}
+
+	err = printContainerInspect(c, containers, format)
+	return err
 }
 
 func toTableData(det []types.ContainerDetails) [][]string {
