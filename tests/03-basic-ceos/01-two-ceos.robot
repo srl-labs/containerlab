@@ -41,6 +41,11 @@ Ensure n2 mgmt IPv4 is in the config file
     Log    ${f}
     Should Contain    ${f}    ${n2-mgmt-ip}
 
+Ensure IPv6 default route is in the config file
+    ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
+    Log    ${f}
+    Should Contain    ${f}    ipv6 route
+
 Ensure n1 is reachable over ssh
     Common.Login via SSH with username and password
     ...    address=${n1-mgmt-ip}

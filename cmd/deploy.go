@@ -325,6 +325,7 @@ func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.
 				node.Config().MgmtIPv6Address = c.NetworkSettings.IPv6addr
 				node.Config().MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
 				node.Config().MgmtIPv4Gateway = c.NetworkSettings.IPv4Gw
+				node.Config().MgmtIPv6Gateway = c.NetworkSettings.IPv6Gw
 			}
 			node.Config().ContainerID = c.ID
 		}
