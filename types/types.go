@@ -89,6 +89,7 @@ type NodeConfig struct {
 	MgmtIPv6Address      string            `json:"mgmt-ipv6-address,omitempty"`
 	MgmtIPv6PrefixLength int               `json:"mgmt-ipv6-prefix-length,omitempty"`
 	MgmtIPv4Gateway      string            `json:"mgmt-ipv4-gateway,omitempty"`
+	MgmtIPv6Gateway      string            `json:"mgmt-ipv6-gateway,omitempty"`
 	MacAddress           string            `json:"mac-address,omitempty"`
 	ContainerID          string            `json:"containerid,omitempty"`
 	TLSCert              string            `json:"tls-cert,omitempty"`
@@ -210,6 +211,7 @@ type GenericMgmtIPs struct {
 	IPv4Gw   string
 	IPv6addr string
 	IPv6pLen int
+	IPv6Gw   string
 }
 
 type GenericFilter struct {

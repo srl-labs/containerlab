@@ -671,7 +671,7 @@ func extractIPInfoFromLabels(labels map[string]string) (types.GenericMgmtIPs, er
 			return types.GenericMgmtIPs{}, err
 		}
 	}
-	return types.GenericMgmtIPs{IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask, IPv4Gw: labels["clab.ipv4.gateway"]}, nil
+	return types.GenericMgmtIPs{IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask, IPv4Gw: labels["clab.ipv4.gateway"], IPv6Gw: labels["clab.ipv6.gateway"]}, nil
 }
 
 func timeSinceInHuman(since time.Time) string {

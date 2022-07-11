@@ -230,12 +230,13 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	// get management bridge v4/6 addresses and save it under mgmt struct
 	// so that nodes can use this information prior to being deployed
 	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
-	var v4 string
-	if v4, _, err = utils.FirstLinkIPs(bridgeName); err != nil {
+	var v4, v6 string
+	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
 		return err
 	}
 
 	d.mgmt.IPv4Gw = v4
+	d.mgmt.IPv6Gw = v6
 
 	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 

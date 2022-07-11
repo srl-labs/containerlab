@@ -147,6 +147,7 @@ func (n *ceos) createCEOSFiles() error {
 	// since the container network has been created before we launch nodes
 	// and mgmt gateway can be used in ceos.cfg template to configure default route for mgmt
 	nodeCfg.MgmtIPv4Gateway = n.runtime.Mgmt().IPv4Gw
+	nodeCfg.MgmtIPv6Gateway = n.runtime.Mgmt().IPv6Gw
 
 	// set the mgmt interface name for the node
 	err := setMgmtInterface(nodeCfg)
