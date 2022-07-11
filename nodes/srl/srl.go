@@ -74,8 +74,6 @@ var (
 	}
 
 	srlTypes = map[string]string{
-		"ixr6":   "7250IXR6.yml",
-		"ixr10":  "7250IXR10.yml",
 		"ixrd1":  "7220IXRD1.yml",
 		"ixrd2":  "7220IXRD2.yml",
 		"ixrd3":  "7220IXRD3.yml",
@@ -83,6 +81,10 @@ var (
 		"ixrd3l": "7220IXRD3L.yml",
 		"ixrh2":  "7220IXRH2.yml",
 		"ixrh3":  "7220IXRH3.yml",
+		"ixr6":   "7250IXR6.yml",
+		"ixr6e":  "7250IXR6e.yml",
+		"ixr10":  "7250IXR10.yml",
+		"ixr10e": "7250IXR10e.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -95,8 +97,8 @@ var (
 	commitCompleteCmd, _ = shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
 
 	srlCfgTpl, _ = template.New("srl-tls-profile").
-		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
-		Parse(srlConfigCmdsTpl)
+			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
+			Parse(srlConfigCmdsTpl)
 )
 
 func init() {

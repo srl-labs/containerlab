@@ -267,15 +267,17 @@
                         "description": "type of a node",
                         "markdownDescription": "node [type](https://containerlab.dev/manual/nodes/#type)",
                         "enum": [
-                            "ixr6",
-                            "ixr10",
                             "ixrd1",
                             "ixrd2",
                             "ixrd3",
                             "ixrd2l",
                             "ixrd3l",
                             "ixrh2",
-                            "ixrh3"
+                            "ixrh3",
+                            "ixr6",
+                            "ixr6e",
+                            "ixr10",
+                            "ixr10e"
                         ]
                     }
                 }
