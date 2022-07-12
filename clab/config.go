@@ -831,14 +831,15 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[TopoFileLabel] = c.TopoFile.path
 }
 
+// labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
+// and labels value sanitized
 func labelsToEnvVars(n *types.NodeConfig) {
 	if n.Env == nil {
 		n.Env = map[string]string{}
 	}
-	// Add labels to env vars with CLAB_LABEL_ prefix added to label keys
-	// and sanitizing the label key value
+
 	for k, v := range n.Labels {
-		// add the value to the node env with a prefixed and specialchars cleaned up key
+		// add the value to the node env with a prefixed and special chars cleaned up key
 		n.Env["CLAB_LABEL_"+utils.ToEnvKey(k)] = v
 	}
 }
