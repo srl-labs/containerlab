@@ -2,23 +2,23 @@
 search:
   boost: 4
 ---
-# Checkpoint Cloudguard
+# Check Point Cloudguard
 
-Checkpoint Cloudguard virtualized security appliance is identified with `checkpoint_cloudguard` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
+Check Point Cloudguard virtualized security appliance is identified with `checkpoint_cloudguard` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
 
 ## Getting Cloudguard image
-Users can obtain the qcow2 disk image for Checkpoint Cloudguard VM from the [official download site](https://supportcenter.checkpoint.com/supportcenter/portal?eventSubmit_doGoviewsolutiondetails=&solutionid=sk158292). To build a containerlab-compatible container use [boxen](https://github.com/carlmontanari/boxen) project.
+Users can obtain the qcow2 disk image for Check Point Cloudguard VM from the [official download site](https://supportcenter.checkpoint.com/supportcenter/portal?eventSubmit_doGoviewsolutiondetails=&solutionid=sk158292). To build a containerlab-compatible container use [boxen](https://github.com/carlmontanari/boxen) project.
 
-## Managing Checkpoint Cloudguard nodes
+## Managing Check Point Cloudguard nodes
 
 !!!note
-    Containers with Checkpoint Cloudguard VM inside will take ~5min to fully boot.  
+    Containers with Check Point Cloudguard VM inside will take ~5min to fully boot.  
     You can monitor the progress with
 
     * `docker logs -f <container-name>` for boxen status reports
     *  and `docker exec -it <container-name> tail -f /console.log` to see the boot log messages.
 
-Checkpoint Cloudguard node launched with containerlab can be managed via the following interfaces:
+Check Point Cloudguard node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
     to connect to a `bash` shell of a running checkpoint_cloudguard container:
@@ -46,7 +46,7 @@ Checkpoint Cloudguard node launched with containerlab can be managed via the fol
     Default login credentials: `admin:admin`
 
 ## Interfaces mapping
-Checkpoint Cloudgard starts up with 8 available interfaces:
+Check Point Cloudgard starts up with 8 available interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1` - first data interface, mapped to the first data port of the VM
