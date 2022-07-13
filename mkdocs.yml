@@ -27,7 +27,7 @@ nav:
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
-          - Checkpoint Cloudguard: manual/kinds/checkpoint_cloudguard.md
+          - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
           - Openvswitch bridge: manual/kinds/ovs-bridge.md
