@@ -104,12 +104,15 @@ var (
 			Parse(srlConfigCmdsTpl)
 	
 	// random prefix for chassis mac of nodes in this project
-	// bit 0     : strictly 0 (indicating unicast address)
+	// bit 1-3   : pseudo-random (avoid mac clashes when interconnecting projects)
+	// bit 4     : strictly 0 (to indicate unicast mac address)
 	// bit 01-11 : pseudo-random (avoid mac clashes when interconnecting projects)
 	// bit 12-24 : index of the node (for labs up to 4096 nodes)
 	// bit 25-47 : used by SRL: FF:00:<port>
-	randNumber, _ = rand.Int(rand.Reader, big.NewInt(2048))
-	macPrefix = fmt.Sprintf("%02x:%01x", randNumber.Int64() / 16, randNumber.Int64() % 16)
+	rand1, _ = rand.Int(rand.Reader, big.NewInt(16))
+	rand2, _ = rand.Int(rand.Reader, big.NewInt(8))
+	rand3, _ = rand.Int(rand.Reader, big.NewInt(16))
+	macPrefix = fmt.Sprintf("%01x%01x:%01x", rand1.Int64(), rand2.Int64() * 2, rand3.Int64())
 )
 
 func init() {
