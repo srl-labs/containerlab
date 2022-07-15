@@ -104,9 +104,9 @@ var (
 			Parse(srlConfigCmdsTpl)
 	
 	// random prefix for chassis mac of nodes in this project
-	// bit 1-3   : pseudo-random (avoid mac clashes when interconnecting projects)
+	// bit 0-3   : pseudo-random (avoid mac clashes when interconnecting projects)
 	// bit 4     : strictly 0 (to indicate unicast mac address)
-	// bit 01-11 : pseudo-random (avoid mac clashes when interconnecting projects)
+	// bit 5-11 : pseudo-random (avoid mac clashes when interconnecting projects)
 	// bit 12-24 : index of the node (for labs up to 4096 nodes)
 	// bit 25-47 : used by SRL: FF:00:<port>
 	rand1, _ = rand.Int(rand.Reader, big.NewInt(16))
