@@ -15,7 +15,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
-	"math/rand"
+	"math/big"
+	"crypto/rand"
 
 	"github.com/google/shlex"
 	"github.com/hairyhenderson/gomplate/v3"
@@ -107,7 +108,8 @@ var (
 	// bit 01-11 : pseudo-random (avoid mac clashes when interconnecting projects)
 	// bit 12-24 : index of the node (for labs up to 4096 nodes)
 	// bit 25-47 : used by SRL: FF:00:<port>
-	macPrefix = fmt.Sprintf("%02x:%01x", rand.Intn(256) % 128, rand.Intn(16))
+	randNumber, _ = rand.Int(rand.Reader, big.NewInt(2048))
+	macPrefix = fmt.Sprintf("%02x:%01x", randNumber.Int64() / 16, randNumber.Int64() % 16)
 )
 
 func init() {
