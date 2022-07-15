@@ -15,6 +15,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"math/rand"
 
 	"github.com/google/shlex"
 	"github.com/hairyhenderson/gomplate/v3"
@@ -100,6 +101,13 @@ var (
 	srlCfgTpl, _ = template.New("srl-tls-profile").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 			Parse(srlConfigCmdsTpl)
+	
+	// random prefix for chassis mac of nodes in this project
+	// bit 0     : strictly 0 (indicating unicast address)
+	// bit 01-11 : pseudo-random (avoid mac clashes when interconnecting projects)
+	// bit 12-24 : index of the node (for labs up to 4096 nodes)
+	// bit 25-47 : used by SRL: FF:00:<port>
+	macPrefix = fmt.Sprintf("%02x:%01x", rand.Intn(256) % 128, rand.Intn(16))
 )
 
 func init() {
@@ -436,10 +444,12 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
-	// Use node index as part of a deterministically generated MAC
+	// bit 0     : strictly 0 (indicating unicast address)
+	// bit 01-11 : pseudo-random (avoid mac clashes when interconnecting projects)
+	// bit 12-24 : index of the node (for labs up to 4096 nodes)
+	// bit 25-47 : used by SRL: FF:00:<port>
 	// this ensures that different srl nodes will have different macs for their ports
-	// (for labs up to 4096 nodes)
-	m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index/256, cfg.Index%256)
+	m := fmt.Sprintf("%s%1x:%02x:00:00:00", macPrefix, cfg.Index/256, cfg.Index%256)
 	mac := mac{
 		MAC: m,
 	}
