@@ -524,6 +524,9 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	return nil
 }
 
+// populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
+// to mitigate the fact that srlinux uses non default netns for management and thus
+// can't leverage docker DNS service
 func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
 	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
 	if err != nil {
