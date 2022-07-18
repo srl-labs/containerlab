@@ -104,15 +104,11 @@ var (
 			Parse(srlConfigCmdsTpl)
 	
 	// random prefix for chassis mac of nodes in this project
-	// bit 0-2   : pseudo-random (avoid mac clashes when interconnecting projects)
-	// bit 3     : strictly 0 (to indicate unicast mac address)
-	// bit 4-11 : pseudo-random (avoid mac clashes when interconnecting projects)
-	// bit 12-24 : index of the node (for labs up to 4096 nodes)
-	// bit 25-47 : used by SRL: FF:00:<port>
-	rand1, _ = rand.Int(rand.Reader, big.NewInt(16))
-	rand2, _ = rand.Int(rand.Reader, big.NewInt(8))
-	rand3, _ = rand.Int(rand.Reader, big.NewInt(16))
-	macPrefix = fmt.Sprintf("%01x%01x:%01x", rand1.Int64(), rand2.Int64() * 2, rand3.Int64())
+	// first byte  - fixed for easy identification of SRL Mac addresses
+	// second byte - random, to distinguish projects
+	// third byte  - index of the node
+	projectIdentifier, _ = rand.Int(rand.Reader, big.NewInt(256))
+	macPrefix = fmt.Sprintf("1a:%02x", projectIdentifier.Int64())
 )
 
 func init() {
@@ -451,7 +447,8 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 
 	// this ensures that different srl nodes will have different macs for their ports
 	// see macPrefix variable for full explanation of bits in mac address
-	m := fmt.Sprintf("%s%1x:%02x:00:00:00", macPrefix, cfg.Index/256, cfg.Index%256)
+	// labs up to 256 nodes are supported, behaviour is undefined when more nodes are defined
+	m := fmt.Sprintf("%s:%02x:00:00:00", macPrefix, cfg.Index%256)
 	mac := mac{
 		MAC: m,
 	}
