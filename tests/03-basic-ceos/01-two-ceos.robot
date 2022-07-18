@@ -49,7 +49,7 @@ Ensure IPv6 default route is in the config file
 
 Ensure MGMT VRF is present
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "show vrf MGMT"
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    MGMT
