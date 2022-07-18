@@ -204,6 +204,28 @@ cEOS Ma0 interface will be configured with a random MAC address with `00:1c:73` 
 
 A default ipv4 route is also created with a next-hop of the management network to allow for outgoing connections.
 
+#### MGMT VRF
+The default empty configuration supports placing the management interface into a VRF to isolate it from the main device routing table.  Passing the environment variable `CLAB_MGMT_VRF` in either the kind or node definition will activate this behavior, and alter the management services configuration to also reflect the management VRF.  You can duplicate this when using the `startup-config` by starting from the linked template below.
+
+```yaml
+# example topo file with management VRF
+# node1 will have vrf MGMT
+# node2 will have vrf FOO
+name: ceos_vrf
+topology:
+  kinds:
+    ceos:
+      env:
+        CLAB_MGMT_VRF: MGMT
+  nodes:
+    node1:
+      kind: ceos
+    node2:
+      kind: ceos
+      env:
+        CLAB_MGMT_VRF: FOO
+```
+
 #### User defined config
 It is possible to make ceos nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
 
