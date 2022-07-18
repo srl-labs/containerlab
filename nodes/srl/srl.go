@@ -424,10 +424,6 @@ func (s *srl) createSRLFiles() error {
 
 //
 
-type mac struct {
-	MAC string
-}
-
 func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
@@ -436,19 +432,16 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
-	// Use node index as part of a deterministically generated MAC
-	// this ensures that different srl nodes will have different macs for their ports
-	// (for labs up to 4096 nodes)
-	m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index/256, cfg.Index%256)
-	mac := mac{
-		MAC: m,
-	}
+	mac := genMac(cfg)
+
 	log.Debug(mac, dst)
+
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	return tpl.Execute(f, mac)
 }
 
