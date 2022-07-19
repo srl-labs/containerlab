@@ -15,6 +15,11 @@ search:
 
 sonic-vs nodes launched with containerlab come without any additional configuration.
 
+## Getting Sonic images
+Apparently, it is still tricky to find sonic container images, as their prime distribution format is a VM. [Several discussions](https://github.com/srl-labs/containerlab/pull/545#issuecomment-998205602) happened around creating a container build pipeline and a [few projects](https://github.com/antongisli/sonic-builder) were created.
+
+One of the latest known working images can be found [here](https://hub.docker.com/r/netreplica/docker-sonic-vs).
+
 ## Managing sonic-vs nodes
 SONiC node launched with containerlab can be managed via the following interfaces:
 
