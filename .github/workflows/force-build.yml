@@ -7,7 +7,7 @@ on:
 
 # make sure those env vars are aligned with the ones in ci-cd.yml workflow
 env:
-  GOVER: 1.17.2
+  GOVER: 1.18.4
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 4.8.3
   GORELEASER_VER: v0.180.3
