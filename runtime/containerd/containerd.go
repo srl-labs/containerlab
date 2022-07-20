@@ -28,6 +28,8 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -641,12 +643,12 @@ func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context, input
 			case containerd.Running:
 				ctr.Status = "Up"
 			default:
-				ctr.Status = strings.Title(string(status.Status))
+				ctr.Status = cases.Title(language.English).String(ctr.State)
 			}
 
 			ctr.Pid = int(task.Pid())
 		} else {
-			ctr.State = strings.Title(string(containerd.Unknown))
+			ctr.State = cases.Title(language.English).String(string(containerd.Unknown))
 			ctr.Status = "Unknown"
 			ctr.Pid = -1
 		}
