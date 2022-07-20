@@ -4,9 +4,10 @@ import (
 	"runtime"
 	"testing"
 
+	"net/netip"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/types"
-	"inet.af/netaddr"
 )
 
 func TestFarEndIP(t *testing.T) {
@@ -29,10 +30,15 @@ func TestFarEndIP(t *testing.T) {
 	}
 
 	for k, v := range lst {
-		n := ipFarEnd(netaddr.MustParseIPPrefix(k))
+		p, err := netip.ParsePrefix(k)
+		if err != nil {
+			t.Errorf("not a valid IP prefix %s", k)
+		}
+
+		n := ipFarEnd(p)
 		n2, _ := ipFarEndS(k)
 
-		if n.IsZero() && v == "" && n2 == "" {
+		if !n.IsValid() && v == "" && n2 == "" {
 			continue
 		}
 
@@ -54,8 +60,11 @@ func TestIPLastOctect(t *testing.T) {
 		"::1/32":      1,
 	}
 	for k, v := range lst {
-		n := netaddr.MustParseIPPrefix(k)
-		lo := ipLastOctet(n.IP())
+		n, err := netip.ParsePrefix(k)
+		if err != nil {
+			t.Error(err)
+		}
+		lo := ipLastOctet(n.Addr())
 		if v != lo {
 			t.Errorf("far end of %s, got %d, expected %d", k, lo, v)
 		}
@@ -160,6 +169,6 @@ func TestIPfarEndS(t *testing.T) {
 
 	ipA = "10.0.3.0/30"
 	feA, err = ipFarEndS(ipA)
-	assert(t, err.Error(), "invalid ip 10.0.3.0/30 - zero IPPrefix")
+	assert(t, err.Error(), "invalid ip 10.0.3.0/30 - invalid Prefix")
 	assert(t, feA, "")
 }
