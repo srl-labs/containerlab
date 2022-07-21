@@ -8,6 +8,7 @@ on:
     tags:
       - "v*"
   pull_request:
+  workflow_dispatch:
 
 env:
   GOVER: 1.18.3
