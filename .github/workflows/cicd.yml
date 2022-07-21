@@ -189,8 +189,8 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: podman-bins
-      - name: Move podman to /usr/local/bin
-        run: sudo mv ./podman /usr/local/bin && sudo chmod a+x /usr/local/bin/podman
+      - name: Move podman to /usr/bin
+        run: which podman && sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
 
       - name: Enable Podman API service
         run: sudo systemctl start podman
