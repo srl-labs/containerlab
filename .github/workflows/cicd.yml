@@ -140,10 +140,10 @@ jobs:
       - name: Build podman v4
         run: make binaries
       # store podman binary as artifact
-      # - uses: actions/upload-artifact@v2
-      #   with:
-      #     name: podman
-      #     path: podman
+      - uses: actions/upload-artifact@v3
+        with:
+          name: podman-bins
+          path: bin
 
   smoke-tests:
     runs-on: ubuntu-20.04
@@ -156,6 +156,7 @@ jobs:
     needs:
       - unit-test
       - build-containerlab
+      - build-podman-v4
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -166,6 +167,13 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: download podman bin artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: podman-bins
+      - name: Move podman to /usr/local/bin
+        run: sudo mv ./bin/podman /usr/local/bin && sudo chmod a+x /usr/local/bin/podman
 
       - name: Enable Podman API service
         run: sudo systemctl start podman
