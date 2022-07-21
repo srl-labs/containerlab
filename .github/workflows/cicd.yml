@@ -15,6 +15,7 @@ env:
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 4.19.1-4
   GORELEASER_VER: v1.5.0
+  PODMAN_VER: v4.1.1
 
 jobs:
   file-changes:
@@ -112,16 +113,29 @@ jobs:
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
+      - name: Cache podman bin
+        id: cache-podman-bin
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./bin
+          key: ${{ runner.os }}-podman-${{ env.PODMAN_VER }}
+          restore-keys: |
+            ${{ runner.os }}-podman
+
       - uses: actions/checkout@v3
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         with:
           repository: containers/podman
           ref: v4.1.1
 
       - uses: actions/setup-go@v2
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         with:
           go-version: ${{ env.GOVER }}
 
       - name: Cache go modules
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         uses: actions/cache@v2
         with:
           # In order:
@@ -135,10 +149,13 @@ jobs:
             ${{ runner.os }}-go-podman
 
       - name: Add build packages
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         run: sudo apt install -y libsystemd-dev libseccomp-dev pkg-config golang-github-proglottis-gpgme-dev
 
       - name: Build podman v4
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         run: make binaries
+
       # store podman binary as artifact
       - uses: actions/upload-artifact@v3
         with:
@@ -173,7 +190,7 @@ jobs:
         with:
           name: podman-bins
       - name: Move podman to /usr/local/bin
-        run: sudo mv ./bin/podman /usr/local/bin && sudo chmod a+x /usr/local/bin/podman
+        run: sudo mv ./podman /usr/local/bin && sudo chmod a+x /usr/local/bin/podman
 
       - name: Enable Podman API service
         run: sudo systemctl start podman
