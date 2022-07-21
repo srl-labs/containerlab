@@ -6,7 +6,6 @@ This test suite verifies
 *** Settings ***
 Library           OperatingSystem
 Library           String
-Suite Setup       Setup
 Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy -t ${topo} --cleanup
 
 *** Variables ***
