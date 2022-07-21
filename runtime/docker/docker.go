@@ -99,7 +99,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	d0, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
 	if err != nil {
 		d.mgmt.MTU = "1500"
-		log.Debugf("an error occured when trying to detect docker default network mtu")
+		log.Debugf("an error occurred when trying to detect docker default network mtu")
 	}
 
 	if mtu, ok := d0.Options["com.docker.network.driver.mtu"]; ok {
@@ -128,8 +128,8 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		enableIPv6 := false
 		var ipamConfig []network.IPAMConfig
 
-		// check if IPv4/6 addr are assigned to a mgmt bridge
 		var v4gw, v6gw string
+		// check if IPv4/6 addr are assigned to a mgmt bridge
 		if d.mgmt.Bridge != "" {
 			v4gw, v6gw, err = utils.FirstLinkIPs(d.mgmt.Bridge)
 			if err != nil {
@@ -226,6 +226,17 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	if d.mgmt.Bridge == "" {
 		d.mgmt.Bridge = bridgeName
 	}
+
+	// get management bridge v4/6 addresses and save it under mgmt struct
+	// so that nodes can use this information prior to being deployed
+	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
+	var v4, v6 string
+	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
+		return err
+	}
+
+	d.mgmt.IPv4Gw = v4
+	d.mgmt.IPv6Gw = v6
 
 	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 
@@ -534,26 +545,32 @@ func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *
 	return err
 }
 
-// ListContainers lists all containers with labels []string
+// ListContainers lists all containers using the provided filters
 func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
 	filter := d.buildFilterString(gfilters)
+
 	ctrs, err := d.Client.ContainerList(ctx, dockerTypes.ContainerListOptions{
 		All:     true,
 		Filters: filter,
 	})
+
 	if err != nil {
 		return nil, err
 	}
+
 	var nr []dockerTypes.NetworkResource
 	if d.mgmt.Network == "" {
 		nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 		defer cancel()
+
 		// fetch containerlab created networks
 		f := filters.NewArgs()
+
 		f.Add("label", "containerlab")
+
 		nr, err = d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
 			Filters: f,
 		})
@@ -564,7 +581,9 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 
 		// fetch default bridge network
 		f = filters.NewArgs()
+
 		f.Add("name", "bridge")
+
 		bridgenet, err := d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
 			Filters: f,
 		})
@@ -599,12 +618,13 @@ func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.Ge
 func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters.Args {
 	filter := filters.NewArgs()
 	for _, filterentry := range gfilters {
-		filterstring := filterentry.Field
+		filterstr := filterentry.Field
 		if filterentry.Operator != "exists" {
-			filterstring = filterstring + filterentry.Operator + filterentry.Match
+			filterstr = filterstr + filterentry.Operator + filterentry.Match
 		}
-		log.Debug("Filterstring: " + filterstring)
-		filter.Add(filterentry.FilterType, filterstring)
+
+		log.Debug("Filter string: " + filterstr)
+		filter.Add(filterentry.FilterType, filterstr)
 	}
 	return filter
 }
@@ -626,8 +646,10 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			Labels:          i.Labels,
 			NetworkSettings: types.GenericMgmtIPs{},
 		}
+
 		bridgeName := d.mgmt.Network
-		// if bridgeName is "", try to find a network created by clab that the container is connected to
+
+		// if bridgeName is empty, try to find a network created by clab that the container is connected to
 		if bridgeName == "" && inputNetworkResources != nil {
 			for idx := range inputNetworkResources {
 				nr := inputNetworkResources[idx]
@@ -638,11 +660,26 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 				}
 			}
 		}
+
+		// if by now we failed to find a docker network name using the network resources created by docker
+		// we take whatever the first network is listed in the original container network settings
+		// this is to derive the network name if the network is not created by clab
+		if bridgeName == "" {
+			// only if there is a single network associated with the container
+			if len(i.NetworkSettings.Networks) == 1 {
+				for n := range i.NetworkSettings.Networks {
+					bridgeName = n
+				}
+			}
+
+		}
+
 		if ifcfg, ok := i.NetworkSettings.Networks[bridgeName]; ok {
 			ctr.NetworkSettings.IPv4addr = ifcfg.IPAddress
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
+			ctr.NetworkSettings.IPv4Gw = ifcfg.Gateway
 		}
 		result = append(result, ctr)
 	}

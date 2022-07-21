@@ -54,7 +54,9 @@
                         "ovs-bridge",
                         "mysocketio",
                         "host",
-                        "keysight_ixia-c-one"
+                        "keysight_ixia-c-one",
+                        "ipinfusion_ocnos",
+                        "checkpoint_cloudguard"
                     ]
                 },
                 "license": {
@@ -265,15 +267,18 @@
                         "description": "type of a node",
                         "markdownDescription": "node [type](https://containerlab.dev/manual/nodes/#type)",
                         "enum": [
-                            "ixr6",
-                            "ixr10",
                             "ixrd1",
                             "ixrd2",
                             "ixrd3",
                             "ixrd2l",
                             "ixrd3l",
+                            "ixrd5",
                             "ixrh2",
-                            "ixrh3"
+                            "ixrh3",
+                            "ixr6",
+                            "ixr6e",
+                            "ixr10",
+                            "ixr10e"
                         ]
                     }
                 }
@@ -435,7 +440,19 @@
                         "srl": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "nokia_srlinux": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "ceos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "arista_ceos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-arista_veos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "juniper_crpd": {
                             "$ref": "#/definitions/node-config"
                         },
                         "crpd": {
@@ -444,19 +461,40 @@
                         "sonic-vs": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "vr-nokia_sros": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "vr-sros": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-juniper_vmx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-vmx": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "vr-cisco_xrv": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "vr-xrv": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-cisco_xrv9k": {
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-xrv9k": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-veos": {
+                        "vr-cisco_nxos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-nxos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-cisco_csr": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-csr": {
                             "$ref": "#/definitions/node-config"
                         },
                         "linux": {
@@ -474,7 +512,13 @@
                         "host": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "ipinfusion_ocnos": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "keysight_ixia-c-one": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "checkpoint_cloudguard": {
                             "$ref": "#/definitions/node-config"
                         }
                     }

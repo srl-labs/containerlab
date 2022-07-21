@@ -7,6 +7,7 @@ package all
 import (
 	_ "github.com/srl-labs/containerlab/nodes/bridge"
 	_ "github.com/srl-labs/containerlab/nodes/ceos"
+	_ "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	_ "github.com/srl-labs/containerlab/nodes/crpd"
 	_ "github.com/srl-labs/containerlab/nodes/cvx"
 	_ "github.com/srl-labs/containerlab/nodes/host"

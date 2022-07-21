@@ -2,7 +2,7 @@
 search:
   boost: 4
 ---
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 # Linux container
 Labs deployed with containerlab are endlessly flexible, mostly because containerlab can spin up and wire regular containers as part of the lab topology.

@@ -7,10 +7,11 @@ import (
 	"strconv"
 	"strings"
 
+	"net/netip"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
-	"inet.af/netaddr"
 )
 
 const (
@@ -168,7 +169,7 @@ func linkName(link *types.Link) (string, string, error) {
 
 // Calculate link IP from the system IPs at both ends
 func linkIP(link *types.Link) (string, string, error) {
-	var ipA netaddr.IPPrefix
+	var ipA netip.Prefix
 	var err error
 	//
 	_, okA := link.A.Node.Config.Vars[vkSystemIP]
@@ -179,11 +180,11 @@ func linkIP(link *types.Link) (string, string, error) {
 	if !okA || !okB {
 		return "", "", nil
 	}
-	sysA, err := netaddr.ParseIPPrefix(fmt.Sprintf("%v", link.A.Node.Config.Vars[vkSystemIP]))
+	sysA, err := netip.ParsePrefix(fmt.Sprintf("%v", link.A.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.A.Node.ShortName, err)
 	}
-	sysB, err := netaddr.ParseIPPrefix(fmt.Sprintf("%v", link.B.Node.Config.Vars[vkSystemIP]))
+	sysB, err := netip.ParsePrefix(fmt.Sprintf("%v", link.B.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
 		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.B.Node.ShortName, err)
 	}
@@ -197,18 +198,18 @@ func linkIP(link *types.Link) (string, string, error) {
 		o4 *= 2
 	}
 
-	o2, o3 := ipLastOctet(sysA.IP()), ipLastOctet(sysB.IP())
+	o2, o3 := ipLastOctet(sysA.Addr()), ipLastOctet(sysB.Addr())
 	if o3 < o2 {
 		o2, o3, o4 = o3, o2, o4+1
 	}
-	ipA, err = netaddr.ParseIPPrefix(fmt.Sprintf("1.%d.%d.%d/31", o2, o3, o4))
+	ipA, err = netip.ParsePrefix(fmt.Sprintf("1.%d.%d.%d/31", o2, o3, o4))
 	if err != nil {
 		log.Errorf("could not create link IP from %s: %s", vkSystemIP, err)
 	}
 	return ipA.String(), ipFarEnd(ipA).String(), nil
 }
 
-func ipLastOctet(in netaddr.IP) int {
+func ipLastOctet(in netip.Addr) int {
 	s := in.String()
 	i := strings.LastIndexAny(s, ".")
 	if i < 0 {
@@ -223,7 +224,7 @@ func ipLastOctet(in netaddr.IP) int {
 
 // Calculates the far end IP (first free IP in the subnet) - string version
 func ipFarEndS(in string) (string, error) {
-	ipA, err := netaddr.ParseIPPrefix(in)
+	ipA, err := netip.ParsePrefix(in)
 	if err != nil {
 		return "", fmt.Errorf("invalid ip %s", in)
 	}
@@ -235,28 +236,28 @@ func ipFarEndS(in string) (string, error) {
 }
 
 // Calculates the far end IP (first free IP in the subnet)
-func ipFarEnd(in netaddr.IPPrefix) netaddr.IPPrefix {
-	if in.IP().Is4() && in.Bits() == 32 {
-		return netaddr.IPPrefix{}
+func ipFarEnd(in netip.Prefix) netip.Prefix {
+	if in.Addr().Is4() && in.Bits() == 32 {
+		return netip.Prefix{}
 	}
 
-	n := in.IP().Next()
+	n := in.Addr().Next()
 
-	if in.IP().Is4() && in.Bits() <= 30 {
-		if !in.Contains(n) || !in.Contains(in.IP().Prior()) {
-			return netaddr.IPPrefix{}
+	if in.Addr().Is4() && in.Bits() <= 30 {
+		if !in.Contains(n) || !in.Contains(in.Addr().Prev()) {
+			return netip.Prefix{}
 		}
 		if !in.Contains(n.Next()) {
-			n = in.IP().Prior()
+			n = in.Addr().Prev()
 		}
 	}
 	if !in.Contains(n) {
-		n = in.IP().Prior()
+		n = in.Addr().Prev()
 	}
 	if !in.Contains(n) {
-		return netaddr.IPPrefix{}
+		return netip.Prefix{}
 	}
-	return netaddr.IPPrefixFrom(n, in.Bits())
+	return netip.PrefixFrom(n, in.Bits())
 }
 
 // GetTemplateNamesInDirs returns a list of template file names found in a list of dir `paths`

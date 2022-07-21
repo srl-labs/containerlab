@@ -28,4 +28,4 @@ This lightweight lab enables the users to perform the following exercises:
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 [^2]: Check out [gnmic](https://gnmic.kmrd.dev) gNMI client to interact with SR Linux gNMI server.
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

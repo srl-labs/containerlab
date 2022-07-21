@@ -316,6 +316,7 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 	log.Debugf("extractMgmtIPs was called and we got a struct %T %+v", mgmtData, mgmtData)
 	v4addr := mgmtData.IPAddress
 	v4pLen := mgmtData.IPPrefixLen
+	v4Gw := mgmtData.Gateway
 	v6addr := mgmtData.GlobalIPv6Address
 	v6pLen := mgmtData.GlobalIPv6PrefixLen
 
@@ -324,6 +325,7 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 		IPv4pLen: v4pLen,
 		IPv6addr: v6addr,
 		IPv6pLen: v6pLen,
+		IPv4Gw:   v4Gw,
 	}
 	return toReturn, nil
 }

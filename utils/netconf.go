@@ -6,9 +6,10 @@ package utils
 
 import (
 	"fmt"
+	"github.com/scrapli/scrapligo/util"
 
-	"github.com/scrapli/scrapligo/driver/base"
-	"github.com/scrapli/scrapligo/netconf"
+	"github.com/scrapli/scrapligo/driver/netconf"
+	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/transport"
 )
 
@@ -16,14 +17,14 @@ import (
 // of invoking a netconf rpc <copy-config>
 // this method is used on the network elements that can't perform a save of config via other means
 func SaveCfgViaNetconf(addr, username, password, _ string) error {
-	baseOpts := []base.Option{
-		base.WithAuthStrictKey(false),
-		base.WithAuthUsername(username),
-		base.WithAuthPassword(password),
-		base.WithTransportType(transport.StandardTransportName),
+	baseOpts := []util.Option{
+		options.WithAuthNoStrictKey(),
+		options.WithAuthUsername(username),
+		options.WithAuthPassword(password),
+		options.WithTransportType(transport.StandardTransport),
 	}
 
-	d, err := netconf.NewNetconfDriver(
+	d, err := netconf.NewDriver(
 		addr,
 		baseOpts...,
 	)

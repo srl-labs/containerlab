@@ -74,15 +74,18 @@ var (
 	}
 
 	srlTypes = map[string]string{
-		"ixr6":   "7250IXR6.yml",
-		"ixr10":  "7250IXR10.yml",
 		"ixrd1":  "7220IXRD1.yml",
 		"ixrd2":  "7220IXRD2.yml",
 		"ixrd3":  "7220IXRD3.yml",
 		"ixrd2l": "7220IXRD2L.yml",
 		"ixrd3l": "7220IXRD3L.yml",
+		"ixrd5":  "7220IXRD5.yml",
 		"ixrh2":  "7220IXRH2.yml",
 		"ixrh3":  "7220IXRH3.yml",
+		"ixr6":   "7250IXR6.yml",
+		"ixr6e":  "7250IXR6e.yml",
+		"ixr10":  "7250IXR10.yml",
+		"ixr10e": "7250IXR10e.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -95,8 +98,8 @@ var (
 	commitCompleteCmd, _ = shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
 
 	srlCfgTpl, _ = template.New("srl-tls-profile").
-		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
-		Parse(srlConfigCmdsTpl)
+			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
+			Parse(srlConfigCmdsTpl)
 )
 
 func init() {
@@ -210,7 +213,9 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if s.cfg.Extras != nil && len(s.cfg.Extras.SRLAgents) != 0 {
 		agents := s.cfg.Extras.SRLAgents
-		appmgr := filepath.Join(s.cfg.LabDir, "config/appmgr/")
+
+		appmgr := filepath.Join(s.cfg.LabDir, "config", "appmgr")
+
 		utils.CreateDirectory(appmgr, 0777)
 
 		for _, fullpath := range agents {
@@ -419,10 +424,6 @@ func (s *srl) createSRLFiles() error {
 
 //
 
-type mac struct {
-	MAC string
-}
-
 func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
@@ -431,19 +432,16 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
-	// Use node index as part of a deterministically generated MAC
-	// this ensures that different srl nodes will have different macs for their ports
-	// (for labs up to 4096 nodes)
-	m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index/256, cfg.Index%256)
-	mac := mac{
-		MAC: m,
-	}
+	mac := genMac(cfg)
+
 	log.Debug(mac, dst)
+
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	return tpl.Execute(f, mac)
 }
 
@@ -526,6 +524,9 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	return nil
 }
 
+// populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
+// to mitigate the fact that srlinux uses non default netns for management and thus
+// can't leverage docker DNS service
 func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
 	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
 	if err != nil {
@@ -552,7 +553,7 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
-	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666) // skipcq: GSC-G302
 	if err != nil {
 		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
 		return err
