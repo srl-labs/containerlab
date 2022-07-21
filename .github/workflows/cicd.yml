@@ -190,7 +190,7 @@ jobs:
         with:
           name: podman-bins
       - name: Move podman to /usr/bin
-        run: which podman && sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
+        run: sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
 
       - name: Enable Podman API service
         run: sudo systemctl start podman
@@ -279,6 +279,13 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: download podman bin artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: podman-bins
+      - name: Move podman to /usr/bin
+        run: sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
 
       - name: Enable Podman API service
         run: sudo systemctl start podman
