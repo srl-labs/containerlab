@@ -55,5 +55,4 @@ Check ${lab-name} mgmt network is gone
 
 *** Keywords ***
 Setup
-    # skipping this test suite for podman for now
-    Skip If    '${runtime}' == 'podman'
+
