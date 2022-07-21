@@ -52,7 +52,3 @@ Check ${lab-name} mgmt network is gone
     ...    sudo ip l show dev ${mgmt-bridge}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
-
-*** Keywords ***
-Setup
-
