@@ -68,7 +68,7 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
 
-	// gomplate overrides the built-in *slice* function. Rename it to *list*
+	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
 	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
 	delete(gfuncs, "slice")
 
