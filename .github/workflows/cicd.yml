@@ -104,6 +104,44 @@ jobs:
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
 
+  build-podman-v4:
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: containers/podman
+          ref: v4.1.1
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVER }}
+
+      - name: Cache go modules
+        uses: actions/cache@v2
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-podman-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-podman
+
+      - name: Add build packages
+        run: sudo apt install -y libseccomp-dev libsystemd-dev
+
+      - name: Build podman v4
+        run: make binaries
+      # store podman binary as artifact
+      # - uses: actions/upload-artifact@v2
+      #   with:
+      #     name: podman
+      #     path: podman
+
   smoke-tests:
     runs-on: ubuntu-20.04
     strategy:
