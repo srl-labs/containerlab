@@ -15,11 +15,14 @@ import (
 )
 
 const (
-	vkNodeName = "clab_node"  // reserved, used for the node's ShortName
-	vkNodes    = "clab_nodes" // reserved, used for all nodes
-	vkLinks    = "clab_links" // reserved, used for all link in a node
-	vkFarEnd   = "clab_far"   // reserved, used for far-end link & node info
-	vkRole     = "clab_role"  // optional, will default to the node's Kind. Used to select the template
+	vkNodeName       = "clab_node"            // reserved, used for the node's ShortName
+	vkNodes          = "clab_nodes"           // reserved, used for all nodes
+	vkLinks          = "clab_links"           // reserved, used for all link in a node
+	vkFarEnd         = "clab_far"             // reserved, used for far-end link & node info
+	vkRole           = "clab_role"            // optional, will default to the node's Kind. Used to select the template
+	vkManagementIPv4 = "clab_management_ipv4" // reserved, management IPv4 of the node
+	vkManagementIPv6 = "clab_management_ipv6" // reserved, management IPv6 of the node
+	vkKind           = "clab_kind"            // reserved, will contain the node kind
 
 	vkSystemIP = "clab_system_ip" // optional, system IP if present could be used to calc link IPs
 	vkLinkIP   = "clab_link_ip"   // optional, link IP
@@ -40,6 +43,9 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		name := nodeCfg.ShortName
 		vars := make(map[string]interface{})
 		vars[vkNodeName] = name
+		vars[vkKind] = nodeCfg.Kind
+		vars[vkManagementIPv4] = nodeCfg.MgmtIPv4Address
+		vars[vkManagementIPv6] = nodeCfg.MgmtIPv6Address
 
 		// Init array for this node
 		for key, val := range nodeCfg.Config.Vars {
