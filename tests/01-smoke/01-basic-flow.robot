@@ -139,8 +139,7 @@ Verify Hosts entries exist
     ...    cat /etc/hosts | grep "${lab-name}" | wc -l
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # podman only has ipv4 networks support so far, thus only ipv4 host entries are expected
-    Run Keyword If    '${runtime}' == 'podman'    Should Contain    ${output}    4
+    Run Keyword If    '${runtime}' == 'podman'    Should Contain    ${output}    6
     Run Keyword If    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
 Verify Mem and CPU limits are set
