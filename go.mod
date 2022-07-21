@@ -197,7 +197,7 @@ require (
 	github.com/nightlyone/lockfile v1.0.0 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.3-0.20211202193544-a5463b7f9c84 // indirect
+	github.com/opencontainers/image-spec v1.0.3-0.20220510175803-08825b8639c2 // indirect
 	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/opencontainers/runtime-tools v0.9.0 // indirect
 	github.com/opencontainers/selinux v1.10.0 // indirect
