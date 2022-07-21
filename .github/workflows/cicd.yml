@@ -133,7 +133,7 @@ jobs:
             ${{ runner.os }}-go-podman
 
       - name: Add build packages
-        run: sudo apt install -y libseccomp-dev libsystemd-dev
+        run: sudo apt install -y libsystemd-dev libseccomp-dev pkg-config golang-github-proglottis-gpgme-dev
 
       - name: Build podman v4
         run: make binaries
