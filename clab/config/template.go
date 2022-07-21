@@ -70,7 +70,6 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 
 	// gomplate overrides the built-in *slice* function. Rename it to *list*
 	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
-	gfuncs["list"] = gfuncs["slice"]
 	delete(gfuncs, "slice")
 
 	tmpl := template.New("").Funcs(gfuncs).Funcs(jT.Funcs)
