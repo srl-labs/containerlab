@@ -8,17 +8,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	netTypes "github.com/containers/common/libnetwork/types"
+	"github.com/containers/podman/v4/pkg/bindings/containers"
+	"github.com/containers/podman/v4/pkg/domain/entities"
+	"github.com/containers/podman/v4/pkg/specgen"
+	"github.com/dustin/go-humanize"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"net"
 	"strings"
 
-	"github.com/containers/podman/v3/pkg/bindings"
-	"github.com/containers/podman/v3/pkg/bindings/containers"
-	"github.com/containers/podman/v3/pkg/bindings/network"
-	"github.com/containers/podman/v3/pkg/domain/entities"
-	"github.com/containers/podman/v3/pkg/specgen"
-	"github.com/dustin/go-humanize"
+	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/google/shlex"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -181,13 +181,27 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		}
 	// Bridge will be used if none provided
 	case "bridge", "":
-		nets := []string{r.mgmt.Network}
-		mgmtv4Addr := net.ParseIP(cfg.MgmtIPv4Address)
-		mgmtv6Addr := net.ParseIP(cfg.MgmtIPv6Address)
+		netName := r.mgmt.Network
 		mac, err := net.ParseMAC(cfg.MacAddress)
 		if err != nil && cfg.MacAddress != "" {
 			return sg, err
 		}
+		// Podman uses a custom type for mac addresses, so we need to convert it first
+		hwAddr := netTypes.HardwareAddr(mac)
+		staticIPs := make([]net.IP, 0)
+		if mgmtv4Addr := net.ParseIP(cfg.MgmtIPv4Address); mgmtv4Addr != nil {
+			staticIPs = append(staticIPs, mgmtv4Addr)
+		}
+		if mgmtv6Addr := net.ParseIP(cfg.MgmtIPv6Address); mgmtv6Addr != nil {
+			staticIPs = append(staticIPs, mgmtv6Addr)
+		}
+		// Static IPs & Macs are properties of a network attachment
+		nets := map[string]netTypes.PerNetworkOptions{netName: {
+			StaticIPs:     staticIPs,
+			Aliases:       nil,
+			StaticMAC:     hwAddr,
+			InterfaceName: "",
+		}}
 		portmap, err := r.convertPortMap(ctx, cfg.PortBindings)
 		if err != nil {
 			return sg, err
@@ -197,22 +211,18 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 			return sg, err
 		}
 		specNetConfig = specgen.ContainerNetworkConfig{
-			// Aliases:             nil,
 			NetNS:               specgen.Namespace{NSMode: "bridge"},
-			StaticIP:            &mgmtv4Addr,
-			StaticIPv6:          &mgmtv6Addr,
-			StaticMAC:           &mac,
 			PortMappings:        portmap,
 			PublishExposedPorts: false,
 			Expose:              expose,
-			CNINetworks:         nets,
-			// UseImageResolvConf:  false,
-			// DNSServers:          nil,
-			// DNSSearch:           nil,
-			// DNSOptions:          nil,
+			Networks:            nets,
+			//UseImageResolvConf:  false,
+			//DNSServers:          nil,
+			//DNSSearch:           nil,
+			//DNSOptions:          nil,
 			UseImageHosts: false,
 			HostAdd:       cfg.ExtraHosts,
-			// NetworkOptions:      nil,
+			//NetworkOptions:      nil,
 		}
 	default:
 		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
@@ -290,17 +300,17 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 	toReturn := types.GenericMgmtIPs{}
 	inspectRes, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
 	if err != nil {
-		log.Warnf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
+		log.Debugf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
 	}
 	// Extract the data only for a specific CNI. Network name is taken from a container's label
 	netName, ok := inspectRes.Config.Labels["clab-net-mgmt"]
 	if !ok || netName == "" {
-		log.Warnf("Couldn't extract mgmt net data for container %q", cID)
+		log.Debugf("Couldn't extract mgmt net data for container %q", cID)
 		return toReturn, nil
 	}
 	mgmtData, ok := inspectRes.NetworkSettings.Networks[netName]
 	if !ok || mgmtData == nil {
-		log.Warnf("Couldn't extract mgmt IPs for container %q and net %q", cID, netName)
+		log.Debugf("Couldn't extract mgmt IPs for container %q and net %q", cID, netName)
 		return toReturn, nil
 	}
 	log.Debugf("extractMgmtIPs was called and we got a struct %T %+v", mgmtData, mgmtData)
@@ -320,20 +330,13 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 	return toReturn, nil
 }
 
-func (r *PodmanRuntime) disableTXOffload(ctx context.Context) error {
+func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
 	// TX checksum disabling will be done here since the mgmt bridge
 	// may not exist in netlink before a container is attached to it
-	netIns, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
-	if err != nil {
-		log.Warnf("failed to disable TX checksum offload; unable to retrieve the bridge name")
-		return err
-	}
-	log.Debugf("Network Inspect result for the created net: type %T and values %+v", netIns, netIns)
-	// Extract details for the bridge assuming that only 1 bridge was created for the network
-	brName := netIns[0]["plugins"].([]interface{})[0].(map[string]interface{})["bridge"].(string)
+	brName := r.mgmt.Bridge
 	log.Debugf("Got a bridge name %q", brName)
 	// Disable checksum calculation hw offload
-	err = utils.EthtoolTXOff(brName)
+	err := utils.EthtoolTXOff(brName)
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offload for interface %q: %v", brName, err)
 		return err
@@ -344,41 +347,71 @@ func (r *PodmanRuntime) disableTXOffload(ctx context.Context) error {
 
 // netOpts is an accessory function that returns a network.CreateOptions struct
 // filled with all parameters for CreateNet function
-func (r *PodmanRuntime) netOpts(_ context.Context) (network.CreateOptions, error) {
+func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
+	// set bridge name = network name if explicit name was not provided
+	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
+		r.mgmt.Bridge = r.mgmt.Network
+	}
 	var (
-		name       = r.mgmt.Network
-		driver     = "bridge"
-		internal   = false
-		ipv6       = false
-		disableDNS = true
-		options    = map[string]string{}
-		labels     = map[string]string{"containerlab": ""}
-		subnet     *net.IPNet
-		err        error
+		name        = r.mgmt.Network
+		intName     = r.mgmt.Bridge
+		driver      = "bridge"
+		internal    = false
+		ipv6        = false
+		dnsEnabled  = false
+		options     = map[string]string{}
+		labels      = map[string]string{"containerlab": ""}
+		err         error
+		ipamOptions = map[string]string{}
+		v4subnet    = netTypes.Subnet{}
+		v6subnet    = netTypes.Subnet{}
+		subnets     = make([]netTypes.Subnet, 0)
 	)
+	// parse mgmt subnets
+	// check if v4 is defined
 	if r.mgmt.IPv4Subnet != "" {
-		_, subnet, err = net.ParseCIDR(r.mgmt.IPv4Subnet)
+		v4subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv4Subnet)
+		if err != nil {
+			return netTypes.Network{}, err
+		}
+		// add a custom gw address if specified
+		if r.mgmt.IPv4Gw != "" && r.mgmt.IPv4Gw != "0.0.0.0" {
+			v4subnet.Gateway = net.ParseIP(r.mgmt.IPv4Gw)
+		}
+		subnets = append(subnets, v4subnet)
+		log.Debugf("Added v4 subnet info to the net definion: \n%v, \n%v\n", subnets, v4subnet)
 	}
-	if err != nil {
-		return network.CreateOptions{}, err
+	// check if v6 is defined
+	if r.mgmt.IPv6Subnet != "" {
+		v6subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv6Subnet)
+		if err != nil {
+			return netTypes.Network{}, err
+		}
+		ipv6 = true
+		// add a custom gw address if specified
+		if r.mgmt.IPv6Gw != "" && r.mgmt.IPv6Gw != "::" {
+			v6subnet.Gateway = net.ParseIP(r.mgmt.IPv6Gw)
+		}
+		subnets = append(subnets, v6subnet)
+		log.Debugf("Added v6 subnet info to the net definion: \n%v, \n%v\n", subnets, v6subnet)
 	}
+
+	// add custom mtu if defined
 	if r.mgmt.MTU != "" {
 		options["mtu"] = r.mgmt.MTU
 	}
-
-	toReturn := network.CreateOptions{
-		DisableDNS: &disableDNS,
-		Driver:     &driver,
-		Internal:   &internal,
-		Labels:     labels,
-		Subnet:     subnet,
-		IPv6:       &ipv6,
-		Options:    options,
-		Name:       &name,
-	}
-	// add a custom gw address if specified
-	if r.mgmt.IPv4Gw != "" && r.mgmt.IPv4Gw != "0.0.0.0" {
-		toReturn.WithGateway(net.ParseIP(r.mgmt.IPv4Gw))
+	// compile the resulting struct
+	toReturn := netTypes.Network{
+		DNSEnabled:       dnsEnabled,
+		Driver:           driver,
+		Internal:         internal,
+		Labels:           labels,
+		Subnets:          subnets,
+		IPv6Enabled:      ipv6,
+		Options:          options,
+		Name:             name,
+		IPAMOptions:      ipamOptions,
+		NetworkInterface: intName,
 	}
 	return toReturn, nil
 }
