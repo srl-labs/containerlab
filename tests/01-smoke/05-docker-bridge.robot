@@ -1,7 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
 Library           String
-Suite Setup       Setup
 Suite Teardown    Cleanup
 
 *** Variables ***
@@ -30,10 +29,6 @@ Ensure inspect outputs IP addresses
     Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
 
 *** Keywords ***
-Setup
-    # skipping this test suite for podman for now
-    Skip If    '${runtime}' == 'podman'
-
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
