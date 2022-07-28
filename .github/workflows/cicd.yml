@@ -409,13 +409,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Install upx
-        # upx orig location http://archive.ubuntu.com/ubuntu/pool/universe/u/upx-ucl/upx-ucl_3.96-3_amd64.deb
-        run: |
-          sudo apt update && sudo apt install -y libucl1
-          curl -L https://gitlab.com/rdodin/pics/-/wikis/uploads/738bbd877e745fc0e9f93a32ae35b108/upx-ucl_3.96-3_amd64.deb -o /tmp/upx.deb
-          sudo dpkg -i /tmp/upx.deb
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
