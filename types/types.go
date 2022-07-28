@@ -6,6 +6,7 @@ package types
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -138,7 +141,10 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
 
-	tpl, err := template.New(filepath.Base(node.StartupConfig)).Parse(templ)
+	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
+	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
+	delete(gfuncs, "slice")
+	tpl, err := template.New(filepath.Base(node.StartupConfig)).Funcs(gfuncs).Parse(templ)
 	if err != nil {
 		return err
 	}
