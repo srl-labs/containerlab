@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -17,6 +18,7 @@ import (
 var debugCount int
 var debug bool
 var timeout time.Duration
+var logLevel string
 
 // path to the topology file
 var topo string
@@ -51,6 +53,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second, "timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "container runtime")
 }
 
 func sudoCheck(_ *cobra.Command, _ []string) error {
@@ -63,11 +66,24 @@ func sudoCheck(_ *cobra.Command, _ []string) error {
 
 func preRunFn(cmd *cobra.Command, _ []string) error {
 
-	// set debug level when required
-	debug = debugCount > 0
-	if debug {
+	// setting log level
+	switch {
+	case debugCount > 0:
 		log.SetLevel(log.DebugLevel)
+	case strings.ToLower(logLevel) == "warn":
+		log.SetLevel(log.WarnLevel)
+	case strings.ToLower(logLevel) == "error":
+		log.SetLevel(log.ErrorLevel)
+	case strings.ToLower(logLevel) == "debug":
+		log.SetLevel(log.DebugLevel)
+	case strings.ToLower(logLevel) == "fatal":
+		log.SetLevel(log.FatalLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
 	}
+
+	// setting output to stderr, so that json outputs can be parsed
+	log.SetOutput(os.Stderr)
 
 	return getTopoFilePath(cmd)
 }
