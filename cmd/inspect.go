@@ -19,9 +19,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/mysocketio"
-	"github.com/srl-labs/containerlab/nodes"
+	mysocketionode "github.com/srl-labs/containerlab/nodes/mysocketio"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var format string
@@ -158,7 +159,7 @@ func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, fo
 		}
 		if kind, ok := cont.Labels["clab-node-kind"]; ok {
 			cdet.Kind = kind
-			if kind == "mysocketio" {
+			if utils.Contains(mysocketionode.Kindnames, kind) {
 				printMysocket = true
 			}
 		}
@@ -302,7 +303,7 @@ func mySocketIoTokenFileFromBindMounts(containers []types.GenericContainer) []st
 	result := []string{}
 	for _, node := range containers {
 		// if not mysocketio kind then continue
-		if node.Labels["clab-node-kind"] != nodes.NodeKindMySocketIO {
+		if !utils.Contains(mysocketionode.Kindnames, node.Labels["clab-node-kind"]) {
 			continue
 		}
 		filepath := ""
