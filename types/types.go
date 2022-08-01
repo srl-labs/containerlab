@@ -323,7 +323,7 @@ func (mse *MySocketIoEntry) isClabEntry() bool {
 func (mse *MySocketIoEntry) getContainerName() (string, error) {
 	splitName := strings.Split(*mse.Name, "-")
 	if len(splitName) < 4 {
-		return "", fmt.Errorf("Issue with entry %s. Does not seem to be a clab based mysocketio entry", *mse.Name)
+		return "", fmt.Errorf("issue with entry %s. does not seem to be a clab based mysocketio entry", *mse.Name)
 	}
 	return strings.Join(splitName[1:len(splitName)-2], "-"), nil
 }
