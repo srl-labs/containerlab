@@ -127,12 +127,6 @@ func toTableData(det []types.ContainerDetails) [][]string {
 }
 
 func printContainerInspect(containers []types.GenericContainer, format string) error {
-
-	if len(containers) == 0 && format == "table" {
-		fmt.Println("no containers found")
-		return nil
-	}
-
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
