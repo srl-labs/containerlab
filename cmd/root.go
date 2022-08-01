@@ -8,7 +8,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -53,7 +52,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second, "timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "container runtime")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "logging level; one of [trace, debug, info, warning, error, fatal]")
 }
 
 func sudoCheck(_ *cobra.Command, _ []string) error {
@@ -70,16 +69,13 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 	switch {
 	case debugCount > 0:
 		log.SetLevel(log.DebugLevel)
-	case strings.ToLower(logLevel) == "warn":
-		log.SetLevel(log.WarnLevel)
-	case strings.ToLower(logLevel) == "error":
-		log.SetLevel(log.ErrorLevel)
-	case strings.ToLower(logLevel) == "debug":
-		log.SetLevel(log.DebugLevel)
-	case strings.ToLower(logLevel) == "fatal":
-		log.SetLevel(log.FatalLevel)
 	default:
-		log.SetLevel(log.InfoLevel)
+		l, err := log.ParseLevel(logLevel)
+		if err != nil {
+			return err
+		}
+
+		log.SetLevel(l)
 	}
 
 	// setting output to stderr, so that json outputs can be parsed
