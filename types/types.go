@@ -307,6 +307,7 @@ type MySocketIoEntry struct {
 	Type      *string `json:"type,omitempty"`
 	CloudAuth bool    `json:"cloud_auth,omitempty"`
 	Name      *string `json:"name,omitempty"`
+	LabName   *string `json:"lab_name,omitempty"`
 }
 
 // isClabEntry checks that the entry name contains clab
