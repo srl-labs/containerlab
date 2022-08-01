@@ -47,7 +47,7 @@ func createMysocketTunnels(ctx context.Context, r runtime.ContainerRuntime, node
 			}
 
 			// create socket and get its ID
-			sockCmd := createSockCmd(ms, n.Config().ShortName)
+			sockCmd := createSockCmd(ms, n.Config().LongName)
 			cmd := []string{"/bin/sh", "-c", fmt.Sprintf("%s | awk 'NR==4 {print $2}'", sockCmd)}
 			log.Debugf("Running mysocketio command %q", cmd)
 			stdout, _, err := r.Exec(ctx, node.ContainerID, cmd)

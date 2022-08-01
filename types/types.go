@@ -292,6 +292,24 @@ type MySocketIoEntry struct {
 	Name      *string `json:"name,omitempty"`
 }
 
+// isClabEntry checks that the entry name contains clab
+// then we assume its a clab entry.
+func (mse *MySocketIoEntry) isClabEntry() bool {
+	splitName := strings.Split(*mse.Name, "-")
+	return strings.Contains(*mse.Name, "clab") && len(splitName) >= 4
+}
+
+// getContainerName deduce the containername from the name of the mysocketio entry
+// precondition is that isClabEntry returned true.
+// clab-slr01-srlnode1-tcp-22 -> slr01-srlnode1
+func (mse *MySocketIoEntry) getContainerName() (string, error) {
+	splitName := strings.Split(*mse.Name, "-")
+	if len(splitName) < 4 {
+		return "", fmt.Errorf("Issue with entry %s. Does not seem to be a clab based mysocketio entry", *mse.Name)
+	}
+	return strings.Join(splitName[1:len(splitName)-2], "-"), nil
+}
+
 type LabData struct {
 	Containers []ContainerDetails `json:"containers"`
 	MySocketIo []*MySocketIoEntry `json:"mysocketio"`
