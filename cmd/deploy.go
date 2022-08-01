@@ -103,7 +103,16 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// latest version channel
 	vCh := make(chan string)
-	go getLatestVersion(vCh)
+
+	// check if new_version_notification is meant to be disabled
+	versionCheckStatus := os.Getenv("CLAB_VERSION_CHECK")
+	log.Debugf("Env: CLAB_VERSION_CHECK=%s", versionCheckStatus)
+
+	if strings.Contains(strings.ToLower(versionCheckStatus), "disable") {
+		close(vCh)
+	} else {
+		go getLatestVersion(vCh)
+	}
 
 	if reconfigure {
 		if err != nil {

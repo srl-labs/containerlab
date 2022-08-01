@@ -55,6 +55,15 @@ The local `--export-template` flag allows a user to specify a custom Go template
 
 To export full topology data instead of a subset of fields exported by default, use `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
 
+### Environment variables
+
+#### CLAB_VERSION_CHECK
+
+Can be set to "disable" value to prevent deploy command making a network request to check new version to report if one is available.
+
+Useful when running in an automated environments with restricted network access.
+
+Example command-line usage: `CLAB_VERSION_CHECK=disable containerlab deploy`
 
 ### Examples
 
