@@ -287,7 +287,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	newVerNotification(vCh)
 
 	// print table summary
-	return printContainerInspect(c, containers, format)
+	return printContainerInspect(containers, format)
 }
 
 func setFlags(conf *clab.Config) {

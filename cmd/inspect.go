@@ -108,7 +108,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	err = printContainerInspect(c, containers, format)
+	err = printContainerInspect(containers, format)
 	return err
 }
 
@@ -126,7 +126,7 @@ func toTableData(det []types.ContainerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(c *clab.CLab, containers []types.GenericContainer, format string) error {
+func printContainerInspect(containers []types.GenericContainer, format string) error {
 
 	if len(containers) == 0 && format == "table" {
 		fmt.Println("no containers found")
