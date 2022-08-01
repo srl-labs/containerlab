@@ -8,16 +8,30 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-n9kv", "vr-cisco_n9kv"}
+)
+
+const (
+	defaultUser     = "admin"
+	defaultPassword = "admin"
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindVrN9KV, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrN9kv)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrN9kv struct {
@@ -34,8 +48,8 @@ func (s *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
 	}
@@ -48,6 +62,10 @@ func (s *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
 func (s *vrN9kv) Config() *types.NodeConfig { return s.cfg }
@@ -79,7 +97,7 @@ func (s *vrN9kv) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrN9kv) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrN9kv) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (*vrN9kv) SaveConfig(_ context.Context) error {

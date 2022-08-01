@@ -18,7 +18,7 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	"github.com/containernetworking/cni/libcni"
-	"github.com/containernetworking/cni/pkg/types/current"
+	current "github.com/containernetworking/cni/pkg/types/040"
 	"github.com/docker/go-units"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
@@ -28,6 +28,8 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -323,13 +325,14 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 		}
 		result, _ := current.NewResultFromResult(res)
 
-		ipv4, ipv6 := "", ""
+		ipv4, ipv6, ipv4Gw := "", "", ""
 		ipv4nm, ipv6nm := 0, 0
 		for _, ip := range result.IPs {
 			switch ip.Version {
 			case "4":
 				ipv4 = ip.Address.IP.String()
 				ipv4nm, _ = ip.Address.Mask.Size()
+				ipv4Gw = ip.Gateway.String()
 			case "6":
 				ipv6 = ip.Address.IP.String()
 				ipv6nm, _ = ip.Address.Mask.Size()
@@ -341,6 +344,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 			"clab.ipv4.netmask": strconv.Itoa(ipv4nm),
 			"clab.ipv6.addr":    ipv6,
 			"clab.ipv6.netmask": strconv.Itoa(ipv6nm),
+			"clab.ipv4.gateway": ipv4Gw,
 		}
 		_, err = newContainer.SetLabels(ctx, additionalLabels)
 		if err != nil {
@@ -639,12 +643,12 @@ func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context, input
 			case containerd.Running:
 				ctr.Status = "Up"
 			default:
-				ctr.Status = strings.Title(string(status.Status))
+				ctr.Status = cases.Title(language.English).String(ctr.State)
 			}
 
 			ctr.Pid = int(task.Pid())
 		} else {
-			ctr.State = strings.Title(string(containerd.Unknown))
+			ctr.State = cases.Title(language.English).String(string(containerd.Unknown))
 			ctr.Status = "Unknown"
 			ctr.Pid = -1
 		}
@@ -669,7 +673,7 @@ func extractIPInfoFromLabels(labels map[string]string) (types.GenericMgmtIPs, er
 			return types.GenericMgmtIPs{}, err
 		}
 	}
-	return types.GenericMgmtIPs{IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask}, nil
+	return types.GenericMgmtIPs{IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask, IPv4Gw: labels["clab.ipv4.gateway"], IPv6Gw: labels["clab.ipv6.gateway"]}, nil
 }
 
 func timeSinceInHuman(since time.Time) string {
@@ -807,4 +811,10 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 	log.Debugf("successfully deleted container %s", containerID)
 
 	return nil
+}
+
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+// TODO: do we need it here? currently no-op
+func (c *ContainerdRuntime) GetHostsPath(context.Context, string) (string, error) {
+	return "", nil
 }

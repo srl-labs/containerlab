@@ -68,9 +68,11 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
 
-	tmpl := template.New("").
-		Funcs(jT.Funcs).
-		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data)))
+	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
+	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
+	delete(gfuncs, "slice")
+
+	tmpl := template.New("").Funcs(gfuncs).Funcs(jT.Funcs)
 
 	for _, nc := range allnodes {
 		for _, baseN := range TemplateNames {

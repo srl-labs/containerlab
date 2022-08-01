@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 <p align=center><object type="image/svg+xml" data=https://cdn.jsdelivr.net/gh/srl-labs/containerlab@master/docs/images/containerlab_export_white_ink_js.svg ></object></p>
 
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
@@ -52,7 +56,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **IaaC approach**  
     Declarative way of defining the labs by means of the topology definition [`clab` files](manual/topo-def-file.md).
 * **Network Operating Systems centric**  
-    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](manual/kinds/kinds.md) which allows the user to focus on the use cases, rather than infrastructure hurdles.
+    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](manual/kinds/index.md) which allows the user to focus on the use cases, rather than infrastructure hurdles.
 * **VM based nodes friendly**  
     With the [vrnetlab integration](manual/vrnetlab.md) it is possible to get the best of two worlds - running virtualized and containerized nodes alike with the same IaaC approach and workflows.
 * **Multi-vendor and open**  
@@ -85,4 +89,4 @@ This short clip briefly demonstrates containerlab features and explains its purp
 ## Join us
 Have questions, ideas, bug reports or just want to chat? Come join [our discord server](https://discord.gg/vAyddtaEV9).
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

@@ -9,20 +9,31 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-xrv", "vr-cisco_xrv"}
+)
+
 const (
 	scrapliPlatformName = "cisco_iosxr"
+	defaultUser         = "clab"
+	defaultPassword     = "clab@123"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrXRV, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrXRV)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrXRV struct {
@@ -38,8 +49,8 @@ func (s *vrXRV) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "clab",
-		"PASSWORD":           "clab@123",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
@@ -53,6 +64,9 @@ func (s *vrXRV) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
@@ -87,16 +101,15 @@ func (s *vrXRV) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrXRV) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrXRV) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *vrXRV) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+	err := netconf.SaveConfig(s.cfg.LongName,
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

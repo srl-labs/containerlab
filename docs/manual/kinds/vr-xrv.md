@@ -1,6 +1,10 @@
+---
+search:
+  boost: 4
+---
 # Cisco XRv
 
-Cisco XRv virtualized router is identified with `vr-xrv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+Cisco XRv virtualized router is identified with `vr-xrv` or `vr-cisco_xrv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 vr-xrv nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
 

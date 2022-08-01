@@ -9,20 +9,31 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-csr", "vr-cisco_csr1000v"}
+)
+
 const (
 	scrapliPlatformName = "cisco_iosxe"
+	defaultUser         = "admin"
+	defaultPassword     = "admin"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrCSR, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrCsr)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrCsr struct {
@@ -53,13 +64,20 @@ func (s *vrCsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
+
 func (s *vrCsr) Config() *types.NodeConfig { return s.cfg }
+
 func (s *vrCsr) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
+
 func (s *vrCsr) Deploy(ctx context.Context) error {
 	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
 	if err != nil {
@@ -68,6 +86,7 @@ func (s *vrCsr) Deploy(ctx context.Context) error {
 	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
+
 func (*vrCsr) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
@@ -84,13 +103,13 @@ func (s *vrCsr) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrCsr) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrCsr) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *vrCsr) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+	err := netconf.SaveConfig(s.cfg.LongName,
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 

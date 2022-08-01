@@ -1,8 +1,8 @@
 BIN_DIR = $$(pwd)/bin
 BINARY = $$(pwd)/bin/containerlab
-MKDOCS_VER = 8.2.1
+MKDOCS_VER = 8.3.9
 # insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
-MKDOCS_INS_VER = 4.8.3
+MKDOCS_INS_VER = 4.19.1-4
 
 
 all: build
@@ -22,7 +22,7 @@ lint:
 	golangci-lint run
 
 clint:
-	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.40.1 golangci-lint run --timeout 5m -v
+	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.47.1 golangci-lint run --timeout 5m -v
 
 .PHONY: docs
 docs:

@@ -67,12 +67,13 @@ func init() {
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false, "regenerate configuration artifacts and overwrite the previous ones if any")
+	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false, "regenerate configuration artifacts and overwrite previous ones if any")
 	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", defaultExportTemplateFPath, "template file for topology data export")
 }
 
+// deployFn function runs deploy sub command
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
@@ -304,6 +305,7 @@ func setFlags(conf *clab.Config) {
 	}
 }
 
+// enrichNodes add container runtime assigned information (such as dynamically assigned IP addresses) to the nodes
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
 	for i := range containers {
 		c := &containers[i]
@@ -320,6 +322,8 @@ func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.
 				node.Config().MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
 				node.Config().MgmtIPv6Address = c.NetworkSettings.IPv6addr
 				node.Config().MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
+				node.Config().MgmtIPv4Gateway = c.NetworkSettings.IPv4Gw
+				node.Config().MgmtIPv6Gateway = c.NetworkSettings.IPv6Gw
 			}
 			node.Config().ContainerID = c.ID
 		}

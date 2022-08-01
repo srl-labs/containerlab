@@ -1,6 +1,20 @@
+---
+search:
+  boost: 4
+---
 # Nokia SR Linux
 
-[Nokia SR Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `srl` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
+[Nokia SR Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `srl` or `nokia_srlinux` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
+
+## Getting SR Linux image
+Nokia SR Linux is the first commercial Network OS with a free and open distribution model. Everyone can pull SR Linux container from a public registry:
+
+```bash
+# pull latest available release
+docker pull ghcr.io/nokia/srlinux
+```
+
+To pull a specific version, use tags that match the released version and are listed in the [srlinux-container-image](https://github.com/nokia/srlinux-container-image) repo.
 
 ## Managing SR Linux nodes
 There are many ways to manage SR Linux nodes, ranging from classic CLI management all the way up to the gNMI programming.
@@ -88,9 +102,11 @@ The breakout interfaces will have the name `eX-Y-Z` where `Z` is the breakout po
 ### Types
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
-The available type values are: `ixr6`, `ixr10`, `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrh2` and `ixrh3`, which correspond to a hardware variant of Nokia 7250/7220 IXR chassis.
+The available type values are: `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrd5`, `ixrh2` and `ixrh3`, which correspond to a hardware variant of Nokia 7220 IXR chassis.
 
-By default, `ixrd2` type will be used by containerlab.
+Nokia 7250 IXR chassis identified with types `ixr6e` and `ixr10e` require a valid license to boot.
+
+If type is not set in the clab file `ixrd2` value will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
 ### Node configuration
@@ -108,7 +124,7 @@ topology:
   nodes:
     srl1:
       kind: srl
-      type: ixr6
+      type: ixrd3
 ```
 
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
@@ -153,7 +169,7 @@ topology:
   nodes:
     srl1:
       kind: srl
-      type: ixr6
+      type: ixrd3
       image: ghcr.io/nokia/srlinux
       # a path to the partial config in CLI format relative to the current working directory
       startup-config: myconfig.cli
@@ -170,7 +186,7 @@ topology:
   nodes:
     srl1:
       kind: srl
-      type: ixr6
+      type: ixrd3
       image: ghcr.io/nokia/srlinux
       # a path to the full config in JSON format relative to the current working directory
       startup-config: myconfig.json

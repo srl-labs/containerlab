@@ -16,7 +16,7 @@ topology:
       type: ixrd2
     spine:
       kind: srl
-      type: ixr6
+      type: ixrd3
     client1:
       kind: linux
     client2:

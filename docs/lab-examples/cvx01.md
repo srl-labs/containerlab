@@ -1,6 +1,6 @@
 |                               |                                                                      |
 | ----------------------------- | -------------------------------------------------------------------- |
-| **Description**               | Cumulus Linux connected back-to-back with FRR                          |
+| **Description**               | Cumulus Linux connected back-to-back with FRR                        |
 | **Components**                | [Cumulus Linux][cvx]                                                 |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 1 GB |
 | **Topology file**             | [topo.clab.yml][topofile]                                            |
@@ -44,4 +44,4 @@ rtt min/avg/max/mdev = 0.400/0.400/0.400/0.000 ms
 
 
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

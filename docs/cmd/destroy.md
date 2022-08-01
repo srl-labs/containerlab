@@ -16,9 +16,11 @@ The `destroy` command destroys a lab referenced by its [topology definition file
 
 With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used get the elements of a lab that will be destroyed.
 
+When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+
 #### cleanup
 
-The local `--cleanup` flag instructs containerlab to remove the lab directory and all its content.
+The local `--cleanup | -c` flag instructs containerlab to remove the lab directory and all its content.
 
 Without this flag present, containerlab will keep the lab directory and all files inside of it.
 

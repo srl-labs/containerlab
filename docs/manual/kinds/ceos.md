@@ -1,6 +1,10 @@
+---
+search:
+  boost: 4
+---
 # Arista cEOS
 
-[Arista cEOS](https://www.arista.com/en/products/software-controlled-container-networking) is identified with `ceos` kind in the [topology file](../topo-def-file.md). The `ceos` kind defines a supported feature set and a startup procedure of a `ceos` node.
+Arista cEOS is identified with `ceos` or `arista_ceos` kind in the [topology file](../topo-def-file.md). The `ceos` kind defines a supported feature set and a startup procedure of a `ceos` node.
 
 cEOS nodes launched with containerlab comes up with
 
@@ -8,6 +12,16 @@ cEOS nodes launched with containerlab comes up with
 * hostname assigned to the node name
 * gNMI, Netconf and eAPI services enabled
 * `admin` user created with password `admin`
+
+## Getting cEOS image
+Arista requires its users to register with arista.com before downloading any images. Once you created an account and logged in, go to the [software downloads](https://www.arista.com/en/support/software-download) section and download ceos64 tar archive for a given release.
+
+Once downloaded, import the archive with docker:
+
+```bash
+# import container image and save it under ceos:4.28.0F name
+docker import cEOS64-lab-4.28.0F.tar.xz ceos:4.28.0F
+```
 
 ## Managing ceos nodes
 Arista cEOS node launched with containerlab can be managed via the following interfaces:
@@ -187,6 +201,30 @@ topology:
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/flash/startup-config`. Using the example topology presented above, the exact path to the config will be `clab-ceos/ceos/flash/startup-config`.
 
 cEOS Ma0 interface will be configured with a random MAC address with `00:1c:73` OUI part. Containerlab will also create a `system_mac_address` file in the node's lab directory with the value of a System MAC address. The System MAC address value is calculated as `Ma0-MAC-addr + 1`.
+
+A default ipv4 route is also created with a next-hop of the management network to allow for outgoing connections.
+
+#### MGMT VRF
+The default empty configuration supports placing the management interface into a VRF to isolate it from the main device routing table.  Passing the environment variable `CLAB_MGMT_VRF` in either the kind or node definition will activate this behavior, and alter the management services configuration to also reflect the management VRF.  You can duplicate this when using the `startup-config` by starting from the linked template below.
+
+```yaml
+# example topo file with management VRF
+# node1 will have vrf MGMT
+# node2 will have vrf FOO
+name: ceos_vrf
+topology:
+  kinds:
+    ceos:
+      env:
+        CLAB_MGMT_VRF: MGMT
+  nodes:
+    node1:
+      kind: ceos
+    node2:
+      kind: ceos
+      env:
+        CLAB_MGMT_VRF: FOO
+```
 
 #### User defined config
 It is possible to make ceos nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:

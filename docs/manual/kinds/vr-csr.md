@@ -1,6 +1,10 @@
+---
+search:
+  boost: 4
+---
 # Cisco CSR1000v
 
-Cisco CSR1000v virtualized router is identified with `vr-csr` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+Cisco CSR1000v virtualized router is identified with `vr-csr` or `vr-cisco_csr1000v` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 vr-csr nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 

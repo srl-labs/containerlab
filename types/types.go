@@ -6,6 +6,7 @@ package types
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -88,6 +91,8 @@ type NodeConfig struct {
 	MgmtIPv4PrefixLength int               `json:"mgmt-ipv4-prefix-length,omitempty"`
 	MgmtIPv6Address      string            `json:"mgmt-ipv6-address,omitempty"`
 	MgmtIPv6PrefixLength int               `json:"mgmt-ipv6-prefix-length,omitempty"`
+	MgmtIPv4Gateway      string            `json:"mgmt-ipv4-gateway,omitempty"`
+	MgmtIPv6Gateway      string            `json:"mgmt-ipv6-gateway,omitempty"`
 	MacAddress           string            `json:"mac-address,omitempty"`
 	ContainerID          string            `json:"containerid,omitempty"`
 	TLSCert              string            `json:"tls-cert,omitempty"`
@@ -117,13 +122,13 @@ type NodeConfig struct {
 }
 
 type HostRequirements struct {
-	SSE3 bool `json:"sse3,omitempty"` // sse3 cpu instruction
+	SSE3         bool `json:"sse3,omitempty"`          // sse3 cpu instruction
+	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
 }
 
 // GenerateConfig generates configuration for the nodes
 // out of the template based on the node configuration and saves the result to dst
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
-
 	// If the config file is already present in the node dir
 	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
 	// this will persist the changes that users make to a running config when booted from some startup config
@@ -133,23 +138,33 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 	} else if node.EnforceStartupConfig {
 		log.Infof("Startup config for '%s' node enforced: '%s'", node.ShortName, dst)
 	}
+
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
-	tpl, err := template.New(filepath.Base(node.StartupConfig)).Parse(templ)
+
+	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
+	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
+	delete(gfuncs, "slice")
+	tpl, err := template.New(filepath.Base(node.StartupConfig)).Funcs(gfuncs).Parse(templ)
 	if err != nil {
 		return err
 	}
+
 	dstBytes := new(bytes.Buffer)
+
 	err = tpl.Execute(dstBytes, node)
 	if err != nil {
 		return err
 	}
 	log.Debugf("node '%s' generated config: %s", node.ShortName, dstBytes.String())
-	f, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666) // skipcq: GSC-G302
+
+	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	_, err = f.Write(dstBytes.Bytes())
+
 	return err
 }
 
@@ -211,8 +226,10 @@ func (ctr *GenericContainer) GetContainerIPv6() string {
 type GenericMgmtIPs struct {
 	IPv4addr string
 	IPv4pLen int
+	IPv4Gw   string
 	IPv6addr string
 	IPv6pLen int
+	IPv6Gw   string
 }
 
 type GenericFilter struct {

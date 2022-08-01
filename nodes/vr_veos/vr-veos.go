@@ -9,20 +9,28 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-veos", "vr-arista_veos"}
+)
+
 const (
 	scrapliPlatformName = "arista_eos"
+	defaultUser         = "admin"
+	defaultPassword     = "admin"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrVEOS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrVEOS)
 	})
+	nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
 }
 
 type vrVEOS struct {
@@ -39,8 +47,8 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
 	}
@@ -53,6 +61,10 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
 
@@ -84,13 +96,13 @@ func (s *vrVEOS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrVEOS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrVEOS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *vrVEOS) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+	err := netconf.SaveConfig(s.cfg.LongName,
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 

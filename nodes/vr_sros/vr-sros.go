@@ -12,21 +12,32 @@ import (
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-sros", "vr-nokia_sros"}
+)
+
 const (
 	vrsrosDefaultType   = "sr-1"
 	scrapliPlatformName = "nokia_sros"
+	defaultUser         = "admin"
+	defaultPassword     = "admin"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrSROS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrSROS)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrSROS struct {
@@ -66,6 +77,10 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.cfg.ShortName,
 		s.cfg.NodeType,
 	)
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
 
@@ -94,7 +109,7 @@ func (s *vrSROS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrSROS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrSROS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *vrSROS) GetImages() map[string]string {
@@ -104,9 +119,9 @@ func (s *vrSROS) GetImages() map[string]string {
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+	err := netconf.SaveConfig(s.cfg.LongName,
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 
@@ -119,7 +134,6 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 }
 
 //
-
 func createVrSROSFiles(node *types.NodeConfig) error {
 	// create config directory that will be bind mounted to vrnetlab container at / path
 	utils.CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)

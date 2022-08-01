@@ -15,7 +15,7 @@ With such approach users are allowed to spread the load between multiple VMs and
 For the sake of the demonstration the topology used in this lab consists of just two virtualized routers [packaged in a container format](../manual/vrnetlab.md) - Nokia SR OS and Juniper vMX. Although the routers are running on different VMs, they logically form a back-to-back connection over a pair of interfaces aggregated in a logical bundle.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:7,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/multinode.drawio&quot;}"></div>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 Upon succesful lab deployment and configuration, the routers will be able to exchange LACP frames, thus proving a transparent L2 connectivity and will be able to ping each other.
 

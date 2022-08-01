@@ -89,8 +89,8 @@ Ensure "inspect all" outputs IP addresses
     # verify ipv4 address
     ${ipv4} =    String.Strip String    ${data}[9]
     Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
-    # verify ipv6 address. Not implemented for podman, as podman doesn't have IPv6 network support yet
-    Run Keyword If    '${runtime}' != 'podman'    Match IPv6 Address    ${data}[10]
+    # verify ipv6 address
+    Run Keyword  Match IPv6 Address    ${data}[10]
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -114,8 +114,8 @@ Verify static ipv4 mgmt addressing for l2
     Should Be Equal As Strings    ${ipv4}    ${n2-ipv4}
 
 Verify static ipv6 mgmt addressing for l2
-    # skipping for containerd and podman. Podman doesn't implement ipv6 network yet
-    Skip If    '${runtime}' == 'containerd' or '${runtime}' == 'podman'
+    # skipping for containerd
+    Skip If    '${runtime}' == 'containerd'
     ${rc}    ${ipv6} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -6 a sh eth0 | cut -d ' ' -f7 | head -1
     Log    ${ipv6}
@@ -139,8 +139,7 @@ Verify Hosts entries exist
     ...    cat /etc/hosts | grep "${lab-name}" | wc -l
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # podman only has ipv4 networks support so far, thus only ipv4 host entries are expected
-    Run Keyword If    '${runtime}' == 'podman'    Should Contain    ${output}    4
+    Run Keyword If    '${runtime}' == 'podman'    Should Contain    ${output}    6
     Run Keyword If    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
 Verify Mem and CPU limits are set

@@ -79,6 +79,8 @@ If `--offline` flag was not provided and no containers were found matching the l
 
 With the global `--topo | -t` flag a user sets the path to the topology file that will be used to get the nodes of a lab.
 
+When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+
 #### srv
 
 The `--srv` flag allows a user to customize the HTTP address and port for the web server. Default value is `:50080`.

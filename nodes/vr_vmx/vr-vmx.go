@@ -7,22 +7,39 @@ package vr_vmx
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-vmx", "vr-juniper_vmx"}
+)
+
 const (
+	configDirName   = "config"
+	startupCfgFName = "startup-config.cfg"
+
 	scrapliPlatformName = "juniper_junos"
+	defaultUser         = "admin"
+	defaultPassword     = "admin@123"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrVMX, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrVMX)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrVMX struct {
@@ -38,21 +55,22 @@ func (s *vrVMX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin@123",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
 	}
 	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
 
-	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
-		// mount dev dir to enable macvtap
-		s.cfg.Binds = append(s.cfg.Binds, "/dev:/dev")
-	}
+	// mount config dir to support startup-config functionality
+	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, configDirName), ":/config"))
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
@@ -61,7 +79,7 @@ func (s *vrVMX) Config() *types.NodeConfig { return s.cfg }
 
 func (s *vrVMX) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return nil
+	return createVrvMXFiles(s.cfg)
 }
 
 func (s *vrVMX) Deploy(ctx context.Context) error {
@@ -88,13 +106,13 @@ func (s *vrVMX) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrVMX) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrVMX) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *vrVMX) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+	err := netconf.SaveConfig(s.cfg.LongName,
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 
@@ -103,5 +121,28 @@ func (s *vrVMX) SaveConfig(_ context.Context) error {
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", s.cfg.ShortName)
+	return nil
+}
+
+func createVrvMXFiles(node *types.NodeConfig) error {
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
+
+	if node.StartupConfig != "" {
+		// dstCfg is a path to a file on the clab host that will have rendered configuration
+		dstCfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(dstCfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+		}
+	}
 	return nil
 }

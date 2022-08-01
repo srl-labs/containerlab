@@ -15,7 +15,7 @@ The type of SR Linux used and the naming prefixes can be customized as well.
 ```yaml
 spines:
   # SRL spine type
-  type: ixr6
+  type: ixrd3
   # number of spines
   num: 2
   # prefix of spines name: ${prefix}${index}
@@ -55,4 +55,4 @@ The `configure.sh` script relies on [gomplate](https://docs.gomplate.ca) and [gn
 [topovarfile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab_vars.yaml
 
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

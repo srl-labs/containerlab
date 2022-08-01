@@ -10,8 +10,12 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+var (
+	kindnames = []string{"mysocketio"}
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindMySocketIO, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(mySocketIO)
 	})
 }
@@ -65,7 +69,7 @@ func (*mySocketIO) GetContainer(_ context.Context) (*types.GenericContainer, err
 }
 
 func (s *mySocketIO) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *mySocketIO) GetImages() map[string]string {

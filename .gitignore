@@ -36,3 +36,5 @@ site/
 __rd*
 tests/out
 **/.*clab.y?ml
+clab/test_data/*.bak
+

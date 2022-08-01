@@ -19,6 +19,8 @@ The lab name and path values will be set for the first node of such lab, to redu
 
 With the global `--topo | -t` or `--name | -n` flag a user specifies which particular lab they want to get the information about.
 
+When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+
 #### format
 
 The local `--format` flag enables different output stylings. By default the table view will be used.

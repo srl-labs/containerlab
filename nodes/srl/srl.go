@@ -63,6 +63,7 @@ commit save`
 )
 
 var (
+	kindnames = []string{"srl", "nokia_srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",
@@ -73,15 +74,18 @@ var (
 	}
 
 	srlTypes = map[string]string{
-		"ixr6":   "7250IXR6.yml",
-		"ixr10":  "7250IXR10.yml",
 		"ixrd1":  "7220IXRD1.yml",
 		"ixrd2":  "7220IXRD2.yml",
 		"ixrd3":  "7220IXRD3.yml",
 		"ixrd2l": "7220IXRD2L.yml",
 		"ixrd3l": "7220IXRD3L.yml",
+		"ixrd5":  "7220IXRD5.yml",
 		"ixrh2":  "7220IXRH2.yml",
 		"ixrh3":  "7220IXRH3.yml",
+		"ixr6":   "7250IXR6.yml",
+		"ixr6e":  "7250IXR6e.yml",
+		"ixr10":  "7250IXR10.yml",
+		"ixr10e": "7250IXR10e.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -99,9 +103,13 @@ var (
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindSRL, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(srl)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, "admin", "admin")
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type srl struct {
@@ -113,6 +121,9 @@ type srl struct {
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.cfg = cfg
+	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
+	// to not rely on certain kind names
+	s.cfg.Kind = nodes.NodeKindSRL
 	for _, o := range opts {
 		o(s)
 	}
@@ -202,7 +213,9 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if s.cfg.Extras != nil && len(s.cfg.Extras.SRLAgents) != 0 {
 		agents := s.cfg.Extras.SRLAgents
-		appmgr := filepath.Join(s.cfg.LabDir, "config/appmgr/")
+
+		appmgr := filepath.Join(s.cfg.LabDir, "config", "appmgr")
+
 		utils.CreateDirectory(appmgr, 0777)
 
 		for _, fullpath := range agents {
@@ -236,8 +249,13 @@ func (s *srl) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+
+	// Populate /etc/hosts for service discovery on mgmt interface
+	if err := s.populateHosts(ctx, nodes); err != nil {
+		log.Warnf("Unable to populate hosts for node %q: %v", s.cfg.ShortName, err)
+	}
 
 	// start waiting for initial commit and mgmt server ready
 	if err := s.Ready(ctx); err != nil {
@@ -269,7 +287,7 @@ func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *srl) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
@@ -406,10 +424,6 @@ func (s *srl) createSRLFiles() error {
 
 //
 
-type mac struct {
-	MAC string
-}
-
 func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
@@ -418,19 +432,16 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
-	// Use node index as part of a deterministically generated MAC
-	// this ensures that different srl nodes will have different macs for their ports
-	// (for labs up to 4096 nodes)
-	m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index/256, cfg.Index%256)
-	mac := mac{
-		MAC: m,
-	}
+	mac := genMac(cfg)
+
 	log.Debug(mac, dst)
+
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	return tpl.Execute(f, mac)
 }
 
@@ -509,6 +520,54 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+
+	return nil
+}
+
+// populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
+// to mitigate the fact that srlinux uses non default netns for management and thus
+// can't leverage docker DNS service
+func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
+	if err != nil {
+		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
+		return err
+	}
+	var entriesv4, entriesv6 bytes.Buffer
+	const (
+		v4Prefix = "###### CLAB-v4-START ######"
+		v4Suffix = "###### CLAB-v4-END ######"
+		v6Prefix = "###### CLAB-v6-START ######"
+		v6Suffix = "###### CLAB-v6-END ######"
+	)
+	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
+	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
+	for node, params := range nodes {
+		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
+			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
+		}
+		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
+			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
+		}
+	}
+	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
+	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
+
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666) // skipcq: GSC-G302
+	if err != nil {
+		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(entriesv4.Bytes())
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(entriesv6.Bytes())
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

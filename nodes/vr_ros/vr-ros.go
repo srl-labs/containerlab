@@ -18,8 +18,17 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
+)
+
+const (
+	defaultUser     = "admin"
+	defaultPassword = "admin"
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindVrROS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrRos)
 	})
 }
@@ -37,8 +46,8 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
 	}
@@ -53,6 +62,9 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
@@ -88,7 +100,7 @@ func (s *vrRos) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrRos) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrRos) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (*vrRos) SaveConfig(_ context.Context) error {

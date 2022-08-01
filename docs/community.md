@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 Containerlab openness and focus on multivendor labs was a key to its success and adoption. With more than a dozen Network Operating Systems spread across several networking vendors and opensource teams, it is a tool that can answer the needs of a broad network engineers community.
 
 ## Discord Server
@@ -85,6 +89,11 @@ Participants: [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-l
 The power of the community is in its members. We are delighted to have containerlab users who share their experience working with the tool, unveiling new use cases, and providing a personal touch to the workflows.
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
+
+### Containerlab with Inmanta
+<small>:material-youtube: [screencast](https://www.youtube.com/watch?v=dL-P1ebTu_0) by [Inmanta](https://www.youtube.com/channel/UCuhO5ol5yTBhlr-p4xfNYhA) · :material-calendar: 2022-03-20</small>
+
+Inmanta is a network orchestration and automation platform. In these [YouTube series](https://www.youtube.com/watch?v=dL-P1ebTu_0), Inmanta's engineer explains how this platform can help you manage network infrastructure provided by Containerlab. Make sure to check subsequent videos in their channel where multiple angles of containerlab are shown. 
 
 ### Containerlab-based DDOS testbed
 <small>:material-text: [Blog](https://blog.sflow.com/2022/03/containerlab-ddos-testbed.html) by [Peter Phaal](https://twitter.com/sFlow) · :material-calendar: 2022-03-16</small>

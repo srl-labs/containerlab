@@ -19,23 +19,23 @@ topology:
 
     spine1:
       kind: srl
-      type: ixr6
+      type: ixrd3
     spine2:
       kind: srl
-      type: ixr6
+      type: ixrd3
     spine3:
       kind: srl
-      type: ixr6
+      type: ixrd3
     spine4:
       kind: srl
-      type: ixr6
+      type: ixrd3
 
     superspine1:
       kind: srl
-      type: ixr6
+      type: ixrd3
     superspine2:
       kind: srl
-      type: ixr6
+      type: ixrd3
 
     client1:
       kind: linux

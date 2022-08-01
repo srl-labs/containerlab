@@ -55,32 +55,6 @@ const (
 	nodeDirVar = "__clabNodeDir__"
 )
 
-// supported kinds
-var kinds = []string{
-	"srl",
-	"ceos",
-	"crpd",
-	"sonic-vs",
-	"vr-ftosv",
-	"vr-n9kv",
-	"vr-sros",
-	"vr-vmx",
-	"vr-vqfx",
-	"vr-xrv",
-	"vr-xrv9k",
-	"vr-veos",
-	"vr-pan",
-	"vr-csr",
-	"vr-ros",
-	"linux",
-	"bridge",
-	"ovs-bridge",
-	"mysocketio",
-	"host",
-	"cvx",
-	"keysight_ixia-c-one",
-}
-
 // Config defines lab configuration as it is provided in the YAML file
 type Config struct {
 	Name     string          `json:"name,omitempty"`
@@ -190,6 +164,11 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	// Init
 	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
 	if !ok {
+		// collect all kind names registered by the nodes in a slice
+		kinds := make([]string, 0, len(nodes.Nodes))
+		for k := range nodes.Nodes {
+			kinds = append(kinds, k)
+		}
 		return fmt.Errorf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
 	}
 	n := nodeInitializer()
@@ -629,28 +608,60 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	return nil
 }
 
-// verifyVirtSupport checks if virtualization supported by vcpu if vrnetlab nodes are used
+// verifyVirtSupport checks if virtualization is supported by a cpu in case topology contains VM-based nodes
+// when clab itself is being invoked as a container, this check is bypassed
 func (c *CLab) verifyVirtSupport() error {
-	virtNeeded := false
+	// check if we are being executed in a container environment
+	// in that case we skip this check as there are no convenient ways to interrogate hosts capabilities
+	// check if /proc/2 exists, and if it does, check if the name of the proc is kthreadd
+	// otherwise it is a container env
+
+	f, err := os.Open("/proc/2/status")
+	if err != nil {
+		log.Debug("proc/2/status file was not found. This means we run in a container and no virt checks are possible")
+		return nil
+	}
+
+	defer f.Close()
+
+	// read first line of a /proc/2/status file to check if it contains kthreadd
+	// if it doesn't, we are in a container
+	scanner := bufio.NewScanner(f)
+
+	scanner.Scan()
+	if !strings.Contains(scanner.Text(), "kthreadd") {
+		log.Debug("proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
+		return nil
+	}
+
+	virtRequired := false
 	for _, n := range c.Nodes {
-		if strings.HasPrefix(n.Config().Kind, "vr-") {
-			virtNeeded = true
+		if n.Config().HostRequirements.VirtRequired {
+			virtRequired = true
+
+			log.Debug("detected virtualization required")
+
 			break
 		}
 	}
-	if !virtNeeded {
+
+	if !virtRequired {
 		return nil
 	}
-	f, err := os.Open("/proc/cpuinfo")
+
+	f, err = os.Open("/proc/cpuinfo")
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
+	scanner = bufio.NewScanner(f)
 
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "vmx") || strings.Contains(scanner.Text(), "svm") {
+
+			log.Debug("virtualization support found")
+
 			return nil
 		}
 	}
@@ -659,7 +670,7 @@ func (c *CLab) verifyVirtSupport() error {
 		return err
 	}
 
-	return fmt.Errorf("virtualization seems to be not supported and it is required for VM based nodes. Check if virtualization can be enabled")
+	return fmt.Errorf("virtualization seems to be not supported and it is required for VM-based nodes.\nEnable virtualization or, in case you're using a VM, make sure virtualization flags are propagated to a guest")
 }
 
 // checkIfSignatures ensures that users provide valid endpoint names
@@ -820,14 +831,15 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[TopoFileLabel] = c.TopoFile.path
 }
 
+// labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
+// and labels value sanitized
 func labelsToEnvVars(n *types.NodeConfig) {
 	if n.Env == nil {
 		n.Env = map[string]string{}
 	}
-	// Add labels to env vars with CLAB_LABEL_ prefix added to label keys
-	// and sanitizing the label key value
+
 	for k, v := range n.Labels {
-		// add the value to the node env with a prefixed and specialchars cleaned up key
+		// add the value to the node env with a prefixed and special chars cleaned up key
 		n.Env["CLAB_LABEL_"+utils.ToEnvKey(k)] = v
 	}
 }

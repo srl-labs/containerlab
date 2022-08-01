@@ -8,16 +8,30 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-pan", "vr-paloalto_panos"}
+)
+
+const (
+	defaultUser     = "admin"
+	defaultPassword = "Admin@123"
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindVrPAN, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrPan)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrPan struct {
@@ -33,8 +47,8 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "admin",
-		"PASSWORD":           "Admin@123",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "6144",
@@ -50,13 +64,20 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
+
 	return nil
 }
+
 func (s *vrPan) Config() *types.NodeConfig { return s.cfg }
+
 func (s *vrPan) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
+
 func (s *vrPan) Deploy(ctx context.Context) error {
 	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
 	if err != nil {
@@ -65,6 +86,7 @@ func (s *vrPan) Deploy(ctx context.Context) error {
 	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
+
 func (*vrPan) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }
@@ -81,7 +103,7 @@ func (s *vrPan) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
 func (s *vrPan) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
 
 func (s *vrPan) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (*vrPan) SaveConfig(_ context.Context) error {

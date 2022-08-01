@@ -17,7 +17,7 @@ The topology template is rendered using the variable file shown below:
 ```yaml
 super_spines:
   # SRL super spine type
-  type: ixr6
+  type: ixrd3
   # number of super spines
   num: 2
   # prefix of super spines name: ${prefix}${index}
@@ -62,4 +62,4 @@ bash configure.sh
 [topovarfile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab_vars.yaml
 
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

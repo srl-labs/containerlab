@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/containers/podman/v3/pkg/api/handlers"
-	"github.com/containers/podman/v3/pkg/bindings/containers"
-	"github.com/containers/podman/v3/pkg/bindings/images"
-	"github.com/containers/podman/v3/pkg/bindings/network"
+	"github.com/containers/podman/v4/pkg/api/handlers"
+	"github.com/containers/podman/v4/pkg/bindings/containers"
+	"github.com/containers/podman/v4/pkg/bindings/images"
+	"github.com/containers/podman/v4/pkg/bindings/network"
 	dockerTypes "github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
@@ -70,12 +70,6 @@ func (r *PodmanRuntime) WithMgmtNet(net *types.MgmtNet) {
 	}
 	log.Debugf("Podman method WithMgmtNet was called with net params: %+v", net)
 	r.mgmt = net
-	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
-		// set bridge name = network name
-		// albeit we don't use it as of right now when creating a bridge
-		r.mgmt.Bridge = r.mgmt.Network
-	}
-
 }
 
 // WithKeepMgmtNet defines that we shouldn't delete mgmt network(s)
@@ -85,9 +79,6 @@ func (r *PodmanRuntime) WithKeepMgmtNet() {
 
 // CreateNet used to create a new bridge for clab mgmt network
 func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
-	// TODO add custom bridge name + bridge options
-	// TODO: looks like the current version of CreateOptions does not support dual-stack / multiple subnets
-	// May need to refactor this.
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
@@ -104,7 +95,9 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		_, err = network.Create(ctx, &netopts)
+		log.Debugf("Trying to create mgmt network with params: %+v", netopts)
+		resp, err := network.Create(ctx, &netopts)
+		log.Debugf("Create network response was: %+v", resp)
 	}
 	return err
 }
@@ -297,7 +290,8 @@ func (r *PodmanRuntime) DeleteContainer(ctx context.Context, contName string) er
 	}
 	// and do a force removal in the end
 	force = true
-	err = containers.Remove(ctx, contName, &containers.RemoveOptions{Force: &force})
+	depend := true
+	_, err = containers.Remove(ctx, contName, &containers.RemoveOptions{Force: &force, Depend: &depend})
 	return err
 }
 
@@ -309,4 +303,19 @@ func (r *PodmanRuntime) Config() runtime.RuntimeConfig {
 // GetName returns runtime name as a string
 func (r *PodmanRuntime) GetName() string {
 	return runtimeName
+}
+
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+func (r *PodmanRuntime) GetHostsPath(ctx context.Context, cID string) (string, error) {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return "", err
+	}
+	inspect, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
+	if err != nil {
+		return "", err
+	}
+	hostsPath := inspect.HostsPath
+	log.Debugf("Method GetHostsPath was called with a resulting path %q", hostsPath)
+	return hostsPath, nil
 }

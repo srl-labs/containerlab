@@ -9,20 +9,31 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
+)
+
 const (
 	scrapliPlatformName = "cisco_iosxr"
+	defaultUser         = "clab"
+	defaultPassword     = "clab@123"
 )
 
 func init() {
-	nodes.Register(nodes.NodeKindVrXRV9K, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrXRV9K)
 	})
+	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 type vrXRV9K struct {
@@ -55,6 +66,9 @@ func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"], s.cfg.Env["VCPU"], s.cfg.Env["RAM"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
@@ -92,13 +106,13 @@ func (s *vrXRV9K) WithRuntime(r runtime.ContainerRuntime) {
 func (s *vrXRV9K) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *vrXRV9K) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (s *vrXRV9K) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
-		nodes.DefaultCredentials[s.cfg.Kind][0],
-		nodes.DefaultCredentials[s.cfg.Kind][1],
+	err := netconf.SaveConfig(s.cfg.LongName,
+		defaultUser,
+		defaultPassword,
 		scrapliPlatformName,
 	)
 

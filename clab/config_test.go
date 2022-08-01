@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/containers/podman/v3/pkg/util"
+	"github.com/containers/podman/v4/pkg/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -379,7 +379,7 @@ func TestLabelsInit(t *testing.T) {
 				ContainerlabLabel: "topo1",
 				NodeNameLabel:     "node1",
 				NodeKindLabel:     "srl",
-				NodeTypeLabel:     "ixr6",
+				NodeTypeLabel:     "ixrd2",
 				NodeGroupLabel:    "",
 				NodeLabDirLabel:   "../clab-topo1/node1",
 				TopoFileLabel:     "topo1.yml",

@@ -14,10 +14,20 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+var (
+	kindnames = []string{"vr-nxos", "vr-cisco_nxos"}
+)
+
+const (
+	defaultUser     = "admin"
+	defaultPassword = "admin"
+)
+
 func init() {
-	nodes.Register(nodes.NodeKindVrNXOS, func() nodes.Node {
+	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrNXOS)
 	})
+	nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
 }
 
 type vrNXOS struct {
@@ -33,8 +43,8 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin",
+		"USERNAME":           defaultUser,
+		"PASSWORD":           defaultPassword,
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "4096",
@@ -45,6 +55,9 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+
+	// set virtualization requirement
+	s.cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
@@ -82,7 +95,7 @@ func (s *vrNXOS) WithRuntime(r runtime.ContainerRuntime) {
 func (s *vrNXOS) GetRuntime() runtime.ContainerRuntime { return s.runtime }
 
 func (s *vrNXOS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.Config().LongName)
+	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
 }
 
 func (*vrNXOS) SaveConfig(_ context.Context) error {

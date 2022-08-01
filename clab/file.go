@@ -78,11 +78,11 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	// create a hidden file that will contain the rendered topology
 	if !strings.HasPrefix(fileBase, ".") {
 		backupFPath := filepath.Join(topoDir,
-			fmt.Sprintf(".%s.yml", fileBase[:len(fileBase)-len(filepath.Ext(topoAbsPath))]))
+			fmt.Sprintf(".%s.yml.bak", fileBase[:len(fileBase)-len(filepath.Ext(topoAbsPath))]))
 
 		err = utils.CreateFile(backupFPath, buf.String())
 		if err != nil {
-			return err
+			log.Warnf("Could not write rendered topology: %v", err)
 		}
 	}
 	log.Debugf("topology:\n%s\n", buf.String())

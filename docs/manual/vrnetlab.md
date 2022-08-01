@@ -4,7 +4,7 @@ Keeping this requirement in mind from the very beginning, we added [`bridge`](..
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/hellt/drawio-js@main/embed2.js" async></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 With this approach, you could bridge VM-based routing systems by attaching interfaces to the bridge you define in your topology. However, it doesn't allow users to define the VM-based nodes in the same topology file. With [`vrnetlab`](https://github.com/hellt/vrnetlab) integration, containerlab is now capable of launching topologies with VM-based routers defined in the same topology file.
 
@@ -37,7 +37,8 @@ The following table provides a link between the version combinations:
 | --               | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)       | fixed SR OS CPU allocation and added Palo Alto PAN support [`vr-pan`](kinds/vr-pan.md)                                                                   |
 | `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)       | added support for Cisco Nexus 9000v via [`vr-n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                     |
 | `0.19.0`         | [`0.6.0`](https://github.com/hellt/vrnetlab/tree/v0.6.0)       | added experimental support for Juniper vQFX via [`vr-vqfx`](kinds/vr-vqfx.md) kind, added support Dell FTOS via [`vr-ftosv`](kinds/vr-ftosv.md)          |
-|                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.0)       | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                          |
+|                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.2)       | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                          |
+|                  | [`0.7.0`](https://github.com/hellt/vrnetlab/tree/v0.7.0)       | startup-config support for vqfx and vmx                                                                                                                  |
 
 ### Building vrnetlab images
 To build a vrnetlab image compatible with containerlab, users first need to ensure that the versions of both projects follow [compatibility matrix](#compatibility-matrix).
