@@ -18,11 +18,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/mysocketio"
 	mysocketionode "github.com/srl-labs/containerlab/nodes/mysocketio"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 var format string
@@ -153,7 +153,7 @@ func printContainerInspect(containers []types.GenericContainer, format string) e
 		}
 		if kind, ok := cont.Labels["clab-node-kind"]; ok {
 			cdet.Kind = kind
-			if utils.Contains(mysocketionode.Kindnames, kind) {
+			if slices.Contains(mysocketionode.Kindnames, kind) {
 				printMysocket = true
 			}
 		}
@@ -306,7 +306,7 @@ func mySocketIoTokenFileFromBindMounts(containers []types.GenericContainer) []*T
 	result := []*TokenFileResults{}
 	for _, node := range containers {
 		// if not mysocketio kind then continue
-		if !utils.Contains(mysocketionode.Kindnames, node.Labels["clab-node-kind"]) {
+		if !slices.Contains(mysocketionode.Kindnames, node.Labels["clab-node-kind"]) {
 			continue
 		}
 
