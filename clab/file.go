@@ -35,6 +35,11 @@ type TopoFile struct {
 	name     string // file name without extension
 }
 
+// GetDir returns the path of a directory that contains topology file
+func (tf *TopoFile) GetDir() string {
+	return tf.dir
+}
+
 // GetTopology parses the topology file into c.Conf structure
 // as well as populates the TopoFile structure with the topology file related information
 func (c *CLab) GetTopology(topo, varsFile string) error {

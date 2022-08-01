@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	kindnames = []string{"mysocketio"}
+	Kindnames = []string{"mysocketio"}
 )
 
 func init() {
-	nodes.Register(kindnames, func() nodes.Node {
+	nodes.Register(Kindnames, func() nodes.Node {
 		return new(mySocketIO)
 	})
 }
