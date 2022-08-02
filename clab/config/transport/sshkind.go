@@ -26,9 +26,9 @@ type SSHKind interface {
 // implements SShKind
 type VrSrosSSHKind struct{}
 
-func (*VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { //skipcq: RVV-A0005
+func (*VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
-	//s.debug = true
+	// s.debug = true
 	r := s.Run("/environment more false", 5)
 	if r.result != "" {
 		log.Warnf("%s Are you in MD-Mode?%s", s.Target, r.LogString(s.Target, true, false))
@@ -40,6 +40,7 @@ func (*VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { //s
 	}
 	return nil
 }
+
 func (*VrSrosSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	res := s.Run("commit", 10)
 	if res.result != "" {
@@ -63,7 +64,7 @@ func (*VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 // implements SShKind
 type SrlSSHKind struct{}
 
-func (*SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { //skipcq: RVV-A0005
+func (*SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
 	if transaction {
 		r0 := s.Run("enter candidate private", 5)

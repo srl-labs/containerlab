@@ -132,7 +132,6 @@ func parseSocketCfg(s string) (mysocket, error) {
 }
 
 func parseAllowedUsers(s string) (domains, emails []string, err error) {
-
 	for _, e := range strings.Split(s, ",") {
 		e = strings.TrimSpace(e)
 		if e == "" {

@@ -115,7 +115,6 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 		_ = netlink.LinkDel(vB.Link)
 	}
 	return err
-
 }
 
 // RemoveHostVeth tries to remove veths connected to the host network namespace
@@ -256,7 +255,6 @@ func (c *CLab) DeleteNetnsSymlinks() (err error) {
 				return err
 			}
 		}
-
 	}
 
 	return nil

@@ -25,9 +25,11 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-var format string
-var details bool
-var all bool
+var (
+	format  string
+	details bool
+	all     bool
+)
 
 // inspectCmd represents the inspect command
 var inspectCmd = &cobra.Command{

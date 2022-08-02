@@ -19,9 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-sros", "vr-nokia_sros"}
-)
+var kindnames = []string{"vr-sros", "vr-nokia_sros"}
 
 const (
 	vrsrosDefaultType   = "sr-1"
@@ -124,7 +122,6 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

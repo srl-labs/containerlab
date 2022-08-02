@@ -18,9 +18,11 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var AEnd = ""
-var BEnd = ""
-var MTU = clab.DefaultVethLinkMTU
+var (
+	AEnd = ""
+	BEnd = ""
+	MTU  = clab.DefaultVethLinkMTU
+)
 
 func init() {
 	toolsCmd.AddCommand(vethCmd)

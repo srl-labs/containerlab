@@ -60,7 +60,6 @@ func init() {
 }
 
 func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
-
 	// check that /dev/kvm exists
 	if _, err := os.Stat(kvmPath); err != nil {
 		return fmt.Errorf("cannot find %q: %s", kvmPath, err)
@@ -121,8 +120,8 @@ func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	if c.config.Timeout <= 0 {
 		c.config.Timeout = defaultTimeout
 	}
-
 }
+
 func (c *IgniteRuntime) WithKeepMgmtNet() {
 	c.ctrRuntime.WithKeepMgmtNet()
 }
@@ -153,7 +152,6 @@ func (*IgniteRuntime) PullImageIfRequired(_ context.Context, imageName string) e
 }
 
 func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
-
 	vm := c.baseVM.DeepCopy()
 
 	// updating the node RAM if it's set
@@ -294,7 +292,6 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 }
 
 func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
-
 	var result []types.GenericContainer
 
 	var labelStrings []string
@@ -399,10 +396,12 @@ func (*IgniteRuntime) Exec(context.Context, string, []string) ([]byte, []byte, e
 	log.Infof("Exec is not yet implemented for Ignite runtime")
 	return []byte{}, []byte{}, nil
 }
+
 func (*IgniteRuntime) ExecNotWait(context.Context, string, []string) error {
 	log.Infof("ExecNotWait is not yet implemented for Ignite runtime")
 	return nil
 }
+
 func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string) error {
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {

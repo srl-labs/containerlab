@@ -51,7 +51,6 @@ func init() {
 	nodes.Register(kindnames, func() nodes.Node {
 		return new(ceos)
 	})
-
 }
 
 type ceos struct {

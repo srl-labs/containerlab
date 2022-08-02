@@ -15,9 +15,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-n9kv", "vr-cisco_n9kv"}
-)
+var kindnames = []string{"vr-n9kv", "vr-cisco_n9kv"}
 
 const (
 	defaultUser     = "admin"
@@ -73,6 +71,7 @@ func (s *vrN9kv) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
 	return nil
 }
+
 func (s *vrN9kv) Deploy(ctx context.Context) error {
 	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
 	if err != nil {
@@ -81,6 +80,7 @@ func (s *vrN9kv) Deploy(ctx context.Context) error {
 	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
 	return err
 }
+
 func (*vrN9kv) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return nil
 }

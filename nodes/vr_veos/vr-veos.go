@@ -16,9 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-veos", "vr-arista_veos"}
-)
+var kindnames = []string{"vr-veos", "vr-arista_veos"}
 
 const (
 	scrapliPlatformName = "arista_eos"
@@ -105,7 +103,6 @@ func (s *vrVEOS) SaveConfig(_ context.Context) error {
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

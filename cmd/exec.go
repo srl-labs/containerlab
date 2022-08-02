@@ -33,7 +33,6 @@ var execCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" && topo == "" {
 			return errors.New("provide either lab name (--name) or topology file path (--topo)")
-
 		}
 
 		if execCommand == "" {
@@ -41,8 +40,7 @@ var execCmd = &cobra.Command{
 		}
 
 		switch execFormat {
-		case "json",
-			"plain":
+		case "json", "plain":
 			// expected values, go on
 		default:
 			log.Error("format is expected to be either json or plain")

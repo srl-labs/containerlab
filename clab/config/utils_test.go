@@ -1,17 +1,15 @@
 package config
 
 import (
+	"net/netip"
 	"runtime"
 	"testing"
-
-	"net/netip"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/types"
 )
 
 func TestFarEndIP(t *testing.T) {
-
 	lst := map[string]string{
 		"10.0.0.1/32": "",
 
@@ -50,11 +48,9 @@ func TestFarEndIP(t *testing.T) {
 			t.Errorf("far end of %s, got %s, expected %s", k, n, v)
 		}
 	}
-
 }
 
 func TestIPLastOctect(t *testing.T) {
-
 	lst := map[string]int{
 		"10.0.0.1/32": 1,
 		"::1/32":      1,
@@ -69,7 +65,6 @@ func TestIPLastOctect(t *testing.T) {
 			t.Errorf("far end of %s, got %d, expected %d", k, lo, v)
 		}
 	}
-
 }
 
 func gettestLink() *types.Link {

@@ -15,9 +15,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-pan", "vr-paloalto_panos"}
-)
+var kindnames = []string{"vr-pan", "vr-paloalto_panos"}
 
 const (
 	defaultUser     = "admin"

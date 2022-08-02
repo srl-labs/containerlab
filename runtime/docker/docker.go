@@ -106,7 +106,6 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 		log.Debugf("detected docker network mtu value - %s", mtu)
 		d.mgmt.MTU = mtu
 	}
-
 }
 
 // CreateDockerNet creates a docker network or reusing if it exists
@@ -556,7 +555,6 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		All:     true,
 		Filters: filter,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -587,7 +585,6 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		bridgenet, err := d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
 			Filters: f,
 		})
-
 		if err != nil {
 			return nil, err
 		}
@@ -671,7 +668,6 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 					bridgeName = n
 				}
 			}
-
 		}
 
 		if ifcfg, ok := i.NetworkSettings.Networks[bridgeName]; ok {

@@ -15,9 +15,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-ftosv", "vr-dell_ftosv"}
-)
+var kindnames = []string{"vr-ftosv", "vr-dell_ftosv"}
 
 const (
 	defaultUser     = "admin"

@@ -125,7 +125,7 @@ func (t *SSHTransport) InChannel() {
 	go func() {
 		buf := make([]byte, 1024)
 		tmpS := ""
-		n, err := t.ses.In.Read(buf) //this reads the ssh terminal
+		n, err := t.ses.In.Read(buf) // this reads the ssh terminal
 		if err == nil {
 			tmpS = string(buf[:n])
 		}
@@ -297,7 +297,7 @@ func (t *SSHTransport) Connect(host string, _ ...TransportOption) error {
 
 	log.Infof("Connected to %s\n", host)
 	t.InChannel()
-	//Read to first prompt
+	// Read to first prompt
 	return nil
 }
 
@@ -374,7 +374,7 @@ func (ses *SSHSession) Close() {
 //   # - command sent
 //   | - result received
 //   ? - prompt part of the result
-func (r *SSHReply) LogString(node string, linefeed, debug bool) string { //skipcq: RVV-A0005
+func (r *SSHReply) LogString(node string, linefeed, debug bool) string { // skipcq: RVV-A0005
 	ind := 12 + len(node)
 	prefix := "\n" + strings.Repeat(" ", ind)
 	s := ""

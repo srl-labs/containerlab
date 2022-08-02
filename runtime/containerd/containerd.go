@@ -106,6 +106,7 @@ func (*ContainerdRuntime) CreateNet(_ context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
 	return nil
 }
+
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	var err error
 	bridgename := c.mgmt.Bridge
@@ -688,6 +689,7 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	}
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
+
 func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, cmd []string) ([]byte, []byte, error) {
 	return c.internalExec(ctx, containername, cmd, false)
 }

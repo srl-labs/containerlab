@@ -102,7 +102,6 @@ func (n *NodeDefinition) GetEnforceStartupConfig() bool {
 		return false
 	}
 	return n.EnforceStartupConfig
-
 }
 
 func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
@@ -270,7 +269,7 @@ func (n *NodeDefinition) GetSysctls() map[string]string {
 	if n == nil || n.Sysctls == nil {
 		return map[string]string{}
 	}
-	
+
 	return n.Sysctls
 }
 

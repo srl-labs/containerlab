@@ -6,10 +6,11 @@ package podman
 import (
 	"context"
 	"fmt"
-	netTypes "github.com/containers/common/libnetwork/types"
 	"net"
 	"strconv"
 	"strings"
+
+	netTypes "github.com/containers/common/libnetwork/types"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"

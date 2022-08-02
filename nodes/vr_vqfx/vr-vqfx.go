@@ -19,9 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-vqfx", "vr-juniper_vqfx"}
-)
+var kindnames = []string{"vr-vqfx", "vr-juniper_vqfx"}
 
 const (
 	scrapliPlatformName = "juniper_junos"
@@ -121,7 +119,6 @@ func (s *vrVQFX) SaveConfig(_ context.Context) error {
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

@@ -2,12 +2,11 @@ package config
 
 import (
 	"fmt"
+	"net/netip"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"net/netip"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -34,7 +33,6 @@ type Dict map[string]interface{}
 
 // Prepare variables for all nodes. This will also prepare all variables for the links
 func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[string]*NodeConfig {
-
 	res := make(map[string]*NodeConfig)
 
 	// preparing all nodes vars
@@ -98,7 +96,6 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 
 // Prepare variables for a specific link
 func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
-
 	// Add a Dict for the far-end link vars and the far-end node name
 	varsA[vkFarEnd] = Dict{vkNodeName: link.B.Node.ShortName}
 	varsB[vkFarEnd] = Dict{vkNodeName: link.A.Node.ShortName}

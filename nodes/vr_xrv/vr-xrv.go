@@ -16,9 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-xrv", "vr-cisco_xrv"}
-)
+var kindnames = []string{"vr-xrv", "vr-cisco_xrv"}
 
 const (
 	scrapliPlatformName = "cisco_iosxr"

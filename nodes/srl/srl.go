@@ -447,7 +447,6 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner
 func (s *srl) addDefaultConfig(ctx context.Context) error {
-
 	b, err := s.banner(ctx)
 	if err != nil {
 		return err
@@ -484,7 +483,6 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		"-c",
 		"sr_cli -ed < tmp/clab-config",
 	})
-
 	if err != nil {
 		return err
 	}
@@ -504,7 +502,6 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -514,7 +511,6 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"-c",
 		"sr_cli -ed --post 'commit save' < tmp/clab-config",
 	})
-
 	if err != nil {
 		return err
 	}

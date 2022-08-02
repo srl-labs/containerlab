@@ -266,7 +266,7 @@ func TestEnvInit(t *testing.T) {
 			// nodeCfg := c.Config.Topology.Nodes[tc.node]
 			// kind := strings.ToLower(c.kindInitialization(nodeCfg))
 			env := c.Config.Topology.GetNodeEnv(tc.node)
-			//env := c.envInit(nodeCfg, kind)
+			// env := c.envInit(nodeCfg, kind)
 			if !reflect.DeepEqual(env, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, env)
 			}
@@ -318,7 +318,7 @@ func TestUserInit(t *testing.T) {
 			// nodeCfg := c.Config.Topology.Nodes[tc.node]
 			// kind := strings.ToLower(c.kindInitialization(nodeCfg))
 			user := c.Config.Topology.GetNodeUser(tc.node)
-			//user := c.userInit(nodeCfg, kind)
+			// user := c.userInit(nodeCfg, kind)
 			if user != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, user)
 			}
@@ -363,7 +363,6 @@ func TestVerifyLinks(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestLabelsInit(t *testing.T) {
@@ -467,7 +466,6 @@ func TestLabelsInit(t *testing.T) {
 }
 
 func TestVerifyRootNetnsInterfaceUniqueness(t *testing.T) {
-
 	opts := []ClabOption{
 		WithTopoFile("test_data/topo7-dup-rootnetns.yml", ""),
 	}
@@ -481,7 +479,6 @@ func TestVerifyRootNetnsInterfaceUniqueness(t *testing.T) {
 		t.Fatalf("expected duplicate rootns links error")
 	}
 	t.Logf("error: %v", err)
-
 }
 
 func TestEnvFileInit(t *testing.T) {
@@ -526,7 +523,7 @@ func TestEnvFileInit(t *testing.T) {
 			env := c.Nodes[tc.node].Config().Env
 			// check all the want key/values are there
 			for k, v := range tc.want {
-				//check keys defined in tc.want exist and values are equal
+				// check keys defined in tc.want exist and values are equal
 				if val, exists := env[k]; !(exists && val == v) {
 					t.Fatalf("wanted %q to be contained in env, but got %q", tc.want, env)
 				}

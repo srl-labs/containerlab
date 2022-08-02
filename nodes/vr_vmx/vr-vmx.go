@@ -19,9 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-vmx", "vr-juniper_vmx"}
-)
+var kindnames = []string{"vr-vmx", "vr-juniper_vmx"}
 
 const (
 	configDirName   = "config"
@@ -115,7 +113,6 @@ func (s *vrVMX) SaveConfig(_ context.Context) error {
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}
