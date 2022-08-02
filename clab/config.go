@@ -95,7 +95,7 @@ func (c *CLab) parseTopology() error {
 	sort.Strings(nodeNames)
 
 	// collect node runtimes in a map[NodeName] -> RuntimeName
-	var nodeRuntimes = make(map[string]string)
+	nodeRuntimes := make(map[string]string)
 
 	for nodeName, topologyNode := range c.Config.Topology.Nodes {
 		// this case is when runtime was overridden at the node level
@@ -313,7 +313,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 	// initialize the endpoint name based on the split function
 	endpoint.EndpointName = split[1] // endpoint name
 	if len(endpoint.EndpointName) > 15 {
-		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName) //skipcq: RVV-A0003
+		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters", endpoint.EndpointName) // skipcq: RVV-A0003
 	}
 	// generate unique MAC
 	endpoint.MAC = utils.GenMac(ClabOUI)
@@ -500,18 +500,15 @@ func (c *CLab) verifyStartupConfigFilesExist() error {
 // VerifyImages will check if image referred in the node config
 // either pullable or is available in the local image store
 func (c *CLab) VerifyImages(ctx context.Context) error {
-
 	images := make(map[string]string)
 
 	for _, node := range c.Nodes {
-
 		for imageKey, imageName := range node.GetImages() {
 			if imageName == "" {
 				return fmt.Errorf("missing required %q image for node %q", imageKey, node.Config().ShortName)
 			}
 			images[imageName] = node.GetRuntime().GetName()
 		}
-
 	}
 
 	for image, runtimeName := range images {

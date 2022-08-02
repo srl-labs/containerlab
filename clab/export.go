@@ -57,7 +57,6 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
 			},
 		}).
 		ParseFiles(p)
-
 	if err != nil {
 		return err
 	}
@@ -84,8 +83,7 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
 
 // generates and writes topology data file to w using a default built-in template
 func (c *CLab) exportTopologyDataWithMinimalTemplate(w io.Writer) error {
-	tdef :=
-		`{
+	tdef := `{
   "name": "{{ .Name }}",
   "type": "{{ .Type }}"
 }`

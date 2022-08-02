@@ -40,17 +40,21 @@ const (
 	defaultGroupPrefix = "tier"
 )
 
-var errDuplicatedValue = errors.New("duplicated value definition")
-var errSyntax = errors.New("syntax error")
+var (
+	errDuplicatedValue = errors.New("duplicated value definition")
+	errSyntax          = errors.New("syntax error")
+)
 
-var image []string
-var kind string
-var nodesFlag []string
-var license []string
-var nodePrefix string
-var groupPrefix string
-var file string
-var deploy bool
+var (
+	image       []string
+	kind        string
+	nodesFlag   []string
+	license     []string
+	nodePrefix  string
+	groupPrefix string
+	file        string
+	deploy      bool
+)
 
 type nodesDef struct {
 	numNodes uint

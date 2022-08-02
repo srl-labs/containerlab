@@ -26,9 +26,7 @@ func (c *CLab) GenerateInventories() error {
 
 // generateAnsibleInventory generates and writes ansible inventory file to w
 func (c *CLab) generateAnsibleInventory(w io.Writer) error {
-
-	invT :=
-		`all:
+	invT := `all:
   children:
 {{- range $kind, $nodes := .Nodes}}
     {{$kind}}:
@@ -92,5 +90,4 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 		return err
 	}
 	return err
-
 }

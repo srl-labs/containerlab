@@ -15,9 +15,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"checkpoint_cloudguard"}
-)
+var kindnames = []string{"checkpoint_cloudguard"}
 
 const (
 	scrapliPlatformName = "checkpoint_cloudguard"

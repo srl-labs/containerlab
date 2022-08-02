@@ -18,9 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
-)
+var kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
 
 const (
 	defaultUser     = "admin"

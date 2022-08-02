@@ -29,7 +29,6 @@ func (s *srl) banner(ctx context.Context) (string, error) {
 	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
 		"sr_cli", "-d", "info from state /system information version | grep version",
 	})
-
 	if err != nil {
 		return "", err
 	}

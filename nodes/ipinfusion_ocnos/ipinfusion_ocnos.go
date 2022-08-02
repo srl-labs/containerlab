@@ -16,9 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"ipinfusion_ocnos"}
-)
+var kindnames = []string{"ipinfusion_ocnos"}
 
 const (
 	scrapliPlatformName = "ipinfusion_ocnos"
@@ -107,7 +105,6 @@ func (s *IPInfusionOcNOS) SaveConfig(_ context.Context) error {
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

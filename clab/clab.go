@@ -166,7 +166,8 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 // returns waitgroups for nodes with static and dynamic IPs,
 // since static nodes are scheduled first
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
-	serialNodes map[string]struct{}) (*sync.WaitGroup, *sync.WaitGroup) {
+	serialNodes map[string]struct{},
+) (*sync.WaitGroup, *sync.WaitGroup) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -191,7 +192,8 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
-	serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node) *sync.WaitGroup {
+	serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node,
+) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 	serialChan := make(chan nodes.Node)
 
@@ -332,7 +334,6 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint) {
 }
 
 func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
-
 	wg := new(sync.WaitGroup)
 
 	concurrentChan := make(chan nodes.Node)
@@ -383,7 +384,6 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	close(serialChan)
 
 	wg.Wait()
-
 }
 
 func (c *CLab) ListContainers(ctx context.Context, labels []*types.GenericFilter) ([]types.GenericContainer, error) {

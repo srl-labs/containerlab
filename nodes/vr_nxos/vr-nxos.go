@@ -14,9 +14,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-nxos", "vr-cisco_nxos"}
-)
+var kindnames = []string{"vr-nxos", "vr-cisco_nxos"}
 
 const (
 	defaultUser     = "admin"

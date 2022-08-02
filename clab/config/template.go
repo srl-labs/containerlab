@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-
 	"text/template"
 
 	"github.com/hairyhenderson/gomplate/v3"
@@ -48,7 +47,6 @@ func LoadTemplates(tmpl *template.Template, role string) error {
 }
 
 func RenderAll(allnodes map[string]*NodeConfig) error {
-
 	if len(TemplatePaths) == 0 { // default is the install path
 		TemplatePaths = []string{"@"}
 	}
@@ -114,7 +112,7 @@ func (c *NodeConfig) String() string {
 }
 
 // Print the config
-func (c *NodeConfig) Print(vars, rendered bool) { //skipcq: RVV-A0005
+func (c *NodeConfig) Print(vars, rendered bool) { // skipcq: RVV-A0005
 	var s strings.Builder
 
 	s.WriteString(c.TargetNode.ShortName)

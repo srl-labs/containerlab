@@ -36,7 +36,6 @@ func TestCheckSockType(t *testing.T) {
 			if err != nil && tc.want == nil {
 				t.Fatalf("wanted '%v' got '%v'", tc.want, err)
 			}
-
 		})
 	}
 }
@@ -70,7 +69,6 @@ func TestCheckSockPort(t *testing.T) {
 			if err != nil && tc.want == nil {
 				t.Fatalf("wanted '%v' got '%v'", tc.want, err)
 			}
-
 		})
 	}
 }
@@ -138,7 +136,6 @@ func TestParseSocketCfg(t *testing.T) {
 				}
 
 			}
-
 		})
 	}
 }
@@ -224,7 +221,6 @@ func TestParseAllowedUsers(t *testing.T) {
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("parseSocketCfg() mismatch (-want +got):\n%s", diff)
 			}
-
 		})
 	}
 }
@@ -289,7 +285,6 @@ func TestCreateSockCmd(t *testing.T) {
 			if diff := cmp.Diff(tc.want, cmd); diff != "" {
 				t.Errorf("parseSocketCfg() mismatch (-want +got):\n%s", diff)
 			}
-
 		})
 	}
 }

@@ -233,7 +233,8 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, cmd []string) (std
 			User:         "root",
 			AttachStderr: true,
 			AttachStdout: true,
-			Cmd:          cmd},
+			Cmd:          cmd,
+		},
 	}
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
@@ -241,7 +242,7 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, cmd []string) (std
 		return nil, nil, err
 	}
 	var sOut, sErr podmanWriterCloser
-	var execSAAOpts = new(containers.ExecStartAndAttachOptions).WithOutputStream(&sOut).WithErrorStream(&sErr).WithAttachOutput(true).WithAttachError(true)
+	execSAAOpts := new(containers.ExecStartAndAttachOptions).WithOutputStream(&sOut).WithErrorStream(&sErr).WithAttachOutput(true).WithAttachError(true)
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
 	if err != nil {
 		log.Errorf("failed to start/attach exec in container %q: %v", cID, err)
@@ -269,7 +270,7 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, cmd []strin
 		log.Errorf("failed to create exec in container %q: %v", cID, err)
 		return err
 	}
-	var execSAAOpts = new(containers.ExecStartAndAttachOptions)
+	execSAAOpts := new(containers.ExecStartAndAttachOptions)
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
 	return nil
 }

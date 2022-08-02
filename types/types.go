@@ -213,7 +213,6 @@ func (ctr *GenericContainer) GetContainerIPv4() string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
-
 }
 
 func (ctr *GenericContainer) GetContainerIPv6() string {

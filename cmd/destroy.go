@@ -126,7 +126,6 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-
 	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
 	containers, err := c.ListContainers(ctx, labels)
 	if err != nil {

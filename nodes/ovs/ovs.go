@@ -12,9 +12,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-var (
-	kindnames = []string{"ovs-bridge"}
-)
+var kindnames = []string{"ovs-bridge"}
 
 func init() {
 	nodes.Register(kindnames, func() nodes.Node {

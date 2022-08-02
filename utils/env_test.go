@@ -170,7 +170,6 @@ interfaces:
 	expT = MergeMaps(expT)
 
 	assert(t, result, expT)
-
 }
 
 func TestMergeMapsLists(t *testing.T) {

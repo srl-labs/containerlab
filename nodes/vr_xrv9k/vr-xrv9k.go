@@ -16,9 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
-)
+var kindnames = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
 
 const (
 	scrapliPlatformName = "cisco_iosxr"
@@ -115,7 +113,6 @@ func (s *vrXRV9K) SaveConfig(_ context.Context) error {
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

@@ -15,9 +15,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"sonic-vs"}
-)
+var kindnames = []string{"sonic-vs"}
 
 func init() {
 	nodes.Register(kindnames, func() nodes.Node {
@@ -47,6 +45,7 @@ func (s *sonic) PreDeploy(_, _, _ string) error {
 
 	return nil
 }
+
 func (s *sonic) Deploy(ctx context.Context) error {
 	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
 	if err != nil {

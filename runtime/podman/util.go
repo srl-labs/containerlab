@@ -8,14 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
+
 	netTypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"net"
-	"strings"
 
 	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/google/shlex"
@@ -24,9 +25,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	errInvalidBind = errors.New("invalid bind mount provided")
-)
+var errInvalidBind = errors.New("invalid bind mount provided")
 
 type podmanWriterCloser struct {
 	bytes.Buffer
@@ -166,7 +165,8 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{
 				NSMode: "container",
-				Value:  prefix + netMode[1]},
+				Value:  prefix + netMode[1],
+			},
 		}
 	case "host":
 		specNetConfig = specgen.ContainerNetworkConfig{
@@ -216,13 +216,13 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 			PublishExposedPorts: false,
 			Expose:              expose,
 			Networks:            nets,
-			//UseImageResolvConf:  false,
-			//DNSServers:          nil,
-			//DNSSearch:           nil,
-			//DNSOptions:          nil,
+			// UseImageResolvConf:  false,
+			// DNSServers:          nil,
+			// DNSSearch:           nil,
+			// DNSOptions:          nil,
 			UseImageHosts: false,
 			HostAdd:       cfg.ExtraHosts,
-			//NetworkOptions:      nil,
+			// NetworkOptions:      nil,
 		}
 	default:
 		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
