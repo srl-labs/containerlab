@@ -400,7 +400,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	netMode := strings.SplitN(node.NetworkMode, ":", 2)
 	switch netMode[0] {
-	case "container":
+	case "container", "external-container":
 		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
 		if len(netMode) != 2 {
 			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
@@ -409,10 +409,22 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		if netMode[1] == "" {
 			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
 		}
-		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
-		prefix := strings.SplitN(node.LongName, node.ShortName, 2)[0]
+		netModeContainerPrefix := ""
+		if netMode[0] == "container" {
+			// Extract lab/topo prefix to provide a full (long) container name if an internal container is referenced. Hackish way.
+			netModeContainerPrefix = strings.SplitN(node.LongName, node.ShortName, 2)[0]
+		}
+
+		LinkNetNsName := netModeContainerPrefix + netMode[1]
+
+		// check if the linked container exists
+		_, err := d.GetContainer(ctx, LinkNetNsName)
+		if err != nil {
+			return "", fmt.Errorf("container network mode was specified for container %q, but no container %q was not found", node.ShortName, LinkNetNsName)
+		}
 		// Compile the net spec
-		containerHostConfig.NetworkMode = container.NetworkMode("container:" + prefix + netMode[1])
+		containerHostConfig.NetworkMode = container.NetworkMode("container:" + LinkNetNsName)
+
 		// unset the hostname as it is not supported in this case
 		containerConfig.Hostname = ""
 	case "host":
