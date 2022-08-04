@@ -26,7 +26,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Cumulus VX](manual/kinds/cvx.md)
 * [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
 
-In addition to native containerized NOSes, containerlab can launch traditional virtual-machine based routers using [vrnetlab integration](manual/vrnetlab.md):
+In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](manual/vrnetlab.md):
 
 * [Nokia virtual SR OS (vSim/VSR)](manual/kinds/vr-sros.md)
 * [Juniper vMX](manual/kinds/vr-vmx.md)
@@ -38,6 +38,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Arista vEOS](manual/kinds/vr-veos.md)
 * [Palo Alto PAN](manual/kinds/vr-pan.md)
 * [IPInfusion OcNOS](manual/kinds/ipinfusion-ocnos.md)
+* [Check Point Cloudguard](manual/kinds/checkpoint_cloudguard.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span all the needed variants of nodes:
 
