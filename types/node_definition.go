@@ -3,8 +3,6 @@ package types
 import (
 	"os"
 	"strings"
-
-	"github.com/cloudflare/cfssl/log"
 )
 
 const (
@@ -288,7 +286,6 @@ func (n *NodeDefinition) GetSubjectAltName() []string {
 	if n == nil {
 		return nil
 	}
-	log.Info("GetSubjectAltName called %s", n.SubjectAltNames)
 	return n.SubjectAltNames
 }
 
