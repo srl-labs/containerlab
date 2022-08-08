@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"github.com/scrapli/scrapligo/platform"
-	"github.com/scrapli/scrapligo/util"
 	"strings"
 	"time"
+
+	"github.com/scrapli/scrapligo/platform"
+	"github.com/scrapli/scrapligo/util"
 
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"

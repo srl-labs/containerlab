@@ -12,15 +12,14 @@ import (
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-sros", "vr-nokia_sros"}
-)
+var kindnames = []string{"vr-sros", "vr-nokia_sros"}
 
 const (
 	vrsrosDefaultType   = "sr-1"
@@ -118,12 +117,11 @@ func (s *vrSROS) GetImages() map[string]string {
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
+	err := netconf.SaveConfig(s.cfg.LongName,
 		defaultUser,
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

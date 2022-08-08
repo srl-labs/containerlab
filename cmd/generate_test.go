@@ -103,19 +103,22 @@ var nodesTestSet = map[string]struct {
 		out: nodesOutput{out: nil, err: errSyntax},
 	},
 	"no_kind_with_nodes_1": {
-		in: nodesInput{kind: "",
+		in: nodesInput{
+			kind:  "",
 			nodes: []string{"1", "2", "3"},
 		},
 		out: nodesOutput{out: nil, err: errSyntax},
 	},
 	"no_kind_with_nodes_2": {
-		in: nodesInput{kind: "",
+		in: nodesInput{
+			kind:  "",
 			nodes: []string{"1:srl", "2", "3"},
 		},
 		out: nodesOutput{out: nil, err: errSyntax},
 	},
 	"no_kind_with_nodes_3": {
-		in: nodesInput{kind: "",
+		in: nodesInput{
+			kind:  "",
 			nodes: []string{"1:srl", "2:ceos", "3"},
 		},
 		out: nodesOutput{out: nil, err: errSyntax},

@@ -6,6 +6,7 @@ package types
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -127,7 +130,6 @@ type HostRequirements struct {
 // GenerateConfig generates configuration for the nodes
 // out of the template based on the node configuration and saves the result to dst
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
-
 	// If the config file is already present in the node dir
 	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
 	// this will persist the changes that users make to a running config when booted from some startup config
@@ -137,23 +139,33 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 	} else if node.EnforceStartupConfig {
 		log.Infof("Startup config for '%s' node enforced: '%s'", node.ShortName, dst)
 	}
+
 	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
-	tpl, err := template.New(filepath.Base(node.StartupConfig)).Parse(templ)
+
+	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
+	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
+	delete(gfuncs, "slice")
+	tpl, err := template.New(filepath.Base(node.StartupConfig)).Funcs(gfuncs).Parse(templ)
 	if err != nil {
 		return err
 	}
+
 	dstBytes := new(bytes.Buffer)
+
 	err = tpl.Execute(dstBytes, node)
 	if err != nil {
 		return err
 	}
 	log.Debugf("node '%s' generated config: %s", node.ShortName, dstBytes.String())
-	f, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666) // skipcq: GSC-G302
+
+	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	_, err = f.Write(dstBytes.Bytes())
+
 	return err
 }
 
@@ -189,6 +201,12 @@ type GenericContainer struct {
 	Labels          map[string]string
 	Pid             int
 	NetworkSettings GenericMgmtIPs
+	Mounts          []ContainerMount
+}
+
+type ContainerMount struct {
+	Source      string
+	Destination string
 }
 
 func (ctr *GenericContainer) GetContainerIPv4() string {
@@ -196,7 +214,6 @@ func (ctr *GenericContainer) GetContainerIPv4() string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
-
 }
 
 func (ctr *GenericContainer) GetContainerIPv6() string {
@@ -281,4 +298,37 @@ type ContainerDetails struct {
 	State       string `json:"state,omitempty"`
 	IPv4Address string `json:"ipv4_address,omitempty"`
 	IPv6Address string `json:"ipv6_address,omitempty"`
+}
+
+type MySocketIoEntry struct {
+	SocketId  *string `json:"socket_id,omitempty"`
+	DnsName   *string `json:"dns_name,omitempty"`
+	Ports     []int   `json:"ports,omitempty"`
+	Type      *string `json:"type,omitempty"`
+	CloudAuth bool    `json:"cloud_auth,omitempty"`
+	Name      *string `json:"name,omitempty"`
+	LabName   *string `json:"lab_name,omitempty"`
+}
+
+// isClabEntry checks that the entry name contains clab
+// then we assume its a clab entry.
+func (mse *MySocketIoEntry) isClabEntry() bool {
+	splitName := strings.Split(*mse.Name, "-")
+	return strings.Contains(*mse.Name, "clab") && len(splitName) >= 4
+}
+
+// getContainerName deduce the containername from the name of the mysocketio entry
+// precondition is that isClabEntry returned true.
+// clab-slr01-srlnode1-tcp-22 -> slr01-srlnode1
+func (mse *MySocketIoEntry) getContainerName() (string, error) {
+	splitName := strings.Split(*mse.Name, "-")
+	if len(splitName) < 4 {
+		return "", fmt.Errorf("issue with entry %s. does not seem to be a clab based mysocketio entry", *mse.Name)
+	}
+	return strings.Join(splitName[1:len(splitName)-2], "-"), nil
+}
+
+type LabData struct {
+	Containers []ContainerDetails `json:"containers"`
+	MySocketIo []*MySocketIoEntry `json:"mysocketio"`
 }

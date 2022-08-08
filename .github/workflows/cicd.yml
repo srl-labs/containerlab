@@ -8,12 +8,14 @@ on:
     tags:
       - "v*"
   pull_request:
+  workflow_dispatch:
 
 env:
-  GOVER: 1.17.2
+  GOVER: 1.18.4
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 4.19.1-4
   GORELEASER_VER: v1.5.0
+  PODMAN_VER: v4.1.1
 
 jobs:
   file-changes:
@@ -104,6 +106,62 @@ jobs:
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
 
+  build-podman-v4:
+    env:
+      CGO_ENABLED: 1 # CGO is required for podman
+    runs-on: ubuntu-20.04
+    needs: file-changes
+    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Cache podman bin
+        id: cache-podman-bin
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./bin
+          key: ${{ runner.os }}-podman-${{ env.PODMAN_VER }}
+          restore-keys: |
+            ${{ runner.os }}-podman
+
+      - uses: actions/checkout@v3
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
+        with:
+          repository: containers/podman
+          ref: v4.1.1
+
+      - uses: actions/setup-go@v2
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
+        with:
+          go-version: ${{ env.GOVER }}
+
+      - name: Cache go modules
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-podman-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-podman
+
+      - name: Add build packages
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
+        run: sudo apt install -y libsystemd-dev libseccomp-dev pkg-config golang-github-proglottis-gpgme-dev
+
+      - name: Build podman v4
+        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
+        run: make binaries
+
+      # store podman binary as artifact
+      - uses: actions/upload-artifact@v3
+        with:
+          name: podman-bins
+          path: bin
+
   smoke-tests:
     runs-on: ubuntu-20.04
     strategy:
@@ -115,6 +173,7 @@ jobs:
     needs:
       - unit-test
       - build-containerlab
+      - build-podman-v4
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -125,6 +184,13 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: download podman bin artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: podman-bins
+      - name: Move podman to /usr/bin
+        run: sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
 
       - name: Enable Podman API service
         run: sudo systemctl start podman
@@ -213,6 +279,13 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: download podman bin artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: podman-bins
+      - name: Move podman to /usr/bin
+        run: sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
 
       - name: Enable Podman API service
         run: sudo systemctl start podman
@@ -335,12 +408,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Install upx
-        run: |
-          sudo apt update && sudo apt install -y libucl1
-          curl -L http://archive.ubuntu.com/ubuntu/pool/universe/u/upx-ucl/upx-ucl_3.96-2_amd64.deb -o /tmp/upx.deb
-          sudo dpkg -i /tmp/upx.deb
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1

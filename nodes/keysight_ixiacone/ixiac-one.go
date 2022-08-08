@@ -16,9 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-var (
-	kindnames = []string{"keysight_ixia-c-one"}
-)
+var kindnames = []string{"keysight_ixia-c-one"}
 
 var ixiacStatusConfig = struct {
 	statusSleepDuration time.Duration
@@ -90,7 +88,6 @@ func ixiacPostDeploy(ctx context.Context, r runtime.ContainerRuntime, cfg *types
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
 		_, stderr, err := r.Exec(ctx, cfg.LongName, []string{"bash", "-c", ixiacOneCmd})
-
 		if err != nil {
 			return err
 		}

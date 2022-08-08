@@ -54,12 +54,13 @@ var versionCmd = &cobra.Command{
 }
 
 // get LatestVersion fetches latest containerlab release version from Github releases
-func getLatestVersion(vc chan string) { //skipcq: RVV-A0006
+func getLatestVersion(vc chan string) { // skipcq: RVV-A0006
 	// client that doesn't follow redirects
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
-		}}
+		},
+	}
 	resp, err := client.Head(fmt.Sprintf("%s/releases/latest", repoUrl))
 	if err != nil || resp.StatusCode != 302 {
 		log.Debugf("error occurred during latest version fetch: %v", err)

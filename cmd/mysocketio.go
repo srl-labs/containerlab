@@ -20,8 +20,10 @@ import (
 
 const loginEndpoint = "https://api.mysocket.io/login"
 
-var email string
-var password string
+var (
+	email    string
+	password string
+)
 
 type tokenResp struct {
 	Token string

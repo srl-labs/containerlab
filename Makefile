@@ -22,7 +22,7 @@ lint:
 	golangci-lint run
 
 clint:
-	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.40.1 golangci-lint run --timeout 5m -v
+	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.47.1 golangci-lint run --timeout 5m -v
 
 .PHONY: docs
 docs:

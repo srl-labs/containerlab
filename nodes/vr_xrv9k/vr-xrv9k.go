@@ -9,15 +9,14 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
-)
+var kindnames = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
 
 const (
 	scrapliPlatformName = "cisco_iosxr"
@@ -109,12 +108,11 @@ func (s *vrXRV9K) Delete(ctx context.Context) error {
 }
 
 func (s *vrXRV9K) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
+	err := netconf.SaveConfig(s.cfg.LongName,
 		defaultUser,
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

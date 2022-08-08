@@ -18,7 +18,7 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	"github.com/containernetworking/cni/libcni"
-	"github.com/containernetworking/cni/pkg/types/current"
+	current "github.com/containernetworking/cni/pkg/types/040"
 	"github.com/docker/go-units"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
@@ -28,6 +28,8 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -104,6 +106,7 @@ func (*ContainerdRuntime) CreateNet(_ context.Context) error {
 	log.Debug("CreateNet() - Not needed with containerd")
 	return nil
 }
+
 func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	var err error
 	bridgename := c.mgmt.Bridge
@@ -641,12 +644,12 @@ func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context, input
 			case containerd.Running:
 				ctr.Status = "Up"
 			default:
-				ctr.Status = strings.Title(string(status.Status))
+				ctr.Status = cases.Title(language.English).String(ctr.State)
 			}
 
 			ctr.Pid = int(task.Pid())
 		} else {
-			ctr.State = strings.Title(string(containerd.Unknown))
+			ctr.State = cases.Title(language.English).String(string(containerd.Unknown))
 			ctr.Status = "Unknown"
 			ctr.Pid = -1
 		}
@@ -686,6 +689,7 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	}
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
+
 func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, cmd []string) ([]byte, []byte, error) {
 	return c.internalExec(ctx, containername, cmd, false)
 }

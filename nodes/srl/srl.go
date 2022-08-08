@@ -46,6 +46,7 @@ set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
 set / system tls server-profile clab-profile authenticate-client false
 {{- end }}
 set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
+set / system gnmi-server unix-socket admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
 set / system lldp admin-state enable
@@ -432,10 +433,6 @@ func (s *srl) createSRLFiles() error {
 
 //
 
-type mac struct {
-	MAC string
-}
-
 func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
@@ -444,25 +441,21 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 		return errors.Wrap(err, "failed to get srl topology file")
 	}
 
-	// Use node index as part of a deterministically generated MAC
-	// this ensures that different srl nodes will have different macs for their ports
-	// (for labs up to 4096 nodes)
-	m := fmt.Sprintf("1a:b%1x:%02x:00:00:00", cfg.Index/256, cfg.Index%256)
-	mac := mac{
-		MAC: m,
-	}
+	mac := genMac(cfg)
+
 	log.Debug(mac, dst)
+
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	return tpl.Execute(f, mac)
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner
 func (s *srl) addDefaultConfig(ctx context.Context) error {
-
 	b, err := s.banner(ctx)
 	if err != nil {
 		return err
@@ -499,7 +492,6 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		"-c",
 		"sr_cli -ed < tmp/clab-config",
 	})
-
 	if err != nil {
 		return err
 	}
@@ -519,7 +511,6 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -529,7 +520,6 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"-c",
 		"sr_cli -ed --post 'commit save' < tmp/clab-config",
 	})
-
 	if err != nil {
 		return err
 	}
@@ -539,6 +529,9 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	return nil
 }
 
+// populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
+// to mitigate the fact that srlinux uses non default netns for management and thus
+// can't leverage docker DNS service
 func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
 	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
 	if err != nil {

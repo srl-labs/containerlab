@@ -6,7 +6,6 @@ This test suite verifies
 *** Settings ***
 Library           OperatingSystem
 Library           String
-Suite Setup       Setup
 Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy -t ${topo} --cleanup
 
 *** Variables ***
@@ -52,8 +51,3 @@ Check ${lab-name} mgmt network is gone
     ...    sudo ip l show dev ${mgmt-bridge}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
-
-*** Keywords ***
-Setup
-    # skipping this test suite for podman for now
-    Skip If    '${runtime}' == 'podman'

@@ -14,15 +14,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var debugCount int
-var debug bool
-var timeout time.Duration
+var (
+	debugCount int
+	debug      bool
+	timeout    time.Duration
+	logLevel   string
+)
 
 // path to the topology file
 var topo string
-var varsFile string
-var graph bool
-var rt string
+
+var (
+	varsFile string
+	graph    bool
+	rt       string
+)
 
 // lab name
 var name string
@@ -38,7 +44,7 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1) //skipcq: RVV-A0003
+		os.Exit(1) // skipcq: RVV-A0003
 	}
 }
 
@@ -51,6 +57,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second, "timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "logging level; one of [trace, debug, info, warning, error, fatal]")
 }
 
 func sudoCheck(_ *cobra.Command, _ []string) error {
@@ -62,12 +69,21 @@ func sudoCheck(_ *cobra.Command, _ []string) error {
 }
 
 func preRunFn(cmd *cobra.Command, _ []string) error {
-
-	// set debug level when required
-	debug = debugCount > 0
-	if debug {
+	// setting log level
+	switch {
+	case debugCount > 0:
 		log.SetLevel(log.DebugLevel)
+	default:
+		l, err := log.ParseLevel(logLevel)
+		if err != nil {
+			return err
+		}
+
+		log.SetLevel(l)
 	}
+
+	// setting output to stderr, so that json outputs can be parsed
+	log.SetOutput(os.Stderr)
 
 	return getTopoFilePath(cmd)
 }
@@ -105,5 +121,4 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	log.Debugf("topology file found: %s", files[0])
 
 	return err
-
 }

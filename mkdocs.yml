@@ -27,7 +27,7 @@ nav:
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
-          - Checkpoint Cloudguard: manual/kinds/checkpoint_cloudguard.md
+          - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
           - Openvswitch bridge: manual/kinds/ovs-bridge.md
@@ -89,6 +89,7 @@ nav:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
+      - "0.30": rn/0.30.md
       - "0.29": rn/0.29.md
       - "0.28": rn/0.28.md
       - "0.27": rn/0.27.md

@@ -11,6 +11,7 @@ ${node1-name}     n1
 ${node2-name}     n2
 ${n1-mgmt-ip}
 ${n2-mgmt-ip}     172.20.20.22
+${runtime}        docker
 
 *** Test Cases ***
 Deploy ${lab-name} lab
@@ -45,6 +46,13 @@ Ensure IPv6 default route is in the config file
     ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
     Log    ${f}
     Should Contain    ${f}    ipv6 route
+
+Ensure MGMT VRF is present
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    MGMT
 
 Ensure n1 is reachable over ssh
     Common.Login via SSH with username and password

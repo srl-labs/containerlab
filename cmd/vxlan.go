@@ -15,12 +15,14 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-var vxlanRemote string
-var cntLink string
-var parentDev string
-var vxlanMTU int
-var vxlanID int
-var delPrefix string
+var (
+	vxlanRemote string
+	cntLink     string
+	parentDev   string
+	vxlanMTU    int
+	vxlanID     int
+	delPrefix   string
+)
 
 func init() {
 	toolsCmd.AddCommand(vxlanCmd)

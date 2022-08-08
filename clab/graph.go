@@ -95,7 +95,7 @@ func (c *CLab) GenerateGraph(_ string) error {
 		if err := g.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName, false, attr); err != nil {
 			return err
 		}
-		//log.Info(link.A.Node.ShortName, " <-> ", link.B.Node.ShortName)
+		// log.Info(link.A.Node.ShortName, " <-> ", link.B.Node.ShortName)
 	}
 
 	// create graph directory
@@ -218,5 +218,4 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	log.Infof("Serving topology graph on http://%s", srv)
 
 	return http.ListenAndServe(srv, nil)
-
 }

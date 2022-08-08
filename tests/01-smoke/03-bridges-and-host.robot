@@ -50,8 +50,6 @@ Verify links in host ns
     Should Contain    ${output}    state UP
 
 Verify management network is using user-specified bridge
-    # skipping this test suite for podman as the management bridge has an incorrect name
-    Skip If    '${runtime}' == 'podman'
     # show management interface info and cut the information about the ifindex of the remote veth
     # note that exec returns the info in the stderr stream, thus we use stderr to parse the ifindex
     ${rc}    ${iface} =    OperatingSystem.Run And Return Rc And Output

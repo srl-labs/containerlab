@@ -56,7 +56,6 @@ func AppendHostsFileEntries(containers []types.GenericContainer, labname string)
 
 // generateHostsEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs
 func generateHostsEntries(containers []types.GenericContainer, labname string) []byte {
-
 	entries := bytes.Buffer{}
 	v6entries := bytes.Buffer{}
 

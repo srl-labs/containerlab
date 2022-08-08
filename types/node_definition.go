@@ -106,7 +106,6 @@ func (n *NodeDefinition) GetEnforceStartupConfig() bool {
 		return false
 	}
 	return n.EnforceStartupConfig
-
 }
 
 func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {

@@ -9,15 +9,14 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	kindnames = []string{"vr-csr", "vr-cisco_csr1000v"}
-)
+var kindnames = []string{"vr-csr", "vr-cisco_csr1000v"}
 
 const (
 	scrapliPlatformName = "cisco_iosxe"
@@ -106,12 +105,11 @@ func (s *vrCsr) Delete(ctx context.Context) error {
 }
 
 func (s *vrCsr) SaveConfig(_ context.Context) error {
-	err := utils.SaveCfgViaNetconf(s.cfg.LongName,
+	err := netconf.SaveConfig(s.cfg.LongName,
 		defaultUser,
 		defaultPassword,
 		scrapliPlatformName,
 	)
-
 	if err != nil {
 		return err
 	}

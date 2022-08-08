@@ -14,9 +14,7 @@ import (
 	"github.com/weaveworks/ignite/pkg/operations"
 )
 
-var (
-	kindnames = []string{"linux"}
-)
+var kindnames = []string{"linux"}
 
 func init() {
 	nodes.Register(kindnames, func() nodes.Node {

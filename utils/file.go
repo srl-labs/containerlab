@@ -7,16 +7,19 @@ package utils
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
-var errNonRegularFile = errors.New("non-regular file")
-var errHTTPFetch = errors.New("failed to fetch http(s) resource")
+var (
+	errNonRegularFile = errors.New("non-regular file")
+	errHTTPFetch      = errors.New("failed to fetch http(s) resource")
+)
 
 // FileExists returns true if a file referenced by filename exists & accessible
 //

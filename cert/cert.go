@@ -201,11 +201,11 @@ func GenerateCert(ca, caKey string, csrJSONTpl *template.Template, input CertInp
 // RetrieveNodeCertData reads the node private key and certificate by the well known paths
 // if either of those files doesn't exist, an error is returned
 func RetrieveNodeCertData(n *types.NodeConfig, labCADir string) (*Certificates, error) {
-	var nodeCertFilesDir = filepath.Join(labCADir, n.ShortName)
-	var nodeCertFile = filepath.Join(nodeCertFilesDir, n.ShortName+".pem")
-	var nodeKeyFile = filepath.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
+	nodeCertFilesDir := filepath.Join(labCADir, n.ShortName)
+	nodeCertFile := filepath.Join(nodeCertFilesDir, n.ShortName+".pem")
+	nodeKeyFile := filepath.Join(nodeCertFilesDir, n.ShortName+"-key.pem")
 
-	var certs = &Certificates{}
+	certs := &Certificates{}
 
 	var err error
 	stat, err := os.Stat(nodeCertFilesDir)
@@ -233,7 +233,7 @@ func writeCertFiles(certs *Certificates, filesPrefix string) {
 	utils.CreateFile(filesPrefix+".csr", string(certs.Csr))
 }
 
-//CreateRootCA creates RootCA key/certificate if it is needed by the topology
+// CreateRootCA creates RootCA key/certificate if it is needed by the topology
 func CreateRootCA(configName, labCARoot string, ns map[string]nodes.Node) error {
 	rootCANeeded := false
 	// check if srl kinds defined in topo
@@ -249,11 +249,11 @@ func CreateRootCA(configName, labCARoot string, ns map[string]nodes.Node) error 
 		return nil
 	}
 
-	var rootCaCertPath = filepath.Join(labCARoot, "root-ca.pem")
-	var rootCaKeyPath = filepath.Join(labCARoot, "root-ca-key.pem")
+	rootCaCertPath := filepath.Join(labCARoot, "root-ca.pem")
+	rootCaKeyPath := filepath.Join(labCARoot, "root-ca-key.pem")
 
-	var rootCaCertExists = false
-	var rootCaKeyExists = false
+	rootCaCertExists := false
+	rootCaKeyExists := false
 
 	_, err := os.Stat(rootCaCertPath)
 	if err == nil {

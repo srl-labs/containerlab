@@ -2,10 +2,12 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package utils
+// Package netconf contains netconf-based functions used in containerlab.
+package netconf
 
 import (
 	"fmt"
+
 	"github.com/scrapli/scrapligo/util"
 
 	"github.com/scrapli/scrapligo/driver/netconf"
@@ -13,20 +15,21 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 )
 
-// SaveCfgViaNetconf saves the running config to the startup by means
-// of invoking a netconf rpc <copy-config>
-// this method is used on the network elements that can't perform a save of config via other means
-func SaveCfgViaNetconf(addr, username, password, _ string) error {
-	baseOpts := []util.Option{
+// SaveConfig saves the running config to the startup by means
+// of invoking a netconf rpc <copy-config> from running to startup datastore
+// this method is used on the network elements that can't perform configuration save via other means.
+func SaveConfig(addr, username, password, _ string) error {
+	opts := []util.Option{
 		options.WithAuthNoStrictKey(),
 		options.WithAuthUsername(username),
 		options.WithAuthPassword(password),
 		options.WithTransportType(transport.StandardTransport),
+		options.WithPort(830),
 	}
 
 	d, err := netconf.NewDriver(
 		addr,
-		baseOpts...,
+		opts...,
 	)
 	if err != nil {
 		return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)

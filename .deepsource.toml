@@ -7,4 +7,12 @@ name = "go"
 enabled = true
 
   [analyzers.meta]
-  import_paths = ["github.com/srl-labs/containerlab"]
+  import_root = "github.com/srl-labs/containerlab"
+
+[[transformers]]
+name = "gofumpt"
+enabled = true
+
+[[transformers]]
+name = "gofmt"
+enabled = true

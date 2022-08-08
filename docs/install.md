@@ -5,11 +5,11 @@ hide:
 Containerlab is distributed as a Linux deb/rpm package and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
 
 ### Pre-requisites
-The following requirements must be satisfied in order to let containerlab tool run successfully:
+The following requirements must be satisfied to let containerlab tool run successfully:
 
 * A user should have `sudo` privileges to run containerlab.
 * A Linux server/VM[^2] and [Docker](https://docs.docker.com/engine/install/) installed.
-* Load container images (e.g. Nokia SR Linux, Arista cEOS) which are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
+* Load container images (e.g. Nokia SR Linux, Arista cEOS) that are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
 ### Install script
 Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) which detects the operating system type and installs the relevant package:
@@ -76,9 +76,9 @@ Containerlab is also available in a container packaging. The latest containerlab
 docker pull ghcr.io/srl-labs/clab
 ```
 
-To pick any of the released versions starting from release 0.19.0, use the version number as a tag, for example: `docker pull ghcr.io/srl-labs/clab:0.19.0`
+To pick any of the released versions starting from release 0.19.0, use the version number as a tag, for example, `docker pull ghcr.io/srl-labs/clab:0.19.0`
 
-Since containerlab itself deploys containers and creates veth pairs, its run instructions are a bit more complex, but still it is a copy-paste-able command.
+Since containerlab itself deploys containers and creates veth pairs, its run instructions are a bit more complex, but still, it is a copy-paste-able command.
 
 For example, if your lab files are contained within the current working directory - `$(pwd)` - then you can launch containerlab container as follows:
 
@@ -88,6 +88,7 @@ docker run --rm -it --privileged \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /var/run/netns:/var/run/netns \
     -v /etc/hosts:/etc/hosts \
+    -v /var/lib/docker/containers:/var/lib/docker/containers \
     --pid="host" \
     -v $(pwd):$(pwd) \
     -w $(pwd) \
