@@ -41,10 +41,11 @@ type CertInput struct {
 	OrganizationUnit string
 	Expiry           string
 
-	Name     string
-	LongName string
-	Fqdn     string
-	Prefix   string
+	Name           string
+	LongName       string
+	Fqdn           string
+	SubjectAltName string
+	Prefix         string
 }
 
 // CaRootInput struct
@@ -95,7 +96,8 @@ var NodeCSRTempl string = `{
     "hosts": [
       "{{.Name}}",
       "{{.LongName}}",
-      "{{.Fqdn}}"
+      "{{.Fqdn}}",
+	  {{.SubjectAltName}}
     ]
 }
 `
