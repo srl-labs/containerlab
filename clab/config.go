@@ -230,6 +230,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
 		Memory:          c.Config.Topology.GetNodeMemory(nodeName),
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
+		SubjectAltNames: c.Config.Topology.GetNodeSubjectAltName(nodeName),
 
 		// Extras
 		Extras: c.Config.Topology.GetNodeExtras(nodeName),

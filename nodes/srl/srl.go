@@ -188,18 +188,18 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 		if err != nil {
 			log.Errorf("failed to parse Node CSR Template: %v", err)
 		}
-		sans := []string{}
-		sansStr, err := json.Marshal(sans)
+		sansStr, err := json.Marshal(s.cfg.SubjectAltNames)
 		if err != nil {
 			log.Errorf("failed to marshal SANs: %v", err)
 		}
+		log.Debugf("SANs: %s", strings.Trim(string(sansStr), "[]"))
 
 		certInput := cert.CertInput{
-			Name:           s.cfg.ShortName,
-			LongName:       s.cfg.LongName,
-			Fqdn:           s.cfg.Fqdn,
-			SubjectAltName: strings.Trim(string(sansStr), "[]"),
-			Prefix:         configName,
+			Name:            s.cfg.ShortName,
+			LongName:        s.cfg.LongName,
+			Fqdn:            s.cfg.Fqdn,
+			SubjectAltNames: strings.Trim(string(sansStr), "[]"),
+			Prefix:          configName,
 		}
 		nodeCerts, err = cert.GenerateCert(
 			path.Join(labCARoot, "root-ca.pem"),

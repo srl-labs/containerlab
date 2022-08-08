@@ -3,6 +3,8 @@ package types
 import (
 	"os"
 	"strings"
+
+	"github.com/cloudflare/cfssl/log"
 )
 
 const (
@@ -23,6 +25,8 @@ type NodeDefinition struct {
 	Position             string            `yaml:"position,omitempty"`
 	Entrypoint           string            `yaml:"entrypoint,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
+	// list of subject Alternative Names (SAN) to be added to the node's certificate
+	SubjectAltNames []string `yaml:"subjectAltNames,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
@@ -270,7 +274,7 @@ func (n *NodeDefinition) GetSysctls() map[string]string {
 	if n == nil || n.Sysctls == nil {
 		return map[string]string{}
 	}
-	
+
 	return n.Sysctls
 }
 
@@ -279,6 +283,14 @@ func (n *NodeDefinition) GetExtras() *Extras {
 		return nil
 	}
 	return n.Extras
+}
+
+func (n *NodeDefinition) GetSubjectAltName() []string {
+	if n == nil {
+		return nil
+	}
+	log.Info("GetSubjectAltName called %s", n.SubjectAltNames)
+	return n.SubjectAltNames
 }
 
 // ImportEnvs imports all environment variales defined in the shell
