@@ -61,9 +61,11 @@ docker tag srlinux:20.6.1-286 srlinux:latest
 
 With `subjectAltNames` the user sets the Subject Alternative Names that will be added to the node's certificate. Host names that are set by default are:
 
-- `shortName`
-- `longName`
-- `FQDN`
+For a topology node named "srl" in a lab named "srl01", the following SANs are set by default:
+
+- `srl`
+- `clab-srl01-srl`
+- `srl.srl01.io`
 
 ```yaml
 name: srl01
