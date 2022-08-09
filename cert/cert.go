@@ -44,6 +44,7 @@ type CertInput struct {
 	Name     string
 	LongName string
 	Fqdn     string
+	SANs     []string
 	Prefix   string
 }
 
@@ -96,6 +97,7 @@ var NodeCSRTempl string = `{
       "{{.Name}}",
       "{{.LongName}}",
       "{{.Fqdn}}"
+      {{range .SANs}},"{{.}}"{{end}}
     ]
 }
 `

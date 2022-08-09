@@ -188,11 +188,14 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 		if err != nil {
 			log.Errorf("failed to parse Node CSR Template: %v", err)
 		}
+		log.Debugf("creating node certificate for %s", s.cfg.SANs)
+
 		certInput := cert.CertInput{
-			Name:     s.cfg.ShortName,
-			LongName: s.cfg.LongName,
-			Fqdn:     s.cfg.Fqdn,
-			Prefix:   configName,
+			Name:            s.cfg.ShortName,
+			LongName:        s.cfg.LongName,
+			Fqdn:            s.cfg.Fqdn,
+			SANs:            s.cfg.SANs,
+			Prefix:          configName,
 		}
 		nodeCerts, err = cert.GenerateCert(
 			path.Join(labCARoot, "root-ca.pem"),

@@ -416,6 +416,16 @@ func (t *Topology) GetSysCtl(name string) map[string]string {
 	return nil
 }
 
+// Return the Subject Alternative Name configuration for the given node
+func (t *Topology) GetSANs(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if len(ndef.GetSANs()) > 0 {
+			return ndef.GetSANs()
+		}
+	}
+	return nil
+}
+
 // Returns the 'extras' section for the given node
 func (t *Topology) GetNodeExtras(name string) *Extras {
 	if ndef, ok := t.Nodes[name]; ok {
