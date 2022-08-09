@@ -361,9 +361,14 @@ topology:
 ```
 
 ### network-mode
+
 By default containerlab nodes use bridge-mode driver - nodes are created with their first interface connected to a docker network (management network).
 
-It is possible to override this behavior and set the network mode to the value of `host`.
+It is possible to change this behavior using `network-mode` property of a node.
+
+#### host mode
+
+The `network-mode` configuration option set to `host` will launch the node in the [host networking mode](https://docs.docker.com/network/host/).
 
 ```yaml
 # example node definition with host networking mode
@@ -372,7 +377,7 @@ my-node:
   network-mode: host
 ```
 
-The `network-mode` configuration option set to `host` will launch the node in the [host networking mode](https://docs.docker.com/network/host/).
+#### container mode
 
 Additionally, a node can join network namespace of another container - by referencing the node in the format of `container:parent_node_name`[^2]:
 
@@ -386,8 +391,10 @@ sidecar-node:
   startup-delay: 10 # (2)
 ```
 
-1.  `my-node` portion of a `network-mode` property instructs `sidecar-node` to join the network namespace of a `my-node`.
-2.  `startup-delay` is required in this case in order to properly initialize the namespace of a parent container.
+1. `my-node` portion of a `network-mode` property instructs `sidecar-node` to join the network namespace of a `my-node`.
+2. `startup-delay` is required in this case in order to properly initialize the namespace of a parent container.
+
+Container name used after `container:` portion can refer to a node defined in containerlab topology or can refer to a name of a container that was launched outside of containerlab. This is useful when containerlab node needs to connect to a network namespace of a container deployed by 3rd party management tool (e.g. k8s kind).
 
 ### runtime
 By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman`, `containerd`, and `ignite` runtimes.
