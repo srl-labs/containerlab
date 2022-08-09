@@ -104,7 +104,7 @@ type NodeConfig struct {
 	Labels               map[string]string `json:"labels,omitempty"`      // container labels
 	Endpoints            []Endpoint        `json:"-"`                     // Slice of pointers to local endpoints, DO NOT marshal into JSON as it creates a cyclical error
 	// List of Subject Alternative Names (SAN) to be added to the node's TLS certificate
-	SANs []string `json:"subjectAltNames,omitempty"`
+	SANs []string `json:"SANs,omitempty"`
 	// Ignite sandbox and kernel imageNames
 	Sandbox string `json:"sandbox,omitempty"`
 	Kernel  string `json:"kernel,omitempty"`

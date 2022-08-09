@@ -41,11 +41,11 @@ type CertInput struct {
 	OrganizationUnit string
 	Expiry           string
 
-	Name            string
-	LongName        string
-	Fqdn            string
-	SANs 			[]string
-	Prefix          string
+	Name     string
+	LongName string
+	Fqdn     string
+	SANs     []string
+	Prefix   string
 }
 
 // CaRootInput struct

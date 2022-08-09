@@ -24,7 +24,7 @@ type NodeDefinition struct {
 	Entrypoint           string            `yaml:"entrypoint,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
 	// list of subject Alternative Names (SAN) to be added to the node's certificate
-	SANs []string `yaml:"subjectAltNames,omitempty"`
+	SANs []string `yaml:"SANs,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings

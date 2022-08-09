@@ -57,9 +57,9 @@ We use `<repository>` image name throughout the docs articles. This means that t
 docker tag srlinux:20.6.1-286 srlinux:latest
 ```
 
-### subject alternative names
+### subject alternative names (SAN)
 
-With `subjectAltNames` the user sets the Subject Alternative Names that will be added to the node's certificate. Host names that are set by default are:
+With `SANs` the user sets the Subject Alternative Names that will be added to the node's certificate. Host names that are set by default are:
 
 For a topology node named "srl" in a lab named "srl01", the following SANs are set by default:
 
@@ -79,7 +79,7 @@ topology:
   nodes:
     srl:
       kind: srl
-      subjectAltNames:
+      SANs:
         - "test.com"
 ```
 
