@@ -417,10 +417,10 @@ func (t *Topology) GetSysCtl(name string) map[string]string {
 }
 
 // Return the Subject Alternative Name configuration for the given node
-func (t *Topology) GetNodeSubjectAltName(name string) []string {
+func (t *Topology) GetSANs(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if len(ndef.GetSubjectAltName()) > 0 {
-			return ndef.GetSubjectAltName()
+		if len(ndef.GetSANs()) > 0 {
+			return ndef.GetSANs()
 		}
 	}
 	return nil

@@ -24,7 +24,7 @@ type NodeDefinition struct {
 	Entrypoint           string            `yaml:"entrypoint,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
 	// list of subject Alternative Names (SAN) to be added to the node's certificate
-	SubjectAltNames []string `yaml:"subjectAltNames,omitempty"`
+	SANs []string `yaml:"subjectAltNames,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
@@ -282,11 +282,11 @@ func (n *NodeDefinition) GetExtras() *Extras {
 	return n.Extras
 }
 
-func (n *NodeDefinition) GetSubjectAltName() []string {
+func (n *NodeDefinition) GetSANs() []string {
 	if n == nil {
 		return nil
 	}
-	return n.SubjectAltNames
+	return n.SANs
 }
 
 // ImportEnvs imports all environment variales defined in the shell
