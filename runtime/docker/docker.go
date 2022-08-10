@@ -799,27 +799,25 @@ func (d *DockerRuntime) processNetworkMode(
 
 		// to support using network stack of containers that are scheduled by clab
 		// or containers deployed externally (i.e. by k8s kind)
-		// we first check if container name referenced in network-mode node property exists externally,
-		// if it doesn't, we assume that container belongs to clab topology
-		contName := netMode[1]
+		// we first check if container name referenced in network-mode node property exists internally,
+		// aka within clab topology. If it doesn't, we assume that users referred to an external container.
+		// extract lab/topo prefix to craft a full container name if an internal container is referenced.
+		contName := strings.SplitN(node.LongName, node.ShortName, 2)[0] + netMode[1]
 
-		// check if a container exists externally
-		// i.e. launched outside of clab
 		_, err := d.GetContainer(ctx, contName)
 		if err != nil {
-			log.Debugf("container %q was not found externally, assuming it is scheduled by clab from now on", contName)
+			log.Debugf("container %q was not found by its name, assuming it is exists externally with unprefixed", contName)
 
-			// container doesn't exist externally, so we assume it is scheduled by clab.
-			// Extract lab/topo prefix to provide a full (long) container name if an internal container is referenced.
-			contName = strings.SplitN(node.LongName, node.ShortName, 2)[0] + netMode[1]
+			// container doesn't exist internally, so we assume it exists externally
+			// with a non-prefixed name.
+			contName = netMode[1]
 
-			// check if container is found under clab fqdn
 			if _, err := d.GetContainer(ctx, contName); err != nil {
 				return fmt.Errorf("container %q is referenced in network-mode, but was not found", netMode[1])
 			}
 		}
 
-		// Compile the net spec
+		// compile the net spec
 		containerHostConfig.NetworkMode = container.NetworkMode("container:" + contName)
 
 		// unset the hostname as it is not supported in this case
