@@ -14,7 +14,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-// GenerateInventories generate various inventory files and writes it to a lab location
+// GenerateInventories generate various inventory files and writes it to a lab location.
 func (c *CLab) GenerateInventories() error {
 	ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
 	f, err := os.Create(ansibleInvFPath)
@@ -24,7 +24,7 @@ func (c *CLab) GenerateInventories() error {
 	return c.generateAnsibleInventory(f)
 }
 
-// generateAnsibleInventory generates and writes ansible inventory file to w
+// generateAnsibleInventory generates and writes ansible inventory file to w.
 func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	invT := `all:
   children:
@@ -63,7 +63,8 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	for _, n := range c.Nodes {
 		i.Nodes[n.Config().Kind] = append(i.Nodes[n.Config().Kind], n.Config())
 		if n.Config().Labels["ansible-group"] != "" {
-			i.Groups[n.Config().Labels["ansible-group"]] = append(i.Groups[n.Config().Labels["ansible-group"]], n.Config())
+			i.Groups[n.Config().Labels["ansible-group"]] =
+				append(i.Groups[n.Config().Labels["ansible-group"]], n.Config())
 		}
 	}
 

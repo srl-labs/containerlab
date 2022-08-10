@@ -18,7 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-// GenerateExports generates various export files and writes it to a lab location
+// GenerateExports generates various export files and writes it to a lab location.
 func (c *CLab) GenerateExports(f io.Writer, p string) error {
 	err := c.exportTopologyDataWithTemplate(f, p)
 	if err != nil {
@@ -33,7 +33,7 @@ func (c *CLab) GenerateExports(f io.Writer, p string) error {
 }
 
 // TopologyExport holds a combination of CLab structure and map of NodeConfig types,
-// which expands Node definitions with dynamically created values
+// which expands Node definitions with dynamically created values.
 type TopologyExport struct {
 	Name        string                       `json:"name"`
 	Type        string                       `json:"type"`
@@ -41,7 +41,7 @@ type TopologyExport struct {
 	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
 }
 
-// exportTopologyDataWithTemplate generates and writes topology data file to w using a template
+// exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
 func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
 	n := filepath.Base(p)
 	t, err := template.New(n).
@@ -81,7 +81,7 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
 	return err
 }
 
-// generates and writes topology data file to w using a default built-in template
+// generates and writes topology data file to w using a default built-in template.
 func (c *CLab) exportTopologyDataWithMinimalTemplate(w io.Writer) error {
 	tdef := `{
   "name": "{{ .Name }}",

@@ -57,6 +57,32 @@ We use `<repository>` image name throughout the docs articles. This means that t
 docker tag srlinux:20.6.1-286 srlinux:latest
 ```
 
+### subject alternative names (SAN)
+
+With `SANs` the user sets the Subject Alternative Names that will be added to the node's certificate. Host names that are set by default are:
+
+For a topology node named "srl" in a lab named "srl01", the following SANs are set by default:
+
+- `srl`
+- `clab-srl01-srl`
+- `srl.srl01.io`
+
+```yaml
+name: srl01
+
+topology:
+  kinds:
+    srl:
+      type: ixrd3
+      image: ghcr.io/nokia/srlinux
+
+  nodes:
+    srl:
+      kind: srl
+      SANs:
+        - "test.com"
+```
+
 ### license
 Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
 

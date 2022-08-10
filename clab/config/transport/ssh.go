@@ -21,11 +21,11 @@ type SSHSession struct {
 
 type SSHTransportOption func(*SSHTransport) error
 
-// The SSH reply, executed command and the prompt
+// The SSH reply, executed command and the prompt.
 type SSHReply struct{ result, prompt, command string }
 
 // SSHTransport setting needs to be set before calling Connect()
-// SSHTransport implements the Transport interface
+// SSHTransport implements the Transport interface.
 type SSHTransport struct {
 	// Channel used to read. Can use Expect to Write & read with timeout
 	in chan SSHReply
@@ -52,7 +52,7 @@ type SSHTransport struct {
 	K SSHKind
 }
 
-// Add username & password authentication
+// Add username & password authentication.
 func WithUserNamePassword(username, password string) SSHTransportOption {
 	return func(tx *SSHTransport) error {
 		tx.SSHConfig.User = username
@@ -65,7 +65,7 @@ func WithUserNamePassword(username, password string) SSHTransportOption {
 }
 
 // Add a basic username & password to a config
-// Will initialize the config if required
+// Will initialize the config if required.
 func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 	return func(tx *SSHTransport) error {
 		tx.SSHConfig.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
@@ -116,7 +116,7 @@ func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SS
 // - The channel read the SSH session, splits on PromptChar
 // - Uses SSHKind's PromptParse to split the received data in *result* and *prompt* parts
 //   (if no valid prompt was found, prompt will simply be empty and result contain all the data)
-// - Emit data
+// - Emit data.
 func (t *SSHTransport) InChannel() {
 	// Ensure we have a working channel
 	t.in = make(chan SSHReply)
@@ -162,7 +162,7 @@ func (t *SSHTransport) InChannel() {
 	}
 }
 
-// Run a single command and wait for the reply
+// Run a single command and wait for the reply.
 func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 	if command != "" {
 		t.ses.Writeln(command)
@@ -230,7 +230,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 
 // Write a config snippet (a set of commands)
 // Session NEEDS to be configurable for other kinds
-// Part of the Transport interface
+// Part of the Transport interface.
 func (t *SSHTransport) Write(data, info *string) error {
 	if *data == "" {
 		return nil
@@ -271,7 +271,7 @@ func (t *SSHTransport) Write(data, info *string) error {
 }
 
 // Connect to a host
-// Part of the Transport interface
+// Part of the Transport interface.
 func (t *SSHTransport) Connect(host string, _ ...TransportOption) error {
 	// Assign Default Values
 	if t.PromptChar == "" {
@@ -302,7 +302,7 @@ func (t *SSHTransport) Connect(host string, _ ...TransportOption) error {
 }
 
 // Close the Session and channels
-// Part of the Transport interface
+// Part of the Transport interface.
 func (t *SSHTransport) Close() {
 	if t.in != nil {
 		close(t.in)
@@ -312,7 +312,7 @@ func (t *SSHTransport) Close() {
 }
 
 // Create a new SSH session (Dial, open in/out pipes and start the shell)
-// pass the authntication details in sshConfig
+// pass the authentication details in sshConfig.
 func NewSSHSession(host string, sshConfig *ssh.ClientConfig) (*SSHSession, error) {
 	if !strings.Contains(host, ":") {
 		return nil, fmt.Errorf("include the port in the host: %s", host)

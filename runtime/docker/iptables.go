@@ -16,7 +16,7 @@ const (
 	iptDelCmd   = "-D DOCKER-USER -o %s -j ACCEPT"
 )
 
-// installIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network
+// installIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network.
 func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
 		return
@@ -51,7 +51,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	return nil
 }
 
-// deleteIPTablesFwdRule deletes `allow` rule installed with InstallIPTablesFwdRule when the bridge interface doesn't exist anymore
+// deleteIPTablesFwdRule deletes `allow` rule installed with InstallIPTablesFwdRule when the bridge interface doesn't exist anymore.
 func (d *DockerRuntime) deleteIPTablesFwdRule(br string) (err error) {
 	if !*d.mgmt.ExternalAccess {
 		return

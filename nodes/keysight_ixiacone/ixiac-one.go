@@ -82,7 +82,7 @@ func (*ixiacOne) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-// ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node
+// ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node.
 func ixiacPostDeploy(ctx context.Context, r runtime.ContainerRuntime, cfg *types.NodeConfig) error {
 	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)

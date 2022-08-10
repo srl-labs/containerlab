@@ -6,10 +6,10 @@ import (
 	"github.com/srl-labs/containerlab/clab/config"
 )
 
-// Show the template variable s
+// Show the template variable s.
 var templateVarOnly bool
 
-// configCmd represents the config command
+// configCmd represents the config command.
 var configTemplateCmd = &cobra.Command{
 	Use:          "template",
 	Short:        "render a template",
@@ -59,6 +59,7 @@ var configTemplateCmd = &cobra.Command{
 func init() {
 	configCmd.AddCommand(configTemplateCmd)
 	configTemplateCmd.Flags().AddFlagSet(configCmd.Flags())
-	configTemplateCmd.Flags().BoolVarP(&templateVarOnly, "vars", "v", false, "show variable used for template rendering")
+	configTemplateCmd.Flags().BoolVarP(&templateVarOnly, "vars", "v", false,
+		"show variable used for template rendering")
 	configTemplateCmd.Flags().SortFlags = false
 }

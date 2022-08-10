@@ -106,7 +106,7 @@ func WithTopoFile(file, varsFile string) ClabOption {
 	}
 }
 
-// NewContainerLab function defines a new container lab
+// NewContainerLab function defines a new container lab.
 func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	c := &CLab{
 		Config: &Config{
@@ -135,7 +135,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	return c, err
 }
 
-// initMgmtNetwork sets management network config
+// initMgmtNetwork sets management network config.
 func (c *CLab) initMgmtNetwork() error {
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
 	if c.Config.Mgmt.Network == "" {
@@ -164,7 +164,7 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 
 // CreateNodes will schedule nodes creation
 // returns waitgroups for nodes with static and dynamic IPs,
-// since static nodes are scheduled first
+// since static nodes are scheduled first.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
 ) (*sync.WaitGroup, *sync.WaitGroup) {
@@ -278,7 +278,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	return wg
 }
 
-// CreateLinks creates links using the specified number of workers
+// CreateLinks creates links using the specified number of workers.
 func (c *CLab) CreateLinks(ctx context.Context, workers uint) {
 	wg := new(sync.WaitGroup)
 	wg.Add(int(workers))
@@ -319,7 +319,8 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint) {
 		}
 		for k, link := range linksCopy {
 			c.m.Lock()
-			if link.A.Node.DeploymentStatus == "created" && link.B.Node.DeploymentStatus == "created" {
+			if link.A.Node.DeploymentStatus == "created" &&
+				link.B.Node.DeploymentStatus == "created" {
 				linksChan <- link
 				delete(linksCopy, k)
 			}
@@ -413,7 +414,7 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 }
 
 // VethCleanup iterates over links found in clab topology to initiate removal of dangling veths in host networking namespace
-// See https://github.com/srl-labs/containerlab/issues/842 for the reference
+// See https://github.com/srl-labs/containerlab/issues/842 for the reference.
 func (c *CLab) VethCleanup(_ context.Context) error {
 	for _, link := range c.Links {
 		err := c.RemoveHostVeth(link)

@@ -11,7 +11,7 @@ func PauseProcessGroup(pgid int) error {
 	return syscall.Kill(-pgid, syscall.SIGSTOP)
 }
 
-// UnpauseProcessGroup send the SIGCONT to the given ProcessGroup identified by its ID
+// UnpauseProcessGroup send the SIGCONT to the given ProcessGroup identified by its ID.
 func UnpauseProcessGroup(pgid int) error {
 	return syscall.Kill(-pgid, syscall.SIGCONT)
 }

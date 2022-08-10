@@ -13,6 +13,15 @@
                     "description": "container image to use for this node",
                     "markdownDescription": "container [image](https://containerlab.dev/manual/nodes/#image) to use for this node"
                 },
+                "SANs": {
+                    "type": "array",
+                    "description": "list of subject alternative names (SAN) to use for this node",
+                    "markdownDescription": "list of [subject alternative names](https://containerlab.dev/manual/nodes/#subject-alternative-names) to use for this node",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
                 "kind": {
                     "type": "string",
                     "description": "kind of this node",

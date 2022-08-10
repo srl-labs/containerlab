@@ -9,7 +9,7 @@ const (
 	importEnvsKey = "__IMPORT_ENVS"
 )
 
-// NodeDefinition represents a configuration a given node can have in the lab definition file
+// NodeDefinition represents a configuration a given node can have in the lab definition file.
 type NodeDefinition struct {
 	Kind                 string            `yaml:"kind,omitempty"`
 	Group                string            `yaml:"group,omitempty"`
@@ -23,6 +23,8 @@ type NodeDefinition struct {
 	Position             string            `yaml:"position,omitempty"`
 	Entrypoint           string            `yaml:"entrypoint,omitempty"`
 	Cmd                  string            `yaml:"cmd,omitempty"`
+	// list of subject Alternative Names (SAN) to be added to the node's certificate
+	SANs []string `yaml:"SANs,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
@@ -280,8 +282,15 @@ func (n *NodeDefinition) GetExtras() *Extras {
 	return n.Extras
 }
 
+func (n *NodeDefinition) GetSANs() []string {
+	if n == nil {
+		return nil
+	}
+	return n.SANs
+}
+
 // ImportEnvs imports all environment variales defined in the shell
-// if __IMPORT_ENVS is set to true
+// if __IMPORT_ENVS is set to true.
 func (n *NodeDefinition) ImportEnvs() {
 	if n == nil || n.Env == nil {
 		return

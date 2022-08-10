@@ -232,8 +232,10 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 	vm.Spec.CopyFiles = copyFiles
 
 	// Setting up env variables
-	fcReqKey := igniteConstants.IGNITE_SANDBOX_ENV_VAR + "FIRECRACKER_GO_SDK_REQUEST_TIMEOUT_MILLISECONDS"
-	fcInitKey := igniteConstants.IGNITE_SANDBOX_ENV_VAR + "FIRECRACKER_GO_SDK_INIT_TIMEOUT_SECONDS"
+	fcReqKey := igniteConstants.IGNITE_SANDBOX_ENV_VAR +
+		"FIRECRACKER_GO_SDK_REQUEST_TIMEOUT_MILLISECONDS"
+	fcInitKey := igniteConstants.IGNITE_SANDBOX_ENV_VAR +
+		"FIRECRACKER_GO_SDK_INIT_TIMEOUT_SECONDS"
 	vm.SetAnnotation(fcReqKey, "1000")
 	vm.SetAnnotation(fcInitKey, "1")
 
@@ -297,7 +299,8 @@ func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.Gene
 	var labelStrings []string
 	for _, gf := range gfilters {
 		if gf.FilterType == "label" && gf.Operator == "=" {
-			labelStrings = append(labelStrings, fmt.Sprintf("{{.ObjectMeta.Labels.%s}}=%s", gf.Field, gf.Match))
+			labelStrings = append(labelStrings, fmt.Sprintf(
+				"{{.ObjectMeta.Labels.%s}}=%s", gf.Field, gf.Match))
 		}
 	}
 
@@ -348,7 +351,7 @@ func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*ty
 	return &genericCtrs[0], nil
 }
 
-// Transform docker-specific to generic container format
+// Transform docker-specific to generic container format.
 func (*IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
@@ -434,7 +437,7 @@ func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string)
 }
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
-// no-op for ignite
+// no-op for ignite.
 func (c *IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
 }

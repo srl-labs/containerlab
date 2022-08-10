@@ -31,7 +31,7 @@ var (
 	staticDir string
 )
 
-// graphCmd represents the graph command
+// graphCmd represents the graph command.
 var graphCmd = &cobra.Command{
 	Use:   "graph",
 	Short: "generate a topology graph",
@@ -117,9 +117,13 @@ func graphFn(_ *cobra.Command, _ []string) error {
 
 func init() {
 	rootCmd.AddCommand(graphCmd)
-	graphCmd.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080", "HTTP server address serving the topology view")
-	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false, "use only information from topo file when building graph")
+	graphCmd.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
+		"HTTP server address serving the topology view")
+	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false,
+		"use only information from topo file when building graph")
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file instead of launching the web server")
-	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultGraphTemplatePath, "Go html template used to generate the graph")
-	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath, "Serve static files from the specified directory")
+	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultGraphTemplatePath,
+		"Go html template used to generate the graph")
+	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath,
+		"Serve static files from the specified directory")
 }

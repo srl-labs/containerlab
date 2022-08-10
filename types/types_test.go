@@ -40,7 +40,7 @@ func getMySocketIoTestData() []mysocketioTestDataType {
 	}
 }
 
-// helper to convert from string to stringpointer
+// helper to convert from string to stringpointer.
 func strptr(s string) *string {
 	return &s
 }
@@ -50,7 +50,8 @@ func TestMySocketIoEntry_getContainerName(t *testing.T) {
 
 		result, err := x.entry.getContainerName()
 		if (err != nil) != x.getContainerNameErr {
-			t.Errorf("Error expected [%v] on %s but error was %v", x.getContainerNameErr, *x.entry.Name, err)
+			t.Errorf("Error expected [%v] on %s but error was %v",
+				x.getContainerNameErr, *x.entry.Name, err)
 			continue
 		}
 		if x.getContainerNameOutput != "" && result != x.getContainerNameOutput {
