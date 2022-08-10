@@ -8,7 +8,3 @@ enabled = true
 
   [analyzers.meta]
   import_root = "github.com/srl-labs/containerlab"
-
-[[transformers]]
-name = "gofumpt"
-enabled = true
