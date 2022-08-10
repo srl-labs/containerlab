@@ -37,7 +37,7 @@ var slug = `
 \____)___/|_| |_|\___)_||_|_|_| |_|\____)_|   |_|\_||_|____/ 
 `
 
-// versionCmd represents the version command
+// versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "show containerlab version or upgrade",
@@ -53,7 +53,7 @@ var versionCmd = &cobra.Command{
 	},
 }
 
-// get LatestVersion fetches latest containerlab release version from Github releases
+// get LatestVersion fetches latest containerlab release version from Github releases.
 func getLatestVersion(vc chan string) { // skipcq: RVV-A0006
 	// client that doesn't follow redirects
 	client := &http.Client{
@@ -82,7 +82,7 @@ func getLatestVersion(vc chan string) { // skipcq: RVV-A0006
 	}
 }
 
-// newVerNotification prints logs information about a new version if one was found
+// newVerNotification prints logs information about a new version if one was found.
 func newVerNotification(vc chan string) {
 	select {
 	case ver, ok := <-vc:
@@ -97,7 +97,7 @@ func newVerNotification(vc chan string) {
 
 // docsLinkFromVer creates a documentation path attribute for a given version
 // for 0.15.0 version, the it returns 0.15/
-// for 0.15.1 - 0.15/#0151
+// for 0.15.1 - 0.15/#0151.
 func docsLinkFromVer(ver string) string {
 	v, _ := gover.NewVersion(ver)
 	segments := v.Segments()

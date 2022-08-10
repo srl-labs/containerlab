@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	// map of commands per platform which start a CLI app
+	// map of commands per platform which start a CLI app.
 	NetworkOSCLICmd = map[string]string{
 		"arista_eos":    "Cli",
 		"nokia_srlinux": "sr_cli",
 	}
 
 	// map of the cli exec command and its argument per runtime
-	// which is used to spawn CLI session
+	// which is used to spawn CLI session.
 	CLIExecCommand = map[string]map[string]string{
 		"docker": {
 			"exec": "docker",
@@ -34,7 +34,7 @@ var (
 )
 
 // SpawnCLIviaExec spawns a CLI session over container runtime exec function
-// end ensures the CLI is available to be used for sending commands over
+// end ensures the CLI is available to be used for sending commands over.
 func SpawnCLIviaExec(platformName, contName, runtime string) (*network.Driver, error) {
 	opts := []util.Option{
 		options.WithAuthBypass(),

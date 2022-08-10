@@ -38,7 +38,7 @@ func init() {
 }
 
 // Init is used to initialize our runtime struct by calling all methods received from the caller
-// Invokes methods such as WithConfig, WithMgmtNet etc to populate the fields
+// Invokes methods such as WithConfig, WithMgmtNet etc to populate the fields.
 func (r *PodmanRuntime) Init(opts ...runtime.RuntimeOption) error {
 	for _, f := range opts {
 		f(r)
@@ -61,7 +61,7 @@ func (r *PodmanRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	}
 }
 
-// WithMgmtNet assigns struct mgmt net parameters to the runtime struct
+// WithMgmtNet assigns struct mgmt net parameters to the runtime struct.
 func (r *PodmanRuntime) WithMgmtNet(net *types.MgmtNet) {
 	// Check for nil pointers on input
 	if net == nil {
@@ -72,12 +72,12 @@ func (r *PodmanRuntime) WithMgmtNet(net *types.MgmtNet) {
 	r.mgmt = net
 }
 
-// WithKeepMgmtNet defines that we shouldn't delete mgmt network(s)
+// WithKeepMgmtNet defines that we shouldn't delete mgmt network(s).
 func (r *PodmanRuntime) WithKeepMgmtNet() {
 	r.config.KeepMgmtNet = true
 }
 
-// CreateNet used to create a new bridge for clab mgmt network
+// CreateNet used to create a new bridge for clab mgmt network.
 func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
@@ -102,7 +102,7 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 	return err
 }
 
-// DeleteNet deletes a clab mgmt bridge
+// DeleteNet deletes a clab mgmt bridge.
 func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	// Skip if "keep mgmt" is set
 	log.Debugf("Method DeleteNet was called with runtime inputs %+v and net settings %+v", r, r.mgmt)
@@ -138,7 +138,7 @@ func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) e
 	return err
 }
 
-// CreateContainer creates a container, but does not start it
+// CreateContainer creates a container, but does not start it.
 func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
@@ -153,7 +153,7 @@ func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConf
 	return res.ID, err
 }
 
-// StartContainer starts a previously created container by ID or its name and executes post-start actions method
+// StartContainer starts a previously created container by ID or its name and executes post-start actions method.
 func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *types.NodeConfig) (interface{}, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
@@ -195,7 +195,7 @@ func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
 	return nil
 }
 
-// ListContainers returns a list of all available containers in the system in a containerlab-specific struct
+// ListContainers returns a list of all available containers in the system in a containerlab-specific struct.
 func (r *PodmanRuntime) ListContainers(ctx context.Context, filters []*types.GenericFilter) ([]types.GenericContainer, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
@@ -242,7 +242,8 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, cmd []string) (std
 		return nil, nil, err
 	}
 	var sOut, sErr podmanWriterCloser
-	execSAAOpts := new(containers.ExecStartAndAttachOptions).WithOutputStream(&sOut).WithErrorStream(&sErr).WithAttachOutput(true).WithAttachError(true)
+	execSAAOpts := new(containers.ExecStartAndAttachOptions).WithOutputStream(&sOut).WithErrorStream(
+		&sErr).WithAttachOutput(true).WithAttachError(true)
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
 	if err != nil {
 		log.Errorf("failed to start/attach exec in container %q: %v", cID, err)
@@ -275,7 +276,7 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, cmd []strin
 	return nil
 }
 
-// DeleteContainer removes a given container from the system (if it exists)
+// DeleteContainer removes a given container from the system (if it exists).
 func (r *PodmanRuntime) DeleteContainer(ctx context.Context, contName string) error {
 	force := !r.config.GracefulShutdown
 	ctx, err := r.connect(ctx)
@@ -296,17 +297,17 @@ func (r *PodmanRuntime) DeleteContainer(ctx context.Context, contName string) er
 	return err
 }
 
-// Config returns the runtime configuration options
+// Config returns the runtime configuration options.
 func (r *PodmanRuntime) Config() runtime.RuntimeConfig {
 	return *r.config
 }
 
-// GetName returns runtime name as a string
+// GetName returns runtime name as a string.
 func (r *PodmanRuntime) GetName() string {
 	return runtimeName
 }
 
-// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container.
 func (r *PodmanRuntime) GetHostsPath(ctx context.Context, cID string) (string, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {

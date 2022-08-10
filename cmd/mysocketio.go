@@ -38,13 +38,13 @@ func init() {
 	_ = mysocketioLoginCmd.MarkFlagRequired("email")
 }
 
-// vxlanCmd represents the vxlan command container
+// vxlanCmd represents the vxlan command container.
 var mysocketioCmd = &cobra.Command{
 	Use:   "mysocketio",
 	Short: "Mysocket.io commands",
 }
 
-// mysocketioLoginCmd represents the mysocketio-login command
+// mysocketioLoginCmd represents the mysocketio-login command.
 var mysocketioLoginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Logs in to mysocket.io service and saves a token to current working directory",
@@ -86,7 +86,8 @@ var mysocketioLoginCmd = &cobra.Command{
 		}
 		err = ioutil.WriteFile(filepath.Join(cwd, ".mysocketio_token"), []byte(t.Token), 0640)
 		if err != nil {
-			return fmt.Errorf("failed to write mysocketio token file as %s: %v", filepath.Join(cwd, ".mysocketio_token"), err)
+			return fmt.Errorf("failed to write mysocketio token file as %s: %v",
+				filepath.Join(cwd, ".mysocketio_token"), err)
 		}
 		log.Infof("Saved mysocketio token as %s", filepath.Join(cwd, ".mysocketio_token"))
 		return nil

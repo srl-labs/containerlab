@@ -22,7 +22,7 @@ type DockerConfigAuth struct {
 	Auth string
 }
 
-// DockerConfig represents the docker config that is typically contained within ~/.docker/config.json
+// DockerConfig represents the docker config that is typically contained within ~/.docker/config.json.
 type DockerConfig struct {
 	Auths map[string]DockerConfigAuth `json:"auths,omitempty"`
 }
@@ -79,7 +79,7 @@ func GetDockerConfig(configPath string) (*DockerConfig, error) {
 }
 
 // GetDockerAuth extracts an auth string for the given container image name based on the credentials
-// stored in docker daemon config file
+// stored in docker daemon config file.
 func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error) {
 	const authStringLength = 2
 	const authStringSep = ":"

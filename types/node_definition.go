@@ -9,7 +9,7 @@ const (
 	importEnvsKey = "__IMPORT_ENVS"
 )
 
-// NodeDefinition represents a configuration a given node can have in the lab definition file
+// NodeDefinition represents a configuration a given node can have in the lab definition file.
 type NodeDefinition struct {
 	Kind                 string            `yaml:"kind,omitempty"`
 	Group                string            `yaml:"group,omitempty"`
@@ -290,7 +290,7 @@ func (n *NodeDefinition) GetSANs() []string {
 }
 
 // ImportEnvs imports all environment variales defined in the shell
-// if __IMPORT_ENVS is set to true
+// if __IMPORT_ENVS is set to true.
 func (n *NodeDefinition) ImportEnvs() {
 	if n == nil || n.Env == nil {
 		return

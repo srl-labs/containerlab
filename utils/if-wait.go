@@ -1,7 +1,7 @@
 package utils
 
 // IfWaitScript is used in ENTRYPOINT/CMD of the nodes that need to ensure that all
-// of the clab links/interfaces are available in the container before calling the main process
+// of the clab links/interfaces are available in the container before calling the main process.
 var IfWaitScript string = `#!/bin/sh
 
 INTFS=$(echo $CLAB_INTFS)

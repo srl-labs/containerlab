@@ -21,7 +21,7 @@ var (
 	errHTTPFetch      = errors.New("failed to fetch http(s) resource")
 )
 
-// FileExists returns true if a file referenced by filename exists & accessible
+// FileExists returns true if a file referenced by filename exists & accessible.
 //
 func FileExists(filename string) bool {
 	f, err := os.Stat(filename)
@@ -58,7 +58,8 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		}
 	} else {
 		if !(dfi.Mode().IsRegular()) {
-			return fmt.Errorf("file copy failed: destination file %s (%q): %w", dfi.Name(), dfi.Mode().String(), errNonRegularFile)
+			return fmt.Errorf("file copy failed: destination file %s (%q): %w",
+				dfi.Name(), dfi.Mode().String(), errNonRegularFile)
 		}
 
 		if sfi != nil && os.SameFile(sfi, dfi) {
@@ -156,7 +157,7 @@ func ExpandHome(p string) string {
 }
 
 // ResolvePath resolves a string path by expanding `~` to home dir
-// or resolving a relative path by joining it with the base path
+// or resolving a relative path by joining it with the base path.
 func ResolvePath(p, base string) string {
 	if p == "" {
 		return p

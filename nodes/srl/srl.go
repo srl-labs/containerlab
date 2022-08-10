@@ -34,7 +34,7 @@ const (
 
 	readyTimeout = time.Minute * 2 // max wait time for node to boot
 	retryTimer   = time.Second
-	// additional config that clab adds on top of the factory config
+	// additional config that clab adds on top of the factory config.
 	srlConfigCmdsTpl = `set / system tls server-profile clab-profile
 set / system tls server-profile clab-profile key "{{ .TLSKey }}"
 set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
@@ -138,7 +138,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
-		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s", s.cfg.NodeType, strings.Join(keys, ", "))
+		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
+			s.cfg.NodeType, strings.Join(keys, ", "))
 	}
 
 	if s.cfg.Cmd == "" {
@@ -159,7 +160,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	if s.cfg.License != "" {
 		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(
+			filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 	}
 
 	// mount config directory
@@ -449,7 +451,7 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	return tpl.Execute(f, mac)
 }
 
-// addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner
+// addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
 func (s *srl) addDefaultConfig(ctx context.Context) error {
 	b, err := s.banner(ctx)
 	if err != nil {
@@ -496,7 +498,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	return nil
 }
 
-// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive
+// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive.
 func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	cfgStr := string(s.startupCliCfg)
 
@@ -526,7 +528,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
-// can't leverage docker DNS service
+// can't leverage docker DNS service.
 func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
 	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
 	if err != nil {

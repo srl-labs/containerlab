@@ -31,7 +31,7 @@ type Certificates struct {
 	Cert []byte
 }
 
-// CertInput struct
+// CertInput struct.
 type CertInput struct {
 	Hosts            []string
 	CommonName       string
@@ -48,7 +48,7 @@ type CertInput struct {
 	Prefix   string
 }
 
-// CaRootInput struct
+// CaRootInput struct.
 type CaRootInput struct {
 	CommonName       string
 	Country          string
@@ -102,7 +102,7 @@ var NodeCSRTempl string = `{
 }
 `
 
-// GenerateRootCa function
+// GenerateRootCa function.
 func GenerateRootCa(labCARoot string, csrRootJsonTpl *template.Template, input CaRootInput) (*Certificates, error) {
 	log.Debug("Creating root CA")
 	// create root CA root directory
@@ -136,7 +136,7 @@ func GenerateRootCa(labCARoot string, csrRootJsonTpl *template.Template, input C
 }
 
 // GenerateCert generates and signs a certificate passed as input and saves the certificate and generated private key by path
-// CA used to sign the cert is passed as ca and caKey file paths
+// CA used to sign the cert is passed as ca and caKey file paths.
 func GenerateCert(ca, caKey string, csrJSONTpl *template.Template, input CertInput, targetPath string) (*Certificates, error) {
 	utils.CreateDirectory(targetPath, 0755)
 	var err error
@@ -199,7 +199,7 @@ func GenerateCert(ca, caKey string, csrJSONTpl *template.Template, input CertInp
 }
 
 // RetrieveNodeCertData reads the node private key and certificate by the well known paths
-// if either of those files doesn't exist, an error is returned
+// if either of those files doesn't exist, an error is returned.
 func RetrieveNodeCertData(n *types.NodeConfig, labCADir string) (*Certificates, error) {
 	nodeCertFilesDir := filepath.Join(labCADir, n.ShortName)
 	nodeCertFile := filepath.Join(nodeCertFilesDir, n.ShortName+".pem")
@@ -233,7 +233,7 @@ func writeCertFiles(certs *Certificates, filesPrefix string) {
 	utils.CreateFile(filesPrefix+".csr", string(certs.Csr))
 }
 
-// CreateRootCA creates RootCA key/certificate if it is needed by the topology
+// CreateRootCA creates RootCA key/certificate if it is needed by the topology.
 func CreateRootCA(configName, labCARoot string, ns map[string]nodes.Node) error {
 	rootCANeeded := false
 	// check if srl kinds defined in topo

@@ -22,7 +22,7 @@ var (
 	keepMgmtNet bool
 )
 
-// destroyCmd represents the destroy command
+// destroyCmd represents the destroy command.
 var destroyCmd = &cobra.Command{
 	Use:     "destroy",
 	Short:   "destroy a lab",
@@ -35,9 +35,11 @@ var destroyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
-	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false, "attempt to stop containers before removing")
+	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false,
+		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers deleting nodes")
+	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
 }
 
@@ -73,7 +75,10 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 		// list all containerlab containers
-		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "exists"}}
+		labels := []*types.GenericFilter{{
+			FilterType: "label", Match: c.Config.Name,
+			Field: "containerlab", Operator: "exists",
+		}}
 		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			return err

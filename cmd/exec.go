@@ -25,7 +25,7 @@ var (
 	execCommand string
 )
 
-// execCmd represents the exec command
+// execCmd represents the exec command.
 var execCmd = &cobra.Command{
 	Use:     "exec",
 	Short:   "execute a command on one or multiple containers",

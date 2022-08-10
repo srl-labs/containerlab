@@ -17,7 +17,7 @@ import (
 
 var downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
 
-// upgradeCmd represents the version command
+// upgradeCmd represents the version command.
 var upgradeCmd = &cobra.Command{
 	Use:     "upgrade",
 	Short:   "upgrade containerlab to latest available version",
@@ -43,7 +43,7 @@ var upgradeCmd = &cobra.Command{
 	},
 }
 
-// downloadFile will download a file from a URL and write its content to a file
+// downloadFile will download a file from a URL and write its content to a file.
 func downloadFile(url string, file *os.File) error {
 	// Get the data
 	resp, err := http.Get(url)

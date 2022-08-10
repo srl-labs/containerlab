@@ -23,7 +23,7 @@ type VxLAN struct {
 	UDPPort  int    // VxLan UDP port (src/dest, no range, single value)
 }
 
-// AddVxLanInterface creates VxLan interface by given vxlan object
+// AddVxLanInterface creates VxLan interface by given vxlan object.
 func AddVxLanInterface(vxlan VxLAN) (err error) {
 	var parentIf netlink.Link
 	var vxlanIf netlink.Link

@@ -17,12 +17,12 @@ import (
 const (
 	clabAuthzKeysFName = "authorized_keys"
 	pubKeysGlob        = "~/.ssh/*.pub"
-	// authorized keys file path on a clab host that is used to create the clabAuthzKeys file
+	// authorized keys file path on a clab host that is used to create the clabAuthzKeys file.
 	authzKeysFPath = "~/.ssh/authorized_keys"
 )
 
 // CreateAuthzKeysFile creats the authorized_keys file in the lab directory
-// if any files ~/.ssh/*.pub found
+// if any files ~/.ssh/*.pub found.
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 

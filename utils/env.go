@@ -14,7 +14,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// convertEnvs convert env variables passed as a map to a list of them
+// convertEnvs convert env variables passed as a map to a list of them.
 func ConvertEnvs(m map[string]string) []string {
 	s := make([]string, 0, len(m))
 	for k, v := range m {
@@ -36,7 +36,7 @@ func mapify(i interface{}) (map[string]interface{}, bool) {
 }
 
 // merge all dictionaries and return a new dictionary
-// recursively if matching keys are both dictionaries
+// recursively if matching keys are both dictionaries.
 func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 	res := make(map[string]interface{})
 	for _, m := range dicts {
@@ -66,7 +66,7 @@ func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 // merge all string maps and return a new map
 // maps that are passed for merging will not be changed
 // merging to empty maps return an empty map
-// merging nils return nil
+// merging nils return nil.
 func MergeStringMaps(maps ...map[string]string) map[string]string {
 	res := map[string]string{}
 
@@ -91,7 +91,7 @@ func MergeStringMaps(maps ...map[string]string) map[string]string {
 	return res
 }
 
-// does a slice contain a string
+// does a slice contain a string.
 func StringInSlice(slice []string, val string) (int, bool) {
 	for i, item := range slice {
 		if item == val {
@@ -101,7 +101,7 @@ func StringInSlice(slice []string, val string) (int, bool) {
 	return -1, false
 }
 
-// LoadEnvVarFiles load EnvVars from the given files, resolving relative paths
+// LoadEnvVarFiles load EnvVars from the given files, resolving relative paths.
 func LoadEnvVarFiles(basefolder string, files []string) (map[string]string, error) {
 	resolvedPaths := []string{}
 	// resolve given paths, relative (to topology definition file)
@@ -124,7 +124,7 @@ func LoadEnvVarFiles(basefolder string, files []string) (map[string]string, erro
 	return result, nil
 }
 
-// MergeStringSlices merges string slices with duplicates removed
+// MergeStringSlices merges string slices with duplicates removed.
 func MergeStringSlices(ss ...[]string) []string {
 	res := make([]string, 0)
 	allNils := true // switch to track if all of the passed slices are nils
@@ -152,14 +152,14 @@ func MergeStringSlices(ss ...[]string) []string {
 	return uniques
 }
 
-// ExpandEnvVarsInStrSlice makes an in-place expansion of env vars in a slice of strings
+// ExpandEnvVarsInStrSlice makes an in-place expansion of env vars in a slice of strings.
 func ExpandEnvVarsInStrSlice(s []string) {
 	for i, e := range s {
 		s[i] = os.ExpandEnv(e)
 	}
 }
 
-// ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key
+// ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key.
 func ToEnvKey(s string) string {
 	// match special chars to later replace with "_"
 	regreplace, _ := regexp.Compile("[+-./]")
