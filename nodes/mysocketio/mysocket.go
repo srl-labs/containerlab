@@ -26,7 +26,7 @@ type mysocket struct {
 	AllowedEmails  []string
 }
 
-// createMysocketTunnels creates internet reachable personal tunnels using mysocket.io
+// createMysocketTunnels creates internet reachable personal tunnels using mysocket.io.
 func createMysocketTunnels(ctx context.Context, r runtime.ContainerRuntime, node *types.NodeConfig, nodesMap map[string]nodes.Node) error {
 	// remove the existing sockets
 	cmd := []string{"/bin/sh", "-c", "mysocketctl socket ls | awk '/clab/ {print $2}' | xargs -n1 mysocketctl socket delete -s"}
@@ -57,7 +57,8 @@ func createMysocketTunnels(ctx context.Context, r runtime.ContainerRuntime, node
 			sockID := strings.TrimSpace(string(stdout))
 
 			// create tunnel and get its ID
-			cmd = []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl tunnel create -s %s | awk 'NR==4 {print $4}'", sockID)}
+			cmd = []string{"/bin/sh", "-c", fmt.Sprintf(
+				"mysocketctl tunnel create -s %s | awk 'NR==4 {print $4}'", sockID)}
 			log.Debugf("Running mysocketio command %q", cmd)
 			stdout, _, err = r.Exec(ctx, node.ContainerID, cmd)
 			if err != nil {
@@ -71,7 +72,8 @@ func createMysocketTunnels(ctx context.Context, r runtime.ContainerRuntime, node
 			if node.Extras != nil && node.Extras.MysocketProxy != "" {
 				proxy = fmt.Sprintf("--proxy %s", node.Extras.MysocketProxy)
 			}
-			cmd = []string{"/bin/sh", "-c", fmt.Sprintf("mysocketctl tunnel connect --host %s -p %d -s %s -t %s %s > socket-%s-%s-%d.log",
+			cmd = []string{"/bin/sh", "-c", fmt.Sprintf(
+				"mysocketctl tunnel connect --host %s -p %d -s %s -t %s %s > socket-%s-%s-%d.log",
 				n.Config().LongName, ms.Port, sockID, tunID, proxy,
 				n.Config().ShortName, ms.Stype, ms.Port)}
 			log.Debugf("Running mysocketio command %q", cmd)

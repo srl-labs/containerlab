@@ -66,7 +66,7 @@ func (*bridge) Delete(_ context.Context) error {
 }
 
 // installIPTablesBridgeFwdRule calls iptables to install `allow` rule for traffic passing through the bridge
-// otherwise, communication over the bridge is not permitted
+// otherwise, communication over the bridge is not permitted.
 func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	// first check if a rule already exists for this bridge to not create duplicates
 	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()

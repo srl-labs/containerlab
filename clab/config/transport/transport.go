@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// Debug count
+// Debug count.
 var DebugCount int
 
 type TransportOption func(*Transport)
@@ -17,7 +17,7 @@ type Transport interface {
 	Close()
 }
 
-// Write config to a node
+// Write config to a node.
 func Write(tx Transport, host string, data, info []string, options ...TransportOption) error {
 	// the Kind should configure the transport parameters before
 

@@ -22,7 +22,7 @@ import (
 // https://github.com/containers/podman/blob/54c630aa0a4dbbddb04ac07b223687aeaa6daefd/pkg/specgenutil/util.go
 // Licensed under apache 2.0 license https://github.com/containers/podman/blob/54c630aa0a4dbbddb04ac07b223687aeaa6daefd/LICENSE
 
-// convertPortMap takes a nat.PortMap Docker type and produces a podman-compatible PortMapping
+// convertPortMap takes a nat.PortMap Docker type and produces a podman-compatible PortMapping.
 func (*PodmanRuntime) convertPortMap(_ context.Context, portMap nat.PortMap) ([]netTypes.PortMapping, error) {
 	log.Debugf("Method convertPortMap was called with inputs %+v", portMap)
 	toReturn := make([]netTypes.PortMapping, 0, len(portMap))
@@ -129,7 +129,8 @@ func parseSplitPort(hostIP, hostPort *string, ctrPort string, protocol *string) 
 	}
 
 	hport := newPort.HostPort
-	logrus.Debugf("Adding port mapping from %d to %d length %d protocol %q", hport, newPort.ContainerPort, newPort.Range, newPort.Protocol)
+	logrus.Debugf("Adding port mapping from %d to %d length %d protocol %q", hport,
+		newPort.ContainerPort, newPort.Range, newPort.Protocol)
 
 	return newPort, nil
 }

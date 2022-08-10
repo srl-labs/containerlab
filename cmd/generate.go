@@ -62,7 +62,7 @@ type nodesDef struct {
 	typ      string
 }
 
-// generateCmd represents the generate command
+// generateCmd represents the generate command.
 var generateCmd = &cobra.Command{
 	Use:     "generate",
 	Aliases: []string{"gen"},
@@ -89,7 +89,8 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
-		b, err := generateTopologyConfig(name, mgmtNetName, mgmtIPv4Subnet.String(), mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
+		b, err := generateTopologyConfig(name, mgmtNetName, mgmtIPv4Subnet.String(),
+			mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
 		if err != nil {
 			return err
 		}
@@ -124,18 +125,26 @@ func init() {
 	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{}, "container image name, can be prefixed with the node kind. <kind>=<image_name>")
-	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl", fmt.Sprintf("container kind, one of %v", supportedKinds))
-	generateCmd.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{}, "comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
-	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{}, "path to license file, can be prefix with the node kind. <kind>=/path/to/file")
+	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{},
+		"container image name, can be prefixed with the node kind. <kind>=<image_name>")
+	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl",
+		fmt.Sprintf("container kind, one of %v", supportedKinds))
+	generateCmd.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{},
+		"comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
+	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{},
+		"path to license file, can be prefix with the node kind. <kind>=/path/to/file")
 	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
 	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
 	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
-	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false, "deploy a fabric based on the generated topology file")
-	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
+	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false,
+		"deploy a fabric based on the generated topology file")
+	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+		"limit the maximum number of workers creating nodes and virtual wires")
 }
 
-func generateTopologyConfig(name, network, ipv4range, ipv6range string, images, licenses map[string]string, nodes ...nodesDef) ([]byte, error) {
+func generateTopologyConfig(name, network, ipv4range, ipv6range string,
+	images, licenses map[string]string, nodes ...nodesDef,
+) ([]byte, error) {
 	numStages := len(nodes)
 	config := &clab.Config{
 		Name: name,

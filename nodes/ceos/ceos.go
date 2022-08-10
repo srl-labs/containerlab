@@ -29,7 +29,7 @@ const (
 
 var (
 	kindnames = []string{"ceos", "arista_ceos"}
-	// defined env vars for the ceos
+	// defined env vars for the ceos.
 	ceosEnv = map[string]string{
 		"CEOS":                                "1",
 		"EOS_PLATFORM":                        "ceoslab",
@@ -58,7 +58,7 @@ type ceos struct {
 	runtime runtime.ContainerRuntime
 }
 
-// intfMap represents interface mapping config file
+// intfMap represents interface mapping config file.
 type intfMap struct {
 	ManagementIntf struct {
 		Eth0 string `json:"eth0"`
@@ -241,7 +241,7 @@ func setMgmtInterface(node *types.NodeConfig) error {
 	return nil
 }
 
-// ceosPostDeploy runs postdeploy actions which are required for ceos nodes
+// ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
 func (n *ceos) ceosPostDeploy() error {
 	nodeCfg := n.Config()
 	d, err := utils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.runtime.GetName())

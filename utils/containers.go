@@ -55,7 +55,7 @@ func GetCNIBinaryPath() string {
 }
 
 // ContainerNSToPID resolves the name of a container via
-// the "/run/netns/<CONTAINERNAME>" to its PID
+// the "/run/netns/<CONTAINERNAME>" to its PID.
 func ContainerNSToPID(cID string) (int, error) {
 	pnns, err := filepath.EvalSymlinks("/run/netns/" + cID)
 	if err != nil {

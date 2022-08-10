@@ -17,13 +17,13 @@ const (
 	IFNAMSIZ        = 16         // linux/if.h
 )
 
-// linux/if.h 'struct ifreq'
+// linux/if.h 'struct ifreq'.
 type IFReqData struct {
 	Name [IFNAMSIZ]byte
 	Data uintptr
 }
 
-// linux/ethtool.h 'struct ethtool_value'
+// linux/ethtool.h 'struct ethtool_value'.
 type EthtoolValue struct {
 	Cmd  uint32
 	Data uint32
@@ -37,7 +37,7 @@ func ioctlEthtool(fd int, argp uintptr) error {
 	return nil
 }
 
-// EthtoolTXOff disables TX checksum offload on specified interface
+// EthtoolTXOff disables TX checksum offload on specified interface.
 func EthtoolTXOff(name string) error {
 	if len(name)+1 > IFNAMSIZ {
 		return fmt.Errorf("name too long")

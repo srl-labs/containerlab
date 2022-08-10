@@ -2,7 +2,7 @@ package srl
 
 import "regexp"
 
-// SrlVersion represents an sr linux version as a set of fields
+// SrlVersion represents an sr linux version as a set of fields.
 type SrlVersion struct {
 	major  string
 	minor  string

@@ -14,10 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Node Filter for config
+// Node Filter for config.
 var configFilter []string
 
-// configCmd represents the config command
+// configCmd represents the config command.
 var configCmd = &cobra.Command{
 	Use:          "config",
 	Short:        "configure a lab",
@@ -145,10 +145,13 @@ func validateFilter(nodes map[string]nodes.Node) error {
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{}, "comma separated list of paths to search for templates")
+	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{},
+		"comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")
-	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{}, "comma separated list of template names to render")
-	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{}, "comma separated list of nodes to include")
+	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{},
+		"comma separated list of template names to render")
+	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{},
+		"comma separated list of nodes to include")
 	configCmd.Flags().SortFlags = false
 
 	configCmd.AddCommand(configSendCmd)
