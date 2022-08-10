@@ -76,10 +76,8 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		if err != nil {
 			log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
 		}
-		res[link.A.Node.ShortName].Vars[vkLinks] =
-			append(res[link.A.Node.ShortName].Vars[vkLinks].([]interface{}), varsA)
-		res[link.B.Node.ShortName].Vars[vkLinks] =
-			append(res[link.B.Node.ShortName].Vars[vkLinks].([]interface{}), varsB)
+		res[link.A.Node.ShortName].Vars[vkLinks] = append(res[link.A.Node.ShortName].Vars[vkLinks].([]interface{}), varsA)
+		res[link.B.Node.ShortName].Vars[vkLinks] = append(res[link.B.Node.ShortName].Vars[vkLinks].([]interface{}), varsB)
 	}
 
 	// Prepare top-level map of nodes
