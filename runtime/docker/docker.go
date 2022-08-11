@@ -398,36 +398,8 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	}
 	containerNetworkingConfig := &network.NetworkingConfig{}
 
-	netMode := strings.SplitN(node.NetworkMode, ":", 2)
-	switch netMode[0] {
-	case "container":
-		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
-		if len(netMode) != 2 {
-			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
-		}
-		// also cont. ID shouldn't be empty
-		if netMode[1] == "" {
-			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
-		}
-		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
-		prefix := strings.SplitN(node.LongName, node.ShortName, 2)[0]
-		// Compile the net spec
-		containerHostConfig.NetworkMode = container.NetworkMode("container:" + prefix + netMode[1])
-		// unset the hostname as it is not supported in this case
-		containerConfig.Hostname = ""
-	case "host":
-		containerHostConfig.NetworkMode = "host"
-	default:
-		containerHostConfig.NetworkMode = container.NetworkMode(d.mgmt.Network)
-
-		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
-			d.mgmt.Network: {
-				IPAMConfig: &network.EndpointIPAMConfig{
-					IPv4Address: node.MgmtIPv4Address,
-					IPv6Address: node.MgmtIPv6Address,
-				},
-			},
-		}
+	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
+		return "", err
 	}
 
 	// regular linux containers may benefit from automatic restart on failure
@@ -600,15 +572,18 @@ func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.Ge
 		FilterType: "name",
 		Field:      "",
 		Operator:   "",
-		Match:      cID,
+		Match:      fmt.Sprintf("^%s$", cID), // this regexp ensure we have an exact match for name
 	}
+
 	ctrs, err := d.ListContainers(ctx, []*types.GenericFilter{&gFilter})
 	if err != nil {
 		return ctr, err
 	}
+
 	if len(ctrs) != 1 {
 		return ctr, fmt.Errorf("found unexpected number of containers: %d", len(ctrs))
 	}
+
 	return &ctrs[0], nil
 }
 
@@ -620,9 +595,10 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 			filterstr = filterstr + filterentry.Operator + filterentry.Match
 		}
 
-		log.Debug("Filter string: " + filterstr)
+		log.Debugf("Filter key: %s, filter value: %s", filterentry.FilterType, filterstr)
 		filter.Add(filterentry.FilterType, filterstr)
 	}
+
 	return filter
 }
 
@@ -794,4 +770,72 @@ func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 	hostsPath := inspect.HostsPath
 	log.Debugf("Method GetHostsPath was called with a resulting path %q", hostsPath)
 	return hostsPath, nil
+}
+
+func (d *DockerRuntime) processNetworkMode(
+	ctx context.Context,
+	containerNetworkingConfig *network.NetworkingConfig,
+	containerHostConfig *container.HostConfig,
+	containerConfig *container.Config,
+	node *types.NodeConfig,
+) error {
+	netMode := strings.SplitN(node.NetworkMode, ":", 2)
+
+	switch netMode[0] {
+	// clab allows its containers to be attached to a netns of another container
+	// this can be a container that is managed by clab, or an external container.
+	case "container":
+		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
+		if len(netMode) != 2 {
+			return fmt.Errorf("container network mode was specified for container %q, but we failed to parse the network-mode instruction: %q",
+				node.ShortName, netMode)
+		}
+
+		// also cont. ID shouldn't be empty
+		if netMode[1] == "" {
+			return fmt.Errorf("container network mode was specified for container %q, referenced container name appears to be empty: %q",
+				node.ShortName, netMode)
+		}
+
+		// to support using network stack of containers that are scheduled by clab
+		// or containers deployed externally (i.e. by k8s kind)
+		// we first check if container name referenced in network-mode node property exists internally,
+		// aka within clab topology. If it doesn't, we assume that users referred to an external container.
+		// extract lab/topo prefix to craft a full container name if an internal container is referenced.
+		contName := strings.SplitN(node.LongName, node.ShortName, 2)[0] + netMode[1]
+
+		_, err := d.GetContainer(ctx, contName)
+		if err != nil {
+			log.Debugf("container %q was not found by its name, assuming it is exists externally with unprefixed", contName)
+
+			// container doesn't exist internally, so we assume it exists externally
+			// with a non-prefixed name.
+			contName = netMode[1]
+
+			if _, err := d.GetContainer(ctx, contName); err != nil {
+				return fmt.Errorf("container %q is referenced in network-mode, but was not found", netMode[1])
+			}
+		}
+
+		// compile the net spec
+		containerHostConfig.NetworkMode = container.NetworkMode("container:" + contName)
+
+		// unset the hostname as it is not supported in this case
+		containerConfig.Hostname = ""
+	case "host":
+		containerHostConfig.NetworkMode = "host"
+	default:
+		containerHostConfig.NetworkMode = container.NetworkMode(d.mgmt.Network)
+
+		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
+			d.mgmt.Network: {
+				IPAMConfig: &network.EndpointIPAMConfig{
+					IPv4Address: node.MgmtIPv4Address,
+					IPv6Address: node.MgmtIPv6Address,
+				},
+			},
+		}
+	}
+
+	return nil
 }
