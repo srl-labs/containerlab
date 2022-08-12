@@ -167,7 +167,19 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 // since static nodes are scheduled first
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
-) (*sync.WaitGroup, *sync.WaitGroup) {
+) *sync.WaitGroup {
+
+	perNodeWaitGroup := map[string]*sync.WaitGroup{}
+	perNodeWaiter := map[string][]*sync.WaitGroup{}
+
+	for name, _ := range c.Nodes {
+		// contains the waitgroup per node
+		perNodeWaitGroup[name] = &sync.WaitGroup{}
+		// contains the references to the wait groups that wait for the named node
+		// all these will have to be decreased on finishing the startup of the named node
+		perNodeWaiter[name] = []*sync.WaitGroup{}
+	}
+
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -178,26 +190,30 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 		}
 		dynIPNodes[name] = n
 	}
-	var staticIPWg *sync.WaitGroup
-	var dynIPWg *sync.WaitGroup
-	if len(staticIPNodes) > 0 {
-		log.Debug("scheduling nodes with static IPs...")
-		staticIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
+
+	// go through all the dynamic ip nodes
+	for dynNodeName, _ := range dynIPNodes {
+		// and add their wait group to the the static nodes, while increasing the waitgroup
+		for staticNodeName, _ := range staticIPNodes {
+			// increase it by one
+			perNodeWaitGroup[dynNodeName].Add(1)
+			// add it to the static node waiter, such that on finishing these are decreased by 1
+			perNodeWaiter[staticNodeName] = append(perNodeWaiter[staticNodeName], perNodeWaitGroup[dynNodeName])
+		}
 	}
+	var NodesWg *sync.WaitGroup
 	if len(dynIPNodes) > 0 {
 		log.Debug("scheduling nodes with dynamic IPs...")
-		dynIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
+		NodesWg = c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, perNodeWaitGroup, perNodeWaiter)
 	}
-	return staticIPWg, dynIPWg
+
+	return NodesWg
 }
 
-func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
-	serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node,
-) *sync.WaitGroup {
+func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes map[string]nodes.Node, perNodeWaitGroup map[string]*sync.WaitGroup, perNodeWaiter map[string][]*sync.WaitGroup) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
-	serialChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, perNodeWaiter map[string][]*sync.WaitGroup) {
 		defer wg.Done()
 		for {
 			select {
@@ -233,6 +249,10 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				c.m.Lock()
 				node.Config().DeploymentStatus = "created"
 				c.m.Unlock()
+				// decrease depending containers waitgroups.
+				for _, pnwg := range perNodeWaiter[node.Config().ShortName] {
+					pnwg.Done()
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -250,30 +270,29 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {
-		go workerFunc(i, concurrentChan, wg)
+		go workerFunc(i, concurrentChan, wg, perNodeWaiter)
 	}
 
-	// start the serial worker
-	if len(serialNodes) > 0 {
-		wg.Add(1)
-		go workerFunc(maxWorkers, serialChan, wg)
+	workerFuncChWG := new(sync.WaitGroup)
+
+	for nodeName, n := range scheduledNodes {
+		workerFuncChWG.Add(1)
+		// start a func for all the containers, then will wait for their own waitgroups
+		// to be set to zero by their depending containers, then enqueue to the creation channel
+		go func(node nodes.Node, nwg *sync.WaitGroup, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+			// wait for all the nodes that node depends on
+			nwg.Wait()
+			// when all dependend nodes are created, push this node into the channel
+			workerChan <- node
+			// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
+			wfcwg.Done()
+		}(n, perNodeWaitGroup[nodeName], concurrentChan, workerFuncChWG) // execute this function straight away
 	}
 
-	// send nodes to workers
-	for _, n := range scheduledNodes {
-		if _, ok := serialNodes[n.Config().LongName]; ok {
-			// delete the entry to avoid starting a serial worker in the
-			// case of dynamic IP nodes scheduling
-			delete(serialNodes, n.Config().LongName)
-			serialChan <- n
-			continue
-		}
-		concurrentChan <- n
-	}
-
-	// close channel to terminate the workers
+	// Gate to make sure the channel is not closed before all the nodes made it though the channel
+	workerFuncChWG.Wait()
+	// close the channel and thereby therminate the workerFuncs
 	close(concurrentChan)
-	close(serialChan)
 
 	return wg
 }
