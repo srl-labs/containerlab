@@ -169,10 +169,19 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
 ) *sync.WaitGroup {
 
+	// TODO: Maybe we make the following a seperate struct, where dependencies can be defined simply by the container names
+	// and allow for easy wait and dones also with just container names.
+
+	// map of WaitGroup items per node.
+	// the scheduling of the nodes creation is dependent in this WaitGroup.
+	// other Nodes, that the specific node relies on will increment the WaitGroup by one.
 	perNodeWaitGroup := map[string]*sync.WaitGroup{}
+	// To keep book about which nodes depend on node x, the waitgroups of the dependent Nodes are listed here.
+	// on sucessfull creation of node x, all the dependent nodes Waitgroups will be decremented.
 	perNodeWaiter := map[string][]*sync.WaitGroup{}
 
-	for name, _ := range c.Nodes {
+	// inti the WaitGroup structs
+	for name := range c.Nodes {
 		// contains the waitgroup per node
 		perNodeWaitGroup[name] = &sync.WaitGroup{}
 		// contains the references to the wait groups that wait for the named node
@@ -180,10 +189,21 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 		perNodeWaiter[name] = []*sync.WaitGroup{}
 	}
 
+	// make the static mgmt ip containers be scheduled befor the dynamic mgmt ip containers
+	createStaticDynamicDependency(c.Nodes, perNodeWaitGroup, perNodeWaiter)
+
+	// finally start scheduling
+	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, perNodeWaitGroup, perNodeWaiter)
+	return NodesWg
+}
+
+// createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers
+func createStaticDynamicDependency(n map[string]nodes.Node, perNodeWaitGroup map[string]*sync.WaitGroup, perNodeWaiter map[string][]*sync.WaitGroup) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
-	for name, n := range c.Nodes {
+	// devide the nodes into static and dynamic mgmt IP nodes.
+	for name, n := range n {
 		if n.Config().MgmtIPv4Address != "" || n.Config().MgmtIPv6Address != "" {
 			staticIPNodes[name] = n
 			continue
@@ -192,22 +212,15 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	}
 
 	// go through all the dynamic ip nodes
-	for dynNodeName, _ := range dynIPNodes {
+	for dynNodeName := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
-		for staticNodeName, _ := range staticIPNodes {
+		for staticNodeName := range staticIPNodes {
 			// increase it by one
 			perNodeWaitGroup[dynNodeName].Add(1)
 			// add it to the static node waiter, such that on finishing these are decreased by 1
 			perNodeWaiter[staticNodeName] = append(perNodeWaiter[staticNodeName], perNodeWaitGroup[dynNodeName])
 		}
 	}
-	var NodesWg *sync.WaitGroup
-	if len(dynIPNodes) > 0 {
-		log.Debug("scheduling nodes with dynamic IPs...")
-		NodesWg = c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, perNodeWaitGroup, perNodeWaiter)
-	}
-
-	return NodesWg
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes map[string]nodes.Node, perNodeWaitGroup map[string]*sync.WaitGroup, perNodeWaiter map[string][]*sync.WaitGroup) *sync.WaitGroup {
