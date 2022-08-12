@@ -26,31 +26,31 @@ import (
 )
 
 const (
-	// file name of a topology export data
+	// file name of a topology export data.
 	topoExportFName            = "topology-data.json"
 	defaultExportTemplateFPath = "/etc/containerlab/templates/export/auto.tmpl"
 )
 
-// name of the container management network
+// name of the container management network.
 var mgmtNetName string
 
-// IPv4/6 address range for container management network
+// IPv4/6 address range for container management network.
 var mgmtIPv4Subnet net.IPNet
 var mgmtIPv6Subnet net.IPNet
 
-// reconfigure flag
+// reconfigure flag.
 var reconfigure bool
 
-// max-workers flag
+// max-workers flag.
 var maxWorkers uint
 
-// skipPostDeploy flag
+// skipPostDeploy flag.
 var skipPostDeploy bool
 
-// template file for topology data export
+// template file for topology data export.
 var exportTemplate string
 
-// deployCmd represents the deploy command
+// deployCmd represents the deploy command.
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
 	Short:        "deploy a lab",
@@ -67,13 +67,16 @@ func init() {
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false, "regenerate configuration artifacts and overwrite previous ones if any")
-	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0, "limit the maximum number of workers creating nodes and virtual wires")
+	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false,
+		"regenerate configuration artifacts and overwrite previous ones if any")
+	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+		"limit the maximum number of workers creating nodes and virtual wires")
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
-	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", defaultExportTemplateFPath, "template file for topology data export")
+	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
+		defaultExportTemplateFPath, "template file for topology data export")
 }
 
-// deployFn function runs deploy sub command
+// deployFn function runs deploy sub command.
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
@@ -192,12 +195,14 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		}
 
 		if n.Config().MgmtIPv4Address != "" {
-			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv4Address)
+			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
+				n.Config().ShortName, n.Config().MgmtIPv4Address)
 			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
 		}
 
 		if n.Config().MgmtIPv6Address != "" {
-			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s", n.Config().ShortName, n.Config().MgmtIPv6Address)
+			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
+				n.Config().ShortName, n.Config().MgmtIPv6Address)
 			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
 		}
 	}
@@ -277,7 +282,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
 			rt := node.GetRuntime()
 			contName := strings.TrimLeft(cont.Names[0], "/")
-			if execJSONResult[contName], err = execCmds(ctx, cont, rt, node.Config().Exec, format); err != nil {
+			if execJSONResult[contName], err = execCmds(ctx, cont, rt,
+				node.Config().Exec, format); err != nil {
 				log.Errorf("Failed to exec commands for node %s", name)
 			}
 		}
@@ -312,7 +318,7 @@ func setFlags(conf *clab.Config) {
 	}
 }
 
-// enrichNodes add container runtime assigned information (such as dynamically assigned IP addresses) to the nodes
+// enrichNodes add container runtime assigned information (such as dynamically assigned IP addresses) to the nodes.
 func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
 	for i := range containers {
 		c := &containers[i]

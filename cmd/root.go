@@ -21,7 +21,7 @@ var (
 	logLevel   string
 )
 
-// path to the topology file
+// path to the topology file.
 var topo string
 
 var (
@@ -30,10 +30,10 @@ var (
 	rt       string
 )
 
-// lab name
+// lab name.
 var name string
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:               "containerlab",
 	Short:             "deploy container based lab environments with a user-defined interconnections",
@@ -52,12 +52,15 @@ func init() {
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
 	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "", "path to the topology file")
-	rootCmd.PersistentFlags().StringVarP(&varsFile, "vars", "", "", "path to the topology template variables file")
+	rootCmd.PersistentFlags().StringVarP(&varsFile, "vars", "", "",
+		"path to the topology template variables file")
 	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
-	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second, "timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
+	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second,
+		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "logging level; one of [trace, debug, info, warning, error, fatal]")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
+		"logging level; one of [trace, debug, info, warning, error, fatal]")
 }
 
 func sudoCheck(_ *cobra.Command, _ []string) error {
@@ -89,15 +92,17 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory if the files was note specified using flags
-// errors if more than one file is found by the glob path
+// errors if more than one file is found by the glob path.
 func getTopoFilePath(cmd *cobra.Command) error {
 	// set commands which may use topo file find functionality, the rest don't need it
-	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" || cmd.Name() == "save" || cmd.Name() == "graph" || cmd.Name() == "exec") {
+	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" ||
+		cmd.Name() == "save" || cmd.Name() == "graph" || cmd.Name() == "exec") {
 		return nil
 	}
 
 	// inspect and destroy commands with --all flag don't use file find functionality
-	if (cmd.Name() == "inspect" || cmd.Name() == "destroy") && cmd.Flag("all").Value.String() == "true" {
+	if (cmd.Name() == "inspect" || cmd.Name() == "destroy") &&
+		cmd.Flag("all").Value.String() == "true" {
 		return nil
 	}
 

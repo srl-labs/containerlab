@@ -44,7 +44,7 @@ type noListFs struct {
 
 var g *gographviz.Graph
 
-// GenerateGraph generates a graph of the lab topology
+// GenerateGraph generates a graph of the lab topology.
 func (c *CLab) GenerateGraph(_ string) error {
 	log.Info("Generating lab graph...")
 	g = gographviz.NewGraph()
@@ -89,7 +89,8 @@ func (c *CLab) GenerateGraph(_ string) error {
 		attr = make(map[string]string)
 		attr["color"] = "black"
 
-		if (strings.Contains(link.A.Node.ShortName, "client")) || (strings.Contains(link.B.Node.ShortName, "client")) {
+		if (strings.Contains(link.A.Node.ShortName, "client")) ||
+			(strings.Contains(link.B.Node.ShortName, "client")) {
 			attr["color"] = "blue"
 		}
 		if err := g.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName, false, attr); err != nil {
@@ -120,7 +121,7 @@ func (c *CLab) GenerateGraph(_ string) error {
 	return nil
 }
 
-// generatePngFromDot generated PNG from the provided dot file
+// generatePngFromDot generated PNG from the provided dot file.
 func generatePngFromDot(dotfile string, outfile string) (err error) {
 	_, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
@@ -130,7 +131,7 @@ func generatePngFromDot(dotfile string, outfile string) (err error) {
 	return nil
 }
 
-// commandExists checks for the existence of the given command on the system
+// commandExists checks for the existence of the given command on the system.
 func commandExists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	if err == nil {

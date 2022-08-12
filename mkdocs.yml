@@ -89,6 +89,7 @@ nav:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
+      - "0.31": rn/0.31.md
       - "0.30": rn/0.30.md
       - "0.29": rn/0.29.md
       - "0.28": rn/0.28.md

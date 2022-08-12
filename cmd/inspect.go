@@ -31,7 +31,7 @@ var (
 	all     bool
 )
 
-// inspectCmd represents the inspect command
+// inspectCmd represents the inspect command.
 var inspectCmd = &cobra.Command{
 	Use:     "inspect",
 	Short:   "inspect lab details",
@@ -120,10 +120,16 @@ func toTableData(det []types.ContainerDetails) [][]string {
 		d := &det[i]
 
 		if all {
-			tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.LabPath, d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address})
+			tabData = append(tabData, []string{
+				fmt.Sprintf("%d", i+1), d.LabPath,
+				d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address,
+			})
 			continue
 		}
-		tabData = append(tabData, []string{fmt.Sprintf("%d", i+1), d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address})
+		tabData = append(tabData, []string{
+			fmt.Sprintf("%d", i+1), d.Name, d.ContainerID,
+			d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address,
+		})
 	}
 	return tabData
 }
@@ -242,7 +248,10 @@ func printContainerInspect(containers []types.GenericContainer, format string) e
 			for _, port := range entry.Ports {
 				portstrarr = append(portstrarr, strconv.Itoa(port))
 			}
-			tabDataMySocketIo = append(tabDataMySocketIo, []string{*entry.LabName, *entry.Name, *entry.SocketId, *entry.DnsName, strings.Join(portstrarr, ", "), *entry.Type, strconv.FormatBool(entry.CloudAuth)})
+			tabDataMySocketIo = append(tabDataMySocketIo, []string{
+				*entry.LabName, *entry.Name, *entry.SocketId, *entry.DnsName,
+				strings.Join(portstrarr, ", "), *entry.Type, strconv.FormatBool(entry.CloudAuth),
+			})
 		}
 		tableMySocketIo := tablewriter.NewWriter(os.Stdout)
 		headerMySocketIo := []string{
@@ -267,7 +276,7 @@ func printContainerInspect(containers []types.GenericContainer, format string) e
 	return nil
 }
 
-// getMySocketioData uses the mysocketio.http client to retrieve the socket data
+// getMySocketioData uses the mysocketio.http client to retrieve the socket data.
 func getMySocketIoData(tokenfile string) ([]*types.MySocketIoEntry, error) {
 	result := []*types.MySocketIoEntry{}
 
@@ -303,7 +312,7 @@ type TokenFileResults struct {
 
 // mySocketIoTokenFileFromBindMounts runs through the provided slice of GenericContainers to deduce the mysocketio containers
 // if those are found the bindmounts are evaluated to find the hostpath to the referenced ".mysocketio_token" files. Since multiple
-// labs might be started the result is a slice of "".mysocketio_token" files
+// labs might be started the result is a slice of "".mysocketio_token" files.
 func mySocketIoTokenFileFromBindMounts(containers []types.GenericContainer) []*TokenFileResults {
 	result := []*TokenFileResults{}
 	for _, node := range containers {

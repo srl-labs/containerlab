@@ -263,7 +263,10 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 				if err != nil {
 					return nil, err
 				}
-				portmappings = append(portmappings, portMapping{HostPort: hostport, ContainerPort: contdatasl.Int(), Protocol: contdatasl.Proto()})
+				portmappings = append(portmappings, portMapping{
+					HostPort:      hostport,
+					ContainerPort: contdatasl.Int(), Protocol: contdatasl.Proto(),
+				})
 			}
 		}
 		if len(portmappings) > 0 {
@@ -546,7 +549,7 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 	return c.produceGenericContainerList(ctx, containerlist)
 }
 
-// TODO this will probably not work. need to work out the exact filter format
+// TODO this will probably not work. need to work out the exact filter format.
 func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
 	var ctr *types.GenericContainer
 	gFilter := types.GenericFilter{
@@ -596,8 +599,10 @@ func (*ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) strin
 	return filterstring
 }
 
-// Transform docker-specific to generic container format
-func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context, input []containerd.Container) ([]types.GenericContainer, error) {
+// Transform docker-specific to generic container format.
+func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context,
+	input []containerd.Container,
+) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for _, i := range input {
@@ -674,7 +679,11 @@ func extractIPInfoFromLabels(labels map[string]string) (types.GenericMgmtIPs, er
 			return types.GenericMgmtIPs{}, err
 		}
 	}
-	return types.GenericMgmtIPs{IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask, IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask, IPv4Gw: labels["clab.ipv4.gateway"], IPv6Gw: labels["clab.ipv6.gateway"]}, nil
+	return types.GenericMgmtIPs{
+		IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask,
+		IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask, IPv4Gw: labels["clab.ipv4.gateway"],
+		IPv6Gw: labels["clab.ipv6.gateway"],
+	}, nil
 }
 
 func timeSinceInHuman(since time.Time) string {
@@ -816,7 +825,7 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 }
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
-// TODO: do we need it here? currently no-op
+// TODO: do we need it here? currently no-op.
 func (c *ContainerdRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
 }

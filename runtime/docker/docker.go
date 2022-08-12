@@ -39,7 +39,7 @@ const (
 	sysctlBase     = "/proc/sys"
 	defaultTimeout = 30 * time.Second
 	rLimitMaxValue = 1048576
-	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating containers
+	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating containers.
 	defaultDockerNetwork = "bridge"
 )
 
@@ -76,7 +76,7 @@ func (d *DockerRuntime) WithKeepMgmtNet() {
 func (*DockerRuntime) GetName() string                 { return runtimeName }
 func (d *DockerRuntime) Config() runtime.RuntimeConfig { return d.config }
 
-// Mgmt return management network struct of a runtime
+// Mgmt return management network struct of a runtime.
 func (d *DockerRuntime) Mgmt() *types.MgmtNet { return d.mgmt }
 
 func (d *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
@@ -108,7 +108,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	}
 }
 
-// CreateDockerNet creates a docker network or reusing if it exists
+// CreateDockerNet creates a docker network or reusing if it exists.
 func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
@@ -242,7 +242,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	return d.postCreateNetActions()
 }
 
-// postCreateNetActions performs additional actions after the network has been created
+// postCreateNetActions performs additional actions after the network has been created.
 func (d *DockerRuntime) postCreateNetActions() (err error) {
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
@@ -275,7 +275,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	return nil
 }
 
-// DeleteNet deletes a docker bridge
+// DeleteNet deletes a docker bridge.
 func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := d.mgmt.Network
 	if network == "bridge" || d.config.KeepMgmtNet {
@@ -314,17 +314,17 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	return nil
 }
 
-// PauseContainer Pauses a container identified by its name
+// PauseContainer Pauses a container identified by its name.
 func (d *DockerRuntime) PauseContainer(ctx context.Context, cID string) error {
 	return d.Client.ContainerPause(ctx, cID)
 }
 
-// UnpauseContainer UnPauses / resumes a container identified by its name
+// UnpauseContainer UnPauses / resumes a container identified by its name.
 func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error {
 	return d.Client.ContainerUnpause(ctx, cID)
 }
 
-// CreateContainer creates a docker container (but does not start it)
+// CreateContainer creates a docker container (but does not start it).
 func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) {
 	log.Infof("Creating container: %q", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
@@ -398,36 +398,8 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	}
 	containerNetworkingConfig := &network.NetworkingConfig{}
 
-	netMode := strings.SplitN(node.NetworkMode, ":", 2)
-	switch netMode[0] {
-	case "container":
-		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
-		if len(netMode) != 2 {
-			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
-		}
-		// also cont. ID shouldn't be empty
-		if netMode[1] == "" {
-			return "", fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", node.ShortName, netMode)
-		}
-		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
-		prefix := strings.SplitN(node.LongName, node.ShortName, 2)[0]
-		// Compile the net spec
-		containerHostConfig.NetworkMode = container.NetworkMode("container:" + prefix + netMode[1])
-		// unset the hostname as it is not supported in this case
-		containerConfig.Hostname = ""
-	case "host":
-		containerHostConfig.NetworkMode = "host"
-	default:
-		containerHostConfig.NetworkMode = container.NetworkMode(d.mgmt.Network)
-
-		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
-			d.mgmt.Network: {
-				IPAMConfig: &network.EndpointIPAMConfig{
-					IPv4Address: node.MgmtIPv4Address,
-					IPv6Address: node.MgmtIPv6Address,
-				},
-			},
-		}
+	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
+		return "", err
 	}
 
 	// regular linux containers may benefit from automatic restart on failure
@@ -451,7 +423,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	return cont.ID, nil
 }
 
-// GetNSPath inspects a container by its name/id and returns a netns path using the pid of a container
+// GetNSPath inspects a container by its name/id and returns a netns path using the pid of a container.
 func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, error) {
 	nctx, cancelFn := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancelFn()
@@ -513,7 +485,7 @@ func (d *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	return nil
 }
 
-// StartContainer starts a docker container
+// StartContainer starts a docker container.
 func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node *types.NodeConfig) (interface{}, error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
@@ -533,7 +505,7 @@ func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node *ty
 	return nil, err
 }
 
-// postStartActions performs misc. tasks that are needed after the container starts
+// postStartActions performs misc. tasks that are needed after the container starts.
 func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *types.NodeConfig) error {
 	var err error
 	node.NSPath, err = d.GetNSPath(ctx, cID)
@@ -544,7 +516,7 @@ func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *
 	return err
 }
 
-// ListContainers lists all containers using the provided filters
+// ListContainers lists all containers using the provided filters.
 func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
@@ -600,15 +572,18 @@ func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.Ge
 		FilterType: "name",
 		Field:      "",
 		Operator:   "",
-		Match:      cID,
+		Match:      fmt.Sprintf("^%s$", cID), // this regexp ensure we have an exact match for name
 	}
+
 	ctrs, err := d.ListContainers(ctx, []*types.GenericFilter{&gFilter})
 	if err != nil {
 		return ctr, err
 	}
+
 	if len(ctrs) != 1 {
 		return ctr, fmt.Errorf("found unexpected number of containers: %d", len(ctrs))
 	}
+
 	return &ctrs[0], nil
 }
 
@@ -620,14 +595,17 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 			filterstr = filterstr + filterentry.Operator + filterentry.Match
 		}
 
-		log.Debug("Filter string: " + filterstr)
+		log.Debugf("Filter key: %s, filter value: %s", filterentry.FilterType, filterstr)
 		filter.Add(filterentry.FilterType, filterstr)
 	}
+
 	return filter
 }
 
-// Transform docker-specific to generic container format
-func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container, inputNetworkResources []dockerTypes.NetworkResource) ([]types.GenericContainer, error) {
+// Transform docker-specific to generic container format.
+func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container,
+	inputNetworkResources []dockerTypes.NetworkResource,
+) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for idx := range inputContainers {
@@ -692,7 +670,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	return result, nil
 }
 
-// Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error
+// Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.
 func (d *DockerRuntime) Exec(ctx context.Context, cID string, cmd []string) ([]byte, []byte, error) {
 	cont, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
@@ -737,7 +715,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, cmd []string) ([]b
 	return outBuf.Bytes(), errBuf.Bytes(), nil
 }
 
-// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
+// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.
 func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, cmd []string) error {
 	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: cmd}
 	respID, err := d.Client.ContainerExecCreate(context.Background(), cID, execConfig)
@@ -753,7 +731,7 @@ func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, cmd []string)
 	return nil
 }
 
-// DeleteContainer tries to stop a container then remove it
+// DeleteContainer tries to stop a container then remove it.
 func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	var err error
 	force := !d.config.GracefulShutdown
@@ -774,7 +752,7 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	return nil
 }
 
-// setSysctl writes sysctl data by writing to a specific file
+// setSysctl writes sysctl data by writing to a specific file.
 func setSysctl(sysctl string, newVal int) error {
 	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
 }
@@ -783,7 +761,7 @@ func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
 	return d.Client.ContainerKill(ctx, name, "kill")
 }
 
-// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
+// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container.
 func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, error) {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
@@ -792,4 +770,72 @@ func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 	hostsPath := inspect.HostsPath
 	log.Debugf("Method GetHostsPath was called with a resulting path %q", hostsPath)
 	return hostsPath, nil
+}
+
+func (d *DockerRuntime) processNetworkMode(
+	ctx context.Context,
+	containerNetworkingConfig *network.NetworkingConfig,
+	containerHostConfig *container.HostConfig,
+	containerConfig *container.Config,
+	node *types.NodeConfig,
+) error {
+	netMode := strings.SplitN(node.NetworkMode, ":", 2)
+
+	switch netMode[0] {
+	// clab allows its containers to be attached to a netns of another container
+	// this can be a container that is managed by clab, or an external container.
+	case "container":
+		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
+		if len(netMode) != 2 {
+			return fmt.Errorf("container network mode was specified for container %q, but we failed to parse the network-mode instruction: %q",
+				node.ShortName, netMode)
+		}
+
+		// also cont. ID shouldn't be empty
+		if netMode[1] == "" {
+			return fmt.Errorf("container network mode was specified for container %q, referenced container name appears to be empty: %q",
+				node.ShortName, netMode)
+		}
+
+		// to support using network stack of containers that are scheduled by clab
+		// or containers deployed externally (i.e. by k8s kind)
+		// we first check if container name referenced in network-mode node property exists internally,
+		// aka within clab topology. If it doesn't, we assume that users referred to an external container.
+		// extract lab/topo prefix to craft a full container name if an internal container is referenced.
+		contName := strings.SplitN(node.LongName, node.ShortName, 2)[0] + netMode[1]
+
+		_, err := d.GetContainer(ctx, contName)
+		if err != nil {
+			log.Debugf("container %q was not found by its name, assuming it is exists externally with unprefixed", contName)
+
+			// container doesn't exist internally, so we assume it exists externally
+			// with a non-prefixed name.
+			contName = netMode[1]
+
+			if _, err := d.GetContainer(ctx, contName); err != nil {
+				return fmt.Errorf("container %q is referenced in network-mode, but was not found", netMode[1])
+			}
+		}
+
+		// compile the net spec
+		containerHostConfig.NetworkMode = container.NetworkMode("container:" + contName)
+
+		// unset the hostname as it is not supported in this case
+		containerConfig.Hostname = ""
+	case "host":
+		containerHostConfig.NetworkMode = "host"
+	default:
+		containerHostConfig.NetworkMode = container.NetworkMode(d.mgmt.Network)
+
+		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
+			d.mgmt.Network: {
+				IPAMConfig: &network.EndpointIPAMConfig{
+					IPv4Address: node.MgmtIPv4Address,
+					IPv6Address: node.MgmtIPv6Address,
+				},
+			},
+		}
+	}
+
+	return nil
 }

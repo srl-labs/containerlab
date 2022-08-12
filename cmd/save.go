@@ -16,7 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 )
 
-// saveCmd represents the save command
+// saveCmd represents the save command.
 var saveCmd = &cobra.Command{
 	Use:   "save",
 	Short: "save containers configuration",

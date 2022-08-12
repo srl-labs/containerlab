@@ -31,7 +31,7 @@ const (
 
 type Dict map[string]interface{}
 
-// Prepare variables for all nodes. This will also prepare all variables for the links
+// Prepare variables for all nodes. This will also prepare all variables for the links.
 func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[string]*NodeConfig {
 	res := make(map[string]*NodeConfig)
 
@@ -76,8 +76,10 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		if err != nil {
 			log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
 		}
-		res[link.A.Node.ShortName].Vars[vkLinks] = append(res[link.A.Node.ShortName].Vars[vkLinks].([]interface{}), varsA)
-		res[link.B.Node.ShortName].Vars[vkLinks] = append(res[link.B.Node.ShortName].Vars[vkLinks].([]interface{}), varsB)
+		res[link.A.Node.ShortName].Vars[vkLinks] =
+			append(res[link.A.Node.ShortName].Vars[vkLinks].([]interface{}), varsA)
+		res[link.B.Node.ShortName].Vars[vkLinks] =
+			append(res[link.B.Node.ShortName].Vars[vkLinks].([]interface{}), varsB)
 	}
 
 	// Prepare top-level map of nodes
@@ -94,7 +96,7 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 	return res
 }
 
-// Prepare variables for a specific link
+// Prepare variables for a specific link.
 func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 	// Add a Dict for the far-end link vars and the far-end node name
 	varsA[vkFarEnd] = Dict{vkNodeName: link.B.Node.ShortName}
@@ -161,16 +163,17 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 	return nil
 }
 
-// Create a link name using the node names and optional link_num
+// Create a link name using the node names and optional link_num.
 func linkName(link *types.Link) (string, string, error) {
 	var linkNo string
 	if v, ok := link.Vars[vkLinkNum]; ok {
 		linkNo = fmt.Sprintf("_%v", v)
 	}
-	return fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNo), fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNo), nil
+	return fmt.Sprintf("to_%s%s", link.B.Node.ShortName, linkNo),
+		fmt.Sprintf("to_%s%s", link.A.Node.ShortName, linkNo), nil
 }
 
-// Calculate link IP from the system IPs at both ends
+// Calculate link IP from the system IPs at both ends.
 func linkIP(link *types.Link) (string, string, error) {
 	var ipA netip.Prefix
 	var err error
@@ -225,7 +228,7 @@ func ipLastOctet(in netip.Addr) int {
 	return res
 }
 
-// Calculates the far end IP (first free IP in the subnet) - string version
+// Calculates the far end IP (first free IP in the subnet) - string version.
 func ipFarEndS(in string) (string, error) {
 	ipA, err := netip.ParsePrefix(in)
 	if err != nil {
@@ -238,7 +241,7 @@ func ipFarEndS(in string) (string, error) {
 	return feA.String(), nil
 }
 
-// Calculates the far end IP (first free IP in the subnet)
+// Calculates the far end IP (first free IP in the subnet).
 func ipFarEnd(in netip.Prefix) netip.Prefix {
 	if in.Addr().Is4() && in.Bits() == 32 {
 		return netip.Prefix{}
@@ -265,7 +268,7 @@ func ipFarEnd(in netip.Prefix) netip.Prefix {
 
 // GetTemplateNamesInDirs returns a list of template file names found in a list of dir `paths`
 // without traversing nested dirs
-// template names are following the pattern <some-name>__<role/kind>.tmpl
+// template names are following the pattern <some-name>__<role/kind>.tmpl.
 func GetTemplateNamesInDirs(paths []string) ([]string, error) {
 	var tnames []string
 	for _, p := range paths {

@@ -21,7 +21,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-// Link is a struct that contains the information of a link between 2 containers
+// Link is a struct that contains the information of a link between 2 containers.
 type Link struct {
 	A      *Endpoint
 	B      *Endpoint
@@ -35,7 +35,7 @@ func (link *Link) String() string {
 		link.A.EndpointName, link.B.Node.ShortName, link.B.EndpointName)
 }
 
-// Endpoint is a struct that contains information of a link endpoint
+// Endpoint is a struct that contains information of a link endpoint.
 type Endpoint struct {
 	Node *NodeConfig
 	// e1-x, eth, etc
@@ -44,10 +44,11 @@ type Endpoint struct {
 	MAC string
 }
 
-// MgmtNet struct defines the management network options
+// MgmtNet struct defines the management network options.
 type MgmtNet struct {
-	Network        string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
-	Bridge         string `yaml:"bridge,omitempty" json:"bridge,omitempty"`   // linux bridge backing the runtime network
+	Network string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
+	Bridge  string `yaml:"bridge,omitempty" json:"bridge,omitempty"`
+	// linux bridge backing the runtime network
 	IPv4Subnet     string `yaml:"ipv4_subnet,omitempty" json:"ipv4-subnet,omitempty"`
 	IPv4Gw         string `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
 	IPv6Subnet     string `yaml:"ipv6_subnet,omitempty" json:"ipv6-subnet,omitempty"`
@@ -56,53 +57,72 @@ type MgmtNet struct {
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
 }
 
-// NodeConfig is a struct that contains the information of a container element
+// NodeConfig is a struct that contains the information of a container element.
 type NodeConfig struct {
-	ShortName            string            `json:"shortname,omitempty"` // name of the Node inside topology YAML
-	LongName             string            `json:"longname,omitempty"`  // containerlab-prefixed unique container name
-	Fqdn                 string            `json:"fqdn,omitempty"`
-	LabDir               string            `json:"labdir,omitempty"` // LabDir is a directory related to the node, it contains config items and/or other persistent state
-	Index                int               `json:"index,omitempty"`
-	Group                string            `json:"group,omitempty"`
-	Kind                 string            `json:"kind,omitempty"`
-	StartupConfig        string            `json:"startup-config,omitempty"`          // path to config template file that is used for startup config generation
-	StartupDelay         uint              `json:"startup-delay,omitempty"`           // optional delay (in seconds) to wait before creating this node
-	EnforceStartupConfig bool              `json:"enforce-startup-config,omitempty"`  // when set to true will enforce the use of startup-config, even when config is present in the lab directory
-	ResStartupConfig     string            `json:"startup-config-abs-path,omitempty"` // path to config file that is actually mounted to the container and is a result of templation
-	Config               *ConfigDispatcher `json:"config,omitempty"`
-	ResConfig            string            `json:"config-abs-path,omitempty"` // path to config file that is actually mounted to the container and is a result of templation
-	NodeType             string            `json:"type,omitempty"`
-	Position             string            `json:"position,omitempty"`
-	License              string            `json:"license,omitempty"`
-	Image                string            `json:"image,omitempty"`
-	Sysctls              map[string]string `json:"sysctls,omitempty"`
-	User                 string            `json:"user,omitempty"`
-	Entrypoint           string            `json:"entrypoint,omitempty"`
-	Cmd                  string            `json:"cmd,omitempty"`
-	Exec                 []string          `json:"exec,omitempty"`
-	Env                  map[string]string `json:"env,omitempty"`
-	Binds                []string          `json:"binds,omitempty"`        // Bind mounts strings (src:dest:options).
-	PortBindings         nat.PortMap       `json:"portbindings,omitempty"` // PortBindings define the bindings between the container ports and host ports
-	PortSet              nat.PortSet       `json:"portset,omitempty"`      // PortSet define the ports that should be exposed on a container
-	NetworkMode          string            `json:"networkmode,omitempty"`  // container networking mode. if set to `host` the host networking will be used for this node, else bridged network
-	MgmtNet              string            `json:"mgmt-net,omitempty"`     // name of the docker network this node is connected to with its first interface
-	MgmtIntf             string            `json:"mgmt-intf,omitempty"`    // can be used to be rendered by the default node template
-	MgmtIPv4Address      string            `json:"mgmt-ipv4-address,omitempty"`
-	MgmtIPv4PrefixLength int               `json:"mgmt-ipv4-prefix-length,omitempty"`
-	MgmtIPv6Address      string            `json:"mgmt-ipv6-address,omitempty"`
-	MgmtIPv6PrefixLength int               `json:"mgmt-ipv6-prefix-length,omitempty"`
-	MgmtIPv4Gateway      string            `json:"mgmt-ipv4-gateway,omitempty"`
-	MgmtIPv6Gateway      string            `json:"mgmt-ipv6-gateway,omitempty"`
-	MacAddress           string            `json:"mac-address,omitempty"`
-	ContainerID          string            `json:"containerid,omitempty"`
-	TLSCert              string            `json:"tls-cert,omitempty"`
-	TLSKey               string            `json:"-"` // Do not marshal into JSON - highly sensitive data
-	TLSAnchor            string            `json:"tls-anchor,omitempty"`
-	NSPath               string            `json:"nspath,omitempty"`      // network namespace path for this node
-	Publish              []string          `json:"publish,omitempty"`     // list of ports to publish with mysocketctl
-	ExtraHosts           []string          `json:"extra-hosts,omitempty"` // Extra /etc/hosts entries for all nodes.
-	Labels               map[string]string `json:"labels,omitempty"`      // container labels
-	Endpoints            []Endpoint        `json:"-"`                     // Slice of pointers to local endpoints, DO NOT marshal into JSON as it creates a cyclical error
+	ShortName string `json:"shortname,omitempty"`
+	// name of the Node inside topology YAML
+	LongName string `json:"longname,omitempty"`
+	// containerlab-prefixed unique container name
+	Fqdn   string `json:"fqdn,omitempty"`
+	LabDir string `json:"labdir,omitempty"`
+	// LabDir is a directory related to the node, it contains config items and/or other persistent state
+	Index         int    `json:"index,omitempty"`
+	Group         string `json:"group,omitempty"`
+	Kind          string `json:"kind,omitempty"`
+	StartupConfig string `json:"startup-config,omitempty"`
+	// path to config template file that is used for startup config generation
+	StartupDelay uint `json:"startup-delay,omitempty"`
+	// optional delay (in seconds) to wait before creating this node
+	EnforceStartupConfig bool `json:"enforce-startup-config,omitempty"`
+	// when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	ResStartupConfig string `json:"startup-config-abs-path,omitempty"`
+	// path to config file that is actually mounted to the container and is a result of templation
+	Config    *ConfigDispatcher `json:"config,omitempty"`
+	ResConfig string            `json:"config-abs-path,omitempty"`
+	// path to config file that is actually mounted to the container and is a result of templation
+	NodeType   string            `json:"type,omitempty"`
+	Position   string            `json:"position,omitempty"`
+	License    string            `json:"license,omitempty"`
+	Image      string            `json:"image,omitempty"`
+	Sysctls    map[string]string `json:"sysctls,omitempty"`
+	User       string            `json:"user,omitempty"`
+	Entrypoint string            `json:"entrypoint,omitempty"`
+	Cmd        string            `json:"cmd,omitempty"`
+	Exec       []string          `json:"exec,omitempty"`
+	Env        map[string]string `json:"env,omitempty"`
+	Binds      []string          `json:"binds,omitempty"`
+	// Bind mounts strings (src:dest:options).
+	PortBindings nat.PortMap `json:"portbindings,omitempty"`
+	// PortBindings define the bindings between the container ports and host ports
+	PortSet nat.PortSet `json:"portset,omitempty"`
+	// PortSet define the ports that should be exposed on a container
+	NetworkMode string `json:"networkmode,omitempty"`
+	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
+	MgmtNet string `json:"mgmt-net,omitempty"`
+	// name of the docker network this node is connected to with its first interface
+	MgmtIntf string `json:"mgmt-intf,omitempty"`
+	// can be used to be rendered by the default node template
+	MgmtIPv4Address      string   `json:"mgmt-ipv4-address,omitempty"`
+	MgmtIPv4PrefixLength int      `json:"mgmt-ipv4-prefix-length,omitempty"`
+	MgmtIPv6Address      string   `json:"mgmt-ipv6-address,omitempty"`
+	MgmtIPv6PrefixLength int      `json:"mgmt-ipv6-prefix-length,omitempty"`
+	MgmtIPv4Gateway      string   `json:"mgmt-ipv4-gateway,omitempty"`
+	MgmtIPv6Gateway      string   `json:"mgmt-ipv6-gateway,omitempty"`
+	MacAddress           string   `json:"mac-address,omitempty"`
+	ContainerID          string   `json:"containerid,omitempty"`
+	TLSCert              string   `json:"tls-cert,omitempty"`
+	TLSKey               string   `json:"-"` // Do not marshal into JSON - highly sensitive data
+	TLSAnchor            string   `json:"tls-anchor,omitempty"`
+	NSPath               string   `json:"nspath,omitempty"` // network namespace path for this node
+	Publish              []string `json:"publish,omitempty"`
+	// list of ports to publish with mysocketctl
+	ExtraHosts []string `json:"extra-hosts,omitempty"`
+	// Extra /etc/hosts entries for all nodes.
+	Labels    map[string]string `json:"labels,omitempty"` // container labels
+	Endpoints []Endpoint        `json:"-"`
+	// Slice of pointers to local endpoints, DO NOT marshal into JSON as it creates a cyclical error
+	// List of Subject Alternative Names (SAN) to be added to the node's TLS certificate
+	SANs []string `json:"SANs,omitempty"`
 	// Ignite sandbox and kernel imageNames
 	Sandbox string `json:"sandbox,omitempty"`
 	Kernel  string `json:"kernel,omitempty"`
@@ -115,7 +135,8 @@ type NodeConfig struct {
 	// Host requirements
 	HostRequirements HostRequirements `json:"host-requirements,omitempty"`
 
-	DeploymentStatus string `json:"deployment-status,omitempty"` // status that is set by containerlab to indicate deployment stage
+	DeploymentStatus string `json:"deployment-status,omitempty"`
+	// status that is set by containerlab to indicate deployment stage
 
 	// Extras
 	Extras *Extras `json:"extras,omitempty"` // Extra node parameters
@@ -127,7 +148,7 @@ type HostRequirements struct {
 }
 
 // GenerateConfig generates configuration for the nodes
-// out of the template based on the node configuration and saves the result to dst
+// out of the template based on the node configuration and saves the result to dst.
 func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 	// If the config file is already present in the node dir
 	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
@@ -189,7 +210,7 @@ func DisableTxOffload(n *NodeConfig) error {
 	return err
 }
 
-// Data struct storing generic container data
+// Data struct storing generic container data.
 type GenericContainer struct {
 	Names           []string
 	ID              string
@@ -266,7 +287,7 @@ func FilterFromLabelStrings(labels []string) []*GenericFilter {
 
 // ConfigDispatcher represents the config of a configuration machine
 // that is responsible to execute configuration commands on the nodes
-// after they started
+// after they started.
 type ConfigDispatcher struct {
 	Vars map[string]interface{} `yaml:"vars,omitempty"`
 }
@@ -278,14 +299,17 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 	return cd.Vars
 }
 
-// Extras contains extra node parameters which are not entitled to be part of a generic node config
+// Extras contains extra node parameters which are not entitled to be part of a generic node config.
 type Extras struct {
-	SRLAgents       []string `yaml:"srl-agents,omitempty"`         // Nokia SR Linux agents. As of now just the agents spec files can be provided here
-	MysocketProxy   string   `yaml:"mysocket-proxy,omitempty"`     // Proxy address that mysocketctl will use
-	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"` // paths to files which are to be copied to ceos flash dir
+	SRLAgents []string `yaml:"srl-agents,omitempty"`
+	// Nokia SR Linux agents. As of now just the agents spec files can be provided here
+	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
+	// Proxy address that mysocketctl will use
+	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
+	// paths to files which are to be copied to ceos flash dir
 }
 
-// ContainerDetails contains information that is commonly outputted to tables or graphs
+// ContainerDetails contains information that is commonly outputted to tables or graphs.
 type ContainerDetails struct {
 	LabName     string `json:"lab_name,omitempty"`
 	LabPath     string `json:"labPath,omitempty"`
@@ -318,7 +342,7 @@ func (mse *MySocketIoEntry) isClabEntry() bool {
 
 // getContainerName deduce the containername from the name of the mysocketio entry
 // precondition is that isClabEntry returned true.
-// clab-slr01-srlnode1-tcp-22 -> slr01-srlnode1
+// clab-slr01-srlnode1-tcp-22 -> slr01-srlnode1.
 func (mse *MySocketIoEntry) getContainerName() (string, error) {
 	splitName := strings.Split(*mse.Name, "-")
 	if len(splitName) < 4 {

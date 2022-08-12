@@ -241,7 +241,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 }
 
 // convertMounts takes a list of filesystem mount binds in docker/clab format (src:dest:options)
-// and converts it into an opencontainers spec format
+// and converts it into an opencontainers spec format.
 func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs.Mount, error) {
 	if len(mounts) == 0 {
 		return nil, nil
@@ -271,8 +271,10 @@ func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs
 }
 
 // produceGenericContainerList takes a list of containers in a podman entities.ListContainer format
-// and transforms it into a GenericContainer type
-func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context, cList []entities.ListContainer) ([]types.GenericContainer, error) {
+// and transforms it into a GenericContainer type.
+func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
+	cList []entities.ListContainer,
+) ([]types.GenericContainer, error) {
 	genericList := make([]types.GenericContainer, len(cList))
 	for i, v := range cList {
 		netSettings, err := r.extractMgmtIP(ctx, v.ID)
@@ -346,7 +348,7 @@ func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
 }
 
 // netOpts is an accessory function that returns a network.CreateOptions struct
-// filled with all parameters for CreateNet function
+// filled with all parameters for CreateNet function.
 func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	// set bridge name = network name if explicit name was not provided
 	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
@@ -443,7 +445,7 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 	return filters
 }
 
-// postStartActions performs misc. tasks that are needed after the container starts
+// postStartActions performs misc. tasks that are needed after the container starts.
 func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *types.NodeConfig) error {
 	var err error
 	// Add NSpath to the node config struct

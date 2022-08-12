@@ -26,7 +26,7 @@ type vEthEndpoint struct {
 	OvsBridge string // ovs-bridge name a veth is destined to be connected to
 }
 
-// CreateVirtualWiring creates the virtual topology between the containers
+// CreateVirtualWiring creates the virtual topology between the containers.
 func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
@@ -118,11 +118,12 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 }
 
 // RemoveHostVeth tries to remove veths connected to the host network namespace
-// And does nothing in case they are not found
+// And does nothing in case they are not found.
 func (c *CLab) RemoveHostVeth(l *types.Link) (err error) {
 	switch {
 	case l.A.Node.Kind == "host":
-		log.Debugf("Removing virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
+		log.Debugf("Removing virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName,
+			l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 		link, err := netlink.LinkByName(l.A.EndpointName)
 		if err != nil {
 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
@@ -133,7 +134,8 @@ func (c *CLab) RemoveHostVeth(l *types.Link) (err error) {
 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
 		}
 	case l.B.Node.Kind == "host":
-		log.Debugf("Removing virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
+		log.Debugf("Removing virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName,
+			l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 		link, err := netlink.LinkByName(l.B.EndpointName)
 		if err != nil {
 			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
@@ -172,7 +174,7 @@ func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAd
 	return
 }
 
-// setVethLink sets the veth link endpoints to the relevant namespaces and/or connects one end to the bridge
+// setVethLink sets the veth link endpoints to the relevant namespaces and/or connects one end to the bridge.
 func (veth *vEthEndpoint) setVethLink() error {
 	// if veth is destined to connect to a linux bridge in the host netns
 	if veth.Bridge != "" {
@@ -194,7 +196,7 @@ func (veth *vEthEndpoint) setVethLink() error {
 	return veth.toNS()
 }
 
-// vethToNS puts a veth endpoint to a given netns and renames its random name to a desired name
+// vethToNS puts a veth endpoint to a given netns and renames its random name to a desired name.
 func (veth *vEthEndpoint) toNS() error {
 	var vethNS ns.NetNS
 	var err error
@@ -246,7 +248,7 @@ func (veth *vEthEndpoint) toBridge() error {
 	return err
 }
 
-// DeleteNetnsSymlinks deletes the symlink file created for each container netns
+// DeleteNetnsSymlinks deletes the symlink file created for each container netns.
 func (c *CLab) DeleteNetnsSymlinks() (err error) {
 	for _, node := range c.Nodes {
 		if node.Config().Kind != "bridge" {
@@ -265,7 +267,7 @@ func genIfName() string {
 	return string(s[:8])
 }
 
-// GetLinksByNamePrefix returns a list of links whose name matches a prefix
+// GetLinksByNamePrefix returns a list of links whose name matches a prefix.
 func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
 	// filtered list of interfaces
 	if prefix == "" {

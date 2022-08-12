@@ -17,7 +17,7 @@ import (
 	"github.com/open-traffic-generator/snappi/gosnappi"
 )
 
-// hostname and interfaces of ixia-c-one node from containerlab topology
+// hostname and interfaces of ixia-c-one node from containerlab topology.
 const (
 	otgHost  = "https://clab-ixiac01-ixia-c"
 	otgPort1 = "eth1"
