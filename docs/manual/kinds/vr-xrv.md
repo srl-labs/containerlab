@@ -61,6 +61,21 @@ Data interfaces `eth1+` needs to be configured with IP addressing manually using
 ### Node configuration
 vr-xrv nodes come up with a basic configuration where only the control plane and line cards are provisioned, as well as the `clab` user and management interfaces such as NETCONF, SNMP, gNMI.
 
+#### Startup configuration
+It is possible to make XRv nodes boot up with a user-defined startup-config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind user sets the path to the config file that will be mounted to a container and used as a startup-config:
+
+```yaml
+topology:
+  nodes:
+    node:
+      kind: vr-xrv
+      startup-config: myconfig.txt
+```
+
+With this knob containerlab is instructed to take a file `myconfig.txt` from the directory that hosts the topology file, and copy it to the lab directory for that specific node under the `/config/startup-config.cfg` name. Then the directory that hosts the startup-config dir is mounted to the container. This will result in this config being applied at startup by the node.
+
+Configuration is applied after the node is started, thus it can contain partial configuration snippets that you desire to add on top of the default config that a node boots up with.
+
 ## Lab examples
 The following labs feature vr-xrv node:
 
