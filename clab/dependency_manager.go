@@ -42,26 +42,35 @@ func (dm *DependencyManager) AddDependency(dependentNodeName, dependingNodeName 
 	dm.perNodeWaiter[dependentNodeName] = append(dm.perNodeWaiter[dependentNodeName], dependingNodeName)
 }
 
+// WaitForDependenciesToFinishFor is caleld by a node that is meant to be created.
+// this call will bock until all the defined dependencies are (other cotnainers) are created before
+// the call returns
 func (dm *DependencyManager) WaitForDependenciesToFinishFor(nodeName string) {
 	dm.perNodeWaitGroup[nodeName].Wait()
 }
 
+// SignalDone is called by a node that has finished the creation process.
+// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied
 func (dm *DependencyManager) SignalDone(nodeName string) {
 	for _, waiterNodeName := range dm.perNodeWaiter[nodeName] {
 		dm.perNodeWaitGroup[waiterNodeName].Done()
 	}
 }
 
+// CheckAcyclicity checks the dependencies between the defined namespaces and throws an error if
 func (dm *DependencyManager) CheckAcyclicity() error {
 
 	log.Debugf("Dependencies:\n%s", dm.String())
-	recursiveAcyclicityCheck(dm.perNodeWaiter, 1)
+	if !isAcyclic(dm.perNodeWaiter, 1) {
+		return fmt.Errorf("the dependencies defned on the namespaces are not resolvable.\n%s", dm.String())
+	}
 
 	return nil
 }
 
-// recursiveAcyclicityCheck checks the provided data for cyclicity.
-func recursiveAcyclicityCheck(dependencies map[string][]string, i int) bool {
+// isAcyclic checks the provided data for cyclicity.
+// i is just for visual candy in the debug output. Must be set to 1.
+func isAcyclic(dependencies map[string][]string, i int) bool {
 
 	// debug output
 	d := []string{}
@@ -116,7 +125,7 @@ func recursiveAcyclicityCheck(dependencies map[string][]string, i int) bool {
 		// replace previous with the new, cleand up dependencies.
 		remaningDeps[name] = remainingNodeDeps
 	}
-	return recursiveAcyclicityCheck(remaningDeps, i+1)
+	return isAcyclic(remaningDeps, i+1)
 }
 
 // String returns a string representation of the actual dependencies
@@ -126,7 +135,7 @@ func (dm *DependencyManager) String() string {
 	dependencies := map[string][]string{}
 
 	// prepare lookup table
-	for name, _ := range dm.perNodeWaitGroup {
+	for name := range dm.perNodeWaitGroup {
 		// polulate dependency map already with empty arrays
 		dependencies[name] = []string{}
 	}
