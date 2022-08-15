@@ -16,8 +16,8 @@ To start this lab, run the [`run.sh`][run] script, which will run the containerl
 
 The lab configuration is documented in detail at: https://www.brianlinkletter.com/2021/05/use-containerlab-to-emulate-open-source-routers/
 
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/frr01/frr01.clab.yml
-[run]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/frr01/run.sh
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/frr01/frr01.clab.yml
+[run]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/frr01/run.sh
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

@@ -17,11 +17,11 @@ Nokia SR OS VM is launched as a container, using [vrnetlab integration](../manua
 ## Use cases
 This lab allows users to launch basic interoperability scenarios between Nokia SR Linux and Nokia SR OS network operating systems.
 
-The lab directory [contains](https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr01) files with essential configurations which can be used to jumpstart the interop demonstration.
+The lab directory [contains](https://github.com/srl-labs/containerlab/tree/main/lab-examples/vr01) files with essential configurations which can be used to jumpstart the interop demonstration.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [sros]: https://www.nokia.com/networks/products/service-router-operating-system/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr01/vr01.clab.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/vr01/vr01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

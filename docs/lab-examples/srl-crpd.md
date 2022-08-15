@@ -174,7 +174,7 @@ Once the lab is deployed with containerlab, use the following configuration inst
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [crpd]: https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/concept/understanding-crpd.html
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlcrpd01/srlcrpd01.clab.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/srlcrpd01/srlcrpd01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

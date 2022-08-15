@@ -14,7 +14,7 @@ The topology created in this lab matches the network used in the [BGP VPLS Deep 
 
 ![topo](https://img-fotki.yandex.ru/get/194989/21639405.11d/0_8b222_20c181b9_orig.png)
 
-It allows readers to follow through the article with the author and create BGP VPLS service between the Nokia and Juniper routers using [configuration snippets](https://github.com/hellt/bgp-vpls-lab/tree/master/configs) provided within the lab repository.
+It allows readers to follow through the article with the author and create BGP VPLS service between the Nokia and Juniper routers using [configuration snippets](https://github.com/hellt/bgp-vpls-lab/tree/main/configs) provided within the lab repository.
 
 As the article was done before Nokia introduced MD-CLI, the configuration snippets for SR OS were translated to MD-CLI.
 
