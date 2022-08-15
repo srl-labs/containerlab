@@ -167,38 +167,33 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 // since static nodes are scheduled first.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
-) *sync.WaitGroup {
+) (*sync.WaitGroup, error) {
 
-	// TODO: Maybe we make the following a seperate struct, where dependencies can be defined simply by the container names
-	// and allow for easy wait and dones also with just container names.
-
-	// map of WaitGroup items per node.
-	// the scheduling of the nodes creation is dependent in this WaitGroup.
-	// other Nodes, that the specific node relies on will increment the WaitGroup by one.
-	perNodeWaitGroup := map[string]*sync.WaitGroup{}
-	// To keep book about which nodes depend on node x, the waitgroups of the dependent Nodes are listed here.
-	// on sucessfull creation of node x, all the dependent nodes Waitgroups will be decremented.
-	perNodeWaiter := map[string][]*sync.WaitGroup{}
+	dm := NewDependencyManager()
 
 	// inti the WaitGroup structs
 	for name := range c.Nodes {
-		// contains the waitgroup per node
-		perNodeWaitGroup[name] = &sync.WaitGroup{}
-		// contains the references to the wait groups that wait for the named node
-		// all these will have to be decreased on finishing the startup of the named node
-		perNodeWaiter[name] = []*sync.WaitGroup{}
+		dm.AddNodeEntry(name)
 	}
 
 	// make the static mgmt ip containers be scheduled befor the dynamic mgmt ip containers
-	createStaticDynamicDependency(c.Nodes, perNodeWaitGroup, perNodeWaiter)
+	createStaticDynamicDependency(c.Nodes, dm)
+
+	// Add possible additional dependencies here
+
+	// make sure that there are no unresolvable dependencies, which would deadlock.
+	err := dm.CheckAcyclicity()
+	if err != nil {
+		return nil, err
+	}
 
 	// finally start scheduling
-	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, perNodeWaitGroup, perNodeWaiter)
-	return NodesWg
+	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
+	return NodesWg, nil
 }
 
 // createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers
-func createStaticDynamicDependency(n map[string]nodes.Node, perNodeWaitGroup map[string]*sync.WaitGroup, perNodeWaiter map[string][]*sync.WaitGroup) {
+func createStaticDynamicDependency(n map[string]nodes.Node, dm *DependencyManager) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -215,18 +210,15 @@ func createStaticDynamicDependency(n map[string]nodes.Node, perNodeWaitGroup map
 	for dynNodeName := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
 		for staticNodeName := range staticIPNodes {
-			// increase it by one
-			perNodeWaitGroup[dynNodeName].Add(1)
-			// add it to the static node waiter, such that on finishing these are decreased by 1
-			perNodeWaiter[staticNodeName] = append(perNodeWaiter[staticNodeName], perNodeWaitGroup[dynNodeName])
+			dm.AddDependency(staticNodeName, dynNodeName)
 		}
 	}
 }
 
-func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes map[string]nodes.Node, perNodeWaitGroup map[string]*sync.WaitGroup, perNodeWaiter map[string][]*sync.WaitGroup) *sync.WaitGroup {
+func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes map[string]nodes.Node, dm *DependencyManager) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, perNodeWaiter map[string][]*sync.WaitGroup) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *DependencyManager) {
 		defer wg.Done()
 		for {
 			select {
@@ -262,10 +254,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes
 				c.m.Lock()
 				node.Config().DeploymentStatus = "created"
 				c.m.Unlock()
-				// decrease depending containers waitgroups.
-				for _, pnwg := range perNodeWaiter[node.Config().ShortName] {
-					pnwg.Done()
-				}
+				// signal to dependencymanager that this node is done
+				dm.SignalDone(node.Config().ShortName)
 			case <-ctx.Done():
 				return
 			}
@@ -283,23 +273,24 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {
-		go workerFunc(i, concurrentChan, wg, perNodeWaiter)
+		go workerFunc(i, concurrentChan, wg, dm)
 	}
 
+	// Waitgroup used to protect the channel towards the workers of being closed to early
 	workerFuncChWG := new(sync.WaitGroup)
 
-	for nodeName, n := range scheduledNodes {
+	for _, n := range scheduledNodes {
 		workerFuncChWG.Add(1)
 		// start a func for all the containers, then will wait for their own waitgroups
 		// to be set to zero by their depending containers, then enqueue to the creation channel
-		go func(node nodes.Node, nwg *sync.WaitGroup, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+		go func(node nodes.Node, dm *DependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
 			// wait for all the nodes that node depends on
-			nwg.Wait()
+			dm.WaitForDependenciesToFinishFor(node.Config().ShortName)
 			// when all dependend nodes are created, push this node into the channel
 			workerChan <- node
 			// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
 			wfcwg.Done()
-		}(n, perNodeWaitGroup[nodeName], concurrentChan, workerFuncChWG) // execute this function straight away
+		}(n, dm, concurrentChan, workerFuncChWG) // execute this function straight away
 	}
 
 	// Gate to make sure the channel is not closed before all the nodes made it though the channel

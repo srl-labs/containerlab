@@ -211,7 +211,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	nodesWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
+	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, serialNodes)
+	if err != nil {
+		return err
+	}
 	c.CreateLinks(ctx, linkWorkers)
 
 	if nodesWg != nil {
