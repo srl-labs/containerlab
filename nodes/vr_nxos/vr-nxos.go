@@ -7,7 +7,11 @@ package vr_nxos
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -17,6 +21,9 @@ import (
 var kindnames = []string{"vr-nxos", "vr-cisco_nxos"}
 
 const (
+	configDirName   = "config"
+	startupCfgFName = "startup-config.cfg"
+
 	defaultUser     = "admin"
 	defaultPassword = "admin"
 )
@@ -51,6 +58,9 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
 
+	// mount config dir to support startup-config functionality
+	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, configDirName), ":/config"))
+
 	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
 
@@ -64,7 +74,7 @@ func (s *vrNXOS) Config() *types.NodeConfig { return s.cfg }
 
 func (s *vrNXOS) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return nil
+	return loadStartupConfigFile(s.cfg)
 }
 
 func (s *vrNXOS) Deploy(ctx context.Context) error {
@@ -97,5 +107,28 @@ func (s *vrNXOS) Delete(ctx context.Context) error {
 }
 
 func (*vrNXOS) SaveConfig(_ context.Context) error {
+	return nil
+}
+
+func loadStartupConfigFile(node *types.NodeConfig) error {
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
+
+	if node.StartupConfig != "" {
+		// dstCfg is a path to a file on the clab host that will have rendered configuration
+		dstCfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(dstCfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+		}
+	}
 	return nil
 }
