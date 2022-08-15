@@ -21,7 +21,7 @@ Upon succesful lab deployment and configuration, the routers will be able to exc
 
 ## Deployment
 
-Since this lab is of a multi-node nature, a user needs to have two machines/VMs and perform lab deployment process on each of them. The [lab directory](https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/) has topology files named `vxlan-sros.clab.yml` and `vxlan-vmx.clab.yml` which are meant to be deployed on VM1 and VM2 accordingly.
+Since this lab is of a multi-node nature, a user needs to have two machines/VMs and perform lab deployment process on each of them. The [lab directory](https://github.com/srl-labs/containerlab/tree/main/lab-examples/vxlan01/) has topology files named `vxlan-sros.clab.yml` and `vxlan-vmx.clab.yml` which are meant to be deployed on VM1 and VM2 accordingly.
 
 The following command will deploy a lab on a specified host:
 
@@ -213,8 +213,8 @@ round-trip min = 2.61ms, avg = 8.04ms, max = 13.5ms, stddev = 0.000ms
 
 Great! Additionally users can [capture the traffic](../manual/wireshark.md) from any of the interfaces involved in the datapath. To see the VxLAN encapsulation the VM's outgoing interfaces should be used.
 
-[vmx-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-vmx.clab.yml
-[sros-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vxlan01/vxlan-sros.clab.yml
+[vmx-topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/vxlan01/vxlan-vmx.clab.yml
+[sros-topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/vxlan01/vxlan-sros.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

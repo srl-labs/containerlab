@@ -20,7 +20,7 @@ With this lightweight CLOS topology a user can exhibit the following scenarios:
 * demonstrate fabric behavior leveraging the user-emulating linux containers attached to the leaves
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos01/clos01.clab.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/clos01/clos01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 

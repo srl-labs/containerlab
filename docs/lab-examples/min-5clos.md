@@ -113,12 +113,12 @@ The following table outlines the addressing plan used in this lab:
 | client4     | eth0           | -           | `172.100.100.15/24` | `2001:172:100:100::15/64` |
 |             | eth1           | leaf4       | `10.0.0.31/31`      | `1000:10:0:0::31/127`     |
 
-Configuration snippets that are used to provision the nodes are contained within the [`configs`](https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos02/configs) subdirectory.
+Configuration snippets that are used to provision the nodes are contained within the [`configs`](https://github.com/srl-labs/containerlab/tree/main/lab-examples/clos02/configs) subdirectory.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos02/clos02.clab.yml
-[setup-topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos02/setup.clos02.clab.yml
-[setup-script]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/clos02/setup.sh
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/clos02/clos02.clab.yml
+[setup-topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/clos02/setup.clos02.clab.yml
+[setup-script]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/clos02/setup.sh
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 
