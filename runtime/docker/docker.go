@@ -96,15 +96,20 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	}
 
 	// detect default MTU if this config parameter was not provided in the clab file
-	d0, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
+	netRes, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
 	if err != nil {
 		d.mgmt.MTU = "1500"
 		log.Debugf("an error occurred when trying to detect docker default network mtu")
 	}
 
-	if mtu, ok := d0.Options["com.docker.network.driver.mtu"]; ok {
+	if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
 		log.Debugf("detected docker network mtu value - %s", mtu)
 		d.mgmt.MTU = mtu
+	}
+
+	// if bridge was not set in the topo file, we default to
+	if d.mgmt.Bridge == "" {
+		d.mgmt.Bridge = "br-" + netRes.ID[:12]
 	}
 }
 

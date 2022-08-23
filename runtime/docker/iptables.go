@@ -63,7 +63,7 @@ func (d *DockerRuntime) deleteIPTablesFwdRule() (err error) {
 
 	br := d.mgmt.Bridge
 
-	if br == "" || br == "docker0" {
+	if br == "docker0" {
 		log.Debug("skipping deletion of iptables forwarding rule for non-bridged or default management network")
 		return
 	}
