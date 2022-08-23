@@ -304,9 +304,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		return err
 	}
 
-	// bridge name associated with the network
-	br := "br-" + nres.ID[:12]
-	err = d.deleteIPTablesFwdRule(br)
+	err = d.deleteIPTablesFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules removal: %v", err)
 	}
