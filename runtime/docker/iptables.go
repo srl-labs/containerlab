@@ -90,12 +90,15 @@ func (d *DockerRuntime) deleteIPTablesFwdRule() (err error) {
 		return nil
 	}
 
-	cmd := fmt.Sprintf(iptDelCmd, br)
+	cmd, err := shlex.Split(fmt.Sprintf(iptDelCmd, br))
+	if err != nil {
+		return err
+	}
 
 	log.Debugf("removing clab iptables rules for bridge %q", br)
 	log.Debugf("trying to delete the forwarding rule with cmd: iptables %s", cmd)
 
-	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
+	stdOutErr, err := exec.Command("iptables", cmd...).CombinedOutput()
 	if err != nil {
 		log.Warnf("Iptables delete stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to delete iptables rules: %w", err)
