@@ -57,6 +57,15 @@ To export full topology data instead of a subset of fields exported by default, 
 
 ### Environment variables
 
+#### CLAB_RUNTIME
+
+Default value of "runtime" key for nodes, same as global `--runtime | -r` flag described above.
+Affects all containerlab commands in the same way, not just `deploy`.
+
+Intended to be set in environments where non-default container runtime should be used, to avoid needing to specify it for every command invocation or in every configuration file.
+
+Example command-line usage: `CLAB_RUNTIME=podman containerlab deploy`
+
 #### CLAB_VERSION_CHECK
 
 Can be set to "disable" value to prevent deploy command making a network request to check new version to report if one is available.
