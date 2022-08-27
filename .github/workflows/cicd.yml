@@ -52,7 +52,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GOVER }}
 
@@ -83,7 +83,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GOVER }}
 
@@ -129,7 +129,7 @@ jobs:
           repository: containers/podman
           ref: v4.1.1
 
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         with:
           go-version: ${{ env.GOVER }}
@@ -392,7 +392,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GOVER }}
 
