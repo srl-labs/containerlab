@@ -72,7 +72,7 @@ jobs:
       - name: Build containerlab
         run: CGO_ENABLED=0 go build -o containerlab -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$(date)'" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
       # store clab binary as artifact
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: containerlab
           path: containerlab
@@ -207,7 +207,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: always()
         with:
           name: 01-smoke-log
@@ -253,7 +253,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/03-basic-ceos
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: always()
         with:
           name: 03-basic-ceos-log
@@ -302,7 +302,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: always()
         with:
           name: 02-basic-srl-log
@@ -339,7 +339,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/04-basic-ixiacone
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: always()
         with:
           name: 04-basic-ixiacone-log
