@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
-	github.com/cloudflare/cfssl v1.6.1
+	github.com/cloudflare/cfssl v1.6.2
 	github.com/containerd/containerd v1.6.6
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.1.1
@@ -34,7 +34,7 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
 	github.com/weaveworks/ignite v0.10.0
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
+	golang.org/x/crypto v0.0.0-20220824171710-5757bc0c5503
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	gopkg.in/yaml.v2 v2.4.0
