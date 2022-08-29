@@ -3,7 +3,7 @@ module github.com/srl-labs/containerlab
 go 1.18
 
 require (
-	github.com/awalterschulze/gographviz v2.0.1+incompatible
+	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cloudflare/cfssl v1.6.1
 	github.com/containerd/containerd v1.6.6
 	github.com/containernetworking/cni v1.1.2
