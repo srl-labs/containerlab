@@ -57,7 +57,7 @@ jobs:
           go-version: ${{ env.GOVER }}
 
       - name: Cache go modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           # In order:
           # * Module download cache
@@ -88,7 +88,7 @@ jobs:
           go-version: ${{ env.GOVER }}
 
       - name: Cache go modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           # In order:
           # * Module download cache
@@ -136,7 +136,7 @@ jobs:
 
       - name: Cache go modules
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           # In order:
           # * Module download cache
@@ -362,7 +362,7 @@ jobs:
       - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER build --clean --strict
 
       - name: Cache htmltest external links
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: tmp/.htmltest
           # key will contain hash of all md files to check if files have changed
@@ -397,7 +397,7 @@ jobs:
           go-version: ${{ env.GOVER }}
 
       - name: Cache go modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           # In order:
           # * Module download cache
