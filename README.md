@@ -1,4 +1,4 @@
-<p align=center><a href="https://containerlab.dev"><img src=https://gitlab.com/rdodin/pics/-/wikis/uploads/9f2e581a8d207a21ff024a312679a239/containerlab_export_white_ink_3.svg?sanitize=true/></a></p>
+<p align=center><a href="https://containerlab.dev"><img src=docs/images/containerlab_export_white_ink.svg?sanitize=true/></a></p>
 
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Github all releases](https://img.shields.io/github/downloads/srl-labs/containerlab/total.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
@@ -47,10 +47,10 @@ And, of course, containerlab is perfectly capable of wiring up arbitrary linux c
 
 This short clip briefly demonstrates containerlab features and explains its purpose:
 
-
 [![vid](https://gitlab.com/rdodin/pics/-/wikis/uploads/35d954fd81d9594ffa5b6110cbc950f5/clab-clip-stillshot.png)](https://youtu.be/xdi7rwdJgkg)
 
 ## Features
+
 * **IaaC approach**  
     Declarative way of defining the labs by means of the topology definition [`clab` files](https://containerlab.dev/manual/topo-def-file/).
 * **Network Operating Systems centric**  
@@ -75,6 +75,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
    The "most-wanted" lab topologies are [documented and included](https://containerlab.dev/lab-examples/lab-examples/) with containerlab installation. Based on this cherry-picked selection you can start crafting the labs answering your needs.
 
 ## Use cases
+
 * **Labs and demos**  
     Containerlab was meant to be a tool for provisioning networking labs built with containers. It is free, open and ubiquitous. No software apart from Docker is required!  
     As with any lab environment it allows the users to validate features, topologies, perform interop testing, datapath testing, etc.  
@@ -84,4 +85,4 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **Telemetry validation**
     Coupling modern telemetry stacks with containerlab labs make a perfect fit for Telemetry use cases validation. Spin up a lab with containerized network functions with a telemetry on the side, and run comprehensive telemetry use cases.
 
-Containerlab documentation is provided at https://containerlab.dev.
+Containerlab documentation is provided at <https://containerlab.dev>.
