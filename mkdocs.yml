@@ -123,7 +123,7 @@ site_description: >-
 repo_name: srl-labs/containerlab
 repo_url: https://github.com/srl-labs/containerlab
 site_url: "https://containerlab.dev/"
-edit_uri: ""
+edit_uri: "edit/main/docs/"
 theme:
   name: material
   custom_dir: docs/overrides
@@ -169,6 +169,7 @@ theme:
     code: Fira Mono
   icon:
     logo: fontawesome/solid/flask
+    repo: fontawesome/brands/github
   favicon: images/flask.svg
 
 # Plugins

@@ -17,10 +17,10 @@ Cisco XRv VM is launched as a container, using [vrnetlab integration](../manual/
 ## Use cases
 This lab allows users to launch basic interoperability scenarios between Nokia SR Linux and Cisco XRv network operating systems.
 
-The lab directory [contains](https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr03) files with essential configurations which can be used to jumpstart the interop demonstration.
+The lab directory [contains](https://github.com/srl-labs/containerlab/tree/main/lab-examples/vr03) files with essential configurations which can be used to jumpstart the interop demonstration.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/vr03/vr03.clab.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/vr03/vr03.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

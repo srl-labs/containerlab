@@ -134,7 +134,7 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [sonic]: https://sonic-net.github.io/SONiC/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/sonic01/sonic01.clab.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/sonic01/sonic01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
