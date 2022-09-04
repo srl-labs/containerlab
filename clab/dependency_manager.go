@@ -44,22 +44,21 @@ func (dm *DependencyManager) AddDependency(dependentNodeName, dependingNodeName 
 
 // WaitForDependenciesToFinishFor is caleld by a node that is meant to be created.
 // this call will bock until all the defined dependencies are (other cotnainers) are created before
-// the call returns
+// the call returns.
 func (dm *DependencyManager) WaitForDependenciesToFinishFor(nodeName string) {
 	dm.perNodeWaitGroup[nodeName].Wait()
 }
 
 // SignalDone is called by a node that has finished the creation process.
-// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied
+// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
 func (dm *DependencyManager) SignalDone(nodeName string) {
 	for _, waiterNodeName := range dm.perNodeWaiter[nodeName] {
 		dm.perNodeWaitGroup[waiterNodeName].Done()
 	}
 }
 
-// CheckAcyclicity checks the dependencies between the defined namespaces and throws an error if
+// CheckAcyclicity checks the dependencies between the defined namespaces and throws an error if.
 func (dm *DependencyManager) CheckAcyclicity() error {
-
 	log.Debugf("Dependencies:\n%s", dm.String())
 	if !isAcyclic(dm.perNodeWaiter, 1) {
 		return fmt.Errorf("the dependencies defned on the namespaces are not resolvable.\n%s", dm.String())
@@ -71,7 +70,6 @@ func (dm *DependencyManager) CheckAcyclicity() error {
 // isAcyclic checks the provided data for cyclicity.
 // i is just for visual candy in the debug output. Must be set to 1.
 func isAcyclic(dependencies map[string][]string, i int) bool {
-
 	// debug output
 	d := []string{}
 	for name, entries := range dependencies {
@@ -128,9 +126,8 @@ func isAcyclic(dependencies map[string][]string, i int) bool {
 	return isAcyclic(remaningDeps, i+1)
 }
 
-// String returns a string representation of the actual dependencies
+// String returns a string representation of the actual dependencies.
 func (dm *DependencyManager) String() string {
-
 	// map to record the dependencies in string based representation
 	dependencies := map[string][]string{}
 

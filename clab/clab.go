@@ -168,7 +168,6 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
 ) (*sync.WaitGroup, error) {
-
 	dm := NewDependencyManager()
 
 	// inti the WaitGroup structs
@@ -192,7 +191,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	return NodesWg, nil
 }
 
-// createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers
+// createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers.
 func createStaticDynamicDependency(n map[string]nodes.Node, dm *DependencyManager) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
@@ -215,7 +214,9 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm *DependencyManage
 	}
 }
 
-func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes map[string]nodes.Node, dm *DependencyManager) *sync.WaitGroup {
+func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
+	scheduledNodes map[string]nodes.Node, dm *DependencyManager,
+) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
 	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *DependencyManager) {
