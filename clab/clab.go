@@ -162,20 +162,18 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntime]
 }
 
-// CreateNodes will schedule nodes creation
-// returns waitgroups for nodes with static and dynamic IPs,
-// since static nodes are scheduled first.
+// CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
+// Nodes interdependencies are created in this function.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
 ) (*sync.WaitGroup, error) {
 	dm := NewDependencyManager()
 
-	// inti the WaitGroup structs
 	for name := range c.Nodes {
 		dm.AddNodeEntry(name)
 	}
 
-	// make the static mgmt ip containers be scheduled befor the dynamic mgmt ip containers
+	// nodes with static mgmt it should be scheduled before the dynamic ones
 	createStaticDynamicDependency(c.Nodes, dm)
 
 	// Add possible additional dependencies here
