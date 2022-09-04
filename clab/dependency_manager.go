@@ -9,12 +9,12 @@ import (
 )
 
 type dependencyManager struct {
-	// map of WaitGroup items per node.
-	// the scheduling of the nodes creation is dependent on this WaitGroup.
-	// other nodes, that the specific node relies on will increment the WaitGroup by one.
+	// map of wait group per node.
+	// The scheduling of the nodes creation is dependent on their respective wait group.
+	// Other nodes, that the specific node relies on will increment the wait group.
 	nodeWaitGroup map[string]*sync.WaitGroup
-	// To keep book about which nodes depend on node x, the waitgroups of the dependent Nodes are listed here.
-	// on successful creation of node x, all the dependent nodes Waitgroups will be decremented.
+	// To track which nodes depend on node x, the wait group of the dependent Nodes are listed here.
+	// On successful creation of node x, all the dependent nodes wait groups will be decremented.
 	nodeWaiter map[string][]string
 }
 
