@@ -192,7 +192,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 }
 
 // createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers.
-func createStaticDynamicDependency(n map[string]nodes.Node, dm *DependencyManager) {
+func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManager) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -215,11 +215,11 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm *DependencyManage
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
-	scheduledNodes map[string]nodes.Node, dm *DependencyManager,
+	scheduledNodes map[string]nodes.Node, dm *dependencyManager,
 ) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *DependencyManager) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *dependencyManager) {
 		defer wg.Done()
 		for {
 			select {
@@ -284,7 +284,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 		workerFuncChWG.Add(1)
 		// start a func for all the containers, then will wait for their own waitgroups
 		// to be set to zero by their depending containers, then enqueue to the creation channel
-		go func(node nodes.Node, dm *DependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+		go func(node nodes.Node, dm *dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
 			// wait for all the nodes that node depends on
 			dm.WaitForDependenciesToFinishFor(node.Config().ShortName)
 			// when all dependend nodes are created, push this node into the channel

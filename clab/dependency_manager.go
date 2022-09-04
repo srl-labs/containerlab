@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type DependencyManager struct {
+type dependencyManager struct {
 	// map of WaitGroup items per node.
 	// the scheduling of the nodes creation is dependent in this WaitGroup.
 	// other Nodes, that the specific node relies on will increment the WaitGroup by one.
@@ -18,14 +18,14 @@ type DependencyManager struct {
 	perNodeWaiter map[string][]string
 }
 
-func NewDependencyManager() *DependencyManager {
-	return &DependencyManager{
+func NewDependencyManager() *dependencyManager {
+	return &dependencyManager{
 		perNodeWaitGroup: map[string]*sync.WaitGroup{},
 		perNodeWaiter:    map[string][]string{},
 	}
 }
 
-func (dm *DependencyManager) AddNodeEntry(name string) {
+func (dm *dependencyManager) AddNodeEntry(name string) {
 	// contains the waitgroup per node
 	dm.perNodeWaitGroup[name] = &sync.WaitGroup{}
 	// contains the references to the wait groups that wait for the named node
@@ -35,7 +35,7 @@ func (dm *DependencyManager) AddNodeEntry(name string) {
 
 // AddDependency adds a dependency between dependentNodeName and dependingNodeName.
 // the dependingNode will wait for the dependentNode to become availabel.
-func (dm *DependencyManager) AddDependency(dependentNodeName, dependingNodeName string) {
+func (dm *dependencyManager) AddDependency(dependentNodeName, dependingNodeName string) {
 	// increase it by one
 	dm.perNodeWaitGroup[dependingNodeName].Add(1)
 	// add it to the static node waiter, such that on finishing these are decreased by 1
@@ -45,20 +45,20 @@ func (dm *DependencyManager) AddDependency(dependentNodeName, dependingNodeName 
 // WaitForDependenciesToFinishFor is caleld by a node that is meant to be created.
 // this call will bock until all the defined dependencies are (other cotnainers) are created before
 // the call returns.
-func (dm *DependencyManager) WaitForDependenciesToFinishFor(nodeName string) {
+func (dm *dependencyManager) WaitForDependenciesToFinishFor(nodeName string) {
 	dm.perNodeWaitGroup[nodeName].Wait()
 }
 
 // SignalDone is called by a node that has finished the creation process.
 // internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *DependencyManager) SignalDone(nodeName string) {
+func (dm *dependencyManager) SignalDone(nodeName string) {
 	for _, waiterNodeName := range dm.perNodeWaiter[nodeName] {
 		dm.perNodeWaitGroup[waiterNodeName].Done()
 	}
 }
 
 // CheckAcyclicity checks the dependencies between the defined namespaces and throws an error if.
-func (dm *DependencyManager) CheckAcyclicity() error {
+func (dm *dependencyManager) CheckAcyclicity() error {
 	log.Debugf("Dependencies:\n%s", dm.String())
 	if !isAcyclic(dm.perNodeWaiter, 1) {
 		return fmt.Errorf("the dependencies defned on the namespaces are not resolvable.\n%s", dm.String())
@@ -127,7 +127,7 @@ func isAcyclic(dependencies map[string][]string, i int) bool {
 }
 
 // String returns a string representation of the actual dependencies.
-func (dm *DependencyManager) String() string {
+func (dm *dependencyManager) String() string {
 	// map to record the dependencies in string based representation
 	dependencies := map[string][]string{}
 
