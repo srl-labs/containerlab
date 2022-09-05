@@ -9,9 +9,9 @@ import (
 )
 
 type dependencyManager struct {
-	// map of wait group per node.
+	// Map of wait group per node.
 	// The scheduling of the nodes creation is dependent on their respective wait group.
-	// Other nodes, that the specific node relies on will increment the wait group.
+	// Other nodes, that the specific node relies on will increment this wait group.
 	nodeWaitGroup map[string]*sync.WaitGroup
 	// Names of the nodes that depend on a given node are listed here.
 	// On successful creation of the said node, all the depending nodes (dependers) wait groups will be decremented.
@@ -39,18 +39,17 @@ func (dm *dependencyManager) AddDependency(dependee, depender string) {
 	dm.nodeDependers[dependee] = append(dm.nodeDependers[dependee], depender)
 }
 
-// WaitForDependenciesToFinishFor is called by a node that is meant to be created.
-// this call will bock until all the defined dependencies are (other containers) are created before
-// the call returns.
-func (dm *dependencyManager) WaitForDependenciesToFinishFor(nodeName string) {
+// WaitForNodeDependencies is called by a node that is meant to be created.
+// This call will bock until all the nodes that this node depends on are created.
+func (dm *dependencyManager) WaitForNodeDependencies(nodeName string) {
 	dm.nodeWaitGroup[nodeName].Wait()
 }
 
 // SignalDone is called by a node that has finished the creation process.
 // internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
 func (dm *dependencyManager) SignalDone(nodeName string) {
-	for _, waiterNodeName := range dm.nodeDependers[nodeName] {
-		dm.nodeWaitGroup[waiterNodeName].Done()
+	for _, depender := range dm.nodeDependers[nodeName] {
+		dm.nodeWaitGroup[depender].Done()
 	}
 }
 

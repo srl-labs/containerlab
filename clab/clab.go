@@ -184,7 +184,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 		return nil, err
 	}
 
-	// finally start scheduling
+	// start scheduling
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
 
 	return NodesWg, nil
@@ -255,7 +255,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				c.m.Lock()
 				node.Config().DeploymentStatus = "created"
 				c.m.Unlock()
-				// signal to dependencymanager that this node is done
+
+				// signal to dependency manager that this node is done
 				dm.SignalDone(node.Config().ShortName)
 			case <-ctx.Done():
 				return
@@ -286,8 +287,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 		// to be set to zero by their depending containers, then enqueue to the creation channel
 		go func(node nodes.Node, dm *dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
 			// wait for all the nodes that node depends on
-			dm.WaitForDependenciesToFinishFor(node.Config().ShortName)
-			// when all dependend nodes are created, push this node into the channel
+			dm.WaitForNodeDependencies(node.Config().ShortName)
+			// when all nodes that this node depends on are created, push it into the channel
 			workerChan <- node
 			// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
 			wfcwg.Done()
@@ -296,7 +297,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 
 	// Gate to make sure the channel is not closed before all the nodes made it though the channel
 	workerFuncChWG.Wait()
-	// close the channel and thereby therminate the workerFuncs
+	// close the channel and thereby terminate the workerFuncs
 	close(concurrentChan)
 
 	return wg
