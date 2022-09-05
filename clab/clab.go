@@ -197,7 +197,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 // createNamespaceSharingDependency inserts dependencies into the dependencyManager that reflect namespace sharing,
 // where containers are started in the namespace of other containers.
 // Hence the depender container has to be started before the dependee container
-func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm *dependencyManager) {
+func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm dependencyManager) {
 	for nodeName, n := range nodeMap {
 		// get the types.NodeConfig
 		nodeConfig := n.Config()
@@ -207,13 +207,11 @@ func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm *depende
 			continue
 		}
 		// the referenced container might be an external pre-existing or a container craeted also by the given clab topology.
-
-		// extract lab/topo prefix to craft a full container name if an internal container is referenced.
-		contName := strings.SplitN(nodeConfig.LongName, nodeConfig.ShortName, 2)[0] + netModeArr[1]
+		contName := netModeArr[1]
 
 		// if the container does not exist in the list of container, it must be an external dependency
 		// it can be ignored for internal processing so -> continue
-		if _, exists := nodeMap[contName]; !exists {
+		if _, exists := nodeMap[netModeArr[1]]; !exists {
 			continue
 		}
 
@@ -224,7 +222,7 @@ func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm *depende
 
 // createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
 // are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
-func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManager) {
+func createStaticDynamicDependency(n map[string]nodes.Node, dm dependencyManager) {
 
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
@@ -248,11 +246,11 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManage
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
-	scheduledNodes map[string]nodes.Node, dm *dependencyManager,
+	scheduledNodes map[string]nodes.Node, dm dependencyManager,
 ) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *dependencyManager) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm dependencyManager) {
 		defer wg.Done()
 		for {
 			select {
@@ -318,7 +316,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 		workerFuncChWG.Add(1)
 		// start a func for all the containers, then will wait for their own waitgroups
 		// to be set to zero by their depending containers, then enqueue to the creation channel
-		go func(node nodes.Node, dm *dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+		go func(node nodes.Node, dm dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
 			// wait for all the nodes that node depends on
 			dm.WaitForNodeDependencies(node.Config().ShortName)
 			// when all nodes that this node depends on are created, push it into the channel

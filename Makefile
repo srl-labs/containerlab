@@ -19,6 +19,17 @@ build-with-podman:
 test:
 	go test -race ./... -v
 
+MOCKDIR = ./mocks
+.PHONY: mocks-gen
+mocks-gen: mocks-rm ## Generate mocks for all the defined interfaces.
+	go install github.com/golang/mock/mockgen@latest
+	mockgen -package=mocks -source=nodes/node.go -destination=$(MOCKDIR)/node.go
+	mockgen -package=mocks -source=clab/dependency_manager.go -destination=$(MOCKDIR)/dependency_manager.go
+
+.PHONY: mocks-rm
+mocks-rm: ## remove generated mocks
+	rm -rf $(MOCKDIR)/*
+
 lint:
 	golangci-lint run
 
