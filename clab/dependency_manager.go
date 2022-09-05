@@ -9,12 +9,12 @@ import (
 )
 
 type dependencyManager struct {
-	// map of wait group per node.
+	// Map of wait group per node.
 	// The scheduling of the nodes creation is dependent on their respective wait group.
-	// Other nodes, that the specific node relies on will increment the wait group.
+	// Other nodes, that the specific node relies on will increment this wait group.
 	nodeWaitGroup map[string]*sync.WaitGroup
 	// Names of the nodes that depend on a given node are listed here.
-	// On successful creation of the said node, all the depending nodes wait groups will be decremented.
+	// On successful creation of the said node, all the depending nodes (dependers) wait groups will be decremented.
 	nodeDependers map[string][]string
 }
 
@@ -32,63 +32,63 @@ func (dm *dependencyManager) AddNode(name string) {
 }
 
 // AddDependency adds a dependency between depender and dependee.
-// the dependingNode will wait for the dependentNode to become available.
+// The depender will effectively wait for the dependee to finish.
 func (dm *dependencyManager) AddDependency(dependee, depender string) {
 	dm.nodeWaitGroup[depender].Add(1)
 	// add a depender node name for a given dependee
 	dm.nodeDependers[dependee] = append(dm.nodeDependers[dependee], depender)
 }
 
-// WaitForDependenciesToFinishFor is called by a node that is meant to be created.
-// this call will bock until all the defined dependencies are (other containers) are created before
-// the call returns.
-func (dm *dependencyManager) WaitForDependenciesToFinishFor(nodeName string) {
+// WaitForNodeDependencies is called by a node that is meant to be created.
+// This call will bock until all the nodes that this node depends on are created.
+func (dm *dependencyManager) WaitForNodeDependencies(nodeName string) {
 	dm.nodeWaitGroup[nodeName].Wait()
 }
 
 // SignalDone is called by a node that has finished the creation process.
 // internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
 func (dm *dependencyManager) SignalDone(nodeName string) {
-	for _, waiterNodeName := range dm.nodeDependers[nodeName] {
-		dm.nodeWaitGroup[waiterNodeName].Done()
+	for _, depender := range dm.nodeDependers[nodeName] {
+		dm.nodeWaitGroup[depender].Done()
 	}
 }
 
-// CheckAcyclicity checks the dependencies between the defined namespaces and throws an error if.
+// CheckAcyclicity checks if dependencies contain cycles.
 func (dm *dependencyManager) CheckAcyclicity() error {
 	log.Debugf("Dependencies:\n%s", dm.String())
 	if !isAcyclic(dm.nodeDependers, 1) {
-		return fmt.Errorf("the dependencies defned on the namespaces are not resolvable.\n%s", dm.String())
+		return fmt.Errorf("cyclic dependencies found!\n%s", dm.String())
 	}
 
 	return nil
 }
 
-// isAcyclic checks the provided data for cycles.
-// i is just for visual candy in the debug output. Must be set to 1.
-func isAcyclic(dependencies map[string][]string, i int) bool {
-	// debug output
-	d := []string{}
-	for name, entries := range dependencies {
-		d = append(d, fmt.Sprintf("%s <- [ %s ]", name, strings.Join(entries, ", ")))
-	}
-	log.Debugf("- cyclicity check round %d - \n%s", i, strings.Join(d, "\n"))
-
+// isAcyclic checks the provided dependencies map for cycles.
+// i indicates the check round. Must be set to 1.
+func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	// no more nodes then the graph is acyclic
-	if len(dependencies) == 0 {
+	if len(nodeDependers) == 0 {
 		log.Debugf("node creation graph is successfully validated as being acyclic")
+
 		return true
 	}
 
-	remainingDeps := map[string][]string{}
+	// debug output
+	d := []string{}
+	for dependee, dependers := range nodeDependers {
+		d = append(d, fmt.Sprintf("%s <- [ %s ]", dependee, strings.Join(dependers, ", ")))
+	}
+	log.Debugf("- cycle check round %d - \n%s", i, strings.Join(d, "\n"))
+
+	remainingNodeDependers := map[string][]string{}
 	leafNodes := []string{}
 	// mark a node as a remaining dependency if other nodes still depend on it,
 	// otherwise add it to the leaf list for it to be removed in the next round of recursive check
-	for name, deps := range dependencies {
-		if len(deps) > 0 {
-			remainingDeps[name] = deps
+	for dependee, dependers := range nodeDependers {
+		if len(dependers) > 0 {
+			remainingNodeDependers[dependee] = dependers
 		} else {
-			leafNodes = append(leafNodes, name)
+			leafNodes = append(leafNodes, dependee)
 		}
 	}
 
@@ -99,11 +99,11 @@ func isAcyclic(dependencies map[string][]string, i int) bool {
 
 	// iterate over remaining nodes, to remove all leaf nodes from the dependencies, because in the next round of recursion,
 	// these will no longer be there, they suffice the satisfy the acyclicity property
-	for name, deps := range remainingDeps {
+	for dependee, dependers := range remainingNodeDependers {
 		// new array that keeps track of remaining dependencies
-		remainingNodeDeps := []string{}
+		newRemainingNodeDependers := []string{}
 		// iterate over deleted nodes
-		for _, dep := range deps {
+		for _, dep := range dependers {
 			keep := true
 			// check if the actual dep is a leafNode and should therefore be removed
 			for _, delnode := range leafNodes {
@@ -114,30 +114,33 @@ func isAcyclic(dependencies map[string][]string, i int) bool {
 				}
 			}
 			if keep {
-				remainingNodeDeps = append(remainingNodeDeps, dep)
+				newRemainingNodeDependers = append(newRemainingNodeDependers, dep)
 			}
 		}
 		// replace previous with the new, cleanup dependencies.
-		remainingDeps[name] = remainingNodeDeps
+		remainingNodeDependers[dependee] = newRemainingNodeDependers
 	}
-	return isAcyclic(remainingDeps, i+1)
+	return isAcyclic(remainingNodeDependers, i+1)
 }
 
-// String returns a string representation of the actual dependencies.
+// String returns a string representation of dependencies recorded with dependency manager.
 func (dm *dependencyManager) String() string {
+	// since dm.nodeDependers contains a map of dependee->[dependers] it is not
+	// particularly suitable for displaying the dependency graph
+	// this function reverses the order so that it becomes depender->[dependees]
+
 	// map to record the dependencies in string based representation
 	dependencies := map[string][]string{}
 
-	// prepare lookup table
+	// prepare dependencies table
 	for name := range dm.nodeWaitGroup {
-		// populate dependency map already with empty arrays
 		dependencies[name] = []string{}
 	}
 
 	// build the dependency datastruct
-	for name, wgarray := range dm.nodeDependers {
-		for _, waiter := range wgarray {
-			dependencies[waiter] = append(dependencies[waiter], name)
+	for dependee, dependers := range dm.nodeDependers {
+		for _, depender := range dependers {
+			dependencies[depender] = append(dependencies[depender], dependee)
 		}
 	}
 
