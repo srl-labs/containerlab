@@ -169,11 +169,11 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 ) (*sync.WaitGroup, error) {
 	dm := NewDependencyManager()
 
-	for name := range c.Nodes {
-		dm.AddNodeEntry(name)
+	for nodeName := range c.Nodes {
+		dm.AddNode(nodeName)
 	}
 
-	// nodes with static mgmt it should be scheduled before the dynamic ones
+	// nodes with static mgmt IP should be scheduled before the dynamic ones
 	createStaticDynamicDependency(c.Nodes, dm)
 
 	// Add possible additional dependencies here
@@ -186,15 +186,17 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 
 	// finally start scheduling
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
+
 	return NodesWg, nil
 }
 
-// createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers.
+// createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
+// are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
 func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManager) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
-	// devide the nodes into static and dynamic mgmt IP nodes.
+	// divide the nodes into static and dynamic mgmt IP nodes.
 	for name, n := range n {
 		if n.Config().MgmtIPv4Address != "" || n.Config().MgmtIPv6Address != "" {
 			staticIPNodes[name] = n

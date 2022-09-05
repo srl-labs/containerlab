@@ -13,33 +13,30 @@ type dependencyManager struct {
 	// The scheduling of the nodes creation is dependent on their respective wait group.
 	// Other nodes, that the specific node relies on will increment the wait group.
 	nodeWaitGroup map[string]*sync.WaitGroup
-	// To track which nodes depend on node x, the wait group of the dependent Nodes are listed here.
-	// On successful creation of node x, all the dependent nodes wait groups will be decremented.
-	nodeWaiter map[string][]string
+	// Names of the nodes that depend on a given node are listed here.
+	// On successful creation of the said node, all the depending nodes wait groups will be decremented.
+	nodeDependers map[string][]string
 }
 
 func NewDependencyManager() *dependencyManager {
 	return &dependencyManager{
 		nodeWaitGroup: map[string]*sync.WaitGroup{},
-		nodeWaiter:    map[string][]string{},
+		nodeDependers: map[string][]string{},
 	}
 }
 
-func (dm *dependencyManager) AddNodeEntry(name string) {
-	// contains the waitgroup per node
+// AddNode adds a node to the dependency manager.
+func (dm *dependencyManager) AddNode(name string) {
 	dm.nodeWaitGroup[name] = &sync.WaitGroup{}
-	// contains the references to the wait groups that wait for the named node
-	// all these will have to be decreased on finishing the startup of the named node
-	dm.nodeWaiter[name] = []string{}
+	dm.nodeDependers[name] = []string{}
 }
 
-// AddDependency adds a dependency between dependentNodeName and dependingNodeName.
+// AddDependency adds a dependency between depender and dependee.
 // the dependingNode will wait for the dependentNode to become available.
-func (dm *dependencyManager) AddDependency(dependentNodeName, dependingNodeName string) {
-	// increase it by one
-	dm.nodeWaitGroup[dependingNodeName].Add(1)
-	// add it to the static node waiter, such that on finishing these are decreased by 1
-	dm.nodeWaiter[dependentNodeName] = append(dm.nodeWaiter[dependentNodeName], dependingNodeName)
+func (dm *dependencyManager) AddDependency(dependee, depender string) {
+	dm.nodeWaitGroup[depender].Add(1)
+	// add a depender node name for a given dependee
+	dm.nodeDependers[dependee] = append(dm.nodeDependers[dependee], depender)
 }
 
 // WaitForDependenciesToFinishFor is called by a node that is meant to be created.
@@ -52,7 +49,7 @@ func (dm *dependencyManager) WaitForDependenciesToFinishFor(nodeName string) {
 // SignalDone is called by a node that has finished the creation process.
 // internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
 func (dm *dependencyManager) SignalDone(nodeName string) {
-	for _, waiterNodeName := range dm.nodeWaiter[nodeName] {
+	for _, waiterNodeName := range dm.nodeDependers[nodeName] {
 		dm.nodeWaitGroup[waiterNodeName].Done()
 	}
 }
@@ -60,7 +57,7 @@ func (dm *dependencyManager) SignalDone(nodeName string) {
 // CheckAcyclicity checks the dependencies between the defined namespaces and throws an error if.
 func (dm *dependencyManager) CheckAcyclicity() error {
 	log.Debugf("Dependencies:\n%s", dm.String())
-	if !isAcyclic(dm.nodeWaiter, 1) {
+	if !isAcyclic(dm.nodeDependers, 1) {
 		return fmt.Errorf("the dependencies defned on the namespaces are not resolvable.\n%s", dm.String())
 	}
 
@@ -138,7 +135,7 @@ func (dm *dependencyManager) String() string {
 	}
 
 	// build the dependency datastruct
-	for name, wgarray := range dm.nodeWaiter {
+	for name, wgarray := range dm.nodeDependers {
 		for _, waiter := range wgarray {
 			dependencies[waiter] = append(dependencies[waiter], name)
 		}
