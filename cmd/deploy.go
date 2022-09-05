@@ -211,13 +211,14 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	nodesStaticWg, nodesDynWg := c.CreateNodes(ctx, nodeWorkers, serialNodes)
-	c.CreateLinks(ctx, linkWorkers)
-	if nodesStaticWg != nil {
-		nodesStaticWg.Wait()
+	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, serialNodes)
+	if err != nil {
+		return err
 	}
-	if nodesDynWg != nil {
-		nodesDynWg.Wait()
+	c.CreateLinks(ctx, linkWorkers)
+
+	if nodesWg != nil {
+		nodesWg.Wait()
 	}
 
 	log.Debug("containers created, retrieving state and IP addresses...")

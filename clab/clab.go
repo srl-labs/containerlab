@@ -162,42 +162,64 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntime]
 }
 
-// CreateNodes will schedule nodes creation
-// returns waitgroups for nodes with static and dynamic IPs,
-// since static nodes are scheduled first.
+// CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
+// Nodes interdependencies are created in this function.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
-) (*sync.WaitGroup, *sync.WaitGroup) {
+) (*sync.WaitGroup, error) {
+	dm := NewDependencyManager()
+
+	for nodeName := range c.Nodes {
+		dm.AddNode(nodeName)
+	}
+
+	// nodes with static mgmt IP should be scheduled before the dynamic ones
+	createStaticDynamicDependency(c.Nodes, dm)
+
+	// Add possible additional dependencies here
+
+	// make sure that there are no unresolvable dependencies, which would deadlock.
+	err := dm.CheckAcyclicity()
+	if err != nil {
+		return nil, err
+	}
+
+	// start scheduling
+	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
+
+	return NodesWg, nil
+}
+
+// createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
+// are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
+func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManager) {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
-	for name, n := range c.Nodes {
+	// divide the nodes into static and dynamic mgmt IP nodes.
+	for name, n := range n {
 		if n.Config().MgmtIPv4Address != "" || n.Config().MgmtIPv6Address != "" {
 			staticIPNodes[name] = n
 			continue
 		}
 		dynIPNodes[name] = n
 	}
-	var staticIPWg *sync.WaitGroup
-	var dynIPWg *sync.WaitGroup
-	if len(staticIPNodes) > 0 {
-		log.Debug("scheduling nodes with static IPs...")
-		staticIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, staticIPNodes)
+
+	// go through all the dynamic ip nodes
+	for dynNodeName := range dynIPNodes {
+		// and add their wait group to the the static nodes, while increasing the waitgroup
+		for staticNodeName := range staticIPNodes {
+			dm.AddDependency(staticNodeName, dynNodeName)
+		}
 	}
-	if len(dynIPNodes) > 0 {
-		log.Debug("scheduling nodes with dynamic IPs...")
-		dynIPWg = c.scheduleNodes(ctx, int(maxWorkers), serialNodes, dynIPNodes)
-	}
-	return staticIPWg, dynIPWg
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
-	serialNodes map[string]struct{}, scheduledNodes map[string]nodes.Node,
+	scheduledNodes map[string]nodes.Node, dm *dependencyManager,
 ) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
-	serialChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *dependencyManager) {
 		defer wg.Done()
 		for {
 			select {
@@ -233,6 +255,9 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				c.m.Lock()
 				node.Config().DeploymentStatus = "created"
 				c.m.Unlock()
+
+				// signal to dependency manager that this node is done
+				dm.SignalDone(node.Config().ShortName)
 			case <-ctx.Done():
 				return
 			}
@@ -250,30 +275,30 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {
-		go workerFunc(i, concurrentChan, wg)
+		go workerFunc(i, concurrentChan, wg, dm)
 	}
 
-	// start the serial worker
-	if len(serialNodes) > 0 {
-		wg.Add(1)
-		go workerFunc(maxWorkers, serialChan, wg)
-	}
+	// Waitgroup used to protect the channel towards the workers of being closed to early
+	workerFuncChWG := new(sync.WaitGroup)
 
-	// send nodes to workers
 	for _, n := range scheduledNodes {
-		if _, ok := serialNodes[n.Config().LongName]; ok {
-			// delete the entry to avoid starting a serial worker in the
-			// case of dynamic IP nodes scheduling
-			delete(serialNodes, n.Config().LongName)
-			serialChan <- n
-			continue
-		}
-		concurrentChan <- n
+		workerFuncChWG.Add(1)
+		// start a func for all the containers, then will wait for their own waitgroups
+		// to be set to zero by their depending containers, then enqueue to the creation channel
+		go func(node nodes.Node, dm *dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+			// wait for all the nodes that node depends on
+			dm.WaitForNodeDependencies(node.Config().ShortName)
+			// when all nodes that this node depends on are created, push it into the channel
+			workerChan <- node
+			// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
+			wfcwg.Done()
+		}(n, dm, concurrentChan, workerFuncChWG) // execute this function straight away
 	}
 
-	// close channel to terminate the workers
+	// Gate to make sure the channel is not closed before all the nodes made it though the channel
+	workerFuncChWG.Wait()
+	// close the channel and thereby terminate the workerFuncs
 	close(concurrentChan)
-	close(serialChan)
 
 	return wg
 }
