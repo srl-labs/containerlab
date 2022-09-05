@@ -64,31 +64,32 @@ func (dm *dependencyManager) CheckAcyclicity() error {
 	return nil
 }
 
-// isAcyclic checks the provided data for cycles.
-// i is just for visual candy in the debug output. Must be set to 1.
-func isAcyclic(dependencies map[string][]string, i int) bool {
-	// debug output
-	d := []string{}
-	for name, entries := range dependencies {
-		d = append(d, fmt.Sprintf("%s <- [ %s ]", name, strings.Join(entries, ", ")))
-	}
-	log.Debugf("- cyclicity check round %d - \n%s", i, strings.Join(d, "\n"))
-
+// isAcyclic checks the provided dependencies map for cycles.
+// i indicates the check round. Must be set to 1.
+func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	// no more nodes then the graph is acyclic
-	if len(dependencies) == 0 {
+	if len(nodeDependers) == 0 {
 		log.Debugf("node creation graph is successfully validated as being acyclic")
+
 		return true
 	}
 
-	remainingDeps := map[string][]string{}
+	// debug output
+	d := []string{}
+	for dependee, dependers := range nodeDependers {
+		d = append(d, fmt.Sprintf("%s <- [ %s ]", dependee, strings.Join(dependers, ", ")))
+	}
+	log.Debugf("- cycle check round %d - \n%s", i, strings.Join(d, "\n"))
+
+	remainingNodeDependers := map[string][]string{}
 	leafNodes := []string{}
 	// mark a node as a remaining dependency if other nodes still depend on it,
 	// otherwise add it to the leaf list for it to be removed in the next round of recursive check
-	for name, deps := range dependencies {
-		if len(deps) > 0 {
-			remainingDeps[name] = deps
+	for dependee, dependers := range nodeDependers {
+		if len(dependers) > 0 {
+			remainingNodeDependers[dependee] = dependers
 		} else {
-			leafNodes = append(leafNodes, name)
+			leafNodes = append(leafNodes, dependee)
 		}
 	}
 
@@ -99,11 +100,11 @@ func isAcyclic(dependencies map[string][]string, i int) bool {
 
 	// iterate over remaining nodes, to remove all leaf nodes from the dependencies, because in the next round of recursion,
 	// these will no longer be there, they suffice the satisfy the acyclicity property
-	for name, deps := range remainingDeps {
+	for dependee, dependers := range remainingNodeDependers {
 		// new array that keeps track of remaining dependencies
-		remainingNodeDeps := []string{}
+		newRemainingNodeDependers := []string{}
 		// iterate over deleted nodes
-		for _, dep := range deps {
+		for _, dep := range dependers {
 			keep := true
 			// check if the actual dep is a leafNode and should therefore be removed
 			for _, delnode := range leafNodes {
@@ -114,13 +115,13 @@ func isAcyclic(dependencies map[string][]string, i int) bool {
 				}
 			}
 			if keep {
-				remainingNodeDeps = append(remainingNodeDeps, dep)
+				newRemainingNodeDependers = append(newRemainingNodeDependers, dep)
 			}
 		}
 		// replace previous with the new, cleanup dependencies.
-		remainingDeps[name] = remainingNodeDeps
+		remainingNodeDependers[dependee] = newRemainingNodeDependers
 	}
-	return isAcyclic(remainingDeps, i+1)
+	return isAcyclic(remainingNodeDependers, i+1)
 }
 
 // String returns a string representation of dependencies recorded with dependency manager.
