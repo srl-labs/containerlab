@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -179,6 +180,9 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	// make the static mgmt ip containers be scheduled befor the dynamic mgmt ip containers
 	createStaticDynamicDependency(c.Nodes, dm)
 
+	// make network namespace shared containers start in the right order
+	createNamespaceSharingDependency(c.Nodes, dm)
+
 	// Add possible additional dependencies here
 
 	// make sure that there are no unresolvable dependencies, which would deadlock.
@@ -190,6 +194,34 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	// finally start scheduling
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
 	return NodesWg, nil
+}
+
+// createNamespaceSharingDependency inserts dependencies into the dependencyManager that reflect namespace sharing,
+// where containers are started in the namespace of other containers.
+// Hence the depender container has to be started before the dependee container
+func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm *DependencyManager) {
+	for nodeName, n := range nodeMap {
+		// get the types.NodeConfig
+		nodeConfig := n.Config()
+		netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
+		if netModeArr[0] != "container" {
+			// we only care about nodes with NetMode "container:<CONTAINERNAME>"
+			continue
+		}
+		// the referenced container might be an external pre-existing or a container craeted also by the given clab topology.
+
+		// extract lab/topo prefix to craft a full container name if an internal container is referenced.
+		contName := strings.SplitN(nodeConfig.LongName, nodeConfig.ShortName, 2)[0] + netModeArr[1]
+
+		// if the container does not exist in the list of container, it must be an external dependency
+		// it can be ignored for internal processing so -> continue
+		if _, exists := nodeMap[contName]; !exists {
+			continue
+		}
+
+		// since the referenced container is an internal existing node, we have to create the dependency
+		dm.AddDependency(contName, nodeName)
+	}
 }
 
 // createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers
