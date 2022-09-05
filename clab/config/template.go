@@ -40,6 +40,10 @@ func LoadTemplates(tmpl *template.Template, role string) error {
 		fn := filepath.Join(p, fmt.Sprintf("*__%s.tmpl", role))
 		_, err := tmpl.ParseGlob(fn)
 		if err != nil {
+			if strings.Contains(err.Error(), "pattern matches no file") {
+				log.Debug(err)
+				return nil
+			}
 			return fmt.Errorf("could not load templates from %s: %w", fn, err)
 		}
 	}
@@ -79,13 +83,11 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 			if l := tmpl.Lookup(tmplN); l == nil {
 				err := LoadTemplates(tmpl, fmt.Sprintf("%s", nc.Vars[vkRole]))
 				if err != nil {
-					log.Warnf("Unable to load template %s (%+v); skipping", tmplN, err)
-					continue
+					return err
 				}
 				l = tmpl.Lookup(tmplN)
-				log.Debugf("Got a lookup result %+v (of type %T)", l, l)
 				if l == nil {
-					log.Warnf("No template found for %s; skipping..", nc.TargetNode.ShortName)
+					log.Debugf("No template found for %s; skipping..", nc.TargetNode.ShortName)
 					continue
 				}
 			}

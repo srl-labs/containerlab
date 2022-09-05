@@ -25,7 +25,7 @@ By introducing a link of `bridge` type to the containerlab topology, we are open
 
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/tree/master/lab-examples/br01/br01.clab.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/br01/br01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 

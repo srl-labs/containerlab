@@ -22,6 +22,15 @@ When the topology file flag is omitted, containerlab will try to find the matchi
 
 With the global `--name | -n` flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.
 
+#### vars
+
+Global `--vars` option for using specified json or yaml file to load template variables from for generating topology file.
+
+Default is to lookup files with "_vars" suffix and common json/yaml file extensions next to topology file.
+For example, for `mylab.clab.gotmpl` template of topology definition file, variables from `mylab.clab_vars.yaml` file will be used by default, if it exists, or one with `.json` or `.yml` extension.
+
+See documentation on [Generated topologies](../manual/topo-def-file.md#generated-topologies) for more information and examples on how to use these variables.
+
 #### reconfigure
 
 The local `--reconfigure | -c` flag instructs containerlab to first **destroy** the lab and all its directories and then start the deployment process. That will result in a clean (re)deployment where every configuration artefact will be generated (TLS, node config) from scratch.
@@ -31,9 +40,11 @@ Without this flag present, containerlab will reuse the available configuration a
 Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get more information on the lab directory contents.
 
 #### max-workers
+
 With `--max-workers` flag, it is possible to limit the number of concurrent workers that create containers or wire virtual links. By default, the number of workers equals the number of nodes/links to create.
 
 #### runtime
+
 Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman`, `containerd`, and `ignite` runtimes.
 
 A global runtime can be selected with a global `--runtime | -r` flag that will select a runtime to use. The possible value are:
@@ -44,6 +55,7 @@ A global runtime can be selected with a global `--runtime | -r` flag that will s
 * `ignite`
 
 #### timeout
+
 A global `--timeout` flag drives the timeout of API requests that containerlab send toward external resources. Currently the only external resource is the container runtime (i.e. docker).
 
 In a busy compute the runtime may respond longer than anticipated, in that case increasing the timeout may help.
@@ -51,11 +63,30 @@ In a busy compute the runtime may respond longer than anticipated, in that case 
 The default timeout is set to 2 minutes and can be changed to values like `30s, 10m`.
 
 #### export-template
+
 The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory. If not set, the default template path is `/etc/containerlab/templates/export/auto.tmpl`.
 
 To export full topology data instead of a subset of fields exported by default, use `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
 
+#### log-level
+
+Global `--log-level` parameter can be used to configure logging verbosity of all containerlab operations.
+`--debug | -d` option is a shorthand for `--log-level debug` and takes priority over `--log-level` if specified.
+
+Following values are accepted, ordered from most verbose to least: `trace`, `debug`, `info`, `warning`, `error`, `fatal`. Default level is `info`.
+
+It should be useful to enable more verbose logging when something doesn't work as expected, to better understand what's going on, and to provide more useful output logs when reporting containerlab issues, while making it more terse in production environments.
+
 ### Environment variables
+
+#### CLAB_RUNTIME
+
+Default value of "runtime" key for nodes, same as global `--runtime | -r` flag described above.
+Affects all containerlab commands in the same way, not just `deploy`.
+
+Intended to be set in environments where non-default container runtime should be used, to avoid needing to specify it for every command invocation or in every configuration file.
+
+Example command-line usage: `CLAB_RUNTIME=podman containerlab deploy`
 
 #### CLAB_VERSION_CHECK
 

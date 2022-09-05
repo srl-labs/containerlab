@@ -6,7 +6,7 @@ Containerlab builds labs based on the topology information that users pass to it
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 ## Topology definition components
-The topology definition file is a configuration file expressed in YAML and has a name pattern of `*.clab.yml`[^1]. In this document, we take a pre-packaged [Nokia SR Linux and Arista cEOS](../lab-examples/srl-ceos.md) lab and explain the topology definition structure using its definition file [srlceos01.clab.yml](https://github.com/srl-labs/containerlab/tree/master/lab-examples/srlceos01/srlceos01.clab.yml) which is pasted below:
+The topology definition file is a configuration file expressed in YAML and has a name pattern of `*.clab.yml`[^1]. In this document, we take a pre-packaged [Nokia SR Linux and Arista cEOS](../lab-examples/srl-ceos.md) lab and explain the topology definition structure using its definition file [srlceos01.clab.yml](https://github.com/srl-labs/containerlab/tree/main/lab-examples/srlceos01/srlceos01.clab.yml) which is pasted below:
 
 ```yaml
 name: srlceos01

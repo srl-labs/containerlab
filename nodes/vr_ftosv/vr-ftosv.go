@@ -7,6 +7,9 @@ package vr_ftosv
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -18,6 +21,8 @@ import (
 var kindnames = []string{"vr-ftosv", "vr-dell_ftosv"}
 
 const (
+	configDirName   = "config"
+	startupCfgFName = "startup-config.cfg"
 	defaultUser     = "admin"
 	defaultPassword = "admin"
 )
@@ -53,6 +58,9 @@ func (s *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
 
+	// mount config dir to support startup-config functionality
+	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, configDirName), ":/config"))
+
 	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
 		s.cfg.Binds = append(s.cfg.Binds, "/dev:/dev")
@@ -71,7 +79,7 @@ func (s *vrFtosv) Config() *types.NodeConfig { return s.cfg }
 
 func (s *vrFtosv) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return nil
+	return loadStartupConfigFile(s.cfg)
 }
 
 func (s *vrFtosv) Deploy(ctx context.Context) error {
@@ -103,5 +111,28 @@ func (s *vrFtosv) Delete(ctx context.Context) error {
 }
 
 func (*vrFtosv) SaveConfig(_ context.Context) error {
+	return nil
+}
+
+func loadStartupConfigFile(node *types.NodeConfig) error {
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
+
+	if node.StartupConfig != "" {
+		// dstCfg is a path to a file on the clab host that will have rendered configuration
+		dstCfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(dstCfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+		}
+	}
 	return nil
 }

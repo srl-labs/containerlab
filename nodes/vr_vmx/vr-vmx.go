@@ -77,7 +77,7 @@ func (s *vrVMX) Config() *types.NodeConfig { return s.cfg }
 
 func (s *vrVMX) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return createVrvMXFiles(s.cfg)
+	return loadStartupConfigFile(s.cfg)
 }
 
 func (s *vrVMX) Deploy(ctx context.Context) error {
@@ -121,7 +121,7 @@ func (s *vrVMX) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-func createVrvMXFiles(node *types.NodeConfig) error {
+func loadStartupConfigFile(node *types.NodeConfig) error {
 	// create config directory that will be bind mounted to vrnetlab container at / path
 	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
 

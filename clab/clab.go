@@ -163,21 +163,18 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntime]
 }
 
-// CreateNodes will schedule nodes creation
-// returns waitgroups for nodes with static and dynamic IPs,
-// since static nodes are scheduled first.
+// CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
+// Nodes interdependencies are created in this function.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	serialNodes map[string]struct{},
 ) (*sync.WaitGroup, error) {
-
 	dm := NewDependencyManager()
 
-	// inti the WaitGroup structs
-	for name := range c.Nodes {
-		dm.AddNodeEntry(name)
+	for nodeName := range c.Nodes {
+		dm.AddNode(nodeName)
 	}
 
-	// make the static mgmt ip containers be scheduled befor the dynamic mgmt ip containers
+	// nodes with static mgmt IP should be scheduled before the dynamic ones
 	createStaticDynamicDependency(c.Nodes, dm)
 
 	// make network namespace shared containers start in the right order
@@ -193,13 +190,14 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 
 	// finally start scheduling
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
+
 	return NodesWg, nil
 }
 
 // createNamespaceSharingDependency inserts dependencies into the dependencyManager that reflect namespace sharing,
 // where containers are started in the namespace of other containers.
 // Hence the depender container has to be started before the dependee container
-func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm *DependencyManager) {
+func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm *dependencyManager) {
 	for nodeName, n := range nodeMap {
 		// get the types.NodeConfig
 		nodeConfig := n.Config()
@@ -224,12 +222,14 @@ func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm *Depende
 	}
 }
 
-// createStaticDynamicDependency creates the waitgroup dependencies that result in a creation of all static mgmt IP containers prior to the dynamic mgmt IP containers
-func createStaticDynamicDependency(n map[string]nodes.Node, dm *DependencyManager) {
+// createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
+// are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
+func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManager) {
+
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
-	// devide the nodes into static and dynamic mgmt IP nodes.
+	// divide the nodes into static and dynamic mgmt IP nodes.
 	for name, n := range n {
 		if n.Config().MgmtIPv4Address != "" || n.Config().MgmtIPv6Address != "" {
 			staticIPNodes[name] = n
@@ -247,10 +247,12 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm *DependencyManage
 	}
 }
 
-func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes map[string]nodes.Node, dm *DependencyManager) *sync.WaitGroup {
+func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
+	scheduledNodes map[string]nodes.Node, dm *dependencyManager,
+) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *DependencyManager) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm *dependencyManager) {
 		defer wg.Done()
 		for {
 			select {
@@ -315,7 +317,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, scheduledNodes
 		workerFuncChWG.Add(1)
 		// start a func for all the containers, then will wait for their own waitgroups
 		// to be set to zero by their depending containers, then enqueue to the creation channel
-		go func(node nodes.Node, dm *DependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+		go func(node nodes.Node, dm *dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
 			// wait for all the nodes that node depends on
 			dm.WaitForDependenciesToFinishFor(node.Config().ShortName)
 			// when all dependend nodes are created, push this node into the channel
