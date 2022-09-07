@@ -165,7 +165,7 @@ theme:
         icon: material/toggle-switch
         name: Switch to light mode
   font:
-    text: Manrope
+    text: Google Sans
     code: Fira Mono
   icon:
     logo: fontawesome/solid/flask
