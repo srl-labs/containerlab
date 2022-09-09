@@ -9,7 +9,7 @@ on:
 env:
   GOVER: 1.18.4
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 4.8.3
+  MKDOCS_INS_VER: 8.4.3-insiders-4.22.1
   GORELEASER_VER: v0.180.3
 
 jobs:

@@ -170,6 +170,7 @@ theme:
   icon:
     logo: fontawesome/solid/flask
     repo: fontawesome/brands/github
+    edit: material/file-edit-outline
   favicon: images/flask.svg
 
 # Plugins

@@ -2,7 +2,8 @@ BIN_DIR = $$(pwd)/bin
 BINARY = $$(pwd)/bin/containerlab
 MKDOCS_VER = 8.3.9
 # insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
-MKDOCS_INS_VER = 4.19.1-4
+# make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
+MKDOCS_INS_VER = 8.4.3-insiders-4.22.1
 
 include .mk/lint.mk
 
