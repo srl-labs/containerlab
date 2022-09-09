@@ -14,6 +14,7 @@ cEOS nodes launched with containerlab comes up with
 * `admin` user created with password `admin`
 
 ## Getting cEOS image
+
 Arista requires its users to register with arista.com before downloading any images. Once you created an account and logged in, go to the [software downloads](https://www.arista.com/en/support/software-download) section and download ceos64 tar archive for a given release.
 
 Once downloaded, import the archive with docker:
@@ -24,6 +25,7 @@ docker import cEOS64-lab-4.28.0F.tar.xz ceos:4.28.0F
 ```
 
 ## Managing ceos nodes
+
 Arista cEOS node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
@@ -54,6 +56,7 @@ Arista cEOS node launched with containerlab can be managed via the following int
     Default user credentials: `admin:admin`
 
 ## Interfaces mapping
+
 ceos container uses the following mapping for its linux interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
@@ -119,12 +122,14 @@ It is possible to make ceos nodes boot up with a user-defined interface layout. 
   }
 }
 ```
+
 Linux's `eth0` interface is always used to map the management interface.
 
 With the following topology file, containerlab is instructed to take a `mymapping.json` file located in the same directory as the topology and mount that to the container as `/mnt/flash/EosIntfMapping.json`. This will result in this interface mapping being considered during the bootup of the node. The destination for that bind has to be `/mnt/flash/EosIntfMapping.json`.
 
 1. Craft a valid interface mapping file.
 2. Use `binds` config option for a ceos node/kind to make this file available in the container's filesystem:
+
     ```yaml
     name: ceos
 
@@ -145,6 +150,7 @@ With the following topology file, containerlab is instructed to take a `mymappin
     ```
 
     1. If all ceos nodes use the same interface mapping file, it is easier to set the bind instruction on a kind level
+
     ```yaml
         topology:
           kinds:
@@ -159,6 +165,7 @@ With the following topology file, containerlab is instructed to take a `mymappin
               kind: ceos
               image: ceos:4.28.0F
     ```
+
     This way the bind is set only once, and nodes of `ceos` kind will have these binds applied.
 
 ## Additional interface naming considerations
@@ -168,6 +175,7 @@ While many users will be fine with the default ceos naming of `eth`, some ceos u
 In order to align interfaces in this manner, the `INTFTYPE` environment variable must be set to `et` in the topology definition file and the links which are defined must be named `et`, as opposed to `eth`. This naming requirement does not apply to the `eth0` interface automatically created by containerlab. This is only required for links that are used for interconnection with other elements in a topology.
 
 example:
+
 ```yaml
 topology:
   defaults:
@@ -181,11 +189,14 @@ topology:
 ```
 
 ## Features and options
+
 ### Node configuration
+
 cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
-When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/ceos/ceos.cfg) and copy it to the config directory of the node.
+
+When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/ceos/ceos.cfg) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config
@@ -205,6 +216,7 @@ cEOS Ma0 interface will be configured with a random MAC address with `00:1c:73` 
 A default ipv4 route is also created with a next-hop of the management network to allow for outgoing connections.
 
 #### MGMT VRF
+
 The default empty configuration supports placing the management interface into a VRF to isolate it from the main device routing table.  Passing the environment variable `CLAB_MGMT_VRF` in either the kind or node definition will activate this behavior, and alter the management services configuration to also reflect the management VRF.  You can duplicate this when using the `startup-config` by starting from the linked template below.
 
 ```yaml
@@ -227,6 +239,7 @@ topology:
 ```
 
 #### User defined config
+
 It is possible to make ceos nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
 
 ```yaml
@@ -269,9 +282,11 @@ It is possible to change the default config which every ceos node will start wit
     ```
 
 #### Saving configuration
+
 In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup config file effectively calling the `write` CLI command.
 
 ## Container configuration
+
 To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
 
 === "Startup command"
@@ -287,6 +302,7 @@ To start an Arista cEOS node containerlab uses the configuration instructions de
     `MGMT_INTF:eth0`
 
 ### File mounts
+
 When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `ceos` kind containerlab creates `flash` directory for each ceos node and mounts these folders by `/mnt/flash` paths.
 
 ```
@@ -316,6 +332,7 @@ clab-srlceos01/ceos
 
 9 directories, 11 files
 ```
+
 ## Copy to `flash`
 
 If there is a need to copy ceos-specific configuration or override files to the ceos node in the topology use `.extras.ceos-copy-to-flash` config option. These files will be copied to the node's flash directory and evaluated on startup.
@@ -336,11 +353,13 @@ topology:
 1. Paths are relative to the topology file. Absolute paths like `~/some/path` or `/some/path` are also possible.
 
 ## Lab examples
+
 The following labs feature a cEOS node:
 
-- [SR Linux and cEOS](../../lab-examples/srl-ceos.md)
+* [SR Linux and cEOS](../../lab-examples/srl-ceos.md)
 
 ## Known issues or limitations
+
 ### cgroups v1
 
 In versions prior to EOS-4.28.0F, the ceos-lab image requires a cgroups v1 environment. For many users, this should not require any changes to the runtime environment. However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
@@ -369,6 +388,7 @@ Starting with EOS-4.28.0F, ceos-lab will automatically determine whether the con
     ```
 
 ### WSL
+
 When running under WSL2 ceos datapath might appear not working. As of Feb 2022 users would need to manually enter the following iptables rules inside ceos container:
 
 ```
