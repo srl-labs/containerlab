@@ -8,6 +8,7 @@
 | **Version information**[^2]   | `cvx:4.3.0` `docker-ce:19.03.13`                                     |
 
 ## Description
+
 The lab consists of Cumulus Linux running in its non-default, docker runtime, connected to a `linux` container playing the role of an end-host. Both nodes are also connected to the clab docker network over their management `eth0` interfaces.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/cvx.drawio&quot;}"></div>
@@ -41,8 +42,6 @@ root@sw1:mgmt:~#
 * Verify basic control plane and data plane operations
 
 [cvx]: https://www.nvidia.com/en-gb/networking/ethernet-switching/cumulus-vx/
-[topofile]: https://github.com/srl-labs/containerlab/blob/master/lab-examples/cvx02/topo.clab.yml
-
-
+[topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/cvx02/topo.clab.yml
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

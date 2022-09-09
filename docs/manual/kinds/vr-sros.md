@@ -50,6 +50,7 @@ Nokia SR OS node launched with containerlab can be managed via the following int
     Default user credentials: `admin:admin`
 
 ## Interfaces mapping
+
 vr-sros container uses the following mapping for its interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
@@ -68,14 +69,16 @@ When containerlab launches vr-sros node, it will assign IPv4/6 address to the `e
 
 Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
 
-
 ## Features and options
+
 ### Variants
+
 Virtual SR OS simulator can be run in multiple HW variants as explained in [the vSIM installation guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE15836AAADTQZZA01_V1_vSIM%20Installation%20and%20Setup%20Guide%2020.10.R1.pdf).
 
-`vr-sros` container images come with [pre-packaged SR OS variants](https://github.com/hellt/vrnetlab/tree/main/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/main/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. Custom variants, on the other hand, give users the full flexibility in emulated hardware configuration, but cards and MDAs would need to be configured manually.
+`vr-sros` container images come with [pre-packaged SR OS variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. Custom variants, on the other hand, give users the full flexibility in emulated hardware configuration, but cards and MDAs would need to be configured manually.
 
 To make vr-sros to boot in one of the packaged variants use its name like that:
+
 ```yaml
 topology:
   nodes:
@@ -87,6 +90,7 @@ topology:
 ```
 
 Custom variant can be defined as simple as that:
+
 ```yaml
 # for distributed chassis CPM and IOM are indicated with markers cp: and lc:
 # notice the delimiter string `___` that MUST be present between CPM and IOM portions
@@ -103,9 +107,11 @@ type: "cpu=2 ram=4 slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-2
 ```
 
 ### Node configuration
+
 vr-sros nodes come up with a basic "blank" configuration where only the card/mda are provisioned, as well as the management interfaces such as Netconf, SNMP, gNMI.
 
 #### User defined config
+
 It is possible to make SR OS nodes to boot up with a user-defined startup config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the config file that will be mounted to a container and used as a startup config:
 
 ```yaml
@@ -120,6 +126,7 @@ topology:
 With such topology file containerlab is instructed to take a file `myconfig.txt` from the current working directory, copy it to the lab directory for that specific node under the `/tftpboot/config.txt` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
 
 #### Configuration save
+
 Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for `vr-sros` nodes via Netconf. The configuration will be saved under `config.txt` file and can be found at the node's directory inside the lab parent directory:
 
 ```bash
@@ -129,6 +136,7 @@ cat clab-cert01/sr/tftpboot/config.txt
 ```
 
 ### License
+
 Path to a valid license must be provided for all vr-sros nodes with a [`license`](../nodes.md#license) directive.
 
 If your SR OS license file is issued for a specific UUID, you can define it with custom type definition:
@@ -138,11 +146,12 @@ If your SR OS license file is issued for a specific UUID, you can define it with
 type: "cp: uuid=00001234-5678-9abc-def1-000012345678 cpu=4 ram=6 slot=A chassis=SR-12 card=cpm5 ___ lc: cpu=4 ram=6 max_nics=36 slot=1 chassis=SR-12 card=iom3-xp-c mda/1=m10-1gb+1-10gb"
 ```
 
-
 ### File mounts
+
 When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `vr-sros` kind containerlab creates `tftpboot` directory where the license file will be copied.
 
 ## Lab examples
+
 The following labs feature vr-sros node:
 
-- [SR Linux and vr-sros](../../lab-examples/vr-sros.md)
+* [SR Linux and vr-sros](../../lab-examples/vr-sros.md)

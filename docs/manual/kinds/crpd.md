@@ -9,6 +9,7 @@ search:
 cRPD nodes launched with containerlab comes up pre-provisioned with SSH service enabled, `root` user created and NETCONF enabled.
 
 ## Managing cRPD nodes
+
 Juniper cRPD node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
@@ -31,6 +32,7 @@ Juniper cRPD node launched with containerlab can be managed via the following in
     Default user credentials: `root:clab123`
 
 ## Interfaces mapping
+
 cRPD container uses the following mapping for its linux interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
@@ -96,11 +98,14 @@ When containerlab launches cRPD node, it will assign IPv4/6 address to the `eth0
     As you see, the management interface `eth0` inherits the IP address that docker assigned to cRPD container.
 
 ## Features and options
+
 ### Node configuration
+
 cRPD nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `crpd` kind with a basic "empty" config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
-When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/master/nodes/crpd/crpd.cfg) and copy it to the config directory of the node.
+
+When a node is defined without `config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/crpd/crpd.cfg) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config
@@ -116,6 +121,7 @@ topology:
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/juniper.conf`. Using the example topology presented above, the exact path to the config will be `clab-crpd/crpd/config/juniper.conf`.
 
 #### User defined config
+
 It is possible to make cRPD nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the config file that will be mounted to a container:
 
 ```yaml
@@ -130,12 +136,15 @@ topology:
 With such topology file containerlab is instructed to take a file `myconfig.conf` from the current working directory, copy it to the lab directory for that specific node under the `/config/juniper.conf` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
 
 #### Saving configuration
+
 With [`containerlab save`](../../cmd/save.md) command it's possible to save running cRPD configuration into a file. The configuration will be saved by `/config/juniper.conf` path in the relevant node directory.
 
 ### License
+
 cRPD containers require a license file to have some features to be activated. With a [`license`](../nodes.md#license) directive it's possible to provide a path to a license file that will be copied over to the nodes configuration directory by the `/config/license/safenet/junos_sfnt.lic` path and will get applied automatically on boot.
 
 ## Container configuration
+
 To launch cRPD, containerlab uses the deployment instructions that are provided in the [TechLibrary](https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/task/crpd-linux-server-install.html) as well as leveraging some setup steps outlined by Matt Oswalt in [this blog post](https://oswalt.dev/2020/03/building-your-own-junos-router-with-crpd-and-linuxkit/).
 
 The SSH service is already enabled for root login, so nothing is needed to be done additionally.
@@ -143,6 +152,7 @@ The SSH service is already enabled for root login, so nothing is needed to be do
 The `root` user is created already with the `clab123` password.
 
 ### File mounts
+
 When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `crpd` kind containerlab creates `config` and `log` directories for each crpd node and mounts these folders by `/config` and `/var/log` paths accordingly.
 
 ```
@@ -166,6 +176,7 @@ clab-crpd/crpd
 ```
 
 ## Lab examples
+
 The following labs feature cRPD node:
 
-- [SR Linux and cRPD](../../lab-examples/srl-crpd.md)
+* [SR Linux and cRPD](../../lab-examples/srl-crpd.md)

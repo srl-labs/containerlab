@@ -7,6 +7,7 @@ search:
 [Nokia SR Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `srl` or `nokia_srlinux` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
 
 ## Getting SR Linux image
+
 Nokia SR Linux is the first commercial Network OS with a free and open distribution model. Everyone can pull SR Linux container from a public registry:
 
 ```bash
@@ -17,6 +18,7 @@ docker pull ghcr.io/nokia/srlinux
 To pull a specific version, use tags that match the released version and are listed in the [srlinux-container-image](https://github.com/nokia/srlinux-container-image) repo.
 
 ## Managing SR Linux nodes
+
 There are many ways to manage SR Linux nodes, ranging from classic CLI management all the way up to the gNMI programming.
 
 === "bash"
@@ -69,6 +71,7 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
     Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^1].
 
 ## Interfaces mapping
+
 SR Linux system expects interfaces inside the container to be named in a specific way - `eX-Y` - where `X` is the line card index, `Y` is the port.
 
 With that naming convention in mind:
@@ -88,6 +91,7 @@ Interfaces can be defined in a non-sequential way, for example:
 ```
 
 ### Breakout interfaces
+
 If the interface is intended to be configured as a breakout interface, its name must be changed accordingly.
 
 The breakout interfaces will have the name `eX-Y-Z` where `Z` is the breakout port number. For example, if interface `ethernet-1/3` on an IXR-D3 system is meant to act as a breakout 100Gb to 4x25Gb, then the interfaces in the topology must use the following naming:
@@ -99,7 +103,9 @@ The breakout interfaces will have the name `eX-Y-Z` where `Z` is the breakout po
 ```
 
 ## Features and options
+
 ### Types
+
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
 The available type values are: `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrd5`, `ixrh2` and `ixrh3`, which correspond to a hardware variant of Nokia 7220 IXR chassis.
@@ -109,11 +115,14 @@ Nokia 7250 IXR chassis identified with types `ixr6e` and `ixr10e` require a vali
 If type is not set in the clab file `ixrd2` value will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
+
 ### Node configuration
+
 SR Linux uses a `/etc/opt/srlinux/config.json` file to persist its configuration. By default, containerlab starts nodes of `srl` kind with a basic "default" config, and with the `startup-config` parameter, it is possible to provide a custom config file that will be used as a startup one.
 
 #### Default node configuration
-When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/master/nodes/srl/srl.go#L38) on top of the factory config:
+
+When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/main/nodes/srl/srl.go#L38) on top of the factory config:
 
 ```yaml
 # example of a topo file that does not define a custom startup-config
@@ -137,6 +146,7 @@ Additional configurations that containerlab adds on top of the factory config:
 * creating tls server certificate
 
 #### User defined startup config
+
 It is possible to make SR Linux nodes boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the local config file that will be used as a startup config.
 
 The startup configuration file can be provided in two formats:
@@ -145,6 +155,7 @@ The startup configuration file can be provided in two formats:
 * partial config in SR Linux CLI format
 
 ##### CLI
+
 A typical lab scenario is to make nodes to boot with a pre-configured use case. The easiest way to do that is to capture the intended changes as CLI commands.
 
 On SR Linux, users can configure the use case and output the changes in the form of `set` instructions with the `info flat` command. These CLI commands can be saved in a file and used as a startup configuration.
@@ -162,7 +173,6 @@ On SR Linux, users can configure the use case and output the changes in the form
     set / network-instance default protocols bgp neighbor 192.168.1.2 peer-as 65001
     ```
 
-
 ```yaml
 name: srl_lab
 topology:
@@ -178,6 +188,7 @@ topology:
 In that case, SR Linux will first boot with the default configuration, and then the CLI commands from the `myconfig.cli` will be applied.
 
 ##### JSON
+
 SR Linux persists its configuration as a JSON file that can be found by the `/etc/opt/srlinux/config.json` path. Users can use this file as a startup configuration like that:
 
 ```yaml
@@ -195,6 +206,7 @@ topology:
 Containerlab will take the `myconfig.json` file, copy it to the lab directory for that specific node under the `config.json` name, and mount that directory to the container. This will result in this config acting as a startup-config for the node.
 
 #### Saving configuration
+
 As was explained in the [Node configuration](#node-configuration) section, SR Linux containers can make their config persistent because config files are provided to the containers from the host via the bind mount.
 
 When a user configures the SR Linux node, the changes are saved into the running configuration stored in memory. To save the running configuration as a startup configuration, the user needs to execute the `tools system configuration save` CLI command. This command will write the config to the `/etc/opt/srlinux/config.json` file that holds the startup-config and is exposed to the host.
@@ -214,6 +226,7 @@ INFO[0001] saved SR Linux configuration from leaf2 node. Output:
 ```
 
 #### User defined custom agents for SR Linux nodes
+
 SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under `/etc/opt/srlinux/appmgr/`. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
 
 ```yaml
@@ -247,12 +260,14 @@ In case only `root-ca.pem` and `root-ca-key.pem` files are provided, the node ce
 Nokia SR Linux nodes support setting of [SANs](../nodes.md#subject-alternative-names-san).
 
 ### License
+
 SR Linux container can run without any license :partying_face:.  
 In that license-less mode the datapath is limited to 100PPS and the sr_linux process will reboot once a week.
 
 The license file lifts these limitations and a path to it can be provided with [`license`](../nodes.md#license) directive.
 
 ## Container configuration
+
 To start an SR Linux NOS containerlab uses the configuration that is described in [SR Linux Software Installation Guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE16113AAAATQZZA01_V1_SR%20Linux%20R20.6%20Software%20Installation.pdf)
 
 === "Startup command"
@@ -270,6 +285,7 @@ To start an SR Linux NOS containerlab uses the configuration that is described i
     `SRLINUX=1`
 
 ### File mounts
+
 When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `srl` kind, containerlab creates directories for each node of that kind.
 
 ```
@@ -289,6 +305,7 @@ banner  cli  config.json  devices  tls  ztp
 The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type`, the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
 
 #### authorized keys
+
 Additionally, containerlab will mount the `authorized_keys` file that will have contents of every public key found in `~/.ssh` directory as well as the contents of a `~/.ssh/authorized_keys` file if it exists[^2]. This file will be mounted to `~/.ssh/authorized_keys` path for the following users:
 
 * `root`
