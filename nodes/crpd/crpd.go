@@ -8,7 +8,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -117,7 +116,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 
 	// path by which to save a config
 	confPath := s.cfg.LabDir + "/config/juniper.conf"
-	err = ioutil.WriteFile(confPath, stdout, 0777) // skipcq: GO-S2306
+	err = os.WriteFile(confPath, stdout, 0777) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.cfg.ShortName, err)
 	}
