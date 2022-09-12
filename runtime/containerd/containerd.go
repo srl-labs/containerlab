@@ -829,3 +829,20 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 func (c *ContainerdRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
 }
+
+// GetContainerStatus retrieves the ContainerStatus of the named container
+func (c *ContainerdRuntime) GetContainerStatus(ctx context.Context, cID string) (runtime.ContainerStatus, error) {
+	task, err := c.getContainerTask(ctx, cID)
+	if err != nil {
+		return runtime.NotFound, err
+	}
+
+	status, err := task.Status(ctx)
+	switch status.Status {
+	case containerd.Running:
+		return runtime.Running, nil
+	case containerd.Created, containerd.Paused, containerd.Pausing, containerd.Stopped, containerd.Unknown:
+		return runtime.Stopped, nil
+	}
+	return runtime.NotFound, nil
+}

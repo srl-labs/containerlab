@@ -842,3 +842,18 @@ func (d *DockerRuntime) processNetworkMode(
 
 	return nil
 }
+
+// GetContainerStatus retrieves the ContainerStatus of the named container
+func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) (runtime.ContainerStatus, error) {
+	inspect, err := d.Client.ContainerInspect(ctx, cID)
+	if err != nil {
+		return runtime.NotFound, err
+	}
+	switch inspect.State.Status {
+	case "running":
+		return runtime.Running, nil
+	case "created", "paused", "restarting", "removing", "exited", "dead":
+		return runtime.Stopped, nil
+	}
+	return runtime.NotFound, nil
+}

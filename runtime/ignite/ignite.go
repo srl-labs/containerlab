@@ -441,3 +441,15 @@ func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string)
 func (c *IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
 }
+
+// GetContainerStatus retrieves the ContainerStatus of the named container
+func (c *IgniteRuntime) GetContainerStatus(ctx context.Context, containerID string) (runtime.ContainerStatus, error) {
+	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
+	if err != nil {
+		return runtime.NotFound, err
+	}
+	if vm.Status.Running {
+		return runtime.Running, nil
+	}
+	return runtime.Stopped, nil
+}
