@@ -8,9 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
@@ -27,7 +25,7 @@ const (
 var (
 	kindnames = []string{"crpd", "juniper_crpd"}
 	//go:embed crpd.cfg
-	cfgTemplate string
+	defaultCfgTemplate string
 
 	//go:embed sshd_config
 	sshdCfg string
@@ -54,10 +52,10 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// mount config and log dirs
 	s.cfg.Binds = append(s.cfg.Binds,
-		fmt.Sprint(path.Join(s.cfg.LabDir, "config"), ":/config"),
-		fmt.Sprint(path.Join(s.cfg.LabDir, "log"), ":/var/log"),
+		fmt.Sprint(filepath.Join(s.cfg.LabDir, "config"), ":/config"),
+		fmt.Sprint(filepath.Join(s.cfg.LabDir, "log"), ":/var/log"),
 		// mount sshd_config
-		fmt.Sprint(path.Join(s.cfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"),
+		fmt.Sprint(filepath.Join(s.cfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"),
 	)
 
 	return nil
@@ -118,7 +116,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 
 	// path by which to save a config
 	confPath := s.cfg.LabDir + "/config/juniper.conf"
-	err = ioutil.WriteFile(confPath, stdout, 0777)
+	err = os.WriteFile(confPath, stdout, 0777) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.cfg.ShortName, err)
 	}
@@ -129,11 +127,12 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 
 func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 	// create config and logs directory that will be bind mounted to crpd
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "config"), 0777)
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, "log"), 0777)
+	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0777)
+	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0777)
 
 	// copy crpd config from default template or user-provided conf file
 	cfg := filepath.Join(nodeCfg.LabDir, "/config/juniper.conf")
+	var cfgTemplate string
 
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
@@ -141,6 +140,10 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 			return err
 		}
 		cfgTemplate = string(c)
+	}
+
+	if cfgTemplate == "" {
+		cfgTemplate = defaultCfgTemplate
 	}
 
 	err := nodeCfg.GenerateConfig(cfg, cfgTemplate)
