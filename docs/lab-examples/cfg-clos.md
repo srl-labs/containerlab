@@ -53,7 +53,7 @@ The variables are scoped under `.vars` container which is present on all of the 
 topology:
   defaults:
     config:
-        vars:
+      vars:
         overlay_as: 65555
 ```
 
