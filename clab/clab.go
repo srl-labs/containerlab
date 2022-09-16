@@ -350,7 +350,6 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename str
 		// sleep until next try
 		time.Sleep(time.Second * time.Duration(waitTimeout))
 	}
-	return
 }
 
 // CreateLinks creates links using the specified number of workers.
