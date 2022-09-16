@@ -113,7 +113,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	}
 }
 
-// CreateDockerNet creates a docker network or reusing if it exists.
+// CreateNet creates a docker network or reusing if it exists.
 func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()

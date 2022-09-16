@@ -549,7 +549,7 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 	return c.produceGenericContainerList(ctx, containerlist)
 }
 
-// TODO this will probably not work. need to work out the exact filter format.
+// GetContainer: TODO this will probably not work. need to work out the exact filter format.
 func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
 	var ctr *types.GenericContainer
 	gFilter := types.GenericFilter{
