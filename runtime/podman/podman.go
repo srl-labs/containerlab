@@ -323,17 +323,17 @@ func (r *PodmanRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container
-func (r *PodmanRuntime) GetContainerStatus(ctx context.Context, cID string) (runtime.ContainerStatus, error) {
+func (r *PodmanRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
 	ctx, err := r.connect(ctx)
 	if err != nil {
-		return runtime.NotFound, err
+		return runtime.NotFound
 	}
 	icd, err := containers.Inspect(ctx, cID, nil)
 	if err != nil {
-		return runtime.NotFound, nil
+		return runtime.NotFound
 	}
 	if icd.State.Running {
-		return runtime.Running, nil
+		return runtime.Running
 	}
-	return runtime.Stopped, nil
+	return runtime.Stopped
 }
