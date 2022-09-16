@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -288,6 +289,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 		go func(node nodes.Node, dm *dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
 			// wait for all the nodes that node depends on
 			dm.WaitForNodeDependencies(node.Config().ShortName)
+			// wait for possible external dependencies
+			c.WaitForExternalNodeDependencies(ctx, node.Config().ShortName)
 			// when all nodes that this node depends on are created, push it into the channel
 			workerChan <- node
 			// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
@@ -301,6 +304,53 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	close(concurrentChan)
 
 	return wg
+}
+
+// WaitForExternalNodeDependencies will take effect on nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>).
+// it will query the container runtime for the status of the depende container. It will sleep loop if a container with the given name is not in running state.
+// It will stop trying after some time (actually 3600 seconds) but only log an Error. Later stages will cause a final exception to be thrown.
+func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename string) {
+	// get the types.NodeConfig
+	nodeConfig := c.Nodes[nodename].Config()
+	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
+	if netModeArr[0] != "container" {
+		// we only care about nodes with NetMode "container:<CONTAINERNAME>"
+		return
+	}
+	// the referenced container might be an external pre-existing or a container craeted also by the given clab topology.
+	contName := netModeArr[1]
+
+	// if the container does not exist in the list of container, it must be an external dependency
+	// it can be ignored for internal processing so -> continue
+	if _, exists := c.Nodes[contName]; exists {
+		return
+	}
+
+	counter := 0
+	waitTimeoutCounter := 3600
+	waitTimeout := 1
+	// enter the wait loop
+	for {
+		// increment counter for break condition
+		counter++
+		// query for external container state
+		runtimeStatus := c.Runtimes[c.globalRuntime].GetContainerStatus(ctx, contName)
+		// check if dependency is running, if so break the loop
+		if runtimeStatus == runtime.Running {
+			if counter > 1 {
+				log.Infof("container %q starts since external container %q is running now", nodename, contName)
+			}
+			break
+		}
+		// check for break condition, if waited too long, return with an error
+		if counter >= waitTimeoutCounter {
+			log.Errorf("container %q waited %d seconds for external dependency container %q to come up, which did not happen. Giving up now", nodename, waitTimeout*waitTimeoutCounter, contName)
+		}
+		log.Infof("container %q depends on external container %q, which is not running yet. waited %d seconds. will continue to wait", nodename, contName, waitTimeout)
+		// sleep until next try
+		time.Sleep(time.Second * time.Duration(waitTimeout))
+	}
+	return
 }
 
 // CreateLinks creates links using the specified number of workers.

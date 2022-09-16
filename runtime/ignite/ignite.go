@@ -443,13 +443,13 @@ func (c *IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container
-func (c *IgniteRuntime) GetContainerStatus(ctx context.Context, containerID string) (runtime.ContainerStatus, error) {
+func (c *IgniteRuntime) GetContainerStatus(ctx context.Context, containerID string) runtime.ContainerStatus {
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {
-		return runtime.NotFound, err
+		return runtime.NotFound
 	}
 	if vm.Status.Running {
-		return runtime.Running, nil
+		return runtime.Running
 	}
-	return runtime.Stopped, nil
+	return runtime.Stopped
 }

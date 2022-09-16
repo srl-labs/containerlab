@@ -60,7 +60,7 @@ type ContainerRuntime interface {
 	// GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
 	GetHostsPath(context.Context, string) (string, error)
 	// GetContainerStatus retrieves the ContainerStatus of the named container
-	GetContainerStatus(ctx context.Context, cID string) (ContainerStatus, error)
+	GetContainerStatus(ctx context.Context, cID string) ContainerStatus
 }
 
 type ContainerStatus string

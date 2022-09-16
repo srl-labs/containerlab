@@ -831,18 +831,22 @@ func (c *ContainerdRuntime) GetHostsPath(context.Context, string) (string, error
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container
-func (c *ContainerdRuntime) GetContainerStatus(ctx context.Context, cID string) (runtime.ContainerStatus, error) {
+func (c *ContainerdRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
 	task, err := c.getContainerTask(ctx, cID)
 	if err != nil {
-		return runtime.NotFound, err
+		return runtime.NotFound
 	}
 
 	status, err := task.Status(ctx)
+	if err != nil {
+		return runtime.NotFound
+	}
+
 	switch status.Status {
 	case containerd.Running:
-		return runtime.Running, nil
+		return runtime.Running
 	case containerd.Created, containerd.Paused, containerd.Pausing, containerd.Stopped, containerd.Unknown:
-		return runtime.Stopped, nil
+		return runtime.Stopped
 	}
-	return runtime.NotFound, nil
+	return runtime.NotFound
 }
