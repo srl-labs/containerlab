@@ -346,7 +346,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename str
 		if counter >= waitTimeoutCounter {
 			log.Errorf("container %q waited %d seconds for external dependency container %q to come up, which did not happen. Giving up now", nodename, waitTimeout*waitTimeoutCounter, contName)
 		}
-		log.Infof("container %q depends on external container %q, which is not running yet. waited %d seconds. will continue to wait", nodename, contName, waitTimeout)
+		log.Infof("container %q depends on external container %q, which is not running yet. waited %d seconds. continue to wait", nodename, contName, waitTimeout*counter)
 		// sleep until next try
 		time.Sleep(time.Second * time.Duration(waitTimeout))
 	}
