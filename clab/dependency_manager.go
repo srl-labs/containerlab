@@ -26,7 +26,7 @@ type dependencyManager interface {
 	String() string
 }
 
-type dependencyManagerImpl struct {
+type defaultDependencyManager struct {
 	// map of wait group per node.
 	// The scheduling of the nodes creation is dependent on their respective wait group.
 	// Other nodes, that the specific node relies on will increment this wait group.
@@ -37,21 +37,21 @@ type dependencyManagerImpl struct {
 }
 
 func NewDependencyManager() dependencyManager {
-	return &dependencyManagerImpl{
+	return &defaultDependencyManager{
 		nodeWaitGroup: map[string]*sync.WaitGroup{},
 		nodeDependers: map[string][]string{},
 	}
 }
 
 // AddNode adds a node to the dependency manager.
-func (dm *dependencyManagerImpl) AddNode(name string) {
+func (dm *defaultDependencyManager) AddNode(name string) {
 	dm.nodeWaitGroup[name] = &sync.WaitGroup{}
 	dm.nodeDependers[name] = []string{}
 }
 
 // AddDependency adds a dependency between depender and dependee.
 // The depender will effectively wait for the dependee to finish.
-func (dm *dependencyManagerImpl) AddDependency(dependee, depender string) {
+func (dm *defaultDependencyManager) AddDependency(dependee, depender string) {
 	dm.nodeWaitGroup[depender].Add(1)
 	// add a depender node name for a given dependee
 	dm.nodeDependers[dependee] = append(dm.nodeDependers[dependee], depender)
@@ -59,20 +59,20 @@ func (dm *dependencyManagerImpl) AddDependency(dependee, depender string) {
 
 // WaitForNodeDependencies is called by a node that is meant to be created.
 // This call will bock until all the nodes that this node depends on are created.
-func (dm *dependencyManagerImpl) WaitForNodeDependencies(nodeName string) {
+func (dm *defaultDependencyManager) WaitForNodeDependencies(nodeName string) {
 	dm.nodeWaitGroup[nodeName].Wait()
 }
 
 // SignalDone is called by a node that has finished the creation process.
 // internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *dependencyManagerImpl) SignalDone(nodeName string) {
+func (dm *defaultDependencyManager) SignalDone(nodeName string) {
 	for _, depender := range dm.nodeDependers[nodeName] {
 		dm.nodeWaitGroup[depender].Done()
 	}
 }
 
 // CheckAcyclicity checks if dependencies contain cycles.
-func (dm *dependencyManagerImpl) CheckAcyclicity() error {
+func (dm *defaultDependencyManager) CheckAcyclicity() error {
 	log.Debugf("Dependencies:\n%s", dm.String())
 	if !isAcyclic(dm.nodeDependers, 1) {
 		return fmt.Errorf("cyclic dependencies found!\n%s", dm.String())
@@ -82,7 +82,7 @@ func (dm *dependencyManagerImpl) CheckAcyclicity() error {
 }
 
 // String returns a string representation of dependencies recorded with dependency manager.
-func (dm *dependencyManagerImpl) String() string {
+func (dm *defaultDependencyManager) String() string {
 	// since dm.nodeDependers contains a map of dependee->[dependers] it is not
 	// particularly suitable for displaying the dependency graph
 	// this function reverses the order so that it becomes depender->[dependees]
