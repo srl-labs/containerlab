@@ -174,12 +174,20 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	}
 
 	// nodes with static mgmt IP should be scheduled before the dynamic ones
-	createStaticDynamicDependency(c.Nodes, dm)
+	err := createStaticDynamicDependency(c.Nodes, dm)
+	if err != nil {
+		return nil, err
+	}
+	// reflect the config given waitFor dependencies in the dependency manager
+	err = createWaitForDependency(c.Nodes, dm)
+	if err != nil {
+		return nil, err
+	}
 
 	// Add possible additional dependencies here
 
 	// make sure that there are no unresolvable dependencies, which would deadlock.
-	err := dm.CheckAcyclicity()
+	err = dm.CheckAcyclicity()
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +200,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 
 // createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
 // are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
-func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManager) {
+func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManager) error {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -209,9 +217,28 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm *dependencyManage
 	for dynNodeName := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
 		for staticNodeName := range staticIPNodes {
-			dm.AddDependency(staticNodeName, dynNodeName)
+			err := dm.AddDependency(staticNodeName, dynNodeName)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+// createWaitForDependency reflects the dependencies defined in the configuration via the waitFor field
+func createWaitForDependency(n map[string]nodes.Node, dm *dependencyManager) error {
+	// iterate through all nodes
+	for waiterNode, node := range n {
+		// add their waitFor items to the dependency manager
+		for _, waitforNode := range node.Config().WaitFor {
+			err := dm.AddDependency(waitforNode, waiterNode)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
@@ -287,7 +314,10 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 		// to be set to zero by their depending containers, then enqueue to the creation channel
 		go func(node nodes.Node, dm *dependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
 			// wait for all the nodes that node depends on
-			dm.WaitForNodeDependencies(node.Config().ShortName)
+			err := dm.WaitForNodeDependencies(node.Config().ShortName)
+			if err != nil {
+				log.Error(err)
+			}
 			// when all nodes that this node depends on are created, push it into the channel
 			workerChan <- node
 			// indicate we are done, such that only when all of these functions are done, the workerChan is being closed

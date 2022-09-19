@@ -258,6 +258,14 @@
                 },
                 "config": {
                     "$ref": "#/definitions/config-config"
+                },
+                "waitFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true,
+                    "description": "Define which nodes should be started befor this node will start"
                 }
             },
             "if": {

@@ -33,21 +33,40 @@ func (dm *dependencyManager) AddNode(name string) {
 
 // AddDependency adds a dependency between depender and dependee.
 // The depender will effectively wait for the dependee to finish.
-func (dm *dependencyManager) AddDependency(dependee, depender string) {
+func (dm *dependencyManager) AddDependency(dependee, depender string) error {
+	// first check if the referenced nodes are known to the dm
+	if _, exists := dm.nodeWaitGroup[depender]; !exists {
+		return fmt.Errorf("node %q is not known to the dependency manager", depender)
+	}
+	if _, exists := dm.nodeDependers[dependee]; !exists {
+		return fmt.Errorf("node %q is not known to the dependency manager", dependee)
+	}
+	// increase the WaitGroup by one for the depender
 	dm.nodeWaitGroup[depender].Add(1)
 	// add a depender node name for a given dependee
 	dm.nodeDependers[dependee] = append(dm.nodeDependers[dependee], depender)
+	return nil
 }
 
 // WaitForNodeDependencies is called by a node that is meant to be created.
 // This call will bock until all the nodes that this node depends on are created.
-func (dm *dependencyManager) WaitForNodeDependencies(nodeName string) {
+func (dm *dependencyManager) WaitForNodeDependencies(nodeName string) error {
+	// first check if the referenced node is known to the dm
+	if _, exists := dm.nodeWaitGroup[nodeName]; !exists {
+		return fmt.Errorf("node %q is not known to the dependency manager", nodeName)
+	}
 	dm.nodeWaitGroup[nodeName].Wait()
+	return nil
 }
 
 // SignalDone is called by a node that has finished the creation process.
 // internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
 func (dm *dependencyManager) SignalDone(nodeName string) {
+	// first check if the referenced node is known to the dm
+	if _, exists := dm.nodeDependers[nodeName]; !exists {
+		log.Errorf("tried to Signal Done for node %q but node is unknown to the DependencyManager")
+		return
+	}
 	for _, depender := range dm.nodeDependers[nodeName] {
 		dm.nodeWaitGroup[depender].Done()
 	}

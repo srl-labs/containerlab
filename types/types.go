@@ -139,7 +139,8 @@ type NodeConfig struct {
 	// status that is set by containerlab to indicate deployment stage
 
 	// Extras
-	Extras *Extras `json:"extras,omitempty"` // Extra node parameters
+	Extras  *Extras  `json:"extras,omitempty"` // Extra node parameters
+	WaitFor []string `json:"waitFor,omitempty"`
 }
 
 type HostRequirements struct {
