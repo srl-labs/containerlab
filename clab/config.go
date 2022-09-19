@@ -234,7 +234,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 
 		// Extras
 		Extras:  c.Config.Topology.GetNodeExtras(nodeName),
-		WaitFor: nodeDef.WaitFor,
+		WaitFor: c.Config.Topology.GetWaitFor(nodeName),
 	}
 
 	var err error
