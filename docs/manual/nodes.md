@@ -535,6 +535,63 @@ topology:
         net.ipv6.icmp.ratelimit: 1000
 ```
 
+### waitFor
+For the explicit definition of startup dependencies between nodes, the `waitFor` knob under the `kind` or `node` level can be used.
+
+Node _srl3_ will wait until _srl1_ and _srl2_ are created before it is created. The _linuxNode_ will via the definition in the _linux_ kind wait for all three _srl_ nodes to be created before it gets created.
+
+```yaml
+name: waitForTest
+topology:
+  kinds:
+    srl:
+      type: ixrd3
+      image: ghcr.io/nokia/srlinux
+    linux:
+      image: ghcr.io/hellt/network-multitool
+      waitFor:
+        - srl1
+        - srl2
+        - srl3
+  nodes:
+    srl1:
+      kind: srl
+    srl2:
+      kind: srl
+    srl3:
+      kind: srl
+      waitFor:
+        - srl1
+        - srl2
+    linuxNode:
+      kind: linux
+```
+
+The Dependency Manger takes care of all the dependencies, specifically defined as well as maybe implicit dependencies. It will inspect the graph an make sure it is acyclic, such that the dependencies can be resolved and no deadlock situation will be reached.
+The output of the Dependency Manager is visible in debug mode and looks like the following. It will visualize all the dependencies, explicit as well as the resolved implicit once.
+
+```yaml
+DEBU[0004] Dependencies:
+srl2 -> [  ]
+srl3 -> [ srl1, srl2 ]
+linux -> [ srl1, srl2, srl3 ]
+srl1 -> [  ] 
+DEBU[0004] - cycle check round 1 - 
+srl1 <- [ linux, srl3 ]
+srl2 <- [ linux, srl3 ]
+srl3 <- [ linux ]
+linux <- [  ] 
+DEBU[0004] - cycle check round 2 - 
+srl1 <- [ srl3 ]
+srl2 <- [ srl3 ]
+srl3 <- [  ] 
+DEBU[0004] - cycle check round 3 - 
+srl2 <- [  ]
+srl1 <- [  ] 
+DEBU[0004] node creation graph is successfully validated as being acyclic 
+```
+
+
 
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.
