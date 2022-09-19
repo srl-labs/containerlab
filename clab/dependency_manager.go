@@ -64,7 +64,7 @@ func (dm *dependencyManager) WaitForNodeDependencies(nodeName string) error {
 func (dm *dependencyManager) SignalDone(nodeName string) {
 	// first check if the referenced node is known to the dm
 	if _, exists := dm.nodeDependers[nodeName]; !exists {
-		log.Errorf("tried to Signal Done for node %q but node is unknown to the DependencyManager")
+		log.Errorf("tried to Signal Done for node %q but node is unknown to the DependencyManager", nodeName)
 		return
 	}
 	for _, depender := range dm.nodeDependers[nodeName] {
