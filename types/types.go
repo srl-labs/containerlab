@@ -183,11 +183,13 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	_, err = f.Write(dstBytes.Bytes())
+	if err != nil {
+		return err
+	}
 
-	return err
+	return f.Close()
 }
 
 func DisableTxOffload(n *NodeConfig) error {
@@ -211,7 +213,7 @@ func DisableTxOffload(n *NodeConfig) error {
 	return err
 }
 
-// Data struct storing generic container data.
+// GenericContainer Data struct storing generic container data.
 type GenericContainer struct {
 	Names           []string
 	ID              string
