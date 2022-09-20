@@ -43,10 +43,10 @@ Start a new shell for this setup to take effect.
 
 #### Fish completions
 ```bash
-containerlab completion fish | source
+❯ containerlab completion fish | source
 ```
 
 To load completions for each session, execute once:
 ```
-containerlab completion fish > ~/.config/fish/completions/containerlab.fish
+❯ containerlab completion fish > ~/.config/fish/completions/containerlab.fish
 ```

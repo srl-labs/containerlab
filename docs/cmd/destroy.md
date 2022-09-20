@@ -40,13 +40,13 @@ Destroy command provided with `--all | -a` flag will perform the deletion of all
 #### Destroy a lab described in the given topology file
 
 ```bash
-containerlab destroy -t mylab.clab.yml
+❯ containerlab destroy -t mylab.clab.yml
 ```
 
 #### Destroy a lab and remove the Lab directory
 
 ```bash
-containerlab destroy -t mylab.clab.yml --cleanup
+❯ containerlab destroy -t mylab.clab.yml --cleanup
 ```
 
 #### Destroy a lab without specifying topology file
@@ -54,18 +54,18 @@ containerlab destroy -t mylab.clab.yml --cleanup
 Given that a single topology file is present in the current directory.
 
 ```bash
-containerlab destroy
+❯ containerlab destroy
 ```
 
 #### Destroy all labs on the container host
 
 ```bash
-containerlab destroy -a
+❯ containerlab destroy -a
 ```
 
 
 #### Destroy a lab using shortcut names
 
 ```bash
-clab des
+❯ clab des
 ```

@@ -105,7 +105,7 @@ Generate and deploy a lab topology for 3-tier CLOS network with 8 leafs, 4 spine
     The `srl` kind in the image and license flags can be omitted, as it is implied by default
 
 ```bash
-containerlab generate --name 3tier --image srl=srlinux:latest \
+❯ containerlab generate --name 3tier --image srl=srlinux:latest \
                       --license srl=license.key \
                       --nodes 8,4,2 --deploy
 ```

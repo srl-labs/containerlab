@@ -37,7 +37,7 @@ With this flag inspect command will output every bit of information about the ru
 #### List all running labs on the host
 
 ```bash
-containerlab inspect --all
+❯ containerlab inspect --all
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
 | # | Topo Path  | Lab Name |      Name       | Container ID |       Image        | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
@@ -50,9 +50,10 @@ containerlab inspect --all
 
 #### Provide information about a specific running lab
 
+Provide information about the running lab named `srl02`
+
 ```bash
-# provide information about the running lab named srl02
-containerlab inspect --name srlceos01
+❯ containerlab inspect --name srlceos01
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
 | # |        Name         | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
@@ -65,7 +66,7 @@ containerlab inspect --name srlceos01
 #### Provide information about a specific running lab in json format
 
 ```bash
-containerlab inspect --name srlceos01 -f json
+❯ containerlab inspect --name srlceos01 -f json
 [
   {
     "lab_name": "srlceos01",
