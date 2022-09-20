@@ -34,8 +34,9 @@ With this flag inspect command will output every bit of information about the ru
 
 ### Examples
 
+#### List all running labs on the host
+
 ```bash
-# list all running labs on the host
 containerlab inspect --all
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
 | # | Topo Path  | Lab Name |      Name       | Container ID |       Image        | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
@@ -45,7 +46,11 @@ containerlab inspect --all
 | 3 | srl02.yml  | srl01    | clab-srl01-srl  | 13c9e7543771 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
 | 4 |            |          | clab-srl01-srl2 | 8cfca93b7b6f | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
+```
 
+#### Provide information about a specific running lab
+
+```bash
 # provide information about the running lab named srl02
 containerlab inspect --name srlceos01
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
@@ -55,8 +60,11 @@ containerlab inspect --name srlceos01
 | 2 | clab-srlceos01-srl  | 82e9aa3c7e6b | srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
 
+```
 
-# now in json format
+#### Provide information about a specific running lab in json format
+
+```bash
 containerlab inspect --name srlceos01 -f json
 [
   {
