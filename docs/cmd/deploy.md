@@ -67,10 +67,28 @@ Example command-line usage: `CLAB_VERSION_CHECK=disable containerlab deploy`
 
 ### Examples
 
-```bash
-# deploy a lab from mylab.clab.yml file located in the same dir
-containerlab deploy -t mylab.clab.yml
+#### Deploy a lab using the given topology file
 
-# deploy a lab from mylab.clab.yml file and regenerate all configuration artifacts
+```bash
+containerlab deploy -t mylab.clab.yml
+```
+
+#### Deploy a lab and regenerate all configuration artifacts
+
+```bash
 containerlab deploy -t mylab.clab.yml --reconfigure
 ```
+
+#### Deploy a lab without specifying topology file
+
+Given that a single topology file is present in the current directory.
+
+```bash
+containerlab deploy
+```
+
+#### Deploy a lab using shortcut names
+```bash
+clab dep -t mylab.clab.yml
+```
+
