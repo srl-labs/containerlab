@@ -138,8 +138,18 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 // initMgmtNetwork sets management network config.
 func (c *CLab) initMgmtNetwork() error {
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
+
+	//TODO DUMAIS: this is temporary, we need to make this configurable
+	if c.Config.Mgmt.Type == types.MgmtNet_Type_Undefined {
+		c.Config.Mgmt.Type = types.MgmtNet_Type_Bridge
+	}
+
 	if c.Config.Mgmt.Network == "" {
-		c.Config.Mgmt.Network = dockerNetName
+		if c.Config.Mgmt.Type == types.MgmtNet_Type_Overlay {
+			c.Config.Mgmt.Network = dockerNetName+"-overlay"
+		} else {
+			c.Config.Mgmt.Network = dockerNetName
+		}
 	}
 
 	if c.Config.Mgmt.IPv4Subnet == "" && c.Config.Mgmt.IPv6Subnet == "" {

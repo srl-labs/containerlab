@@ -29,6 +29,13 @@ type Link struct {
 	Labels map[string]string
 	Vars   map[string]interface{}
 }
+type MgmtNet_Type string
+
+const (
+	MgmtNet_Type_Undefined MgmtNet_Type = ""
+	MgmtNet_Type_Bridge MgmtNet_Type    = "bridge"
+	MgmtNet_Type_Overlay                = "overlay"
+)
 
 func (link *Link) String() string {
 	return fmt.Sprintf("link [%s:%s, %s:%s]", link.A.Node.ShortName,
@@ -55,6 +62,7 @@ type MgmtNet struct {
 	IPv6Gw         string `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
 	MTU            string `yaml:"mtu,omitempty" json:"mtu,omitempty"`
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
+	Type		   MgmtNet_Type `yaml:"type,omitempty" json:"type,omitempty"`
 }
 
 // NodeConfig is a struct that contains the information of a container element.

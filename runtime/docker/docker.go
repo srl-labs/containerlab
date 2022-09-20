@@ -90,6 +90,7 @@ func (d *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 
 func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	d.mgmt = n
+
 	// return if MTU value was set by a user via config file
 	if n.MTU != "" {
 		return
@@ -180,13 +181,21 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			netwOpts["com.docker.network.bridge.name"] = bridgeName
 		}
 
+		driver := "bridge"
+		attachable := false
+
+		if d.mgmt.Type == types.MgmtNet_Type_Overlay {
+			driver = "overlay"
+			attachable = true
+		}
+
 		opts := dockerTypes.NetworkCreate{
 			CheckDuplicate: true,
-			Driver:         "bridge",
+			Driver:         driver,
 			EnableIPv6:     enableIPv6,
 			IPAM:           ipam,
 			Internal:       false,
-			Attachable:     false,
+			Attachable:     attachable,
 			Labels: map[string]string{
 				"containerlab": "",
 			},
@@ -227,22 +236,24 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		return err
 	}
 
-	if d.mgmt.Bridge == "" {
-		d.mgmt.Bridge = bridgeName
+	if d.mgmt.Type == types.MgmtNet_Type_Bridge {
+		log.Debugf("Docker network %q, is of type bridge. Finding IPs", d.mgmt.Network)
+		if d.mgmt.Bridge == "" {
+			d.mgmt.Bridge = bridgeName
+		}
+
+		// get management bridge v4/6 addresses and save it under mgmt struct
+		// so that nodes can use this information prior to being deployed
+		// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
+		var v4, v6 string
+		if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
+			return err
+		}
+
+		d.mgmt.IPv4Gw = v4
+		d.mgmt.IPv6Gw = v6
+		log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 	}
-
-	// get management bridge v4/6 addresses and save it under mgmt struct
-	// so that nodes can use this information prior to being deployed
-	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
-	var v4, v6 string
-	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
-		return err
-	}
-
-	d.mgmt.IPv4Gw = v4
-	d.mgmt.IPv6Gw = v6
-
-	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 
 	return d.postCreateNetActions()
 }
@@ -259,18 +270,20 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 		return fmt.Errorf("failed to disable RP filter on docker host for the 'default' scope: %v", err)
 	}
 
-	log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
-	file := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/group_fwd_mask"
+	if d.mgmt.Type == types.MgmtNet_Type_Bridge {
+		log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
+		file := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/group_fwd_mask"
 
-	err = ioutil.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
-	if err != nil {
-		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
-	}
+		err = ioutil.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
+		if err != nil {
+			log.Warnf("failed to enable LLDP on docker bridge: %v", err)
+		}
 
-	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", d.mgmt.Bridge)
-	err = utils.EthtoolTXOff(d.mgmt.Bridge)
-	if err != nil {
-		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
+		log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", d.mgmt.Bridge)
+		err = utils.EthtoolTXOff(d.mgmt.Bridge)
+		if err != nil {
+			log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
+		}
 	}
 	err = d.installIPTablesFwdRule()
 	if err != nil {
