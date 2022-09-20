@@ -139,7 +139,6 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 func (c *CLab) initMgmtNetwork() error {
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
 
-	//TODO DUMAIS: this is temporary, we need to make this configurable
 	if c.Config.Mgmt.Type == types.MgmtNet_Type_Undefined {
 		c.Config.Mgmt.Type = types.MgmtNet_Type_Bridge
 	}
