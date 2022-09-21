@@ -49,9 +49,8 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 	createStaticDynamicDependency(nodeMap, dm)
 }
 
-// getNodeMap return a map of nodes for testing purpose
+// getNodeMap return a map of nodes for testing purpose.
 func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
-
 	// instantiate Mock Node 1
 	mockNode1 := mocks.NewMockNode(mockCtrl)
 	mockNode1.EXPECT().Config().Return(
