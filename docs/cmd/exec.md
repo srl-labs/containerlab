@@ -31,9 +31,11 @@ By default `exec` command will attempt to execute the command across all the nod
 
 ### Examples
 
+#### Execute a command on all nodes of the lab
+
+Show ipv4 information from all the nodes of the lab with a plain text output
+
 ```bash
-# show ipv4 information from all the nodes of the lab
-# with a plain text output
 ❯ containerlab exec -t srl02.yml --cmd 'ip -4 a show dummy-mgmt0'
 INFO[0000] clab-srl02-srl1: stdout:
 6: dummy-mgmt0: <BROADCAST,NOARP> mtu 1500 qdisc noop state DOWN group default qlen 1000
@@ -43,17 +45,23 @@ INFO[0000] clab-srl02-srl2: stdout:
 6: dummy-mgmt0: <BROADCAST,NOARP> mtu 1500 qdisc noop state DOWN group default qlen 1000
     inet 172.20.20.2/24 brd 172.20.20.255 scope global dummy-mgmt0
        valid_lft forever preferred_lft forever
+```
+#### Execute a command on a node referenced by its name
 
-# show ipv4 information from a specific node of the lab
-# with a plain text output
+Show ipv4 information from a specific node of the lab with a plain text output
+
+```bash
 ❯ containerlab exec -t srl02.yml --label clab-node-name\=srl2 --cmd 'ip -4 a show dummy-mgmt0'
 INFO[0000] Parsing & checking topology file: srl02.yml  
 INFO[0000] Executed command 'ip -4 a show dummy-mgmt0' on clab-srl02-srl2. stdout:
 6: dummy-mgmt0: <BROADCAST,NOARP> mtu 1500 qdisc noop state DOWN group default qlen 1000
     inet 172.20.20.5/24 brd 172.20.20.255 scope global dummy-mgmt0
        valid_lft forever preferred_lft forever 
+```
 
-# execute a CLI command with a plain text output
+#### Execute a CLI Command
+
+```bash
 ❯ containerlab exec -t srl02.yml --cmd 'sr_cli  "show version"'
 INFO[0001] clab-srl02-srl1: stdout:
 ----------------------------------------------------
@@ -83,9 +91,11 @@ Last Booted       : 2021-06-24T10:25:26.904Z
 Total Memory      : 24052875 kB
 Free Memory       : 21911914 kB
 ----------------------------------------------------
+```
 
+#### Execute a Command with json formatted output
 
-# execute a CLI command with a json output
+```bash
 ❯ containerlab exec -t srl02.yml --cmd 'sr_cli  "show version | as json"' -f json | jq
 {
   "clab-srl02-srl1": {
