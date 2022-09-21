@@ -48,9 +48,9 @@ With this flag inspect command will output every bit of information about the ru
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
 ```
 
-#### Provide information about a specific running lab
+#### Provide information about a specific running lab by its name
 
-Provide information about the running lab named `srl02`
+Provide information about the running lab named `srlceos01`
 
 ```bash
 ❯ containerlab inspect --name srlceos01
@@ -60,7 +60,19 @@ Provide information about the running lab named `srl02`
 | 1 | clab-srlceos01-ceos | 90bebb1e2c5f | ceos    | ceos |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
 | 2 | clab-srlceos01-srl  | 82e9aa3c7e6b | srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
+```
 
+#### Provide information about a specific running lab by its topology file
+
+```bash
+clab inspect -t srl02.clab.yml 
+INFO[0000] Parsing & checking topology file: srl02.clab.yml 
++---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
+| # |      Name       | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
++---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
+| 1 | clab-srl02-srl1 | 7a7c101be7d8 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
+| 2 | clab-srl02-srl2 | 5e3737621753 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
++---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
 ```
 
 #### Provide information about a specific running lab in json format
@@ -90,3 +102,4 @@ Provide information about the running lab named `srl02`
   }
 ]
 ```
+

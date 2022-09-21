@@ -113,20 +113,20 @@ This will render the running lab if the lab is running and the topology file if 
 #### Render graph on specified http server port
 
 ```bash
-❯ containerlab graph --topo /path/to/topo1.clab.yml --srv ":3002"
+containerlab graph --topo /path/to/topo1.clab.yml --srv ":3002"
 ```
 
 #### Render graph using a custom html template
 
 ```bash
-❯ containerlab graph --topo /path/to/topo1.clab.yml --template my_template.html
+containerlab graph --topo /path/to/topo1.clab.yml --template my_template.html
 ```
 
 #### Render graph using a custom template that links to local files
 
 The HTML server will use a custom template that links to local files located at /path/to/static_files directory
 ```bash
-❯ containerlab graph --topo /path/to/topo1.clab.yml --template my_template.html --static-dir /path/to/static_files
+containerlab graph --topo /path/to/topo1.clab.yml --template my_template.html --static-dir /path/to/static_files
 ```
 
 [^1]: This method is prone to errors when node names contain dashes and special symbols. Use with caution, and prefer the HTML server alternative.

@@ -46,7 +46,7 @@ INFO[0000] clab-srl02-srl2: stdout:
     inet 172.20.20.2/24 brd 172.20.20.255 scope global dummy-mgmt0
        valid_lft forever preferred_lft forever
 ```
-#### Execute a command on one node by name
+#### Execute a command on a node referenced by its name
 
 Show ipv4 information from a specific node of the lab with a plain text output
 
@@ -59,7 +59,7 @@ INFO[0000] Executed command 'ip -4 a show dummy-mgmt0' on clab-srl02-srl2. stdou
        valid_lft forever preferred_lft forever 
 ```
 
-#### Execute a SR Linux CLI Command
+#### Execute a CLI Command
 
 ```bash
 ❯ containerlab exec -t srl02.yml --cmd 'sr_cli  "show version"'
@@ -93,7 +93,7 @@ Free Memory       : 21911914 kB
 ----------------------------------------------------
 ```
 
-#### Execute a SR Linux CLI Command with json formatted output
+#### Execute a Command with json formatted output
 
 ```bash
 ❯ containerlab exec -t srl02.yml --cmd 'sr_cli  "show version | as json"' -f json | jq
