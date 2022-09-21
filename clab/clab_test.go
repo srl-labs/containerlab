@@ -20,7 +20,7 @@ func Test_createNamespaceSharingDependencyOne(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	// instantiate a dependencyManager mock
-	dm := mocks.NewMockdependencyManager(mockCtrl)
+	dm := mocks.NewMockDependencyManager(mockCtrl)
 
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
@@ -34,7 +34,7 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	// instantiate a dependencyManager mock
-	dm := mocks.NewMockdependencyManager(mockCtrl)
+	dm := mocks.NewMockDependencyManager(mockCtrl)
 
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
