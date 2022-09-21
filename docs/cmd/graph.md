@@ -102,17 +102,30 @@ With `--dot` flag provided containerlab will generate the `dot` file instead of 
 
 ### Examples
 
+#### Render graph of topology on HTML server
+
+This will render the running lab if the lab is running and the topology file if it isn't. Default options will be used (HTML server running on port `50080`).
+
 ```bash
+containerlab graph -t /path/to/topo1.clab.yml
+```
 
-# render a graph from running lab or topo file if lab is not running#
-# using HTML graph option with default server address :50080
-containerlab graph --topo /path/to/topo1.clab.yml
+#### Render graph on specified http server port
 
-# start an http server on :3002 where topo1 graph will be rendered using a custom template my_template.html
-containerlab graph --topo /path/to/topo1.clab.yml --srv ":3002" --template my_template.html
+```bash
+containerlab graph --topo /path/to/topo1.clab.yml --srv ":3002"
+```
 
-# start an http server on default port :50080 
-# using a custom template that links to local files located at /path/to/static_files directory
+#### Render graph using a custom html template
+
+```bash
+containerlab graph --topo /path/to/topo1.clab.yml --template my_template.html
+```
+
+#### Render graph using a custom template that links to local files
+
+The HTML server will use a custom template that links to local files located at /path/to/static_files directory
+```bash
 containerlab graph --topo /path/to/topo1.clab.yml --template my_template.html --static-dir /path/to/static_files
 ```
 

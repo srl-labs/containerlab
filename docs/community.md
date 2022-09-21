@@ -5,15 +5,21 @@ hide:
 
 # Community
 
-Containerlab openness and focus on multivendor labs was a key to its success and adoption. With more than a dozen Network Operating Systems spread across several networking vendors and opensource teams, it is a tool that can answer the needs of a broad network engineers community.
+Containerlab openness and focus on multivendor labs were key to its success and adoption. With more than a dozen Network Operating Systems spread across several networking vendors and opensource teams, it is a tool that can answer the needs of a broad network engineers community.
 
-## Discord Server
+## Chat servers
 
-Growing the number of supported NOSes is a task that can't be done by a single person, and there the community role is adamant. To support and cherish the growing containerlab community and provide better feedback and discussions platform, we launched containerlab's own Discord server.
+### Discord
+
+Growing the number of supported NOSes is a task that can't be done by a single person, and there the community role is adamant. To support and cherish the growing containerlab community and provide better feedback and discussions platform, we launched containerlab's official Discord server where maintainers and users hang out.
 
 Everybody is welcome to join and chat with our community members about all things containerlab!
 
 <center>[:fontawesome-brands-discord: Join Containerlab Discord Server](https://discord.gg/vAyddtaEV9){ .md-button .md-button--primary }</center>
+
+### IRC
+
+For those who cherish IRC in their hearts, a community-led IRC channel `#containerlab` is available at [IRC Libera server](https://libera.chat/).
 
 ## In The Media
 
@@ -116,7 +122,7 @@ Clever use of containerlab with a focus on the workload capabilities and integra
 
 <small>:material-youtube: [screencast](https://www.youtube.com/watch?v=dL-P1ebTu_0) by [Inmanta](https://www.youtube.com/channel/UCuhO5ol5yTBhlr-p4xfNYhA) · :material-calendar: 2022-03-20</small>
 
-Inmanta is a network orchestration and automation platform. In these [YouTube series](https://www.youtube.com/watch?v=dL-P1ebTu_0), Inmanta's engineer explains how this platform can help you manage network infrastructure provided by Containerlab. Make sure to check subsequent videos in their channel where multiple angles of containerlab are shown. 
+Inmanta is a network orchestration and automation platform. In these [YouTube series](https://www.youtube.com/watch?v=dL-P1ebTu_0), Inmanta's engineer explains how this platform can help you manage network infrastructure provided by Containerlab. Make sure to check subsequent videos in their channel where multiple angles of containerlab are shown.
 
 ### Containerlab-based DDOS testbed
 
@@ -141,7 +147,6 @@ I’ve been progressing through a series of technical books, some of which I’v
 <small>:material-text: [Blog](https://www.theasciiconstruct.com/post/junos-vqfx-containerlab/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-02-06</small>
 
 In this post, we look at how Containerlab can be used to quickly spin up vQFX topologies for network validation and testing. We’ll walk through the entire process - how to build docker images from vQFX images, what happens behind the scenes when bringing these containers up and how to build/verify your topology.
-
 
 ### Multipoint Redistribution and SR Linux
 

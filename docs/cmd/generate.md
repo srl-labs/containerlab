@@ -98,13 +98,13 @@ With `--ipv4-subnet` and `ipv6-subnet` its possible to change the address ranges
 
 ### Examples
 
-```bash
-# generate and deploy a lab topology for 3-tier CLOS network
-# with 8 leafs, 4 spines and 2 superspines
-# all using Nokia SR Linux nodes with license and image provided.
-# Note that `srl` kind in the image and license flags might be omitted,
-# as it is implied by default)
+#### Generate topology for a 3-tier CLOS network
+Generate and deploy a lab topology for 3-tier CLOS network with 8 leafs, 4 spines and 2 superspines. All using Nokia SR Linux nodes with license and image provided.
 
+!!! note
+    The `srl` kind in the image and license flags can be omitted, as it is implied by default
+
+```bash
 containerlab generate --name 3tier --image srl=srlinux:latest \
                       --license srl=license.key \
                       --nodes 8,4,2 --deploy
