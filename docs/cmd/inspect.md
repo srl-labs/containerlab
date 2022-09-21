@@ -65,7 +65,7 @@ Provide information about the running lab named `srlceos01`
 #### Provide information about a specific running lab by its topology file
 
 ```bash
-clab inspect -t srl02.clab.yml 
+❯ clab inspect -t srl02.clab.yml 
 INFO[0000] Parsing & checking topology file: srl02.clab.yml 
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
 | # |      Name       | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |

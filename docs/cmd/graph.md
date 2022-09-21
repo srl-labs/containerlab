@@ -107,7 +107,7 @@ With `--dot` flag provided containerlab will generate the `dot` file instead of 
 This will render the running lab if the lab is running and the topology file if it isn't. Default options will be used (HTML server running on port `50080`).
 
 ```bash
-❯ containerlab graph -t /path/to/topo1.clab.yml
+containerlab graph -t /path/to/topo1.clab.yml
 ```
 
 #### Render graph on specified http server port
