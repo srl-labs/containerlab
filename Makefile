@@ -22,7 +22,7 @@ test:
 MOCKDIR = ./mocks
 .PHONY: mocks-gen
 mocks-gen: mocks-rm ## Generate mocks for all the defined interfaces.
-	go install github.com/golang/mock/mockgen@latest
+	go install github.com/golang/mock/mockgen@v1.6.0
 	mockgen -package=mocks -source=nodes/node.go -destination=$(MOCKDIR)/node.go
 	mockgen -package=mocks -source=clab/dependency_manager.go -destination=$(MOCKDIR)/dependency_manager.go
 
