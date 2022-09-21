@@ -8,8 +8,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type dependencyManager struct {
-	// Map of wait group per node.
+type dependencyManager interface {
+	// AddNode adds a node to the dependency manager.
+	AddNode(name string)
+	// AddDependency adds a dependency between depender and dependee.
+	// The depender will effectively wait for the dependee to finish.
+	AddDependency(dependee, depender string)
+	// WaitForNodeDependencies is called by a node that is meant to be created.
+	// This call will bock until all the nodes that this node depends on are created.
+	WaitForNodeDependencies(nodeName string)
+	// SignalDone is called by a node that has finished the creation process.
+	// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
+	SignalDone(nodeName string)
+	// CheckAcyclicity checks if dependencies contain cycles.
+	CheckAcyclicity() error
+	// String returns a string representation of dependencies recorded with dependency manager.
+	String() string
+}
+
+type defaultDependencyManager struct {
+	// map of wait group per node.
 	// The scheduling of the nodes creation is dependent on their respective wait group.
 	// Other nodes, that the specific node relies on will increment this wait group.
 	nodeWaitGroup map[string]*sync.WaitGroup
@@ -18,22 +36,22 @@ type dependencyManager struct {
 	nodeDependers map[string][]string
 }
 
-func NewDependencyManager() *dependencyManager {
-	return &dependencyManager{
+func NewDependencyManager() dependencyManager {
+	return &defaultDependencyManager{
 		nodeWaitGroup: map[string]*sync.WaitGroup{},
 		nodeDependers: map[string][]string{},
 	}
 }
 
 // AddNode adds a node to the dependency manager.
-func (dm *dependencyManager) AddNode(name string) {
+func (dm *defaultDependencyManager) AddNode(name string) {
 	dm.nodeWaitGroup[name] = &sync.WaitGroup{}
 	dm.nodeDependers[name] = []string{}
 }
 
 // AddDependency adds a dependency between depender and dependee.
 // The depender will effectively wait for the dependee to finish.
-func (dm *dependencyManager) AddDependency(dependee, depender string) {
+func (dm *defaultDependencyManager) AddDependency(dependee, depender string) {
 	dm.nodeWaitGroup[depender].Add(1)
 	// add a depender node name for a given dependee
 	dm.nodeDependers[dependee] = append(dm.nodeDependers[dependee], depender)
@@ -41,26 +59,55 @@ func (dm *dependencyManager) AddDependency(dependee, depender string) {
 
 // WaitForNodeDependencies is called by a node that is meant to be created.
 // This call will bock until all the nodes that this node depends on are created.
-func (dm *dependencyManager) WaitForNodeDependencies(nodeName string) {
+func (dm *defaultDependencyManager) WaitForNodeDependencies(nodeName string) {
 	dm.nodeWaitGroup[nodeName].Wait()
 }
 
 // SignalDone is called by a node that has finished the creation process.
 // internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *dependencyManager) SignalDone(nodeName string) {
+func (dm *defaultDependencyManager) SignalDone(nodeName string) {
 	for _, depender := range dm.nodeDependers[nodeName] {
 		dm.nodeWaitGroup[depender].Done()
 	}
 }
 
 // CheckAcyclicity checks if dependencies contain cycles.
-func (dm *dependencyManager) CheckAcyclicity() error {
+func (dm *defaultDependencyManager) CheckAcyclicity() error {
 	log.Debugf("Dependencies:\n%s", dm.String())
 	if !isAcyclic(dm.nodeDependers, 1) {
 		return fmt.Errorf("cyclic dependencies found!\n%s", dm.String())
 	}
 
 	return nil
+}
+
+// String returns a string representation of dependencies recorded with dependency manager.
+func (dm *defaultDependencyManager) String() string {
+	// since dm.nodeDependers contains a map of dependee->[dependers] it is not
+	// particularly suitable for displaying the dependency graph
+	// this function reverses the order so that it becomes depender->[dependees]
+
+	// map to record the dependencies in string based representation
+	dependencies := map[string][]string{}
+
+	// prepare dependencies table
+	for name := range dm.nodeWaitGroup {
+		dependencies[name] = []string{}
+	}
+
+	// build the dependency datastruct
+	for dependee, dependers := range dm.nodeDependers {
+		for _, depender := range dependers {
+			dependencies[depender] = append(dependencies[depender], dependee)
+		}
+	}
+
+	result := []string{}
+	// print dependencies
+	for nodename, deps := range dependencies {
+		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(deps, ", ")))
+	}
+	return strings.Join(result, "\n")
 }
 
 // isAcyclic checks the provided dependencies map for cycles.
@@ -121,33 +168,4 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 		remainingNodeDependers[dependee] = newRemainingNodeDependers
 	}
 	return isAcyclic(remainingNodeDependers, i+1)
-}
-
-// String returns a string representation of dependencies recorded with dependency manager.
-func (dm *dependencyManager) String() string {
-	// since dm.nodeDependers contains a map of dependee->[dependers] it is not
-	// particularly suitable for displaying the dependency graph
-	// this function reverses the order so that it becomes depender->[dependees]
-
-	// map to record the dependencies in string based representation
-	dependencies := map[string][]string{}
-
-	// prepare dependencies table
-	for name := range dm.nodeWaitGroup {
-		dependencies[name] = []string{}
-	}
-
-	// build the dependency datastruct
-	for dependee, dependers := range dm.nodeDependers {
-		for _, depender := range dependers {
-			dependencies[depender] = append(dependencies[depender], dependee)
-		}
-	}
-
-	result := []string{}
-	// print dependencies
-	for nodename, deps := range dependencies {
-		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(deps, ", ")))
-	}
-	return strings.Join(result, "\n")
 }
