@@ -44,6 +44,14 @@ INFO[0000] clab-srl02-srl2: stdout:
     inet 172.20.20.2/24 brd 172.20.20.255 scope global dummy-mgmt0
        valid_lft forever preferred_lft forever
 
+# show ipv4 information from a specific node of the lab
+# with a plain text output
+❯ containerlab exec -t srl02.yml --label clab-node-name\=srl2 --cmd 'ip -4 a show dummy-mgmt0'
+INFO[0000] Parsing & checking topology file: srl02.yml  
+INFO[0000] Executed command 'ip -4 a show dummy-mgmt0' on clab-srl02-srl2. stdout:
+6: dummy-mgmt0: <BROADCAST,NOARP> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    inet 172.20.20.5/24 brd 172.20.20.255 scope global dummy-mgmt0
+       valid_lft forever preferred_lft forever 
 
 # execute a CLI command with a plain text output
 ❯ containerlab exec -t srl02.yml --cmd 'sr_cli  "show version"'
