@@ -184,7 +184,6 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	if err != nil {
 		return nil, err
 	}
-
 	// make network namespace shared containers start in the right order
 	createNamespaceSharingDependency(c.Nodes, dm)
 

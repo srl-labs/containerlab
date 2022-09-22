@@ -213,7 +213,7 @@ func DisableTxOffload(n *NodeConfig) error {
 	return err
 }
 
-// GenericContainer Data struct storing generic container data.
+// GenericContainer stores generic container data.
 type GenericContainer struct {
 	Names           []string
 	ID              string
