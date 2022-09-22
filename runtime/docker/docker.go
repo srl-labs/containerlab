@@ -113,7 +113,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	}
 }
 
-// CreateDockerNet creates a docker network or reusing if it exists.
+// CreateNet creates a docker network or reusing if it exists.
 func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
@@ -841,4 +841,19 @@ func (d *DockerRuntime) processNetworkMode(
 	}
 
 	return nil
+}
+
+// GetContainerStatus retrieves the ContainerStatus of the named container.
+func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
+	inspect, err := d.Client.ContainerInspect(ctx, cID)
+	if err != nil {
+		return runtime.NotFound
+	}
+	switch inspect.State.Status {
+	case "running":
+		return runtime.Running
+	case "created", "paused", "restarting", "removing", "exited", "dead":
+		return runtime.Stopped
+	}
+	return runtime.NotFound
 }

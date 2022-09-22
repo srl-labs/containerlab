@@ -549,7 +549,7 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 	return c.produceGenericContainerList(ctx, containerlist)
 }
 
-// TODO this will probably not work. need to work out the exact filter format.
+// GetContainer TODO this will probably not work. need to work out the exact filter format.
 func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
 	var ctr *types.GenericContainer
 	gFilter := types.GenericFilter{
@@ -828,4 +828,25 @@ func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID str
 // TODO: do we need it here? currently no-op.
 func (c *ContainerdRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
+}
+
+// GetContainerStatus retrieves the ContainerStatus of the named container.
+func (c *ContainerdRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
+	task, err := c.getContainerTask(ctx, cID)
+	if err != nil {
+		return runtime.NotFound
+	}
+
+	status, err := task.Status(ctx)
+	if err != nil {
+		return runtime.NotFound
+	}
+
+	switch status.Status {
+	case containerd.Running:
+		return runtime.Running
+	case containerd.Created, containerd.Paused, containerd.Pausing, containerd.Stopped, containerd.Unknown:
+		return runtime.Stopped
+	}
+	return runtime.NotFound
 }
