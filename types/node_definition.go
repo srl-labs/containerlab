@@ -63,7 +63,7 @@ type NodeDefinition struct {
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
 	// List of node names to wait for before satarting this particular node
-	WaitFor []string `yaml:"waitFor,omitempty"`
+	WaitFor []string `yaml:"wait-for,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {

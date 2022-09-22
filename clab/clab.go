@@ -179,7 +179,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	if err != nil {
 		return nil, err
 	}
-	// reflect the config given waitFor dependencies in the dependency manager
+	// reflect the config given wait-for dependencies in the dependency manager
 	err = createWaitForDependency(c.Nodes, dm)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm DependencyManager
 	return nil
 }
 
-// createWaitForDependency reflects the dependencies defined in the configuration via the waitFor field
+// createWaitForDependency reflects the dependencies defined in the configuration via the wait-for field
 func createWaitForDependency(n map[string]nodes.Node, dm DependencyManager) error {
 	// iterate through all nodes
 	for waiterNode, node := range n {

@@ -535,10 +535,10 @@ topology:
         net.ipv6.icmp.ratelimit: 1000
 ```
 
-### waitFor
-For the explicit definition of startup dependencies between nodes, the `waitFor` knob under the `kind` or `node` level can be used.
+### wait-for
+For the explicit definition of startup dependencies between nodes, the `wait-for` knob under the `kind` or `node` level can be used.
 
-Node _srl3_ will wait until _srl1_ and _srl2_ are created before it is created. The _linuxNode_ will via the definition in the _linux_ kind wait for all three _srl_ nodes to be created before it gets created.
+Node _srl3_ will wait until _srl1_ and _srl2_ are created before it is created. The _client_ will via the definition in the _linux_ kind wait for all three _srl_ nodes to be created before it gets created.
 
 ```yaml
 name: waitForTest
@@ -549,7 +549,7 @@ topology:
       image: ghcr.io/nokia/srlinux
     linux:
       image: ghcr.io/hellt/network-multitool
-      waitFor:
+      wait-for:
         - srl1
         - srl2
         - srl3
@@ -560,7 +560,7 @@ topology:
       kind: srl
     srl3:
       kind: srl
-      waitFor:
+      wait-for:
         - srl1
         - srl2
     linuxNode:

@@ -140,7 +140,7 @@ type NodeConfig struct {
 
 	// Extras
 	Extras  *Extras  `json:"extras,omitempty"` // Extra node parameters
-	WaitFor []string `json:"waitFor,omitempty"`
+	WaitFor []string `json:"wait-for,omitempty"`
 }
 
 type HostRequirements struct {

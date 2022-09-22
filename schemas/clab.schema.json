@@ -259,13 +259,14 @@
                 "config": {
                     "$ref": "#/definitions/config-config"
                 },
-                "waitFor": {
+                "wait-for": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
                     "uniqueItems": true,
-                    "description": "Define which nodes should be started befor this node will start"
+                    "description": "Define which nodes should be started before this node will start",
+                    "markdownDescription": "[wait-for](https://containerlab.dev/manual/nodes/#cmd) defines which nodes should be started before this node will start"
                 }
             },
             "if": {
