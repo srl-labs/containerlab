@@ -340,6 +340,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename str
 	var retryCounter = 0
 
 	// enter the ticker loop
+TIMEOUT_LOOP:
 	for {
 		select {
 		case <-ticker.C:
@@ -348,7 +349,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename str
 			// check if dependency is running, if so break the loop
 			if runtimeStatus == runtime.Running {
 				log.Infof("node %q starts since external container %q is running now", nodename, contName)
-				break
+				break TIMEOUT_LOOP
 			}
 			// if not, log and loop again
 			log.Infof("node %q depends on external container %q, which is not running yet. waited %d seconds. continue to wait", nodename, contName, tickFrequencySec*retryCounter)
@@ -356,7 +357,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename str
 		case <-timeout:
 			// timeout reached, break with error log message
 			log.Errorf("node %q waited %d seconds for external dependency container %q to come up, which did not happen. Giving up now", nodename, waitTimeoutSec*tickFrequencySec, contName)
-			break
+			break TIMEOUT_LOOP
 		}
 		// increment counter
 		retryCounter++
