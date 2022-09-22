@@ -179,11 +179,13 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	if err != nil {
 		return nil, err
 	}
-	// reflect the config given wait-for dependencies in the dependency manager
+
+	// create user-defined node dependencies done with `wait-for` node property
 	err = createWaitForDependency(c.Nodes, dm)
 	if err != nil {
 		return nil, err
 	}
+
 	// make network namespace shared containers start in the right order
 	createNamespaceSharingDependency(c.Nodes, dm)
 
@@ -258,18 +260,18 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm DependencyManager
 	return nil
 }
 
-// createWaitForDependency reflects the dependencies defined in the configuration via the wait-for field
+// createWaitForDependency reflects the dependencies defined in the configuration via the wait-for field.
 func createWaitForDependency(n map[string]nodes.Node, dm DependencyManager) error {
-	// iterate through all nodes
 	for waiterNode, node := range n {
-		// add their waitFor items to the dependency manager
-		for _, waitforNode := range node.Config().WaitFor {
-			err := dm.AddDependency(waitforNode, waiterNode)
+		// add node's waitFor nodes to the dependency manager
+		for _, waitForNode := range node.Config().WaitFor {
+			err := dm.AddDependency(waitForNode, waiterNode)
 			if err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }
 
