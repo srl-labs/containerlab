@@ -186,6 +186,7 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 
 	_, err = f.Write(dstBytes.Bytes())
 	if err != nil {
+		f.Close()
 		return err
 	}
 
