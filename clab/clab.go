@@ -337,7 +337,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename str
 	timeout := time.After(time.Second * 3600)
 
 	// repeat retryCounter for log display
-	var retryCounter = 0
+	retryCounter := 0
 
 	// enter the ticker loop
 TIMEOUT_LOOP:
@@ -352,11 +352,13 @@ TIMEOUT_LOOP:
 				break TIMEOUT_LOOP
 			}
 			// if not, log and loop again
-			log.Infof("node %q depends on external container %q, which is not running yet. waited %d seconds. continue to wait", nodename, contName, tickFrequencySec*retryCounter)
+			log.Infof("node %q depends on external container %q, which is not running yet. waited %d seconds. continue to wait",
+				nodename, contName, tickFrequencySec*retryCounter)
 
 		case <-timeout:
 			// timeout reached, break with error log message
-			log.Errorf("node %q waited %d seconds for external dependency container %q to come up, which did not happen. Giving up now", nodename, waitTimeoutSec*tickFrequencySec, contName)
+			log.Errorf("node %q waited %d seconds for external dependency container %q to come up, which did not happen. Giving up now",
+				nodename, waitTimeoutSec*tickFrequencySec, contName)
 			break TIMEOUT_LOOP
 		}
 		// increment counter

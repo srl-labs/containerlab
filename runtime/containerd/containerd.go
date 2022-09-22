@@ -830,7 +830,7 @@ func (c *ContainerdRuntime) GetHostsPath(context.Context, string) (string, error
 	return "", nil
 }
 
-// GetContainerStatus retrieves the ContainerStatus of the named container
+// GetContainerStatus retrieves the ContainerStatus of the named container.
 func (c *ContainerdRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
 	task, err := c.getContainerTask(ctx, cID)
 	if err != nil {

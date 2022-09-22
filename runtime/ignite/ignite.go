@@ -442,7 +442,7 @@ func (c *IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
 }
 
-// GetContainerStatus retrieves the ContainerStatus of the named container
+// GetContainerStatus retrieves the ContainerStatus of the named container.
 func (c *IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) runtime.ContainerStatus {
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {

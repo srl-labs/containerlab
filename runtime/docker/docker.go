@@ -843,7 +843,7 @@ func (d *DockerRuntime) processNetworkMode(
 	return nil
 }
 
-// GetContainerStatus retrieves the ContainerStatus of the named container
+// GetContainerStatus retrieves the ContainerStatus of the named container.
 func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
