@@ -62,6 +62,8 @@ type NodeDefinition struct {
 	Sysctls map[string]string `yaml:"sysctls,omitempty"`
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
+	// List of node names to wait for before satarting this particular node
+	WaitFor []string `yaml:"wait-for,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -287,6 +289,13 @@ func (n *NodeDefinition) GetSANs() []string {
 		return nil
 	}
 	return n.SANs
+}
+
+func (n *NodeDefinition) GetWaitFor() []string {
+	if n == nil {
+		return []string{}
+	}
+	return n.WaitFor
 }
 
 // ImportEnvs imports all environment variales defined in the shell

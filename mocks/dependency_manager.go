@@ -10,55 +10,57 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockdependencyManager is a mock of dependencyManager interface.
-type MockdependencyManager struct {
+// MockDependencyManager is a mock of DependencyManager interface.
+type MockDependencyManager struct {
 	ctrl     *gomock.Controller
-	recorder *MockdependencyManagerMockRecorder
+	recorder *MockDependencyManagerMockRecorder
 }
 
-// MockdependencyManagerMockRecorder is the mock recorder for MockdependencyManager.
-type MockdependencyManagerMockRecorder struct {
-	mock *MockdependencyManager
+// MockDependencyManagerMockRecorder is the mock recorder for MockDependencyManager.
+type MockDependencyManagerMockRecorder struct {
+	mock *MockDependencyManager
 }
 
-// NewMockdependencyManager creates a new mock instance.
-func NewMockdependencyManager(ctrl *gomock.Controller) *MockdependencyManager {
-	mock := &MockdependencyManager{ctrl: ctrl}
-	mock.recorder = &MockdependencyManagerMockRecorder{mock}
+// NewMockDependencyManager creates a new mock instance.
+func NewMockDependencyManager(ctrl *gomock.Controller) *MockDependencyManager {
+	mock := &MockDependencyManager{ctrl: ctrl}
+	mock.recorder = &MockDependencyManagerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdependencyManager) EXPECT() *MockdependencyManagerMockRecorder {
+func (m *MockDependencyManager) EXPECT() *MockDependencyManagerMockRecorder {
 	return m.recorder
 }
 
 // AddDependency mocks base method.
-func (m *MockdependencyManager) AddDependency(dependee, depender string) {
+func (m *MockDependencyManager) AddDependency(dependee, depender string) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddDependency", dependee, depender)
+	ret := m.ctrl.Call(m, "AddDependency", dependee, depender)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // AddDependency indicates an expected call of AddDependency.
-func (mr *MockdependencyManagerMockRecorder) AddDependency(dependee, depender interface{}) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) AddDependency(dependee, depender interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockdependencyManager)(nil).AddDependency), dependee, depender)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), dependee, depender)
 }
 
 // AddNode mocks base method.
-func (m *MockdependencyManager) AddNode(name string) {
+func (m *MockDependencyManager) AddNode(name string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddNode", name)
 }
 
 // AddNode indicates an expected call of AddNode.
-func (mr *MockdependencyManagerMockRecorder) AddNode(name interface{}) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) AddNode(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNode", reflect.TypeOf((*MockdependencyManager)(nil).AddNode), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNode", reflect.TypeOf((*MockDependencyManager)(nil).AddNode), name)
 }
 
 // CheckAcyclicity mocks base method.
-func (m *MockdependencyManager) CheckAcyclicity() error {
+func (m *MockDependencyManager) CheckAcyclicity() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckAcyclicity")
 	ret0, _ := ret[0].(error)
@@ -66,25 +68,25 @@ func (m *MockdependencyManager) CheckAcyclicity() error {
 }
 
 // CheckAcyclicity indicates an expected call of CheckAcyclicity.
-func (mr *MockdependencyManagerMockRecorder) CheckAcyclicity() *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) CheckAcyclicity() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAcyclicity", reflect.TypeOf((*MockdependencyManager)(nil).CheckAcyclicity))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAcyclicity", reflect.TypeOf((*MockDependencyManager)(nil).CheckAcyclicity))
 }
 
 // SignalDone mocks base method.
-func (m *MockdependencyManager) SignalDone(nodeName string) {
+func (m *MockDependencyManager) SignalDone(nodeName string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SignalDone", nodeName)
 }
 
 // SignalDone indicates an expected call of SignalDone.
-func (mr *MockdependencyManagerMockRecorder) SignalDone(nodeName interface{}) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) SignalDone(nodeName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignalDone", reflect.TypeOf((*MockdependencyManager)(nil).SignalDone), nodeName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignalDone", reflect.TypeOf((*MockDependencyManager)(nil).SignalDone), nodeName)
 }
 
 // String mocks base method.
-func (m *MockdependencyManager) String() string {
+func (m *MockDependencyManager) String() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "String")
 	ret0, _ := ret[0].(string)
@@ -92,19 +94,21 @@ func (m *MockdependencyManager) String() string {
 }
 
 // String indicates an expected call of String.
-func (mr *MockdependencyManagerMockRecorder) String() *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) String() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockdependencyManager)(nil).String))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockDependencyManager)(nil).String))
 }
 
 // WaitForNodeDependencies mocks base method.
-func (m *MockdependencyManager) WaitForNodeDependencies(nodeName string) {
+func (m *MockDependencyManager) WaitForNodeDependencies(nodeName string) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "WaitForNodeDependencies", nodeName)
+	ret := m.ctrl.Call(m, "WaitForNodeDependencies", nodeName)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // WaitForNodeDependencies indicates an expected call of WaitForNodeDependencies.
-func (mr *MockdependencyManagerMockRecorder) WaitForNodeDependencies(nodeName interface{}) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) WaitForNodeDependencies(nodeName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNodeDependencies", reflect.TypeOf((*MockdependencyManager)(nil).WaitForNodeDependencies), nodeName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNodeDependencies", reflect.TypeOf((*MockDependencyManager)(nil).WaitForNodeDependencies), nodeName)
 }

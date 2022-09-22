@@ -139,7 +139,8 @@ type NodeConfig struct {
 	// status that is set by containerlab to indicate deployment stage
 
 	// Extras
-	Extras *Extras `json:"extras,omitempty"` // Extra node parameters
+	Extras  *Extras  `json:"extras,omitempty"` // Extra node parameters
+	WaitFor []string `json:"wait-for,omitempty"`
 }
 
 type HostRequirements struct {
@@ -182,11 +183,14 @@ func (node *NodeConfig) GenerateConfig(dst, templ string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	_, err = f.Write(dstBytes.Bytes())
+	if err != nil {
+		f.Close()
+		return err
+	}
 
-	return err
+	return f.Close()
 }
 
 func DisableTxOffload(n *NodeConfig) error {
@@ -210,7 +214,7 @@ func DisableTxOffload(n *NodeConfig) error {
 	return err
 }
 
-// Data struct storing generic container data.
+// GenericContainer stores generic container data.
 type GenericContainer struct {
 	Names           []string
 	ID              string

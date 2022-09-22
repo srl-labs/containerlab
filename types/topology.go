@@ -405,7 +405,7 @@ func (t *Topology) GetNodeMemory(name string) string {
 	return ""
 }
 
-// Return the Sysctl configuration for the given node.
+// GetSysCtl return the Sysctl configuration for the given node.
 func (t *Topology) GetSysCtl(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
 		return utils.MergeStringMaps(
@@ -416,7 +416,7 @@ func (t *Topology) GetSysCtl(name string) map[string]string {
 	return nil
 }
 
-// Return the Subject Alternative Name configuration for the given node.
+// GetSANs return the Subject Alternative Name configuration for the given node.
 func (t *Topology) GetSANs(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if len(ndef.GetSANs()) > 0 {
@@ -426,7 +426,7 @@ func (t *Topology) GetSANs(name string) []string {
 	return nil
 }
 
-// Returns the 'extras' section for the given node.
+// GetNodeExtras returns the 'extras' section for the given node.
 func (t *Topology) GetNodeExtras(name string) *Extras {
 	if ndef, ok := t.Nodes[name]; ok {
 		node_extras := ndef.GetExtras()
@@ -440,6 +440,16 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 		}
 
 		return t.GetDefaults().GetExtras()
+	}
+	return nil
+}
+
+// GetWaitFor return the wait-for configuration for the given node.
+func (t *Topology) GetWaitFor(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return utils.MergeStringSlices(
+			t.GetKind(t.GetNodeKind(name)).GetWaitFor(),
+			ndef.GetWaitFor())
 	}
 	return nil
 }
