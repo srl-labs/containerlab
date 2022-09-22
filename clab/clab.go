@@ -351,7 +351,7 @@ TIMEOUT_LOOP:
 
 			// if not, log and retry
 			log.Infof("node %q depends on external container %q, which is not running yet. Waited %s. Retrying...",
-				nodeName, contName, time.Since(startTime))
+				nodeName, contName, time.Since(startTime).Truncate(time.Second))
 
 		case <-timeout:
 			log.Errorf("node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now",
