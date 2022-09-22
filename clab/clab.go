@@ -306,18 +306,17 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	return wg
 }
 
-// WaitForExternalNodeDependencies will take effect on nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>).
-// it will query the container runtime for the status of the depende container. It will sleep loop if a container with the given name is not in running state.
-// It will stop trying after some time (actually 3600 seconds) but only log an Error. Later stages will cause a final exception to be thrown.
-func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodename string) {
-	// get the types.NodeConfig
-	nodeConfig := c.Nodes[nodename].Config()
+// WaitForExternalNodeDependencies makes nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>)
+// to wait until the referenced container is in started status.
+// The wait time is 3600s by default.
+func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName string) {
+	nodeConfig := c.Nodes[nodeName].Config()
 	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
 	if netModeArr[0] != "container" {
 		// we only care about nodes with NetMode "container:<CONTAINERNAME>"
 		return
 	}
-	// the referenced container might be an external pre-existing or a container craeted also by the given clab topology.
+	// the referenced container might be an external pre-existing or a container created also by the given clab topology.
 	contName := netModeArr[1]
 
 	// if the container does not exist in the list of container, it must be an external dependency
@@ -348,17 +347,17 @@ TIMEOUT_LOOP:
 			runtimeStatus := c.Runtimes[c.globalRuntime].GetContainerStatus(ctx, contName)
 			// check if dependency is running, if so break the loop
 			if runtimeStatus == runtime.Running {
-				log.Infof("node %q starts since external container %q is running now", nodename, contName)
+				log.Infof("node %q starts since external container %q is running now", nodeName, contName)
 				break TIMEOUT_LOOP
 			}
 			// if not, log and loop again
 			log.Infof("node %q depends on external container %q, which is not running yet. waited %d seconds. continue to wait",
-				nodename, contName, tickFrequencySec*retryCounter)
+				nodeName, contName, tickFrequencySec*retryCounter)
 
 		case <-timeout:
 			// timeout reached, break with error log message
 			log.Errorf("node %q waited %d seconds for external dependency container %q to come up, which did not happen. Giving up now",
-				nodename, waitTimeoutSec*tickFrequencySec, contName)
+				nodeName, waitTimeoutSec*tickFrequencySec, contName)
 			break TIMEOUT_LOOP
 		}
 		// increment counter
