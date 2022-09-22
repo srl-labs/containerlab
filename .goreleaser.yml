@@ -18,7 +18,8 @@ builds:
       - amd64
       - arm64
     hooks:
-      post: upx "{{ .Path }}"
+      post:
+        - upx "{{ .Path }}"
 dockers:
   - goos: linux
     goarch: amd64
@@ -46,17 +47,13 @@ publishers:
 release:
   prerelease: auto
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
+  use: github-native
 
 nfpms:
   - id: containerlab-nfpms
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     package_name: containerlab
-    maintainer: Wim Henderickx <wim.henderickx@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>, Roman Dodin <dodin.roman@gmail.com>
+    maintainer: Roman Dodin <dodin.roman@gmail.com>, Karim Radhouani <medkarimrdi@gmail.com>
     homepage: https://containerlab.dev
     description: |
       containerlab deploys containerized networking topologies
