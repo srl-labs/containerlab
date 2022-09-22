@@ -373,6 +373,10 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 // to wait until the referenced container is in started status.
 // The wait time is 15 minutes by default.
 func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName string) {
+	if _, exists := c.Nodes[nodeName]; !exists {
+		log.Errorf("unable to find referenced node %q", nodeName)
+		return
+	}
 	nodeConfig := c.Nodes[nodeName].Config()
 	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
 	if netModeArr[0] != "container" {
