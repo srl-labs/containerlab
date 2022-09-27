@@ -186,6 +186,12 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 		return nil, err
 	}
 
+	// create a set of dependencies, that makes the ignite nodes start one after the other
+	err = createIgniteSerialDependency(c.Nodes, dm)
+	if err != nil {
+		return nil, err
+	}
+
 	// make network namespace shared containers start in the right order
 	createNamespaceSharingDependency(c.Nodes, dm)
 
@@ -201,6 +207,23 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
 
 	return NodesWg, nil
+}
+
+// create a set of dependencies, that makes the ignite nodes start one after the other
+func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm DependencyManager) error {
+	var prevIgniteNode nodes.Node
+	// iterate through the nodes
+	for _, n := range nodeMap {
+		// find nodes that should run with IgniteRuntime
+		if n.GetRuntime().GetName() == runtime.IgniteRuntime {
+			if prevIgniteNode != nil {
+				// add a dependency to the previously found ignite node
+				dm.AddDependency(n.Config().ShortName, prevIgniteNode.Config().ShortName)
+			}
+			prevIgniteNode = n
+		}
+	}
+	return nil
 }
 
 // createNamespaceSharingDependency adds dependency between the containerlab nodes that share a common network namespace.
