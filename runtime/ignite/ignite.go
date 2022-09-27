@@ -174,7 +174,10 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Kernel, err)
 	}
 	c.baseVM.Spec.Kernel.OCI = ociRef
-	k, _ := operations.FindOrImportKernel(providers.Client, ociRef)
+	k, err := operations.FindOrImportKernel(providers.Client, ociRef)
+	if err != nil {
+		log.Error(err)
+	}
 	vm.SetKernel(k)
 
 	ociRef, err = meta.NewOCIImageRef(node.Image)
