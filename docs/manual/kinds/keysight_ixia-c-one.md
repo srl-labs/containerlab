@@ -108,14 +108,14 @@ Examples below show how test designer can configure IP address on eth1 data port
     ```
 
 ## Features and options
-The free version of ixia-c supports generation of L2 and L3 traffic to test forwarding of Ethernet, IPv4 and IPv6 traffic by switches and routers. For technical support and queries, please log requests at [open-traffic-generator/ixia-c](https://github.com/open-traffic-generator/ixia-c/issues) or contact us via [Slack](https://ixia-c.slack.com/signup#/domain-signup).
+The free version of Ixia-c supports generation of L2 and L3 traffic to test forwarding of Ethernet, IPv4 and IPv6 traffic by switches and routers. For technical support and queries, please log requests at [open-traffic-generator/ixia-c](https://github.com/open-traffic-generator/ixia-c/issues) or contact us via [Slack](https://ixia-c.slack.com/signup#/domain-signup).
 
-The commercial version of ixia-c supports ARP/ND/Auto destination MAC resolution in data traffic, IPv4 and IPv6 BGP with IPv4 and IPv6 Routes and ISIS with IPv4 and IPv6 routes[^1].
+The commercial version of Ixia-c supports ARP/ND/Auto destination MAC resolution in data traffic, IPv4 and IPv6 BGP with IPv4 and IPv6 Routes and ISIS with IPv4 and IPv6 routes[^1].
 
 ## Lab examples
 The following labs feature Keysight ixia-c-one node:
 
-- [Keysight ixia-c-one and Arista cEOS](../../lab-examples/ixiacone-srl.md)
+- [Keysight Ixia-c and Nokia SR Linux](../../lab-examples/ixiacone-srl.md)
 
 ## Known issues or limitations
 1. For L3 traffic tests using the free version , there is no in-built support of ARP and ND.  
