@@ -5,7 +5,7 @@
 chassis_configuration:
   "chassis_type": 71
   "base_mac": "{{ .MAC }}"
-  "cpm_card_type": 201
+  "cpm_card_type": 190
 
 slot_configuration:
   1:
