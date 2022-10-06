@@ -165,9 +165,7 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
-	serialNodes map[string]struct{},
-) (*sync.WaitGroup, error) {
+func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint) (*sync.WaitGroup, error) {
 	dm := NewDependencyManager()
 
 	for nodeName := range c.Nodes {
@@ -341,6 +339,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				c.m.Unlock()
 
 				// signal to dependency manager that this node is done
+
 				dm.SignalDone(node.Config().ShortName)
 			case <-ctx.Done():
 				return

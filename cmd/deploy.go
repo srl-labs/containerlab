@@ -182,18 +182,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		linkWorkers = maxWorkers
 	}
 
-	// a set of workers that do not support concurrency
-	serialNodes := make(map[string]struct{})
-
 	// extraHosts holds host entries for nodes with static IPv4/6 addresses
 	// these entries will be used by container runtime to populate /etc/hosts file
 	extraHosts := make([]string, 0, len(c.Nodes))
 
 	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == runtime.IgniteRuntime {
-			serialNodes[n.Config().LongName] = struct{}{}
-		}
-
 		if n.Config().MgmtIPv4Address != "" {
 			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
 				n.Config().ShortName, n.Config().MgmtIPv4Address)
@@ -211,16 +204,14 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, serialNodes)
+	nodesWg, err := c.CreateNodes(ctx, nodeWorkers)
 	if err != nil {
 		return err
 	}
 	c.CreateLinks(ctx, linkWorkers)
-
 	if nodesWg != nil {
 		nodesWg.Wait()
 	}
-
 	log.Debug("containers created, retrieving state and IP addresses...")
 
 	// Building list of generic containers
