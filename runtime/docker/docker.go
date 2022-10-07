@@ -408,7 +408,11 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	// regular linux containers may benefit from automatic restart on failure
 	// note, that veth pairs added to this container (outside of eth0) will be lost on restart
 	if node.Kind == "linux" {
-		containerHostConfig.RestartPolicy.Name = "on-failure"
+		if node.AutoRemove != "yes" {
+			containerHostConfig.RestartPolicy.Name = "on-failure"
+		} else {
+			containerHostConfig.AutoRemove = true
+		}
 	}
 
 	cont, err := d.Client.ContainerCreate(
