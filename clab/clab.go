@@ -165,9 +165,7 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
-	serialNodes map[string]struct{},
-) (*sync.WaitGroup, error) {
+func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint) (*sync.WaitGroup, error) {
 	dm := NewDependencyManager()
 
 	for nodeName := range c.Nodes {
@@ -182,6 +180,12 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 
 	// create user-defined node dependencies done with `wait-for` node property
 	err = createWaitForDependency(c.Nodes, dm)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a set of dependencies, that makes the ignite nodes start one after the other
+	err = createIgniteSerialDependency(c.Nodes, dm)
 	if err != nil {
 		return nil, err
 	}
@@ -201,6 +205,23 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
 
 	return NodesWg, nil
+}
+
+// create a set of dependencies, that makes the ignite nodes start one after the other
+func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm DependencyManager) error {
+	var prevIgniteNode nodes.Node
+	// iterate through the nodes
+	for _, n := range nodeMap {
+		// find nodes that should run with IgniteRuntime
+		if n.GetRuntime().GetName() == runtime.IgniteRuntime {
+			if prevIgniteNode != nil {
+				// add a dependency to the previously found ignite node
+				dm.AddDependency(n.Config().ShortName, prevIgniteNode.Config().ShortName)
+			}
+			prevIgniteNode = n
+		}
+	}
+	return nil
 }
 
 // createNamespaceSharingDependency adds dependency between the containerlab nodes that share a common network namespace.
@@ -318,6 +339,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				c.m.Unlock()
 
 				// signal to dependency manager that this node is done
+
 				dm.SignalDone(node.Config().ShortName)
 			case <-ctx.Done():
 				return
