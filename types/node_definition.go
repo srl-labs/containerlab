@@ -33,6 +33,8 @@ type NodeDefinition struct {
 	Ports []string `yaml:"ports,omitempty"`
 	// user-defined IPv4 address in the management network
 	MgmtIPv4 string `yaml:"mgmt_ipv4,omitempty"`
+	// user-defined IPv4 prefix in the management network
+	MgmtIPv4Prefix int `yaml:"mgmt_ipv4_prefix,omitempty"`
 	// user-defined IPv6 address in the management network
 	MgmtIPv6 string `yaml:"mgmt_ipv6,omitempty"`
 	// list of ports to publish with mysocketctl
@@ -169,6 +171,13 @@ func (n *NodeDefinition) GetMgmtIPv4() string {
 		return ""
 	}
 	return n.MgmtIPv4
+}
+
+func (n *NodeDefinition) GetMgmtIPv4Prefix() int {
+	if n == nil {
+		return 0
+	}
+	return n.MgmtIPv4Prefix
 }
 
 func (n *NodeDefinition) GetMgmtIPv6() string {
