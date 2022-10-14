@@ -42,7 +42,7 @@ func LoadTemplates(tmpl *template.Template, role string) error {
 		if err != nil {
 			if strings.Contains(err.Error(), "pattern matches no file") {
 				log.Debug(err)
-				return nil
+				continue
 			}
 			return fmt.Errorf("could not load templates from %s: %w", fn, err)
 		}
