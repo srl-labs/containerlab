@@ -22,6 +22,7 @@ const (
 	vkManagementIPv4 = "clab_management_ipv4" // reserved, management IPv4 of the node
 	vkManagementIPv6 = "clab_management_ipv6" // reserved, management IPv6 of the node
 	vkKind           = "clab_kind"            // reserved, will contain the node kind
+	vkType           = "clab_type"            // reserved, will contain the node type
 
 	vkSystemIP = "clab_system_ip" // optional, system IP if present could be used to calc link IPs
 	vkLinkIP   = "clab_link_ip"   // optional, link IP
@@ -44,6 +45,7 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 		vars[vkKind] = nodeCfg.Kind
 		vars[vkManagementIPv4] = nodeCfg.MgmtIPv4Address
 		vars[vkManagementIPv6] = nodeCfg.MgmtIPv6Address
+		vars[vkType] = nodeCfg.NodeType
 
 		// Init array for this node
 		for key, val := range nodeCfg.Config.Vars {
