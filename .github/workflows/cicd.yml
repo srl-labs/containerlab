@@ -345,43 +345,6 @@ jobs:
           name: 04-basic-ixiacone-log
           path: ./tests/out/*.html
 
-  ignite-runtime-test:
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        runtime:
-          - "ignite"
-    needs:
-      - unit-test
-      - build-containerlab
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - uses: actions/download-artifact@v3
-        with:
-          name: containerlab
-      - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8"
-          cache: pip
-          cache-dependency-path: "tests/requirements.txt"
-      - name: Install robotframework
-        run: |
-          pip install -r tests/requirements.txt
-      - name: Run ignite tests
-        run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/05-ignite
-      # upload test reports as a zip file
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: 05-ignite-log
-          path: ./tests/out/*.html
-
   docs-test:
     runs-on: ubuntu-20.04
     needs: file-changes
