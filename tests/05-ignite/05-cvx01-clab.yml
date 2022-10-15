@@ -1,0 +1,13 @@
+name: 05-ignite
+
+topology:
+  nodes:
+    sw1:
+      kind: cvx
+      image: networkop/cx:4.3.0
+    sw2:
+      kind: cvx
+      image: networkop/cx:4.3.0
+
+  links:
+    - endpoints: ["sw1:swp12", "sw2:swp21"]

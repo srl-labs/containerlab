@@ -1981,6 +1981,8 @@ github.com/nats-io/nuid v1.0.1/go.mod h1:19wcPz3Ph3q0Jbyiqsd0kePYG7A95tJPxeL+1OS
 github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d/go.mod h1:o96djdrsSGy3AWPyBgZMAGfxZNfgntdJG+11KU4QvbU=
 github.com/nbutton23/zxcvbn-go v0.0.0-20210217022336-fa2cb2858354/go.mod h1:KSVJerMDfblTH7p5MZaTt+8zaT2iEk3AkVb9PQdZuE8=
 github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/ZM=
+github.com/networkop/libgitops v0.0.0-20221014201752-02ecf9790f58 h1:D5fRjvFIpZUQIlEyrukjNPdR3wmlmelnCul0bLlh3ls=
+github.com/networkop/libgitops v0.0.0-20221014201752-02ecf9790f58/go.mod h1:1oFuIJ/fBC3gpqsa+xtgG2Febt2ru9aWn2WEMYlIqso=
 github.com/networkplumbing/go-nft v0.2.0/go.mod h1:HnnM+tYvlGAsMU7yoYwXEVLLiDW9gdMmb5HoGcwpuQs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nightlyone/lockfile v1.0.0 h1:RHep2cFKK4PonZJDdEl4GmkabuhbsRMgk/k3uAmxBiA=
@@ -2510,8 +2512,6 @@ github.com/vmihailenco/tagparser v0.1.1 h1:quXMXlA39OCbd2wAdTsGDlK9RkOk6Wuw+x37w
 github.com/vmihailenco/tagparser v0.1.1/go.mod h1:OeAg3pn3UbLjkWt+rN9oFYB6u/cQgqMEUPoW2WPyhdI=
 github.com/weaveworks/ignite v0.10.0 h1:byMQPzYtdrfDsX15ASsA9/3UBCK3DCd2k+wLvHzz63Q=
 github.com/weaveworks/ignite v0.10.0/go.mod h1:QXOsR0TN26pBhBWjlAVR7ETzXiQAZlSjXFi2xA21DJM=
-github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c h1:sjuQNsahOaafCY6l5xagnTFwFW6Y6Wm0nnn7U1WvGmA=
-github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c/go.mod h1:1oFuIJ/fBC3gpqsa+xtgG2Febt2ru9aWn2WEMYlIqso=
 github.com/weppos/publicsuffix-go v0.13.1-0.20210123135404-5fd73613514e/go.mod h1:HYux0V0Zi04bHNwOHy4cXJVz/TQjYonnF6aoYhj+3QE=
 github.com/weppos/publicsuffix-go v0.15.1-0.20210511084619-b1f36a2d6c0b/go.mod h1:HYux0V0Zi04bHNwOHy4cXJVz/TQjYonnF6aoYhj+3QE=
 github.com/weppos/publicsuffix-go v0.15.1-0.20210807195340-dc689ff0bb59/go.mod h1:HYux0V0Zi04bHNwOHy4cXJVz/TQjYonnF6aoYhj+3QE=
