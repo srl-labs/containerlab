@@ -19,7 +19,7 @@ CVX supports two modes of operation:
 * Using Firecracker micro-VMs -- this mode runs Cumulus VX inside a micro-VM on top of the native Cumulus kernel. This mode uses `ignite` runtime and is the default way of running CVX nodes.
 
     !!!warning
-        This mode doesn't work with containerlab > v0.27.1 due to dependencies issues in ignite[^2]. Install containerlab v0.27.1 or older to get ignite-based cvx nodes.
+        This mode was broken in containerlab between v0.27.1 and v0.32.1 due to dependencies issues in ignite[^2].
 
 !!! note
     When running in the default `ignite` runtime mode, the only host OS dependency is `/dev/kvm`[^1] required to support hardware-assisted virtualisation. Firecracker VMs are spun up inside a special "sandbox" container that has all the right tools and dependencies required to run micro-VMs.
