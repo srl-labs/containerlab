@@ -14,17 +14,19 @@ var topologyTestSet = map[string]struct {
 		input: &Topology{
 			Nodes: map[string]*NodeDefinition{
 				"node1": {
-					Kind:   "srl",
-					CPU:    1,
-					Memory: "1G",
+					Kind:       "srl",
+					CPU:        1,
+					Memory:     "1G",
+					AutoRemove: true,
 				},
 			},
 		},
 		want: map[string]*NodeDefinition{
 			"node1": {
-				Kind:   "srl",
-				CPU:    1,
-				Memory: "1G",
+				Kind:       "srl",
+				CPU:        1,
+				Memory:     "1G",
+				AutoRemove: true,
 			},
 		},
 	},
@@ -59,8 +61,9 @@ var topologyTestSet = map[string]struct {
 						"label1": "v1",
 						"label2": "v2",
 					},
-					CPU:    1,
-					Memory: "1G",
+					CPU:        1,
+					Memory:     "1G",
+					AutoRemove: true,
 				},
 			},
 			Nodes: map[string]*NodeDefinition{
@@ -106,8 +109,9 @@ var topologyTestSet = map[string]struct {
 					"label1": "v1",
 					"label2": "notv2",
 				},
-				CPU:    1,
-				Memory: "2G",
+				CPU:        1,
+				Memory:     "2G",
+				AutoRemove: true,
 			},
 		},
 	},
@@ -260,8 +264,9 @@ var topologyTestSet = map[string]struct {
 					"label1": "v1",
 					"label2": "v2",
 				},
-				CPU:    1,
-				Memory: "1G",
+				CPU:        1,
+				Memory:     "1G",
+				AutoRemove: false,
 			},
 		},
 	},
@@ -457,6 +462,20 @@ func TestGetNodeLabels(t *testing.T) {
 			t.Errorf("item %q failed", name)
 			t.Errorf("item %q exp %q", name, item.want["node1"].Labels)
 			t.Errorf("item %q got %q", name, labels)
+			t.Fail()
+		}
+	}
+}
+
+func TestGetNodeAutoRemove(t *testing.T) {
+	for name, item := range topologyTestSet {
+		t.Logf("%q test item", name)
+		autoremove := item.input.GetNodeAutoRemove("node1")
+		t.Logf("%q test item result: %v", name, autoremove)
+		if !cmp.Equal(item.want["node1"].AutoRemove, autoremove) {
+			t.Errorf("item %q failed", name)
+			t.Errorf("item %q exp %v", name, item.want["node1"].AutoRemove)
+			t.Errorf("item %q got %v", name, autoremove)
 			t.Fail()
 		}
 	}
