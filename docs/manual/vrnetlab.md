@@ -1,3 +1,5 @@
+# VM-based routers integration
+
 Containerlab focuses on containers, but many routing products ship only in virtual machine packaging. Leaving containerlab users without the ability to create topologies with both containerized and VM-based routing systems would have been a shame.
 
 Keeping this requirement in mind from the very beginning, we added [`bridge`](../lab-examples/ext-bridge.md)/[`ovs-bridge`](kinds/ovs-bridge.md) kind that allows bridging your containerized topology with other resources available via a bridged network. For example, a VM based router:
@@ -27,20 +29,21 @@ Containerlab depends on `hellt/vrnetlab` project, and sometimes features added i
 
 The following table provides a link between the version combinations:
 
-| containerlab[^3] | vrnetlab[^4]                                                   | Notes                                                                                                                                                    |
-| ---------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl) | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                           |
-| `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)       | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances |
-| --               | [`0.2.1`](https://github.com/hellt/vrnetlab/tree/v0.2.1)       | added timeout for SR OS images to allow eth interfaces to appear in the container namespace. Other images are not touched.                               |
-| --               | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)       | fixed serial (telnet) access to SR OS nodes                                                                                                              |
-| --               | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)       | set default cpu/ram for SR OS images                                                                                                                     |
-| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)       | added support for Cisco CSR1000v via [`vr-csr`](kinds/vr-csr.md) and MikroTik routeros via [`vr-ros`](kinds/vr-ros.md) kind                              |
-| --               | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)       | enhanced SR OS boot sequence                                                                                                                             |
-| --               | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)       | fixed SR OS CPU allocation and added Palo Alto PAN support [`vr-pan`](kinds/vr-pan.md)                                                                   |
-| `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)       | added support for Cisco Nexus 9000v via [`vr-n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                     |
-| `0.19.0`         | [`0.6.0`](https://github.com/hellt/vrnetlab/tree/v0.6.0)       | added experimental support for Juniper vQFX via [`vr-vqfx`](kinds/vr-vqfx.md) kind, added support Dell FTOS via [`vr-ftosv`](kinds/vr-ftosv.md)          |
-|                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.2)       | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                          |
-|                  | [`0.7.0`](https://github.com/hellt/vrnetlab/tree/v0.7.0)       | startup-config support for vqfx and vmx                                                                                                                  |
+| containerlab[^3] | vrnetlab[^4]                                                     | Notes                                                                                                                                                    |
+| ---------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl)   | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                           |
+| `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)         | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances |
+| --               | [`0.2.1`](https://github.com/hellt/vrnetlab/tree/v0.2.1)         | added timeout for SR OS images to allow eth interfaces to appear in the container namespace. Other images are not touched.                               |
+| --               | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)         | fixed serial (telnet) access to SR OS nodes                                                                                                              |
+| --               | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)         | set default cpu/ram for SR OS images                                                                                                                     |
+| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)         | added support for Cisco CSR1000v via [`vr-csr`](kinds/vr-csr.md) and MikroTik routeros via [`vr-ros`](kinds/vr-ros.md) kind                              |
+| --               | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)         | enhanced SR OS boot sequence                                                                                                                             |
+| --               | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)         | fixed SR OS CPU allocation and added Palo Alto PAN support [`vr-pan`](kinds/vr-pan.md)                                                                   |
+| `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)         | added support for Cisco Nexus 9000v via [`vr-n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                     |
+| `0.19.0`         | [`0.6.0`](https://github.com/hellt/vrnetlab/tree/v0.6.0)         | added experimental support for Juniper vQFX via [`vr-vqfx`](kinds/vr-vqfx.md) kind, added support Dell FTOS via [`vr-ftosv`](kinds/vr-ftosv.md)          |
+|                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.2)         | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                          |
+|                  | [`0.7.0`](https://github.com/hellt/vrnetlab/tree/v0.7.0)         | startup-config support for vqfx and vmx                                                                                                                  |
+| `0.32.2`         | [`0.8.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.0) | startup-config support for the rest of the kinds, support for multi line card SR OS                                                                      |
 
 ### Building vrnetlab images
 
