@@ -27,6 +27,7 @@ func init() {
 	nodes.Register(kindnames, func() nodes.Node {
 		return new(cvx)
 	})
+	nodes.SetNonDefaultRuntimePerKind(kindnames, runtime.IgniteRuntime)
 }
 
 type cvx struct {
