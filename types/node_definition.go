@@ -17,7 +17,7 @@ type NodeDefinition struct {
 	StartupConfig        string            `yaml:"startup-config,omitempty"`
 	StartupDelay         uint              `yaml:"startup-delay,omitempty"`
 	EnforceStartupConfig bool              `yaml:"enforce-startup-config,omitempty"`
-	AutoRemove           string            `yaml:"auto-remove,omitempty"`
+	AutoRemove           bool              `yaml:"auto-remove,omitempty"`
 	Config               *ConfigDispatcher `yaml:"config,omitempty"`
 	Image                string            `yaml:"image,omitempty"`
 	License              string            `yaml:"license,omitempty"`
@@ -109,9 +109,9 @@ func (n *NodeDefinition) GetEnforceStartupConfig() bool {
 	return n.EnforceStartupConfig
 }
 
-func (n *NodeDefinition) GetAutoRemove() string {
+func (n *NodeDefinition) GetAutoRemove() bool {
 	if n == nil {
-		return ""
+		return false
 	}
 	return n.AutoRemove
 }

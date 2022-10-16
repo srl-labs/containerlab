@@ -99,9 +99,9 @@
                     "markdownDescription": "Set to `true` to [make the node to boot with a startup-config](https://containerlab.dev/manual/nodes/#enforce-startup-config) even if the config file is present in the lab directory"
                 },
                 "auto-remove": {
-                    "type": "string",
-                    "description": "Set to `yes` to cleanup the node automatically, instead of auto-restarting",
-                    "markdownDescription": "Set to `yes` to disable any auto-restart policy and cleanup this node"
+                    "type": "boolean",
+                    "description": "Set to `true` to remove the node automatically, instead of auto-restarting",
+                    "markdownDescription": "Set to `true` to [remove the node/container automatically](https://containerlab.dev/manual/nodes/#auto-remove), instead of auto-restarting it"
                 },
                 "exec": {
                     "type": "array",
