@@ -76,7 +76,7 @@ type NodeConfig struct {
 	// when set to true will enforce the use of startup-config, even when config is present in the lab directory
 	EnforceStartupConfig bool `json:"enforce-startup-config,omitempty"`
 	// when set to true will auto-remove a stopped/failed container
-	AutoRemove bool `json:"auto-remove,omitempty"`
+	AutoRemove *bool `json:"auto-remove,omitempty"`
 	// path to config file that is actually mounted to the container and is a result of templation
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`

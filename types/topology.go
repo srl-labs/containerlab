@@ -194,18 +194,22 @@ func (t *Topology) GetNodeEnforceStartupConfig(name string) bool {
 	return false
 }
 
-func (t *Topology) GetNodeAutoRemove(name string) bool {
+func (t *Topology) GetNodeAutoRemove(name string) *bool {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetAutoRemove() {
-			return true
+		if ndef.GetAutoRemove() != nil {
+			return ndef.AutoRemove
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetAutoRemove() {
-			return true
+		if t.GetKind(t.GetNodeKind(name)).GetAutoRemove() != nil {
+			return t.GetKind(t.GetNodeKind(name)).GetAutoRemove()
 		}
+	}
+
+	if t.GetDefaults().GetAutoRemove() != nil {
 		return t.GetDefaults().GetAutoRemove()
 	}
 
-	return false
+	def := false
+	return &def
 }
 
 func (t *Topology) GetNodeLicense(name string) (string, error) {

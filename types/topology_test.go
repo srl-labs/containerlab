@@ -6,6 +6,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func boolptr(b bool) *bool {
+	return &b
+}
+
 var topologyTestSet = map[string]struct {
 	input *Topology
 	want  map[string]*NodeDefinition
@@ -17,7 +21,7 @@ var topologyTestSet = map[string]struct {
 					Kind:       "srl",
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: true,
+					AutoRemove: boolptr(true),
 				},
 			},
 		},
@@ -26,7 +30,7 @@ var topologyTestSet = map[string]struct {
 				Kind:       "srl",
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: true,
+				AutoRemove: boolptr(true),
 			},
 		},
 	},
@@ -63,7 +67,7 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: true,
+					AutoRemove: boolptr(true),
 				},
 			},
 			Nodes: map[string]*NodeDefinition{
@@ -75,7 +79,8 @@ var topologyTestSet = map[string]struct {
 					Labels: map[string]string{
 						"label2": "notv2",
 					},
-					Memory: "2G",
+					Memory:     "2G",
+					AutoRemove: boolptr(false),
 				},
 			},
 		},
@@ -111,7 +116,7 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: true,
+				AutoRemove: boolptr(false),
 			},
 		},
 	},
@@ -266,7 +271,7 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: false,
+				AutoRemove: boolptr(false),
 			},
 		},
 	},
@@ -472,7 +477,7 @@ func TestGetNodeAutoRemove(t *testing.T) {
 		t.Logf("%q test item", name)
 		autoremove := item.input.GetNodeAutoRemove("node1")
 		t.Logf("%q test item result: %v", name, autoremove)
-		if !cmp.Equal(item.want["node1"].AutoRemove, autoremove) {
+		if item.want["node1"].AutoRemove != nil && *item.want["node1"].AutoRemove != *autoremove {
 			t.Errorf("item %q failed", name)
 			t.Errorf("item %q exp %v", name, item.want["node1"].AutoRemove)
 			t.Errorf("item %q got %v", name, autoremove)
