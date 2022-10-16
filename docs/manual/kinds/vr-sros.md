@@ -116,6 +116,42 @@ type: >-
   lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
 ```
 
+???tip "How to define links in a multi line card setup?"
+    When a node uses multiple line cards users should pay special attention to the way links are defined in the topology file. As explained in the [interface mapping](#interfaces-mapping) section, SR OS nodes use `ethX` notation for their interfaces, where `X` denotes a port number on a line card/MDA.
+
+    Things get a little more tricky when multiple line cards are provided. First, every line card must be defined with a `max_nics` property that serves a simple purpose - identify how many ports at maximum this line card can bear. In the example above both line cards are equipped with the same IOM/MDA and can bear 6 ports at max. Thus, `max_nics` is set to 6.
+
+    Another significant value of a line card definition is the `slot` position. Line cards are inserted into slots, and slot 1 comes before slot 2, and so on.
+
+    Knowing the slot number and the maximum number of ports a line card has, users can identify which indexes they need to use in the `link` portion of a topology to address the right port of a chassis. Let's use the following example topology to explain how this all maps together:
+
+    ```yaml
+    topology:
+      nodes:
+        R1:
+          kind: vr-sros
+          image: vr-sros:22.7.R2
+          type: >-
+            cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
+            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
+            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
+        R2:
+          kind: vr-sros
+          image: sros:22.7.R2
+          type: >-
+            cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
+            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
+            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
+
+      links:
+      - endpoints: ["R1:eth1", "R2:eth3"]
+      - endpoints: ["R1:eth7", "R2:eth8"]
+    ```
+
+    Starting with the first pair of endpoints `R1:eth1 <--> eth3:R2`; we see that port1 of R1 is connected with port3 of R2. Looking at the slot information and `max_nics` value of 6 we see that the linecard in slot 1 can host maximum 6 ports. This means that ports from 1 till 6 belong to the line card equipped in slot=1. Consequently, links ranging from `eth1` to `eth6` will address the ports of that line card.
+
+    The second pair of endpoints `R1:eth7 <--> eth8:R2` addresses the ports on a line card equipped in the slot 2. This is driven by the fact that the first six interfaces belong to line card in slot 1 as we just found out. This means that our second line card that sits in slot 2 and has as well six ports, will be addressed by the interfaces `eth7` till `eth12`, where `eth7` is port1 and `eth12` is port6.
+
 An integrated variant is provided with a simple TIMOS line:
 
 ```yaml
