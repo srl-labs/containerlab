@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -262,7 +262,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
 	file := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/group_fwd_mask"
 
-	err = ioutil.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
+	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
 	if err != nil {
 		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}
@@ -483,7 +483,7 @@ func (d *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	}
 	defer reader.Close()
 	// must read from reader, otherwise image is not properly pulled
-	_, _ = io.Copy(ioutil.Discard, reader)
+	_, _ = io.Copy(io.Discard, reader)
 	log.Infof("Done pulling %s", canonicalImageName)
 
 	return nil
@@ -758,7 +758,7 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 
 // setSysctl writes sysctl data by writing to a specific file.
 func setSysctl(sysctl string, newVal int) error {
-	return ioutil.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
+	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
 }
 
 func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
