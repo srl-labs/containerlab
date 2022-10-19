@@ -51,13 +51,6 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithRuntime(rt,
-			&runtime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: graceful,
-			},
-		),
 	}
 
 	if keepMgmtNet {
@@ -70,7 +63,19 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	case !all:
 		topos[topo] = struct{}{}
 	case all:
-		c, err := clab.NewContainerLab(opts...)
+		// only WithRuntime option is needed to list all containers of a lab
+		inspectAllOpts := []clab.ClabOption{
+			clab.WithRuntime(rt,
+				&runtime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: graceful,
+				},
+			),
+			clab.WithTimeout(timeout),
+		}
+
+		c, err := clab.NewContainerLab(inspectAllOpts...)
 		if err != nil {
 			return err
 		}
@@ -97,6 +102,13 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	for topo := range topos {
 		opts := append(opts,
 			clab.WithTopoFile(topo, varsFile),
+			clab.WithRuntime(rt,
+				&runtime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: graceful,
+				},
+			),
 		)
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
 		nc, err := clab.NewContainerLab(opts...)
