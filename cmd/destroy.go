@@ -53,10 +53,6 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		clab.WithTimeout(timeout),
 	}
 
-	if keepMgmtNet {
-		opts = append(opts, clab.WithKeepMgmtNet())
-	}
-
 	topos := map[string]struct{}{}
 
 	switch {
@@ -100,7 +96,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	log.Debugf("We got the following topos struct for destroy: %+v", topos)
 	for topo := range topos {
-		opts := append(opts,
+		opts = append(opts,
 			clab.WithTopoFile(topo, varsFile),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
@@ -110,6 +106,11 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 				},
 			),
 		)
+
+		if keepMgmtNet {
+			opts = append(opts, clab.WithKeepMgmtNet())
+		}
+
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
 		nc, err := clab.NewContainerLab(opts...)
 		if err != nil {
