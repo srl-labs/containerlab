@@ -107,9 +107,17 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 		d.mgmt.MTU = mtu
 	}
 
-	// if bridge was not set in the topo file, we default to
-	if d.mgmt.Bridge == "" {
-		d.mgmt.Bridge = "br-" + netRes.ID[:12]
+	// if bridge was not set in the topo file, find out the bridge name
+	// used by the network used in the topology
+	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
+		// fetch the network by the name set in the topo and populate the bridge name used by this network
+		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, dockerTypes.NetworkInspectOptions{})
+		// if the network is succesfully found, set the bridge used by it
+		if err == nil {
+			d.mgmt.Bridge = "br-" + netRes.ID[:12]
+			log.Debugf("detected network name in use: %s, backed by a bridge %s", d.mgmt.Network, d.mgmt.Bridge)
+		}
+
 	}
 }
 
