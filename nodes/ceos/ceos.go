@@ -253,8 +253,7 @@ func (n *ceos) ceosPostDeploy() error {
 
 	cfgs := []string{
 		"hostname %d", nodeCfg.ShortName,
-		"username admin privilege 15 secret admin",
-		"username janoger privilege 15 secret netcon",
+		"username janoger privilege 15 secret netcon!",
 		"interface " + nodeCfg.MgmtIntf,
 		"no ip address",
 		"no ipv6 address",

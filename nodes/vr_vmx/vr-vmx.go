@@ -26,8 +26,8 @@ const (
 	startupCfgFName = "startup-config.cfg"
 
 	scrapliPlatformName = "juniper_junos"
-	defaultUser         = "admin"
-	defaultPassword     = "admin@123"
+	defaultUser         = "janoger"
+	defaultPassword     = "netcon!"
 )
 
 func init() {
