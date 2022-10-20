@@ -49,10 +49,6 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	opts := []clab.ClabOption{
-		clab.WithTimeout(timeout),
-	}
-
 	topos := map[string]struct{}{}
 
 	switch {
@@ -96,7 +92,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	log.Debugf("We got the following topos struct for destroy: %+v", topos)
 	for topo := range topos {
-		opts = append(opts,
+		opts := []clab.ClabOption{
+			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo, varsFile),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
@@ -105,7 +102,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 					GracefulShutdown: graceful,
 				},
 			),
-		)
+		}
 
 		if keepMgmtNet {
 			opts = append(opts, clab.WithKeepMgmtNet())
