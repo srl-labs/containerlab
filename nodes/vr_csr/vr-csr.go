@@ -27,8 +27,8 @@ const (
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
 
-	defaultUser     = "admin"
-	defaultPassword = "admin"
+	defaultUser     = "janoger"
+	defaultPassword = "netcon!"
 )
 
 func init() {
@@ -55,8 +55,8 @@ func (s *vrCsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           "admin",
-		"PASSWORD":           "admin",
+		"USERNAME":           "janoger",
+		"PASSWORD":           "netcon!",
 		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
 	}
