@@ -89,8 +89,8 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.cfg.MacAddress = utils.GenMac("00:1c:73")
 
 	// mount config dir
-	cfgPath := filepath.Join(n.cfg.LabDir, "flash")
-	n.cfg.Binds = append(n.cfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
+	// cfgPath := filepath.Join(n.cfg.LabDir, "flash")
+	// n.cfg.Binds = append(n.cfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
 	return nil
 }
 
@@ -252,6 +252,8 @@ func (n *ceos) ceosPostDeploy() error {
 	defer d.Close()
 
 	cfgs := []string{
+		"hostname %d", nodeCfg.ShortName,
+		"username janoger privilege 15 secret netcon!",
 		"interface " + nodeCfg.MgmtIntf,
 		"no ip address",
 		"no ipv6 address",

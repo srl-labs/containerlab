@@ -24,8 +24,8 @@ const (
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
 
-	defaultUser     = "admin"
-	defaultPassword = "admin"
+	defaultUser     = "janoger"
+	defaultPassword = "netcon!"
 )
 
 func init() {
