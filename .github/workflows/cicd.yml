@@ -248,7 +248,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Pull ceos image
-        run: docker pull ghcr.io/srl-labs/ceos:4.25.0F && docker tag ghcr.io/srl-labs/ceos:4.25.0F ceos:4.25.0F
+        run: docker pull ghcr.io/srl-labs/ceos:4.28.0F && docker tag ghcr.io/srl-labs/ceos:4.28.0F ceos:4.28.0F
       - name: Run ceos tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/03-basic-ceos
