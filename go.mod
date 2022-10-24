@@ -9,7 +9,7 @@ require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.1.1
 	github.com/containers/common v0.50.1
-	github.com/containers/podman/v4 v4.2.1
+	github.com/containers/podman/v4 v4.3.0
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker v20.10.20+incompatible
@@ -46,12 +46,14 @@ require (
 	github.com/cilium/ebpf v0.7.0 // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
 	github.com/google/go-containerregistry v0.11.0 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20220723181115-27de4befb95e // indirect
 	github.com/mistifyio/go-zfs/v3 v3.0.0 // indirect
+	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/sigstore/sigstore v1.4.2 // indirect
 	github.com/theupdateframework/go-tuf v0.5.1 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
-	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	inet.af/netaddr v0.0.0-20220617031823-097006376321 // indirect
 )
 
@@ -118,7 +120,7 @@ require (
 	github.com/containers/image v3.0.2+incompatible // indirect
 	github.com/containers/image/v5 v5.23.0 // indirect
 	github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a // indirect
-	github.com/containers/ocicrypt v1.1.5 // indirect
+	github.com/containers/ocicrypt v1.1.6 // indirect
 	github.com/containers/psgo v1.7.3 // indirect
 	github.com/containers/storage v1.43.0 // indirect
 	github.com/coreos/go-iptables v0.6.0 // indirect
@@ -139,7 +141,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v0.6.7 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/freddierice/go-losetup v0.0.0-20170407175016-fc9adea44124 // indirect
-	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fullstorydev/grpcurl v1.8.6 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
@@ -214,7 +216,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6-0.20220930104621-17e8dac29df8 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
@@ -235,7 +237,7 @@ require (
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc1 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/opencontainers/runc v1.1.4 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20220714195903-17b3287fafb7 // indirect
 	github.com/opencontainers/selinux v1.10.2 // indirect
