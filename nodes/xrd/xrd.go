@@ -6,6 +6,8 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
@@ -45,11 +47,6 @@ func (x *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	x.cfg.Env = defEnv
 
-	// Check Static MgmtIPv4/Prefix
-	if x.cfg.MgmtIPv4Address == "" || x.cfg.MgmtIPv4PrefixLength == 0 {
-		return fmt.Errorf("Kind XRd needs mgmt_ipv4 and mgmt_ipv4_prefix. Please set parameters to yml")
-	}
-
 	var interfaceEnvCount string
 	for i := 0; i < 90; i++ {
 		interfaceEnvCount = interfaceEnvCount + fmt.Sprintf("linux:eth%d,xr_name=Gi0/0/0/%d;", i+1, i)
@@ -85,6 +82,7 @@ func (x *xrd) Deploy(ctx context.Context) error {
 
 func (x *xrd) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Cisco XRd '%s' node", x.cfg.ShortName)
+	x.createXRDFiles()
 	return nil
 }
 
@@ -109,11 +107,36 @@ func (x *xrd) SaveConfig(ctx context.Context) error {
 func (x *xrd) createXRDFiles() error {
 	nodeCfg := x.Config()
 	nodeCfg.ResStartupConfig = filepath.Join(x.cfg.LabDir, "xrd.conf")
+	x.cfg.EnforceStartupConfig = true
+
+	if x.cfg.StartupConfig == "" {
+		x.cfg.StartupConfig = "None"
+	}
 
 	err := nodeCfg.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
+
+	if x.cfg.StartupConfig != "None" {
+
+		// Open file
+		file, err := os.OpenFile(nodeCfg.ResStartupConfig, os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+
+		// Read static Startup Config
+		bytes, err := ioutil.ReadFile(x.cfg.StartupConfig)
+		if err != nil {
+			panic(err)
+		}
+		startupconfig := string(bytes)
+
+		fmt.Fprintln(file, startupconfig)
+	}
+
 	return err
 
 }
