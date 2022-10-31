@@ -31,7 +31,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/scrapli/scrapligo v1.1.3
 	github.com/sirupsen/logrus v1.9.0
-	github.com/spf13/cobra v1.6.0
+	github.com/spf13/cobra v1.6.1
 	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.0.0-20220919173607-35f4265a4bc0
