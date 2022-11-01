@@ -314,5 +314,19 @@ Additionally, containerlab will mount the `authorized_keys` file that will have 
 
 This will enable passwordless access for the users above if any public key is found in the user's directory.
 
+## Host Requirements
+
+SR Linux is a containerized NOS, therefore it depends on the host's kernel and CPU. It is recommended to run a kernel v4 and newer, though it might also run on the older kernels.
+
+### SSSE3 CPU set
+
+SR Linux XDP - the emulated datapath based on DPDK - requires SSS3E instructions to be available. This instruction set is present on most modern CPUs, but it is missing in the basic emulated CPUs created by hypervisors like QEMU, Proxmox. When this instruction set is not present in the host CPU set, containerlab will abort the lab deployment if it has SR Linux nodes defined.
+
+The easiest way to enable SSSE3 instruction set is to configure the hypervisor to use the `host` CPU type, which exposes all available instructions to the guest. For Proxmox, this can be set in the GUI:
+
+![proxmox](https://gitlab.com/rdodin/pics/-/wikis/uploads/c01dad79d8ab51fba77423f841d40378/image.png){: .img-shadow}
+
+Or it's also possible via the proxmox configuration file `/etc/pve/qemu-server/vmid.conf`.
+
 [^1]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access.
 [^2]: If running with `sudo`, add `-E` flag to sudo to preserve user' home directory for this feature to work as expected.
