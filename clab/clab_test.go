@@ -119,7 +119,6 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 }
 
 func Test_createWaitForDependency(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -142,7 +141,6 @@ func Test_createWaitForDependency(t *testing.T) {
 }
 
 func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -162,7 +160,6 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 				return runtime.Running
 			}
 			return runtime.Stopped
-
 		},
 	).Times(counterMax)
 
@@ -185,7 +182,6 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 }
 
 func Test_WaitForExternalNodeDependencies_NoContainerNetworkMode(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -200,7 +196,6 @@ func Test_WaitForExternalNodeDependencies_NoContainerNetworkMode(t *testing.T) {
 }
 
 func Test_WaitForExternalNodeDependencies_NodeNonExisting(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

@@ -446,9 +446,12 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	return tpl.Execute(f, mac)
+	if err := tpl.Execute(f, mac); err != nil {
+		return err
+	}
+
+	return f.Close()
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
@@ -560,7 +563,6 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
 		return err
 	}
-	defer file.Close()
 
 	_, err = file.Write(entriesv4.Bytes())
 	if err != nil {
@@ -571,5 +573,5 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 		return err
 	}
 
-	return nil
+	return file.Close()
 }

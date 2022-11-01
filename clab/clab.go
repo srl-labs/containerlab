@@ -207,7 +207,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint) (*sync.WaitGrou
 	return NodesWg, nil
 }
 
-// create a set of dependencies, that makes the ignite nodes start one after the other
+// create a set of dependencies, that makes the ignite nodes start one after the other.
 func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm DependencyManager) error {
 	var prevIgniteNode nodes.Node
 	// iterate through the nodes
