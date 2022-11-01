@@ -147,7 +147,7 @@ type NodeConfig struct {
 }
 
 type HostRequirements struct {
-	SSE3         bool `json:"sse3,omitempty"`          // sse3 cpu instruction
+	SSSE3        bool `json:"sse3,omitempty"`          // ssse3 cpu instruction
 	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
 }
 

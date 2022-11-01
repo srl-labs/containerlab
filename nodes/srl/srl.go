@@ -172,8 +172,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	topoPath := filepath.Join(s.cfg.LabDir, "topology.yml")
 	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
-	// SSE3 cpu instruction set is required
-	s.cfg.HostRequirements.SSE3 = true
+	// SSSE3 cpu instruction set is required
+	s.cfg.HostRequirements.SSSE3 = true
 	return nil
 }
 

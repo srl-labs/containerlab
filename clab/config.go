@@ -415,9 +415,9 @@ func (c *CLab) verifyBridgesExist() error {
 
 func (c *CLab) checkHostRequirements() error {
 	for _, n := range c.Nodes {
-		// sse3 instruction set check
-		if n.Config().HostRequirements.SSE3 && !cpuid.CPU.SSE3() {
-			return fmt.Errorf("SSE3 CPU instruction set is required by kind '%s' but not available. If containerlab runs in a VM, check if that VM has been launched with full host-cpu support", n.Config().Kind)
+		// ssse3 instruction set check
+		if n.Config().HostRequirements.SSSE3 && !cpuid.CPU.SSSE3() {
+			return fmt.Errorf("SSSE3 CPU instruction set is required by kind '%s' but not available on the host. If containerlab runs in a VM, check if that VM has been launched with full host-cpu support (see https://containerlab.dev/manual/kinds/srl/#ssse3-cpu-set for details)", n.Config().Kind)
 		}
 	}
 
