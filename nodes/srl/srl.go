@@ -94,9 +94,10 @@ var (
 	//go:embed topology/*
 	topologies embed.FS
 
-	saveCmd              = []string{"sr_cli", "-d", "tools", "system", "configuration", "save"}
-	mgmtServerRdyCmd, _  = shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
-	commitCompleteCmd, _ = shlex.Split("sr_cli -d info from state system configuration commit 1 status | grep complete")
+	saveCmd             = []string{"sr_cli", "-d", "tools", "system", "configuration", "save"}
+	mgmtServerRdyCmd, _ = shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
+	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config
+	readyForConfigCmd, _ = shlex.Split("cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config")
 
 	srlCfgTpl, _ = template.New("srl-tls-profile").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
@@ -331,35 +332,41 @@ func (s *srl) Ready(ctx context.Context) error {
 				time.Sleep(retryTimer)
 				continue
 			}
+
 			if len(stderr) != 0 {
 				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
 				time.Sleep(retryTimer)
 				continue
 			}
+
 			if !bytes.Contains(stdout, []byte("running")) {
 				time.Sleep(retryTimer)
 				continue
 			}
 
-			// and then if the initial commit completes
-			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.cfg.LongName, commitCompleteCmd)
+			// once mgmt server is running, we need to check if it is ready to accept configuration commands
+			// this is done with checking readyForConfigCmd
+			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.cfg.LongName, readyForConfigCmd)
 			if err != nil {
+				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
 				continue
 			}
 
 			if len(stderr) != 0 {
-				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+				log.Debugf("readyForConfigCmd stderr: %s", string(stderr))
 				time.Sleep(retryTimer)
 				continue
 			}
 
-			if !bytes.Contains(stdout, []byte("complete")) {
-				log.Debugf("node %s not yet ready", s.cfg.ShortName)
+			if !bytes.Contains(stdout, []byte("loaded initial configuration")) {
+				log.Debugf("Management server readiness files doesn't contain the marker string %s", string(stdout))
 				time.Sleep(retryTimer)
 				continue
 			}
-			log.Debugf("Node %s booted", s.cfg.ShortName)
+
+			log.Debugf("Node %s is ready to accept configs", s.cfg.ShortName)
+
 			return nil
 		}
 	}
