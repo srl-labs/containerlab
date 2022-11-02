@@ -101,7 +101,7 @@ Verify bind mount in l1 node
 
 Verify port forwarding for node l2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    curl -m 3 localhost:56180
+    ...    curl -m 3 --retry 3 localhost:56180
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Thank you for using nginx
