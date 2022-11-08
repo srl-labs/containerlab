@@ -96,7 +96,7 @@ var (
 
 	saveCmd             = []string{"sr_cli", "-d", "tools", "system", "configuration", "save"}
 	mgmtServerRdyCmd, _ = shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
-	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config
+	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd, _ = shlex.Split("cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config")
 
 	srlCfgTpl, _ = template.New("srl-tls-profile").
@@ -529,6 +529,10 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	if len(stderr) != 0 {
+		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, stderr)
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)

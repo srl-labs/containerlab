@@ -6,6 +6,7 @@ package nodes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/srl-labs/containerlab/runtime"
@@ -19,11 +20,7 @@ const (
 	ImageKey   = "image"
 	KernelKey  = "kernel"
 	SandboxKey = "sandbox"
-)
 
-var NodeKind string
-
-const (
 	NodeKindBridge = "bridge"
 
 	NodeKindHOST = "host"
@@ -31,8 +28,24 @@ const (
 	NodeKindSRL  = "srl"
 )
 
-// a map of node kinds overriding the default global runtime.
-var NonDefaultRuntimes = map[string]string{}
+var (
+	NodeKind string
+	// a map of node kinds overriding the default global runtime.
+	NonDefaultRuntimes = map[string]string{}
+
+	// Nodes is a map of all supported kinds and their init functions.
+	Nodes = map[string]Initializer{}
+
+	DefaultConfigTemplates = map[string]string{
+		"vr-sros": "",
+	}
+
+	// DefaultCredentials holds default username and password per each kind.
+	defaultCredentials = map[string][]string{}
+
+	// ErrCommandExecError is an error returned when a command is failed to execute on a given node.
+	ErrCommandExecError = errors.New("command execution error")
+)
 
 // SetNonDefaultRuntimePerKind sets a non default runtime for kinds that requires that (see cvx).
 func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
@@ -59,9 +72,6 @@ type Node interface {
 	GetRuntime() runtime.ContainerRuntime
 }
 
-// Nodes is a map of all supported kinds and their init functions.
-var Nodes = map[string]Initializer{}
-
 type Initializer func() Node
 
 func Register(names []string, initFn Initializer) {
@@ -87,13 +97,6 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 		n.WithRuntime(r)
 	}
 }
-
-var DefaultConfigTemplates = map[string]string{
-	"vr-sros": "",
-}
-
-// DefaultCredentials holds default username and password per each kind.
-var defaultCredentials = map[string][]string{}
 
 // SetDefaultCredentials register default credentials per provided kindname.
 func SetDefaultCredentials(kindnames []string, user, password string) error {
