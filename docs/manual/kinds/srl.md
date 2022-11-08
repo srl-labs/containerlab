@@ -156,22 +156,48 @@ The startup configuration file can be provided in two formats:
 
 ##### CLI
 
-A typical lab scenario is to make nodes to boot with a pre-configured use case. The easiest way to do that is to capture the intended changes as CLI commands.
+A typical lab scenario is to make nodes boot with a pre-configured use case. The easiest way to do that is to capture the intended changes as CLI commands.
 
-On SR Linux, users can configure the use case and output the changes in the form of `set` instructions with the `info flat` command. These CLI commands can be saved in a file and used as a startup configuration.
+On SR Linux, users can configure the system and capture the changes in the form of CLI instructions using the `info` command. These CLI commands can be saved in a file[^3] and used as a startup configuration.
 
-???info "flat config CLI example"
-    this can be `myconfig.cli` referred below
-    ```bash
-    set / network-instance default protocols bgp admin-state enable
-    set / network-instance default protocols bgp router-id 10.10.10.1
-    set / network-instance default protocols bgp autonomous-system 65001
-    set / network-instance default protocols bgp group ibgp ipv4-unicast admin-state enable
-    set / network-instance default protocols bgp group ibgp export-policy export-lo
-    set / network-instance default protocols bgp neighbor 192.168.1.2 admin-state enable
-    set / network-instance default protocols bgp neighbor 192.168.1.2 peer-group ibgp
-    set / network-instance default protocols bgp neighbor 192.168.1.2 peer-as 65001
-    ```
+???info "CLI config examples"
+    these snippets can be the contents of `myconfig.cli` file referenced in the topology below
+    === "Regular config"
+        ```bash
+        network-instance default {
+            interface ethernet-1/1.0 {
+            }
+            interface ethernet-1/2.0 {
+            }
+            protocols {
+                bgp {
+                    admin-state enable
+                    autonomous-system 65001
+                    router-id 10.0.0.1
+                    group rs {
+                        peer-as 65003
+                        ipv4-unicast {
+                            admin-state enable
+                        }
+                    }
+                    neighbor 192.168.13.2 {
+                        peer-group rs
+                    }
+                }
+            }
+        }
+        ```
+    === "Flat config"
+        ```bash
+        set / network-instance default protocols bgp admin-state enable
+        set / network-instance default protocols bgp router-id 10.10.10.1
+        set / network-instance default protocols bgp autonomous-system 65001
+        set / network-instance default protocols bgp group ibgp ipv4-unicast admin-state enable
+        set / network-instance default protocols bgp group ibgp export-policy export-lo
+        set / network-instance default protocols bgp neighbor 192.168.1.2 admin-state enable
+        set / network-instance default protocols bgp neighbor 192.168.1.2 peer-group ibgp
+        set / network-instance default protocols bgp neighbor 192.168.1.2 peer-as 65001
+        ```
 
 ```yaml
 name: srl_lab
@@ -185,7 +211,7 @@ topology:
       startup-config: myconfig.cli
 ```
 
-In that case, SR Linux will first boot with the default configuration, and then the CLI commands from the `myconfig.cli` will be applied.
+In that case, SR Linux will first boot with the default configuration, and then the CLI commands from the `myconfig.cli` will be applied. Note, that no entering into the candidate config, nor explicit commit is required to be part of the CLI configuration snippets.
 
 ##### JSON
 
@@ -330,3 +356,4 @@ Or it's also possible via the proxmox configuration file `/etc/pve/qemu-server/v
 
 [^1]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access.
 [^2]: If running with `sudo`, add `-E` flag to sudo to preserve user' home directory for this feature to work as expected.
+[^3]: CLI configs can be saved also in the "flat" format using `info flat` command.
