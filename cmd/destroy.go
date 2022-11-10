@@ -195,7 +195,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	if err != nil {
 		return fmt.Errorf("error while deleting netns symlinks: %w", err)
 	}
-	// Remove any dangling veths from host netns
+	// Remove any dangling veths from host netns or bridges
 	err = c.VethCleanup(ctx)
 	if err != nil {
 		return fmt.Errorf("error during veth cleanup procedure, %w", err)

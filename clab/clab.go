@@ -585,11 +585,12 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 	return nil, fmt.Errorf("could not find a container matching name %q", contName)
 }
 
-// VethCleanup iterates over links found in clab topology to initiate removal of dangling veths in host networking namespace
+// VethCleanup iterates over links found in clab topology to initiate removal of dangling veths
+// in host networking namespace or attached to linux bridge.
 // See https://github.com/srl-labs/containerlab/issues/842 for the reference.
 func (c *CLab) VethCleanup(_ context.Context) error {
 	for _, link := range c.Links {
-		err := c.RemoveHostVeth(link)
+		err := c.RemoveHostOrBridgeVeth(link)
 		if err != nil {
 			log.Infof("Error during veth cleanup: %v", err)
 		}
