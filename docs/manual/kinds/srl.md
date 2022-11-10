@@ -346,7 +346,7 @@ SR Linux is a containerized NOS, therefore it depends on the host's kernel and C
 
 ### SSSE3 CPU set
 
-SR Linux XDP - the emulated datapath based on DPDK - requires SSS3E instructions to be available. This instruction set is present on most modern CPUs, but it is missing in the basic emulated CPUs created by hypervisors like QEMU, Proxmox. When this instruction set is not present in the host CPU set, containerlab will abort the lab deployment if it has SR Linux nodes defined.
+SR Linux XDP - the emulated datapath based on DPDK - requires SSSE3 instructions to be available. This instruction set is present on most modern CPUs, but it is missing in the basic emulated CPUs created by hypervisors like QEMU, Proxmox. When this instruction set is not present in the host CPU set, containerlab will abort the lab deployment if it has SR Linux nodes defined.
 
 The easiest way to enable SSSE3 instruction set is to configure the hypervisor to use the `host` CPU type, which exposes all available instructions to the guest. For Proxmox, this can be set in the GUI:
 
