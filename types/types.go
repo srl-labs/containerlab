@@ -147,8 +147,8 @@ type NodeConfig struct {
 }
 
 type HostRequirements struct {
-	SSSE3        bool `json:"sse3,omitempty"`          // ssse3 cpu instruction
-	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
+	SSSE3        bool `json:"ssse3,omitempty"`          // ssse3 cpu instruction
+	VirtRequired bool `json:"virt-required,omitempty"`  // indicates that KVM virtualization is required for this node to run
 }
 
 // GenerateConfig generates configuration for the nodes
