@@ -579,8 +579,8 @@ github.com/containers/common v0.50.1 h1:AYRAf1xyahNVRez49KIkREInNf36SQx1lyLY9M95
 github.com/containers/common v0.50.1/go.mod h1:XnWlXPyE9Ky+8v8MfYWJZFnejkprAkUeo0DTWmSiwcY=
 github.com/containers/image v3.0.2+incompatible h1:B1lqAE8MUPCrsBLE86J0gnXleeRq8zJnQryhiiGQNyE=
 github.com/containers/image v3.0.2+incompatible/go.mod h1:8Vtij257IWSanUQKe1tAeNOm2sRVkSqQTVQ1IlwI3+M=
-github.com/containers/image/v5 v5.23.0 h1:Uv/n8zsHVUBBJK2rfBUHbN4CutHHmsQeyi4f80lAOf8=
-github.com/containers/image/v5 v5.23.0/go.mod h1:EXFFGEsL99S6aqLqK2mQJ3yrNh6Q05UCHt4mhF9JNoM=
+github.com/containers/image/v5 v5.23.1 h1:dUK9p5xfd38iTQXJEgMsUGqIHXbkDugrleZtd3zB+Wg=
+github.com/containers/image/v5 v5.23.1/go.mod h1:EXFFGEsL99S6aqLqK2mQJ3yrNh6Q05UCHt4mhF9JNoM=
 github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a h1:spAGlqziZjCJL25C6F1zsQY05tfCKE9F5YwtEWWe6hU=
 github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a/go.mod h1:9rfv8iPl1ZP7aqh9YA68wnZv2NUDbXdcdPHVz0pFbPY=
 github.com/containers/ocicrypt v1.0.1/go.mod h1:MeJDzk1RJHv89LjsH0Sp5KTY3ZYkjXO/C+bKAeWFIrc=
@@ -588,8 +588,8 @@ github.com/containers/ocicrypt v1.1.0/go.mod h1:b8AOe0YR67uU8OqfVNcznfFpAzu3rdgU
 github.com/containers/ocicrypt v1.1.1/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B0oB3dj3jFxY=
 github.com/containers/ocicrypt v1.1.6 h1:uoG52u2e91RE4UqmBICZY8dNshgfvkdl3BW6jnxiFaI=
 github.com/containers/ocicrypt v1.1.6/go.mod h1:WgjxPWdTJMqYMjf3M6cuIFFA1/MpyyhIM99YInA+Rvc=
-github.com/containers/podman/v4 v4.3.0 h1:Gf0dfyeo6445eIt7saT7sZVuwyOczT0ijbJ/1F0iHHc=
-github.com/containers/podman/v4 v4.3.0/go.mod h1:zM4TjR008+vftfdvEJl9oPG/upLyVwsX56qreHtl5Js=
+github.com/containers/podman/v4 v4.3.1 h1:cMCaKMwXd/FGfylA/w6VBtPb3ImIY0Wg8qLYYovMIjE=
+github.com/containers/podman/v4 v4.3.1/go.mod h1:RDbLSy1WeMSqw90DSxlQBAU5U6c0er9wFrXCOwYv8tQ=
 github.com/containers/psgo v1.7.3 h1:KTNurTMXpZjDJHWmlieVO7k7jgKJ4CR/HpPeSaAKtgc=
 github.com/containers/psgo v1.7.3/go.mod h1:PfaNzzHmMb8M9/blPgyD4BB3ZEj/0ApZIxN6nNtA+t4=
 github.com/containers/storage v1.42.0/go.mod h1:JiUJwOgOo1dr2DdOUc1MRe2GCAXABYoYmOdPF8yvH78=
