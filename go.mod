@@ -29,14 +29,14 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/runtime-spec v1.0.3-0.20211214071223-8958f93039ab
 	github.com/pkg/errors v0.9.1
-	github.com/scrapli/scrapligo v1.1.3
+	github.com/scrapli/scrapligo v1.1.4
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
 	github.com/weaveworks/ignite v0.10.0
-	golang.org/x/crypto v0.0.0-20220919173607-35f4265a4bc0
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8
-	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
+	golang.org/x/crypto v0.1.0
+	golang.org/x/sys v0.1.0
+	golang.org/x/term v0.1.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -312,7 +312,7 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	gocloud.dev v0.25.1-0.20220408200107-09b10f7359f7 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
+	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/text v0.4.0
