@@ -15,6 +15,7 @@ import (
 	"github.com/awalterschulze/gographviz"
 	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -162,25 +163,31 @@ func (nfs noListFs) Open(name string) (result http.File, err error) {
 	return f, nil
 }
 
+func buildGraphNode(node nodes.Node) types.ContainerDetails {
+	return types.ContainerDetails{
+		Name:        node.Config().ShortName,
+		Kind:        node.Config().Kind,
+		Image:       node.Config().Image,
+		Group:       node.Config().Group,
+		State:       "N/A",
+		IPv4Address: node.Config().MgmtIPv4Address,
+		IPv6Address: node.Config().MgmtIPv6Address,
+	}
+}
+
 func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 	log.Info("building graph from topology file")
 	for _, node := range c.Nodes {
-		g.Nodes = append(g.Nodes, types.ContainerDetails{
-			Name:        node.Config().ShortName,
-			Kind:        node.Config().Kind,
-			Image:       node.Config().Image,
-			Group:       node.Config().Group,
-			State:       "N/A",
-			IPv4Address: node.Config().MgmtIPv4Address,
-			IPv6Address: node.Config().MgmtIPv6Address,
-		})
+		g.Nodes = append(g.Nodes, buildGraphNode(node))
 	}
 }
 
 func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []types.GenericContainer) {
+	containerNames := make(map[string]struct{})
 	for _, cont := range containers {
 		log.Debugf("looking for node name %s", cont.Labels[NodeNameLabel])
 		if node, ok := c.Nodes[cont.Labels[NodeNameLabel]]; ok {
+			containerNames[node.Config().ShortName] = struct{}{}
 			g.Nodes = append(g.Nodes, types.ContainerDetails{
 				Name:        node.Config().ShortName,
 				Kind:        node.Config().Kind,
@@ -190,6 +197,11 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []types.Generi
 				IPv4Address: cont.GetContainerIPv4(),
 				IPv6Address: cont.GetContainerIPv6(),
 			})
+		}
+	}
+	for _, node := range c.Nodes {
+		if _, exist := containerNames[node.Config().ShortName]; !exist {
+			g.Nodes = append(g.Nodes, buildGraphNode(node))
 		}
 	}
 }
