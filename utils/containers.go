@@ -12,15 +12,14 @@ const (
 	cniBin = "/opt/cni/bin"
 )
 
-// produces a canonical image name.
-// returns the canonical image name including the tag
+// GetCanonicalImageName produces a canonical image name.
 // if the input name did not specify a tag, the implicit "latest" tag is returned.
 func GetCanonicalImageName(imageName string) string {
-	// might need canonical name e.g.
-	//    -> alpine == docker.io/library/alpine
-	//    -> foo/bar == docker.io/foo/bar
-	//    -> foo.bar/baz == foo.bar/bar
-	//    -> docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch
+	// name transformation rules
+	//    alpine == docker.io/library/alpine:latest
+	//    foo/bar == docker.io/foo/bar:latest
+	//    foo.bar/baz == foo.bar/bar:latest
+	//    docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch:latest
 	canonicalImageName := imageName
 	slashCount := strings.Count(imageName, "/")
 
