@@ -11,6 +11,15 @@
             data.nodes[key]["group"] = 'N/A';
         }
     }
+    // for non container nodes, no image filed is set
+    // we set it to N/A to indicate no image property
+    // without this, the nx graph node tooltip image value 
+    // will be skipped, cause the filed name and value mismatch
+    for (var key in data.nodes) {
+        if (!("image" in data.nodes[key])) {
+            data.nodes[key]["image"] = 'N/A';
+        }
+    }
 
     nx.define('CustomLinkLabel', nx.graphic.Topology.Link, {
         properties: {
