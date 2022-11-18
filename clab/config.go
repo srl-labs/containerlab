@@ -309,9 +309,12 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 
 	// split the string to get node name and endpoint name
 	split := strings.Split(e, ":")
-	if len(split) != 2 {
-		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904, RVV-A0003
-	}
+
+	// // NO NEED TO CHECK THE FORMAT, this is already been done by checkEndpoint()
+	// if (len(split) < 2 && len(split) > 3) || (len(split) == 3 && split[0] != "container") {
+	// 	log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904, RVV-A0003
+	// }
+
 	nName := split[0] // node name
 
 	// initialize the endpoint name based on the split function
@@ -334,6 +337,21 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 			NSPath:           hostNSPath,
 			DeploymentStatus: "created",
 		}
+	case "container":
+		// create a local context for later use
+		local_ctx := context.Background()
+		// query the Runtime for the NSPath of the referenced container
+		nsp, err := c.GlobalRuntime().GetNSPath(local_ctx, split[1])
+		if err != nil {
+			log.Fatalf("unable to find external container %q; %v", split[1], err) // skipcq: RVV-A0003
+		}
+		endpoint.Node = &types.NodeConfig{
+			Kind:             "ext-ns",
+			ShortName:        split[1],
+			NSPath:           nsp,
+			DeploymentStatus: "created",
+		}
+		endpoint.EndpointName = split[2]
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
@@ -699,7 +717,7 @@ func (c *CLab) checkIfSignatures() error {
 // checkEndpoint runs checks on the endpoint syntax.
 func checkEndpoint(e string) error {
 	split := strings.Split(e, ":")
-	if len(split) != 2 {
+	if (len(split) < 2 && len(split) > 3) || (len(split) == 3 && split[0] != "container") {
 		return fmt.Errorf("malformed endpoint definition: %s", e)
 	}
 	if split[1] == "eth0" {

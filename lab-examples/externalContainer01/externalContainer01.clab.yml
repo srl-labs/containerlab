@@ -1,0 +1,19 @@
+name: k8s_kind01
+
+topology:
+  kinds:
+    srl:
+      type: ixrd3
+      image: ghcr.io/nokia/srlinux
+  nodes:
+    srl:
+      kind: srl
+
+  links:
+  # you need to start the containers n1 & n2 externally before
+  # starting this topology.
+  # E.g. via:
+  #              docker run -d --name n1 nginx
+  #              docker run -d --name n2 nginx
+    - endpoints: ["srl:e1-1", "container:n1:eth1"]
+    - endpoints: ["srl:e1-2", "container:n2:eth1"]
