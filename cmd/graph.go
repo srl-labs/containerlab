@@ -93,6 +93,23 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
 	})
 	for _, l := range c.Links {
+
+		// if it is an external container or ns, there will not be a node.
+		// So we will artificially add the nodes here
+		for _, endpoint := range []*types.Endpoint{l.A, l.B} {
+			if endpoint.Node.Kind == "ext-ns" {
+				gtopo.Nodes = append(gtopo.Nodes, types.ContainerDetails{
+					Name:        endpoint.Node.ShortName,
+					Kind:        endpoint.Node.Kind,
+					Image:       "N/A",
+					Group:       "external",
+					State:       "N/A",
+					IPv4Address: "N/A",
+					IPv6Address: "N/A",
+				})
+			}
+		}
+
 		gtopo.Links = append(gtopo.Links, clab.Link{
 			Source:         l.A.Node.ShortName,
 			SourceEndpoint: l.A.EndpointName,
