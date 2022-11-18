@@ -11,11 +11,6 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-const (
-	DockerRuntime = "docker"
-	IgniteRuntime = "ignite"
-)
-
 type ContainerRuntime interface {
 	// Initializes the Container runtime struct
 	Init(...RuntimeOption) error

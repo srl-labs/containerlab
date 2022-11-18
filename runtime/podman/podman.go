@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	runtimeName    = "podman"
+	RuntimeName    = "podman"
 	defaultTimeout = 120 * time.Second
 )
 
@@ -29,7 +29,7 @@ type PodmanRuntime struct {
 }
 
 func init() {
-	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
+	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
 		return &PodmanRuntime{
 			config: &runtime.RuntimeConfig{},
 			mgmt:   &types.MgmtNet{},
@@ -304,7 +304,7 @@ func (r *PodmanRuntime) Config() runtime.RuntimeConfig {
 
 // GetName returns runtime name as a string.
 func (r *PodmanRuntime) GetName() string {
-	return runtimeName
+	return RuntimeName
 }
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container.

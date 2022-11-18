@@ -511,7 +511,7 @@ func (c *CLab) VerifyImages(ctx context.Context) error {
 	for _, node := range c.Nodes {
 		for imageKey, imageName := range node.GetImages() {
 			if imageName == "" {
-				return fmt.Errorf("missing required %q image for node %q", imageKey, node.Config().ShortName)
+				return fmt.Errorf("missing required %q attribute for node %q", imageKey, node.Config().ShortName)
 			}
 			images[imageName] = node.GetRuntime().GetName()
 		}

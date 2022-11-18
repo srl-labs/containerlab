@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	runtimeName                   = "ignite"
+	RuntimeName                   = "ignite"
 	defaultContainerRuntime       = igniteRuntimes.RuntimeDocker
 	defaultTimeout                = 30 * time.Second
 	kvmPath                       = "/dev/kvm"
@@ -52,7 +52,7 @@ type IgniteRuntime struct {
 }
 
 func init() {
-	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
+	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
 		return &IgniteRuntime{
 			mgmt: &types.MgmtNet{},
 		}
@@ -110,7 +110,7 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 
 func (c *IgniteRuntime) Mgmt() *types.MgmtNet { return c.mgmt }
 
-func (*IgniteRuntime) GetName() string                 { return runtimeName }
+func (*IgniteRuntime) GetName() string                 { return RuntimeName }
 func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
 
 func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
