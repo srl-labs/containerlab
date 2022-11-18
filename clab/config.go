@@ -319,10 +319,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 
 	// initialize the endpoint name based on the split function
 	endpoint.EndpointName = split[1] // endpoint name
-	if len(endpoint.EndpointName) > 15 {
-		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters",
-			endpoint.EndpointName) // skipcq: RVV-A0003
-	}
+
 	// generate unique MAC
 	endpoint.MAC = utils.GenMac(ClabOUI)
 
@@ -367,6 +364,11 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 			n.Config().Endpoints = append(n.Config().Endpoints, *endpoint)
 		}
 		c.m.Unlock()
+	}
+
+	if len(endpoint.EndpointName) > 15 {
+		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters",
+			endpoint.EndpointName) // skipcq: RVV-A0003
 	}
 
 	// stop the deployment if the matching node element was not found
