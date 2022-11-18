@@ -13,7 +13,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -40,45 +39,34 @@ func init() {
 }
 
 type crpd struct {
-	cfg     *types.NodeConfig
-	runtime runtime.ContainerRuntime
+	nodes.DefaultNode
 }
 
 func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	s.cfg = cfg
+	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
 	}
 
 	// mount config and log dirs
-	s.cfg.Binds = append(s.cfg.Binds,
-		fmt.Sprint(filepath.Join(s.cfg.LabDir, "config"), ":/config"),
-		fmt.Sprint(filepath.Join(s.cfg.LabDir, "log"), ":/var/log"),
+	s.Cfg.Binds = append(s.Cfg.Binds,
+		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "config"), ":/config"),
+		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "log"), ":/var/log"),
 		// mount sshd_config
-		fmt.Sprint(filepath.Join(s.cfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"),
+		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"),
 	)
 
 	return nil
 }
-func (s *crpd) Config() *types.NodeConfig { return s.cfg }
 
 func (s *crpd) PreDeploy(_, _, _ string) error {
-	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return createCRPDFiles(s.cfg)
-}
-
-func (s *crpd) Deploy(ctx context.Context) error {
-	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
-	return err
+	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	return createCRPDFiles(s.Cfg)
 }
 
 func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	log.Debugf("Running postdeploy actions for CRPD %q node", s.cfg.ShortName)
-	_, stderr, err := s.runtime.Exec(ctx, s.cfg.ContainerID, []string{"service", "ssh", "restart"})
+	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
+	_, stderr, err := s.Runtime.Exec(ctx, s.Cfg.ContainerID, []string{"service", "ssh", "restart"})
 	if err != nil {
 		return err
 	}
@@ -90,37 +78,23 @@ func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	return err
 }
 
-func (s *crpd) GetImages() map[string]string {
-	return map[string]string{
-		nodes.ImageKey: s.cfg.Image,
-	}
-}
-
-func (*crpd) WithMgmtNet(*types.MgmtNet)               {}
-func (s *crpd) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *crpd) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-
-func (s *crpd) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
-}
-
 func (s *crpd) SaveConfig(ctx context.Context) error {
-	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
+	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, saveCmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
+		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
 	}
 
 	if len(stderr) > 0 {
-		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
+		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, string(stderr))
 	}
 
 	// path by which to save a config
-	confPath := s.cfg.LabDir + "/config/juniper.conf"
+	confPath := s.Cfg.LabDir + "/config/juniper.conf"
 	err = os.WriteFile(confPath, stdout, 0777) // skipcq: GO-S2306
 	if err != nil {
-		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.cfg.ShortName, err)
+		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.Cfg.ShortName, err)
 	}
-	log.Infof("saved cRPD configuration from %s node to %s\n", s.cfg.ShortName, confPath)
+	log.Infof("saved cRPD configuration from %s node to %s\n", s.Cfg.ShortName, confPath)
 
 	return nil
 }

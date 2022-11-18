@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -39,13 +38,11 @@ func init() {
 }
 
 type vrVEOS struct {
-	cfg     *types.NodeConfig
-	mgmt    *types.MgmtNet
-	runtime runtime.ContainerRuntime
+	nodes.DefaultNode
 }
 
 func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	s.cfg = cfg
+	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
 	}
@@ -54,64 +51,35 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"USERNAME":           defaultUser,
 		"PASSWORD":           defaultPassword,
-		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
-		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
+		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
+		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
 	}
-	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
+	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, configDirName), ":/config"))
+	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, configDirName), ":/config"))
 
-	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
+	if s.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
-		s.cfg.Binds = append(s.cfg.Binds, "/dev:/dev")
+		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		s.cfg.Env["USERNAME"], s.cfg.Env["PASSWORD"], s.cfg.ShortName, s.cfg.Env["CONNECTION_MODE"])
+	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
+		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
 
 	// set virtualization requirement
-	s.cfg.HostRequirements.VirtRequired = true
+	s.Cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
-
-func (s *vrVEOS) Config() *types.NodeConfig { return s.cfg }
 
 func (s *vrVEOS) PreDeploy(_, _, _ string) error {
-	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return loadStartupConfigFile(s.cfg)
-}
-
-func (s *vrVEOS) Deploy(ctx context.Context) error {
-	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
-	return err
-}
-
-func (*vrVEOS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
-	return nil
-}
-
-func (s *vrVEOS) GetImages() map[string]string {
-	return map[string]string{
-		nodes.ImageKey: s.cfg.Image,
-	}
-}
-
-func (s *vrVEOS) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
-func (s *vrVEOS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *vrVEOS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-
-func (s *vrVEOS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
+	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	return loadStartupConfigFile(s.Cfg)
 }
 
 func (s *vrVEOS) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(s.cfg.LongName,
+	err := netconf.SaveConfig(s.Cfg.LongName,
 		defaultUser,
 		defaultPassword,
 		scrapliPlatformName,
@@ -120,7 +88,7 @@ func (s *vrVEOS) SaveConfig(_ context.Context) error {
 		return err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file\n", s.cfg.ShortName)
+	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
 	return nil
 }
 
