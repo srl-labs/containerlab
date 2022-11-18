@@ -303,6 +303,28 @@ ip link
     link/ether b2:80:e9:60:c7:9d brd ff:ff:ff:ff:ff:ff link-netns clab-srl01-srl
 ```
 
+### External Container linking
+It is possible to connect nodes defined in the topology definition to externally managed, pre-existing containers.
+
+```yaml
+name: externalContainer01
+
+topology:
+  kinds:
+    srl:
+      type: ixrd3
+      image: ghcr.io/nokia/srlinux
+  nodes:
+    srl:
+      kind: srl
+
+  links:
+    - endpoints: ["srl:e1-1", "container:nginx1:eth1"]
+    - endpoints: ["srl:e1-2", "container:nginx2:eth1"]
+```
+
+By using the three column specification e.g. `container:nginx2:eth1` with a fixed first value of `container`, the second parameter being the name of the external container and the third being the name of the network interface. Links between the container will be created on deployment.
+
 ### Additional connections to management network
 By default every lab node will be connected to the docker network named `clab` which acts as a management network for the nodes.
 

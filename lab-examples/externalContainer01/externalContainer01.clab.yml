@@ -1,4 +1,4 @@
-name: k8s_kind01
+name: externalContainer01
 
 topology:
   kinds:
@@ -15,5 +15,5 @@ topology:
   # E.g. via:
   #              docker run -d --name n1 nginx
   #              docker run -d --name n2 nginx
-    - endpoints: ["srl:e1-1", "container:n1:eth1"]
-    - endpoints: ["srl:e1-2", "container:n2:eth1"]
+    - endpoints: ["srl:e1-1", "container:nginx1:eth1"]
+    - endpoints: ["srl:e1-2", "container:nginx2:eth1"]
