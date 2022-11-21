@@ -195,7 +195,7 @@ By default vr-sros nodes boot up with a pre-defined "boot options file" (BOF). T
 - license file location
 - config file location
 
-When the node is up and running you can make changes to this BOF. One popular example of such changes is the addition of static-routes to reach external networks from within the vs-sros node. Although you can save the BOF from within the SROS system, the location the file is written to is not persistent across container restarts. It is also not possible to define a BOF target location. Hence we had to come with an idea to apply BOF changes upon startup automatically. 
+When the node is up and running you can make changes to this BOF. One popular example of such changes is the addition of static-routes to reach external networks from within the vs-sros node. Although you can save the BOF from within the SROS system, the location the file is written to is not persistent across container restarts. It is also not possible to define a BOF target location. A workaround for this is to automatically execute a CLI script after successful boot making the needed BOF changes:
 
 SROS has an option to automatically execute a "script" upon successful boot. This option is accessible in SROS via:
 
