@@ -189,6 +189,72 @@ Containerlab's [`save`](../../cmd/save.md) command will perform a configuration 
 cat clab-cert01/sr/tftpboot/config.txt
 ```
 
+#### Boot Options File
+
+By default vr-sros nodes boot up with a pre-defined "boot options file" (BOF). This file includes settings such as:
+- license file location
+- config file location
+
+When the node is up and running you can make changes to this BOF. One popular example of such changes is the addition of static-routes to reach external networks from within the vs-sros node. Although you can save the BOF from within the SROS system, the location the file is written to is not persistent across container restarts. It is also not possible to define a BOF target location. Hence we had to come with an idea to apply BOF changes upon startup automatically. 
+
+SROS has an option to automatically execute a "script" upon successful boot. This option is accessible in SROS via:
+
+```bash
+[pr:/configure]
+A:admin@sros1# system boot-good-exec ?
+
+ boot-good-exec <string>
+ <string>  - <1..180 characters>
+
+    CLI script file to execute following successful boot-up
+
+[pr:/configure]
+A:admin@sros1# system boot-good-exec
+```
+
+This option was introduced already in SROS 16.0.R1. Using this option and the ability to mount basically any file into the default tftp location used by the containerized SROS boxes it is very easy to automatically apply any config including BOF changes after startup. 
+
+As an example the following SROS MD-CLI script was created:
+
+```bash
+########################################
+# Configuring static management routes
+########################################
+/bof private
+router "management" static-routes route 10.0.0.0/24 next-hop 172.31.255.29
+router "management" static-routes route 10.0.1.0/24 next-hop 172.31.255.29
+router "management" static-routes route 192.168.0.0/24 next-hop 172.31.255.29
+router "management" static-routes route 172.20.20.0/24 next-hop 172.31.255.29
+commit
+exit all
+```
+
+This script is placed in the containerlab's topology root directory and bound to the vr-sros containers tftpboot location using containerlab's "binds" variable:
+
+```yaml
+  nodes:
+    sros1:
+      mgmt_ipv4: [mgmt-ip]
+      kind: vr-sros
+      image: [container-image-repo]
+      type: sr-1s
+      license: license-sros.txt
+      binds:
+        - post-boot-exec.cfg:/tftpboot/post-boot-exec.cfg
+```
+
+Note: You still need to apply the following configuration line to your SROS devices to enable the automatic CLI script execution after successful boot. The tftpboot location is always at "tftp://172.31.255.29/".
+
+```bash
+[pr:/configure system]
+A:admin@sros1# info | match boot-goo
+    boot-good-exec "tftp://172.31.255.29/post-boot-exec.cfg"
+
+[pr:/configure system]
+```
+
+By combining file bindings available in containerlab and the automatic script execution of SROS it is possible to reach some kind of BOF persistency. 
+
 ### License
 
 Path to a valid license must be provided for all vr-sros nodes with a [`license`](../nodes.md#license) directive.
