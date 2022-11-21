@@ -10,6 +10,7 @@ import (
 	_ "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	_ "github.com/srl-labs/containerlab/nodes/crpd"
 	_ "github.com/srl-labs/containerlab/nodes/cvx"
+	_ "github.com/srl-labs/containerlab/nodes/ext_container"
 	_ "github.com/srl-labs/containerlab/nodes/host"
 	_ "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
 	_ "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"

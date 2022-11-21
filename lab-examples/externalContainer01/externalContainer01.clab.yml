@@ -1,0 +1,19 @@
+name: externalContainer01
+
+topology:
+  kinds:
+    srl:
+      type: ixrd3
+      image: ghcr.io/nokia/srlinux
+  nodes:
+    srl:
+      kind: srl
+    node1:
+      kind: ext-container
+    node2:
+      kind: ext-container
+
+  links:
+    - endpoints: ["srl:e1-1", "node1:eth1"]
+    - endpoints: ["srl:e1-2", "node2:eth1"]
+
