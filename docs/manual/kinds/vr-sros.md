@@ -189,6 +189,73 @@ Containerlab's [`save`](../../cmd/save.md) command will perform a configuration 
 cat clab-cert01/sr/tftpboot/config.txt
 ```
 
+#### Boot Options File
+
+By default `vr_nokia_sros` nodes boot up with a pre-defined "Boot Options File" (BOF). This file includes boot settings including:
+
+* license file location
+* config file location
+
+When the node is up and running you can make changes to this BOF. One popular example of such changes is the addition of static-routes to reach external networks from within the SR OS node. Although you can save the BOF from within the SROS system, the location the file is written to is not persistent across container restarts. It is also not possible to define a BOF target location.  
+A workaround for this limitation is to automatically execute a CLI script that configures BOF once the system boots.
+
+SR OS has an option (introduced in SR OS 16.0.R1) to automatically execute a script upon successful boot. This option is accessible in SR OS by the `/configure system boot-good-exec` MD-CLI path:
+
+```bash
+[pr:/configure]
+A:admin@sros1# system boot-good-exec ?
+
+ boot-good-exec <string>
+ <string>  - <1..180 characters>
+
+    CLI script file to execute following successful boot-up
+```
+
+By mounting a script to SR OS container node and using the `boot-good-exec` option, users can make changes to the BOF the second the node boots and thus complete the task of having a *somewhat* persistent BOF.
+
+As an example the following SR OS MD-CLI script was created to persist custom static routes to the BOF:
+
+```bash
+########################################
+# Configuring static management routes
+########################################
+/bof private
+router "management" static-routes route 10.0.0.0/24 next-hop 172.31.255.29
+router "management" static-routes route 10.0.1.0/24 next-hop 172.31.255.29
+router "management" static-routes route 192.168.0.0/24 next-hop 172.31.255.29
+router "management" static-routes route 172.20.20.0/24 next-hop 172.31.255.29
+commit
+exit all
+```
+
+This script is then placed somewhere on the disk, for example in the containerlab's topology root directory, and mounted to `vr-nokia_sros` node tftpboot directory using [binds](../nodes.md#binds) property:
+
+```yaml
+  nodes:
+    sros1:
+      mgmt_ipv4: [mgmt-ip]
+      kind: vr-sros
+      image: [container-image-repo]
+      type: sr-1s
+      license: license-sros.txt
+      binds:
+        - post-boot-exec.cfg:/tftpboot/post-boot-exec.cfg #(1)!
+```
+
+1. `post-boot-exec.cfg` file contains the script referenced above and it is mounted to `/tftpboot` directory that is available in SR OS node.
+
+Once the script is mounted to the node, users need to instruct SR OS to execute the script upon successful boot. This is done by adding the following configuration line on SR OS MD-CLI:
+
+```bash
+[pr:/configure system]
+A:admin@sros1# info | match boot-goo
+    boot-good-exec "tftp://172.31.255.29/post-boot-exec.cfg" #(1)!
+```
+
+1. The tftpboot location is always at `tftp://172.31.255.29/` address and the name of the file needs to match the file you used in the binds instruction.
+
+By combining file bindings and the automatic script execution of SROS it is possible to create a workaround for persistent BOF settings.
+
 ### License
 
 Path to a valid license must be provided for all vr-sros nodes with a [`license`](../nodes.md#license) directive.
