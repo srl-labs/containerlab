@@ -43,12 +43,11 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (*bridge) Deploy(_ context.Context) error { return nil }
+func (*bridge) Delete(_ context.Context) error { return nil }
+func (*bridge) GetImages() map[string]string   { return map[string]string{} }
+
 func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return b.installIPTablesBridgeFwdRule()
-}
-
-func (*bridge) Delete(_ context.Context) error {
-	return nil
 }
 
 // installIPTablesBridgeFwdRule calls iptables to install `allow` rule for traffic passing through the bridge
