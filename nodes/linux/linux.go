@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
@@ -23,13 +23,12 @@ func init() {
 }
 
 type linux struct {
-	cfg     *types.NodeConfig
-	runtime runtime.ContainerRuntime
+	nodes.DefaultNode
 	vmChans *operations.VMChannels
 }
 
 func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	l.cfg = cfg
+	l.Cfg = cfg
 	for _, o := range opts {
 		o(l)
 	}
@@ -43,16 +42,12 @@ func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (l *linux) Config() *types.NodeConfig { return l.cfg }
-
-func (*linux) PreDeploy(_, _, _ string) error { return nil }
-
 func (l *linux) Deploy(ctx context.Context) error {
-	cID, err := l.runtime.CreateContainer(ctx, l.cfg)
+	cID, err := l.Runtime.CreateContainer(ctx, l.Cfg)
 	if err != nil {
 		return err
 	}
-	intf, err := l.runtime.StartContainer(ctx, cID, l.cfg)
+	intf, err := l.Runtime.StartContainer(ctx, cID, l.Cfg)
 
 	if vmChans, ok := intf.(*operations.VMChannels); ok {
 		l.vmChans = vmChans
@@ -62,8 +57,8 @@ func (l *linux) Deploy(ctx context.Context) error {
 }
 
 func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
-	log.Debugf("Running postdeploy actions for Linux '%s' node", l.cfg.ShortName)
-	if err := types.DisableTxOffload(l.cfg); err != nil {
+	log.Debugf("Running postdeploy actions for Linux '%s' node", l.Cfg.ShortName)
+	if err := types.DisableTxOffload(l.Cfg); err != nil {
 		return err
 	}
 
@@ -77,25 +72,13 @@ func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 
 func (l *linux) GetImages() map[string]string {
 	images := make(map[string]string)
-	images[nodes.ImageKey] = l.cfg.Image
+	images[nodes.ImageKey] = l.Cfg.Image
 
 	// ignite runtime additionally needs a kernel and sandbox image
-	if l.runtime.GetName() != runtime.IgniteRuntime {
+	if l.Runtime.GetName() != ignite.RuntimeName {
 		return images
 	}
-	images[nodes.KernelKey] = l.cfg.Kernel
-	images[nodes.SandboxKey] = l.cfg.Sandbox
+	images[nodes.KernelKey] = l.Cfg.Kernel
+	images[nodes.SandboxKey] = l.Cfg.Sandbox
 	return images
-}
-
-func (*linux) WithMgmtNet(*types.MgmtNet)               {}
-func (l *linux) WithRuntime(r runtime.ContainerRuntime) { l.runtime = r }
-func (l *linux) GetRuntime() runtime.ContainerRuntime   { return l.runtime }
-
-func (l *linux) Delete(ctx context.Context) error {
-	return l.runtime.DeleteContainer(ctx, l.Config().LongName)
-}
-
-func (*linux) SaveConfig(_ context.Context) error {
-	return nil
 }

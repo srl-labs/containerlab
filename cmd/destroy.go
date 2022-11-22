@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -158,7 +159,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	// a set of workers that do not support concurrency
 	serialNodes := make(map[string]struct{})
 	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == runtime.IgniteRuntime {
+		if n.GetRuntime().GetName() == ignite.RuntimeName {
 			serialNodes[n.Config().LongName] = struct{}{}
 			// decreasing the num of maxWorkers as they are used for concurrent nodes
 			maxWorkers = maxWorkers - 1
@@ -166,7 +167,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// Serializing ignite workers due to busy device error
-	if _, ok := c.Runtimes[runtime.IgniteRuntime]; ok {
+	if _, ok := c.Runtimes[ignite.RuntimeName]; ok {
 		maxWorkers = 1
 	}
 

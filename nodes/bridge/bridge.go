@@ -13,7 +13,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -31,38 +30,24 @@ func init() {
 }
 
 type bridge struct {
-	cfg     *types.NodeConfig
-	runtime runtime.ContainerRuntime
+	nodes.DefaultNode
 }
 
 func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	s.cfg = cfg
+	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
 	}
-	s.cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
+	s.Cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
 	return nil
 }
-func (s *bridge) Config() *types.NodeConfig    { return s.cfg }
-func (*bridge) PreDeploy(_, _, _ string) error { return nil }
+
 func (*bridge) Deploy(_ context.Context) error { return nil }
+func (*bridge) Delete(_ context.Context) error { return nil }
+func (*bridge) GetImages() map[string]string   { return map[string]string{} }
+
 func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return b.installIPTablesBridgeFwdRule()
-}
-func (*bridge) WithMgmtNet(*types.MgmtNet)               {}
-func (s *bridge) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *bridge) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-
-func (*bridge) GetContainer(_ context.Context) (*types.GenericContainer, error) {
-	return nil, nil
-}
-
-func (*bridge) SaveConfig(_ context.Context) error { return nil }
-
-func (*bridge) GetImages() map[string]string { return map[string]string{} }
-
-func (*bridge) Delete(_ context.Context) error {
-	return nil
 }
 
 // installIPTablesBridgeFwdRule calls iptables to install `allow` rule for traffic passing through the bridge
@@ -71,23 +56,23 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	// first check if a rule already exists for this bridge to not create duplicates
 	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
 
-	re, _ := regexp.Compile(fmt.Sprintf("ACCEPT[^\n]+%s", b.cfg.ShortName))
+	re, _ := regexp.Compile(fmt.Sprintf("ACCEPT[^\n]+%s", b.Cfg.ShortName))
 
 	if re.Match(res) {
-		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", b.cfg.ShortName)
+		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", b.Cfg.ShortName)
 		return err
 	}
 	if err != nil {
-		return fmt.Errorf("failed to add iptables forwarding rule for bridge %q: %w", b.cfg.ShortName, err)
+		return fmt.Errorf("failed to add iptables forwarding rule for bridge %q: %w", b.Cfg.ShortName, err)
 	}
 
-	cmd := fmt.Sprintf(iptAllowCmd, b.cfg.ShortName)
+	cmd := fmt.Sprintf(iptAllowCmd, b.Cfg.ShortName)
 
-	log.Debugf("Installing iptables rules for bridge %q", b.cfg.ShortName)
+	log.Debugf("Installing iptables rules for bridge %q", b.Cfg.ShortName)
 
 	stdOutErr, err := exec.Command("iptables", strings.Split(cmd, " ")...).CombinedOutput()
 
-	log.Debugf("iptables install stdout for bridge %s:%s", b.cfg.ShortName, stdOutErr)
+	log.Debugf("iptables install stdout for bridge %s:%s", b.Cfg.ShortName, stdOutErr)
 
 	if err != nil {
 		log.Warnf("iptables install stdout/stderr result is: %s", stdOutErr)
