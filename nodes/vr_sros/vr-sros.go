@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -39,85 +38,54 @@ func init() {
 }
 
 type vrSROS struct {
-	cfg     *types.NodeConfig
-	mgmt    *types.MgmtNet
-	runtime runtime.ContainerRuntime
+	nodes.DefaultNode
 }
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	s.cfg = cfg
+	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
 	}
-	if s.cfg.StartupConfig == "" {
-		s.cfg.StartupConfig = nodes.DefaultConfigTemplates[s.cfg.Kind]
+	if s.Cfg.StartupConfig == "" {
+		s.Cfg.StartupConfig = nodes.DefaultConfigTemplates[s.Cfg.Kind]
 	}
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
-	if s.cfg.NodeType == "" {
-		s.cfg.NodeType = vrsrosDefaultType
+	if s.Cfg.NodeType == "" {
+		s.Cfg.NodeType = vrsrosDefaultType
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"DOCKER_NET_V4_ADDR": s.mgmt.IPv4Subnet,
-		"DOCKER_NET_V6_ADDR": s.mgmt.IPv6Subnet,
+		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
+		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
 	}
-	s.cfg.Env = utils.MergeStringMaps(defEnv, s.cfg.Env)
+	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
 
 	// mount tftpboot dir
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(path.Join(s.cfg.LabDir, "tftpboot"), ":/tftpboot"))
-	if s.cfg.Env["CONNECTION_MODE"] == "macvtap" {
+	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, "tftpboot"), ":/tftpboot"))
+	if s.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
-		s.cfg.Binds = append(s.cfg.Binds, "/dev:/dev")
+		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", s.cfg.Env["CONNECTION_MODE"],
-		s.cfg.ShortName,
-		s.cfg.NodeType,
+	s.Cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", s.Cfg.Env["CONNECTION_MODE"],
+		s.Cfg.ShortName,
+		s.Cfg.NodeType,
 	)
 
 	// set virtualization requirement
-	s.cfg.HostRequirements.VirtRequired = true
+	s.Cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
-
-func (s *vrSROS) Config() *types.NodeConfig { return s.cfg }
 
 func (s *vrSROS) PreDeploy(_, _, _ string) error {
-	utils.CreateDirectory(s.cfg.LabDir, 0777)
-	return createVrSROSFiles(s.cfg)
-}
-
-func (s *vrSROS) Deploy(ctx context.Context) error {
-	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
-	return err
-}
-
-func (*vrSROS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
-	return nil
-}
-
-func (s *vrSROS) WithMgmtNet(mgmt *types.MgmtNet)        { s.mgmt = mgmt }
-func (s *vrSROS) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *vrSROS) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-
-func (s *vrSROS) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
-}
-
-func (s *vrSROS) GetImages() map[string]string {
-	return map[string]string{
-		nodes.ImageKey: s.cfg.Image,
-	}
+	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	return createVrSROSFiles(s.Cfg)
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(s.cfg.LongName,
+	err := netconf.SaveConfig(s.Cfg.LongName,
 		defaultUser,
 		defaultPassword,
 		scrapliPlatformName,
@@ -126,11 +94,10 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 		return err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file\n", s.cfg.ShortName)
+	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
 	return nil
 }
 
-//
 func createVrSROSFiles(node *types.NodeConfig) error {
 	// create config directory that will be bind mounted to vrnetlab container at / path
 	utils.CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)

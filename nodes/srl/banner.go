@@ -26,14 +26,14 @@ const banner = `................................................................
 
 // banner returns a banner string with a docs version filled in based on the version information queried from the node.
 func (s *srl) banner(ctx context.Context) (string, error) {
-	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
 		"sr_cli", "-d", "info from state /system information version | grep version",
 	})
 	if err != nil {
 		return "", err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, stdout, stderr)
 
 	v := s.parseVersionString(string(stdout))
 

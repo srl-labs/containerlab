@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	runtimeName    = "docker"
+	RuntimeName    = "docker"
 	sysctlBase     = "/proc/sys"
 	defaultTimeout = 30 * time.Second
 	rLimitMaxValue = 1048576
@@ -44,7 +44,7 @@ const (
 )
 
 func init() {
-	runtime.Register(runtimeName, func() runtime.ContainerRuntime {
+	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
 		return &DockerRuntime{
 			mgmt: new(types.MgmtNet),
 		}
@@ -73,7 +73,7 @@ func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 func (d *DockerRuntime) WithKeepMgmtNet() {
 	d.config.KeepMgmtNet = true
 }
-func (*DockerRuntime) GetName() string                 { return runtimeName }
+func (*DockerRuntime) GetName() string                 { return RuntimeName }
 func (d *DockerRuntime) Config() runtime.RuntimeConfig { return d.config }
 
 // Mgmt return management network struct of a runtime.

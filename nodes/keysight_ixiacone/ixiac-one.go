@@ -33,12 +33,11 @@ func init() {
 }
 
 type ixiacOne struct {
-	cfg     *types.NodeConfig
-	runtime runtime.ContainerRuntime
+	nodes.DefaultNode
 }
 
 func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	l.cfg = cfg
+	l.Cfg = cfg
 	for _, o := range opts {
 		o(l)
 	}
@@ -46,40 +45,9 @@ func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (l *ixiacOne) Config() *types.NodeConfig { return l.cfg }
-
-func (*ixiacOne) PreDeploy(_, _, _ string) error { return nil }
-
-func (l *ixiacOne) Deploy(ctx context.Context) error {
-	cID, err := l.runtime.CreateContainer(ctx, l.cfg)
-	if err != nil {
-		return err
-	}
-	_, err = l.runtime.StartContainer(ctx, cID, l.cfg)
-	return err
-}
-
 func (l *ixiacOne) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
-	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.cfg.ShortName)
-	return ixiacPostDeploy(ctx, l.runtime, l.cfg)
-}
-
-func (l *ixiacOne) GetImages() map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = l.cfg.Image
-	return images
-}
-
-func (*ixiacOne) WithMgmtNet(*types.MgmtNet)               {}
-func (l *ixiacOne) WithRuntime(r runtime.ContainerRuntime) { l.runtime = r }
-func (l *ixiacOne) GetRuntime() runtime.ContainerRuntime   { return l.runtime }
-
-func (l *ixiacOne) Delete(ctx context.Context) error {
-	return l.runtime.DeleteContainer(ctx, l.Config().LongName)
-}
-
-func (*ixiacOne) SaveConfig(_ context.Context) error {
-	return nil
+	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.Cfg.ShortName)
+	return ixiacPostDeploy(ctx, l.Runtime, l.Cfg)
 }
 
 // ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node.

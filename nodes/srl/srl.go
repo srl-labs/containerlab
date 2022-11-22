@@ -24,7 +24,6 @@ import (
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -115,75 +114,72 @@ func init() {
 }
 
 type srl struct {
-	cfg     *types.NodeConfig
-	runtime runtime.ContainerRuntime
+	nodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	s.cfg = cfg
+	s.Cfg = cfg
 	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
 	// to not rely on certain kind names
-	s.cfg.Kind = nodes.NodeKindSRL
+	s.Cfg.Kind = nodes.NodeKindSRL
 	for _, o := range opts {
 		o(s)
 	}
 
-	if s.cfg.NodeType == "" {
-		s.cfg.NodeType = srlDefaultType
+	if s.Cfg.NodeType == "" {
+		s.Cfg.NodeType = srlDefaultType
 	}
 
-	if _, found := srlTypes[s.cfg.NodeType]; !found {
+	if _, found := srlTypes[s.Cfg.NodeType]; !found {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
-			s.cfg.NodeType, strings.Join(keys, ", "))
+			s.Cfg.NodeType, strings.Join(keys, ", "))
 	}
 
-	if s.cfg.Cmd == "" {
+	if s.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
 		// the additional touch is needed to support non docker runtimes
-		s.cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+		s.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
-	s.cfg.Env = utils.MergeStringMaps(srlEnv, s.cfg.Env)
+	s.Cfg.Env = utils.MergeStringMaps(srlEnv, s.Cfg.Env)
 
 	// if user was not initialized to a value, use root
-	if s.cfg.User == "" {
-		s.cfg.User = "0:0"
+	if s.Cfg.User == "" {
+		s.Cfg.User = "0:0"
 	}
 	for k, v := range srlSysctl {
-		s.cfg.Sysctls[k] = v
+		s.Cfg.Sysctls[k] = v
 	}
 
-	if s.cfg.License != "" {
+	if s.Cfg.License != "" {
 		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-		s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(
-			filepath.Join(s.cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+		s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(
+			filepath.Join(s.Cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 	}
 
 	// mount config directory
-	cfgPath := filepath.Join(s.cfg.LabDir, "config")
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
+	cfgPath := filepath.Join(s.Cfg.LabDir, "config")
+	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
 	// mount srlinux topology
-	topoPath := filepath.Join(s.cfg.LabDir, "topology.yml")
-	s.cfg.Binds = append(s.cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+	topoPath := filepath.Join(s.Cfg.LabDir, "topology.yml")
+	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	// SSSE3 cpu instruction set is required
-	s.cfg.HostRequirements.SSSE3 = true
+	s.Cfg.HostRequirements.SSSE3 = true
 	return nil
 }
 
-func (s *srl) Config() *types.NodeConfig { return s.cfg }
-
 func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
-	utils.CreateDirectory(s.cfg.LabDir, 0777)
+	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	// retrieve node certificates
-	nodeCerts, err := cert.RetrieveNodeCertData(s.cfg, labCADir)
+	nodeCerts, err := cert.RetrieveNodeCertData(s.Cfg, labCADir)
 	// if not available on disk, create cert in next step
 	if err != nil {
 		// create CERT
@@ -191,13 +187,13 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 		if err != nil {
 			log.Errorf("failed to parse Node CSR Template: %v", err)
 		}
-		log.Debugf("creating node certificate for %s", s.cfg.SANs)
+		log.Debugf("creating node certificate for %s", s.Cfg.SANs)
 
 		certInput := cert.CertInput{
-			Name:     s.cfg.ShortName,
-			LongName: s.cfg.LongName,
-			Fqdn:     s.cfg.Fqdn,
-			SANs:     s.cfg.SANs,
+			Name:     s.Cfg.ShortName,
+			LongName: s.Cfg.LongName,
+			Fqdn:     s.Cfg.Fqdn,
+			SANs:     s.Cfg.SANs,
 			Prefix:   configName,
 		}
 		nodeCerts, err = cert.GenerateCert(
@@ -208,20 +204,20 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 			path.Join(labCADir, certInput.Name),
 		)
 		if err != nil {
-			log.Errorf("failed to generate certificates for node %s: %v", s.cfg.ShortName, err)
+			log.Errorf("failed to generate certificates for node %s: %v", s.Cfg.ShortName, err)
 		}
-		log.Debugf("%s CSR: %s", s.cfg.ShortName, string(nodeCerts.Csr))
-		log.Debugf("%s Cert: %s", s.cfg.ShortName, string(nodeCerts.Cert))
-		log.Debugf("%s Key: %s", s.cfg.ShortName, string(nodeCerts.Key))
+		log.Debugf("%s CSR: %s", s.Cfg.ShortName, string(nodeCerts.Csr))
+		log.Debugf("%s Cert: %s", s.Cfg.ShortName, string(nodeCerts.Cert))
+		log.Debugf("%s Key: %s", s.Cfg.ShortName, string(nodeCerts.Key))
 	}
-	s.cfg.TLSCert = string(nodeCerts.Cert)
-	s.cfg.TLSKey = string(nodeCerts.Key)
+	s.Cfg.TLSCert = string(nodeCerts.Cert)
+	s.Cfg.TLSKey = string(nodeCerts.Key)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
-	if s.cfg.Extras != nil && len(s.cfg.Extras.SRLAgents) != 0 {
-		agents := s.cfg.Extras.SRLAgents
+	if s.Cfg.Extras != nil && len(s.Cfg.Extras.SRLAgents) != 0 {
+		agents := s.Cfg.Extras.SRLAgents
 
-		appmgr := filepath.Join(s.cfg.LabDir, "config", "appmgr")
+		appmgr := filepath.Join(s.Cfg.LabDir, "config", "appmgr")
 
 		utils.CreateDirectory(appmgr, 0777)
 
@@ -235,9 +231,9 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	}
 
 	// mount authorized_keys file to enable passwordless login
-	authzKeysPath := filepath.Join(filepath.Dir(s.cfg.LabDir), "authorized_keys")
+	authzKeysPath := filepath.Join(filepath.Dir(s.Cfg.LabDir), "authorized_keys")
 	if utils.FileExists(authzKeysPath) {
-		s.cfg.Binds = append(s.cfg.Binds,
+		s.Cfg.Binds = append(s.Cfg.Binds,
 			fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"),
 			fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"),
 			fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"),
@@ -247,21 +243,12 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	return s.createSRLFiles()
 }
 
-func (s *srl) Deploy(ctx context.Context) error {
-	cID, err := s.runtime.CreateContainer(ctx, s.cfg)
-	if err != nil {
-		return err
-	}
-	_, err = s.runtime.StartContainer(ctx, cID, s.cfg)
-	return err
-}
-
 func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
-	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.cfg.ShortName)
+	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
 	// Populate /etc/hosts for service discovery on mgmt interface
 	if err := s.populateHosts(ctx, nodes); err != nil {
-		log.Warnf("Unable to populate hosts for node %q: %v", s.cfg.ShortName, err)
+		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
 	}
 
 	// start waiting for initial commit and mgmt server ready
@@ -272,7 +259,7 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 	// return if config file is found in the lab directory.
 	// This can be either if the startup-config has been mounted by that path
 	// or the config has been previously generated and saved
-	if utils.FileExists(filepath.Join(s.cfg.LabDir, "config", "config.json")) {
+	if utils.FileExists(filepath.Join(s.Cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
 
@@ -283,31 +270,17 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 	return s.addOverlayCLIConfig(ctx)
 }
 
-func (s *srl) GetImages() map[string]string {
-	return map[string]string{
-		nodes.ImageKey: s.cfg.Image,
-	}
-}
-
-func (*srl) WithMgmtNet(*types.MgmtNet)               {}
-func (s *srl) WithRuntime(r runtime.ContainerRuntime) { s.runtime = r }
-func (s *srl) GetRuntime() runtime.ContainerRuntime   { return s.runtime }
-
-func (s *srl) Delete(ctx context.Context) error {
-	return s.runtime.DeleteContainer(ctx, s.cfg.LongName)
-}
-
 func (s *srl) SaveConfig(ctx context.Context) error {
-	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, saveCmd)
+	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, saveCmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", s.cfg.ShortName, err)
+		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
 	}
 
 	if len(stderr) > 0 {
-		return fmt.Errorf("%s errors: %s", s.cfg.ShortName, string(stderr))
+		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, string(stderr))
 	}
 
-	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", s.cfg.ShortName, string(stdout))
+	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", s.Cfg.ShortName, string(stdout))
 
 	return nil
 }
@@ -320,14 +293,14 @@ func (s *srl) Ready(ctx context.Context) error {
 	var stdout, stderr []byte
 	var err error
 
-	log.Debugf("Waiting for SR Linux node %q to boot...", s.cfg.ShortName)
+	log.Debugf("Waiting for SR Linux node %q to boot...", s.Cfg.ShortName)
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", s.cfg.ShortName, err)
+			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", s.Cfg.ShortName, err)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.cfg.LongName, mgmtServerRdyCmd)
+			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.Cfg.LongName, mgmtServerRdyCmd)
 			if err != nil {
 				time.Sleep(retryTimer)
 				continue
@@ -346,7 +319,7 @@ func (s *srl) Ready(ctx context.Context) error {
 
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
-			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.cfg.LongName, readyForConfigCmd)
+			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.Cfg.LongName, readyForConfigCmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
@@ -365,7 +338,7 @@ func (s *srl) Ready(ctx context.Context) error {
 				continue
 			}
 
-			log.Debugf("Node %s is ready to accept configs", s.cfg.ShortName)
+			log.Debugf("Node %s is ready to accept configs", s.Cfg.ShortName)
 
 			return nil
 		}
@@ -373,14 +346,14 @@ func (s *srl) Ready(ctx context.Context) error {
 }
 
 func (s *srl) createSRLFiles() error {
-	log.Debugf("Creating directory structure for SRL container: %s", s.cfg.ShortName)
+	log.Debugf("Creating directory structure for SRL container: %s", s.Cfg.ShortName)
 	var src string
 	var dst string
 
-	if s.cfg.License != "" {
+	if s.Cfg.License != "" {
 		// copy license file to node specific directory in lab
-		src = s.cfg.License
-		dst = filepath.Join(s.cfg.LabDir, "license.key")
+		src = s.Cfg.License
+		dst = filepath.Join(s.Cfg.LabDir, "license.key")
 		if err := utils.CopyFile(src, dst, 0644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
 		}
@@ -388,22 +361,22 @@ func (s *srl) createSRLFiles() error {
 	}
 
 	// generate SRL topology file, including base MAC
-	err := generateSRLTopologyFile(s.cfg)
+	err := generateSRLTopologyFile(s.Cfg)
 	if err != nil {
 		return err
 	}
 
-	utils.CreateDirectory(path.Join(s.cfg.LabDir, "config"), 0777)
+	utils.CreateDirectory(path.Join(s.Cfg.LabDir, "config"), 0777)
 
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
-	if s.cfg.StartupConfig != "" {
-		dst = filepath.Join(s.cfg.LabDir, "config", "config.json")
+	if s.Cfg.StartupConfig != "" {
+		dst = filepath.Join(s.Cfg.LabDir, "config", "config.json")
 
-		log.Debugf("Reading startup-config %s", s.cfg.StartupConfig)
+		log.Debugf("Reading startup-config %s", s.Cfg.StartupConfig)
 
-		c, err := os.ReadFile(s.cfg.StartupConfig)
+		c, err := os.ReadFile(s.Cfg.StartupConfig)
 		if err != nil {
 			return err
 		}
@@ -415,7 +388,7 @@ func (s *srl) createSRLFiles() error {
 		isJSON := len(x) > 0 && x[0] == '{'
 		if !isJSON {
 			log.Debugf("startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
-				s.cfg.ShortName)
+				s.Cfg.ShortName)
 
 			s.startupCliCfg = c
 
@@ -426,16 +399,14 @@ func (s *srl) createSRLFiles() error {
 
 		cfgTemplate := string(c)
 
-		err = s.cfg.GenerateConfig(dst, cfgTemplate)
+		err = s.Cfg.GenerateConfig(dst, cfgTemplate)
 		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", s.cfg.ShortName, err)
+			log.Errorf("node=%s, failed to generate config: %v", s.Cfg.ShortName, err)
 		}
 	}
 
 	return err
 }
-
-//
 
 func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
@@ -473,7 +444,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		*types.NodeConfig
 		Banner string
 	}{
-		s.cfg,
+		s.Cfg,
 		b,
 	}
 
@@ -483,8 +454,8 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("Node %q additional config:\n%s", s.cfg.ShortName, buf.String())
-	_, _, err = s.runtime.Exec(ctx, s.cfg.LongName, []string{
+	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
+	_, _, err = s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
 		"bash",
 		"-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
@@ -494,7 +465,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
 		"bash",
 		"-c",
 		"sr_cli -ed < tmp/clab-config",
@@ -503,7 +474,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, stdout, stderr)
 
 	return nil
 }
@@ -512,8 +483,8 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	cfgStr := string(s.startupCliCfg)
 
-	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.cfg.ShortName, s.cfg.StartupConfig, cfgStr)
-	_, _, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
+	_, _, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
 		"bash",
 		"-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
@@ -522,7 +493,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return err
 	}
 
-	stdout, stderr, err := s.runtime.Exec(ctx, s.cfg.LongName, []string{
+	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
 		"bash",
 		"-c",
 		"sr_cli -ed --post 'commit save' < tmp/clab-config",
@@ -535,7 +506,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, stderr)
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.cfg.ShortName, stdout, stderr)
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, stdout, stderr)
 
 	return nil
 }
@@ -544,9 +515,9 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
 func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
-	hosts, err := s.runtime.GetHostsPath(ctx, s.cfg.LongName)
+	hosts, err := s.Runtime.GetHostsPath(ctx, s.Cfg.LongName)
 	if err != nil {
-		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
+		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.Cfg.ShortName, err)
 		return err
 	}
 	var entriesv4, entriesv6 bytes.Buffer
@@ -571,7 +542,7 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666) // skipcq: GSC-G302
 	if err != nil {
-		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.cfg.ShortName, err)
+		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", s.Cfg.ShortName, err)
 		return err
 	}
 

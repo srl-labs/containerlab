@@ -18,6 +18,8 @@ import (
 	_ "github.com/srl-labs/containerlab/nodes/all"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
+	"github.com/srl-labs/containerlab/runtime/docker"
+	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -64,7 +66,7 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 		case envN != "":
 			name = envN
 		default:
-			name = runtime.DockerRuntime
+			name = docker.RuntimeName
 		}
 		c.globalRuntime = name
 
@@ -213,7 +215,7 @@ func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm DependencyMa
 	// iterate through the nodes
 	for _, n := range nodeMap {
 		// find nodes that should run with IgniteRuntime
-		if n.GetRuntime().GetName() == runtime.IgniteRuntime {
+		if n.GetRuntime().GetName() == ignite.RuntimeName {
 			if prevIgniteNode != nil {
 				// add a dependency to the previously found ignite node
 				dm.AddDependency(n.Config().ShortName, prevIgniteNode.Config().ShortName)
