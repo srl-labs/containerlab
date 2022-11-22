@@ -503,8 +503,8 @@ func (c *CLab) verifyStartupConfigFilesExist() error {
 	return nil
 }
 
-// VerifyImages will check if image referred in the node config
-// either pullable or is available in the local image store.
+// VerifyImages will check if the image referenced in the node config
+// either pullable or available in the local image store.
 func (c *CLab) VerifyImages(ctx context.Context) error {
 	images := make(map[string]string)
 
