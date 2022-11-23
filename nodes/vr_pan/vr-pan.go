@@ -6,6 +6,9 @@ package vr_pan
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/nodes"
@@ -18,6 +21,9 @@ var kindnames = []string{"vr-pan", "vr-paloalto_panos"}
 const (
 	defaultUser     = "admin"
 	defaultPassword = "Admin@123"
+
+	configDirName   = "config"
+	startupCfgFName = "startup-config.cfg"
 )
 
 func init() {
@@ -51,6 +57,9 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
 
+	// mount config dir to support startup-config functionality
+	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, configDirName), ":/config"))
+
 	if s.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
 		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
@@ -67,5 +76,28 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrPan) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	return loadStartupConfigFile(s.Cfg)
+}
+
+func loadStartupConfigFile(node *types.NodeConfig) error {
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
+
+	if node.StartupConfig != "" {
+		// dstCfg is a path to a file on the clab host that will have rendered configuration
+		dstCfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
+
+		c, err := os.ReadFile(node.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(dstCfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
+		}
+	}
 	return nil
 }
