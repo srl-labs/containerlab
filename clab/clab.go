@@ -501,6 +501,7 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint) {
 			}
 			c.m.Unlock()
 		}
+		time.Sleep(time.Duration(500) * time.Millisecond)
 	}
 
 	// close channel to terminate the workers
