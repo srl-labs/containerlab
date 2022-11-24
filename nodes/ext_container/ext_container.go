@@ -33,6 +33,7 @@ func (s *extcont) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	return nil
 }
+
 func (e *extcont) Deploy(ctx context.Context) error {
 	// check for the external dependency to be running
 	err := runtime.TimeoutWaitForContainerRunning(ctx, e.Runtime, e.Cfg.ShortName, e.Cfg.ShortName)
@@ -52,10 +53,10 @@ func (e *extcont) Deploy(ctx context.Context) error {
 	return nil
 }
 
-// Delete we will not mess with external containers on delete
+// Delete we will not mess with external containers on delete.
 func (e *extcont) Delete(ctx context.Context) error {
 	return nil
 }
 
-// GetImages don't matter for external containers
+// GetImages don't matter for external containers.
 func (e *extcont) GetImages() map[string]string { return map[string]string{} }

@@ -116,7 +116,8 @@ func TimeoutWaitForContainerRunning(ctx context.Context, r ContainerRuntime, con
 	// startTime is used to calculate elapsed waiting time
 	startTime := time.Now()
 
-	resultErr := fmt.Errorf("node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now", nodeName, time.Since(startTime), contName)
+	resultErr := fmt.Errorf("node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now",
+		nodeName, time.Since(startTime), contName)
 
 TIMEOUT_LOOP:
 	for {
