@@ -6,7 +6,7 @@ search:
 
 Palo Alto PA-VM virtualized firewall is identified with `vr-pan` or `vr-paloalto_panos` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen/) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-pan nodes launched with containerlab comes up pre-provisioned with SSH, and HTTPS services enabled.
+vr-pan nodes launched with containerlab come up pre-provisioned with SSH, and HTTPS services enabled.
 
 ## Managing vr-pan nodes
 
@@ -33,6 +33,7 @@ Palo Alto PA-VM node launched with containerlab can be managed via the following
     Default user credentials: `admin:Admin@123`
 
 ## Interfaces mapping
+
 vr-pan container supports up to 24 interfaces (plus mgmt) and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
@@ -41,12 +42,26 @@ vr-pan container supports up to 24 interfaces (plus mgmt) and uses the following
 
 When containerlab launches vr-pan node, it will assign IPv4/6 address to the `mgmt` interface. These addresses can be used to reach management plane of the router.
 
-Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
+Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
 
 !!!info
     Interfaces will *not* show up in the cli (`show interfaces all`) until some configuration is made to the interface!
 
-
 ## Features and options
+
 ### Node configuration
+
 vr-pan nodes come up with a basic configuration where only `admin` user and management interface is provisioned.
+
+### User defined config
+
+It is possible to make `vr-pan` nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
+
+```yaml
+name: lab
+topology:
+  nodes:
+    ceos:
+      kind: vr-paloalto_panos
+      startup-config: myconfig.conf
+```
