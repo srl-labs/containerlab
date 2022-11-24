@@ -56,6 +56,12 @@ func (d *DefaultNode) GetRuntimeInformation(ctx context.Context) ([]types.Generi
 		return nil, err
 	}
 
+	// if we did not get any generic container back, return early
+	if len(genericContainer) == 0 {
+		return genericContainer, nil
+	}
+
+	// populate ip information
 	gcNwSettings := genericContainer[0].NetworkSettings
 	if gcNwSettings != (types.GenericMgmtIPs{}) {
 		d.Cfg.MgmtIPv4Address = gcNwSettings.IPv4addr

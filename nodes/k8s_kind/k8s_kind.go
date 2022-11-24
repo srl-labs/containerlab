@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -79,16 +80,6 @@ func (k *k8s_kind) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// retrieve the cluster nodes
-	nodes, err := kindProvider.ListNodes(k.Cfg.ShortName)
-	if err != nil {
-		return err
-	}
-
-	for _, node := range nodes {
-		fmt.Println(node.String())
-	}
-
 	return err
 }
 
@@ -110,6 +101,8 @@ func (k *k8s_kind) GetRuntimeInformation(ctx context.Context) ([]types.GenericCo
 		for key, v := range k.Cfg.Labels {
 			cnt.Labels[key] = v
 		}
+		// we need to overwrite the nodename label
+		k.Cfg.Labels["clab-node-name"] = strings.TrimLeft(cnt.Names[0], "/")
 	}
 	return containeList, nil
 }

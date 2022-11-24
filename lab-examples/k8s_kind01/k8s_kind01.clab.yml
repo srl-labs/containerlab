@@ -1,10 +1,5 @@
 name: k8s_kind01
 
-mgmt:
-  network: br-k8s1
-  ipv4_subnet: 172.100.100.0/24
-  ipv6_subnet: 2001:172:100:100::0/64
-
 topology:
   kinds:
     srl:
@@ -13,20 +8,33 @@ topology:
   nodes:
     srl01:
       kind: srl
-    srl02:
-      kind: srl
-      mgmt_ipv4: 172.100.100.2
-      mgmt_ipv6: 2001:172:100:100::2
     k01:
       kind: k8s-kind
       startup-config: k01-config.yaml
     k02:
       kind: k8s-kind
-    #k01-control-plane:
-    #  kind: ext-container
-    #k01-worker:
-    #  kind: ext-container
+
+    # k01 -> resulting nodes due to startup-config assigned config `k01-config.yaml`
+    k01-control-plane:
+      kind: ext-container
+      #exec: 
+      #  - "ip a del dev eth1"
+      #  - "ip a add dev eth1 192.168.2.1/24"
+    k01-worker:
+      kind: ext-container
+      #exec: 
+      #  - "ip a del dev eth1"
+      #  - "ip a add dev eth1 192.168.2.2/24"
+
+    # k02 -> default kind cluster with just single node 
+    k02-control-plane:
+      kind: ext-container
+
   links: 
-    - endpoints: ["srl01:e1-1", "srl02:e1-1"]
-    - endpoints: ["srl01:e1-2", "srl02:e1-2"]
+    - endpoints: ["srl01:e1-1", "k01-control-plane:eth1"]
+    - endpoints: ["srl01:e1-2", "k01-worker:eth1"]
+    - endpoints: ["srl01:e1-4", "k02-control-plane:eth1"]
+
+    - endpoints: ["srl01:e1-10", "k01-control-plane:eth2"]
+    - endpoints: ["srl01:e1-11", "k02-control-plane:eth2"]
 
