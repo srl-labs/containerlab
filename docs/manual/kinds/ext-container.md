@@ -37,3 +37,8 @@ topology:
 This configuration will start an SRLinux node with the name of "srl" as a containerlab managed container.
 Further it defines two additional nodes (node1 and node2) of type `ext-container`. These containers will not be created by containerlab.
 It will try to find these nodes in the runtime and add the links as defined in the links section of the configuration.
+
+## Enabled node parameters
+With k8s-kind nodes it is possible to use the following configuration parameters:
+
+* [exec](../nodes.md#exec) - to execute commands within the external container as part of the deployment

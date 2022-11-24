@@ -51,3 +51,11 @@ func (e *extcont) Deploy(ctx context.Context) error {
 	e.Cfg.DeploymentStatus = "created"
 	return nil
 }
+
+// Delete we will not mess with external containers on delete
+func (e *extcont) Delete(ctx context.Context) error {
+	return nil
+}
+
+// GetImages don't matter for external containers
+func (e *extcont) GetImages() map[string]string { return map[string]string{} }
