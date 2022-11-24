@@ -34,7 +34,7 @@ func (s *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (*host) Deploy(_ context.Context) error { return nil }
 func (*host) GetImages() map[string]string   { return map[string]string{} }
 func (*host) Delete(_ context.Context) error { return nil }
-func (*host) WithMgmtNet(*types.MgmtNet)     { return }
+func (*host) WithMgmtNet(*types.MgmtNet)     {}
 
 func (h *host) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
 	// we skip the enrichment of network information

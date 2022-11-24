@@ -203,12 +203,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 	log.Debug("containers created, retrieving state and IP addresses...")
 
-	// Building list of generic containers
-	containers, err := c.ListContainersClabNodes(ctx)
-	if err != nil {
-		return err
-	}
-
 	if err := c.GenerateInventories(); err != nil {
 		return err
 	}
@@ -234,7 +228,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// Update containers after postDeploy action
-	containers, err = c.ListContainersClabNodes(ctx)
+	containers, err := c.ListContainersClabNodes(ctx)
 	if err != nil {
 		return err
 	}
