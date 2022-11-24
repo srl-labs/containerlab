@@ -81,20 +81,28 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var glabels []*types.GenericFilter
-	if all {
-		glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
-	} else {
-		if name != "" {
-			glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
-		} else if topo != "" {
-			glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-		}
-	}
+	var containers []types.GenericContainer
 
-	containers, err := c.ListContainers(ctx, glabels)
-	if err != nil {
-		return fmt.Errorf("failed to list containers: %s", err)
+	// if the topo file is availabel, use it
+	if topo != "" {
+		containers, err = c.ListContainersClabNodes(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list containers: %s", err)
+		}
+	} else {
+		var glabels []*types.GenericFilter
+		// or when just the name is given
+		if name != "" {
+			// if name is set, filter for name
+			glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
+		} else {
+			// this is the --all case
+			glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
+		}
+		containers, err = c.ListContainersFilter(ctx, glabels)
+		if err != nil {
+			return fmt.Errorf("failed to list containers: %s", err)
+		}
 	}
 
 	if len(containers) == 0 {

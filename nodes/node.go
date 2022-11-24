@@ -70,6 +70,8 @@ type Node interface {
 	Delete(context.Context) error
 	GetImages() map[string]string
 	GetRuntime() runtime.ContainerRuntime
+	GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error)
+	DeleteNetnsSymlink() (err error)
 }
 
 type Initializer func() Node

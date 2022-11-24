@@ -634,29 +634,11 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			NetworkSettings: types.GenericMgmtIPs{},
 		}
 
-		bridgeName := d.mgmt.Network
-
-		// if bridgeName is empty, try to find a network created by clab that the container is connected to
-		if bridgeName == "" && inputNetworkResources != nil {
-			for idx := range inputNetworkResources {
-				nr := inputNetworkResources[idx]
-
-				if _, ok := i.NetworkSettings.Networks[nr.Name]; ok {
-					bridgeName = nr.Name
-					break
-				}
-			}
-		}
-
-		// if by now we failed to find a docker network name using the network resources created by docker
-		// we take whatever the first network is listed in the original container network settings
-		// this is to derive the network name if the network is not created by clab
-		if bridgeName == "" {
-			// only if there is a single network associated with the container
-			if len(i.NetworkSettings.Networks) == 1 {
-				for n := range i.NetworkSettings.Networks {
-					bridgeName = n
-				}
+		var bridgeName string
+		// only if there is a single network associated with the container
+		if len(i.NetworkSettings.Networks) == 1 {
+			for n := range i.NetworkSettings.Networks {
+				bridgeName = n
 			}
 		}
 

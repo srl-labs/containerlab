@@ -260,7 +260,7 @@ type GenericMgmtIPs struct {
 }
 
 type GenericFilter struct {
-	// defined by now "label"
+	// defined by now "label" / "name" [then only Match is required]
 	FilterType string
 	// defines e.g. the label name for FilterType "label"
 	Field string

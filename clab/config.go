@@ -532,7 +532,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	containers, err := c.ListContainers(nctx, nil)
+	containers, err := c.ListContainersFilter(nctx, nil)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ import (
 	_ "github.com/srl-labs/containerlab/nodes/ext_container"
 	_ "github.com/srl-labs/containerlab/nodes/host"
 	_ "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
+	_ "github.com/srl-labs/containerlab/nodes/k8s_kind"
 	_ "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	_ "github.com/srl-labs/containerlab/nodes/linux"
 	_ "github.com/srl-labs/containerlab/nodes/mysocketio"

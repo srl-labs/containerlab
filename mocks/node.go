@@ -65,6 +65,20 @@ func (mr *MockNodeMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNode)(nil).Delete), arg0)
 }
 
+// DeleteNetnsSymlink mocks base method.
+func (m *MockNode) DeleteNetnsSymlink() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteNetnsSymlink")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteNetnsSymlink indicates an expected call of DeleteNetnsSymlink.
+func (mr *MockNodeMockRecorder) DeleteNetnsSymlink() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNetnsSymlink", reflect.TypeOf((*MockNode)(nil).DeleteNetnsSymlink))
+}
+
 // Deploy mocks base method.
 func (m *MockNode) Deploy(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -105,6 +119,21 @@ func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 func (mr *MockNodeMockRecorder) GetRuntime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockNode)(nil).GetRuntime))
+}
+
+// GetRuntimeInformation mocks base method.
+func (m *MockNode) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRuntimeInformation", ctx)
+	ret0, _ := ret[0].([]types.GenericContainer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRuntimeInformation indicates an expected call of GetRuntimeInformation.
+func (mr *MockNodeMockRecorder) GetRuntimeInformation(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntimeInformation", reflect.TypeOf((*MockNode)(nil).GetRuntimeInformation), ctx)
 }
 
 // Init mocks base method.

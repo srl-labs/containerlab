@@ -6,10 +6,12 @@ package nodes
 
 import (
 	"context"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 type DefaultNode struct {
@@ -46,4 +48,43 @@ func (d *DefaultNode) GetImages() map[string]string {
 	return map[string]string{
 		ImageKey: d.Cfg.Image,
 	}
+}
+
+func (d *DefaultNode) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
+	genericContainer, err := d.GetRuntimeInformationBase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	gcNwSettings := genericContainer[0].NetworkSettings
+	if gcNwSettings != (types.GenericMgmtIPs{}) {
+		d.Cfg.MgmtIPv4Address = gcNwSettings.IPv4addr
+		d.Cfg.MgmtIPv4PrefixLength = gcNwSettings.IPv4pLen
+		d.Cfg.MgmtIPv6Address = gcNwSettings.IPv6addr
+		d.Cfg.MgmtIPv6PrefixLength = gcNwSettings.IPv6pLen
+		d.Cfg.MgmtIPv4Gateway = gcNwSettings.IPv4Gw
+		d.Cfg.MgmtIPv6Gateway = gcNwSettings.IPv6Gw
+	}
+	d.Cfg.ContainerID = genericContainer[0].ID
+
+	return genericContainer, nil
+}
+
+func (d *DefaultNode) GetRuntimeInformationBase(ctx context.Context) ([]types.GenericContainer, error) {
+	return d.Runtime.ListContainers(ctx, []*types.GenericFilter{
+		{
+			FilterType: "name",
+			Match:      fmt.Sprintf("^%s$", d.Cfg.LongName), // this regexp ensure we have an exact match for name
+		},
+	})
+}
+
+// DeleteNetnsSymlink deletes the symlink file created for the container netns.
+func (d *DefaultNode) DeleteNetnsSymlink() (err error) {
+	log.Debugf("Deleting %s network namespace", d.Config().LongName)
+	if err := utils.DeleteNetnsSymlink(d.Config().LongName); err != nil {
+		return err
+	}
+
+	return nil
 }

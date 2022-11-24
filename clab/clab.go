@@ -532,11 +532,26 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	wg.Wait()
 }
 
-func (c *CLab) ListContainers(ctx context.Context, labels []*types.GenericFilter) ([]types.GenericContainer, error) {
+// ListContainersFilter lists all containers based on the GenericFilter supplied
+func (c *CLab) ListContainersFilter(ctx context.Context, labels []*types.GenericFilter) ([]types.GenericContainer, error) {
 	var containers []types.GenericContainer
 
 	for _, r := range c.Runtimes {
 		ctrs, err := r.ListContainers(ctx, labels)
+		if err != nil {
+			return containers, fmt.Errorf("could not list containers: %v", err)
+		}
+		containers = append(containers, ctrs...)
+	}
+	return containers, nil
+}
+
+// ListContainersClabNodes lists all containers based on the nodes stored in the clab instance
+func (c *CLab) ListContainersClabNodes(ctx context.Context) ([]types.GenericContainer, error) {
+	var containers []types.GenericContainer
+
+	for _, n := range c.Nodes {
+		ctrs, err := n.GetRuntimeInformation(ctx)
 		if err != nil {
 			return containers, fmt.Errorf("could not list containers: %v", err)
 		}
