@@ -103,7 +103,8 @@ func WithKeepMgmtNet() RuntimeOption {
 	}
 }
 
-func TimeoutWaitForContainerRunning(ctx context.Context, r ContainerRuntime, contName, nodeName string) error {
+// WaitForContainerRunning waits for container to become running by polling its status.
+func WaitForContainerRunning(ctx context.Context, r ContainerRuntime, contName, nodeName string) error {
 	// how long to wait for the external container to become running
 	statusCheckTimeout := 15 * time.Minute
 	// frequency to check for new container state

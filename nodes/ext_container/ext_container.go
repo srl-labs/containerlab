@@ -36,7 +36,7 @@ func (s *extcont) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (e *extcont) Deploy(ctx context.Context) error {
 	// check for the external dependency to be running
-	err := runtime.TimeoutWaitForContainerRunning(ctx, e.Runtime, e.Cfg.ShortName, e.Cfg.ShortName)
+	err := runtime.WaitForContainerRunning(ctx, e.Runtime, e.Cfg.ShortName, e.Cfg.ShortName)
 	if err != nil {
 		return err
 	}

@@ -417,7 +417,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 		return
 	}
 
-	runtime.TimeoutWaitForContainerRunning(ctx, c.Runtimes[c.globalRuntime], contName, nodeName)
+	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntime], contName, nodeName)
 }
 
 // CreateLinks creates links using the specified number of workers.
