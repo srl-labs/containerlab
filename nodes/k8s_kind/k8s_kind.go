@@ -46,7 +46,7 @@ func (d *k8s_kind) GetImages() map[string]string { return map[string]string{} }
 // DeleteNetnsSymlink kind takes care of the Netlinks itself
 func (d *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
 
-func (k *k8s_kind) Deploy(ctx context.Context) error {
+func (k *k8s_kind) Deploy(_ context.Context) error {
 
 	// create the Provider with the above runtime based options
 	kindProvider, err := k.getProvider()
@@ -106,7 +106,7 @@ func (k *k8s_kind) GetRuntimeInformation(ctx context.Context) ([]types.GenericCo
 	return containeList, nil
 }
 
-func (k *k8s_kind) Delete(ctx context.Context) error {
+func (k *k8s_kind) Delete(_ context.Context) error {
 	// create the Provider with the above runtime based options
 	kindProvider, err := k.getProvider()
 	if err != nil {

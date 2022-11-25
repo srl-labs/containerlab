@@ -90,9 +90,5 @@ func (d *DefaultNode) GetRuntimeInformationBase(ctx context.Context) ([]types.Ge
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
 func (d *DefaultNode) DeleteNetnsSymlink() (err error) {
 	log.Debugf("Deleting %s network namespace", d.Config().LongName)
-	if err := utils.DeleteNetnsSymlink(d.Config().LongName); err != nil {
-		return err
-	}
-
-	return nil
+	return utils.DeleteNetnsSymlink(d.Config().LongName)
 }

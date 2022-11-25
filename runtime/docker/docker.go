@@ -575,7 +575,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 
 		nr = append(nr, bridgenet...)
 	}
-	return d.produceGenericContainerList(ctrs, nr)
+	return d.produceGenericContainerList(ctrs)
 }
 
 func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.GenericContainer, error) {
@@ -615,9 +615,7 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 }
 
 // Transform docker-specific to generic container format.
-func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container,
-	inputNetworkResources []dockerTypes.NetworkResource,
-) ([]types.GenericContainer, error) {
+func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for idx := range inputContainers {

@@ -247,7 +247,7 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node, nodes
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := s.populateHosts(ctx, nodes, nodesRuntimeInfo); err != nil {
+	if err := s.populateHosts(ctx, nodesRuntimeInfo); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
 	}
 
@@ -514,7 +514,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node, nodesRuntimeInfos []types.GenericContainer) error {
+func (s *srl) populateHosts(ctx context.Context, nodesRuntimeInfos []types.GenericContainer) error {
 	hosts, err := s.Runtime.GetHostsPath(ctx, s.Cfg.LongName)
 	if err != nil {
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.Cfg.ShortName, err)
