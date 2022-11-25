@@ -51,5 +51,3 @@ topology:
       exec:
         - ip address add 192.168.0.1/24 dev eth1
 ```
-
-Other node configuration options like `
