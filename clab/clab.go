@@ -30,10 +30,10 @@ type CLab struct {
 	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
 	Links         map[int]*types.Link                 `json:"links,omitempty"`
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
-	globalRuntime string                              `json:"global-runtime,omitempty"`
-	Dir           *Directory                          `json:"dir,omitempty"`
+	globalRuntime string
+	Dir           *Directory `json:"dir,omitempty"`
 
-	timeout time.Duration `json:"timeout,omitempty"`
+	timeout time.Duration
 }
 
 type Directory struct {
@@ -417,40 +417,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 		return
 	}
 
-	// how long to wait for the external container to become running
-	statusCheckTimeout := 15 * time.Minute
-	// frequency to check for new container state
-	statusCheckFrequency := time.Second
-
-	// setup a ticker
-	ticker := time.NewTicker(statusCheckFrequency)
-	// timeout sets the specified timeout
-	timeout := time.After(statusCheckTimeout)
-	// startTime is used to calculate elapsed waiting time
-	startTime := time.Now()
-
-TIMEOUT_LOOP:
-	for {
-		select {
-		case <-ticker.C:
-			runtimeStatus := c.Runtimes[c.globalRuntime].GetContainerStatus(ctx, contName)
-
-			// if the dependency container is running we are allowed to schedule the node
-			if runtimeStatus == runtime.Running {
-				log.Infof("node %q starts since external container %q is running now", nodeName, contName)
-				break TIMEOUT_LOOP
-			}
-
-			// if not, log and retry
-			log.Infof("node %q depends on external container %q, which is not running yet. Waited %s. Retrying...",
-				nodeName, contName, time.Since(startTime).Truncate(time.Second))
-
-		case <-timeout:
-			log.Errorf("node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now",
-				nodeName, time.Since(startTime), contName)
-			break TIMEOUT_LOOP
-		}
-	}
+	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntime], contName, nodeName)
 }
 
 // CreateLinks creates links using the specified number of workers.

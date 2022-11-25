@@ -31,6 +31,7 @@ nav:
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
           - Openvswitch bridge: manual/kinds/ovs-bridge.md
+          - External container: manual/kinds/ext-container.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md

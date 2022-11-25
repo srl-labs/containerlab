@@ -6,8 +6,10 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -99,4 +101,47 @@ func WithKeepMgmtNet() RuntimeOption {
 	return func(r ContainerRuntime) {
 		r.WithKeepMgmtNet()
 	}
+}
+
+// WaitForContainerRunning waits for container to become running by polling its status.
+func WaitForContainerRunning(ctx context.Context, r ContainerRuntime, contName, nodeName string) error {
+	// how long to wait for the external container to become running
+	statusCheckTimeout := 15 * time.Minute
+	// frequency to check for new container state
+	statusCheckFrequency := time.Second
+
+	// setup a ticker
+	ticker := time.NewTicker(statusCheckFrequency)
+	// timeout sets the specified timeout
+	timeout := time.After(statusCheckTimeout)
+	// startTime is used to calculate elapsed waiting time
+	startTime := time.Now()
+
+	resultErr := fmt.Errorf("node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now",
+		nodeName, time.Since(startTime), contName)
+
+TIMEOUT_LOOP:
+	for {
+		select {
+		case <-ticker.C:
+			runtimeStatus := r.GetContainerStatus(ctx, contName)
+
+			// if the dependency container is running we are allowed to schedule the node
+			if runtimeStatus == Running {
+				// reset resultErr to nil
+				resultErr = nil
+				break TIMEOUT_LOOP
+			}
+
+			// if not, log and retry
+			log.Infof("node %q depends on external container %q, which is not running yet. Waited %s. Retrying...",
+				nodeName, contName, time.Since(startTime).Truncate(time.Second))
+
+		case <-timeout:
+			log.Errorf("node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now",
+				nodeName, time.Since(startTime), contName)
+			break TIMEOUT_LOOP
+		}
+	}
+	return resultErr
 }

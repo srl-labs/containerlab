@@ -65,7 +65,8 @@
                         "host",
                         "keysight_ixia-c-one",
                         "ipinfusion_ocnos",
-                        "checkpoint_cloudguard"
+                        "checkpoint_cloudguard",
+                        "ext-container"
                     ]
                 },
                 "license": {
@@ -540,6 +541,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "checkpoint_cloudguard": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "ext-container": {
                             "$ref": "#/definitions/node-config"
                         }
                     }
