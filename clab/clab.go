@@ -468,6 +468,9 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint) {
 			}
 			c.m.Unlock()
 		}
+
+		// prevent clab from throttle CPU when nodes take considerable time to start
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	// close channel to terminate the workers
