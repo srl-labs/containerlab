@@ -165,7 +165,7 @@ func printContainerInspect(containers []types.GenericContainer, format string) e
 		cdet.ContainerID = cont.ShortID
 
 		if len(cont.Names) > 0 {
-			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
+			cdet.Name = cont.Names[0]
 		}
 		if kind, ok := cont.Labels["clab-node-kind"]; ok {
 			cdet.Kind = kind

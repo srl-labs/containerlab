@@ -91,7 +91,7 @@ var execCmd = &cobra.Command{
 				return err
 			}
 
-			contName := strings.TrimLeft(cont.Names[0], "/")
+			contName := cont.Names[0]
 			if jsonResult[contName], err = execCmds(
 				ctx, cont, nodeRuntime, []string{execCommand}, execFormat,
 			); err != nil {
@@ -141,7 +141,7 @@ func execCmds(
 			}
 			result[cmd]["stderr"] = string(stderr)
 		case "plain", "table":
-			contName := strings.TrimLeft(cont.Names[0], "/")
+			contName := cont.Names[0]
 			if len(stdout) > 0 {
 				log.Infof("Executed command '%s' on %s. stdout:\n%s", cmd, contName, string(stdout))
 			}

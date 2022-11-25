@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -102,7 +101,7 @@ func (k *k8s_kind) GetRuntimeInformation(ctx context.Context) ([]types.GenericCo
 			cnt.Labels[key] = v
 		}
 		// we need to overwrite the nodename label
-		k.Cfg.Labels["clab-node-name"] = strings.TrimLeft(cnt.Names[0], "/")
+		k.Cfg.Labels["clab-node-name"] = cnt.Names[0]
 	}
 	return containeList, nil
 }

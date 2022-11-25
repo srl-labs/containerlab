@@ -156,31 +156,31 @@ func (mr *MockNodeMockRecorder) Init(arg0 interface{}, arg1 ...interface{}) *gom
 }
 
 // PostDeploy mocks base method.
-func (m *MockNode) PostDeploy(arg0 context.Context, arg1 map[string]nodes.Node) error {
+func (m *MockNode) PostDeploy(arg0 context.Context, arg1 map[string]nodes.Node, arg2 []types.GenericContainer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostDeploy", arg0, arg1)
+	ret := m.ctrl.Call(m, "PostDeploy", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PostDeploy indicates an expected call of PostDeploy.
-func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1, arg2)
 }
 
 // PreDeploy mocks base method.
-func (m *MockNode) PreDeploy(configName, labCADir, labCARoot string) error {
+func (m *MockNode) PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreDeploy", configName, labCADir, labCARoot)
+	ret := m.ctrl.Call(m, "PreDeploy", ctx, configName, labCADir, labCARoot)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PreDeploy indicates an expected call of PreDeploy.
-func (mr *MockNodeMockRecorder) PreDeploy(configName, labCADir, labCARoot interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), configName, labCADir, labCARoot)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, configName, labCADir, labCARoot)
 }
 
 // SaveConfig mocks base method.

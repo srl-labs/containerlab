@@ -79,7 +79,7 @@ func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrXRV9K) PreDeploy(_, _, _ string) error {
+func (s *vrXRV9K) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return loadStartupConfigFile(s.Cfg)
 }

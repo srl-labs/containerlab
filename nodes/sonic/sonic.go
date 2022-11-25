@@ -37,12 +37,12 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *sonic) PreDeploy(_, _, _ string) error {
+func (s *sonic) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nil
 }
 
-func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
 	err := s.Runtime.ExecNotWait(ctx, s.Cfg.ContainerID, []string{"supervisord"})

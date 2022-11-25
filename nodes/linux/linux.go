@@ -56,7 +56,7 @@ func (l *linux) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", l.Cfg.ShortName)
 	if err := types.DisableTxOffload(l.Cfg); err != nil {
 		return err

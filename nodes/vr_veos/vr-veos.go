@@ -73,7 +73,7 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrVEOS) PreDeploy(_, _, _ string) error {
+func (s *vrVEOS) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return loadStartupConfigFile(s.Cfg)
 }

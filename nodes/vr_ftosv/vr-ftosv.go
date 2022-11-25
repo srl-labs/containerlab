@@ -5,6 +5,7 @@
 package vr_ftosv
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -71,7 +72,7 @@ func (s *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrFtosv) PreDeploy(_, _, _ string) error {
+func (s *vrFtosv) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return loadStartupConfigFile(s.Cfg)
 }

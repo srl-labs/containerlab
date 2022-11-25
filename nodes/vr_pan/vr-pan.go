@@ -5,6 +5,7 @@
 package vr_pan
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -74,7 +75,7 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrPan) PreDeploy(_, _, _ string) error {
+func (s *vrPan) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return loadStartupConfigFile(s.Cfg)
 }

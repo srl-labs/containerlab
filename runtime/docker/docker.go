@@ -623,8 +623,14 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	for idx := range inputContainers {
 		i := inputContainers[idx]
 
+		clean_names := []string{}
+		for _, n := range i.Names {
+			// the docker names seem to always come with a "/" in the first position
+			clean_names = append(clean_names, strings.TrimLeft(n, "/"))
+		}
+
 		ctr := types.GenericContainer{
-			Names:           i.Names,
+			Names:           clean_names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
 			Image:           i.Image,
@@ -737,12 +743,12 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", strings.TrimLeft(cID, "/"))
+	log.Debugf("Removing container: %s", cID)
 	err = d.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force, RemoveVolumes: true})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", strings.TrimLeft(cID, "/"))
+	log.Infof("Removed container: %s", cID)
 	return nil
 }
 

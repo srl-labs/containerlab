@@ -49,7 +49,7 @@ func (*bridge) GetImages() map[string]string   { return map[string]string{} }
 // DeleteNetnsSymlink the bridge is no namespace / container hence there is no Netns Symlink
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
-func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
 	return b.installIPTablesBridgeFwdRule()
 }
 

@@ -59,12 +59,12 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *crpd) PreDeploy(_, _, _ string) error {
+func (s *crpd) PreDeploy(ctx context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return createCRPDFiles(s.Cfg)
 }
 
-func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 	_, stderr, err := s.Runtime.Exec(ctx, s.Cfg.ContainerID, []string{"service", "ssh", "restart"})
 	if err != nil {

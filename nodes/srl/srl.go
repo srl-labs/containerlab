@@ -176,7 +176,7 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	// retrieve node certificates
 	nodeCerts, err := cert.RetrieveNodeCertData(s.Cfg, labCADir)
@@ -243,11 +243,11 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 	return s.createSRLFiles()
 }
 
-func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
+func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node, nodesRuntimeInfo []types.GenericContainer) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := s.populateHosts(ctx, nodes); err != nil {
+	if err := s.populateHosts(ctx, nodes, nodesRuntimeInfo); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
 	}
 
@@ -514,7 +514,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node, nodesRuntimeInfos []types.GenericContainer) error {
 	hosts, err := s.Runtime.GetHostsPath(ctx, s.Cfg.LongName)
 	if err != nil {
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.Cfg.ShortName, err)
@@ -529,14 +529,17 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	)
 	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
 	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
-	for node, params := range nodes {
-		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
-			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
+
+	for _, nodeRuntimeInfo := range nodesRuntimeInfos {
+		if v4 := nodeRuntimeInfo.NetworkSettings.IPv4addr; v4 != "" {
+			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, nodeRuntimeInfo.Names[0])
 		}
-		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
-			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
+		if v6 := nodeRuntimeInfo.NetworkSettings.IPv6addr; v6 != "" {
+			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, nodeRuntimeInfo.Names[0])
 		}
+
 	}
+
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 

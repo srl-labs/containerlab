@@ -11,7 +11,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	cfssllog "github.com/cloudflare/cfssl/log"
@@ -215,10 +214,16 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		wg := &sync.WaitGroup{}
 		wg.Add(len(c.Nodes))
 
+		// retrieve information about all the created containers
+		nodesRuntimeInfos, err := c.ListContainersClabNodes(ctx)
+		if err != nil {
+			return err
+		}
+
 		for _, node := range c.Nodes {
 			go func(node nodes.Node, wg *sync.WaitGroup) {
 				defer wg.Done()
-				err := node.PostDeploy(ctx, c.Nodes)
+				err := node.PostDeploy(ctx, c.Nodes, nodesRuntimeInfos)
 				if err != nil {
 					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
 				}
@@ -254,7 +259,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		name := cont.Labels[clab.NodeNameLabel]
 		if node, ok := c.Nodes[name]; ok && (len(node.Config().Exec) > 0) {
 			rt := node.GetRuntime()
-			contName := strings.TrimLeft(cont.Names[0], "/")
+			contName := cont.Names[0]
 			if execJSONResult[contName], err = execCmds(ctx, cont, rt,
 				node.Config().Exec, format); err != nil {
 				log.Errorf("Failed to exec commands for node %s", name)

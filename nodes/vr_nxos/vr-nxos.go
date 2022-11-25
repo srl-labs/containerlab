@@ -5,6 +5,7 @@
 package vr_nxos
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -66,7 +67,7 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrNXOS) PreDeploy(_, _, _ string) error {
+func (s *vrNXOS) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return loadStartupConfigFile(s.Cfg)
 }

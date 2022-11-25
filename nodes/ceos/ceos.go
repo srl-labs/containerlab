@@ -92,14 +92,14 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *ceos) PreDeploy(_, _, _ string) error {
+func (n *ceos) PreDeploy(_ context.Context, _ string, _ string, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return n.createCEOSFiles()
 }
 
-func (n *ceos) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
-	return n.ceosPostDeploy()
+	return n.ceosPostDeploy(ctx)
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
@@ -124,12 +124,6 @@ func (n *ceos) createCEOSFiles() error {
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0777)
 	cfg := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
 	nodeCfg.ResStartupConfig = cfg
-
-	// set mgmt ipv4 gateway as it is already known by now
-	// since the container network has been created before we launch nodes
-	// and mgmt gateway can be used in ceos.Cfg template to configure default route for mgmt
-	nodeCfg.MgmtIPv4Gateway = n.Runtime.Mgmt().IPv4Gw
-	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
 
 	// set the mgmt interface name for the node
 	err := setMgmtInterface(nodeCfg)
@@ -225,7 +219,7 @@ func setMgmtInterface(node *types.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy() error {
+func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	nodeCfg := n.Config()
 	d, err := utils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
 	if err != nil {
@@ -240,17 +234,27 @@ func (n *ceos) ceosPostDeploy() error {
 		"no ipv6 address",
 	}
 
+	// retrieve runtime information to fill mgmt ips etc
+	gcontainer, err := n.GetRuntimeInformation(ctx)
+	if err != nil {
+		return err
+	}
+	// this is a nodekind with a single underlaying container
+	if len(gcontainer) != 1 {
+		return fmt.Errorf("expected to retrieve 1 container information, got %d", len(gcontainer))
+	}
+
 	// adding ipv4 address to configs
-	if nodeCfg.MgmtIPv4Address != "" {
+	if gcontainer[0].NetworkSettings.IPv4addr != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ip address %s/%d", nodeCfg.MgmtIPv4Address, nodeCfg.MgmtIPv4PrefixLength),
+			fmt.Sprintf("ip address %s/%d", gcontainer[0].NetworkSettings.IPv4addr, gcontainer[0].NetworkSettings.IPv4pLen),
 		)
 	}
 
 	// adding ipv6 address to configs
-	if nodeCfg.MgmtIPv6Address != "" {
+	if gcontainer[0].NetworkSettings.IPv6addr != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ipv6 address %s/%d", nodeCfg.MgmtIPv6Address, nodeCfg.MgmtIPv6PrefixLength),
+			fmt.Sprintf("ipv6 address %s/%d", gcontainer[0].NetworkSettings.IPv6addr, gcontainer[0].NetworkSettings.IPv6pLen),
 		)
 	}
 

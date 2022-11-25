@@ -61,9 +61,9 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	Config() *types.NodeConfig
-	PreDeploy(configName, labCADir, labCARoot string) error
+	PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error
 	Deploy(context.Context) error
-	PostDeploy(context.Context, map[string]Node) error
+	PostDeploy(context.Context, map[string]Node, []types.GenericContainer) error
 	WithMgmtNet(*types.MgmtNet)
 	WithRuntime(runtime.ContainerRuntime)
 	SaveConfig(context.Context) error

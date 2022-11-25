@@ -79,7 +79,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrSROS) PreDeploy(_, _, _ string) error {
+func (s *vrSROS) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return createVrSROSFiles(s.Cfg)
 }
