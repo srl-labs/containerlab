@@ -18,7 +18,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -93,8 +92,6 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *ceos) Config() *types.NodeConfig { return n.Cfg }
-
 func (n *ceos) PreDeploy(_, _, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return n.createCEOSFiles()
@@ -104,9 +101,6 @@ func (n *ceos) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
 	return n.ceosPostDeploy()
 }
-
-func (n *ceos) WithRuntime(r runtime.ContainerRuntime) { n.Runtime = r }
-func (n *ceos) GetRuntime() runtime.ContainerRuntime   { return n.Runtime }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
 	_, stderr, err := n.Runtime.Exec(ctx, n.Cfg.LongName, saveCmd)
