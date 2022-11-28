@@ -30,11 +30,11 @@ func NewDefaultNode() *DefaultNode {
 func (d *DefaultNode) PostDeploy(_ context.Context, _ map[string]Node, _ []types.GenericContainer) error {
 	return nil
 }
-func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                     { d.Mgmt = mgmt }
-func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)              { d.Runtime = r }
-func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                { return d.Runtime }
-func (d *DefaultNode) Config() *types.NodeConfig                           { return d.Cfg }
-func (d *DefaultNode) PreDeploy(ctx context.Context, _, _, _ string) error { return nil }
+func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                   { d.Mgmt = mgmt }
+func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)            { d.Runtime = r }
+func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime              { return d.Runtime }
+func (d *DefaultNode) Config() *types.NodeConfig                         { return d.Cfg }
+func (d *DefaultNode) PreDeploy(_ context.Context, _, _, _ string) error { return nil }
 
 // PreCheckDeploymentConditionsMeet performs all the necessary checks prior to the deployment
 func (d *DefaultNode) PreCheckDeploymentConditionsMeet(ctx context.Context) error {

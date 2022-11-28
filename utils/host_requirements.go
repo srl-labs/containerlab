@@ -14,7 +14,7 @@ func VerifySSSE3Support() bool {
 	return cpuid.CPU.SSSE3()
 }
 
-// verifyVirtSupport checks if virtualization is supported by a cpu in case topology contains VM-based nodes
+// VerifyVirtSupport checks if virtualization is supported by a cpu in case topology contains VM-based nodes
 // when clab itself is being invoked as a container, this check is bypassed.
 func VerifyVirtSupport() bool {
 	// check if we are being executed in a container environment
@@ -27,8 +27,7 @@ func VerifyVirtSupport() bool {
 		log.Debug("proc/2/status file was not found. This means we run in a container and no virt checks are possible")
 		return true
 	}
-
-	defer f.Close()
+	f.Close()
 
 	// read first line of a /proc/2/status file to check if it contains kthreadd
 	// if it doesn't, we are in a container
@@ -45,7 +44,7 @@ func VerifyVirtSupport() bool {
 		log.Debugf("Error checking VirtSupport: %v", err)
 		return false
 	}
-	defer f.Close()
+	f.Close()
 
 	scanner = bufio.NewScanner(f)
 

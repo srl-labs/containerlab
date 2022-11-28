@@ -247,7 +247,7 @@ func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot strin
 	return s.createSRLFiles()
 }
 
-func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node, nodesRuntimeInfo []types.GenericContainer) error {
+func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node, nodesRuntimeInfo []types.GenericContainer) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
 	// Populate /etc/hosts for service discovery on mgmt interface

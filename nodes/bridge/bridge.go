@@ -62,7 +62,7 @@ func (b *bridge) GetRuntimeInformation(ctx context.Context) ([]types.GenericCont
 	return b.GetRuntimeInformationBase(ctx)
 }
 
-func (b *bridge) PreCheckDeploymentConditionsMeet(ctx context.Context) error {
+func (b *bridge) PreCheckDeploymentConditionsMeet(_ context.Context) error {
 	err := b.VerifyHostRequirements()
 	if err != nil {
 		return err

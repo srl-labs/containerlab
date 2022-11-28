@@ -35,7 +35,7 @@ func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *ovs) PreCheckDeploymentConditionsMeet(ctx context.Context) error {
+func (s *ovs) PreCheckDeploymentConditionsMeet(_ context.Context) error {
 	err := s.VerifyHostRequirements()
 	if err != nil {
 		return err

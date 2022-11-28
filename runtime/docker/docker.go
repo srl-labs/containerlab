@@ -543,38 +543,6 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		return nil, err
 	}
 
-	var nr []dockerTypes.NetworkResource
-	if d.mgmt.Network == "" {
-		nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
-		defer cancel()
-
-		// fetch containerlab created networks
-		f := filters.NewArgs()
-
-		f.Add("label", "containerlab")
-
-		nr, err = d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
-			Filters: f,
-		})
-
-		if err != nil {
-			return nil, err
-		}
-
-		// fetch default bridge network
-		f = filters.NewArgs()
-
-		f.Add("name", "bridge")
-
-		bridgenet, err := d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
-			Filters: f,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		nr = append(nr, bridgenet...)
-	}
 	return d.produceGenericContainerList(ctrs)
 }
 
