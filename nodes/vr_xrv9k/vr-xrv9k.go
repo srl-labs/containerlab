@@ -45,6 +45,11 @@ type vrXRV9K struct {
 }
 
 func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode()
+	// set virtualization requirement
+	s.HostRequirements.VirtRequired = true
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -72,9 +77,6 @@ func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace",
 		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName,
 		s.Cfg.Env["CONNECTION_MODE"], s.Cfg.Env["VCPU"], s.Cfg.Env["RAM"])
-
-	// set virtualization requirement
-	s.Cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }

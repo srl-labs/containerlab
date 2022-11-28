@@ -36,6 +36,9 @@ type cvx struct {
 }
 
 func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	c.DefaultNode = *nodes.NewDefaultNode()
+
 	c.Cfg = cfg
 	for _, o := range opts {
 		o(c)

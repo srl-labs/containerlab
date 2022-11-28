@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -120,6 +121,11 @@ type srl struct {
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode()
+	// set virtualization requirement
+	s.HostRequirements.SSSE3 = true
+
 	s.Cfg = cfg
 	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
 	// to not rely on certain kind names
@@ -171,8 +177,6 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	topoPath := filepath.Join(s.Cfg.LabDir, "topology.yml")
 	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
-	// SSSE3 cpu instruction set is required
-	s.Cfg.HostRequirements.SSSE3 = true
 	return nil
 }
 
@@ -559,4 +563,14 @@ func (s *srl) populateHosts(ctx context.Context, nodesRuntimeInfos []types.Gener
 	}
 
 	return file.Close()
+}
+
+func (s *srl) CheckInterfaceNamingConvention() error {
+	srlIfRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+	for _, e := range s.Config().Endpoints {
+		if !srlIfRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("nokia sr linux endpoint %q doesn't match required pattern. SR Linux endpoints should be named as e1-1 or e1-1-1", e.EndpointName)
+		}
+	}
+	return nil
 }

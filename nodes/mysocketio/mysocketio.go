@@ -22,6 +22,9 @@ type mySocketIO struct {
 }
 
 func (s *mySocketIO) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode()
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)

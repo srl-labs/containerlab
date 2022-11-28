@@ -60,18 +60,21 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
-	Config() *types.NodeConfig
-	PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error
-	Deploy(context.Context) error
-	PostDeploy(context.Context, map[string]Node, []types.GenericContainer) error
-	WithMgmtNet(*types.MgmtNet)
-	WithRuntime(runtime.ContainerRuntime)
-	SaveConfig(context.Context) error
-	Delete(context.Context) error
-	GetImages() map[string]string
-	GetRuntime() runtime.ContainerRuntime
 	GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error)
 	DeleteNetnsSymlink() (err error)
+	Config() *types.NodeConfig                              // Config returns the nodes configuration
+	PreCheckDeploymentConditionsMeet(context.Context) error // PreCheckDeploymentDependencies checks if all the conditions are meat to deploy this node
+	PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error
+	Deploy(context.Context) error // Deploy triggers the deployment of this node
+	PostDeploy(context.Context, map[string]Node, []types.GenericContainer) error
+	WithMgmtNet(*types.MgmtNet)               // WithMgmtNet provides the management network for the node
+	WithRuntime(runtime.ContainerRuntime)     // WithRuntime provides the runtime for the node
+	CheckInterfaceNamingConvention() error    // CheckInterfaceNamingConvention triggers a check for the interface naming provided via the topology file
+	VerifyStartupConfig(topoDir string) error // VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
+	SaveConfig(context.Context) error         // SaveConfig saves the nodes configuration to an external file
+	Delete(context.Context) error             // Delete triggers the deletion of this node
+	GetImages() map[string]string             // GetImages returns the images used for this kind
+	GetRuntime() runtime.ContainerRuntime     // GetRuntime returns the nodes assigned runtime
 }
 
 type Initializer func() Node

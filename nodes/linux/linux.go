@@ -28,6 +28,9 @@ type linux struct {
 }
 
 func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	l.DefaultNode = *nodes.NewDefaultNode()
+
 	l.Cfg = cfg
 	for _, o := range opts {
 		o(l)

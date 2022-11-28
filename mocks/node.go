@@ -37,6 +37,20 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 	return m.recorder
 }
 
+// CheckInterfaceNamingConvention mocks base method.
+func (m *MockNode) CheckInterfaceNamingConvention() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckInterfaceNamingConvention")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckInterfaceNamingConvention indicates an expected call of CheckInterfaceNamingConvention.
+func (mr *MockNodeMockRecorder) CheckInterfaceNamingConvention() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceNamingConvention", reflect.TypeOf((*MockNode)(nil).CheckInterfaceNamingConvention))
+}
+
 // Config mocks base method.
 func (m *MockNode) Config() *types.NodeConfig {
 	m.ctrl.T.Helper()
@@ -169,6 +183,20 @@ func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1, arg2 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1, arg2)
 }
 
+// PreCheckDeploymentConditionsMeet mocks base method.
+func (m *MockNode) PreCheckDeploymentConditionsMeet(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreCheckDeploymentConditionsMeet", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreCheckDeploymentConditionsMeet indicates an expected call of PreCheckDeploymentConditionsMeet.
+func (mr *MockNodeMockRecorder) PreCheckDeploymentConditionsMeet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreCheckDeploymentConditionsMeet", reflect.TypeOf((*MockNode)(nil).PreCheckDeploymentConditionsMeet), arg0)
+}
+
 // PreDeploy mocks base method.
 func (m *MockNode) PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error {
 	m.ctrl.T.Helper()
@@ -195,6 +223,20 @@ func (m *MockNode) SaveConfig(arg0 context.Context) error {
 func (mr *MockNodeMockRecorder) SaveConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockNode)(nil).SaveConfig), arg0)
+}
+
+// VerifyStartupConfig mocks base method.
+func (m *MockNode) VerifyStartupConfig(topoDir string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyStartupConfig", topoDir)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyStartupConfig indicates an expected call of VerifyStartupConfig.
+func (mr *MockNodeMockRecorder) VerifyStartupConfig(topoDir interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyStartupConfig", reflect.TypeOf((*MockNode)(nil).VerifyStartupConfig), topoDir)
 }
 
 // WithMgmtNet mocks base method.

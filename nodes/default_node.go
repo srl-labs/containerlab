@@ -15,22 +15,69 @@ import (
 )
 
 type DefaultNode struct {
-	Cfg     *types.NodeConfig
-	Mgmt    *types.MgmtNet
-	Runtime runtime.ContainerRuntime
+	Cfg              *types.NodeConfig
+	Mgmt             *types.MgmtNet
+	Runtime          runtime.ContainerRuntime
+	HostRequirements types.HostRequirements
 }
 
-func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                   { d.Mgmt = mgmt }
-func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)            { d.Runtime = r }
-func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime              { return d.Runtime }
-func (d *DefaultNode) Config() *types.NodeConfig                         { return d.Cfg }
-func (d *DefaultNode) PreDeploy(_ context.Context, _, _, _ string) error { return nil }
+func NewDefaultNode() *DefaultNode {
+	return &DefaultNode{
+		HostRequirements: types.HostRequirements{},
+	}
+}
+
 func (d *DefaultNode) PostDeploy(_ context.Context, _ map[string]Node, _ []types.GenericContainer) error {
 	return nil
+}
+func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                     { d.Mgmt = mgmt }
+func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)              { d.Runtime = r }
+func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                { return d.Runtime }
+func (d *DefaultNode) Config() *types.NodeConfig                           { return d.Cfg }
+func (d *DefaultNode) PreDeploy(ctx context.Context, _, _, _ string) error { return nil }
+
+// PreCheckDeploymentConditionsMeet performs all the necessary checks prior to the deployment
+func (d *DefaultNode) PreCheckDeploymentConditionsMeet(ctx context.Context) error {
+	err := d.VerifyHostRequirements()
+	if err != nil {
+		return err
+	}
+	err = d.VerifyStartupConfig(d.Cfg.LabDir)
+	if err != nil {
+		return err
+	}
+	err = d.PullImage(ctx)
+	if err != nil {
+		return err
+	}
+	err = d.CheckInterfaceNamingConvention()
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
 func (d *DefaultNode) SaveConfig(_ context.Context) error {
 	log.Debugf("Save operation is currently not supported for %q node kind", d.Cfg.Kind)
 	return nil
+}
+
+func (d *DefaultNode) PullImage(ctx context.Context) error {
+	for imageKey, imageName := range d.GetImages() {
+		if imageName == "" {
+			return fmt.Errorf("missing required %q attribute for node %q", imageKey, d.Cfg.ShortName)
+		}
+		err := d.Runtime.PullImageIfRequired(ctx, imageName)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *DefaultNode) VerifyHostRequirements() error {
+	_, err := d.HostRequirements.IsValid()
+	return err
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context) error {
@@ -88,7 +135,31 @@ func (d *DefaultNode) GetRuntimeInformationBase(ctx context.Context) ([]types.Ge
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
-func (d *DefaultNode) DeleteNetnsSymlink() (err error) {
+func (d *DefaultNode) DeleteNetnsSymlink() error {
 	log.Debugf("Deleting %s network namespace", d.Config().LongName)
 	return utils.DeleteNetnsSymlink(d.Config().LongName)
+}
+
+func (d *DefaultNode) CheckInterfaceNamingConvention() error {
+	log.Debugf("CheckInterfaceNamingConvention() not implemented for %q", d.Cfg.Kind)
+	return nil
+}
+
+func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
+	return d.VerifyStartupConfigFileExists(topoDir)
+}
+
+// VerifyStartupConfigFileExists helper function to allow overwrites to easily perform the
+// file existence check augmenting the node specific VerifyStartupConfig()
+func (d *DefaultNode) VerifyStartupConfigFileExists(topoDir string) error {
+	cfg := d.Config().StartupConfig
+	if cfg == "" {
+		return nil
+	}
+
+	rcfg := utils.ResolvePath(cfg, topoDir)
+	if !utils.FileExists(rcfg) {
+		return fmt.Errorf("node %q startup-config file not found by the path %s", d.Config().ShortName, rcfg)
+	}
+	return nil
 }

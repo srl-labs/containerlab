@@ -9,6 +9,7 @@ import (
 
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"ovs-bridge"}
@@ -24,9 +25,25 @@ type ovs struct {
 }
 
 func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode()
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
+	}
+	return nil
+}
+
+func (s *ovs) PreCheckDeploymentConditionsMeet(ctx context.Context) error {
+	err := s.VerifyHostRequirements()
+	if err != nil {
+		return err
+	}
+	// check bridge exists
+	_, err = utils.BridgeByName(s.Cfg.ShortName)
+	if err != nil {
+		return err
 	}
 	return nil
 }

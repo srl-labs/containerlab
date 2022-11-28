@@ -135,8 +135,6 @@ type NodeConfig struct {
 	CPU    float64 `json:"cpu,omitempty"`
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
-	// Host requirements
-	HostRequirements HostRequirements `json:"host-requirements,omitempty"`
 
 	// status that is set by containerlab to indicate deployment stage
 	DeploymentStatus string `json:"deployment-status,omitempty"`
@@ -149,6 +147,22 @@ type NodeConfig struct {
 type HostRequirements struct {
 	SSSE3        bool `json:"ssse3,omitempty"`         // ssse3 cpu instruction
 	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
+}
+
+func (h *HostRequirements) IsValid() (bool, error) {
+
+	if h.VirtRequired && !utils.VerifyVirtSupport() {
+		return false, fmt.Errorf("SSSE3 CPU feature required, but not available")
+	}
+	if h.SSSE3 && !utils.VerifySSSE3Support() {
+		return false, fmt.Errorf("SSSE3 CPU feature required, but not available")
+	}
+	return true, nil
+}
+
+func (h *HostRequirements) Combine(h2 *HostRequirements) {
+	h.SSSE3 = h.SSSE3 || h2.SSSE3
+	h.VirtRequired = h.VirtRequired || h2.VirtRequired
 }
 
 // GenerateConfig generates configuration for the nodes

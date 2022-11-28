@@ -67,6 +67,9 @@ type intfMap struct {
 }
 
 func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	n.DefaultNode = *nodes.NewDefaultNode()
+
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)

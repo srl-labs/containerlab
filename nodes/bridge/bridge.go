@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"bridge"}
@@ -34,6 +35,9 @@ type bridge struct {
 }
 
 func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode()
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -56,6 +60,19 @@ func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node, _ []type
 func (b *bridge) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
 	// we skip the enrichment of network information
 	return b.GetRuntimeInformationBase(ctx)
+}
+
+func (b *bridge) PreCheckDeploymentConditionsMeet(ctx context.Context) error {
+	err := b.VerifyHostRequirements()
+	if err != nil {
+		return err
+	}
+	// check bridge exists
+	_, err = utils.BridgeByName(b.Cfg.ShortName)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // installIPTablesBridgeFwdRule calls iptables to install `allow` rule for traffic passing through the bridge

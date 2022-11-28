@@ -42,6 +42,11 @@ type vrSROS struct {
 }
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode()
+	// set virtualization requirement
+	s.HostRequirements.VirtRequired = true
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -72,9 +77,6 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.ShortName,
 		s.Cfg.NodeType,
 	)
-
-	// set virtualization requirement
-	s.Cfg.HostRequirements.VirtRequired = true
 
 	return nil
 }
