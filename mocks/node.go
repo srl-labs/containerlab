@@ -108,17 +108,17 @@ func (mr *MockNodeMockRecorder) Deploy(arg0 interface{}) *gomock.Call {
 }
 
 // GetImages mocks base method.
-func (m *MockNode) GetImages() map[string]string {
+func (m *MockNode) GetImages(arg0 context.Context) map[string]string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetImages")
+	ret := m.ctrl.Call(m, "GetImages", arg0)
 	ret0, _ := ret[0].(map[string]string)
 	return ret0
 }
 
 // GetImages indicates an expected call of GetImages.
-func (mr *MockNodeMockRecorder) GetImages() *gomock.Call {
+func (mr *MockNodeMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages), arg0)
 }
 
 // GetRuntime mocks base method.

@@ -26,7 +26,7 @@ type ovs struct {
 
 func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode()
+	s.DefaultNode = *nodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -54,4 +54,4 @@ func (*ovs) Delete(_ context.Context) error {
 	return nil
 }
 
-func (*ovs) GetImages() map[string]string { return map[string]string{} }
+func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }

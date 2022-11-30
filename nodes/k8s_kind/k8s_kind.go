@@ -32,6 +32,7 @@ type k8s_kind struct {
 }
 
 func (k *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	k.DefaultNode = *nodes.NewDefaultNode(k)
 	k.Cfg = cfg
 	for _, o := range opts {
 		o(k)
@@ -41,7 +42,7 @@ func (k *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 // GetImages is not required, kind will download the images itself
-func (d *k8s_kind) GetImages() map[string]string { return map[string]string{} }
+func (d *k8s_kind) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
 // DeleteNetnsSymlink kind takes care of the Netlinks itself
 func (d *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }

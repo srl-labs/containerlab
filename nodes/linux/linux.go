@@ -29,7 +29,7 @@ type linux struct {
 
 func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	l.DefaultNode = *nodes.NewDefaultNode()
+	l.DefaultNode = *nodes.NewDefaultNode(l)
 
 	l.Cfg = cfg
 	for _, o := range opts {
@@ -73,7 +73,7 @@ func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node, _ []types
 	return nil
 }
 
-func (l *linux) GetImages() map[string]string {
+func (l *linux) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
 	images[nodes.ImageKey] = l.Cfg.Image
 

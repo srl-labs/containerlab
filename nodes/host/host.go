@@ -25,7 +25,7 @@ type host struct {
 
 func (s *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode()
+	s.DefaultNode = *nodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -34,10 +34,10 @@ func (s *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	return nil
 }
-func (*host) Deploy(_ context.Context) error { return nil }
-func (*host) GetImages() map[string]string   { return map[string]string{} }
-func (*host) Delete(_ context.Context) error { return nil }
-func (*host) WithMgmtNet(*types.MgmtNet)     {}
+func (*host) Deploy(_ context.Context) error                { return nil }
+func (*host) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (*host) Delete(_ context.Context) error                { return nil }
+func (*host) WithMgmtNet(*types.MgmtNet)                    {}
 
 func (h *host) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
 	// we skip the enrichment of network information

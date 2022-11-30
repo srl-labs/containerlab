@@ -38,7 +38,7 @@ type CheckpointCloudguard struct {
 
 func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode()
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 

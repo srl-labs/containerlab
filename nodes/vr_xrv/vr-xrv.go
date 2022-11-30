@@ -46,7 +46,7 @@ type vrXRV struct {
 
 func (s *vrXRV) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode()
+	s.DefaultNode = *nodes.NewDefaultNode(s)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
 

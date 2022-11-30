@@ -57,4 +57,4 @@ func (e *extcont) Deploy(ctx context.Context) error {
 func (e *extcont) Delete(_ context.Context) error { return nil }
 
 // GetImages don't matter for external containers.
-func (e *extcont) GetImages() map[string]string { return map[string]string{} }
+func (e *extcont) GetImages(_ context.Context) map[string]string { return map[string]string{} }

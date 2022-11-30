@@ -43,7 +43,7 @@ type vrSROS struct {
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode()
+	s.DefaultNode = *nodes.NewDefaultNode(s)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
 

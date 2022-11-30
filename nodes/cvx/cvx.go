@@ -37,7 +37,7 @@ type cvx struct {
 
 func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	c.DefaultNode = *nodes.NewDefaultNode()
+	c.DefaultNode = *nodes.NewDefaultNode(c)
 
 	c.Cfg = cfg
 	for _, o := range opts {
@@ -96,7 +96,7 @@ func (c *cvx) PostDeploy(_ context.Context, _ map[string]nodes.Node, _ []types.G
 	return <-c.vmChans.SpawnFinished
 }
 
-func (c *cvx) GetImages() map[string]string {
+func (c *cvx) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
 	images[nodes.ImageKey] = c.Cfg.Image
 

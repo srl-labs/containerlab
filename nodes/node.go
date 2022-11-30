@@ -67,14 +67,14 @@ type Node interface {
 	PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error
 	Deploy(context.Context) error // Deploy triggers the deployment of this node
 	PostDeploy(context.Context, map[string]Node, []types.GenericContainer) error
-	WithMgmtNet(*types.MgmtNet)               // WithMgmtNet provides the management network for the node
-	WithRuntime(runtime.ContainerRuntime)     // WithRuntime provides the runtime for the node
-	CheckInterfaceNamingConvention() error    // CheckInterfaceNamingConvention triggers a check for the interface naming provided via the topology file
-	VerifyStartupConfig(topoDir string) error // VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
-	SaveConfig(context.Context) error         // SaveConfig saves the nodes configuration to an external file
-	Delete(context.Context) error             // Delete triggers the deletion of this node
-	GetImages() map[string]string             // GetImages returns the images used for this kind
-	GetRuntime() runtime.ContainerRuntime     // GetRuntime returns the nodes assigned runtime
+	WithMgmtNet(*types.MgmtNet)                  // WithMgmtNet provides the management network for the node
+	WithRuntime(runtime.ContainerRuntime)        // WithRuntime provides the runtime for the node
+	CheckInterfaceNamingConvention() error       // CheckInterfaceNamingConvention triggers a check for the interface naming provided via the topology file
+	VerifyStartupConfig(topoDir string) error    // VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
+	SaveConfig(context.Context) error            // SaveConfig saves the nodes configuration to an external file
+	Delete(context.Context) error                // Delete triggers the deletion of this node
+	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
+	GetRuntime() runtime.ContainerRuntime        // GetRuntime returns the nodes assigned runtime
 }
 
 type Initializer func() Node

@@ -28,7 +28,7 @@ type sonic struct {
 
 func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode()
+	s.DefaultNode = *nodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {

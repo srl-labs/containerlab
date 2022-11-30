@@ -122,7 +122,7 @@ type srl struct {
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode()
+	s.DefaultNode = *nodes.NewDefaultNode(s)
 	// set virtualization requirement
 	s.HostRequirements.SSSE3 = true
 
