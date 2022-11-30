@@ -287,8 +287,8 @@ Nokia SR Linux nodes support setting of [SANs](../nodes.md#subject-alternative-n
 
 ### License
 
-SR Linux container can run without any license :partying_face:.  
-In that license-less mode the datapath is limited to 100PPS and the sr_linux process will reboot once a week.
+SR Linux container can run without a license :partying_face:.  
+In that license-less mode, the datapath is limited to 1000 PPS and the sr_linux process will restart once a week.
 
 The license file lifts these limitations and a path to it can be provided with [`license`](../nodes.md#license) directive.
 
