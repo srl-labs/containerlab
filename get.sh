@@ -207,7 +207,7 @@ installPkg() {
     runAsRoot $PKG_INSTALLER $TMP_FILE
 }
 
-# setPkgInstaller deduces the pkg installation command 
+# setPkgInstaller deduces the pkg installation command
 setPkgInstaller() {
     if [ $PKG_FORMAT == "deb" ]; then
         PKG_INSTALLER="dpkg -i"
@@ -217,7 +217,7 @@ setPkgInstaller() {
         fi
         if [[ -n "$VARIANT_ID" && $VARIANT_ID == "coreos" ]]; then
             PKG_INSTALLER="rpm-ostree install --uninstall=containerlab --idempotent"
-        else 
+        else
             PKG_INSTALLER="rpm -U"
         fi
     fi
