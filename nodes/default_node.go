@@ -109,18 +109,18 @@ func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
 }
 
 func (d *DefaultNode) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
-	genericContainer, err := d.GetRuntimeInformationBase(ctx)
+	genericContainers, err := d.GetRuntimeInformationBase(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// if we did not get any generic container back, return early
-	if len(genericContainer) == 0 {
-		return genericContainer, nil
+	if len(genericContainers) == 0 {
+		return genericContainers, nil
 	}
 
 	// populate ip information
-	gcNwSettings := genericContainer[0].NetworkSettings
+	gcNwSettings := genericContainers[0].NetworkSettings
 	if gcNwSettings != (types.GenericMgmtIPs{}) {
 		d.Cfg.MgmtIPv4Address = gcNwSettings.IPv4addr
 		d.Cfg.MgmtIPv4PrefixLength = gcNwSettings.IPv4pLen
@@ -129,9 +129,9 @@ func (d *DefaultNode) GetRuntimeInformation(ctx context.Context) ([]types.Generi
 		d.Cfg.MgmtIPv4Gateway = gcNwSettings.IPv4Gw
 		d.Cfg.MgmtIPv6Gateway = gcNwSettings.IPv6Gw
 	}
-	d.Cfg.ContainerID = genericContainer[0].ID
+	d.Cfg.ContainerID = genericContainers[0].ID
 
-	return genericContainer, nil
+	return genericContainers, nil
 }
 
 func (d *DefaultNode) GetRuntimeInformationBase(ctx context.Context) ([]types.GenericContainer, error) {
