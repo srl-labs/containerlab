@@ -72,7 +72,7 @@ func (d *DefaultNode) PreCheckDeploymentConditionsMeet(ctx context.Context) erro
 }
 
 func (d *DefaultNode) PullImage(ctx context.Context) error {
-	for imageKey, imageName := range d.GetImages(ctx) {
+	for imageKey, imageName := range d.OverwriteNode.GetImages(ctx) {
 		if imageName == "" {
 			return fmt.Errorf("missing required %q attribute for node %q", imageKey, d.Cfg.ShortName)
 		}
@@ -219,6 +219,7 @@ type NodeOverwrites interface {
 	CheckInterfaceNamingConvention() error
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
+	GetImages(ctx context.Context) map[string]string
 }
 
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {

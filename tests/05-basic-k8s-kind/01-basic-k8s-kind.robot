@@ -1,7 +1,6 @@
 *** Settings ***
 Library           OperatingSystem
 Library           SSHLibrary
-Suite Teardown    Run Keyword    Cleanup
 Resource          ../common.robot
 
 *** Variables ***
@@ -20,24 +19,56 @@ Deploy ${lab-name} lab
 
 Verify link ${if1-name} in k8s-kind node k01-control-plane
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker exec -t k01-control-plane ip address show ${if1-name}
+    ...    sudo docker exec -t k01-control-plane ip address show dev ${if1-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.237.1/24
 
 Verify link ${if1-name} in k8s-kind node k01-worker
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker exec -t k01-worker ip address show ${if1-name}
+    ...    sudo docker exec -t k01-worker ip address show dev ${if1-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.237.2/24
 
 Verify link ${if1-name} in k8s-kind node k02-control-plane
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker exec -t k02-control-plane ip address show ${if1-name}
+    ...    sudo docker exec -t k02-control-plane ip address show dev ${if1-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.237.3/24
+
+Verify link eth2 in k8s-kind node k01-control-plane
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker exec -t k01-control-plane ip link show dev eth2
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+
+Verify link eth2 in k8s-kind node k02-control-plane
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker exec -t k02-control-plane ip link show dev eth2
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+
+Verify ping from alpine node to k01-control-plane
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker exec -t clab-01-basic-k8s-kind-alpine ping 192.168.237.1 -c 1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+Verify ping from alpine node to k01-worker
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker exec -t clab-01-basic-k8s-kind-alpine ping 192.168.237.2 -c 1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+Verify ping from alpine node to k02-control-plane
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker exec -t clab-01-basic-k8s-kind-alpine ping 192.168.237.3 -c 1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
 
 Cleanup
     Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
@@ -48,7 +79,8 @@ Verify kind nodes are gone
     ...    sudo docker ps -a
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Not Contain    ${output} k01-control-plane
-    Should Not Contain    ${output} k01-worker
-    Should Not Contain    ${output} k02-control-plane
-    Should Not Contain    ${output} srl01
+    Should Not Contain    ${output}     k01-control-plane
+    Should Not Contain    ${output}     k01-worker
+    Should Not Contain    ${output}     k02-control-plane
+    Should Not Contain    ${output}     -srl01
+    Should Not Contain    ${output}     -alpine

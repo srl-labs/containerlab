@@ -8,6 +8,13 @@ topology:
   nodes:
     srl01:
       kind: srl
+      startup-config: srl01.config
+    alpine:
+      kind: linux
+      image: alpine
+      cmd: ash -c "sleep 9999"
+      exec: 
+        - "ip a add dev eth1 192.168.237.20/24"
     k01:
       kind: k8s-kind
       startup-config: k01-config.yaml
@@ -37,6 +44,7 @@ topology:
     - endpoints: ["srl01:e1-1", "k01-control-plane:eth1"]
     - endpoints: ["srl01:e1-2", "k01-worker:eth1"]
     - endpoints: ["srl01:e1-3", "k02-control-plane:eth1"]
+    - endpoints: ["srl01:e1-4", "alpine:eth1"]
 
     - endpoints: ["srl01:e1-10", "k01-control-plane:eth2"]
     - endpoints: ["srl01:e1-11", "k02-control-plane:eth2"]

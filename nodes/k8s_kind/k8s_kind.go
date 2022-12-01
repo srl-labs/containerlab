@@ -43,6 +43,7 @@ func (k *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 // GetImages is not required, kind will download the images itself
 func (d *k8s_kind) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (d *k8s_kind) PullImage(ctx context.Context) error           { return nil }
 
 // DeleteNetnsSymlink kind takes care of the Netlinks itself
 func (d *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
@@ -102,7 +103,7 @@ func (k *k8s_kind) GetRuntimeInformation(ctx context.Context) ([]types.GenericCo
 			cnt.Labels[key] = v
 		}
 		// we need to overwrite the nodename label
-		k.Cfg.Labels["clab-node-name"] = cnt.Names[0]
+		cnt.Labels["clab-node-name"] = cnt.Names[0]
 	}
 	return containeList, nil
 }
