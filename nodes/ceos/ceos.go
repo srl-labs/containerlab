@@ -121,7 +121,7 @@ func (n *ceos) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func (n *ceos) createCEOSFiles(ctx context.Context) error {
+func (n *ceos) createCEOSFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0777)
