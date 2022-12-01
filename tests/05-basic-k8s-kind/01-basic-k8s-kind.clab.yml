@@ -1,0 +1,43 @@
+name: 01-basic-k8s-kind
+
+topology:
+  kinds:
+    srl:
+     type: ixrd3
+     image: ghcr.io/nokia/srlinux
+  nodes:
+    srl01:
+      kind: srl
+    k01:
+      kind: k8s-kind
+      startup-config: k01-config.yaml
+    k02:
+      kind: k8s-kind
+
+    # k01 -> resulting nodes due to startup-config assigned config `k01-config.yaml`
+    k01-control-plane:
+      kind: ext-container
+      exec: 
+        - "ip a del dev eth1"
+        - "ip a add dev eth1 192.168.237.1/24"
+
+    k01-worker:
+      kind: ext-container
+      exec: 
+        - "ip a del dev eth1"
+        - "ip a add dev eth1 192.168.237.2/24"
+
+    k02-control-plane:
+      kind: ext-container
+      exec: 
+        - "ip a del dev eth1"
+        - "ip a add dev eth1 192.168.237.3/24"
+
+  links: 
+    - endpoints: ["srl01:e1-1", "k01-control-plane:eth1"]
+    - endpoints: ["srl01:e1-2", "k01-worker:eth1"]
+    - endpoints: ["srl01:e1-3", "k02-control-plane:eth1"]
+
+    - endpoints: ["srl01:e1-10", "k01-control-plane:eth2"]
+    - endpoints: ["srl01:e1-11", "k02-control-plane:eth2"]
+
