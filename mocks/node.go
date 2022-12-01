@@ -107,6 +107,20 @@ func (mr *MockNodeMockRecorder) Deploy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0)
 }
 
+// GenerateConfig mocks base method.
+func (m *MockNode) GenerateConfig(dst, templ string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateConfig", dst, templ)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GenerateConfig indicates an expected call of GenerateConfig.
+func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), dst, templ)
+}
+
 // GetImages mocks base method.
 func (m *MockNode) GetImages(arg0 context.Context) map[string]string {
 	m.ctrl.T.Helper()
