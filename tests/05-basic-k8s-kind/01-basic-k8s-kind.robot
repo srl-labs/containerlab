@@ -70,6 +70,20 @@ Verify ping from alpine node to k02-control-plane
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
+Verify kind cluster k01 nodes are ready
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker exec -t k01-control-plane kubectl get nodes | grep Ready | wc -l
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Integers    ${output}    2
+
+Verify kind cluster k02 nodes are ready
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker exec -t k02-control-plane kubectl get nodes | grep Ready | wc -l
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Integers    ${output}    1
+
 Cleanup
     Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}
