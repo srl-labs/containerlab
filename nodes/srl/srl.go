@@ -403,7 +403,7 @@ func (s *srl) createSRLFiles() error {
 
 		cfgTemplate := string(c)
 
-		err = s.Cfg.GenerateConfig(dst, cfgTemplate)
+		err = s.GenerateConfig(dst, cfgTemplate)
 		if err != nil {
 			log.Errorf("node=%s, failed to generate config: %v", s.Cfg.ShortName, err)
 		}

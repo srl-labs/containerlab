@@ -7,11 +7,8 @@ package vr_nxos
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 
-	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -71,28 +68,5 @@ func (s *vrNXOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (s *vrNXOS) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	return loadStartupConfigFile(s.Cfg)
-}
-
-func loadStartupConfigFile(node *types.NodeConfig) error {
-	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
-
-	if node.StartupConfig != "" {
-		// dstCfg is a path to a file on the clab host that will have rendered configuration
-		dstCfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
-
-		c, err := os.ReadFile(node.StartupConfig)
-		if err != nil {
-			return err
-		}
-
-		cfgTemplate := string(c)
-
-		err = node.GenerateConfig(dstCfg, cfgTemplate)
-		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-		}
-	}
-	return nil
+	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
 }

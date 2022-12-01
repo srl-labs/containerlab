@@ -22,10 +22,9 @@ const (
 	SandboxKey = "sandbox"
 
 	NodeKindBridge = "bridge"
-
-	NodeKindHOST = "host"
-	NodeKindOVS  = "ovs-bridge"
-	NodeKindSRL  = "srl"
+	NodeKindHOST   = "host"
+	NodeKindOVS    = "ovs-bridge"
+	NodeKindSRL    = "srl"
 )
 
 var (
@@ -75,6 +74,7 @@ type Node interface {
 	Delete(context.Context) error                // Delete triggers the deletion of this node
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() runtime.ContainerRuntime        // GetRuntime returns the nodes assigned runtime
+	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
 }
 
 type Initializer func() Node

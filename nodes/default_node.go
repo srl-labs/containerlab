@@ -5,9 +5,16 @@
 package nodes
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"text/template"
 
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -160,6 +167,51 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 	return nil
 }
 
+// GenerateConfig generates configuration for the nodes
+// out of the template based on the node configuration and saves the result to dst.
+func (d *DefaultNode) GenerateConfig(dst, templ string) error {
+	// If the config file is already present in the node dir
+	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
+	// this will persist the changes that users make to a running config when booted from some startup config
+	if utils.FileExists(dst) && (d.Cfg.StartupConfig == "" || !d.Cfg.EnforceStartupConfig) {
+		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, d.Cfg.ShortName)
+		return nil
+	} else if d.Cfg.EnforceStartupConfig {
+		log.Infof("Startup config for '%s' node enforced: '%s'", d.Cfg.ShortName, dst)
+	}
+
+	log.Debugf("generating config for node %s from file %s", d.Cfg.ShortName, d.Cfg.StartupConfig)
+
+	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
+	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
+	delete(gfuncs, "slice")
+	tpl, err := template.New(filepath.Base(d.Cfg.StartupConfig)).Funcs(gfuncs).Parse(templ)
+	if err != nil {
+		return err
+	}
+
+	dstBytes := new(bytes.Buffer)
+
+	err = tpl.Execute(dstBytes, d.Cfg)
+	if err != nil {
+		return err
+	}
+	log.Debugf("node '%s' generated config: %s", d.Cfg.ShortName, dstBytes.String())
+
+	f, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(dstBytes.Bytes())
+	if err != nil {
+		f.Close()
+		return err
+	}
+
+	return f.Close()
+}
+
 // NodeOverwrites provides an interface used to be able to overwrite
 // certain methods in the embedding struct
 type NodeOverwrites interface {
@@ -167,4 +219,29 @@ type NodeOverwrites interface {
 	CheckInterfaceNamingConvention() error
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
+}
+
+func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
+	nodeCfg := node.Config()
+	// create config directory that will be bind mounted to vrnetlab container at / path
+	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0777)
+
+	node.Config()
+	if nodeCfg.StartupConfig != "" {
+		// dstCfg is a path to a file on the clab host that will have rendered configuration
+		dstCfg := filepath.Join(nodeCfg.LabDir, configDirName, startupCfgFName)
+
+		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		cfgTemplate := string(c)
+
+		err = node.GenerateConfig(dstCfg, cfgTemplate)
+		if err != nil {
+			log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+		}
+	}
+	return nil
 }

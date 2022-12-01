@@ -95,9 +95,9 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *ceos) PreDeploy(_ context.Context, _ string, _ string, _ string) error {
+func (n *ceos) PreDeploy(ctx context.Context, _, _, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	return n.createCEOSFiles()
+	return n.createCEOSFiles(ctx)
 }
 
 func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
@@ -121,7 +121,7 @@ func (n *ceos) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func (n *ceos) createCEOSFiles() error {
+func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0777)
@@ -143,7 +143,7 @@ func (n *ceos) createCEOSFiles() error {
 		cfgTemplate = string(c)
 	}
 
-	err = nodeCfg.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err = n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -258,6 +258,25 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	if gcontainer[0].NetworkSettings.IPv6addr != "" {
 		cfgs = append(cfgs,
 			fmt.Sprintf("ipv6 address %s/%d", gcontainer[0].NetworkSettings.IPv6addr, gcontainer[0].NetworkSettings.IPv6pLen),
+		)
+	}
+
+	// prep default mgmt routes, if mgmt in VRF we need to extend the ip route comamnd
+	mgmt_vrf_part := ""
+	if val, exists := nodeCfg.Env["CLAB_MGMT_VRF"]; exists {
+		mgmt_vrf_part = "vrf " + val
+	}
+
+	// adding ipv4 address to configs
+	if gcontainer[0].NetworkSettings.IPv4Gw != "" {
+		cfgs = append(cfgs,
+			fmt.Sprintf("ip route %s 0.0.0.0/0 %s", mgmt_vrf_part, gcontainer[0].NetworkSettings.IPv4Gw),
+		)
+	}
+
+	if gcontainer[0].NetworkSettings.IPv6Gw != "" {
+		cfgs = append(cfgs,
+			fmt.Sprintf("ip route %s ::0/0 %s", mgmt_vrf_part, gcontainer[0].NetworkSettings.IPv6Gw),
 		)
 	}
 
