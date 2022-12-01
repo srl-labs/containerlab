@@ -276,7 +276,7 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 
 	if gcontainer[0].NetworkSettings.IPv6Gw != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ip route %s ::0/0 %s", mgmt_vrf_part, gcontainer[0].NetworkSettings.IPv6Gw),
+			fmt.Sprintf("ipv6 route %s ::0/0 %s", mgmt_vrf_part, gcontainer[0].NetworkSettings.IPv6Gw),
 		)
 	}
 
