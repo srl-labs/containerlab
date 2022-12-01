@@ -428,18 +428,21 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 			filterOp = "="
 			filterValue = ""
 		}
-		if filterOp != "=" {
+		filterStr := ""
+		if filterType == "name" {
+			filterStr = filterValue
+		} else if filterOp != "=" {
 			log.Warnf("received a filter with unsupported match type: %+v", gF)
 			continue
+		} else {
+			filterStr = gF.Field + filterOp + filterValue
 		}
-		filterStr := gF.Field + filterOp + filterValue
 		log.Debugf("produced a filterStr %q from inputs %+v", filterStr, gF)
 		_, ok := filters[filterType]
 		if !ok {
 			filters[filterType] = []string{}
 		}
 		filters[filterType] = append(filters[filterType], filterStr)
-
 	}
 	log.Debugf("Method buildFilterString was called with inputs %+v\n and results %+v", gFilters, filters)
 	return filters

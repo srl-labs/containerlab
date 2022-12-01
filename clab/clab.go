@@ -60,7 +60,7 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 		// define runtime name.
 		// order of preference: cli flag -> env var -> default value of docker
 		envN := os.Getenv("CLAB_RUNTIME")
-		log.Debugf("envN runtime var value is %v", envN)
+		log.Debugf("env runtime var value is %v", envN)
 		switch {
 		case name != "":
 		case envN != "":

@@ -97,6 +97,9 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 		}
 		log.Debugf("Trying to create mgmt network with params: %+v", netopts)
 		resp, err := network.Create(ctx, &netopts)
+		if err != nil {
+			return err
+		}
 		log.Debugf("Create network response was: %+v", resp)
 	}
 	return err
@@ -113,10 +116,10 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("Trying to delete mgmt network %v", r.mgmt.Network)
+	log.Debugf("trying to delete mgmt network %v", r.mgmt.Network)
 	_, err = network.Remove(ctx, r.mgmt.Network, &network.RemoveOptions{})
 	if err != nil {
-		return fmt.Errorf("Error while trying to remove a mgmt network %w", err)
+		return fmt.Errorf("error while trying to remove a mgmt network %w", err)
 	}
 	return nil
 }
@@ -192,6 +195,9 @@ func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
 		return err
 	}
 	err = containers.Stop(ctx, cID, &containers.StopOptions{})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -273,7 +279,7 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, cmd []strin
 	}
 	execSAAOpts := new(containers.ExecStartAndAttachOptions)
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
-	return nil
+	return err
 }
 
 // DeleteContainer removes a given container from the system (if it exists).
