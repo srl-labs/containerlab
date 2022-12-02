@@ -6,11 +6,9 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
@@ -58,27 +56,22 @@ var execCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		execResult := map[string]types.ExecReader{}
+		resultCollection := types.NewExecCollection()
 
 		for _, node := range c.Nodes {
 			exec, err := types.NewExec(execCommand)
 			if err != nil {
 				return err
 			}
-			err = node.RunExecType(ctx, exec)
+			execResult, err := node.RunExecType(ctx, exec)
 			if err != nil {
 				return err
 			}
-
-			execResult[node.Config().ShortName] = exec
+			resultCollection.Add(node.Config().ShortName, execResult)
 		}
 
 		if execFormat == string(types.ExecFormatJSON) {
-			result, err := json.Marshal(execResult)
-			if err != nil {
-				log.Errorf("Issue converting to json %v", err)
-			}
-			fmt.Println(string(result))
+			fmt.Println(resultCollection.GetInFormat(types.ExecFormatJSON))
 		}
 		return err
 	},
