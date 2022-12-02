@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -70,7 +70,7 @@ var mysocketioLoginCmd = &cobra.Command{
 		}
 		defer resp.Body.Close()
 
-		b, err := ioutil.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ var mysocketioLoginCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(filepath.Join(cwd, ".mysocketio_token"), []byte(t.Token), 0640)
+		err = os.WriteFile(filepath.Join(cwd, ".mysocketio_token"), []byte(t.Token), 0640)
 		if err != nil {
 			return fmt.Errorf("failed to write mysocketio token file as %s: %v",
 				filepath.Join(cwd, ".mysocketio_token"), err)
