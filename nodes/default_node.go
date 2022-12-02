@@ -246,3 +246,38 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 	}
 	return nil
 }
+
+func (d *DefaultNode) RunExecConfig(ctx context.Context) ([]types.ExecReader, error) {
+	result := []types.ExecReader{}
+	for _, cmd := range d.Cfg.Exec {
+		e, err := types.NewExec(cmd)
+		if err != nil {
+			return result, err
+		}
+
+		result = append(result, e)
+	}
+	return result, nil
+}
+
+// RunExecType is the final function that calls the runtime to execute a type.Exec on a container
+// This is to be overriden if the nodes implementation differs
+func (d *DefaultNode) RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error) {
+	err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, exec)
+	if err != nil {
+		log.Errorf("%s: failed to execute cmd: %q wit error %v", d.Cfg.LongName, exec.GetCmdString(), err)
+		return nil, err
+	}
+	return exec, nil
+}
+
+// RunExecType is the final function that calls the runtime to execute a type.Exec on a container
+// This is to be overriden if the nodes implementation differs
+func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec *types.Exec) error {
+	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, exec)
+	if err != nil {
+		log.Errorf("%s: failed to execute cmd: %q wit error %v", d.Cfg.LongName, exec.GetCmdString(), err)
+		return err
+	}
+	return nil
+}

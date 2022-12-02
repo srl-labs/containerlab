@@ -41,6 +41,6 @@ func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node, _
 	}
 
 	log.Infof("Creating mysocketio tunnels...")
-	err = createMysocketTunnels(ctx, s.Runtime, s.Cfg, ns)
+	err = createMysocketTunnels(ctx, s, ns)
 	return err
 }

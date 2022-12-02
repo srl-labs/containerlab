@@ -638,27 +638,27 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.
-func (d *DockerRuntime) Exec(ctx context.Context, cID string, cmd []string) ([]byte, []byte, error) {
+func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecExecutor) error {
 	cont, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	execID, err := d.Client.ContainerExecCreate(ctx, cID, dockerTypes.ExecConfig{
 		User:         "root",
 		AttachStderr: true,
 		AttachStdout: true,
-		Cmd:          cmd,
+		Cmd:          exec.GetCmd(),
 	})
 	if err != nil {
 		log.Errorf("failed to create exec in container %s: %v", cont.Name, err)
-		return nil, nil, err
+		return err
 	}
 	log.Debugf("%s exec created %v", cont.Name, cID)
 
 	rsp, err := d.Client.ContainerExecAttach(ctx, execID.ID, dockerTypes.ExecStartCheck{})
 	if err != nil {
 		log.Errorf("failed exec in container %s: %v", cont.Name, err)
-		return nil, nil, err
+		return err
 	}
 	defer rsp.Close()
 	log.Debugf("%s exec attached %v", cont.Name, cID)
@@ -674,17 +674,28 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, cmd []string) ([]b
 	select {
 	case err := <-outputDone:
 		if err != nil {
-			return outBuf.Bytes(), errBuf.Bytes(), err
+			return err
 		}
 	case <-ctx.Done():
-		return nil, nil, ctx.Err()
+		return ctx.Err()
 	}
-	return outBuf.Bytes(), errBuf.Bytes(), nil
+
+	// retrieve the exit code via inspect
+	execInspect, err := d.Client.ContainerExecInspect(ctx, execID.ID)
+	if err != nil {
+		return err
+	}
+
+	// set the result fields in the exec struct
+	exec.SetReturnCode(execInspect.ExitCode)
+	exec.SetStdOut(outBuf.Bytes())
+	exec.SetStdErr(errBuf.Bytes())
+	return nil
 }
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.
-func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, cmd []string) error {
-	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: cmd}
+func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, exec types.ExecExecutor) error {
+	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: exec.GetCmd()}
 	respID, err := d.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
 		return err

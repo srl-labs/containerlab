@@ -75,6 +75,8 @@ type Node interface {
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() runtime.ContainerRuntime        // GetRuntime returns the nodes assigned runtime
 	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
+	RunExecConfig(ctx context.Context) ([]types.ExecReader, error)
+	RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error)
 }
 
 type Initializer func() Node

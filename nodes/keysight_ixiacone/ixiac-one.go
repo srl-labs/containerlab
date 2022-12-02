@@ -12,7 +12,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -50,20 +49,21 @@ func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (l *ixiacOne) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
 	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.Cfg.ShortName)
-	return ixiacPostDeploy(ctx, l.Runtime, l.Cfg)
+	return l.ixiacPostDeploy(ctx)
 }
 
 // ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node.
-func ixiacPostDeploy(ctx context.Context, r runtime.ContainerRuntime, cfg *types.NodeConfig) error {
+func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		_, stderr, err := r.Exec(ctx, cfg.LongName, []string{"bash", "-c", ixiacOneCmd})
+		exec := types.NewExecSlice([]string{"bash", "-c", ixiacOneCmd})
+		execResult, err := l.RunExecType(ctx, exec)
 		if err != nil {
 			return err
 		}
-		if stderr != nil {
-			msg := strings.TrimSuffix(string(stderr), "\n")
+		if len(execResult.GetStdErrString()) > 0 {
+			msg := strings.TrimSuffix(execResult.GetStdErrString(), "\n")
 			if msg != statusInProgressMsg {
 				return err
 			}
