@@ -43,7 +43,7 @@ func (k *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 // GetImages is not required, kind will download the images itself
 func (d *k8s_kind) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (d *k8s_kind) PullImage(ctx context.Context) error           { return nil }
+func (d *k8s_kind) PullImage(_ context.Context) error             { return nil }
 
 // DeleteNetnsSymlink kind takes care of the Netlinks itself
 func (d *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }

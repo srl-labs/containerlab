@@ -59,4 +59,4 @@ func (e *extcont) Delete(_ context.Context) error { return nil }
 
 // GetImages don't matter for external containers.
 func (e *extcont) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (e *extcont) PullImage(ctx context.Context) error           { return nil }
+func (e *extcont) PullImage(_ context.Context) error             { return nil }
