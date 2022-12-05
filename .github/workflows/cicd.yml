@@ -384,7 +384,7 @@ jobs:
       - name: Install robotframework
         run: |
           pip install -r tests/requirements.txt
-      - name: Run srlinux tests
+      - name: Run k8s-kind and ext-container tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/05-basic-k8s-kind
       # upload test reports as a zip file
