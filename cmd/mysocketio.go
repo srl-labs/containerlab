@@ -84,7 +84,7 @@ var mysocketioLoginCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(filepath.Join(cwd, ".mysocketio_token"), []byte(t.Token), 0640)
+		err = os.WriteFile(filepath.Join(cwd, ".mysocketio_token"), []byte(t.Token), 0600)
 		if err != nil {
 			return fmt.Errorf("failed to write mysocketio token file as %s: %v",
 				filepath.Join(cwd, ".mysocketio_token"), err)

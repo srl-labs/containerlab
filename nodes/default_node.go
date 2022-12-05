@@ -275,7 +275,7 @@ func (d *DefaultNode) RunExecType(ctx context.Context, exec *types.Exec) (types.
 	return exec, nil
 }
 
-// RunExecType is the final function that calls the runtime to execute a type.Exec on a container
+// RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
 // This is to be overriden if the nodes implementation differs
 func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec *types.Exec) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, exec)

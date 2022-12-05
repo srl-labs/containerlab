@@ -41,7 +41,7 @@ func (*host) PullImage(_ context.Context) error             { return nil }
 func (*host) Delete(_ context.Context) error                { return nil }
 func (*host) WithMgmtNet(*types.MgmtNet)                    {}
 
-func (h *host) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
+func (h *host) GetRuntimeInformation(_ context.Context) ([]types.GenericContainer, error) {
 	// we skip the enrichment of network information
 	return []types.GenericContainer{
 		{
@@ -63,14 +63,14 @@ func (h *host) GetRuntimeInformation(ctx context.Context) ([]types.GenericContai
 	}, nil
 }
 
-func (h *host) RunExecConfig(ctx context.Context) ([]types.ExecReader, error) {
+func (h *host) RunExecConfig(_ context.Context) ([]types.ExecReader, error) {
 	if h.Cfg.Exec != nil && len(h.Cfg.Exec) > 0 {
 		log.Error("exec not supported on kind 'host' -> noop; continuing")
 	}
 	return []types.ExecReader{}, nil
 }
 
-func (h *host) RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error) {
+func (h *host) RunExecType(_ context.Context, _ *types.Exec) (types.ExecReader, error) {
 	log.Error("exec not supported on kind 'host' -> noop; continuing")
 	return nil, nil
 }
