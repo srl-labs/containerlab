@@ -68,7 +68,7 @@ func (s *crpd) PreDeploy(_ context.Context, _, _, _ string) error {
 	return createCRPDFiles(s)
 }
 
-func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
+func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 
 	sshRestartExec := types.NewExecSlice(sshRestartCmd)

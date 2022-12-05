@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -214,16 +213,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		wg := &sync.WaitGroup{}
 		wg.Add(len(c.Nodes))
 
-		// retrieve information about all the created containers
-		nodesRuntimeInfos, err := c.ListContainersClabNodes(ctx)
-		if err != nil {
-			return err
-		}
-
 		for _, node := range c.Nodes {
 			go func(node nodes.Node, wg *sync.WaitGroup) {
 				defer wg.Done()
-				err := node.PostDeploy(ctx, c.Nodes, nodesRuntimeInfos)
+				err := node.PostDeploy(ctx, c.Nodes)
 				if err != nil {
 					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
 				}
@@ -255,7 +248,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	execCollection := types.NewExecCollection()
 	for _, n := range c.Nodes {
-
 		execResult, err := n.RunExecConfig(ctx)
 		if err != nil {
 			log.Errorf("Failed to exec commands for node %s", name)
@@ -263,9 +255,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		execCollection.AddAll(n.Config().ShortName, execResult)
 	}
 
-	if format == string(types.ExecFormatJSON) {
-		fmt.Println(execCollection.GetInFormat(types.ExecFormatJSON))
-	}
+	// write to log
+	execCollection.WriteLogInfo()
 
 	// log new version availability info if ready
 	newVerNotification(vCh)

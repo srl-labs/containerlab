@@ -65,7 +65,7 @@ type Node interface {
 	PreCheckDeploymentConditionsMeet(context.Context) error // PreCheckDeploymentDependencies checks if all the conditions are meat to deploy this node
 	PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error
 	Deploy(context.Context) error // Deploy triggers the deployment of this node
-	PostDeploy(context.Context, map[string]Node, []types.GenericContainer) error
+	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)                  // WithMgmtNet provides the management network for the node
 	WithRuntime(runtime.ContainerRuntime)        // WithRuntime provides the runtime for the node
 	CheckInterfaceNamingConvention() error       // CheckInterfaceNamingConvention triggers a check for the interface naming provided via the topology file

@@ -87,7 +87,7 @@ func (c *cvx) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (c *cvx) PostDeploy(_ context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
+func (c *cvx) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for cvx '%s' node", c.Cfg.ShortName)
 	if c.vmChans == nil {
 		return nil

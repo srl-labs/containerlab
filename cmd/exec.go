@@ -31,12 +31,11 @@ var execCmd = &cobra.Command{
 			return errors.New("provide command to execute")
 		}
 
-		switch execFormat {
-		case "json", "plain":
-			// expected values, go on
-		default:
-			return errors.New("format is expected to be either json or plain")
+		outputFormat, err := types.ParseExecOutputFormat(format)
+		if err != nil {
+			return err
 		}
+
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo, varsFile),
@@ -70,10 +69,13 @@ var execCmd = &cobra.Command{
 			resultCollection.Add(node.Config().ShortName, execResult)
 		}
 
-		if execFormat == string(types.ExecFormatJSON) {
-			fmt.Println(resultCollection.GetInFormat(types.ExecFormatJSON))
+		output, err := resultCollection.GetInFormat(outputFormat)
+		if err != nil {
+			return err
 		}
-		return err
+		fmt.Println(output)
+
+		return nil
 	},
 }
 

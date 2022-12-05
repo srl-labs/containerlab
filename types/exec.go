@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/google/shlex"
 )
 
@@ -14,6 +16,16 @@ const (
 	ExecFormatJSON  ExecOutputFormat = "json"
 	ExecFormatPLAIN ExecOutputFormat = "plain"
 )
+
+func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case string(ExecFormatJSON):
+		return ExecFormatJSON, nil
+	case string(ExecFormatPLAIN), "table":
+		return ExecFormatPLAIN, nil
+	}
+	return "", fmt.Errorf("cannot parse %q as 'ExecOutputFormat'", s)
+}
 
 type ExecExecutor interface {
 	GetCmd() []string
@@ -36,10 +48,10 @@ type ExecReader interface {
 }
 
 type Exec struct {
-	Stdout     []byte   `json:"stdout"`
-	Stderr     []byte   `json:"stderr"`
-	ReturnCode int      `json:"returnCode"`
 	Cmd        []string `json:"cmd"`
+	ReturnCode int      `json:"returnCode"`
+	Stdout     string   `json:"stdout"`
+	Stderr     string   `json:"stderr"`
 }
 
 func NewExec(cmd string) (*Exec, error) {
@@ -67,14 +79,14 @@ func (e *Exec) SetCmd(cmd string) error {
 }
 
 func (e *Exec) String() string {
-	return fmt.Sprintf("  Cmd: %s\n  StdOut: %s\n  StdErr %s\n  ReturnCode: %d\n", e.GetCmdString(), e.Stdout, e.Stderr, e.ReturnCode)
+	return fmt.Sprintf("Cmd: %s\nReturnCode: %d\nStdOut:\n%s\nStdErr:\n%s\n", e.GetCmdString(), e.ReturnCode, e.Stdout, e.Stderr)
 }
 
 func (e *Exec) GetEntryInFormat(format ExecOutputFormat) (string, error) {
 	var result string
 	switch format {
 	case ExecFormatJSON:
-		byteData, err := json.Marshal(e)
+		byteData, err := json.MarshalIndent(e, "", "  ")
 		if err != nil {
 			return "", err
 		}
@@ -107,11 +119,11 @@ func (e *Exec) GetStdErrString() string {
 }
 
 func (e *Exec) GetStdOutByteSlice() []byte {
-	return e.Stdout
+	return []byte(e.Stdout)
 }
 
 func (e *Exec) GetStdErrByteSlice() []byte {
-	return e.Stderr
+	return []byte(e.Stderr)
 }
 
 func (e *Exec) GetCmd() []string {
@@ -119,11 +131,11 @@ func (e *Exec) GetCmd() []string {
 }
 
 func (e *Exec) SetStdOut(data []byte) {
-	e.Stdout = data
+	e.Stdout = string(data)
 }
 
 func (e *Exec) SetStdErr(data []byte) {
-	e.Stderr = data
+	e.Stderr = string(data)
 }
 
 // internal data struct
@@ -151,19 +163,41 @@ func (ec *ExecCollection) GetInFormat(format ExecOutputFormat) (string, error) {
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:
-		byteData, err := json.Marshal(ec.execCollectionData)
+		byteData, err := json.MarshalIndent(ec.execCollectionData, "", "  ")
 		if err != nil {
 			return "", err
 		}
 		result.Write(byteData)
 	case ExecFormatPLAIN:
+		printSep := false
 		for k, execResults := range ec.execCollectionData {
+			if len(execResults) == 0 {
+				// skip if there is no result
+				continue
+			}
+			// write seperator
+			if printSep {
+				result.WriteString("\n+++++++++++++++++++++++++++++\n\n")
+			}
+			// write header for entry
+			result.WriteString("Node: ")
 			result.WriteString(k)
-			result.WriteString(":\n")
+			result.WriteString("\n")
 			for _, er := range execResults {
+				// write entry
 				result.WriteString(er.String())
 			}
+			// starting second run, print sep
+			printSep = true
 		}
 	}
 	return result.String(), nil
+}
+
+func (ec *ExecCollection) WriteLogInfo() {
+	for k, execResults := range ec.execCollectionData {
+		for _, er := range execResults {
+			log.Infof("Executed command '%s' on %s. stdout:\n%s", er.GetCmdString(), k, er.GetStdOutString())
+		}
+	}
 }

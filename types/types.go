@@ -143,7 +143,6 @@ type HostRequirements struct {
 }
 
 func (h *HostRequirements) IsValid() (bool, error) {
-
 	if h.VirtRequired && !utils.VerifyVirtSupport() {
 		return false, fmt.Errorf("SSSE3 CPU feature required, but not available")
 	}

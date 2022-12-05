@@ -45,7 +45,7 @@ func (s *sonic) PreDeploy(_ context.Context, _, _, _ string) error {
 	return nil
 }
 
-func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
+func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
 	exec := types.NewExecSlice([]string{"supervisord"})

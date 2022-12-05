@@ -37,7 +37,7 @@ func NewDefaultNode(on NodeOverwrites) *DefaultNode {
 	return dn
 }
 
-func (d *DefaultNode) PostDeploy(_ context.Context, _ map[string]Node, _ []types.GenericContainer) error {
+func (d *DefaultNode) PostDeploy(_ context.Context, _ map[string]Node) error {
 	return nil
 }
 func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                   { d.Mgmt = mgmt }
@@ -220,6 +220,7 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
+	RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error)
 }
 
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
@@ -254,8 +255,11 @@ func (d *DefaultNode) RunExecConfig(ctx context.Context) ([]types.ExecReader, er
 		if err != nil {
 			return result, err
 		}
-
-		result = append(result, e)
+		er, err := d.OverwriteNode.RunExecType(ctx, e)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, er)
 	}
 	return result, nil
 }
@@ -265,7 +269,7 @@ func (d *DefaultNode) RunExecConfig(ctx context.Context) ([]types.ExecReader, er
 func (d *DefaultNode) RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error) {
 	err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, exec)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q wit error %v", d.Cfg.LongName, exec.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, exec.GetCmdString(), err)
 		return nil, err
 	}
 	return exec, nil
@@ -276,7 +280,7 @@ func (d *DefaultNode) RunExecType(ctx context.Context, exec *types.Exec) (types.
 func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec *types.Exec) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, exec)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q wit error %v", d.Cfg.LongName, exec.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, exec.GetCmdString(), err)
 		return err
 	}
 	return nil

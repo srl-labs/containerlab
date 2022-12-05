@@ -162,11 +162,17 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 	return clusterConfig, nil
 }
 
-func (k *k8s_kind) RunExec(ctx context.Context, format string) (result map[string]map[string]interface{}, err error) {
+func (k *k8s_kind) RunExecConfig(ctx context.Context) ([]types.ExecReader, error) {
 	// It might be usefull to execute the same set of commands on all
 	// resulting kind nodes, but that's not implemented yet. So we give the hint to use ext-container
 	if k.Cfg.Exec != nil && len(k.Cfg.Exec) > 0 {
 		log.Errorf("Exec not implemented on k8s-kind use ext-container and reference the resulting kind cluster nodes seperately.")
 	}
+	return nil, nil
+}
+func (k *k8s_kind) RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error) {
+	// It might be usefull to execute the same set of commands on all
+	// resulting kind nodes, but that's not implemented yet. So we give the hint to use ext-container
+	log.Errorf("Exec not implemented on k8s-kind use ext-container and reference the resulting kind cluster nodes seperately.")
 	return nil, nil
 }

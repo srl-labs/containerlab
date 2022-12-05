@@ -100,7 +100,7 @@ func (n *ceos) PreDeploy(ctx context.Context, _, _, _ string) error {
 	return n.createCEOSFiles(ctx)
 }
 
-func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node, _ []types.GenericContainer) error {
+func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
 	return n.ceosPostDeploy(ctx)
 }

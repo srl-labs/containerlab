@@ -247,11 +247,21 @@ func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot strin
 	return s.createSRLFiles()
 }
 
-func (s *srl) PostDeploy(ctx context.Context, _ map[string]nodes.Node, nodesRuntimeInfo []types.GenericContainer) error {
+func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
+	// retriev all the runtime informations of all nodes
+	nodesRuntimeInfos := []types.GenericContainer{}
+	for _, node := range nodes {
+		infos, err := node.GetRuntimeInformation(ctx)
+		if err != nil {
+			return err
+		}
+		nodesRuntimeInfos = append(nodesRuntimeInfos, infos...)
+	}
+
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := s.populateHosts(ctx, nodesRuntimeInfo); err != nil {
+	if err := s.populateHosts(ctx, nodesRuntimeInfos); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
 	}
 

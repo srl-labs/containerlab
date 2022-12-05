@@ -184,17 +184,17 @@ func (mr *MockNodeMockRecorder) Init(arg0 interface{}, arg1 ...interface{}) *gom
 }
 
 // PostDeploy mocks base method.
-func (m *MockNode) PostDeploy(arg0 context.Context, arg1 map[string]nodes.Node, arg2 []types.GenericContainer) error {
+func (m *MockNode) PostDeploy(arg0 context.Context, arg1 map[string]nodes.Node) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostDeploy", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "PostDeploy", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PostDeploy indicates an expected call of PostDeploy.
-func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1)
 }
 
 // PreCheckDeploymentConditionsMeet mocks base method.
@@ -223,6 +223,36 @@ func (m *MockNode) PreDeploy(ctx context.Context, configName, labCADir, labCARoo
 func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, configName, labCADir, labCARoot)
+}
+
+// RunExecConfig mocks base method.
+func (m *MockNode) RunExecConfig(ctx context.Context) ([]types.ExecReader, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunExecConfig", ctx)
+	ret0, _ := ret[0].([]types.ExecReader)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunExecConfig indicates an expected call of RunExecConfig.
+func (mr *MockNodeMockRecorder) RunExecConfig(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecConfig", reflect.TypeOf((*MockNode)(nil).RunExecConfig), ctx)
+}
+
+// RunExecType mocks base method.
+func (m *MockNode) RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunExecType", ctx, exec)
+	ret0, _ := ret[0].(types.ExecReader)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunExecType indicates an expected call of RunExecType.
+func (mr *MockNodeMockRecorder) RunExecType(ctx, exec interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecType", reflect.TypeOf((*MockNode)(nil).RunExecType), ctx, exec)
 }
 
 // SaveConfig mocks base method.
