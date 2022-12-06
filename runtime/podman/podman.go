@@ -234,23 +234,23 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return nspath, nil
 }
 
-func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecExecutor) error {
-	ctx, err := r.connect(ctx)
+func (r *PodmanRuntime) Exec(ctx context.Context, cID string, cmd []string) (stdout []byte, stderr []byte, err error) {
+	ctx, err = r.connect(ctx)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	execCreateConf := handlers.ExecCreateConfig{
 		ExecConfig: dockerTypes.ExecConfig{
 			User:         "root",
 			AttachStderr: true,
 			AttachStdout: true,
-			Cmd:          exec.GetCmd(),
+			Cmd:          cmd,
 		},
 	}
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
 		log.Errorf("failed to create exec in container %q: %v", cID, err)
-		return err
+		return nil, nil, err
 	}
 	var sOut, sErr podmanWriterCloser
 	execSAAOpts := new(containers.ExecStartAndAttachOptions).WithOutputStream(&sOut).WithErrorStream(
@@ -258,15 +258,13 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecExe
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
 	if err != nil {
 		log.Errorf("failed to start/attach exec in container %q: %v", cID, err)
-		return err
+		return nil, nil, err
 	}
 	log.Debugf("Exec attached to the container %q and got stdout %q and stderr %q", cID, sOut.Bytes(), sErr.Bytes())
-	exec.SetStdErr(sErr.Bytes())
-	exec.SetStdOut(sOut.Bytes())
-	return nil
+	return sOut.Bytes(), sErr.Bytes(), nil
 }
 
-func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec types.ExecExecutor) error {
+func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, cmd []string) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
@@ -276,7 +274,7 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec types.
 			Tty:          false,
 			AttachStderr: false,
 			AttachStdout: false,
-			Cmd:          exec.GetCmd(),
+			Cmd:          cmd,
 		},
 	}
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
