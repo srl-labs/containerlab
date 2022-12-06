@@ -204,12 +204,25 @@ installFile() {
 # installPkg installs the downloaded version of a package in a deb or rpm format
 installPkg() {
     echo "Preparing to install $BINARY_NAME ${TAG_WO_VER} from package"
+    runAsRoot $PKG_INSTALLER $TMP_FILE
+}
+
+# setPkgInstaller deduces the pkg installation command
+setPkgInstaller() {
     if [ $PKG_FORMAT == "deb" ]; then
-        runAsRoot dpkg -i $TMP_FILE
+        PKG_INSTALLER="dpkg -i"
     elif [ $PKG_FORMAT == "rpm" ]; then
-        runAsRoot rpm -U $TMP_FILE
+        if [ -f /etc/os-release ]; then
+            VARIANT_ID="$(. /etc/os-release && echo "$VARIANT_ID")"
+        fi
+        if [[ -n "$VARIANT_ID" && $VARIANT_ID == "coreos" ]]; then
+            PKG_INSTALLER="rpm-ostree install --uninstall=containerlab --idempotent"
+        else
+            PKG_INSTALLER="rpm -U"
+        fi
     fi
 }
+
 
 # fail_trap is executed if an error occurs.
 fail_trap() {
@@ -229,6 +242,13 @@ fail_trap() {
 
 # testVersion tests the installed client to make sure it is working.
 testVersion() {
+    if [ -f /etc/os-release ]; then
+        # CoreOS requires a reboot for the new layers to become active, hence the binary is not yet available
+        VARIANT_ID="$(. /etc/os-release && echo "$VARIANT_ID")"
+        if [[ -n "$VARIANT_ID" && $VARIANT_ID == "coreos" ]]; then
+            exit 0
+        fi
+    fi
     set +e
     $BIN_INSTALL_DIR/$BINARY_NAME version
     if [ "$?" = "1" ]; then
@@ -306,6 +326,7 @@ if ! checkInstalledVersion; then
     verifyOpenssl
     downloadFile
     if [ $USE_PKG == "true" ]; then
+        setPkgInstaller
         installPkg
     else
         installFile
