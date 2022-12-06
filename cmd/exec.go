@@ -31,6 +31,10 @@ var execCmd = &cobra.Command{
 	Short:   "execute a command on one or multiple containers",
 	PreRunE: sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if name == "" && topo == "" {
+			return errors.New("provide either lab name (--name) or topology file path (--topo)")
+		}
+
 		if execCommand == "" {
 			return errors.New("provide command to execute")
 		}
@@ -57,6 +61,9 @@ var execCmd = &cobra.Command{
 			return err
 		}
 
+		if name == "" {
+			name = c.Config.Name
+		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
