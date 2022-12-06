@@ -6,13 +6,9 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
-	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
@@ -31,20 +27,15 @@ var execCmd = &cobra.Command{
 	Short:   "execute a command on one or multiple containers",
 	PreRunE: sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if name == "" && topo == "" {
-			return errors.New("provide either lab name (--name) or topology file path (--topo)")
-		}
-
 		if execCommand == "" {
 			return errors.New("provide command to execute")
 		}
 
-		switch execFormat {
-		case "json", "plain":
-			// expected values, go on
-		default:
-			log.Error("format is expected to be either json or plain")
+		outputFormat, err := types.ParseExecOutputFormat(format)
+		if err != nil {
+			return err
 		}
+
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo, varsFile),
@@ -61,97 +52,31 @@ var execCmd = &cobra.Command{
 			return err
 		}
 
-		if name == "" {
-			name = c.Config.Name
-		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		filters := []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
-		filters = append(filters, types.FilterFromLabelStrings(labels)...)
-		containers, err := c.ListContainers(ctx, filters)
+		resultCollection := types.NewExecCollection()
+
+		for _, node := range c.Nodes {
+			exec, err := types.NewExec(execCommand)
+			if err != nil {
+				return err
+			}
+			execResult, err := node.RunExecType(ctx, exec)
+			if err != nil {
+				return err
+			}
+			resultCollection.Add(node.Config().ShortName, execResult)
+		}
+
+		output, err := resultCollection.GetInFormat(outputFormat)
 		if err != nil {
 			return err
 		}
+		fmt.Println(output)
 
-		if len(containers) == 0 {
-			return errors.New("no containers found")
-		}
-
-		jsonResult := make(map[string]map[string]map[string]interface{})
-		for _, cont := range containers {
-			if cont.State != "running" {
-				continue
-			}
-			if len(cont.Names) == 0 {
-				continue
-			}
-			nodeRuntime, err := c.GetNodeRuntime(strings.TrimPrefix(cont.Names[0], "/"))
-			if err != nil {
-				return err
-			}
-
-			contName := strings.TrimLeft(cont.Names[0], "/")
-			if jsonResult[contName], err = execCmds(
-				ctx, cont, nodeRuntime, []string{execCommand}, execFormat,
-			); err != nil {
-				return err
-			}
-		}
-		if execFormat == "json" {
-			result, err := json.Marshal(jsonResult)
-			if err != nil {
-				log.Errorf("Issue converting to json %v", err)
-			}
-			fmt.Println(string(result))
-		}
-		return err
+		return nil
 	},
-}
-
-func execCmds(
-	ctx context.Context,
-	cont types.GenericContainer,
-	runtime runtime.ContainerRuntime,
-	cmds []string,
-	format string,
-) (result map[string]map[string]interface{}, err error) {
-	var doc interface{}
-
-	result = make(map[string]map[string]interface{})
-	for _, cmd := range cmds {
-		c, err := shlex.Split(cmd)
-		if err != nil {
-			return nil, err
-		}
-
-		stdout, stderr, err := runtime.Exec(ctx, cont.ID, c)
-		if err != nil {
-			log.Errorf("%s: failed to execute cmd: %v", cont.Names, err)
-			return nil, nil
-		}
-
-		switch format {
-		case "json":
-			result[cmd] = make(map[string]interface{})
-			if json.Unmarshal([]byte(stdout), &doc) == nil {
-				result[cmd]["stdout"] = doc
-			} else {
-				result[cmd]["stdout"] = string(stdout)
-			}
-			result[cmd]["stderr"] = string(stderr)
-		case "plain", "table":
-			contName := strings.TrimLeft(cont.Names[0], "/")
-			if len(stdout) > 0 {
-				log.Infof("Executed command '%s' on %s. stdout:\n%s", cmd, contName, string(stdout))
-			}
-			if len(stderr) > 0 {
-				log.Infof("Executed command '%s' on %s. stderr:\n%s", cmd, contName, string(stderr))
-			}
-		}
-	}
-
-	return result, nil
 }
 
 func init() {

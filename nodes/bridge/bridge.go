@@ -104,8 +104,14 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 
 func (b *bridge) PullImage(_ context.Context) error { return nil }
 
-// UpdateConfigWithRuntimeInfo is a noop for bridges.
-func (b *bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
+func (b *bridge) RunExecConfig(_ context.Context) ([]types.ExecReader, error) {
+	if b.Cfg.Exec != nil && len(b.Cfg.Exec) > 0 {
+		log.Error("exec not supported on kind 'bridge' -> noop; continuing")
+	}
+	return []types.ExecReader{}, nil
+}
 
-// GetContainers is a noop for bridges.
-func (b *bridge) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
+func (b *bridge) RunExecType(_ context.Context, _ *types.Exec) (types.ExecReader, error) {
+	log.Error("exec not supported on kind 'bridge' -> noop; continuing")
+	return nil, nil
+}

@@ -7,6 +7,7 @@ package host
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -63,4 +64,16 @@ func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) 
 			},
 		},
 	}, nil
+}
+
+func (h *host) RunExecConfig(_ context.Context) ([]types.ExecReader, error) {
+	if h.Cfg.Exec != nil && len(h.Cfg.Exec) > 0 {
+		log.Error("exec not supported on kind 'host' -> noop; continuing")
+	}
+	return []types.ExecReader{}, nil
+}
+
+func (h *host) RunExecType(_ context.Context, _ *types.Exec) (types.ExecReader, error) {
+	log.Error("exec not supported on kind 'host' -> noop; continuing")
+	return nil, nil
 }
