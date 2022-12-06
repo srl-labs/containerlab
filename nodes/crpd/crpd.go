@@ -29,8 +29,7 @@ var (
 	//go:embed sshd_config
 	sshdCfg string
 
-	saveCmd       = []string{"cli", "show", "conf"}
-	sshRestartCmd = []string{"service", "ssh", "restart"}
+	saveCmd = []string{"cli", "show", "conf"}
 )
 
 func init() {
