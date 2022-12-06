@@ -79,7 +79,7 @@ Ensure srl1 is reachable over ssh
     Login via SSH with username and password
     ...    address=clab-${lab-name}-srl1
     ...    username=admin
-    ...    password=admin
+    ...    password=NokiaSrl1!
     ...    try_for=10
 
 Ensure srl1 is reachable over ssh with public key RSA auth
