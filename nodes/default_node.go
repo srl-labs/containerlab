@@ -121,14 +121,14 @@ func (d *DefaultNode) GetRuntimeInformation(ctx context.Context) ([]types.Generi
 
 	// populate ip information
 	gcNwSettings := genericContainers[0].NetworkSettings
-	if gcNwSettings != (types.GenericMgmtIPs{}) {
-		d.Cfg.MgmtIPv4Address = gcNwSettings.IPv4addr
-		d.Cfg.MgmtIPv4PrefixLength = gcNwSettings.IPv4pLen
-		d.Cfg.MgmtIPv6Address = gcNwSettings.IPv6addr
-		d.Cfg.MgmtIPv6PrefixLength = gcNwSettings.IPv6pLen
-		d.Cfg.MgmtIPv4Gateway = gcNwSettings.IPv4Gw
-		d.Cfg.MgmtIPv6Gateway = gcNwSettings.IPv6Gw
-	}
+
+	d.Cfg.MgmtIPv4Address = gcNwSettings.IPv4addr
+	d.Cfg.MgmtIPv4PrefixLength = gcNwSettings.IPv4pLen
+	d.Cfg.MgmtIPv6Address = gcNwSettings.IPv6addr
+	d.Cfg.MgmtIPv6PrefixLength = gcNwSettings.IPv6pLen
+	d.Cfg.MgmtIPv4Gateway = gcNwSettings.IPv4Gw
+	d.Cfg.MgmtIPv6Gateway = gcNwSettings.IPv6Gw
+
 	d.Cfg.ContainerID = genericContainers[0].ID
 
 	return genericContainers, nil
