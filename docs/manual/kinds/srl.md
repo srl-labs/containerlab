@@ -67,7 +67,7 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
     ```
 
 !!!info
-    Default credentials: `admin:admin`  
+    Default credentials[^4]: `admin:NokiaSrl1!`  
     Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^1].
 
 ## Interfaces mapping
@@ -354,6 +354,7 @@ The easiest way to enable SSSE3 instruction set is to configure the hypervisor t
 
 Or it's also possible via the proxmox configuration file `/etc/pve/qemu-server/vmid.conf`.
 
-[^1]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access.
+[^1]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access. Experimental feature.
 [^2]: If running with `sudo`, add `-E` flag to sudo to preserve user' home directory for this feature to work as expected.
 [^3]: CLI configs can be saved also in the "flat" format using `info flat` command.
+[^4]: Prior to SR Linux 22.11.1, the default credentials were `admin:admin`.
