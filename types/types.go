@@ -5,18 +5,11 @@
 package types
 
 import (
-	"bytes"
-	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
-	"github.com/hairyhenderson/gomplate/v3"
-	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -135,8 +128,6 @@ type NodeConfig struct {
 	CPU    float64 `json:"cpu,omitempty"`
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
-	// Host requirements
-	HostRequirements HostRequirements `json:"host-requirements,omitempty"`
 
 	// status that is set by containerlab to indicate deployment stage
 	DeploymentStatus string `json:"deployment-status,omitempty"`
@@ -151,49 +142,19 @@ type HostRequirements struct {
 	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
 }
 
-// GenerateConfig generates configuration for the nodes
-// out of the template based on the node configuration and saves the result to dst.
-func (node *NodeConfig) GenerateConfig(dst, templ string) error {
-	// If the config file is already present in the node dir
-	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
-	// this will persist the changes that users make to a running config when booted from some startup config
-	if utils.FileExists(dst) && (node.StartupConfig == "" || !node.EnforceStartupConfig) {
-		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, node.ShortName)
-		return nil
-	} else if node.EnforceStartupConfig {
-		log.Infof("Startup config for '%s' node enforced: '%s'", node.ShortName, dst)
+func (h *HostRequirements) IsValid() (bool, error) {
+	if h.VirtRequired && !utils.VerifyVirtSupport() {
+		return false, fmt.Errorf("SSSE3 CPU feature required, but not available")
 	}
-
-	log.Debugf("generating config for node %s from file %s", node.ShortName, node.StartupConfig)
-
-	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
-	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
-	delete(gfuncs, "slice")
-	tpl, err := template.New(filepath.Base(node.StartupConfig)).Funcs(gfuncs).Parse(templ)
-	if err != nil {
-		return err
+	if h.SSSE3 && !utils.VerifySSSE3Support() {
+		return false, fmt.Errorf("SSSE3 CPU feature required, but not available")
 	}
+	return true, nil
+}
 
-	dstBytes := new(bytes.Buffer)
-
-	err = tpl.Execute(dstBytes, node)
-	if err != nil {
-		return err
-	}
-	log.Debugf("node '%s' generated config: %s", node.ShortName, dstBytes.String())
-
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(dstBytes.Bytes())
-	if err != nil {
-		f.Close()
-		return err
-	}
-
-	return f.Close()
+func (h *HostRequirements) Combine(h2 *HostRequirements) {
+	h.SSSE3 = h.SSSE3 || h2.SSSE3
+	h.VirtRequired = h.VirtRequired || h2.VirtRequired
 }
 
 func DisableTxOffload(n *NodeConfig) error {
@@ -260,7 +221,7 @@ type GenericMgmtIPs struct {
 }
 
 type GenericFilter struct {
-	// defined by now "label"
+	// defined by now "label" / "name" [then only Match is required]
 	FilterType string
 	// defines e.g. the label name for FilterType "label"
 	Field string

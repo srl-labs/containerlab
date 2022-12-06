@@ -77,7 +77,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			FilterType: "label", Match: c.Config.Name,
 			Field: "containerlab", Operator: "exists",
 		}}
-		containers, err := c.ListContainers(ctx, labels)
+		containers, err := c.ListContainersFilter(ctx, labels)
 		if err != nil {
 			return err
 		}
@@ -142,8 +142,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-	containers, err := c.ListContainers(ctx, labels)
+	containers, err := c.ListContainersClabNodes(ctx)
 	if err != nil {
 		return err
 	}
@@ -192,10 +191,13 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	// delete container network namespaces symlinks
-	err = c.DeleteNetnsSymlinks()
-	if err != nil {
-		return fmt.Errorf("error while deleting netns symlinks: %w", err)
+	for _, node := range c.Nodes {
+		err = node.DeleteNetnsSymlink()
+		if err != nil {
+			return fmt.Errorf("error while deleting netns symlinks: %w", err)
+		}
 	}
+
 	// Remove any dangling veths from host netns or bridges
 	err = c.VethCleanup(ctx)
 	if err != nil {

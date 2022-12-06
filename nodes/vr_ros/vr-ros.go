@@ -5,12 +5,10 @@
 package vr_ros
 
 import (
+	"context"
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -21,6 +19,9 @@ var kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
 const (
 	defaultUser     = "admin"
 	defaultPassword = "admin"
+
+	configDirName   = "ftpboot"
+	startupCfgFName = "config.auto.rsc"
 )
 
 func init() {
@@ -34,6 +35,11 @@ type vrRos struct {
 }
 
 func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+	// set virtualization requirement
+	s.HostRequirements.VirtRequired = true
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -57,35 +63,10 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
 
-	// set virtualization requirement
-	s.Cfg.HostRequirements.VirtRequired = true
-
 	return nil
 }
 
-func (s *vrRos) PreDeploy(_, _, _ string) error {
+func (s *vrRos) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	return createVrROSFiles(s.Cfg)
-}
-
-func createVrROSFiles(node *types.NodeConfig) error {
-	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(node.LabDir, "ftpboot"), 0777)
-
-	if node.StartupConfig != "" {
-		cfg := filepath.Join(node.LabDir, "ftpboot", "config.auto.rsc")
-
-		c, err := os.ReadFile(node.StartupConfig)
-		if err != nil {
-			return err
-		}
-
-		cfgTemplate := string(c)
-
-		err = node.GenerateConfig(cfg, cfgTemplate)
-		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-		}
-	}
-	return nil
+	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
 }

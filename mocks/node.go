@@ -37,6 +37,20 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 	return m.recorder
 }
 
+// CheckInterfaceNamingConvention mocks base method.
+func (m *MockNode) CheckInterfaceNamingConvention() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckInterfaceNamingConvention")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckInterfaceNamingConvention indicates an expected call of CheckInterfaceNamingConvention.
+func (mr *MockNodeMockRecorder) CheckInterfaceNamingConvention() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceNamingConvention", reflect.TypeOf((*MockNode)(nil).CheckInterfaceNamingConvention))
+}
+
 // Config mocks base method.
 func (m *MockNode) Config() *types.NodeConfig {
 	m.ctrl.T.Helper()
@@ -65,6 +79,20 @@ func (mr *MockNodeMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNode)(nil).Delete), arg0)
 }
 
+// DeleteNetnsSymlink mocks base method.
+func (m *MockNode) DeleteNetnsSymlink() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteNetnsSymlink")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteNetnsSymlink indicates an expected call of DeleteNetnsSymlink.
+func (mr *MockNodeMockRecorder) DeleteNetnsSymlink() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNetnsSymlink", reflect.TypeOf((*MockNode)(nil).DeleteNetnsSymlink))
+}
+
 // Deploy mocks base method.
 func (m *MockNode) Deploy(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -79,18 +107,32 @@ func (mr *MockNodeMockRecorder) Deploy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0)
 }
 
-// GetImages mocks base method.
-func (m *MockNode) GetImages() map[string]string {
+// GenerateConfig mocks base method.
+func (m *MockNode) GenerateConfig(dst, templ string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetImages")
+	ret := m.ctrl.Call(m, "GenerateConfig", dst, templ)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GenerateConfig indicates an expected call of GenerateConfig.
+func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), dst, templ)
+}
+
+// GetImages mocks base method.
+func (m *MockNode) GetImages(arg0 context.Context) map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetImages", arg0)
 	ret0, _ := ret[0].(map[string]string)
 	return ret0
 }
 
 // GetImages indicates an expected call of GetImages.
-func (mr *MockNodeMockRecorder) GetImages() *gomock.Call {
+func (mr *MockNodeMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages), arg0)
 }
 
 // GetRuntime mocks base method.
@@ -105,6 +147,21 @@ func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 func (mr *MockNodeMockRecorder) GetRuntime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockNode)(nil).GetRuntime))
+}
+
+// GetRuntimeInformation mocks base method.
+func (m *MockNode) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRuntimeInformation", ctx)
+	ret0, _ := ret[0].([]types.GenericContainer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRuntimeInformation indicates an expected call of GetRuntimeInformation.
+func (mr *MockNodeMockRecorder) GetRuntimeInformation(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntimeInformation", reflect.TypeOf((*MockNode)(nil).GetRuntimeInformation), ctx)
 }
 
 // Init mocks base method.
@@ -140,18 +197,32 @@ func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1)
 }
 
-// PreDeploy mocks base method.
-func (m *MockNode) PreDeploy(configName, labCADir, labCARoot string) error {
+// PreCheckDeploymentConditionsMeet mocks base method.
+func (m *MockNode) PreCheckDeploymentConditionsMeet(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreDeploy", configName, labCADir, labCARoot)
+	ret := m.ctrl.Call(m, "PreCheckDeploymentConditionsMeet", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreCheckDeploymentConditionsMeet indicates an expected call of PreCheckDeploymentConditionsMeet.
+func (mr *MockNodeMockRecorder) PreCheckDeploymentConditionsMeet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreCheckDeploymentConditionsMeet", reflect.TypeOf((*MockNode)(nil).PreCheckDeploymentConditionsMeet), arg0)
+}
+
+// PreDeploy mocks base method.
+func (m *MockNode) PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreDeploy", ctx, configName, labCADir, labCARoot)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PreDeploy indicates an expected call of PreDeploy.
-func (mr *MockNodeMockRecorder) PreDeploy(configName, labCADir, labCARoot interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), configName, labCADir, labCARoot)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, configName, labCADir, labCARoot)
 }
 
 // SaveConfig mocks base method.
@@ -166,6 +237,20 @@ func (m *MockNode) SaveConfig(arg0 context.Context) error {
 func (mr *MockNodeMockRecorder) SaveConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockNode)(nil).SaveConfig), arg0)
+}
+
+// VerifyStartupConfig mocks base method.
+func (m *MockNode) VerifyStartupConfig(topoDir string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyStartupConfig", topoDir)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyStartupConfig indicates an expected call of VerifyStartupConfig.
+func (mr *MockNodeMockRecorder) VerifyStartupConfig(topoDir interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyStartupConfig", reflect.TypeOf((*MockNode)(nil).VerifyStartupConfig), topoDir)
 }
 
 // WithMgmtNet mocks base method.

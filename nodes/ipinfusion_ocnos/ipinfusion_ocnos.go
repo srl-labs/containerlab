@@ -38,6 +38,11 @@ type IPInfusionOcNOS struct {
 }
 
 func (s *IPInfusionOcNOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+	// set virtualization requirement
+	s.HostRequirements.VirtRequired = true
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -55,13 +60,10 @@ func (s *IPInfusionOcNOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) 
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
 
-	// set virtualization requirement
-	s.Cfg.HostRequirements.VirtRequired = true
-
 	return nil
 }
 
-func (s *IPInfusionOcNOS) PreDeploy(_, _, _ string) error {
+func (s *IPInfusionOcNOS) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nil
 }

@@ -14,7 +14,6 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -129,7 +128,7 @@ func parseSplitPort(hostIP, hostPort *string, ctrPort string, protocol *string) 
 	}
 
 	hport := newPort.HostPort
-	logrus.Debugf("Adding port mapping from %d to %d length %d protocol %q", hport,
+	log.Debugf("Adding port mapping from %d to %d length %d protocol %q", hport,
 		newPort.ContainerPort, newPort.Range, newPort.Protocol)
 
 	return newPort, nil

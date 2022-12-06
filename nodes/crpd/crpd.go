@@ -29,7 +29,8 @@ var (
 	//go:embed sshd_config
 	sshdCfg string
 
-	saveCmd = []string{"cli", "show", "conf"}
+	saveCmd       = []string{"cli", "show", "conf"}
+	sshRestartCmd = []string{"service", "ssh", "restart"}
 )
 
 func init() {
@@ -43,6 +44,9 @@ type crpd struct {
 }
 
 func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -59,9 +63,9 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *crpd) PreDeploy(_, _, _ string) error {
+func (s *crpd) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	return createCRPDFiles(s.Cfg)
+	return createCRPDFiles(s)
 }
 
 func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
@@ -99,7 +103,8 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func createCRPDFiles(nodeCfg *types.NodeConfig) error {
+func createCRPDFiles(node nodes.Node) error {
+	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to crpd
 	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0777)
 	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0777)
@@ -120,7 +125,7 @@ func createCRPDFiles(nodeCfg *types.NodeConfig) error {
 		cfgTemplate = defaultCfgTemplate
 	}
 
-	err := nodeCfg.GenerateConfig(cfg, cfgTemplate)
+	err := node.GenerateConfig(cfg, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
 	}

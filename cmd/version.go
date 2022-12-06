@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	gover "github.com/hashicorp/go-version"
@@ -110,4 +111,23 @@ func docsLinkFromVer(ver string) string {
 		relSlug = relSlug + fmt.Sprintf("#%d%d%d", maj, min, patch)
 	}
 	return relSlug
+}
+
+// CheckClabVersionIsLatest returns a chan that returns the version check result
+// uses the CLAB_VERSION_CHECK env variable (default true, if == "disable" will not perform the check)
+func CheckClabVersionIsLatest() chan string {
+	// latest version channel
+	vCh := make(chan string)
+
+	// check if new_version_notification is meant to be disabled
+	versionCheckStatus := os.Getenv("CLAB_VERSION_CHECK")
+	log.Debugf("Env: CLAB_VERSION_CHECK=%s", versionCheckStatus)
+
+	if strings.Contains(strings.ToLower(versionCheckStatus), "disable") {
+		close(vCh)
+	} else {
+		go getLatestVersion(vCh)
+	}
+
+	return vCh
 }

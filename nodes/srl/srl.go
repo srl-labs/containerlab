@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -120,6 +121,11 @@ type srl struct {
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+	// set virtualization requirement
+	s.HostRequirements.SSSE3 = true
+
 	s.Cfg = cfg
 	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
 	// to not rely on certain kind names
@@ -171,12 +177,10 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	topoPath := filepath.Join(s.Cfg.LabDir, "topology.yml")
 	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
-	// SSSE3 cpu instruction set is required
-	s.Cfg.HostRequirements.SSSE3 = true
 	return nil
 }
 
-func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	// retrieve node certificates
 	nodeCerts, err := cert.RetrieveNodeCertData(s.Cfg, labCADir)
@@ -246,8 +250,18 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
+	// retriev all the runtime informations of all nodes
+	nodesRuntimeInfos := []types.GenericContainer{}
+	for _, node := range nodes {
+		infos, err := node.GetRuntimeInformation(ctx)
+		if err != nil {
+			return err
+		}
+		nodesRuntimeInfos = append(nodesRuntimeInfos, infos...)
+	}
+
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := s.populateHosts(ctx, nodes); err != nil {
+	if err := s.populateHosts(ctx, nodesRuntimeInfos); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
 	}
 
@@ -399,7 +413,7 @@ func (s *srl) createSRLFiles() error {
 
 		cfgTemplate := string(c)
 
-		err = s.Cfg.GenerateConfig(dst, cfgTemplate)
+		err = s.GenerateConfig(dst, cfgTemplate)
 		if err != nil {
 			log.Errorf("node=%s, failed to generate config: %v", s.Cfg.ShortName, err)
 		}
@@ -514,7 +528,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+func (s *srl) populateHosts(ctx context.Context, nodesRuntimeInfos []types.GenericContainer) error {
 	hosts, err := s.Runtime.GetHostsPath(ctx, s.Cfg.LongName)
 	if err != nil {
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", s.Cfg.ShortName, err)
@@ -529,14 +543,17 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	)
 	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
 	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
-	for node, params := range nodes {
-		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
-			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
+
+	for _, nodeRuntimeInfo := range nodesRuntimeInfos {
+		if v4 := nodeRuntimeInfo.NetworkSettings.IPv4addr; v4 != "" {
+			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, nodeRuntimeInfo.Names[0])
 		}
-		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
-			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
+		if v6 := nodeRuntimeInfo.NetworkSettings.IPv6addr; v6 != "" {
+			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, nodeRuntimeInfo.Names[0])
 		}
+
 	}
+
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
@@ -556,4 +573,14 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	}
 
 	return file.Close()
+}
+
+func (s *srl) CheckInterfaceNamingConvention() error {
+	srlIfRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+	for _, e := range s.Config().Endpoints {
+		if !srlIfRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("nokia sr linux endpoint %q doesn't match required pattern. SR Linux endpoints should be named as e1-1 or e1-1-1", e.EndpointName)
+		}
+	}
+	return nil
 }

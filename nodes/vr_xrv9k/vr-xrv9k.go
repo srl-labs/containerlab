@@ -7,9 +7,7 @@ package vr_xrv9k
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
@@ -45,6 +43,11 @@ type vrXRV9K struct {
 }
 
 func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+	// set virtualization requirement
+	s.HostRequirements.VirtRequired = true
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -73,15 +76,12 @@ func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName,
 		s.Cfg.Env["CONNECTION_MODE"], s.Cfg.Env["VCPU"], s.Cfg.Env["RAM"])
 
-	// set virtualization requirement
-	s.Cfg.HostRequirements.VirtRequired = true
-
 	return nil
 }
 
-func (s *vrXRV9K) PreDeploy(_, _, _ string) error {
+func (s *vrXRV9K) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	return loadStartupConfigFile(s.Cfg)
+	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
 }
 
 func (s *vrXRV9K) SaveConfig(_ context.Context) error {
@@ -95,28 +95,5 @@ func (s *vrXRV9K) SaveConfig(_ context.Context) error {
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
-	return nil
-}
-
-func loadStartupConfigFile(node *types.NodeConfig) error {
-	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(node.LabDir, configDirName), 0777)
-
-	if node.StartupConfig != "" {
-		// dstCfg is a path to a file on the clab host that will have rendered configuration
-		dstCfg := filepath.Join(node.LabDir, configDirName, startupCfgFName)
-
-		c, err := os.ReadFile(node.StartupConfig)
-		if err != nil {
-			return err
-		}
-
-		cfgTemplate := string(c)
-
-		err = node.GenerateConfig(dstCfg, cfgTemplate)
-		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-		}
-	}
 	return nil
 }

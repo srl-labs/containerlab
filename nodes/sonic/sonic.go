@@ -27,6 +27,9 @@ type sonic struct {
 }
 
 func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -37,7 +40,7 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *sonic) PreDeploy(_, _, _ string) error {
+func (s *sonic) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nil
 }

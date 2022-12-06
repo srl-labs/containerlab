@@ -27,6 +27,7 @@ type extcont struct {
 }
 
 func (s *extcont) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	s.DefaultNode = *nodes.NewDefaultNode(s)
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -57,4 +58,5 @@ func (e *extcont) Deploy(ctx context.Context) error {
 func (e *extcont) Delete(_ context.Context) error { return nil }
 
 // GetImages don't matter for external containers.
-func (e *extcont) GetImages() map[string]string { return map[string]string{} }
+func (e *extcont) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (e *extcont) PullImage(_ context.Context) error             { return nil }

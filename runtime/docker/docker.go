@@ -543,39 +543,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		return nil, err
 	}
 
-	var nr []dockerTypes.NetworkResource
-	if d.mgmt.Network == "" {
-		nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
-		defer cancel()
-
-		// fetch containerlab created networks
-		f := filters.NewArgs()
-
-		f.Add("label", "containerlab")
-
-		nr, err = d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
-			Filters: f,
-		})
-
-		if err != nil {
-			return nil, err
-		}
-
-		// fetch default bridge network
-		f = filters.NewArgs()
-
-		f.Add("name", "bridge")
-
-		bridgenet, err := d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
-			Filters: f,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		nr = append(nr, bridgenet...)
-	}
-	return d.produceGenericContainerList(ctrs, nr)
+	return d.produceGenericContainerList(ctrs)
 }
 
 func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.GenericContainer, error) {
@@ -615,16 +583,20 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 }
 
 // Transform docker-specific to generic container format.
-func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container,
-	inputNetworkResources []dockerTypes.NetworkResource,
-) ([]types.GenericContainer, error) {
+func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container) ([]types.GenericContainer, error) {
 	var result []types.GenericContainer
 
 	for idx := range inputContainers {
 		i := inputContainers[idx]
 
+		clean_names := []string{}
+		for _, n := range i.Names {
+			// the docker names seem to always come with a "/" in the first position
+			clean_names = append(clean_names, strings.TrimLeft(n, "/"))
+		}
+
 		ctr := types.GenericContainer{
-			Names:           i.Names,
+			Names:           clean_names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
 			Image:           i.Image,
@@ -634,29 +606,11 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			NetworkSettings: types.GenericMgmtIPs{},
 		}
 
-		bridgeName := d.mgmt.Network
-
-		// if bridgeName is empty, try to find a network created by clab that the container is connected to
-		if bridgeName == "" && inputNetworkResources != nil {
-			for idx := range inputNetworkResources {
-				nr := inputNetworkResources[idx]
-
-				if _, ok := i.NetworkSettings.Networks[nr.Name]; ok {
-					bridgeName = nr.Name
-					break
-				}
-			}
-		}
-
-		// if by now we failed to find a docker network name using the network resources created by docker
-		// we take whatever the first network is listed in the original container network settings
-		// this is to derive the network name if the network is not created by clab
-		if bridgeName == "" {
-			// only if there is a single network associated with the container
-			if len(i.NetworkSettings.Networks) == 1 {
-				for n := range i.NetworkSettings.Networks {
-					bridgeName = n
-				}
+		var bridgeName string
+		// only if there is a single network associated with the container
+		if len(i.NetworkSettings.Networks) == 1 {
+			for n := range i.NetworkSettings.Networks {
+				bridgeName = n
 			}
 		}
 
@@ -666,6 +620,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
 			ctr.NetworkSettings.IPv4Gw = ifcfg.Gateway
+			ctr.NetworkSettings.IPv6Gw = ifcfg.IPv6Gateway
 		}
 
 		// populating mounts information
@@ -755,12 +710,12 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", strings.TrimLeft(cID, "/"))
+	log.Debugf("Removing container: %s", cID)
 	err = d.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force, RemoveVolumes: true})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", strings.TrimLeft(cID, "/"))
+	log.Infof("Removed container: %s", cID)
 	return nil
 }
 

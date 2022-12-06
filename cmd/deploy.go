@@ -21,7 +21,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -104,18 +103,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	setFlags(c.Config)
 	log.Debugf("lab Conf: %+v", c.Config)
 
-	// latest version channel
-	vCh := make(chan string)
-
-	// check if new_version_notification is meant to be disabled
-	versionCheckStatus := os.Getenv("CLAB_VERSION_CHECK")
-	log.Debugf("Env: CLAB_VERSION_CHECK=%s", versionCheckStatus)
-
-	if strings.Contains(strings.ToLower(versionCheckStatus), "disable") {
-		close(vCh)
-	} else {
-		go getLatestVersion(vCh)
-	}
+	// dispatch a versioncheck that will run in background
+	vCh := CheckClabVersionIsLatest()
 
 	if reconfigure {
 		if err != nil {
@@ -214,16 +203,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 	log.Debug("containers created, retrieving state and IP addresses...")
 
-	// Building list of generic containers
-	labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-	containers, err := c.ListContainers(ctx, labels)
-	if err != nil {
-		return err
-	}
-
-	log.Debug("enriching nodes with IP information...")
-	enrichNodes(containers, c.Nodes)
-
 	if err := c.GenerateInventories(); err != nil {
 		return err
 	}
@@ -249,7 +228,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// Update containers after postDeploy action
-	containers, err = c.ListContainers(ctx, labels)
+	containers, err := c.ListContainersClabNodes(ctx)
 	if err != nil {
 		return err
 	}
@@ -309,30 +288,5 @@ func setFlags(conf *clab.Config) {
 	}
 	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
 		conf.Mgmt.IPv6Subnet = v6
-	}
-}
-
-// enrichNodes add container runtime assigned information (such as dynamically assigned IP addresses) to the nodes.
-func enrichNodes(containers []types.GenericContainer, nodesMap map[string]nodes.Node) {
-	for i := range containers {
-		c := &containers[i]
-
-		name = c.Labels[clab.NodeNameLabel]
-		if node, ok := nodesMap[name]; ok {
-			// add network information
-			// skipping host networking nodes as they don't have separate addresses
-			if strings.ToLower(node.Config().NetworkMode) == "host" {
-				continue
-			}
-			if c.NetworkSettings != (types.GenericMgmtIPs{}) {
-				node.Config().MgmtIPv4Address = c.NetworkSettings.IPv4addr
-				node.Config().MgmtIPv4PrefixLength = c.NetworkSettings.IPv4pLen
-				node.Config().MgmtIPv6Address = c.NetworkSettings.IPv6addr
-				node.Config().MgmtIPv6PrefixLength = c.NetworkSettings.IPv6pLen
-				node.Config().MgmtIPv4Gateway = c.NetworkSettings.IPv4Gw
-				node.Config().MgmtIPv6Gateway = c.NetworkSettings.IPv6Gw
-			}
-			node.Config().ContainerID = c.ID
-		}
 	}
 }

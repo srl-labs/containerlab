@@ -252,20 +252,6 @@ func (veth *vEthEndpoint) toBridge() error {
 	return err
 }
 
-// DeleteNetnsSymlinks deletes the symlink file created for each container netns.
-func (c *CLab) DeleteNetnsSymlinks() (err error) {
-	for _, node := range c.Nodes {
-		if node.Config().Kind != "bridge" {
-			log.Debugf("Deleting %s network namespace", node.Config().LongName)
-			if err := utils.DeleteNetnsSymlink(node.Config().LongName); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func genIfName() string {
 	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
 	return string(s[:8])
