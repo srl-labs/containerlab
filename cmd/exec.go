@@ -62,7 +62,7 @@ var execCmd = &cobra.Command{
 
 		filters := []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
 		filters = append(filters, types.FilterFromLabelStrings(labels)...)
-		containers, err := c.ListContainers(ctx, filters)
+		containers, err := c.ListContainersFilter(ctx, filters)
 		if err != nil {
 			return err
 		}
