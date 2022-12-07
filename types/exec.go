@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -17,6 +18,10 @@ const (
 	ExecFormatPLAIN ExecOutputFormat = "plain"
 )
 
+var (
+	ErrRunExecTypeNotSupported = errors.New("exec not supported for this kind")
+)
+
 func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case string(ExecFormatJSON):
@@ -27,49 +32,54 @@ func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
 	return "", fmt.Errorf("cannot parse %q as 'ExecOutputFormat'", s)
 }
 
-type ExecExecutor interface {
+type ExecOperation interface {
 	GetCmd() []string
 	GetCmdString() string
-	SetStdOut(stdout []byte)
-	SetStdErr(stderr []byte)
-	SetReturnCode(rc int)
 }
 
-type ExecReader interface {
-	GetStdOutString() string
-	GetStdErrString() string
-	GetStdOutByteSlice() []byte
-	GetStdErrByteSlice() []byte
-	GetReturnCode() int
-	SetCmd(s string) error
-	GetCmdString() string
-	GetEntryInFormat(format ExecOutputFormat) (string, error)
-	String() string
+type ExecOp struct {
+	Cmd []string `json:"cmd"`
 }
 
-type Exec struct {
-	Cmd        []string `json:"cmd"`
-	ReturnCode int      `json:"returnCode"`
-	Stdout     string   `json:"stdout"`
-	Stderr     string   `json:"stderr"`
-}
-
-func NewExec(cmd string) (*Exec, error) {
-	result := &Exec{}
+func NewExec(cmd string) (ExecOperation, error) {
+	result := &ExecOp{}
 	if err := result.SetCmd(cmd); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func NewExecSlice(cmd []string) *Exec {
-	return &Exec{
+func NewExecOperationSlice(cmd []string) ExecOperation {
+	return &ExecOp{
 		Cmd: cmd,
 	}
 }
 
+type ExecResultHolder interface {
+	GetStdOutString() string
+	GetStdErrString() string
+	GetStdOutByteSlice() []byte
+	GetStdErrByteSlice() []byte
+	GetReturnCode() int
+	GetCmdString() string
+	GetEntryInFormat(format ExecOutputFormat) (string, error)
+	String() string
+}
+
+type ExecResult struct {
+	Cmd        []string `json:"cmd"`
+	ReturnCode int      `json:"returnCode"`
+	Stdout     string   `json:"stdout"`
+	Stderr     string   `json:"stderr"`
+}
+
+func NewExecResult(op ExecOperation) *ExecResult {
+	er := &ExecResult{Cmd: op.GetCmd()}
+	return er
+}
+
 // SetCmd sets the command that is to be executed
-func (e *Exec) SetCmd(cmd string) error {
+func (e *ExecOp) SetCmd(cmd string) error {
 	c, err := shlex.Split(cmd)
 	if err != nil {
 		return err
@@ -78,11 +88,21 @@ func (e *Exec) SetCmd(cmd string) error {
 	return nil
 }
 
-func (e *Exec) String() string {
+// SetCmd sets the command that is to be executed
+func (e *ExecOp) GetCmd() []string {
+	return e.Cmd
+}
+
+// SetCmd sets the command that is to be executed
+func (e *ExecOp) GetCmdString() string {
+	return strings.Join(e.Cmd, " ")
+}
+
+func (e *ExecResult) String() string {
 	return fmt.Sprintf("Cmd: %s\nReturnCode: %d\nStdOut:\n%s\nStdErr:\n%s\n", e.GetCmdString(), e.ReturnCode, e.Stdout, e.Stderr)
 }
 
-func (e *Exec) GetEntryInFormat(format ExecOutputFormat) (string, error) {
+func (e *ExecResult) GetEntryInFormat(format ExecOutputFormat) (string, error) {
 	var result string
 	switch format {
 	case ExecFormatJSON:
@@ -98,48 +118,48 @@ func (e *Exec) GetEntryInFormat(format ExecOutputFormat) (string, error) {
 }
 
 // GetCmdString returns the initially parsed cmd as a string for e.g. log output purpose
-func (e *Exec) GetCmdString() string {
+func (e *ExecResult) GetCmdString() string {
 	return strings.Join(e.Cmd, " ")
 }
 
-func (e *Exec) GetReturnCode() int {
+func (e *ExecResult) GetReturnCode() int {
 	return e.ReturnCode
 }
 
-func (e *Exec) SetReturnCode(rc int) {
+func (e *ExecResult) SetReturnCode(rc int) {
 	e.ReturnCode = rc
 }
 
-func (e *Exec) GetStdOutString() string {
+func (e *ExecResult) GetStdOutString() string {
 	return string(e.Stdout)
 }
 
-func (e *Exec) GetStdErrString() string {
+func (e *ExecResult) GetStdErrString() string {
 	return string(e.Stderr)
 }
 
-func (e *Exec) GetStdOutByteSlice() []byte {
+func (e *ExecResult) GetStdOutByteSlice() []byte {
 	return []byte(e.Stdout)
 }
 
-func (e *Exec) GetStdErrByteSlice() []byte {
+func (e *ExecResult) GetStdErrByteSlice() []byte {
 	return []byte(e.Stderr)
 }
 
-func (e *Exec) GetCmd() []string {
+func (e *ExecResult) GetCmd() []string {
 	return e.Cmd
 }
 
-func (e *Exec) SetStdOut(data []byte) {
+func (e *ExecResult) SetStdOut(data []byte) {
 	e.Stdout = string(data)
 }
 
-func (e *Exec) SetStdErr(data []byte) {
+func (e *ExecResult) SetStdErr(data []byte) {
 	e.Stderr = string(data)
 }
 
 // internal data struct
-type execCollectionData map[string][]ExecReader
+type execCollectionData map[string][]ExecResultHolder
 
 type ExecCollection struct {
 	execCollectionData
@@ -147,15 +167,15 @@ type ExecCollection struct {
 
 func NewExecCollection() *ExecCollection {
 	return &ExecCollection{
-		execCollectionData: map[string][]ExecReader{},
+		execCollectionData: map[string][]ExecResultHolder{},
 	}
 }
 
-func (ec *ExecCollection) Add(cId string, e ExecReader) {
+func (ec *ExecCollection) Add(cId string, e ExecResultHolder) {
 	ec.execCollectionData[cId] = append(ec.execCollectionData[cId], e)
 }
 
-func (ec *ExecCollection) AddAll(cId string, e []ExecReader) {
+func (ec *ExecCollection) AddAll(cId string, e []ExecResultHolder) {
 	ec.execCollectionData[cId] = append(ec.execCollectionData[cId], e...)
 }
 

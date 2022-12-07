@@ -71,7 +71,7 @@ func (s *crpd) PreDeploy(_ context.Context, _, _, _ string) error {
 func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 
-	sshRestartExec := types.NewExecSlice(sshRestartCmd)
+	sshRestartExec := types.NewExecOperationSlice(sshRestartCmd)
 	execResult, err := s.RunExecType(ctx, sshRestartExec)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (s *crpd) SaveConfig(ctx context.Context) error {
-	saveExec := types.NewExecSlice(saveCmd)
+	saveExec := types.NewExecOperationSlice(saveCmd)
 	execResult, err := s.RunExecType(ctx, saveExec)
 	if err != nil {
 		return err

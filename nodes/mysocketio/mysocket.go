@@ -31,7 +31,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 	cmd := []string{"/bin/sh", "-c", "mysocketctl socket ls | awk '/clab/ {print $2}' | xargs -n1 mysocketctl socket delete -s"}
 	log.Debugf("Running postdeploy mysocketio command %q", cmd)
 
-	exec := types.NewExecSlice(cmd)
+	exec := types.NewExecOperationSlice(cmd)
 	_, err := node.RunExecType(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("failed to remove existing sockets: %v", err)
@@ -52,7 +52,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 			cmd := []string{"/bin/sh", "-c", fmt.Sprintf("%s | awk 'NR==4 {print $2}'", sockCmd)}
 			log.Debugf("Running mysocketio command %q", cmd)
 
-			exec = types.NewExecSlice(cmd)
+			exec = types.NewExecOperationSlice(cmd)
 			execResult, err := node.RunExecType(ctx, exec)
 			if err != nil {
 				return fmt.Errorf("failed to create mysocketio socket: %v", err)
@@ -63,7 +63,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 			cmd = []string{"/bin/sh", "-c", fmt.Sprintf(
 				"mysocketctl tunnel create -s %s | awk 'NR==4 {print $4}'", sockID)}
 			log.Debugf("Running mysocketio command %q", cmd)
-			exec = types.NewExecSlice(cmd)
+			exec = types.NewExecOperationSlice(cmd)
 			execResult, err = node.RunExecType(ctx, exec)
 			if err != nil {
 				return fmt.Errorf("failed to create mysocketio socket: %v", err)
@@ -81,7 +81,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 				n.Config().LongName, ms.Port, sockID, tunID, proxy,
 				n.Config().ShortName, ms.Stype, ms.Port)}
 			log.Debugf("Running mysocketio command %q", cmd)
-			exec = types.NewExecSlice(cmd)
+			exec = types.NewExecOperationSlice(cmd)
 			err = node.RunExecTypeWoWait(ctx, exec)
 			if err != nil {
 				return err

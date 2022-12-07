@@ -398,12 +398,12 @@ func (c *IgniteRuntime) GetNSPath(ctx context.Context, ctrId string) (string, er
 	return result, nil
 }
 
-func (*IgniteRuntime) Exec(_ context.Context, _ string, _ types.ExecExecutor) error {
+func (*IgniteRuntime) Exec(_ context.Context, _ string, _ types.ExecOperation) (types.ExecResultHolder, error) {
 	log.Infof("Exec is not yet implemented for Ignite runtime")
-	return nil
+	return nil, nil
 }
 
-func (*IgniteRuntime) ExecNotWait(_ context.Context, _ string, _ types.ExecExecutor) error {
+func (*IgniteRuntime) ExecNotWait(_ context.Context, _ string, _ types.ExecOperation) error {
 	log.Infof("ExecNotWait is not yet implemented for Ignite runtime")
 	return nil
 }

@@ -699,22 +699,22 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
 
-func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec types.ExecExecutor) error {
+func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec types.ExecOperation) (types.ExecResultHolder, error) {
 	return c.internalExec(ctx, containername, exec, false)
 }
 
-func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, exec types.ExecExecutor) error {
-	err := c.internalExec(ctx, containername, exec, true)
+func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, exec types.ExecOperation) error {
+	_, err := c.internalExec(ctx, containername, exec, true)
 	return err
 }
 
-func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, exec types.ExecExecutor, detach bool) error { // skipcq: RVV-A0005
+func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, exec types.ExecOperation, detach bool) (types.ExecResultHolder, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 	container, err := c.client.LoadContainer(ctx, containername)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var stdinbuf, stdoutbuf, stderrbuf bytes.Buffer
@@ -724,14 +724,14 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 
 	spec, err := container.Spec(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	pspec := spec.Process
 	pspec.Terminal = false
 	pspec.Args = exec.GetCmd()
 	task, err := container.Task(ctx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	needToDelete := true
@@ -744,14 +744,14 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 		log.Debugf("Deleting old process with exec-id %s", clabExecId)
 		_, err := p.Delete(ctx, containerd.WithProcessKill)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	process, err := task.Exec(ctx, clabExecId, pspec, ioCreator)
 	// task, err := container.NewTask(ctx, cio.NewCreator(cio_opt))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var statusC <-chan containerd.ExitStatus
@@ -770,30 +770,32 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 
 		statusC, err = process.Wait(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if err := process.Start(ctx); err != nil {
-		return err
+		return nil, err
 	}
+
+	execResult := types.NewExecResult(exec)
+
 	if !detach {
 		status := <-statusC
 		code, _, err := status.Result()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		log.Infof("Exit code: %d", code)
 		intCode, _ := strconv.Atoi(fmt.Sprint(code))
-		exec.SetReturnCode(intCode)
 
+		execResult.SetReturnCode(intCode)
+		execResult.SetStdErr(stderrbuf.Bytes())
+		execResult.SetStdOut(stdoutbuf.Bytes())
 	}
 
-	exec.SetStdErr(stderrbuf.Bytes())
-	exec.SetStdOut(stdoutbuf.Bytes())
-
-	return nil
+	return execResult, nil
 }
 
 func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID string) error {

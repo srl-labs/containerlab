@@ -57,7 +57,7 @@ func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		exec := types.NewExecSlice([]string{"bash", "-c", ixiacOneCmd})
+		exec := types.NewExecOperationSlice([]string{"bash", "-c", ixiacOneCmd})
 		execResult, err := l.RunExecType(ctx, exec)
 		if err != nil {
 			return err

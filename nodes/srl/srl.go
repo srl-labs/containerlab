@@ -274,7 +274,7 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
-	exec := types.NewExecSlice(saveCmd)
+	exec := types.NewExecOperationSlice(saveCmd)
 	execResult, err := s.RunExecType(ctx, exec)
 
 	if err != nil {
@@ -304,7 +304,7 @@ func (s *srl) Ready(ctx context.Context) error {
 			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", s.Cfg.ShortName, err)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			exec := types.NewExecSlice(mgmtServerRdyCmd)
+			exec := types.NewExecOperationSlice(mgmtServerRdyCmd)
 			execResult, err := s.RunExecType(ctx, exec)
 			if err != nil {
 				time.Sleep(retryTimer)
@@ -324,7 +324,7 @@ func (s *srl) Ready(ctx context.Context) error {
 
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
-			exec = types.NewExecSlice(readyForConfigCmd)
+			exec = types.NewExecOperationSlice(readyForConfigCmd)
 			execResult, err = s.RunExecType(ctx, exec)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
@@ -462,13 +462,13 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
 
-	exec := types.NewExecSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
+	exec := types.NewExecOperationSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
 	_, err = s.RunExecType(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	exec = types.NewExecSlice([]string{"bash", "-c", "sr_cli -ed < tmp/clab-config"})
+	exec = types.NewExecOperationSlice([]string{"bash", "-c", "sr_cli -ed < tmp/clab-config"})
 	execResult, err := s.RunExecType(ctx, exec)
 	if err != nil {
 		return err
@@ -485,13 +485,13 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
 
-	exec := types.NewExecSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
+	exec := types.NewExecOperationSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
 	_, err := s.RunExecType(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	exec = types.NewExecSlice([]string{"bash", "-c", "sr_cli -ed --post 'commit save' < tmp/clab-config"})
+	exec = types.NewExecOperationSlice([]string{"bash", "-c", "sr_cli -ed --post 'commit save' < tmp/clab-config"})
 	execResult, err := s.RunExecType(ctx, exec)
 	if err != nil {
 		return err

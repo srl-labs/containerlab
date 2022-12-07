@@ -104,14 +104,14 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 
 func (b *bridge) PullImage(_ context.Context) error { return nil }
 
-func (b *bridge) RunExecConfig(_ context.Context) ([]types.ExecReader, error) {
+func (b *bridge) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, error) {
 	if b.Cfg.Exec != nil && len(b.Cfg.Exec) > 0 {
 		log.Error("exec not supported on kind 'bridge' -> noop; continuing")
 	}
-	return []types.ExecReader{}, nil
+	return []types.ExecResultHolder{}, nil
 }
 
-func (b *bridge) RunExecType(_ context.Context, _ *types.Exec) (types.ExecReader, error) {
+func (b *bridge) RunExecType(_ context.Context, _ types.ExecOperation) (types.ExecResultHolder, error) {
 	log.Error("exec not supported on kind 'bridge' -> noop; continuing")
-	return nil, nil
+	return nil, types.ErrRunExecTypeNotSupported
 }

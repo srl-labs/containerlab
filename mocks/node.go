@@ -226,10 +226,10 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot i
 }
 
 // RunExecConfig mocks base method.
-func (m *MockNode) RunExecConfig(ctx context.Context) ([]types.ExecReader, error) {
+func (m *MockNode) RunExecConfig(ctx context.Context) ([]types.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunExecConfig", ctx)
-	ret0, _ := ret[0].([]types.ExecReader)
+	ret0, _ := ret[0].([]types.ExecResultHolder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -241,10 +241,10 @@ func (mr *MockNodeMockRecorder) RunExecConfig(ctx interface{}) *gomock.Call {
 }
 
 // RunExecType mocks base method.
-func (m *MockNode) RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error) {
+func (m *MockNode) RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunExecType", ctx, exec)
-	ret0, _ := ret[0].(types.ExecReader)
+	ret0, _ := ret[0].(types.ExecResultHolder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

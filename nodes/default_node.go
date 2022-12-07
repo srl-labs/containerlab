@@ -238,7 +238,7 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
-	RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error)
+	RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error)
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -267,8 +267,8 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 	return nil
 }
 
-func (d *DefaultNode) RunExecConfig(ctx context.Context) ([]types.ExecReader, error) {
-	result := []types.ExecReader{}
+func (d *DefaultNode) RunExecConfig(ctx context.Context) ([]types.ExecResultHolder, error) {
+	result := []types.ExecResultHolder{}
 	for _, cmd := range d.Cfg.Exec {
 		e, err := types.NewExec(cmd)
 		if err != nil {
@@ -285,18 +285,18 @@ func (d *DefaultNode) RunExecConfig(ctx context.Context) ([]types.ExecReader, er
 
 // RunExecType is the final function that calls the runtime to execute a type.Exec on a container
 // This is to be overriden if the nodes implementation differs
-func (d *DefaultNode) RunExecType(ctx context.Context, exec *types.Exec) (types.ExecReader, error) {
-	err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, exec)
+func (d *DefaultNode) RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error) {
+	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, exec)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, exec.GetCmdString(), err)
 		return nil, err
 	}
-	return exec, nil
+	return execResult, nil
 }
 
 // RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
 // This is to be overriden if the nodes implementation differs
-func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec *types.Exec) error {
+func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec types.ExecOperation) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, exec)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, exec.GetCmdString(), err)

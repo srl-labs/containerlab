@@ -106,7 +106,7 @@ func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
-	saveCmdExec := types.NewExecSlice(saveCmd)
+	saveCmdExec := types.NewExecOperationSlice(saveCmd)
 	execResult, err := n.RunExecType(ctx, saveCmdExec)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)

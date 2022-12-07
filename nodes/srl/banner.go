@@ -28,7 +28,7 @@ const banner = `................................................................
 // banner returns a banner string with a docs version filled in based on the version information queried from the node.
 func (s *srl) banner(ctx context.Context) (string, error) {
 
-	exec := types.NewExecSlice([]string{
+	exec := types.NewExecOperationSlice([]string{
 		"sr_cli", "-d", "info from state /system information version | grep version",
 	})
 

@@ -682,10 +682,10 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.
-func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecExecutor) error {
+func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecOperation) (types.ExecResultHolder, error) {
 	cont, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	execID, err := d.Client.ContainerExecCreate(ctx, cID, dockerTypes.ExecConfig{
 		User:         "root",
@@ -695,14 +695,14 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecExe
 	})
 	if err != nil {
 		log.Errorf("failed to create exec in container %s: %v", cont.Name, err)
-		return err
+		return nil, err
 	}
 	log.Debugf("%s exec created %v", cont.Name, cID)
 
 	rsp, err := d.Client.ContainerExecAttach(ctx, execID.ID, dockerTypes.ExecStartCheck{})
 	if err != nil {
 		log.Errorf("failed exec in container %s: %v", cont.Name, err)
-		return err
+		return nil, err
 	}
 	defer rsp.Close()
 	log.Debugf("%s exec attached %v", cont.Name, cID)
@@ -718,27 +718,29 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecExe
 	select {
 	case err := <-outputDone:
 		if err != nil {
-			return err
+			return nil, err
 		}
 	case <-ctx.Done():
-		return ctx.Err()
+		return nil, ctx.Err()
 	}
 
 	// retrieve the exit code via inspect
 	execInspect, err := d.Client.ContainerExecInspect(ctx, execID.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	execResult := types.NewExecResult(exec)
+
 	// set the result fields in the exec struct
-	exec.SetReturnCode(execInspect.ExitCode)
-	exec.SetStdOut(outBuf.Bytes())
-	exec.SetStdErr(errBuf.Bytes())
-	return nil
+	execResult.SetReturnCode(execInspect.ExitCode)
+	execResult.SetStdOut(outBuf.Bytes())
+	execResult.SetStdErr(errBuf.Bytes())
+	return execResult, nil
 }
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.
-func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, exec types.ExecExecutor) error {
+func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, exec types.ExecOperation) error {
 	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: exec.GetCmd()}
 	respID, err := d.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
