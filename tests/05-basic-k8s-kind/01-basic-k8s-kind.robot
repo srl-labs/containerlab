@@ -15,7 +15,7 @@ ${if1-name}     eth1
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${result} =    Run Process
-    ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} -d   timeout=600s    shell=True
+    ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} -d   timeout=1200s    shell=True
     Log    ${result.stderr}
     Log    ${result.stdout}
     Should Be Equal As Integers    ${result.rc}    0
