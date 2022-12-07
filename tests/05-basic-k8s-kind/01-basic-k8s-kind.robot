@@ -1,7 +1,9 @@
 *** Settings ***
 Library           OperatingSystem
 Library           SSHLibrary
+Library           Process
 Resource          ../common.robot
+
 
 *** Variables ***
 ${lab-name}       01-basic-k8s-kind
@@ -12,10 +14,11 @@ ${if1-name}     eth1
 *** Test Cases ***
 Deploy ${lab-name} lab
     Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    ${result} =    Run Process
+    ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} -d   timeout=600s    shell=True
+    Log    ${result.stderr}
+    Log    ${result.stdout}
+    Should Be Equal As Integers    ${result.rc}    0
 
 Verify link ${if1-name} in k8s-kind node k01-control-plane
     ${rc}    ${output} =    Run And Return Rc And Output
