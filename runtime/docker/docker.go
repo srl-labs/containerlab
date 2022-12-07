@@ -462,13 +462,16 @@ func (d *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 		return err
 	}
 
+	canonicalImageName := utils.GetCanonicalImageName(imageName)
+
 	// If Image doesn't exist, we need to pull it
-	if len(images) > 0 {
-		log.Debugf("Image %s present, skip pulling", imageName)
-		return nil
+	for _, imageNameSlice := range []string{imageName, canonicalImageName} {
+		if containsImageTagExactMatch(images, imageNameSlice) {
+			log.Debugf("Image %s present, skip pulling", imageNameSlice)
+			return nil
+		}
 	}
 
-	canonicalImageName := utils.GetCanonicalImageName(imageName)
 	authString := ""
 
 	// get docker config based on an empty path (default docker config path will be assumed)
@@ -495,6 +498,18 @@ func (d *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName strin
 	log.Infof("Done pulling %s", canonicalImageName)
 
 	return nil
+}
+
+// containsImageTagExactMatch checks if a repo tag within the image summaries do exactly match the provided string
+func containsImageTagExactMatch(images []dockerTypes.ImageSummary, imageTag string) bool {
+	for _, image := range images {
+		for _, tag := range image.RepoTags {
+			if imageTag == tag {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // StartContainer starts a docker container.
