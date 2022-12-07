@@ -38,22 +38,17 @@ require (
 	golang.org/x/sys v0.3.0
 	golang.org/x/term v0.2.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/kind v0.17.0
 )
 
 require (
-	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.5 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cilium/ebpf v0.7.0 // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
-	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/google/go-containerregistry v0.11.0 // indirect
-	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20220723181115-27de4befb95e // indirect
 	github.com/mistifyio/go-zfs/v3 v3.0.0 // indirect
-	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/sigstore/sigstore v1.4.2 // indirect
 	github.com/theupdateframework/go-tuf v0.5.1 // indirect
