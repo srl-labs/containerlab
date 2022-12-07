@@ -88,12 +88,12 @@ func (e *ExecOp) SetCmd(cmd string) error {
 	return nil
 }
 
-// SetCmd sets the command that is to be executed
+// GetCmd sets the command that is to be executed
 func (e *ExecOp) GetCmd() []string {
 	return e.Cmd
 }
 
-// SetCmd sets the command that is to be executed
+// GetCmdString sets the command that is to be executed
 func (e *ExecOp) GetCmdString() string {
 	return strings.Join(e.Cmd, " ")
 }
