@@ -234,10 +234,10 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return nspath, nil
 }
 
-func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecExecutor) error {
+func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecOperation) (types.ExecResultHolder, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	execCreateConf := handlers.ExecCreateConfig{
 		ExecConfig: dockerTypes.ExecConfig{
@@ -250,23 +250,34 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecExe
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
 	if err != nil {
 		log.Errorf("failed to create exec in container %q: %v", cID, err)
-		return err
+		return nil, err
 	}
 	var sOut, sErr podmanWriterCloser
 	execSAAOpts := new(containers.ExecStartAndAttachOptions).WithOutputStream(&sOut).WithErrorStream(
 		&sErr).WithAttachOutput(true).WithAttachError(true)
+
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
 	if err != nil {
 		log.Errorf("failed to start/attach exec in container %q: %v", cID, err)
-		return err
+		return nil, err
+	}
+	// perform inspection to retrieve the exitcode
+	inspectOut, err := containers.ExecInspect(ctx, execID, nil)
+	if err != nil {
+		return nil, err
 	}
 	log.Debugf("Exec attached to the container %q and got stdout %q and stderr %q", cID, sOut.Bytes(), sErr.Bytes())
-	exec.SetStdErr(sErr.Bytes())
-	exec.SetStdOut(sOut.Bytes())
-	return nil
+
+	// fill the execution result
+	execResult := types.NewExecResult(exec)
+	execResult.SetStdErr(sErr.Bytes())
+	execResult.SetStdOut(sOut.Bytes())
+	execResult.SetReturnCode(inspectOut.ExitCode)
+
+	return execResult, nil
 }
 
-func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec types.ExecExecutor) error {
+func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec types.ExecOperation) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
