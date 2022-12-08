@@ -6,9 +6,8 @@ topology:
      type: ixrd3
      image: ghcr.io/nokia/srlinux
   nodes:
-    srl01:
-      kind: srl
-      startup-config: srl01.config
+    br01:
+      kind: bridge
     alpine:
       kind: linux
       image: alpine
@@ -41,11 +40,11 @@ topology:
         - "ip a add dev eth1 192.168.237.3/24"
 
   links: 
-    - endpoints: ["srl01:e1-1", "k01-control-plane:eth1"]
-    - endpoints: ["srl01:e1-2", "k01-worker:eth1"]
-    - endpoints: ["srl01:e1-3", "k02-control-plane:eth1"]
-    - endpoints: ["srl01:e1-4", "alpine:eth1"]
+    - endpoints: ["br01:e1", "k01-control-plane:eth1"]
+    - endpoints: ["br01:e2", "k01-worker:eth1"]
+    - endpoints: ["br01:e3", "k02-control-plane:eth1"]
+    - endpoints: ["br01:e4", "alpine:eth1"]
 
-    - endpoints: ["srl01:e1-10", "k01-control-plane:eth2"]
-    - endpoints: ["srl01:e1-11", "k02-control-plane:eth2"]
+    - endpoints: ["br01:e5", "k01-control-plane:eth2"]
+    - endpoints: ["br01:e6", "k02-control-plane:eth2"]
 

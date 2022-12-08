@@ -12,6 +12,11 @@ ${runtime}        docker
 ${if1-name}     eth1
 
 *** Test Cases ***
+
+Create Bridge
+    Run     sudo ip link add dev br01 type bridge
+    Run     sudo ip link set dev br01 up
+    
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${result} =    Run Process
@@ -90,6 +95,8 @@ Verify kind cluster k02 nodes are ready
 Cleanup
     Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}
+    Run    sudo ip l set dev br01 down
+    Run    sudo ip l del dev br01
 
 Verify kind nodes are gone
     ${rc}    ${output} =    Run And Return Rc And Output
