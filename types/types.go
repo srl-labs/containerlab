@@ -8,11 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
-	"github.com/srl-labs/containerlab/virt"
 )
 
 // Link is a struct that contains the information of a link between 2 containers.
@@ -137,44 +133,6 @@ type NodeConfig struct {
 	Extras  *Extras    `json:"extras,omitempty"`
 	WaitFor []string   `json:"wait-for,omitempty"`
 	DNS     *DNSConfig `json:"dns,omitempty"`
-}
-
-type HostRequirements struct {
-	SSSE3        bool `json:"ssse3,omitempty"`         // ssse3 cpu instruction
-	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
-}
-
-// Verify checks if host requirements are met.
-func (h *HostRequirements) Verify() error {
-	if h.VirtRequired && !virt.VerifyVirtSupport() {
-		return fmt.Errorf("the CPU virtualization support is required, but not available")
-	}
-	if h.SSSE3 && !virt.VerifySSSE3Support() {
-		return fmt.Errorf("the SSSE3 CPU feature required, but not available")
-	}
-
-	return nil
-}
-
-func DisableTxOffload(n *NodeConfig) error {
-	// skip this if node runs in host mode
-	if strings.ToLower(n.NetworkMode) == "host" {
-		return nil
-	}
-	// disable tx checksum offload for linux containers on eth0 interfaces
-	nodeNS, err := ns.GetNS(n.NSPath)
-	if err != nil {
-		return err
-	}
-	err = nodeNS.Do(func(_ ns.NetNS) error {
-		// disabling offload on eth0 interface
-		err := utils.EthtoolTXOff("eth0")
-		if err != nil {
-			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
-		}
-		return err
-	})
-	return err
 }
 
 type GenericFilter struct {

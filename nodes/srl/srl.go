@@ -32,6 +32,8 @@ import (
 const (
 	srlDefaultType = "ixrd2"
 
+	KindName = "srl"
+
 	readyTimeout = time.Minute * 2 // max wait time for node to boot
 	retryTimer   = time.Second
 	// additional config that clab adds on top of the factory config.
@@ -124,11 +126,12 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.DefaultNode = *nodes.NewDefaultNode(s)
 	// set virtualization requirement
 	s.HostRequirements.SSSE3 = true
+	s.HostRequirements.MinVCPU = 2
+	s.HostRequirements.MinVCPUFailAction = types.FailBehaviourLog
+	s.HostRequirements.MinFreeMemoryGb = 2
+	s.HostRequirements.MinFreeMemoryGbFailAction = types.FailBehaviourLog
 
 	s.Cfg = cfg
-	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
-	// to not rely on certain kind names
-	s.Cfg.Kind = nodes.NodeKindSRL
 	for _, o := range opts {
 		o(s)
 	}

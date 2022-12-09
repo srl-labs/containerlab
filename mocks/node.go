@@ -165,6 +165,20 @@ func (mr *MockNodeMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages), arg0)
 }
 
+// GetKindProperties mocks base method.
+func (m *MockNode) GetKindProperties() *types.KindProperties {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKindProperties")
+	ret0, _ := ret[0].(*types.KindProperties)
+	return ret0
+}
+
+// GetKindProperties indicates an expected call of GetKindProperties.
+func (mr *MockNodeMockRecorder) GetKindProperties() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKindProperties", reflect.TypeOf((*MockNode)(nil).GetKindProperties))
+}
+
 // GetRuntime mocks base method.
 func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 	m.ctrl.T.Helper()
@@ -267,6 +281,20 @@ func (m *MockNode) UpdateConfigWithRuntimeInfo(arg0 context.Context) error {
 func (mr *MockNodeMockRecorder) UpdateConfigWithRuntimeInfo(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfigWithRuntimeInfo", reflect.TypeOf((*MockNode)(nil).UpdateConfigWithRuntimeInfo), arg0)
+}
+
+// VerifyLicenseFiles mocks base method.
+func (m *MockNode) VerifyLicenseFiles(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyLicenseFiles", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyLicenseFiles indicates an expected call of VerifyLicenseFiles.
+func (mr *MockNodeMockRecorder) VerifyLicenseFiles(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyLicenseFiles", reflect.TypeOf((*MockNode)(nil).VerifyLicenseFiles), arg0)
 }
 
 // VerifyStartupConfig mocks base method.

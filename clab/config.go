@@ -6,15 +6,12 @@ package clab
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
-	"github.com/mackerelio/go-osstat/memory"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
@@ -367,9 +364,6 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
-	if err = c.verifyLicFilesExist(); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -412,23 +406,6 @@ func (c *CLab) verifyDuplicateAddresses() error {
 			} else {
 				return fmt.Errorf("management IP address %s appeared more than once in the topology file", ip)
 			}
-		}
-	}
-
-	return nil
-}
-
-// verifyLicFilesExist checks if referenced license files exist.
-func (c *CLab) verifyLicFilesExist() error {
-	for _, node := range c.Nodes {
-		lic := node.Config().License
-		if lic == "" {
-			continue
-		}
-
-		rlic := utils.ResolvePath(lic, c.TopoFile.dir)
-		if !utils.FileExists(rlic) {
-			return fmt.Errorf("node's %q license file not found by the path %s", node.Config().ShortName, rlic)
 		}
 	}
 
@@ -501,6 +478,8 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	for _, l := range c.Links {
 		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
+			// TODO: THIS IS MEANT TO BE REPLACE WITH A CHECK AGAINST THE KINDPROPERTIES -> IsRootNamespaceBased. FURTHER REFACTORYING required,
+			// because that field is available in Node, not in NodeConfig.
 			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
 					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
@@ -555,34 +534,6 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
-	}
-
-	return nil
-}
-
-// CheckResources runs container host resources check.
-func (c *CLab) CheckResources() error {
-	vcpu := runtime.NumCPU()
-	log.Debugf("Number of vcpu: %d", vcpu)
-	if vcpu < 2 {
-		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
-		if c.HasKind(nodes.NodeKindSRL) {
-			return errors.New("not enough vcpus. Nokia SR Linux nodes require at least 2 vcpus")
-		}
-	}
-
-	// get memory usage on the host and check available memory
-	mem, err := memory.Get()
-	if err != nil {
-		return err
-	}
-
-	availMemGi := mem.Available / 1024 / 1024 / 1024
-
-	log.Debugf("Detected available memory on host: %d bytes/%d Gi", mem.Available, availMemGi)
-
-	if availMemGi < 1 {
-		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", availMemGi)
 	}
 
 	return nil

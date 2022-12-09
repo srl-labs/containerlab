@@ -25,7 +25,6 @@ const (
 	NodeKindBridge = "bridge"
 	NodeKindHOST   = "host"
 	NodeKindOVS    = "ovs-bridge"
-	NodeKindSRL    = "srl"
 )
 
 var (
@@ -72,6 +71,7 @@ type Node interface {
 	CheckInterfaceName() error
 	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
 	VerifyStartupConfig(topoDir string) error
+	VerifyLicenseFiles(context.Context) error    // VerifyLicenseFiles checks for the existence of the provided license file(s)
 	SaveConfig(context.Context) error            // SaveConfig saves the nodes configuration to an external file
 	Delete(context.Context) error                // Delete triggers the deletion of this node
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind

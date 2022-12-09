@@ -120,6 +120,20 @@ func (mr *MockNodeOverwritesMockRecorder) VerifyHostRequirements() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHostRequirements", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyHostRequirements))
 }
 
+// VerifyLicenseFiles mocks base method.
+func (m *MockNodeOverwrites) VerifyLicenseFiles(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyLicenseFiles", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyLicenseFiles indicates an expected call of VerifyLicenseFiles.
+func (mr *MockNodeOverwritesMockRecorder) VerifyLicenseFiles(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyLicenseFiles", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyLicenseFiles), arg0)
+}
+
 // VerifyStartupConfig mocks base method.
 func (m *MockNodeOverwrites) VerifyStartupConfig(topoDir string) error {
 	m.ctrl.T.Helper()
