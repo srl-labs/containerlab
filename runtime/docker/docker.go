@@ -721,7 +721,7 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 
 // setSysctl writes sysctl data by writing to a specific file.
 func setSysctl(sysctl string, newVal int) error {
-	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
+	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0600)
 }
 
 func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
