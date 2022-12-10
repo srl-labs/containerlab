@@ -77,7 +77,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			FilterType: "label", Match: c.Config.Name,
 			Field: "containerlab", Operator: "exists",
 		}}
-		containers, err := c.ListContainersFilter(ctx, labels)
+		containers, err := c.ListContainers(ctx, labels)
 		if err != nil {
 			return err
 		}

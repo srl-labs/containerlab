@@ -74,7 +74,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	// if offline mode is not enforced, list containers matching lab name
 	if !offline {
 		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-		containers, err = c.ListContainersFilter(ctx, labels)
+		containers, err = c.ListContainers(ctx, labels)
 		if err != nil {
 			return err
 		}
