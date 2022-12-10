@@ -237,48 +237,17 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 		"no ipv6 address",
 	}
 
-	// retrieve runtime information to fill mgmt ips etc
-	gcontainer, err := n.GetRuntimeInformation(ctx)
-	if err != nil {
-		return err
-	}
-	// this is a nodekind with a single underlaying container
-	if len(gcontainer) != 1 {
-		return fmt.Errorf("expected to retrieve 1 container information, got %d", len(gcontainer))
-	}
-
 	// adding ipv4 address to configs
-	if gcontainer[0].NetworkSettings.IPv4addr != "" {
+	if nodeCfg.MgmtIPv4Address != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ip address %s/%d", gcontainer[0].NetworkSettings.IPv4addr,
-				gcontainer[0].NetworkSettings.IPv4pLen),
+			fmt.Sprintf("ip address %s/%d", nodeCfg.MgmtIPv4Address, nodeCfg.MgmtIPv4PrefixLength),
 		)
 	}
 
 	// adding ipv6 address to configs
-	if gcontainer[0].NetworkSettings.IPv6addr != "" {
+	if nodeCfg.MgmtIPv6Address != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ipv6 address %s/%d", gcontainer[0].NetworkSettings.IPv6addr,
-				gcontainer[0].NetworkSettings.IPv6pLen),
-		)
-	}
-
-	// prep default mgmt routes, if mgmt in VRF we need to extend the ip route comamnd
-	mgmt_vrf_part := ""
-	if val, exists := nodeCfg.Env["CLAB_MGMT_VRF"]; exists {
-		mgmt_vrf_part = "vrf " + val
-	}
-
-	// adding ipv4 address to configs
-	if gcontainer[0].NetworkSettings.IPv4Gw != "" {
-		cfgs = append(cfgs,
-			fmt.Sprintf("ip route %s 0.0.0.0/0 %s", mgmt_vrf_part, gcontainer[0].NetworkSettings.IPv4Gw),
-		)
-	}
-
-	if gcontainer[0].NetworkSettings.IPv6Gw != "" {
-		cfgs = append(cfgs,
-			fmt.Sprintf("ipv6 route %s ::0/0 %s", mgmt_vrf_part, gcontainer[0].NetworkSettings.IPv6Gw),
+			fmt.Sprintf("ipv6 address %s/%d", nodeCfg.MgmtIPv6Address, nodeCfg.MgmtIPv6PrefixLength),
 		)
 	}
 

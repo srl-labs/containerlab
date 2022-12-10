@@ -108,39 +108,43 @@ func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
 	}
 }
 
-func (d *DefaultNode) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
-	genericContainers, err := d.GetRuntimeInformationBase(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// if we did not get any generic container back, return early
-	if len(genericContainers) == 0 {
-		return genericContainers, nil
-	}
-
-	// populate ip information
-	gcNwSettings := genericContainers[0].NetworkSettings
-
-	d.Cfg.MgmtIPv4Address = gcNwSettings.IPv4addr
-	d.Cfg.MgmtIPv4PrefixLength = gcNwSettings.IPv4pLen
-	d.Cfg.MgmtIPv6Address = gcNwSettings.IPv6addr
-	d.Cfg.MgmtIPv6PrefixLength = gcNwSettings.IPv6pLen
-	d.Cfg.MgmtIPv4Gateway = gcNwSettings.IPv4Gw
-	d.Cfg.MgmtIPv6Gateway = gcNwSettings.IPv6Gw
-
-	d.Cfg.ContainerID = genericContainers[0].ID
-
-	return genericContainers, nil
-}
-
-func (d *DefaultNode) GetRuntimeInformationBase(ctx context.Context) ([]types.GenericContainer, error) {
-	return d.Runtime.ListContainers(ctx, []*types.GenericFilter{
+func (d *DefaultNode) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
+	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      fmt.Sprintf("^%s$", d.Cfg.LongName), // this regexp ensure we have an exact match for name
 		},
 	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cnts) == 0 {
+		return nil, fmt.Errorf("failed to get container for node %s", d.Cfg.LongName)
+	}
+
+	return &cnts[0], err
+}
+
+func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
+	c, err := d.GetContainer(ctx)
+	if err != nil {
+		return err
+	}
+
+	netSettings := c.NetworkSettings
+
+	d.Cfg.MgmtIPv4Address = netSettings.IPv4addr
+	d.Cfg.MgmtIPv4PrefixLength = netSettings.IPv4pLen
+	d.Cfg.MgmtIPv6Address = netSettings.IPv6addr
+	d.Cfg.MgmtIPv6PrefixLength = netSettings.IPv6pLen
+	d.Cfg.MgmtIPv4Gateway = netSettings.IPv4Gw
+	d.Cfg.MgmtIPv6Gateway = netSettings.IPv6Gw
+
+	d.Cfg.ContainerID = c.ID
+
+	return nil
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.

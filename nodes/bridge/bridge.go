@@ -57,11 +57,6 @@ func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return b.installIPTablesBridgeFwdRule()
 }
 
-func (b *bridge) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
-	// we skip the enrichment of network information
-	return b.GetRuntimeInformationBase(ctx)
-}
-
 func (b *bridge) PreCheckDeploymentConditionsMeet(_ context.Context) error {
 	err := b.VerifyHostRequirements()
 	if err != nil {
@@ -108,3 +103,6 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 }
 
 func (b *bridge) PullImage(_ context.Context) error { return nil }
+
+// UpdateConfigWithRuntimeInfo is a noop for bridges.
+func (b *bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
