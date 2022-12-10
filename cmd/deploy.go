@@ -103,8 +103,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	setFlags(c.Config)
 	log.Debugf("lab Conf: %+v", c.Config)
 
-	// dispatch a versioncheck that will run in background
-	vCh := CheckClabVersionIsLatest()
+	// dispatch a version check that will run in background
+	vCh := getLatestClabVersion()
 
 	if reconfigure {
 		if err != nil {

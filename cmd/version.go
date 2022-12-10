@@ -113,9 +113,9 @@ func docsLinkFromVer(ver string) string {
 	return relSlug
 }
 
-// CheckClabVersionIsLatest returns a chan that returns the version check result
+// getLatestClabVersion returns a chan that returns the version check result
 // uses the CLAB_VERSION_CHECK env variable (default true, if == "disable" will not perform the check).
-func CheckClabVersionIsLatest() chan string {
+func getLatestClabVersion() chan string {
 	// latest version channel
 	vCh := make(chan string)
 
