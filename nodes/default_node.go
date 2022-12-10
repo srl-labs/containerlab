@@ -213,7 +213,7 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 }
 
 // NodeOverwrites provides an interface used to be able to overwrite
-// certain methods in the embedding struct
+// certain methods in the embedding struct.
 type NodeOverwrites interface {
 	VerifyStartupConfig(topoDir string) error
 	CheckInterfaceNamingConvention() error

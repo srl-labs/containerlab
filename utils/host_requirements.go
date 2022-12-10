@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// VerifySSSE3Support check if SSSE3 is supported on the host
+// VerifySSSE3Support check if SSSE3 is supported on the host.
 func VerifySSSE3Support() bool {
 	return cpuid.CPU.SSSE3()
 }

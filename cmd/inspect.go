@@ -97,7 +97,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 			glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
 		} else {
 			// this is the --all case
-			glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
+			glabels = []*types.GenericFilter{{
+				FilterType: "label",
+				Field:      "containerlab", Operator: "exists",
+			}}
 		}
 		containers, err = c.ListContainers(ctx, glabels)
 		if err != nil {

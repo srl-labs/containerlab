@@ -50,7 +50,7 @@ func (*bridge) Deploy(_ context.Context) error                { return nil }
 func (*bridge) Delete(_ context.Context) error                { return nil }
 func (*bridge) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
-// DeleteNetnsSymlink the bridge is no namespace / container hence there is no Netns Symlink
+// DeleteNetnsSymlink the bridge is no namespace / container hence there is no Netns Symlink.
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
 func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {

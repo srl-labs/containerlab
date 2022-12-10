@@ -546,7 +546,7 @@ func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter
 	return containers, nil
 }
 
-// ListContainersClabNodes lists all containers based on the nodes stored in the clab instance
+// ListContainersClabNodes lists all containers based on the nodes stored in the clab instance.
 func (c *CLab) ListContainersClabNodes(ctx context.Context) ([]types.GenericContainer, error) {
 	var containers []types.GenericContainer
 

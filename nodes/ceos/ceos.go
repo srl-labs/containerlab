@@ -250,14 +250,16 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	// adding ipv4 address to configs
 	if gcontainer[0].NetworkSettings.IPv4addr != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ip address %s/%d", gcontainer[0].NetworkSettings.IPv4addr, gcontainer[0].NetworkSettings.IPv4pLen),
+			fmt.Sprintf("ip address %s/%d", gcontainer[0].NetworkSettings.IPv4addr,
+				gcontainer[0].NetworkSettings.IPv4pLen),
 		)
 	}
 
 	// adding ipv6 address to configs
 	if gcontainer[0].NetworkSettings.IPv6addr != "" {
 		cfgs = append(cfgs,
-			fmt.Sprintf("ipv6 address %s/%d", gcontainer[0].NetworkSettings.IPv6addr, gcontainer[0].NetworkSettings.IPv6pLen),
+			fmt.Sprintf("ipv6 address %s/%d", gcontainer[0].NetworkSettings.IPv6addr,
+				gcontainer[0].NetworkSettings.IPv6pLen),
 		)
 	}
 
