@@ -106,3 +106,6 @@ func (b *bridge) PullImage(_ context.Context) error { return nil }
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (b *bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
+
+// GetContainer is a noop for bridges.
+func (b *bridge) GetContainer(_ context.Context) (*types.GenericContainer, error) { return nil, nil }

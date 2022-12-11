@@ -122,7 +122,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	for _, clab := range labs {
 		err = destroyLab(ctx, clab)
 		if err != nil {
-			log.Errorf("Error occurred during the %s lab deletion %v", clab.Config.Name, err)
+			log.Errorf("Error occurred during the %s lab deletion: %v", clab.Config.Name, err)
 			errs = append(errs, err)
 		}
 

@@ -115,7 +115,6 @@ func (d *DefaultNode) GetContainer(ctx context.Context) (*types.GenericContainer
 			Match:      fmt.Sprintf("^%s$", d.Cfg.LongName), // this regexp ensure we have an exact match for name
 		},
 	})
-
 	if err != nil {
 		return nil, err
 	}
