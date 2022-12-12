@@ -551,18 +551,12 @@ func (c *CLab) ListNodesContainers(ctx context.Context) ([]types.GenericContaine
 	var containers []types.GenericContainer
 
 	for _, n := range c.Nodes {
-		ct, err := n.GetContainer(ctx)
+		cts, err := n.GetContainers(ctx)
 		if err != nil {
 			return containers, fmt.Errorf("could not get container for node %s: %v", n.Config().LongName, err)
 		}
 
-		// a nil container is returned by nodes that are not backed by containers
-		// such as bridges
-		if ct == nil {
-			continue
-		}
-
-		containers = append(containers, *ct)
+		containers = append(containers, cts...)
 	}
 	return containers, nil
 }

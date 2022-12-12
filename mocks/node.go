@@ -121,19 +121,19 @@ func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), dst, templ)
 }
 
-// GetContainer mocks base method.
-func (m *MockNode) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
+// GetContainers mocks base method.
+func (m *MockNode) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetContainer", ctx)
-	ret0, _ := ret[0].(*types.GenericContainer)
+	ret := m.ctrl.Call(m, "GetContainers", ctx)
+	ret0, _ := ret[0].([]types.GenericContainer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetContainer indicates an expected call of GetContainer.
-func (mr *MockNodeMockRecorder) GetContainer(ctx interface{}) *gomock.Call {
+// GetContainers indicates an expected call of GetContainers.
+func (mr *MockNodeMockRecorder) GetContainers(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainer", reflect.TypeOf((*MockNode)(nil).GetContainer), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockNode)(nil).GetContainers), ctx)
 }
 
 // GetImages mocks base method.

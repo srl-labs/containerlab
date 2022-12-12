@@ -108,7 +108,7 @@ func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
 	}
 }
 
-func (d *DefaultNode) GetContainer(ctx context.Context) (*types.GenericContainer, error) {
+func (d *DefaultNode) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
 	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
@@ -119,20 +119,19 @@ func (d *DefaultNode) GetContainer(ctx context.Context) (*types.GenericContainer
 		return nil, err
 	}
 
-	if len(cnts) == 0 {
-		return nil, fmt.Errorf("failed to get container for node %s", d.Cfg.LongName)
-	}
-
-	return &cnts[0], err
+	return cnts, err
 }
 
 func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
-	c, err := d.GetContainer(ctx)
+	cnts, err := d.GetContainers(ctx)
 	if err != nil {
 		return err
 	}
 
-	netSettings := c.NetworkSettings
+	// TODO: rdodin: evaluate the necessity of this function, since runtime data may be updated by the runtime
+	// when we do listing of containers and produce the GenericContainer
+	// network settings of a first container only
+	netSettings := cnts[0].NetworkSettings
 
 	d.Cfg.MgmtIPv4Address = netSettings.IPv4addr
 	d.Cfg.MgmtIPv4PrefixLength = netSettings.IPv4pLen
@@ -141,7 +140,7 @@ func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 	d.Cfg.MgmtIPv4Gateway = netSettings.IPv4Gw
 	d.Cfg.MgmtIPv6Gateway = netSettings.IPv6Gw
 
-	d.Cfg.ContainerID = c.ID
+	d.Cfg.ContainerID = cnts[0].ID
 
 	return nil
 }
