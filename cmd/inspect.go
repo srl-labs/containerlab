@@ -51,7 +51,7 @@ func init() {
 
 func inspectFn(_ *cobra.Command, _ []string) error {
 	if name == "" && topo == "" && !all {
-		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
+		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 		return nil
 	}
 	opts := []clab.ClabOption{
@@ -83,7 +83,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	var containers []types.GenericContainer
 
-	// if the topo file is availabel, use it
+	// if the topo file is available, use it
 	if topo != "" {
 		containers, err = c.ListNodesContainers(ctx)
 		if err != nil {
