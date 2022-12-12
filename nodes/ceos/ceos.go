@@ -128,6 +128,12 @@ func (n *ceos) createCEOSFiles(_ context.Context) error {
 	cfg := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
 	nodeCfg.ResStartupConfig = cfg
 
+	// set mgmt ipv4 gateway as it is already known by now
+	// since the container network has been created before we launch nodes
+	// and mgmt gateway can be used in ceos.Cfg template to configure default route for mgmt
+	nodeCfg.MgmtIPv4Gateway = n.Runtime.Mgmt().IPv4Gw
+	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
+
 	// set the mgmt interface name for the node
 	err := setMgmtInterface(nodeCfg)
 	if err != nil {
