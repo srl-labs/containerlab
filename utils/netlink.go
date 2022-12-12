@@ -76,7 +76,7 @@ func GenMac(oui string) string {
 	return fmt.Sprintf("%s:%02x:%02x:%02x", oui, buf[0], buf[1], buf[2])
 }
 
-// deleteNetnsSymlink deletes a network namespace and removes the symlink created by linkContainerNS func.
+// deleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS func.
 func DeleteNetnsSymlink(n string) error {
 	log.Debug("Deleting netns symlink: ", n)
 	sl := fmt.Sprintf("/run/netns/%s", n)
