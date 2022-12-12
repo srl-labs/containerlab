@@ -21,12 +21,16 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+// DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
+// It has common fields and methods that every node should typically have. Nodes can override methods if needed.
 type DefaultNode struct {
 	Cfg              *types.NodeConfig
 	Mgmt             *types.MgmtNet
 	Runtime          runtime.ContainerRuntime
 	HostRequirements types.HostRequirements
-	OverwriteNode    NodeOverwrites
+	// OverwriteNode stores the interface used to overwrite methods defined
+	// for DefaultNode, so that particular nodes can provide custom implementations.
+	OverwriteNode NodeOverwrites
 }
 
 func NewDefaultNode(on NodeOverwrites) *DefaultNode {
@@ -34,6 +38,7 @@ func NewDefaultNode(on NodeOverwrites) *DefaultNode {
 		HostRequirements: types.HostRequirements{},
 		OverwriteNode:    on,
 	}
+
 	return dn
 }
 
@@ -47,6 +52,8 @@ func (d *DefaultNode) Config() *types.NodeConfig                         { retur
 func (d *DefaultNode) PreDeploy(_ context.Context, _, _, _ string) error { return nil }
 
 func (d *DefaultNode) SaveConfig(_ context.Context) error {
+	// nodes should have the save method defined on their respective structs.
+	// By default SaveConfig is a noop.
 	log.Debugf("Save operation is currently not supported for %q node kind", d.Cfg.Kind)
 	return nil
 }
@@ -152,7 +159,7 @@ func (d *DefaultNode) DeleteNetnsSymlink() error {
 }
 
 func (d *DefaultNode) CheckInterfaceNamingConvention() error {
-	log.Debugf("CheckInterfaceNamingConvention() not implemented for %q", d.Cfg.Kind)
+	log.Debugf("CheckInterfaceNamingConvention() not implemented for %q kind", d.Cfg.Kind)
 	return nil
 }
 
@@ -214,8 +221,9 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 	return f.Close()
 }
 
-// NodeOverwrites provides an interface used to be able to overwrite
-// certain methods in the embedding struct.
+// NodeOverwrites provides an interface to overwrite
+// that node types implement and provide in the call to NewDefaultNode function
+// to override methods in the DefaultNode struct with node-specific implementation.
 type NodeOverwrites interface {
 	VerifyStartupConfig(topoDir string) error
 	CheckInterfaceNamingConvention() error
