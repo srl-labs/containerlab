@@ -589,14 +589,15 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	for idx := range inputContainers {
 		i := inputContainers[idx]
 
-		clean_names := []string{}
+		names := []string{}
 		for _, n := range i.Names {
 			// the docker names seem to always come with a "/" in the first position
-			clean_names = append(clean_names, strings.TrimLeft(n, "/"))
+			// we trim it as slashes are not required in a single host setting
+			names = append(names, strings.TrimLeft(n, "/"))
 		}
 
 		ctr := types.GenericContainer{
-			Names:           clean_names,
+			Names:           names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
 			Image:           i.Image,
