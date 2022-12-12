@@ -270,7 +270,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
 	file := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/group_fwd_mask"
 
-	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
+	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640) // skipcq: GO-S2306
 	if err != nil {
 		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}

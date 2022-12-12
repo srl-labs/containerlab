@@ -228,7 +228,7 @@ func setMgmtInterface(node *types.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy(ctx context.Context) error {
+func (n *ceos) ceosPostDeploy(_ context.Context) error {
 	nodeCfg := n.Config()
 	d, err := utils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
 	if err != nil {
