@@ -121,6 +121,21 @@ func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), dst, templ)
 }
 
+// GetContainers mocks base method.
+func (m *MockNode) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainers", ctx)
+	ret0, _ := ret[0].([]types.GenericContainer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainers indicates an expected call of GetContainers.
+func (mr *MockNodeMockRecorder) GetContainers(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockNode)(nil).GetContainers), ctx)
+}
+
 // GetImages mocks base method.
 func (m *MockNode) GetImages(arg0 context.Context) map[string]string {
 	m.ctrl.T.Helper()
@@ -147,21 +162,6 @@ func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 func (mr *MockNodeMockRecorder) GetRuntime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockNode)(nil).GetRuntime))
-}
-
-// GetRuntimeInformation mocks base method.
-func (m *MockNode) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRuntimeInformation", ctx)
-	ret0, _ := ret[0].([]types.GenericContainer)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetRuntimeInformation indicates an expected call of GetRuntimeInformation.
-func (mr *MockNodeMockRecorder) GetRuntimeInformation(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntimeInformation", reflect.TypeOf((*MockNode)(nil).GetRuntimeInformation), ctx)
 }
 
 // Init mocks base method.
@@ -237,6 +237,20 @@ func (m *MockNode) SaveConfig(arg0 context.Context) error {
 func (mr *MockNodeMockRecorder) SaveConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockNode)(nil).SaveConfig), arg0)
+}
+
+// UpdateConfigWithRuntimeInfo mocks base method.
+func (m *MockNode) UpdateConfigWithRuntimeInfo(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateConfigWithRuntimeInfo", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateConfigWithRuntimeInfo indicates an expected call of UpdateConfigWithRuntimeInfo.
+func (mr *MockNodeMockRecorder) UpdateConfigWithRuntimeInfo(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfigWithRuntimeInfo", reflect.TypeOf((*MockNode)(nil).UpdateConfigWithRuntimeInfo), arg0)
 }
 
 // VerifyStartupConfig mocks base method.

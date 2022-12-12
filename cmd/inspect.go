@@ -85,7 +85,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	// if the topo file is availabel, use it
 	if topo != "" {
-		containers, err = c.ListContainersClabNodes(ctx)
+		containers, err = c.ListNodesContainers(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %s", err)
 		}

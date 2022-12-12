@@ -270,7 +270,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
 	file := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/group_fwd_mask"
 
-	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
+	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640) // skipcq: GO-S2306
 	if err != nil {
 		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}
@@ -589,14 +589,15 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	for idx := range inputContainers {
 		i := inputContainers[idx]
 
-		clean_names := []string{}
+		names := []string{}
 		for _, n := range i.Names {
 			// the docker names seem to always come with a "/" in the first position
-			clean_names = append(clean_names, strings.TrimLeft(n, "/"))
+			// we trim it as slashes are not required in a single host setting
+			names = append(names, strings.TrimLeft(n, "/"))
 		}
 
 		ctr := types.GenericContainer{
-			Names:           clean_names,
+			Names:           names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
 			Image:           i.Image,
