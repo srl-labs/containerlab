@@ -12,6 +12,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/srl-labs/containerlab/virt"
 )
 
 // Link is a struct that contains the information of a link between 2 containers.
@@ -143,10 +144,10 @@ type HostRequirements struct {
 }
 
 func (h *HostRequirements) IsValid() (bool, error) {
-	if h.VirtRequired && !utils.VerifyVirtSupport() {
+	if h.VirtRequired && !virt.VerifyVirtSupport() {
 		return false, fmt.Errorf("the CPU virtualization support is required, but not available")
 	}
-	if h.SSSE3 && !utils.VerifySSSE3Support() {
+	if h.SSSE3 && !virt.VerifySSSE3Support() {
 		return false, fmt.Errorf("the SSSE3 CPU feature required, but not available")
 	}
 	return true, nil
