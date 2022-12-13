@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cloudflare/cfssl v1.6.3
-	github.com/containerd/containerd v1.6.10
+	github.com/containerd/containerd v1.6.12
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.1.1
 	github.com/containers/common v0.50.1
@@ -219,7 +219,7 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mdlayher/netlink v1.4.0 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
