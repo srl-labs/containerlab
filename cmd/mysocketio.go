@@ -15,7 +15,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	terminal "golang.org/x/term"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 const loginEndpoint = "https://api.mysocket.io/login"
@@ -52,7 +52,7 @@ var mysocketioLoginCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if password == "" {
 			var err error
-			password, err = readPassword()
+			password, err = utils.ReadPasswordFromTerminal()
 			if err != nil {
 				return err
 			}
@@ -92,14 +92,4 @@ var mysocketioLoginCmd = &cobra.Command{
 		log.Infof("Saved mysocketio token as %s", filepath.Join(cwd, ".mysocketio_token"))
 		return nil
 	},
-}
-
-func readPassword() (string, error) {
-	fmt.Print("password: ")
-	pass, err := terminal.ReadPassword(int(os.Stdin.Fd()))
-	if err != nil {
-		return "", err
-	}
-	fmt.Println()
-	return string(pass), nil
 }

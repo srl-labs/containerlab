@@ -119,7 +119,7 @@ func TestParseSocketCfg(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := parseSocketCfg(tc.got)
+			got, err := ParseSocketCfg(tc.got)
 
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("parseSocketCfg() mismatch (-want +got):\n%s", diff)
