@@ -48,14 +48,10 @@ func Login(email, password string) error {
 		return err
 	}
 
-	absPathToken := cwdTokenFilePath()
-
-	err = ioutil.WriteFile(absPathToken, []byte(loginResp.Token), 0600)
+	err = writeToken(loginResp.Token)
 	if err != nil {
-		return fmt.Errorf("failed to write border0.com token file as %s: %v",
-			absPathToken, err)
+		return err
 	}
-	log.Infof("Saved mysocketio token as %s", absPathToken)
 	return nil
 }
 
@@ -91,7 +87,7 @@ func checkPoliciesExist(policyNames map[string]struct{}) error {
 	}
 	notFound := []string{}
 OUTER:
-	for name, _ := range policyNames {
+	for name := range policyNames {
 		for _, policy := range policies {
 			if name == policy.Name {
 				continue OUTER
@@ -160,7 +156,7 @@ func Request(method string, url string, targetStruct interface{}, data interface
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 401 {
-		return fmt.Errorf("401 Unauthorized")
+		return fmt.Errorf("401 Unauthorized, maybe the token expired")
 	}
 
 	if resp.StatusCode == 429 {
@@ -191,7 +187,37 @@ func Request(method string, url string, targetStruct interface{}, data interface
 	return nil
 }
 
+// RefreshLogin checking the validity of the login token as well as it
+func RefreshLogin(ctx context.Context) error {
+	t := &LoginRefreshResponse{}
+	log.Debug("Validating and refreshing border0.com token")
+	err := Request("POST", "login/refresh", t, nil, true)
+	if err != nil {
+		return err
+	}
+	err = writeToken(t.Token)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// writeToken writes the given token to a file
+func writeToken(token string) error {
+	absPathToken := cwdTokenFilePath()
+
+	err := ioutil.WriteFile(absPathToken, []byte(token), 0600)
+	if err != nil {
+		return fmt.Errorf("failed to write border0.com token file as %s: %v",
+			absPathToken, err)
+	}
+	log.Infof("Saved border0.com token to %s", absPathToken)
+	return nil
+}
+
 func CreateBorder0Config(ctx context.Context, nodesMap map[string]nodes.Node, labname string) (string, error) {
+
+	log.Debug("Creating the border0.com configuration")
 	// acquire token
 	border0Token, err := getToken()
 	if err != nil {
