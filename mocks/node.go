@@ -37,6 +37,20 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 	return m.recorder
 }
 
+// CheckDeploymentConditions mocks base method.
+func (m *MockNode) CheckDeploymentConditions(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckDeploymentConditions", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckDeploymentConditions indicates an expected call of CheckDeploymentConditions.
+func (mr *MockNodeMockRecorder) CheckDeploymentConditions(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDeploymentConditions", reflect.TypeOf((*MockNode)(nil).CheckDeploymentConditions), arg0)
+}
+
 // CheckInterfaceNamingConvention mocks base method.
 func (m *MockNode) CheckInterfaceNamingConvention() error {
 	m.ctrl.T.Helper()
@@ -195,20 +209,6 @@ func (m *MockNode) PostDeploy(arg0 context.Context, arg1 map[string]nodes.Node) 
 func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1)
-}
-
-// PreCheckDeploymentConditionsMeet mocks base method.
-func (m *MockNode) PreCheckDeploymentConditionsMeet(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreCheckDeploymentConditionsMeet", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PreCheckDeploymentConditionsMeet indicates an expected call of PreCheckDeploymentConditionsMeet.
-func (mr *MockNodeMockRecorder) PreCheckDeploymentConditionsMeet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreCheckDeploymentConditionsMeet", reflect.TypeOf((*MockNode)(nil).PreCheckDeploymentConditionsMeet), arg0)
 }
 
 // PreDeploy mocks base method.

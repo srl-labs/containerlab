@@ -61,7 +61,7 @@ func (d *DefaultNode) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-func (d *DefaultNode) PreCheckDeploymentConditionsMeet(ctx context.Context) error {
+func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 	err := d.OverwriteNode.VerifyHostRequirements()
 	if err != nil {
 		return err

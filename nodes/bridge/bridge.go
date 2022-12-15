@@ -57,7 +57,7 @@ func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return b.installIPTablesBridgeFwdRule()
 }
 
-func (b *bridge) PreCheckDeploymentConditionsMeet(_ context.Context) error {
+func (b *bridge) CheckDeploymentConditions(_ context.Context) error {
 	err := b.VerifyHostRequirements()
 	if err != nil {
 		return err
