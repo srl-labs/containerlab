@@ -240,12 +240,13 @@ type NodeOverwrites interface {
 	GetImages(ctx context.Context) map[string]string
 }
 
+// LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
+// and puts the resulting config file by the LabDir/configDirName/startupCfgFName path.
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
 	nodeCfg := node.Config()
 	// create config directory that will be bind mounted to vrnetlab container at / path
 	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0777)
 
-	node.Config()
 	if nodeCfg.StartupConfig != "" {
 		// dstCfg is a path to a file on the clab host that will have rendered configuration
 		dstCfg := filepath.Join(nodeCfg.LabDir, configDirName, startupCfgFName)
