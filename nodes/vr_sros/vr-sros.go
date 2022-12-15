@@ -25,8 +25,9 @@ const (
 	scrapliPlatformName = "nokia_sros"
 	defaultUser         = "admin"
 	defaultPassword     = "admin"
-	configDirName       = "ftpboot"
+	configDirName       = "tftpboot"
 	startupCfgFName     = "config.txt"
+	licenseFName        = "license.txt"
 )
 
 func init() {
@@ -124,11 +125,12 @@ func createVrSROSFiles(node nodes.Node) error {
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
-		dst := filepath.Join(nodeCfg.LabDir, "/tftpboot/license.txt")
+		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
 		if err := utils.CopyFile(src, dst, 0644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
+
 	return nil
 }
