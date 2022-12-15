@@ -33,10 +33,13 @@ type DefaultNode struct {
 	OverwriteNode NodeOverwrites
 }
 
-func NewDefaultNode(on NodeOverwrites) *DefaultNode {
+// NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
+// which is implemented by the node struct of a particular kind.
+// This allows DefaultNode to access fields of the specific node struct in the methods defined for DefaultNode.
+func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	dn := &DefaultNode{
 		HostRequirements: types.HostRequirements{},
-		OverwriteNode:    on,
+		OverwriteNode:    n,
 	}
 
 	return dn
@@ -221,9 +224,11 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 	return f.Close()
 }
 
-// NodeOverwrites provides an interface to overwrite
-// that node types implement and provide in the call to NewDefaultNode function
-// to override methods in the DefaultNode struct with node-specific implementation.
+// NodeOverwrites is an interface that every node implementation implements.
+// It is used to enable DefaultNode to get access to the particular node structs
+// and is provided as an argument of the NewDefaultNode function.
+// The methods defined for this interfaces are the methods that particular node has a custom
+// implementation of.
 type NodeOverwrites interface {
 	VerifyStartupConfig(topoDir string) error
 	CheckInterfaceNamingConvention() error
