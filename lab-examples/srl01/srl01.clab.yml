@@ -9,3 +9,8 @@ topology:
   nodes:
     srl:
       kind: srl
+      publish:
+        - "ssh/22"
+    b0:
+      kind: border0
+      image: border0:latest

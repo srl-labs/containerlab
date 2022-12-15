@@ -41,6 +41,13 @@ func (b *border0) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (b *border0) PreDeploy(_ context.Context, topologyName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(b.Cfg.LabDir, 0777)
+
+	// // TODO: This needs to go into the Node based checks after #1129 is being merged
+	// err := border0_api.RefreshLogin(ctx)
+	// if err != nil {
+	// 	return err
+	// }
+
 	b.topologyName = topologyName
 	border0Mount := fmt.Sprintf("%s:%s:ro", b.hostborder0yamlPath, b.containerborder0yamlPath)
 	b.Cfg.Binds = append(b.Cfg.Binds, border0Mount)

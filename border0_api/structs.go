@@ -6,8 +6,12 @@ import (
 )
 
 type LoginResponse struct {
+	LoginRefreshResponse
+	MFA bool `json:"require_mfa"`
+}
+
+type LoginRefreshResponse struct {
 	Token string `json:"token"`
-	MFA   bool   `json:"require_mfa"`
 }
 
 type LoginRequest struct {

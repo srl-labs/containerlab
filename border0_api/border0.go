@@ -49,8 +49,10 @@ func Login(email, password string) error {
 	}
 
 	err = writeToken(loginResp.Token)
+
 	if err != nil {
 		return err
+
 	}
 	return nil
 }
