@@ -26,6 +26,9 @@ const apiUrl = "https://api.border0.com/api/v1"
 
 var supportedSockTypes = []string{"ssh", "tls", "http", "https"}
 
+// to avoid multiple token lookups etc. we'll cache the token
+var tokenCache = ""
+
 // Login performs a login to border0.com and stores the retrieved the access-token in the cwd
 func Login(email, password string) error {
 	// if password not set read from terminal
@@ -67,17 +70,25 @@ func getApiUrl() string {
 
 // getToken retrieved the border0 access-token as a string
 func getToken() (string, error) {
+	// return the cached token
+	if tokenCache != "" {
+		return tokenCache, nil
+	}
+	// resolve the token file
 	tokenFile, err := tokenfile()
 	if err != nil {
 		return "", err
 	}
+	// read in the token from the resolved file
 	content, err := os.ReadFile(tokenFile)
 	if err != nil {
 		return "", err
 	}
 
-	tokenString := strings.TrimSpace(string(content))
-	return tokenString, nil
+	// also store the token is cache
+	tokenCache := strings.TrimSpace(string(content))
+
+	return tokenCache, nil
 }
 
 // checkPoliciesExist given a Map of policy names, will figure out if these policies already on the border0 side.
@@ -115,7 +126,7 @@ OUTER:
 func tokenfile() (string, error) {
 	tokenFile := ""
 	// iterate over the possible border0.com token file locations
-	for i := 0; i < 2; i++ {
+	for i := 0; i <= 2; i++ {
 		switch i {
 		case 0:
 			// Environement variable provided location
@@ -134,7 +145,6 @@ func tokenfile() (string, error) {
 		if utils.FileExists(tokenFile) {
 			return tokenFile, nil
 		}
-		i += 1
 	}
 	// no valid file found, return error
 	return "", fmt.Errorf("no access-token found, please login to border0.com first e.g use `containerlab tools border0 login --email <BORDER0-USER-MAIL-ADDRESS>`")
@@ -247,6 +257,8 @@ func writeToken(token string) error {
 			absPathToken, err)
 	}
 	log.Debugf("Saved border0.com token to %s", absPathToken)
+	// also update the token cache
+	tokenCache = token
 	return nil
 }
 

@@ -37,6 +37,12 @@ func (b *border0) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		o(b)
 	}
 
+	// set default image
+	if b.Cfg.Image == "" {
+		b.Cfg.Image = "ghcr.io/steiler/containerlab-border0.com"
+	}
+
+	// prepare host and container paths for border0.com config bind
 	b.hostborder0yamlPath = path.Join(b.Cfg.LabDir, "border0.yaml")
 	b.containerborder0yamlPath = path.Join("/code", "border0.yaml")
 	return nil
