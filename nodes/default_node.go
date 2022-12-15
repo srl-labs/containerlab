@@ -165,6 +165,7 @@ func (d *DefaultNode) CheckInterfaceNamingConvention() error {
 	return nil
 }
 
+// VerifyStartupConfig verifies that startup config files exists on disks.
 func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 	cfg := d.Config().StartupConfig
 	if cfg == "" {
@@ -175,6 +176,7 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 	if !utils.FileExists(rcfg) {
 		return fmt.Errorf("node %q startup-config file not found by the path %s", d.Config().ShortName, rcfg)
 	}
+
 	return nil
 }
 
