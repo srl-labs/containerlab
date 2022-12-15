@@ -9,7 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -205,7 +205,7 @@ func Request(method string, url string, targetStruct interface{}, data interface
 	}
 
 	if resp.StatusCode == 429 {
-		responseData, _ := ioutil.ReadAll(resp.Body)
+		responseData, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("rate limit error: %v", string(responseData))
 	}
 
@@ -251,7 +251,7 @@ func RefreshLogin(ctx context.Context) error {
 func writeToken(token string) error {
 	absPathToken := cwdTokenFilePath()
 
-	err := ioutil.WriteFile(absPathToken, []byte(token), 0600)
+	err := os.WriteFile(absPathToken, []byte(token), 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write border0.com token file as %s: %v",
 			absPathToken, err)
