@@ -200,7 +200,7 @@ func (veth *vEthEndpoint) setVethLink() error {
 	return veth.toNS()
 }
 
-// vethToNS puts a veth endpoint to a given netns and renames its random name to a desired name.
+// toNS puts a veth endpoint to a given netns and renames its random name to a desired name.
 func (veth *vEthEndpoint) toNS() error {
 	var vethNS ns.NetNS
 	var err error
@@ -250,20 +250,6 @@ func (veth *vEthEndpoint) toBridge() error {
 		return nil
 	})
 	return err
-}
-
-// DeleteNetnsSymlinks deletes the symlink file created for each container netns.
-func (c *CLab) DeleteNetnsSymlinks() (err error) {
-	for _, node := range c.Nodes {
-		if node.Config().Kind != "bridge" {
-			log.Debugf("Deleting %s network namespace", node.Config().LongName)
-			if err := utils.DeleteNetnsSymlink(node.Config().LongName); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
 
 func genIfName() string {

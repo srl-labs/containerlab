@@ -67,6 +67,9 @@ type intfMap struct {
 }
 
 func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	n.DefaultNode = *nodes.NewDefaultNode(n)
+
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
@@ -92,14 +95,14 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *ceos) PreDeploy(_, _, _ string) error {
+func (n *ceos) PreDeploy(ctx context.Context, _, _, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	return n.createCEOSFiles()
+	return n.createCEOSFiles(ctx)
 }
 
-func (n *ceos) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
-	return n.ceosPostDeploy()
+	return n.ceosPostDeploy(ctx)
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
@@ -118,7 +121,7 @@ func (n *ceos) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func (n *ceos) createCEOSFiles() error {
+func (n *ceos) createCEOSFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0777)
@@ -146,7 +149,7 @@ func (n *ceos) createCEOSFiles() error {
 		cfgTemplate = string(c)
 	}
 
-	err = nodeCfg.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err = n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -225,7 +228,7 @@ func setMgmtInterface(node *types.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy() error {
+func (n *ceos) ceosPostDeploy(_ context.Context) error {
 	nodeCfg := n.Config()
 	d, err := utils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
 	if err != nil {

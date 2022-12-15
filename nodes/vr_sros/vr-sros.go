@@ -7,9 +7,9 @@ package vr_sros
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
@@ -25,6 +25,9 @@ const (
 	scrapliPlatformName = "nokia_sros"
 	defaultUser         = "admin"
 	defaultPassword     = "admin"
+	configDirName       = "tftpboot"
+	startupCfgFName     = "config.txt"
+	licenseFName        = "license.txt"
 )
 
 func init() {
@@ -42,6 +45,11 @@ type vrSROS struct {
 }
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+	// set virtualization requirement
+	s.HostRequirements.VirtRequired = true
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -73,15 +81,12 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.NodeType,
 	)
 
-	// set virtualization requirement
-	s.Cfg.HostRequirements.VirtRequired = true
-
 	return nil
 }
 
-func (s *vrSROS) PreDeploy(_, _, _ string) error {
+func (s *vrSROS) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	return createVrSROSFiles(s.Cfg)
+	return createVrSROSFiles(s)
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
@@ -98,34 +103,34 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-func createVrSROSFiles(node *types.NodeConfig) error {
-	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(node.LabDir, "tftpboot"), 0777)
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (s *vrSROS) CheckInterfaceName() error {
+	// vsim doesn't seem to support >20 interfaces, yet we allow to set max if number 32 just in case.
+	// https://regex101.com/r/bx6kzM/1
+	ifRe := regexp.MustCompile(`eth([1-9]|[12][0-9]|3[0-2])$`)
+	for _, e := range s.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is from 1 to 32", e.EndpointName)
+		}
+	}
 
-	if node.License != "" {
+	return nil
+}
+
+func createVrSROSFiles(node nodes.Node) error {
+	nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+
+	nodeCfg := node.Config()
+
+	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
-		src := node.License
-		dst := filepath.Join(node.LabDir, "/tftpboot/license.txt")
+		src := nodeCfg.License
+		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
 		if err := utils.CopyFile(src, dst, 0644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
 
-	if node.StartupConfig != "" {
-		cfg := filepath.Join(node.LabDir, "tftpboot", "config.txt")
-
-		c, err := os.ReadFile(node.StartupConfig)
-		if err != nil {
-			return err
-		}
-
-		cfgTemplate := string(c)
-
-		err = node.GenerateConfig(cfg, cfgTemplate)
-		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", node.ShortName, err)
-		}
-	}
 	return nil
 }

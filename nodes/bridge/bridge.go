@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"bridge"}
@@ -34,6 +35,9 @@ type bridge struct {
 }
 
 func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -42,12 +46,28 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (*bridge) Deploy(_ context.Context) error { return nil }
-func (*bridge) Delete(_ context.Context) error { return nil }
-func (*bridge) GetImages() map[string]string   { return map[string]string{} }
+func (*bridge) Deploy(_ context.Context) error                { return nil }
+func (*bridge) Delete(_ context.Context) error                { return nil }
+func (*bridge) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+
+// DeleteNetnsSymlink is a noop for bridge nodes.
+func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
 func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	return b.installIPTablesBridgeFwdRule()
+}
+
+func (b *bridge) CheckDeploymentConditions(_ context.Context) error {
+	err := b.VerifyHostRequirements()
+	if err != nil {
+		return err
+	}
+	// check bridge exists
+	_, err = utils.BridgeByName(b.Cfg.ShortName)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // installIPTablesBridgeFwdRule calls iptables to install `allow` rule for traffic passing through the bridge
@@ -81,3 +101,11 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 
 	return nil
 }
+
+func (b *bridge) PullImage(_ context.Context) error { return nil }
+
+// UpdateConfigWithRuntimeInfo is a noop for bridges.
+func (b *bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
+
+// GetContainers is a noop for bridges.
+func (b *bridge) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }

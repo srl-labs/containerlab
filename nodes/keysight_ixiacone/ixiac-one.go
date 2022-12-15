@@ -37,6 +37,9 @@ type ixiacOne struct {
 }
 
 func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	l.DefaultNode = *nodes.NewDefaultNode(l)
+
 	l.Cfg = cfg
 	for _, o := range opts {
 		o(l)

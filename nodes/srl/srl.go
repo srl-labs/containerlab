@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -120,6 +121,11 @@ type srl struct {
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+	// set virtualization requirement
+	s.HostRequirements.SSSE3 = true
+
 	s.Cfg = cfg
 	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
 	// to not rely on certain kind names
@@ -171,12 +177,10 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	topoPath := filepath.Join(s.Cfg.LabDir, "topology.yml")
 	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
-	// SSSE3 cpu instruction set is required
-	s.Cfg.HostRequirements.SSSE3 = true
 	return nil
 }
 
-func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
+func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	// retrieve node certificates
 	nodeCerts, err := cert.RetrieveNodeCertData(s.Cfg, labCADir)
@@ -245,7 +249,6 @@ func (s *srl) PreDeploy(configName, labCADir, labCARoot string) error {
 
 func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
-
 	// Populate /etc/hosts for service discovery on mgmt interface
 	if err := s.populateHosts(ctx, nodes); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
@@ -399,7 +402,7 @@ func (s *srl) createSRLFiles() error {
 
 		cfgTemplate := string(c)
 
-		err = s.Cfg.GenerateConfig(dst, cfgTemplate)
+		err = s.GenerateConfig(dst, cfgTemplate)
 		if err != nil {
 			log.Errorf("node=%s, failed to generate config: %v", s.Cfg.ShortName, err)
 		}
@@ -556,4 +559,16 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	}
 
 	return file.Close()
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (s *srl) CheckInterfaceName() error {
+	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+	for _, e := range s.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
+		}
+	}
+
+	return nil
 }

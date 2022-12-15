@@ -26,7 +26,7 @@ func BridgeByName(name string) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-// linkContainerNS creates a symlink for containers network namespace
+// LinkContainerNS creates a symlink for containers network namespace
 // so that it can be managed by iproute2 utility.
 func LinkContainerNS(nspath, containerName string) error {
 	CreateDirectory("/run/netns/", 0755)
@@ -76,7 +76,7 @@ func GenMac(oui string) string {
 	return fmt.Sprintf("%s:%02x:%02x:%02x", oui, buf[0], buf[1], buf[2])
 }
 
-// deleteNetnsSymlink deletes a network namespace and removes the symlink created by linkContainerNS func.
+// DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS func.
 func DeleteNetnsSymlink(n string) error {
 	log.Debug("Deleting netns symlink: ", n)
 	sl := fmt.Sprintf("/run/netns/%s", n)

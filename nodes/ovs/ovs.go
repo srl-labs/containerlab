@@ -9,6 +9,7 @@ import (
 
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"ovs-bridge"}
@@ -24,6 +25,9 @@ type ovs struct {
 }
 
 func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	s.DefaultNode = *nodes.NewDefaultNode(s)
+
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -31,10 +35,20 @@ func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (*ovs) Deploy(_ context.Context) error { return nil }
-
-func (*ovs) Delete(_ context.Context) error {
+func (s *ovs) CheckDeploymentConditions(_ context.Context) error {
+	err := s.VerifyHostRequirements()
+	if err != nil {
+		return err
+	}
+	// check bridge exists
+	_, err = utils.BridgeByName(s.Cfg.ShortName)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (*ovs) GetImages() map[string]string { return map[string]string{} }
+func (*ovs) Deploy(_ context.Context) error                { return nil }
+func (*ovs) PullImage(_ context.Context) error             { return nil }
+func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (*ovs) Delete(_ context.Context) error                { return nil }

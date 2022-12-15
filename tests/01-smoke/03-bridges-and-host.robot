@@ -11,7 +11,7 @@ Suite Setup       Setup
 Suite Teardown    Cleanup
 
 *** Variables ***
-${lab-name}       2-linux-nodes
+${lab-name}       bridge-and-host
 ${lab-file}       03-linux-nodes-to-bridge-and-host.clab.yml
 ${bridge-name}    br-01-03-clab
 ${br-link1-name}    l1-eth1

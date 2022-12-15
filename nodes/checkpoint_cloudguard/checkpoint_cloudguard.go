@@ -5,6 +5,7 @@
 package checkpoint_cloudguard
 
 import (
+	"context"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -36,6 +37,11 @@ type CheckpointCloudguard struct {
 }
 
 func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// set virtualization requirement
+	n.HostRequirements.VirtRequired = true
+
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
@@ -53,13 +59,10 @@ func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOpt
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
-	// set virtualization requirement
-	n.Cfg.HostRequirements.VirtRequired = true
-
 	return nil
 }
 
-func (n *CheckpointCloudguard) PreDeploy(_, _, _ string) error {
+func (n *CheckpointCloudguard) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return nil
 }

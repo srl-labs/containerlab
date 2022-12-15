@@ -51,7 +51,7 @@ func init() {
 
 func inspectFn(_ *cobra.Command, _ []string) error {
 	if name == "" && topo == "" && !all {
-		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the flag --all")
+		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 		return nil
 	}
 	opts := []clab.ClabOption{
@@ -81,20 +81,31 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var glabels []*types.GenericFilter
-	if all {
-		glabels = []*types.GenericFilter{{FilterType: "label", Field: "containerlab", Operator: "exists"}}
-	} else {
-		if name != "" {
-			glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
-		} else if topo != "" {
-			glabels = []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
-		}
-	}
+	var containers []types.GenericContainer
 
-	containers, err := c.ListContainers(ctx, glabels)
-	if err != nil {
-		return fmt.Errorf("failed to list containers: %s", err)
+	// if the topo file is available, use it
+	if topo != "" {
+		containers, err = c.ListNodesContainers(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list containers: %s", err)
+		}
+	} else {
+		var glabels []*types.GenericFilter
+		// or when just the name is given
+		if name != "" {
+			// if name is set, filter for name
+			glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
+		} else {
+			// this is the --all case
+			glabels = []*types.GenericFilter{{
+				FilterType: "label",
+				Field:      "containerlab", Operator: "exists",
+			}}
+		}
+		containers, err = c.ListContainers(ctx, glabels)
+		if err != nil {
+			return fmt.Errorf("failed to list containers: %s", err)
+		}
 	}
 
 	if len(containers) == 0 {
@@ -157,7 +168,7 @@ func printContainerInspect(containers []types.GenericContainer, format string) e
 		cdet.ContainerID = cont.ShortID
 
 		if len(cont.Names) > 0 {
-			cdet.Name = strings.TrimLeft(cont.Names[0], "/")
+			cdet.Name = cont.Names[0]
 		}
 		if kind, ok := cont.Labels["clab-node-kind"]; ok {
 			cdet.Kind = kind

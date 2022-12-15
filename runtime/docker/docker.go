@@ -270,7 +270,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
 	file := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/group_fwd_mask"
 
-	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640)
+	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640) // skipcq: GO-S2306
 	if err != nil {
 		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}
@@ -565,6 +565,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 
 		nr = append(nr, bridgenet...)
 	}
+
 	return d.produceGenericContainerList(ctrs, nr)
 }
 
@@ -613,8 +614,15 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	for idx := range inputContainers {
 		i := inputContainers[idx]
 
+		names := []string{}
+		for _, n := range i.Names {
+			// the docker names seem to always come with a "/" in the first position
+			// we trim it as slashes are not required in a single host setting
+			names = append(names, strings.TrimLeft(n, "/"))
+		}
+
 		ctr := types.GenericContainer{
-			Names:           i.Names,
+			Names:           names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
 			Image:           i.Image,
@@ -656,6 +664,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			ctr.NetworkSettings.IPv6addr = ifcfg.GlobalIPv6Address
 			ctr.NetworkSettings.IPv6pLen = ifcfg.GlobalIPv6PrefixLen
 			ctr.NetworkSettings.IPv4Gw = ifcfg.Gateway
+			ctr.NetworkSettings.IPv6Gw = ifcfg.IPv6Gateway
 		}
 
 		// populating mounts information
@@ -745,18 +754,18 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 			force = true
 		}
 	}
-	log.Debugf("Removing container: %s", strings.TrimLeft(cID, "/"))
+	log.Debugf("Removing container: %s", cID)
 	err = d.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force, RemoveVolumes: true})
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", strings.TrimLeft(cID, "/"))
+	log.Infof("Removed container: %s", cID)
 	return nil
 }
 
 // setSysctl writes sysctl data by writing to a specific file.
 func setSysctl(sysctl string, newVal int) error {
-	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0640)
+	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0600)
 }
 
 func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {

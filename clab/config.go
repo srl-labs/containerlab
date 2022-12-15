@@ -5,19 +5,16 @@
 package clab
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
 	"syscall"
 
-	"github.com/klauspost/cpuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -363,9 +360,14 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 // CheckTopologyDefinition runs topology checks and returns any errors found.
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	var err error
-	if err = c.verifyBridgesExist(); err != nil {
-		return err
+
+	for _, node := range c.Nodes {
+		err := node.CheckDeploymentConditions(ctx)
+		if err != nil {
+			return err
+		}
 	}
+
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
@@ -378,49 +380,12 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
-	if err = c.verifyVirtSupport(); err != nil {
-		return err
-	}
 	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
 	if err = c.verifyLicFilesExist(); err != nil {
 		return err
 	}
-	if err = c.verifyStartupConfigFilesExist(); err != nil {
-		return err
-	}
-	if err = c.checkIfSignatures(); err != nil {
-		return err
-	}
-	if err = c.checkHostRequirements(); err != nil {
-		return err
-	}
-
-	return c.VerifyImages(ctx)
-}
-
-// VerifyBridgeExists verifies if every node of kind=bridge/ovs-bridge exists on the lab host.
-func (c *CLab) verifyBridgesExist() error {
-	for name, node := range c.Nodes {
-		if node.Config().Kind == nodes.NodeKindBridge ||
-			node.Config().Kind == nodes.NodeKindOVS {
-			if _, err := netlink.LinkByName(name); err != nil {
-				return fmt.Errorf("bridge %s is referenced in the endpoints section but was not found in the default network namespace", name)
-			}
-		}
-	}
-	return nil
-}
-
-func (c *CLab) checkHostRequirements() error {
-	for _, n := range c.Nodes {
-		// ssse3 instruction set check
-		if n.Config().HostRequirements.SSSE3 && !cpuid.CPU.SSSE3() {
-			return fmt.Errorf("SSSE3 CPU instruction set is required by kind '%s' but not available on the host. If containerlab runs in a VM, check if that VM has been launched with full host-cpu support (see https://containerlab.dev/manual/kinds/srl/#ssse3-cpu-set for details)", n.Config().Kind)
-		}
-	}
-
 	return nil
 }
 
@@ -486,46 +451,6 @@ func (c *CLab) verifyLicFilesExist() error {
 	return nil
 }
 
-// verifyStartupConfigFilesExist checks if referenced startup config files exist.
-func (c *CLab) verifyStartupConfigFilesExist() error {
-	for _, node := range c.Nodes {
-		cfg := node.Config().StartupConfig
-		if cfg == "" {
-			continue
-		}
-
-		rcfg := utils.ResolvePath(cfg, c.TopoFile.dir)
-		if !utils.FileExists(rcfg) {
-			return fmt.Errorf("node's %q startup-config file not found by the path %s", node.Config().ShortName, rcfg)
-		}
-	}
-
-	return nil
-}
-
-// VerifyImages will check if the image referenced in the node config
-// either pullable or available in the local image store.
-func (c *CLab) VerifyImages(ctx context.Context) error {
-	images := make(map[string]string)
-
-	for _, node := range c.Nodes {
-		for imageKey, imageName := range node.GetImages() {
-			if imageName == "" {
-				return fmt.Errorf("missing required %q attribute for node %q", imageKey, node.Config().ShortName)
-			}
-			images[imageName] = node.GetRuntime().GetName()
-		}
-	}
-
-	for image, runtimeName := range images {
-		err := c.Runtimes[runtimeName].PullImageIfRequired(ctx, image)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // VerifyContainersUniqueness ensures that nodes defined in the topology do not have names of the existing containers
 // additionally it checks that the lab name is unique and no containers are currently running with the same lab name label.
 func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
@@ -544,7 +469,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	dups := []string{}
 	for _, n := range c.Nodes {
 		for _, cnt := range containers {
-			if "/"+n.Config().LongName == cnt.Names[0] {
+			if n.Config().LongName == cnt.Names[0] {
 				dups = append(dups, n.Config().LongName)
 			}
 		}
@@ -570,23 +495,16 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 // and ensure that nodes that are configured with host networking mode do not have any interfaces defined.
 func (c *CLab) verifyHostIfaces() error {
 	for _, l := range c.Links {
-		if l.A.Node.ShortName == "host" {
-			if nl, _ := netlink.LinkByName(l.A.EndpointName); nl != nil {
-				return fmt.Errorf("host interface %s referenced in topology already exists", l.A.EndpointName)
+		for _, ep := range []*types.Endpoint{l.A, l.B} {
+			if ep.Node.ShortName == "host" {
+				if nl, _ := netlink.LinkByName(ep.EndpointName); nl != nil {
+					return fmt.Errorf("host interface %s referenced in topology already exists", ep.EndpointName)
+				}
 			}
-		}
-		if l.A.Node.NetworkMode == "host" {
-			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
-				l.A.Node.ShortName, l.A.Node.ShortName)
-		}
-		if l.B.Node.ShortName == "host" {
-			if nl, _ := netlink.LinkByName(l.B.EndpointName); nl != nil {
-				return fmt.Errorf("host interface %s referenced in topology already exists", l.B.EndpointName)
+			if ep.Node.NetworkMode == "host" {
+				return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+					ep.Node.ShortName, ep.Node.ShortName)
 			}
-		}
-		if l.B.Node.NetworkMode == "host" {
-			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
-				l.B.Node.ShortName, l.B.Node.ShortName)
 		}
 	}
 	return nil
@@ -608,91 +526,6 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 			}
 		}
 	}
-	return nil
-}
-
-// verifyVirtSupport checks if virtualization is supported by a cpu in case topology contains VM-based nodes
-// when clab itself is being invoked as a container, this check is bypassed.
-func (c *CLab) verifyVirtSupport() error {
-	// check if we are being executed in a container environment
-	// in that case we skip this check as there are no convenient ways to interrogate hosts capabilities
-	// check if /proc/2 exists, and if it does, check if the name of the proc is kthreadd
-	// otherwise it is a container env
-
-	f, err := os.Open("/proc/2/status")
-	if err != nil {
-		log.Debug("proc/2/status file was not found. This means we run in a container and no virt checks are possible")
-		return nil
-	}
-
-	defer f.Close()
-
-	// read first line of a /proc/2/status file to check if it contains kthreadd
-	// if it doesn't, we are in a container
-	scanner := bufio.NewScanner(f)
-
-	scanner.Scan()
-	if !strings.Contains(scanner.Text(), "kthreadd") {
-		log.Debug("proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
-		return nil
-	}
-
-	virtRequired := false
-	for _, n := range c.Nodes {
-		if n.Config().HostRequirements.VirtRequired {
-			virtRequired = true
-
-			log.Debug("detected virtualization required")
-
-			break
-		}
-	}
-
-	if !virtRequired {
-		return nil
-	}
-
-	f, err = os.Open("/proc/cpuinfo")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	scanner = bufio.NewScanner(f)
-
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "vmx") ||
-			strings.Contains(scanner.Text(), "svm") {
-
-			log.Debug("virtualization support found")
-
-			return nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	return fmt.Errorf("virtualization seems to be not supported and it is required for VM-based nodes.\nEnable virtualization or, in case you're using a VM, make sure virtualization flags are propagated to a guest")
-}
-
-// checkIfSignatures ensures that users provide valid endpoint names
-// mostly this is useful for srlinux nodes which require special naming convention to be followed.
-func (c *CLab) checkIfSignatures() error {
-	for _, node := range c.Nodes {
-		switch {
-		case node.Config().Kind == nodes.NodeKindSRL:
-			// regexp to match srlinux endpoint names
-			srlIfRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
-			for _, e := range node.Config().Endpoints {
-				if !srlIfRe.MatchString(e.EndpointName) {
-					return fmt.Errorf("nokia sr linux endpoint %q doesn't match required pattern. SR Linux endpoints should be named as e1-1 or e1-1-1", e.EndpointName)
-				}
-			}
-		}
-	}
-
 	return nil
 }
 
