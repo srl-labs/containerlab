@@ -155,11 +155,6 @@ func (h *HostRequirements) Verify() error {
 	return nil
 }
 
-func (h *HostRequirements) Combine(h2 *HostRequirements) {
-	h.SSSE3 = h.SSSE3 || h2.SSSE3
-	h.VirtRequired = h.VirtRequired || h2.VirtRequired
-}
-
 func DisableTxOffload(n *NodeConfig) error {
 	// skip this if node runs in host mode
 	if strings.ToLower(n.NetworkMode) == "host" {
