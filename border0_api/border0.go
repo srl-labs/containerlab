@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +26,7 @@ const apiUrl = "https://api.border0.com/api/v1"
 
 var supportedSockTypes = []string{"ssh", "tls", "http", "https"}
 
+// Login performs a login to border0.com and stores the retrieved the access-token in the cwd
 func Login(email, password string) error {
 	// if password not set read from terminal
 	if password == "" {
@@ -36,23 +36,23 @@ func Login(email, password string) error {
 			return err
 		}
 	}
-
+	// prepare a LoginRequest
 	loginReq := &LoginRequest{
 		Email:    email,
 		Password: password,
 	}
+	// init a LoginResponse
 	loginResp := &LoginResponse{}
 
+	// execute the request
 	err := Request("POST", "login", loginResp, loginReq, false)
 	if err != nil {
 		return err
 	}
 
 	err = writeToken(loginResp.Token)
-
 	if err != nil {
 		return err
-
 	}
 	return nil
 }
@@ -65,15 +65,13 @@ func getApiUrl() string {
 	}
 }
 
+// getToken retrieved the border0 access-token as a string
 func getToken() (string, error) {
-	if os.Getenv("BORDER0_ADMIN_TOKEN") != "" {
-		return os.Getenv("BORDER0_ADMIN_TOKEN"), nil
+	tokenFile, err := tokenfile()
+	if err != nil {
+		return "", err
 	}
-
-	if _, err := os.Stat(tokenfile()); os.IsNotExist(err) {
-		return "", errors.New("API: please login first (no token found)")
-	}
-	content, err := os.ReadFile(tokenfile())
+	content, err := os.ReadFile(tokenFile)
 	if err != nil {
 		return "", err
 	}
@@ -82,35 +80,64 @@ func getToken() (string, error) {
 	return tokenString, nil
 }
 
+// checkPoliciesExist given a Map of policy names, will figure out if these policies already on the border0 side.
 func checkPoliciesExist(policyNames map[string]struct{}) error {
+	// retrieve the existing policies
 	policies, err := GetExistingPolicies()
 	if err != nil {
 		return err
 	}
+	// keep track of the non-found policy names
 	notFound := []string{}
 OUTER:
+	// iterate over the given policy names
 	for name := range policyNames {
+		// iterate over the retrieved policies
 		for _, policy := range policies {
 			if name == policy.Name {
+				// if a policy with the name is found continue with next
 				continue OUTER
 			}
 		}
+		// if not found add to the list
 		notFound = append(notFound, name)
 	}
+	// if we have non found poolicies, raise error
 	if len(notFound) > 0 {
 		return fmt.Errorf("border0.com policies %q referenced but they don't exist", strings.Join(notFound, ", "))
 	}
+	// if we've found all items return nil
 	return nil
 }
 
-func tokenfile() string {
-	cwd, _ := os.Getwd()
-	tokenfile := fmt.Sprintf("%s/.border0_token", cwd)
-	if utils.FileExists(tokenfile) {
-		return tokenfile
+// tokenfile retrieve the location of the token file. It can reside in different locations and the most valid will be resolved here
+// already validates that the file exists
+func tokenfile() (string, error) {
+	tokenFile := ""
+	// iterate over the possible border0.com token file locations
+	for i := 0; i < 2; i++ {
+		switch i {
+		case 0:
+			// Environement variable provided location
+			if os.Getenv("BORDER0_ADMIN_TOKEN") != "" {
+				tokenFile = os.Getenv("BORDER0_ADMIN_TOKEN")
+			}
+		case 1:
+			// Current Working Directory location
+			cwd, _ := os.Getwd()
+			tokenFile = fmt.Sprintf("%s/.border0_token", cwd)
+		case 2:
+			// Home directory location
+			tokenFile = fmt.Sprintf("%s/.border0/token", os.Getenv("HOME"))
+		}
+		// if file exists return
+		if utils.FileExists(tokenFile) {
+			return tokenFile, nil
+		}
+		i += 1
 	}
-	tokenfile = fmt.Sprintf("%s/.border0/token", os.Getenv("HOME"))
-	return tokenfile
+	// no valid file found, return error
+	return "", fmt.Errorf("no access-token found, please login to border0.com first e.g use `containerlab tools border0 login --email <BORDER0-USER-MAIL-ADDRESS>`")
 }
 
 // cwdTokenFilePath get the abspath of the token file in the current working directory
@@ -122,6 +149,7 @@ func cwdTokenFilePath() string {
 	return filepath.Join(cwd, ".border0_token")
 }
 
+// GetExistingPolicies retrieved the existing policies from border0.com
 func GetExistingPolicies() ([]Policy, error) {
 	var policies []Policy
 	err := Request("GET", "policies", &policies, nil, true)
@@ -131,6 +159,7 @@ func GetExistingPolicies() ([]Policy, error) {
 	return policies, nil
 }
 
+// Request is the helper function that handels the http requests, as well as the marshalling of request structs and unmarshalling of responses
 func Request(method string, url string, targetStruct interface{}, data interface{}, requireAccessToken bool) error {
 	jv, _ := json.Marshal(data)
 	body := bytes.NewBuffer(jv)
@@ -140,7 +169,11 @@ func Request(method string, url string, targetStruct interface{}, data interface
 	var token = ""
 	//try to find the token in the environment
 	if requireAccessToken {
-		token, _ = getToken()
+		var err error
+		token, err = getToken()
+		if err != nil {
+			return err
+		}
 	}
 	if token != "" {
 		token = strings.TrimSpace(token)
@@ -213,12 +246,13 @@ func writeToken(token string) error {
 		return fmt.Errorf("failed to write border0.com token file as %s: %v",
 			absPathToken, err)
 	}
-	log.Infof("Saved border0.com token to %s", absPathToken)
+	log.Debugf("Saved border0.com token to %s", absPathToken)
 	return nil
 }
 
+// CreateBorder0Config inspects the `publish` section of the nodes configuration and builds a configuration for
+// the border0.com cli clients "Static Sockets plugin" [https://docs.border0.com/docs/static-sockets-plugin]
 func CreateBorder0Config(ctx context.Context, nodesMap map[string]nodes.Node, labname string) (string, error) {
-
 	log.Debug("Creating the border0.com configuration")
 	// acquire token
 	border0Token, err := getToken()
@@ -277,6 +311,7 @@ func CreateBorder0Config(ctx context.Context, nodesMap map[string]nodes.Node, la
 	return string(bconfig), nil
 }
 
+// ParseSocketCfg parses the nodes publish configuration string and returns resulting *configSocket
 func ParseSocketCfg(s, host string) (*configSocket, error) {
 
 	result := &configSocket{}
@@ -317,6 +352,8 @@ func ParseSocketCfg(s, host string) (*configSocket, error) {
 	return result, nil
 }
 
+// checkSockType checks that the types of the socket definitions from the publish config section
+// contains a valid value
 func checkSockType(t string) error {
 	if _, ok := utils.StringInSlice(supportedSockTypes, t); !ok {
 		return fmt.Errorf("border0.com does not support socket type %q. Supported types are %q", t, strings.Join(supportedSockTypes, "|"))
@@ -324,6 +361,8 @@ func checkSockType(t string) error {
 	return nil
 }
 
+// checkSockPort checks that the port of the socket definitions from the publish config section
+// is in the valid range of portnumbers
 func checkSockPort(p int) error {
 	if p < 1 || p > 65535 {
 		return fmt.Errorf("incorrect port number %v", p)

@@ -29,6 +29,9 @@ type border0 struct {
 }
 
 func (b *border0) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	// Init DefaultNode
+	b.DefaultNode = *nodes.NewDefaultNode(b)
+
 	b.Cfg = cfg
 	for _, o := range opts {
 		o(b)
@@ -36,6 +39,21 @@ func (b *border0) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	b.hostborder0yamlPath = path.Join(b.Cfg.LabDir, "border0.yaml")
 	b.containerborder0yamlPath = path.Join("/code", "border0.yaml")
+	return nil
+}
+
+func (b *border0) CheckDeploymentConditions(ctx context.Context) error {
+	// perform the default checks defined in the DefaultNode
+	err := b.DefaultNode.CheckDeploymentConditions(ctx)
+	if err != nil {
+		return err
+	}
+	// perform a border0 login refresh to validate border0.com token
+	err = border0_api.RefreshLogin(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -78,7 +96,7 @@ func (b *border0) PostDeploy(ctx context.Context, nodesMap map[string]nodes.Node
 	utils.CreateFile(b.hostborder0yamlPath, config)
 
 	// bring up the tunnels
-	b0Cmd := exec.NewExecCmdFromSlice([]string{"./border0", "connector", "start", "--config", b.containerborder0yamlPath})
+	b0Cmd := exec.NewExecCmdFromSlice([]string{"/bin/sh", "-c", "./border0 connector start --config " + b.containerborder0yamlPath + " 2> /proc/1/fd/2  1> /proc/1/fd/1"})
 	err = b.Runtime.ExecNotWait(ctx, b.Cfg.LongName, b0Cmd)
 	if err != nil {
 		return err
