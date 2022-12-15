@@ -70,7 +70,7 @@ func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = d.OverwriteNode.CheckInterfaceNamingConvention()
+	err = d.OverwriteNode.CheckInterfaceName()
 	if err != nil {
 		return err
 	}
@@ -160,8 +160,10 @@ func (d *DefaultNode) DeleteNetnsSymlink() error {
 	return utils.DeleteNetnsSymlink(d.Config().LongName)
 }
 
-func (d *DefaultNode) CheckInterfaceNamingConvention() error {
-	log.Debugf("CheckInterfaceNamingConvention() not implemented for %q kind", d.Cfg.Kind)
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (d *DefaultNode) CheckInterfaceName() error {
+	log.Debugf("Interface name check is not implemented for %q kind", d.Cfg.Kind)
+
 	return nil
 }
 
@@ -232,7 +234,7 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 // implementation of.
 type NodeOverwrites interface {
 	VerifyStartupConfig(topoDir string) error
-	CheckInterfaceNamingConvention() error
+	CheckInterfaceName() error
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string

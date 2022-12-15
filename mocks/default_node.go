@@ -34,18 +34,18 @@ func (m *MockNodeOverwrites) EXPECT() *MockNodeOverwritesMockRecorder {
 	return m.recorder
 }
 
-// CheckInterfaceNamingConvention mocks base method.
-func (m *MockNodeOverwrites) CheckInterfaceNamingConvention() error {
+// CheckInterfaceName mocks base method.
+func (m *MockNodeOverwrites) CheckInterfaceName() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckInterfaceNamingConvention")
+	ret := m.ctrl.Call(m, "CheckInterfaceName")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CheckInterfaceNamingConvention indicates an expected call of CheckInterfaceNamingConvention.
-func (mr *MockNodeOverwritesMockRecorder) CheckInterfaceNamingConvention() *gomock.Call {
+// CheckInterfaceName indicates an expected call of CheckInterfaceName.
+func (mr *MockNodeOverwritesMockRecorder) CheckInterfaceName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceNamingConvention", reflect.TypeOf((*MockNodeOverwrites)(nil).CheckInterfaceNamingConvention))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceName", reflect.TypeOf((*MockNodeOverwrites)(nil).CheckInterfaceName))
 }
 
 // GetImages mocks base method.

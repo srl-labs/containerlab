@@ -561,12 +561,14 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	return file.Close()
 }
 
-func (s *srl) CheckInterfaceNamingConvention() error {
-	srlIfRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (s *srl) CheckInterfaceName() error {
+	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
 	for _, e := range s.Config().Endpoints {
-		if !srlIfRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("nokia sr linux endpoint %q doesn't match required pattern. SR Linux endpoints should be named as e1-1 or e1-1-1", e.EndpointName)
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
 		}
 	}
+
 	return nil
 }

@@ -59,7 +59,7 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
-	// GetContainer returns a pointer to GenericContainer that the node uses.
+	// GetContainers returns a pointer to GenericContainer that the node uses.
 	GetContainers(ctx context.Context) ([]types.GenericContainer, error)
 	DeleteNetnsSymlink() (err error)
 	Config() *types.NodeConfig // Config returns the nodes configuration
@@ -68,9 +68,10 @@ type Node interface {
 	PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error
 	Deploy(context.Context) error // Deploy triggers the deployment of this node
 	PostDeploy(context.Context, map[string]Node) error
-	WithMgmtNet(*types.MgmtNet)            // WithMgmtNet provides the management network for the node
-	WithRuntime(runtime.ContainerRuntime)  // WithRuntime provides the runtime for the node
-	CheckInterfaceNamingConvention() error // CheckInterfaceNamingConvention triggers a check for the interface naming provided via the topology file
+	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node
+	WithRuntime(runtime.ContainerRuntime) // WithRuntime provides the runtime for the node
+	// CheckInterfaceName checks if a name of the interface referenced in the topology file correct
+	CheckInterfaceName() error
 	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
 	VerifyStartupConfig(topoDir string) error
 	SaveConfig(context.Context) error            // SaveConfig saves the nodes configuration to an external file

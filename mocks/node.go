@@ -51,18 +51,18 @@ func (mr *MockNodeMockRecorder) CheckDeploymentConditions(arg0 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDeploymentConditions", reflect.TypeOf((*MockNode)(nil).CheckDeploymentConditions), arg0)
 }
 
-// CheckInterfaceNamingConvention mocks base method.
-func (m *MockNode) CheckInterfaceNamingConvention() error {
+// CheckInterfaceName mocks base method.
+func (m *MockNode) CheckInterfaceName() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckInterfaceNamingConvention")
+	ret := m.ctrl.Call(m, "CheckInterfaceName")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CheckInterfaceNamingConvention indicates an expected call of CheckInterfaceNamingConvention.
-func (mr *MockNodeMockRecorder) CheckInterfaceNamingConvention() *gomock.Call {
+// CheckInterfaceName indicates an expected call of CheckInterfaceName.
+func (mr *MockNodeMockRecorder) CheckInterfaceName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceNamingConvention", reflect.TypeOf((*MockNode)(nil).CheckInterfaceNamingConvention))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceName", reflect.TypeOf((*MockNode)(nil).CheckInterfaceName))
 }
 
 // Config mocks base method.

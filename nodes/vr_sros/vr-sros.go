@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
@@ -98,6 +99,20 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
+	return nil
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (s *vrSROS) CheckInterfaceName() error {
+	// vsim doesn't seem to support >20 interfaces, yet we allow to set max if number 32 just in case.
+	// https://regex101.com/r/bx6kzM/1
+	ifRe := regexp.MustCompile(`eth([1-9]|[12][0-9]|3[0-2])$`)
+	for _, e := range s.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is from 1 to 32", e.EndpointName)
+		}
+	}
+
 	return nil
 }
 
