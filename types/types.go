@@ -143,14 +143,16 @@ type HostRequirements struct {
 	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
 }
 
-func (h *HostRequirements) IsValid() (bool, error) {
+// Verify checks if host requirements are met.
+func (h *HostRequirements) Verify() error {
 	if h.VirtRequired && !virt.VerifyVirtSupport() {
-		return false, fmt.Errorf("the CPU virtualization support is required, but not available")
+		return fmt.Errorf("the CPU virtualization support is required, but not available")
 	}
 	if h.SSSE3 && !virt.VerifySSSE3Support() {
-		return false, fmt.Errorf("the SSSE3 CPU feature required, but not available")
+		return fmt.Errorf("the SSSE3 CPU feature required, but not available")
 	}
-	return true, nil
+
+	return nil
 }
 
 func (h *HostRequirements) Combine(h2 *HostRequirements) {
