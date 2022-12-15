@@ -50,7 +50,7 @@ func (*bridge) Deploy(_ context.Context) error                { return nil }
 func (*bridge) Delete(_ context.Context) error                { return nil }
 func (*bridge) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
-// DeleteNetnsSymlink the bridge is no namespace / container hence there is no Netns Symlink.
+// DeleteNetnsSymlink is a noop for bridge nodes.
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
 func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
@@ -107,5 +107,5 @@ func (b *bridge) PullImage(_ context.Context) error { return nil }
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (b *bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
-// GetContainer is a noop for bridges.
-func (b *bridge) GetContainer(_ context.Context) (*types.GenericContainer, error) { return nil, nil }
+// GetContainers is a noop for bridges.
+func (b *bridge) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
