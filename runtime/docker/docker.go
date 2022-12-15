@@ -446,29 +446,19 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
 }
 
+// PullImageIfRequired pulls the image if it is not found in the local registry store.
 func (d *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName string) error {
-	filter := filters.NewArgs()
-	filter.Add("reference", imageName)
-
-	ilo := dockerTypes.ImageListOptions{
-		All:     false,
-		Filters: filter,
-	}
-
 	log.Debugf("Looking up %s Docker image", imageName)
 
-	images, err := d.Client.ImageList(ctx, ilo)
-	if err != nil {
-		return err
-	}
+	canonicalImageName := utils.GetCanonicalImageName(imageName)
 
-	// If Image doesn't exist, we need to pull it
-	if len(images) > 0 {
+	_, b, err := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
+	if err == nil && b != nil {
 		log.Debugf("Image %s present, skip pulling", imageName)
 		return nil
 	}
 
-	canonicalImageName := utils.GetCanonicalImageName(imageName)
+	// If Image doesn't exist, we need to pull it
 	authString := ""
 
 	// get docker config based on an empty path (default docker config path will be assumed)
