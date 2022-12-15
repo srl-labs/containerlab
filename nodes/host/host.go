@@ -39,3 +39,28 @@ func (*host) GetImages(_ context.Context) map[string]string { return map[string]
 func (*host) PullImage(_ context.Context) error             { return nil }
 func (*host) Delete(_ context.Context) error                { return nil }
 func (*host) WithMgmtNet(*types.MgmtNet)                    {}
+
+// UpdateConfigWithRuntimeInfo is a noop for hosts.
+func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
+
+// GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
+func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) {
+	return []types.GenericContainer{
+		{
+			Names:   []string{"Host"},
+			State:   "running",
+			ID:      "N/A",
+			ShortID: "N/A",
+			Image:   "-",
+			Status:  "running",
+			NetworkSettings: types.GenericMgmtIPs{
+				IPv4addr: "N/A",
+				IPv4pLen: 0,
+				IPv4Gw:   "N/A",
+				IPv6addr: "N/A",
+				IPv6pLen: 0,
+				IPv6Gw:   "N/A",
+			},
+		},
+	}, nil
+}
