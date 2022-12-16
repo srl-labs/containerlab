@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"syscall"
 
+	"github.com/mackerelio/go-osstat/memory"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -587,9 +587,18 @@ func (c *CLab) CheckResources() error {
 		}
 	}
 
-	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
-	if freeMemG < 1 {
-		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", freeMemG)
+	// get memory usage on the host and check available memory
+	mem, err := memory.Get()
+	if err != nil {
+		return err
+	}
+
+	availMemGi := mem.Available / 1024 / 1024 / 1024
+
+	log.Debugf("Detected available memory on host: %d bytes/%d Gi", mem.Available, availMemGi)
+
+	if availMemGi < 1 {
+		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", availMemGi)
 	}
 
 	return nil
@@ -605,27 +614,6 @@ func (c *CLab) setDefaults() {
 		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numLinks)
 
 	}
-}
-
-// sysMemory reports on total installed or free memory (in bytes)
-// used from https://github.com/pbnjay/memory
-func sysMemory(v string) uint64 {
-	in := &syscall.Sysinfo_t{}
-	err := syscall.Sysinfo(in)
-	if err != nil {
-		return 0
-	}
-	var m uint64
-	// If this is a 32-bit system, then these fields are
-	// uint32 instead of uint64.
-	// So we always convert to uint64 to match signature.
-	switch v {
-	case "total":
-		m = uint64(in.Totalram) * uint64(in.Unit)
-	case "free":
-		m = uint64(in.Freeram) * uint64(in.Unit)
-	}
-	return m
 }
 
 // returns nodeCfg.ShortName based on the provided containerName and labName.
