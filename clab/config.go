@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"syscall"
 
 	"github.com/mackerelio/go-osstat/memory"
 	log "github.com/sirupsen/logrus"
@@ -615,27 +614,6 @@ func (c *CLab) setDefaults() {
 		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numLinks)
 
 	}
-}
-
-// sysMemory reports on total installed or free memory (in bytes)
-// used from https://github.com/pbnjay/memory
-func sysMemory(v string) uint64 {
-	in := &syscall.Sysinfo_t{}
-	err := syscall.Sysinfo(in)
-	if err != nil {
-		return 0
-	}
-	var m uint64
-	// If this is a 32-bit system, then these fields are
-	// uint32 instead of uint64.
-	// So we always convert to uint64 to match signature.
-	switch v {
-	case "total":
-		m = uint64(in.Totalram) * uint64(in.Unit)
-	case "free":
-		m = uint64(in.Freeram) * uint64(in.Unit)
-	}
-	return m
 }
 
 // returns nodeCfg.ShortName based on the provided containerName and labName.
