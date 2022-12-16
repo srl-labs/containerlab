@@ -73,7 +73,7 @@ func (h *host) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, error
 	return []types.ExecResultHolder{}, nil
 }
 
-func (h *host) RunExecType(_ context.Context, _ types.ExecOperation) (types.ExecResultHolder, error) {
+func (h *host) RunExecType(_ context.Context, _ types.ExecCmd) (types.ExecResultHolder, error) {
 	log.Error("exec not supported on kind 'host' -> noop; continuing")
 	return nil, types.ErrRunExecTypeNotSupported
 }

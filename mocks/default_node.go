@@ -78,7 +78,7 @@ func (mr *MockNodeOverwritesMockRecorder) PullImage(ctx interface{}) *gomock.Cal
 }
 
 // RunExecType mocks base method.
-func (m *MockNodeOverwrites) RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error) {
+func (m *MockNodeOverwrites) RunExecType(ctx context.Context, exec types.ExecCmd) (types.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunExecType", ctx, exec)
 	ret0, _ := ret[0].(types.ExecResultHolder)

@@ -241,7 +241,7 @@ func (mr *MockNodeMockRecorder) RunExecConfig(ctx interface{}) *gomock.Call {
 }
 
 // RunExecType mocks base method.
-func (m *MockNode) RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error) {
+func (m *MockNode) RunExecType(ctx context.Context, exec types.ExecCmd) (types.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunExecType", ctx, exec)
 	ret0, _ := ret[0].(types.ExecResultHolder)

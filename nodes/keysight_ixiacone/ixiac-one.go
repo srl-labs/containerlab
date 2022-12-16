@@ -54,11 +54,11 @@ func (l *ixiacOne) PostDeploy(ctx context.Context, _ map[string]nodes.Node) erro
 
 // ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node.
 func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
-	ixiacOneCmd := fmt.Sprintf("ls %s", ixiacStatusConfig.readyFileName)
+	ixiacOneCmd := fmt.Sprintf("bash -c 'ls %s'", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		exec := types.NewExecOperationSlice([]string{"bash", "-c", ixiacOneCmd})
-		execResult, err := l.RunExecType(ctx, exec)
+		cmd, _ := types.NewExecCmdFromString(ixiacOneCmd)
+		execResult, err := l.RunExec(ctx, cmd)
 		if err != nil {
 			return err
 		}

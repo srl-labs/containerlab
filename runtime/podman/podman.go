@@ -234,7 +234,7 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return nspath, nil
 }
 
-func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecOperation) (types.ExecResultHolder, error) {
+func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd) (types.ExecResultHolder, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
@@ -277,7 +277,7 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecOpe
 	return execResult, nil
 }
 
-func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec types.ExecOperation) error {
+func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec types.ExecCmd) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err

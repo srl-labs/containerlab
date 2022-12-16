@@ -17,7 +17,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/google/shlex"
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/pkg/errors"
@@ -94,10 +93,10 @@ var (
 	//go:embed topology/*
 	topologies embed.FS
 
-	saveCmd             = []string{"sr_cli", "-d", "tools", "system", "configuration", "save"}
-	mgmtServerRdyCmd, _ = shlex.Split("sr_cli -d info from state system app-management application mgmt_server state | grep running")
+	saveCmd          = `sr_cli -d "tools system configuration save"`
+	mgmtServerRdyCmd = `sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
-	readyForConfigCmd, _ = shlex.Split("cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config")
+	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
 	srlCfgTpl, _ = template.New("srl-tls-profile").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
@@ -274,8 +273,8 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
-	exec := types.NewExecOperationSlice(saveCmd)
-	execResult, err := s.RunExecType(ctx, exec)
+	cmd, _ := types.NewExecCmdFromString(saveCmd)
+	execResult, err := s.RunExec(ctx, cmd)
 
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
@@ -304,8 +303,8 @@ func (s *srl) Ready(ctx context.Context) error {
 			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", s.Cfg.ShortName, err)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			exec := types.NewExecOperationSlice(mgmtServerRdyCmd)
-			execResult, err := s.RunExecType(ctx, exec)
+			cmd, _ := types.NewExecCmdFromString(mgmtServerRdyCmd)
+			execResult, err := s.RunExec(ctx, cmd)
 			if err != nil {
 				time.Sleep(retryTimer)
 				continue
@@ -324,8 +323,8 @@ func (s *srl) Ready(ctx context.Context) error {
 
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
-			exec = types.NewExecOperationSlice(readyForConfigCmd)
-			execResult, err = s.RunExecType(ctx, exec)
+			cmd, _ = types.NewExecCmdFromString(readyForConfigCmd)
+			execResult, err = s.RunExec(ctx, cmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
@@ -462,14 +461,18 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
 
-	exec := types.NewExecOperationSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
-	_, err = s.RunExecType(ctx, exec)
+	exec := types.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
+	_, err = s.RunExec(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	exec = types.NewExecOperationSlice([]string{"bash", "-c", "sr_cli -ed < tmp/clab-config"})
-	execResult, err := s.RunExecType(ctx, exec)
+	cmd, err := types.NewExecCmdFromString(`bash -c "sr_cli -ed < /tmp/clab-config"`)
+	if err != nil {
+		return err
+	}
+
+	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
@@ -485,14 +488,14 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
 
-	exec := types.NewExecOperationSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
-	_, err := s.RunExecType(ctx, exec)
+	cmd := types.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
+	_, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	exec = types.NewExecOperationSlice([]string{"bash", "-c", "sr_cli -ed --post 'commit save' < tmp/clab-config"})
-	execResult, err := s.RunExecType(ctx, exec)
+	cmd, _ = types.NewExecCmdFromString(`bash -c "sr_cli -ed --post 'commit save' < tmp/clab-config"`)
+	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}

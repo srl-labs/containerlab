@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
@@ -58,11 +59,13 @@ var execCmd = &cobra.Command{
 		resultCollection := types.NewExecCollection()
 
 		for _, node := range c.Nodes {
-			exec, err := types.NewExec(execCommand)
+			execCmd, err := types.NewExecCmdFromString(execCommand)
 			if err != nil {
-				return err
+				// do not stop exec for other nodes if some failed
+				log.Error(err)
 			}
-			execResult, err := node.RunExecType(ctx, exec)
+
+			execResult, err := node.RunExec(ctx, execCmd)
 			if err != nil {
 				// skip nodes that do not support exec
 				if err == types.ErrRunExecTypeNotSupported {
