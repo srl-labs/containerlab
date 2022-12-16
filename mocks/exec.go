@@ -11,31 +11,31 @@ import (
 	types "github.com/srl-labs/containerlab/types"
 )
 
-// MockExecOperation is a mock of ExecOperation interface.
-type MockExecOperation struct {
+// MockExecCmd is a mock of ExecCmd interface.
+type MockExecCmd struct {
 	ctrl     *gomock.Controller
-	recorder *MockExecOperationMockRecorder
+	recorder *MockExecCmdMockRecorder
 }
 
-// MockExecOperationMockRecorder is the mock recorder for MockExecOperation.
-type MockExecOperationMockRecorder struct {
-	mock *MockExecOperation
+// MockExecCmdMockRecorder is the mock recorder for MockExecCmd.
+type MockExecCmdMockRecorder struct {
+	mock *MockExecCmd
 }
 
-// NewMockExecOperation creates a new mock instance.
-func NewMockExecOperation(ctrl *gomock.Controller) *MockExecOperation {
-	mock := &MockExecOperation{ctrl: ctrl}
-	mock.recorder = &MockExecOperationMockRecorder{mock}
+// NewMockExecCmd creates a new mock instance.
+func NewMockExecCmd(ctrl *gomock.Controller) *MockExecCmd {
+	mock := &MockExecCmd{ctrl: ctrl}
+	mock.recorder = &MockExecCmdMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockExecOperation) EXPECT() *MockExecOperationMockRecorder {
+func (m *MockExecCmd) EXPECT() *MockExecCmdMockRecorder {
 	return m.recorder
 }
 
 // GetCmd mocks base method.
-func (m *MockExecOperation) GetCmd() []string {
+func (m *MockExecCmd) GetCmd() []string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCmd")
 	ret0, _ := ret[0].([]string)
@@ -43,13 +43,13 @@ func (m *MockExecOperation) GetCmd() []string {
 }
 
 // GetCmd indicates an expected call of GetCmd.
-func (mr *MockExecOperationMockRecorder) GetCmd() *gomock.Call {
+func (mr *MockExecCmdMockRecorder) GetCmd() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCmd", reflect.TypeOf((*MockExecOperation)(nil).GetCmd))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCmd", reflect.TypeOf((*MockExecCmd)(nil).GetCmd))
 }
 
 // GetCmdString mocks base method.
-func (m *MockExecOperation) GetCmdString() string {
+func (m *MockExecCmd) GetCmdString() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCmdString")
 	ret0, _ := ret[0].(string)
@@ -57,9 +57,9 @@ func (m *MockExecOperation) GetCmdString() string {
 }
 
 // GetCmdString indicates an expected call of GetCmdString.
-func (mr *MockExecOperationMockRecorder) GetCmdString() *gomock.Call {
+func (mr *MockExecCmdMockRecorder) GetCmdString() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCmdString", reflect.TypeOf((*MockExecOperation)(nil).GetCmdString))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCmdString", reflect.TypeOf((*MockExecCmd)(nil).GetCmdString))
 }
 
 // MockExecResultHolder is a mock of ExecResultHolder interface.
