@@ -42,7 +42,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 			continue
 		}
 		for _, socket := range n.Config().Publish {
-			ms, err := ParseSocketCfg(socket)
+			ms, err := parseSocketCfg(socket)
 			if err != nil {
 				return err
 			}
@@ -103,7 +103,7 @@ func createSockCmd(ms mysocket, n string) string {
 	return cmd
 }
 
-func ParseSocketCfg(s string) (mysocket, error) {
+func parseSocketCfg(s string) (mysocket, error) {
 	var err error
 	ms := mysocket{}
 	split := strings.Split(s, "/")

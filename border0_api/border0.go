@@ -22,7 +22,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const apiUrl = "https://api.border0.com/api/v1"
+const (
+	apiUrl                       = "https://api.border0.com/api/v1"
+	ENV_NAME_BORDER0_ADMIN_TOKEN = "BORDER0_ADMIN_TOKEN"
+	ENV_NAME_BORDER0_API         = "BORDER0_API"
+)
 
 var supportedSockTypes = []string{"ssh", "tls", "http", "https"}
 
@@ -30,7 +34,7 @@ var supportedSockTypes = []string{"ssh", "tls", "http", "https"}
 var tokenCache = ""
 
 // Login performs a login to border0.com and stores the retrieved the access-token in the cwd
-func Login(email, password string) error {
+func Login(ctx context.Context, email, password string) error {
 	// if password not set read from terminal
 	if password == "" {
 		var err error
@@ -48,7 +52,7 @@ func Login(email, password string) error {
 	loginResp := &LoginResponse{}
 
 	// execute the request
-	err := Request("POST", "login", loginResp, loginReq, false)
+	err := Request(ctx, http.MethodPost, "login", loginResp, loginReq, false)
 	if err != nil {
 		return err
 	}
@@ -61,8 +65,8 @@ func Login(email, password string) error {
 }
 
 func getApiUrl() string {
-	if os.Getenv("BORDER0_API") != "" {
-		return os.Getenv("BORDER0_API")
+	if os.Getenv(ENV_NAME_BORDER0_API) != "" {
+		return os.Getenv(ENV_NAME_BORDER0_API)
 	} else {
 		return apiUrl
 	}
@@ -92,9 +96,9 @@ func getToken() (string, error) {
 }
 
 // checkPoliciesExist given a Map of policy names, will figure out if these policies already on the border0 side.
-func checkPoliciesExist(policyNames map[string]struct{}) error {
+func checkPoliciesExist(ctx context.Context, policyNames map[string]struct{}) error {
 	// retrieve the existing policies
-	policies, err := GetExistingPolicies()
+	policies, err := GetExistingPolicies(ctx)
 	if err != nil {
 		return err
 	}
@@ -130,8 +134,8 @@ func tokenfile() (string, error) {
 		switch i {
 		case 0:
 			// Environement variable provided location
-			if os.Getenv("BORDER0_ADMIN_TOKEN") != "" {
-				tokenFile = os.Getenv("BORDER0_ADMIN_TOKEN")
+			if os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN) != "" {
+				tokenFile = os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN)
 			}
 		case 1:
 			// Current Working Directory location
@@ -160,9 +164,9 @@ func cwdTokenFilePath() string {
 }
 
 // GetExistingPolicies retrieved the existing policies from border0.com
-func GetExistingPolicies() ([]Policy, error) {
+func GetExistingPolicies(ctx context.Context) ([]Policy, error) {
 	var policies []Policy
-	err := Request("GET", "policies", &policies, nil, true)
+	err := Request(ctx, http.MethodGet, "policies", &policies, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -170,14 +174,14 @@ func GetExistingPolicies() ([]Policy, error) {
 }
 
 // Request is the helper function that handels the http requests, as well as the marshalling of request structs and unmarshalling of responses
-func Request(method string, url string, targetStruct interface{}, data interface{}, requireAccessToken bool) error {
+func Request(ctx context.Context, method string, url string, targetStruct interface{}, data interface{}, requireAccessToken bool) error {
 	jv, _ := json.Marshal(data)
 	body := bytes.NewBuffer(jv)
 
-	req, _ := http.NewRequest(method, fmt.Sprintf("%s/%s", getApiUrl(), url), body)
+	req, _ := http.NewRequestWithContext(ctx, method, fmt.Sprintf("%s/%s", getApiUrl(), url), body)
 
 	var token = ""
-	//try to find the token in the environment
+	// try to find the token in the environment
 	if requireAccessToken {
 		var err error
 		token, err = getToken()
@@ -236,7 +240,7 @@ func Request(method string, url string, targetStruct interface{}, data interface
 func RefreshLogin(ctx context.Context) error {
 	t := &LoginRefreshResponse{}
 	log.Debug("Validating and refreshing border0.com token")
-	err := Request("POST", "login/refresh", t, nil, true)
+	err := Request(ctx, http.MethodPost, "login/refresh", t, nil, true)
 	if err != nil {
 		return err
 	}
@@ -308,7 +312,7 @@ func CreateBorder0Config(ctx context.Context, nodesMap map[string]nodes.Node, la
 	}
 
 	// check for the existence of referenced policies
-	err = checkPoliciesExist(policyNames)
+	err = checkPoliciesExist(ctx, policyNames)
 	if err != nil {
 		return "", err
 	}
@@ -325,9 +329,8 @@ func CreateBorder0Config(ctx context.Context, nodesMap map[string]nodes.Node, la
 
 // ParseSocketCfg parses the nodes publish configuration string and returns resulting *configSocket
 func ParseSocketCfg(s, host string) (*configSocket, error) {
-
 	result := &configSocket{}
-
+	// split the socket definition string
 	split := strings.Split(s, "/")
 	if len(split) > 3 {
 		return result, fmt.Errorf("wrong mysocketio publish section %s. should be <type>/<port-number>[/<policyname>,] i.e. tcp/22, tls/22/mypolicy1 or tls/22/mypolicy1,myotherpolicy", s)

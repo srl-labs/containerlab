@@ -66,25 +66,21 @@ func (b *border0) CheckDeploymentConditions(ctx context.Context) error {
 func (b *border0) PreDeploy(_ context.Context, topologyName, labCADir, labCARoot string) error {
 	utils.CreateDirectory(b.Cfg.LabDir, 0777)
 
-	// // TODO: This needs to go into the Node based checks after #1129 is being merged
-	// err := border0_api.RefreshLogin(ctx)
-	// if err != nil {
-	// 	return err
-	// }
-
+	// setup the mount for the Static Socket Plugin config file
 	b.topologyName = topologyName
 	border0Mount := fmt.Sprintf("%s:%s:ro", b.hostborder0yamlPath, b.containerborder0yamlPath)
 	b.Cfg.Binds = append(b.Cfg.Binds, border0Mount)
-	// make sure the host file exists prior to starting the container
+
+	// make sure the config file exists on the host prior to starting the container
 	err := utils.CreateFile(b.hostborder0yamlPath, "")
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
 func (b *border0) PostDeploy(ctx context.Context, nodesMap map[string]nodes.Node) error {
+	// disable tx offloading
 	log.Debugf("Running postdeploy actions for border0.com node %q", b.Cfg.ShortName)
 	err := types.DisableTxOffload(b.Cfg)
 	if err != nil {
@@ -92,7 +88,6 @@ func (b *border0) PostDeploy(ctx context.Context, nodesMap map[string]nodes.Node
 	}
 
 	log.Infof("Creating border0.com tunnels...")
-
 	// create a configuration for border0.com
 	config, err := border0_api.CreateBorder0Config(ctx, nodesMap, b.topologyName)
 	if err != nil {
@@ -107,7 +102,6 @@ func (b *border0) PostDeploy(ctx context.Context, nodesMap map[string]nodes.Node
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

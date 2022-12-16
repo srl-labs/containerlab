@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/border0_api"
 )
@@ -35,6 +37,10 @@ var border0LoginCmd = &cobra.Command{
 	Short: "Logs in to border0.com service and saves a token to current working directory",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return border0_api.Login(border0Email, border0Password)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		return border0_api.Login(ctx, border0Email, border0Password)
 	},
 }

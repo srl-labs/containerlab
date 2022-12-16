@@ -51,10 +51,10 @@ type Socket struct {
 }
 
 func (s *Socket) SanitizeName() {
-	socketName := strings.Replace(s.Name, ".", "-", -1)
-	socketName = strings.Replace(socketName, " ", "-", -1)
-	socketName = strings.Replace(socketName, ".", "-", -1)
-	s.Name = strings.Replace(socketName, "_", "-", -1)
+	socketName := strings.ReplaceAll(s.Name, ".", "-")
+	socketName = strings.ReplaceAll(socketName, " ", "-")
+	socketName = strings.ReplaceAll(socketName, ".", "-")
+	s.Name = strings.ReplaceAll(socketName, "_", "-")
 }
 
 type Tunnel struct {

@@ -75,9 +75,9 @@ func TestCheckSockPort(t *testing.T) {
 
 func TestParseSocketCfg(t *testing.T) {
 	tests := map[string]struct {
-		got  string
-		want mysocket
-		err  error
+		got     string
+		want    mysocket
+		wantErr bool
 	}{
 		"simple-tcp": {
 			got: "tcp/22",
@@ -85,7 +85,7 @@ func TestParseSocketCfg(t *testing.T) {
 				Stype: "tcp",
 				Port:  22,
 			},
-			err: nil,
+			wantErr: false,
 		},
 		"simple-http": {
 			got: "http/8080",
@@ -93,12 +93,12 @@ func TestParseSocketCfg(t *testing.T) {
 				Stype: "http",
 				Port:  8080,
 			},
-			err: nil,
+			wantErr: false,
 		},
 		"wrong-type": {
-			got:  "stcp/22",
-			want: mysocket{},
-			err:  fmt.Errorf(""),
+			got:     "stcp/22",
+			want:    mysocket{},
+			wantErr: true,
 		},
 		"with-email-and-domain": {
 			got: "tls/22/a@b.com,c.com",
@@ -108,31 +108,31 @@ func TestParseSocketCfg(t *testing.T) {
 				AllowedDomains: []string{"c.com"},
 				AllowedEmails:  []string{"a@b.com"},
 			},
-			err: nil,
+			wantErr: false,
 		},
 		"wrong-num-of-sections": {
-			got:  "tcp/22/a@b.com/test",
-			want: mysocket{},
-			err:  fmt.Errorf(""),
+			got:     "tcp/22/a@b.com/test",
+			want:    mysocket{},
+			wantErr: true,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := ParseSocketCfg(tc.got)
+			got, err := parseSocketCfg(tc.got)
 
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("parseSocketCfg() mismatch (-want +got):\n%s", diff)
 			}
 
-			switch tc.err {
-			case nil:
+			switch tc.wantErr {
+			case false:
 				if err != nil {
 					t.Errorf("unexpected error %v", err)
 				}
-			case fmt.Errorf(""):
-				if err != nil {
-					t.Errorf("expected to have an errorm but got nil instead")
+			case true:
+				if err == nil {
+					t.Errorf("expected to have an error but got nil instead")
 				}
 
 			}
