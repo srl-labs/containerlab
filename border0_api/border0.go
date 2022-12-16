@@ -78,19 +78,27 @@ func getToken() (string, error) {
 	if tokenCache != "" {
 		return tokenCache, nil
 	}
-	// resolve the token file
-	tokenFile, err := tokenfile()
-	if err != nil {
-		return "", err
-	}
-	// read in the token from the resolved file
-	content, err := os.ReadFile(tokenFile)
-	if err != nil {
-		return "", err
+	var tokenData string = ""
+	// Environement variable provided token
+	if os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN) != "" {
+		tokenData = os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN)
+		log.Debugf("sourcing Border0.com token from %q environment variable", tokenData)
+	} else {
+		// resolve the token file
+		tokenFile, err := tokenfile()
+		if err != nil {
+			return "", err
+		}
+		// read in the token from the resolved file
+		tokenBytes, err := os.ReadFile(tokenFile)
+		if err != nil {
+			return "", err
+		}
+		tokenData = string(tokenBytes)
 	}
 
 	// also store the token is cache
-	tokenCache := strings.TrimSpace(string(content))
+	tokenCache := strings.TrimSpace(tokenData)
 
 	return tokenCache, nil
 }
@@ -130,18 +138,13 @@ OUTER:
 func tokenfile() (string, error) {
 	tokenFile := ""
 	// iterate over the possible border0.com token file locations
-	for i := 0; i <= 2; i++ {
+	for i := 0; i <= 1; i++ {
 		switch i {
 		case 0:
-			// Environement variable provided location
-			if os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN) != "" {
-				tokenFile = os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN)
-			}
-		case 1:
 			// Current Working Directory location
 			cwd, _ := os.Getwd()
 			tokenFile = fmt.Sprintf("%s/.border0_token", cwd)
-		case 2:
+		case 1:
 			// Home directory location
 			tokenFile = fmt.Sprintf("%s/.border0/token", os.Getenv("HOME"))
 		}

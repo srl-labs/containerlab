@@ -59,7 +59,12 @@ func (b *border0) CheckDeploymentConditions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
+	// TODO: @steiler, check referenced policies do exist
+	// therefor we would either need the map[string]node.nodes here or a
+	// more specific container config returning the PUBLISH setting
+	//
+	// The idea would be to come up with a specific interface (DeploymentConditionsChecker) implemented by the Clab struct.
+	// which implements GetNodes() or as mentioned more specific that allows for the retrieval of the required information.
 	return nil
 }
 
