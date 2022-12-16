@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/mackerelio/go-osstat/memory"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
@@ -587,9 +588,18 @@ func (c *CLab) CheckResources() error {
 		}
 	}
 
-	freeMemG := sysMemory("free") / 1024 / 1024 / 1024
-	if freeMemG < 1 {
-		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", freeMemG)
+	// get memory usage on the host and check available memory
+	mem, err := memory.Get()
+	if err != nil {
+		return err
+	}
+
+	availMemGi := mem.Available / 1024 / 1024 / 1024
+
+	log.Debugf("Detected available memory on host: %d bytes/%d Gi", mem.Available, availMemGi)
+
+	if availMemGi < 1 {
+		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", availMemGi)
 	}
 
 	return nil
