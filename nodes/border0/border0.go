@@ -68,7 +68,7 @@ func (b *border0) CheckDeploymentConditions(ctx context.Context) error {
 	return nil
 }
 
-func (b *border0) PreDeploy(_ context.Context, topologyName, labCADir, labCARoot string) error {
+func (b *border0) PreDeploy(_ context.Context, topologyName, _, _ string) error {
 	utils.CreateDirectory(b.Cfg.LabDir, 0777)
 
 	// setup the mount for the Static Socket Plugin config file

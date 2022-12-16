@@ -71,7 +71,7 @@ func Test_createBorder0Config(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		//want    func() string
+		// want    func() string
 		wantErr bool
 	}{
 		{

@@ -78,7 +78,7 @@ func getToken() (string, error) {
 	if tokenCache != "" {
 		return tokenCache, nil
 	}
-	var tokenData string = ""
+	var tokenData = ""
 	// Environement variable provided token
 	if os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN) != "" {
 		tokenData = os.Getenv(ENV_NAME_BORDER0_ADMIN_TOKEN)
