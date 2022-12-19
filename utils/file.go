@@ -124,12 +124,16 @@ func CreateFile(file, content string) (err error) {
 	var f *os.File
 
 	f, err = os.Create(file)
-	if err == nil {
-		defer f.Close()
-		_, err = f.WriteString(content + "\n")
+	if err != nil {
+		return err
 	}
 
-	return err
+	_, err = f.WriteString(content + "\n")
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
 }
 
 // CreateDirectory creates a directory by a path with a mode/permission specified by perm.
