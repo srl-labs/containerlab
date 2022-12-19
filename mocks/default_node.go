@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/srl-labs/containerlab/types"
 )
 
 // MockNodeOverwrites is a mock of NodeOverwrites interface.
@@ -75,21 +74,6 @@ func (m *MockNodeOverwrites) PullImage(ctx context.Context) error {
 func (mr *MockNodeOverwritesMockRecorder) PullImage(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockNodeOverwrites)(nil).PullImage), ctx)
-}
-
-// RunExecType mocks base method.
-func (m *MockNodeOverwrites) RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunExecType", ctx, exec)
-	ret0, _ := ret[0].(types.ExecResultHolder)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RunExecType indicates an expected call of RunExecType.
-func (mr *MockNodeOverwritesMockRecorder) RunExecType(ctx, exec interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecType", reflect.TypeOf((*MockNodeOverwrites)(nil).RunExecType), ctx, exec)
 }
 
 // VerifyHostRequirements mocks base method.

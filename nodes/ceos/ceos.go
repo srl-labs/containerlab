@@ -106,14 +106,13 @@ func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
-	saveCmdExec := types.NewExecOperationSlice(saveCmd)
-	execResult, err := n.RunExecType(ctx, saveCmdExec)
+	_, stderr, err := n.Runtime.Exec(ctx, n.Cfg.LongName, saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+	if len(stderr) > 0 {
+		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, string(stderr))
 	}
 
 	confPath := n.Cfg.LabDir + "/flash/startup-config"

@@ -109,15 +109,3 @@ func (b *bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return n
 
 // GetContainers is a noop for bridges.
 func (b *bridge) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
-
-func (b *bridge) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, error) {
-	if b.Cfg.Exec != nil && len(b.Cfg.Exec) > 0 {
-		log.Error("exec not supported on kind 'bridge' -> noop; continuing")
-	}
-	return []types.ExecResultHolder{}, nil
-}
-
-func (b *bridge) RunExecType(_ context.Context, _ types.ExecOperation) (types.ExecResultHolder, error) {
-	log.Error("exec not supported on kind 'bridge' -> noop; continuing")
-	return nil, types.ErrRunExecTypeNotSupported
-}

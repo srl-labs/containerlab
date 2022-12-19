@@ -12,6 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -26,13 +27,11 @@ type mysocket struct {
 }
 
 // createMysocketTunnels creates internet reachable personal tunnels using mysocket.io.
-func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[string]nodes.Node) error {
+func createMysocketTunnels(ctx context.Context, r runtime.ContainerRuntime, node *types.NodeConfig, nodesMap map[string]nodes.Node) error {
 	// remove the existing sockets
 	cmd := []string{"/bin/sh", "-c", "mysocketctl socket ls | awk '/clab/ {print $2}' | xargs -n1 mysocketctl socket delete -s"}
 	log.Debugf("Running postdeploy mysocketio command %q", cmd)
-
-	exec := types.NewExecOperationSlice(cmd)
-	_, err := node.RunExecType(ctx, exec)
+	_, _, err := r.Exec(ctx, node.ContainerID, cmd)
 	if err != nil {
 		return fmt.Errorf("failed to remove existing sockets: %v", err)
 	}
@@ -51,38 +50,34 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 			sockCmd := createSockCmd(ms, n.Config().LongName)
 			cmd := []string{"/bin/sh", "-c", fmt.Sprintf("%s | awk 'NR==4 {print $2}'", sockCmd)}
 			log.Debugf("Running mysocketio command %q", cmd)
-
-			exec = types.NewExecOperationSlice(cmd)
-			execResult, err := node.RunExecType(ctx, exec)
+			stdout, _, err := r.Exec(ctx, node.ContainerID, cmd)
 			if err != nil {
 				return fmt.Errorf("failed to create mysocketio socket: %v", err)
 			}
-			sockID := strings.TrimSpace(execResult.GetStdOutString())
+			sockID := strings.TrimSpace(string(stdout))
 
 			// create tunnel and get its ID
 			cmd = []string{"/bin/sh", "-c", fmt.Sprintf(
 				"mysocketctl tunnel create -s %s | awk 'NR==4 {print $4}'", sockID)}
 			log.Debugf("Running mysocketio command %q", cmd)
-			exec = types.NewExecOperationSlice(cmd)
-			execResult, err = node.RunExecType(ctx, exec)
+			stdout, _, err = r.Exec(ctx, node.ContainerID, cmd)
 			if err != nil {
 				return fmt.Errorf("failed to create mysocketio socket: %v", err)
 			}
-			tunID := strings.TrimSpace(execResult.GetStdOutString())
+			tunID := strings.TrimSpace(string(stdout))
 
 			// connect tunnel
 			// if proxy was provided via extras, add it to the connect cmd
 			var proxy string
-			if node.Config().Extras != nil && node.Config().Extras.MysocketProxy != "" {
-				proxy = fmt.Sprintf("--proxy %s", node.Config().Extras.MysocketProxy)
+			if node.Extras != nil && node.Extras.MysocketProxy != "" {
+				proxy = fmt.Sprintf("--proxy %s", node.Extras.MysocketProxy)
 			}
 			cmd = []string{"/bin/sh", "-c", fmt.Sprintf(
 				"mysocketctl tunnel connect --host %s -p %d -s %s -t %s %s > socket-%s-%s-%d.log",
 				n.Config().LongName, ms.Port, sockID, tunID, proxy,
 				n.Config().ShortName, ms.Stype, ms.Port)}
 			log.Debugf("Running mysocketio command %q", cmd)
-			exec = types.NewExecOperationSlice(cmd)
-			err = node.RunExecTypeWoWait(ctx, exec)
+			err = r.ExecNotWait(ctx, node.ContainerID, cmd)
 			if err != nil {
 				return err
 			}
