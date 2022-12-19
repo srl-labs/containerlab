@@ -8,6 +8,7 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -66,8 +67,8 @@ func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) 
 	}, nil
 }
 
-func (h *host) RunExecs(_ context.Context, _ []string) ([]types.ExecResultHolder, error) {
+func (h *host) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", h.Config().Kind)
 
-	return nil, types.ErrRunExecTypeNotSupported
+	return nil, exec.ErrRunExecTypeNotSupported
 }

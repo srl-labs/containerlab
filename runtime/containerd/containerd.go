@@ -25,6 +25,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -699,16 +700,16 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
 
-func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec types.ExecCmd) (types.ExecResultHolder, error) {
+func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec exec.ExecCmd) (exec.ExecResultHolder, error) {
 	return c.internalExec(ctx, containername, exec, false)
 }
 
-func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, exec types.ExecCmd) error {
+func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, exec exec.ExecCmd) error {
 	_, err := c.internalExec(ctx, containername, exec, true)
 	return err
 }
 
-func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, exec types.ExecCmd, detach bool) (types.ExecResultHolder, error) { // skipcq: RVV-A0005
+func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, execCmd exec.ExecCmd, detach bool) (exec.ExecResultHolder, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
@@ -728,7 +729,7 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 	}
 	pspec := spec.Process
 	pspec.Terminal = false
-	pspec.Args = exec.GetCmd()
+	pspec.Args = execCmd.GetCmd()
 	task, err := container.Task(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -778,7 +779,7 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 		return nil, err
 	}
 
-	execResult := types.NewExecResult(exec)
+	execResult := exec.NewExecResult(execCmd)
 
 	if !detach {
 		status := <-statusC

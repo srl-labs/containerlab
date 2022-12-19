@@ -16,9 +16,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -252,7 +252,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// execute commands specified for nodes with `exec` node parameter
-	execCollection := types.NewExecCollection()
+	execCollection := exec.NewExecCollection()
 	for _, n := range c.Nodes {
 		execResult, err := n.RunExecs(ctx, n.Config().Exec)
 		if err != nil {

@@ -14,6 +14,7 @@ import (
 	"github.com/containers/podman/v4/pkg/bindings/network"
 	dockerTypes "github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -234,7 +235,7 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return nspath, nil
 }
 
-func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd) (types.ExecResultHolder, error) {
+func (r *PodmanRuntime) Exec(ctx context.Context, cID string, execCmd exec.ExecCmd) (exec.ExecResultHolder, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
@@ -244,7 +245,7 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd
 			User:         "root",
 			AttachStderr: true,
 			AttachStdout: true,
-			Cmd:          exec.GetCmd(),
+			Cmd:          execCmd.GetCmd(),
 		},
 	}
 	execID, err := containers.ExecCreate(ctx, cID, &execCreateConf)
@@ -269,7 +270,7 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd
 	log.Debugf("Exec attached to the container %q and got stdout %q and stderr %q", cID, sOut.Bytes(), sErr.Bytes())
 
 	// fill the execution result
-	execResult := types.NewExecResult(exec)
+	execResult := exec.NewExecResult(execCmd)
 	execResult.SetStdErr(sErr.Bytes())
 	execResult.SetStdOut(sOut.Bytes())
 	execResult.SetReturnCode(inspectOut.ExitCode)
@@ -277,7 +278,7 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd
 	return execResult, nil
 }
 
-func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec types.ExecCmd) error {
+func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec exec.ExecCmd) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err

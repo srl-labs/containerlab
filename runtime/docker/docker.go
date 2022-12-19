@@ -28,6 +28,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -682,7 +683,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.
-func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd) (types.ExecResultHolder, error) {
+func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd exec.ExecCmd) (exec.ExecResultHolder, error) {
 	cont, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
 		return nil, err
@@ -691,7 +692,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd
 		User:         "root",
 		AttachStderr: true,
 		AttachStdout: true,
-		Cmd:          exec.GetCmd(),
+		Cmd:          execCmd.GetCmd(),
 	})
 	if err != nil {
 		log.Errorf("failed to create exec in container %s: %v", cont.Name, err)
@@ -730,7 +731,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd
 		return nil, err
 	}
 
-	execResult := types.NewExecResult(exec)
+	execResult := exec.NewExecResult(execCmd)
 
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(execInspect.ExitCode)
@@ -740,8 +741,8 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, exec types.ExecCmd
 }
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.
-func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, exec types.ExecCmd) error {
-	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: exec.GetCmd()}
+func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, execCmd exec.ExecCmd) error {
+	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: execCmd.GetCmd()}
 	respID, err := d.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
 		return err
