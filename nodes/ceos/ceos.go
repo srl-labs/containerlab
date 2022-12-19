@@ -46,7 +46,8 @@ var (
 	saveCmd = []string{"Cli", "-p", "15", "-c", "wr"}
 )
 
-func init() {
+// Register registers the node in the global Node map.
+func Register() {
 	nodes.Register(kindnames, func() nodes.Node {
 		return new(ceos)
 	})

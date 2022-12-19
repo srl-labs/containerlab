@@ -30,7 +30,8 @@ const (
 	licenseFName        = "license.txt"
 )
 
-func init() {
+// Register registers the node in the global Node map.
+func Register() {
 	nodes.Register(kindnames, func() nodes.Node {
 		return new(vrSROS)
 	})

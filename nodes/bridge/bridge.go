@@ -24,7 +24,8 @@ const (
 	iptAllowCmd = "-I FORWARD -i %s -j ACCEPT -w 5"
 )
 
-func init() {
+// Register registers the node in the global Node map.
+func Register() {
 	nodes.Register(kindnames, func() nodes.Node {
 		return new(bridge)
 	})
