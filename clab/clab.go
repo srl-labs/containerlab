@@ -15,7 +15,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	_ "github.com/srl-labs/containerlab/nodes/all"
+	allNodes "github.com/srl-labs/containerlab/nodes/all"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
@@ -111,6 +111,8 @@ func WithTopoFile(file, varsFile string) ClabOption {
 
 // NewContainerLab function defines a new container lab.
 func NewContainerLab(opts ...ClabOption) (*CLab, error) {
+	allNodes.RegisterAll()
+
 	c := &CLab{
 		Config: &Config{
 			Mgmt:     new(types.MgmtNet),

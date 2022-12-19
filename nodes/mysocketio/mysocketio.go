@@ -11,7 +11,8 @@ import (
 
 var Kindnames = []string{"mysocketio"}
 
-func init() {
+// Register registers the node in the global Node map.
+func Register() {
 	nodes.Register(Kindnames, func() nodes.Node {
 		return new(mySocketIO)
 	})
