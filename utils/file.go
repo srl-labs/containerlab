@@ -91,7 +91,7 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 			return err
 		}
 	}
-	defer in.Close()
+	defer in.Close() // skipcq: GO-S2307
 
 	out, err := os.Create(dst)
 	if err != nil {
