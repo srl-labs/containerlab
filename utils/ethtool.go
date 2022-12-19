@@ -17,13 +17,13 @@ const (
 	IFNAMSIZ        = 16         // linux/if.h
 )
 
-// linux/if.h 'struct ifreq'.
+// IFReqData linux/if.h 'struct ifreq'.
 type IFReqData struct {
 	Name [IFNAMSIZ]byte
 	Data uintptr
 }
 
-// linux/ethtool.h 'struct ethtool_value'.
+// EthtoolValue linux/ethtool.h 'struct ethtool_value'.
 type EthtoolValue struct {
 	Cmd  uint32
 	Data uint32

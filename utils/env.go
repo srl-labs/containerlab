@@ -14,7 +14,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// convertEnvs convert env variables passed as a map to a list of them.
+// ConvertEnvs converts env variables passed as a map to a list of them.
 func ConvertEnvs(m map[string]string) []string {
 	s := make([]string, 0, len(m))
 	for k, v := range m {
@@ -35,7 +35,7 @@ func mapify(i interface{}) (map[string]interface{}, bool) {
 	return map[string]interface{}{}, false
 }
 
-// merge all dictionaries and return a new dictionary
+// MergeMaps merges all dictionaries and return a new dictionary
 // recursively if matching keys are both dictionaries.
 func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 	res := make(map[string]interface{})
@@ -63,7 +63,7 @@ func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
 	return res
 }
 
-// merge all string maps and return a new map
+// MergeStringMaps merges all string maps and return a new map
 // maps that are passed for merging will not be changed
 // merging to empty maps return an empty map
 // merging nils return nil.
@@ -91,7 +91,7 @@ func MergeStringMaps(maps ...map[string]string) map[string]string {
 	return res
 }
 
-// does a slice contain a string.
+// StringInSlice checks if a slice contains `val` string and returns slice index if true.
 func StringInSlice(slice []string, val string) (int, bool) {
 	for i, item := range slice {
 		if item == val {

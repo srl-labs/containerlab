@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// An interface to implement kind specific methods for transactions and prompt checking.
+// SSHKind is an interface to implement kind specific methods for transactions and prompt checking.
 type SSHKind interface {
 	// Start a config transaction
 	ConfigStart(s *SSHTransport, transaction bool) error
@@ -23,7 +23,7 @@ type SSHKind interface {
 	PromptParse(s *SSHTransport, in *string) *SSHReply
 }
 
-// implements SShKind.
+// VrSrosSSHKind implements SShKind.
 type VrSrosSSHKind struct{}
 
 func (*VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // skipcq: RVV-A0005
@@ -61,7 +61,7 @@ func (*VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 	return nil
 }
 
-// implements SShKind.
+// SrlSSHKind implements SShKind.
 type SrlSSHKind struct{}
 
 func (*SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // skipcq: RVV-A0005
