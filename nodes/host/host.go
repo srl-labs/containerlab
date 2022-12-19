@@ -66,13 +66,6 @@ func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) 
 	}, nil
 }
 
-func (h *host) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, error) {
-	if h.Cfg.Exec != nil && len(h.Cfg.Exec) > 0 {
-		log.Error("exec not supported on kind 'host' -> noop; continuing")
-	}
-	return []types.ExecResultHolder{}, nil
-}
-
 func (h *host) RunExecs(_ context.Context, _ []string) ([]types.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", h.Config().Kind)
 

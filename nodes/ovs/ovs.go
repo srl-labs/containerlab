@@ -54,13 +54,6 @@ func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*ovs) Delete(_ context.Context) error                { return nil }
 
-func (o *ovs) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, error) {
-	if o.Cfg.Exec != nil && len(o.Cfg.Exec) > 0 {
-		log.Error("exec not supported on kind 'ovs' -> noop; continuing")
-	}
-	return []types.ExecResultHolder{}, nil
-}
-
 func (o *ovs) RunExecs(_ context.Context, _ []string) ([]types.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", o.Config().Kind)
 
