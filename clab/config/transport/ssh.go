@@ -109,7 +109,7 @@ func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SS
 	return nil, fmt.Errorf("no transport implemented for kind: %s", node.Kind)
 }
 
-// Creates the channel reading the SSH connection
+// InChannel creates the channel reading the SSH connection.
 //
 // The first prompt is saved in LoginMessages
 //
