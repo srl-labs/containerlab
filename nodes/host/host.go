@@ -70,5 +70,5 @@ func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) 
 func (h *host) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", h.Config().Kind)
 
-	return nil, exec.ErrRunExecTypeNotSupported
+	return nil, exec.ErrRunExecNotSupported
 }

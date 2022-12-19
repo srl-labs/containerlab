@@ -68,7 +68,7 @@ var execCmd = &cobra.Command{
 			execResult, err := node.RunExec(ctx, execCmd)
 			if err != nil {
 				// skip nodes that do not support exec
-				if err == exec.ErrRunExecTypeNotSupported {
+				if err == exec.ErrRunExecNotSupported {
 					continue
 				}
 				return err

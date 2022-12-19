@@ -114,5 +114,5 @@ func (b *bridge) GetContainers(_ context.Context) ([]types.GenericContainer, err
 func (b *bridge) RunExecs(_ context.Context, _ []string) ([]cExec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
 
-	return nil, cExec.ErrRunExecTypeNotSupported
+	return nil, cExec.ErrRunExecNotSupported
 }

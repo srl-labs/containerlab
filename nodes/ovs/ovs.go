@@ -58,5 +58,5 @@ func (*ovs) Delete(_ context.Context) error                { return nil }
 func (o *ovs) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", o.Config().Kind)
 
-	return nil, exec.ErrRunExecTypeNotSupported
+	return nil, exec.ErrRunExecNotSupported
 }

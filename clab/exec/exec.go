@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	ErrRunExecTypeNotSupported = errors.New("exec not supported for this kind")
+	ErrRunExecNotSupported = errors.New("exec not supported for this kind")
 )
 
 func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
