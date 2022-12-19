@@ -48,14 +48,12 @@ func (s *sonic) PreDeploy(_ context.Context, _, _, _ string) error {
 func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
-	exec := types.NewExecOperationSlice([]string{"supervisord"})
-	err := s.RunExecTypeWoWait(ctx, exec)
+	err := s.Runtime.ExecNotWait(ctx, s.Cfg.ContainerID, []string{"supervisord"})
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}
 
-	exec = types.NewExecOperationSlice([]string{"supervisorctl", "start", "bgpd"})
-	err = s.RunExecTypeWoWait(ctx, exec)
+	err = s.Runtime.ExecNotWait(ctx, s.Cfg.ContainerID, []string{"supervisorctl start bgpd"})
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}
