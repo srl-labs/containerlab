@@ -158,39 +158,42 @@ func (e *ExecResult) SetStdErr(data []byte) {
 	e.Stderr = string(data)
 }
 
-// internal data struct
-type execCollectionData map[string][]ExecResultHolder
+// execEntries is a map indexed by container IDs storing lists of ExecResultHolder.
+// ExecResultHolder is an interface that is backed by the type storing data for the executed command.
+type execEntries map[string][]ExecResultHolder
 
+// ExecCollection represents a datastore for exec commands execution results.
 type ExecCollection struct {
-	execCollectionData
+	execEntries
 }
 
+// NewExecCollection initializes the collection of exec command results.
 func NewExecCollection() *ExecCollection {
 	return &ExecCollection{
-		execCollectionData: map[string][]ExecResultHolder{},
+		execEntries{},
 	}
 }
 
 func (ec *ExecCollection) Add(cId string, e ExecResultHolder) {
-	ec.execCollectionData[cId] = append(ec.execCollectionData[cId], e)
+	ec.execEntries[cId] = append(ec.execEntries[cId], e)
 }
 
 func (ec *ExecCollection) AddAll(cId string, e []ExecResultHolder) {
-	ec.execCollectionData[cId] = append(ec.execCollectionData[cId], e...)
+	ec.execEntries[cId] = append(ec.execEntries[cId], e...)
 }
 
 func (ec *ExecCollection) GetInFormat(format ExecOutputFormat) (string, error) {
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:
-		byteData, err := json.MarshalIndent(ec.execCollectionData, "", "  ")
+		byteData, err := json.MarshalIndent(ec.execEntries, "", "  ")
 		if err != nil {
 			return "", err
 		}
 		result.Write(byteData)
 	case ExecFormatPLAIN:
 		printSep := false
-		for k, execResults := range ec.execCollectionData {
+		for k, execResults := range ec.execEntries {
 			if len(execResults) == 0 {
 				// skip if there is no result
 				continue
@@ -215,7 +218,7 @@ func (ec *ExecCollection) GetInFormat(format ExecOutputFormat) (string, error) {
 }
 
 func (ec *ExecCollection) WriteLogInfo() {
-	for k, execResults := range ec.execCollectionData {
+	for k, execResults := range ec.execEntries {
 		for _, er := range execResults {
 			log.Infof("Executed command '%s' on %s. stdout:\n%s", er.GetCmdString(), k, er.GetStdOutString())
 		}
