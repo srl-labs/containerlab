@@ -46,9 +46,9 @@ type ContainerRuntime interface {
 	// Get a netns path using the pid of a container
 	GetNSPath(context.Context, string) (string, error)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
-	Exec(context.Context, string, []string) ([]byte, []byte, error)
+	Exec(ctx context.Context, cID string, exec types.ExecOperation) (types.ExecResultHolder, error)
 	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
-	ExecNotWait(context.Context, string, []string) error
+	ExecNotWait(ctx context.Context, cID string, exec types.ExecOperation) error
 	// Delete container by its name
 	DeleteContainer(context.Context, string) error
 	// Getter for runtime config options

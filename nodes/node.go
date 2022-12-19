@@ -81,6 +81,9 @@ type Node interface {
 	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
 	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assgined by runtime
 	UpdateConfigWithRuntimeInfo(context.Context) error
+	RunExecConfig(ctx context.Context) ([]types.ExecResultHolder, error)
+	// RunExecType will return a types.ErrRunExecTypeNotSupported if the Kind does not support the execution of commands. This error must be handled.
+	RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error)
 }
 
 type Initializer func() Node

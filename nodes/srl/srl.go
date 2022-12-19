@@ -274,16 +274,18 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
-	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, saveCmd)
+	exec := types.NewExecOperationSlice(saveCmd)
+	execResult, err := s.RunExecType(ctx, exec)
+
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
 	}
 
-	if len(stderr) > 0 {
-		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, string(stderr))
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
-	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", s.Cfg.ShortName, string(stdout))
+	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", s.Cfg.ShortName, execResult.GetStdOutString())
 
 	return nil
 }
@@ -293,7 +295,6 @@ func (s *srl) SaveConfig(ctx context.Context) error {
 func (s *srl) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
-	var stdout, stderr []byte
 	var err error
 
 	log.Debugf("Waiting for SR Linux node %q to boot...", s.Cfg.ShortName)
@@ -303,40 +304,42 @@ func (s *srl) Ready(ctx context.Context) error {
 			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", s.Cfg.ShortName, err)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.Cfg.LongName, mgmtServerRdyCmd)
+			exec := types.NewExecOperationSlice(mgmtServerRdyCmd)
+			execResult, err := s.RunExecType(ctx, exec)
 			if err != nil {
 				time.Sleep(retryTimer)
 				continue
 			}
 
-			if len(stderr) != 0 {
-				log.Debugf("error during checking SR Linux boot status: %s", string(stderr))
+			if len(execResult.GetStdErrString()) != 0 {
+				log.Debugf("error during checking SR Linux boot status: %s", execResult.GetStdErrString())
 				time.Sleep(retryTimer)
 				continue
 			}
 
-			if !bytes.Contains(stdout, []byte("running")) {
+			if !strings.Contains(execResult.GetStdOutString(), "running") {
 				time.Sleep(retryTimer)
 				continue
 			}
 
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
-			stdout, stderr, err = s.GetRuntime().Exec(ctx, s.Cfg.LongName, readyForConfigCmd)
+			exec = types.NewExecOperationSlice(readyForConfigCmd)
+			execResult, err = s.RunExecType(ctx, exec)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
 				continue
 			}
 
-			if len(stderr) != 0 {
-				log.Debugf("readyForConfigCmd stderr: %s", string(stderr))
+			if len(execResult.GetStdErrString()) != 0 {
+				log.Debugf("readyForConfigCmd stderr: %s", string(execResult.GetStdErrString()))
 				time.Sleep(retryTimer)
 				continue
 			}
 
-			if !bytes.Contains(stdout, []byte("loaded initial configuration")) {
-				log.Debugf("Management server readiness files doesn't contain the marker string %s", string(stdout))
+			if !strings.Contains(execResult.GetStdOutString(), "loaded initial configuration") {
+				log.Debugf("Management server readiness files doesn't contain the marker string %s", execResult.GetStdOutString())
 				time.Sleep(retryTimer)
 				continue
 			}
@@ -458,26 +461,20 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	}
 
 	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
-	_, _, err = s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
-		"bash",
-		"-c",
-		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
-	})
 
+	exec := types.NewExecOperationSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
+	_, err = s.RunExecType(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
-		"bash",
-		"-c",
-		"sr_cli -ed < tmp/clab-config",
-	})
+	exec = types.NewExecOperationSlice([]string{"bash", "-c", "sr_cli -ed < tmp/clab-config"})
+	execResult, err := s.RunExecType(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, stdout, stderr)
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return nil
 }
@@ -487,29 +484,24 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	cfgStr := string(s.startupCliCfg)
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
-	_, _, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
-		"bash",
-		"-c",
-		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
-	})
+
+	exec := types.NewExecOperationSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
+	_, err := s.RunExecType(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
-		"bash",
-		"-c",
-		"sr_cli -ed --post 'commit save' < tmp/clab-config",
-	})
+	exec = types.NewExecOperationSlice([]string{"bash", "-c", "sr_cli -ed --post 'commit save' < tmp/clab-config"})
+	execResult, err := s.RunExecType(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	if len(stderr) != 0 {
-		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, stderr)
+	if len(execResult.GetStdErrString()) != 0 {
+		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, stdout, stderr)
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return nil
 }

@@ -225,6 +225,36 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, configName, labCADir, labCARoot)
 }
 
+// RunExecConfig mocks base method.
+func (m *MockNode) RunExecConfig(ctx context.Context) ([]types.ExecResultHolder, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunExecConfig", ctx)
+	ret0, _ := ret[0].([]types.ExecResultHolder)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunExecConfig indicates an expected call of RunExecConfig.
+func (mr *MockNodeMockRecorder) RunExecConfig(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecConfig", reflect.TypeOf((*MockNode)(nil).RunExecConfig), ctx)
+}
+
+// RunExecType mocks base method.
+func (m *MockNode) RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunExecType", ctx, exec)
+	ret0, _ := ret[0].(types.ExecResultHolder)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunExecType indicates an expected call of RunExecType.
+func (mr *MockNodeMockRecorder) RunExecType(ctx, exec interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecType", reflect.TypeOf((*MockNode)(nil).RunExecType), ctx, exec)
+}
+
 // SaveConfig mocks base method.
 func (m *MockNode) SaveConfig(arg0 context.Context) error {
 	m.ctrl.T.Helper()

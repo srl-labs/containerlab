@@ -29,7 +29,8 @@ var (
 	//go:embed sshd_config
 	sshdCfg string
 
-	saveCmd = []string{"cli", "show", "conf"}
+	saveCmd       = []string{"cli", "show", "conf"}
+	sshRestartCmd = []string{"service", "ssh", "restart"}
 )
 
 func init() {
@@ -69,31 +70,34 @@ func (s *crpd) PreDeploy(_ context.Context, _, _, _ string) error {
 
 func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
-	_, stderr, err := s.Runtime.Exec(ctx, s.Cfg.ContainerID, []string{"service", "ssh", "restart"})
+
+	sshRestartExec := types.NewExecOperationSlice(sshRestartCmd)
+	execResult, err := s.RunExecType(ctx, sshRestartExec)
 	if err != nil {
 		return err
 	}
 
-	if len(stderr) > 0 {
-		return fmt.Errorf("crpd post-deploy failed: %s", string(stderr))
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
 	}
 
 	return err
 }
 
 func (s *crpd) SaveConfig(ctx context.Context) error {
-	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, saveCmd)
+	saveExec := types.NewExecOperationSlice(saveCmd)
+	execResult, err := s.RunExecType(ctx, saveExec)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
+		return err
 	}
 
-	if len(stderr) > 0 {
-		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, string(stderr))
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
 	}
 
 	// path by which to save a config
 	confPath := s.Cfg.LabDir + "/config/juniper.conf"
-	err = os.WriteFile(confPath, stdout, 0777) // skipcq: GO-S2306
+	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(), 0777) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.Cfg.ShortName, err)
 	}
