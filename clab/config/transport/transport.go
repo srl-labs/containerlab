@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// Debug count.
+// DebugCount is a debug verbosity counter.
 var DebugCount int
 
 type TransportOption func(*Transport)

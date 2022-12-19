@@ -238,7 +238,6 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
-	RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error)
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -267,28 +266,31 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 	return nil
 }
 
-func (d *DefaultNode) RunExecConfig(ctx context.Context) ([]types.ExecResultHolder, error) {
-	result := []types.ExecResultHolder{}
-	for _, cmd := range d.Cfg.Exec {
-		e, err := types.NewExec(cmd)
-		if err != nil {
-			return result, err
-		}
-		er, err := d.OverwriteNode.RunExecType(ctx, e)
+// RunExecs executes cmds commands for a node. Commands is a list of strings.
+func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]types.ExecResultHolder, error) {
+	results := []types.ExecResultHolder{}
+	for _, cmd := range cmds {
+		execCmd, err := types.NewExecCmdFromString(cmd)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, er)
+
+		er, err := d.RunExec(ctx, execCmd)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, er)
 	}
-	return result, nil
+
+	return results, nil
 }
 
-// RunExecType is the final function that calls the runtime to execute a type.Exec on a container
-// This is to be overriden if the nodes implementation differs
-func (d *DefaultNode) RunExecType(ctx context.Context, exec types.ExecOperation) (types.ExecResultHolder, error) {
-	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, exec)
+// RunExec executes a single command for a node.
+func (d *DefaultNode) RunExec(ctx context.Context, cmd types.ExecCmd) (types.ExecResultHolder, error) {
+	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, cmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, exec.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, cmd.GetCmdString(), err)
 		return nil, err
 	}
 	return execResult, nil
@@ -296,7 +298,7 @@ func (d *DefaultNode) RunExecType(ctx context.Context, exec types.ExecOperation)
 
 // RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
 // This is to be overriden if the nodes implementation differs
-func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec types.ExecOperation) error {
+func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec types.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, exec)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, exec.GetCmdString(), err)

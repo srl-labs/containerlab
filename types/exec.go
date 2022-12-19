@@ -32,7 +32,7 @@ func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
 	return "", fmt.Errorf("cannot parse %q as 'ExecOutputFormat'", s)
 }
 
-type ExecOperation interface {
+type ExecCmd interface {
 	GetCmd() []string
 	GetCmdString() string
 }
@@ -41,7 +41,7 @@ type ExecOp struct {
 	Cmd []string `json:"cmd"`
 }
 
-func NewExec(cmd string) (ExecOperation, error) {
+func NewExecCmdFromString(cmd string) (ExecCmd, error) {
 	result := &ExecOp{}
 	if err := result.SetCmd(cmd); err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func NewExec(cmd string) (ExecOperation, error) {
 	return result, nil
 }
 
-func NewExecOperationSlice(cmd []string) ExecOperation {
+func NewExecCmdFromSlice(cmd []string) ExecCmd {
 	return &ExecOp{
 		Cmd: cmd,
 	}
@@ -73,7 +73,7 @@ type ExecResult struct {
 	Stderr     string   `json:"stderr"`
 }
 
-func NewExecResult(op ExecOperation) *ExecResult {
+func NewExecResult(op ExecCmd) *ExecResult {
 	er := &ExecResult{Cmd: op.GetCmd()}
 	return er
 }

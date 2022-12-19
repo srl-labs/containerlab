@@ -29,8 +29,8 @@ var (
 	//go:embed sshd_config
 	sshdCfg string
 
-	saveCmd       = []string{"cli", "show", "conf"}
-	sshRestartCmd = []string{"service", "ssh", "restart"}
+	saveCmd       = "cli show conf"
+	sshRestartCmd = "service ssh restart"
 )
 
 func init() {
@@ -71,8 +71,8 @@ func (s *crpd) PreDeploy(_ context.Context, _, _, _ string) error {
 func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 
-	sshRestartExec := types.NewExecOperationSlice(sshRestartCmd)
-	execResult, err := s.RunExecType(ctx, sshRestartExec)
+	cmd, _ := types.NewExecCmdFromString(sshRestartCmd)
+	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
@@ -85,8 +85,8 @@ func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (s *crpd) SaveConfig(ctx context.Context) error {
-	saveExec := types.NewExecOperationSlice(saveCmd)
-	execResult, err := s.RunExecType(ctx, saveExec)
+	cmd, _ := types.NewExecCmdFromString(saveCmd)
+	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}

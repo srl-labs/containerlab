@@ -32,7 +32,7 @@ const (
 
 type Dict map[string]interface{}
 
-// Prepare variables for all nodes. This will also prepare all variables for the links.
+// PrepareVars variables for all nodes. This will also prepare all variables for the links.
 func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[string]*NodeConfig {
 	res := make(map[string]*NodeConfig)
 

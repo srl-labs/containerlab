@@ -16,13 +16,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// templates to execute.
+// TemplateNames is templates to execute.
 var TemplateNames []string
 
-// path to additional templates.
+// TemplatePaths is path to additional templates.
 var TemplatePaths []string
 
-// debug count.
+// DebugCount is a debug verbosity counter.
 var DebugCount int
 
 type NodeConfig struct {
@@ -34,7 +34,7 @@ type NodeConfig struct {
 	Info []string
 }
 
-// Load templates from all paths for the specific role/kind.
+// LoadTemplates loads templates from all paths for the specific role/kind.
 func LoadTemplates(tmpl *template.Template, role string) error {
 	for _, p := range TemplatePaths {
 		fn := filepath.Join(p, fmt.Sprintf("*__%s.tmpl", role))
@@ -107,7 +107,7 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 	return nil
 }
 
-// Implement stringer for NodeConfig.
+// String implements stringer interface for NodeConfig.
 func (c *NodeConfig) String() string {
 	s := fmt.Sprintf("%s: %v", c.TargetNode.ShortName, c.Info)
 	return s

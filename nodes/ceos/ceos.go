@@ -43,7 +43,7 @@ var (
 	//go:embed ceos.cfg
 	cfgTemplate string
 
-	saveCmd = []string{"Cli", "-p", "15", "-c", "wr"}
+	saveCmd = "Cli -p 15 -c wr"
 )
 
 func init() {
@@ -106,8 +106,8 @@ func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
-	saveCmdExec := types.NewExecOperationSlice(saveCmd)
-	execResult, err := n.RunExecType(ctx, saveCmdExec)
+	cmd, _ := types.NewExecCmdFromString(saveCmd)
+	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
