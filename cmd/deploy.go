@@ -256,7 +256,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	for _, n := range c.Nodes {
 		execResult, err := n.RunExecs(ctx, n.Config().Exec)
 		if err != nil {
-			log.Errorf("Failed to exec commands for node %s", name)
+			log.Warnf("Failed to exec commands for node %q", n.Config().ShortName)
 		}
 		execCollection.AddAll(n.Config().ShortName, execResult)
 	}

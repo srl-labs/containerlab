@@ -61,7 +61,8 @@ func (o *ovs) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, error)
 	return []types.ExecResultHolder{}, nil
 }
 
-func (*ovs) RunExecType(_ context.Context, _ types.ExecCmd) (types.ExecResultHolder, error) {
-	log.Error("exec not supported on kind 'ovs' -> noop; continuing")
+func (o *ovs) RunExecs(_ context.Context, _ []string) ([]types.ExecResultHolder, error) {
+	log.Warnf("Exec operation is not implemented for kind %q", o.Config().Kind)
+
 	return nil, types.ErrRunExecTypeNotSupported
 }

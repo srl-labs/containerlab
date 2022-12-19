@@ -118,6 +118,7 @@ func (b *bridge) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, err
 }
 
 func (b *bridge) RunExecs(_ context.Context, _ []string) ([]types.ExecResultHolder, error) {
-	log.Error("exec not supported on kind 'bridge' -> noop; continuing")
+	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
+
 	return nil, types.ErrRunExecTypeNotSupported
 }
