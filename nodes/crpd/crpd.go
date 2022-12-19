@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -71,7 +72,7 @@ func (s *crpd) PreDeploy(_ context.Context, _, _, _ string) error {
 func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 
-	cmd, _ := types.NewExecCmdFromString(sshRestartCmd)
+	cmd, _ := exec.NewExecCmdFromString(sshRestartCmd)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -85,7 +86,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (s *crpd) SaveConfig(ctx context.Context) error {
-	cmd, _ := types.NewExecCmdFromString(saveCmd)
+	cmd, _ := exec.NewExecCmdFromString(saveCmd)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err

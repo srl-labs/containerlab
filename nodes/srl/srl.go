@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/srl-labs/containerlab/cert"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -273,7 +274,7 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
-	cmd, _ := types.NewExecCmdFromString(saveCmd)
+	cmd, _ := exec.NewExecCmdFromString(saveCmd)
 	execResult, err := s.RunExec(ctx, cmd)
 
 	if err != nil {
@@ -303,7 +304,7 @@ func (s *srl) Ready(ctx context.Context) error {
 			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", s.Cfg.ShortName, err)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			cmd, _ := types.NewExecCmdFromString(mgmtServerRdyCmd)
+			cmd, _ := exec.NewExecCmdFromString(mgmtServerRdyCmd)
 			execResult, err := s.RunExec(ctx, cmd)
 			if err != nil {
 				time.Sleep(retryTimer)
@@ -323,7 +324,7 @@ func (s *srl) Ready(ctx context.Context) error {
 
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
-			cmd, _ = types.NewExecCmdFromString(readyForConfigCmd)
+			cmd, _ = exec.NewExecCmdFromString(readyForConfigCmd)
 			execResult, err = s.RunExec(ctx, cmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
@@ -461,13 +462,13 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
 
-	exec := types.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
-	_, err = s.RunExec(ctx, exec)
+	execCmd := exec.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
+	_, err = s.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
 	}
 
-	cmd, err := types.NewExecCmdFromString(`bash -c "sr_cli -ed < /tmp/clab-config"`)
+	cmd, err := exec.NewExecCmdFromString(`bash -c "sr_cli -ed < /tmp/clab-config"`)
 	if err != nil {
 		return err
 	}
@@ -488,13 +489,13 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
 
-	cmd := types.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
+	cmd := exec.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
 	_, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	cmd, _ = types.NewExecCmdFromString(`bash -c "sr_cli -ed --post 'commit save' < tmp/clab-config"`)
+	cmd, _ = exec.NewExecCmdFromString(`bash -c "sr_cli -ed --post 'commit save' < tmp/clab-config"`)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err

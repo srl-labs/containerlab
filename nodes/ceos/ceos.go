@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -106,7 +107,7 @@ func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
-	cmd, _ := types.NewExecCmdFromString(saveCmd)
+	cmd, _ := exec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)

@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	exec "github.com/srl-labs/containerlab/clab/exec"
 	nodes "github.com/srl-labs/containerlab/nodes"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	types "github.com/srl-labs/containerlab/types"
@@ -226,25 +227,25 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot i
 }
 
 // RunExec mocks base method.
-func (m *MockNode) RunExec(ctx context.Context, exec types.ExecCmd) (types.ExecResultHolder, error) {
+func (m *MockNode) RunExec(ctx context.Context, execCmd exec.ExecCmd) (exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunExec", ctx, exec)
-	ret0, _ := ret[0].(types.ExecResultHolder)
+	ret := m.ctrl.Call(m, "RunExec", ctx, execCmd)
+	ret0, _ := ret[0].(exec.ExecResultHolder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RunExec indicates an expected call of RunExec.
-func (mr *MockNodeMockRecorder) RunExec(ctx, exec interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) RunExec(ctx, execCmd interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNode)(nil).RunExec), ctx, exec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNode)(nil).RunExec), ctx, execCmd)
 }
 
 // RunExecs mocks base method.
-func (m *MockNode) RunExecs(ctx context.Context, cmds []string) ([]types.ExecResultHolder, error) {
+func (m *MockNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunExecs", ctx, cmds)
-	ret0, _ := ret[0].([]types.ExecResultHolder)
+	ret0, _ := ret[0].([]exec.ExecResultHolder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

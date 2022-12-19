@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -57,7 +58,7 @@ func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	ixiacOneCmd := fmt.Sprintf("bash -c 'ls %s'", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		cmd, _ := types.NewExecCmdFromString(ixiacOneCmd)
+		cmd, _ := exec.NewExecCmdFromString(ixiacOneCmd)
 		execResult, err := l.RunExec(ctx, cmd)
 		if err != nil {
 			return err

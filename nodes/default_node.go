@@ -16,6 +16,7 @@ import (
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -267,10 +268,10 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 }
 
 // RunExecs executes cmds commands for a node. Commands is a list of strings.
-func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]types.ExecResultHolder, error) {
-	results := []types.ExecResultHolder{}
+func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error) {
+	results := []exec.ExecResultHolder{}
 	for _, cmd := range cmds {
-		execCmd, err := types.NewExecCmdFromString(cmd)
+		execCmd, err := exec.NewExecCmdFromString(cmd)
 		if err != nil {
 			return nil, err
 		}
@@ -287,10 +288,10 @@ func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]types.Exec
 }
 
 // RunExec executes a single command for a node.
-func (d *DefaultNode) RunExec(ctx context.Context, cmd types.ExecCmd) (types.ExecResultHolder, error) {
-	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, cmd)
+func (d *DefaultNode) RunExec(ctx context.Context, execCmd exec.ExecCmd) (exec.ExecResultHolder, error) {
+	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, execCmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, cmd.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, execCmd.GetCmdString(), err)
 		return nil, err
 	}
 	return execResult, nil
@@ -298,10 +299,10 @@ func (d *DefaultNode) RunExec(ctx context.Context, cmd types.ExecCmd) (types.Exe
 
 // RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
 // This is to be overriden if the nodes implementation differs
-func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, exec types.ExecCmd) error {
-	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, exec)
+func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, execCmd exec.ExecCmd) error {
+	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, execCmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, exec.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, execCmd.GetCmdString(), err)
 		return err
 	}
 	return nil

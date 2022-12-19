@@ -12,8 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -32,7 +32,7 @@ var execCmd = &cobra.Command{
 			return errors.New("provide command to execute")
 		}
 
-		outputFormat, err := types.ParseExecOutputFormat(format)
+		outputFormat, err := exec.ParseExecOutputFormat(format)
 		if err != nil {
 			return err
 		}
@@ -56,10 +56,10 @@ var execCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		resultCollection := types.NewExecCollection()
+		resultCollection := exec.NewExecCollection()
 
 		for _, node := range c.Nodes {
-			execCmd, err := types.NewExecCmdFromString(execCommand)
+			execCmd, err := exec.NewExecCmdFromString(execCommand)
 			if err != nil {
 				// do not stop exec for other nodes if some failed
 				log.Error(err)
@@ -68,7 +68,7 @@ var execCmd = &cobra.Command{
 			execResult, err := node.RunExec(ctx, execCmd)
 			if err != nil {
 				// skip nodes that do not support exec
-				if err == types.ErrRunExecTypeNotSupported {
+				if err == exec.ErrRunExecTypeNotSupported {
 					continue
 				}
 				return err
