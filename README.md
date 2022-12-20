@@ -4,7 +4,7 @@
 [![Github all releases](https://img.shields.io/github/downloads/srl-labs/containerlab/total.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Go Report](https://img.shields.io/badge/go%20report-A%2B-blue?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://goreportcard.com/report/github.com/srl-labs/containerlab)
 [![Doc](https://img.shields.io/badge/Docs-containerlab.dev-blue?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://containerlab.dev)
-[![build](https://img.shields.io/github/workflow/status/srl-labs/containerlab/Test/master?style=flat-square&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
+[![build](https://img.shields.io/github/actions/workflow/status/srl-labs/containerlab/cicd.yml?branch=main&style=flat-square&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 
 ---
 
