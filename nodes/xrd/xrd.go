@@ -59,14 +59,6 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		o(n)
 	}
 
-	var interfaceEnvContent string
-	for i := 1; i <= 90; i++ {
-		interfaceEnvContent += fmt.Sprintf("linux:eth%d,xr_name=Gi0/0/0/%d;", i, i-1)
-	}
-	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvContent}
-
-	n.Cfg.Env = utils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
-
 	n.Cfg.Binds = append(n.Cfg.Binds,
 		// mount first-boot config file
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "first-boot.cfg"), ":/etc/xrd/first-boot.cfg"),
@@ -78,7 +70,10 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *xrd) PreDeploy(ctx context.Context, _, _, _ string) error {
+	n.genInterfacesEnv()
+
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+
 	return n.createXRDFiles(ctx)
 }
 
@@ -125,4 +120,20 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	}
 
 	return err
+}
+
+// genInterfacesEnv calculates how many interfaces were defined for xrd node
+// and populates the content of a required env var.
+func (n *xrd) genInterfacesEnv() {
+	// xrd (at least control-plane variant) needs XR_INTERFACE ENV var to be populated for all active interface
+	// here we take the number of links users set in the topology to get the right # of links
+	var interfaceEnvVar string
+
+	for i := range n.Config().Endpoints {
+		interfaceEnvVar += fmt.Sprintf("linux:eth%d,xr_name=Gi0/0/0/%d;", i+1, i)
+	}
+
+	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
+
+	n.Cfg.Env = utils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
 }
