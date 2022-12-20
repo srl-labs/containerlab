@@ -1,0 +1,15 @@
+name: srlxrd01
+
+topology:
+  nodes:
+    srl:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      startup-config: srl.cfg
+
+    xrd:
+      kind: cisco_xrd
+      image: xrd-control-plane
+
+  links:
+    - endpoints: ["srl:e1-1", "xrd:eth1"]
