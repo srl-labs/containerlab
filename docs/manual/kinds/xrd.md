@@ -57,7 +57,7 @@ XRd container uses the following mapping for its linux interfaces[^2]:
 * `eth1` - first data interface mapped to `Gi0/0/0/0` internal interface.
 * `ethN` - Nth data interface mapped to `Gi0/0/0/N-1` internal interface.
 
-When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and XRd node will boot with that addresses configured for its `MgmthEth0`. Data interfaces `eth1+` need to be configured with IP addressing manually.
+When containerlab launches XRd node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and XRd node will boot with that addresses configured for its `MgmthEth0`. Data interfaces `eth1+` need to be configured with IP addressing manually.
 
 ```
 RP/0/RP0/CPU0:xrd#sh ip int br
