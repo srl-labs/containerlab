@@ -10,6 +10,7 @@ topology:
     xrd:
       kind: cisco_xrd
       image: xrd-control-plane
+      startup-config: xrd.cfg
 
   links:
     - endpoints: ["srl:e1-1", "xrd:eth1"]
