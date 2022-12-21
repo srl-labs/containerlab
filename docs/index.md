@@ -21,6 +21,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 
 * [Nokia SR Linux](manual/kinds/srl.md)
 * [Arista cEOS](manual/kinds/ceos.md)
+* [Cisco XRd](manual/kinds/xrd.md)
 * [Azure SONiC](manual/kinds/sonic-vs.md)
 * [Juniper cRPD](manual/kinds/crpd.md)
 * [Cumulus VX](manual/kinds/cvx.md)

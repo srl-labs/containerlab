@@ -22,7 +22,7 @@ XRd image is available for download only for users who have an active service ac
 
 ## Managing XRd nodes
 
-There are many ways to manage SR Linux nodes, ranging from classic CLI management all the way up to the gNMI programming.
+There are several management interfaces supported by XRd nodes:
 
 === "bash"
     to connect to a `bash` shell of a running XRd container:
@@ -57,7 +57,7 @@ XRd container uses the following mapping for its linux interfaces[^2]:
 * `eth1` - first data interface mapped to `Gi0/0/0/0` internal interface.
 * `ethN` - Nth data interface mapped to `Gi0/0/0/N-1` internal interface.
 
-When containerlab launches XRd node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and XRd node will boot with that addresses configured for its `MgmthEth0`. Data interfaces `eth1+` need to be configured with IP addressing manually.
+When containerlab launches XRd node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and XRd node will boot with these addresses configured for its `MgmthEth0`. Data interfaces `eth1+` need to be configured with IP addressing manually.
 
 ```
 RP/0/RP0/CPU0:xrd#sh ip int br
@@ -71,11 +71,11 @@ MgmtEth0/RP0/CPU0/0            172.20.20.5     Up              Up       default
 
 ### Node configuration
 
-XRd nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node and expose internal direcotories of the NOS.
+XRd nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node and expose internal directories of the NOS.
 
-For XRd nodes, containerlab exposes the following file layout of node's lab directory:
+For XRd nodes, containerlab exposes the following file layout of the node's lab directory:
 
-* `xr-storage` (dir): a directory that is mounted to `/xr-storage` path of the NOS and provides access to logs and various runtime files.
+* `xr-storage` (dir): a directory that is mounted to `/xr-storage` path of the NOS and is used to persist changes made to the node as well as provides access to the logs and various runtime files.
 * `first-boot.cfg` - a configuration file in Cisco IOS-XR CLI format that the node boots with.
 
 #### Default node configuration
@@ -97,7 +97,7 @@ topology:
 
 #### User defined config
 
-It is possible to make XRd nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
+It is possible to make XRd nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup-config:
 
 ```yaml
 name: xrd
@@ -110,12 +110,18 @@ topology:
 
 When a config file is passed via `startup-config` parameter it will be used during an initial lab deployment. However, a config file that might be in the lab directory of a node takes precedence over the startup-config[^3].
 
-With such topology file containerlab is instructed to take a file `xrd.cfg` from the current working directory and copy it to the lab directory for that specific node under the `/first-boot.cfg` name. This will result in this config to act as a startup config for the node.
+With such topology file containerlab is instructed to take a file `xrd.cfg` from the current working directory and copy it to the lab directory for that specific node under the `/first-boot.cfg` name. This will result in this config acting as a startup-config for the node.
 
 To provide a user-defined config, take the [default configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/xrd/xrd.cfg) and add the necessary configuration commands without changing the rest of the file. This will result in proper automatic assignment of IP addresses to the management interface, as well as applying user-defined commands.
 
 !!!tip
     Check [SR Linux and XRd](../../lab-examples/srl-xrd.md) lab example where startup configuration files are provided to both nodes to see it in action.
+
+#### Configuration persistency
+
+XRd nodes persist their configuration in `<lab-directory>/<node-name>/xr-storage` directory. When a user commits changes to XRd nodes using one of the management interfaces, they are kept in the configuration DB (but not exposed as a configuration file).
+
+This capability allows users to configure the XRd node, commit the changes, then destroy the lab (without using `--cleanup` flag to keep the lab dir intact) and on a subsequent deploy action, the node will boot with the previously saved configuration.
 
 ## Lab examples
 
