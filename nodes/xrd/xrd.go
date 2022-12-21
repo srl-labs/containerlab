@@ -125,12 +125,12 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 // genInterfacesEnv calculates how many interfaces were defined for xrd node
 // and populates the content of a required env var.
 func (n *xrd) genInterfacesEnv() {
-	// xrd (at least control-plane variant) needs XR_INTERFACE ENV var to be populated for all active interface
+	// xrd-control-plane variant needs XR_INTERFACE ENV var to be populated for all active interface
 	// here we take the number of links users set in the topology to get the right # of links
 	var interfaceEnvVar string
 
-	for i := range n.Config().Endpoints {
-		interfaceEnvVar += fmt.Sprintf("linux:eth%d,xr_name=Gi0/0/0/%d;", i+1, i)
+	for i, ep := range n.Config().Endpoints {
+		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=Gi0/0/0/%d;", ep.EndpointName, i)
 	}
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
