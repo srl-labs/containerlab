@@ -24,6 +24,11 @@ XRd image is available for download only for users who have an active service ac
 
 There are several management interfaces supported by XRd nodes:
 
+=== "CLI"
+    to connect to a XR CLI shell of a running XRd container:
+    ```bash
+    docker exec -it <container-name/id> /pkg/bin/xr_cli.sh
+    ```
 === "bash"
     to connect to a `bash` shell of a running XRd container:
     ```bash
@@ -57,7 +62,7 @@ XRd container uses the following mapping for its Linux interfaces[^2]:
 * `Gi0-0-0-0` - first data interface mapped to `Gi0/0/0/0` internal interface.
 * `Gi0-0-0-N` - Nth data interface mapped to `Gi0/0/0/N` internal interface.
 
-When containerlab launches XRd node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and XRd node will boot with these addresses configured for its `MgmthEth0`. Data interfaces `Gi0/0/0/N` need to be configured with IP addressing manually.
+When containerlab launches XRd node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and XRd node will boot with these addresses configured for its `MgmtEth0`. Data interfaces `Gi0/0/0/N` need to be configured with IP addressing manually.
 
 ```
 RP/0/RP0/CPU0:xrd#sh ip int br

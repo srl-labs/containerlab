@@ -146,7 +146,7 @@ func (n *xrd) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`^Gi0-0-0-\d+$`)
 	for _, e := range n.Config().Endpoints {
 		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. SR Linux interfaces should be named as Gi0-0-0-X where X is the interface number", e.EndpointName)
+			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number", e.EndpointName)
 		}
 	}
 
