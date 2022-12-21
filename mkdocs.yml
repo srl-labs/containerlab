@@ -16,6 +16,7 @@ nav:
           - Juniper cRPD: manual/kinds/crpd.md
           - Juniper vMX: manual/kinds/vr-vmx.md
           - Juniper vQFX: manual/kinds/vr-vqfx.md
+          - Cisco XRd: manual/kinds/xrd.md
           - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - Cisco XRv: manual/kinds/vr-xrv.md
           - Cisco CSR1000v: manual/kinds/vr-csr.md
