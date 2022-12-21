@@ -185,6 +185,7 @@ plugins:
   - redirects:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
+  - typeset
 
 # Customization
 extra:
@@ -211,7 +212,7 @@ markdown_extensions:
   - markdown.extensions.def_list
   - markdown.extensions.footnotes
   - markdown.extensions.meta
-  - markdown.extensions.toc:
+  - toc:
       permalink: "#"
   - pymdownx.arithmatex
   - pymdownx.betterem:
