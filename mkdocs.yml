@@ -16,6 +16,7 @@ nav:
           - Juniper cRPD: manual/kinds/crpd.md
           - Juniper vMX: manual/kinds/vr-vmx.md
           - Juniper vQFX: manual/kinds/vr-vqfx.md
+          - Cisco XRd: manual/kinds/xrd.md
           - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - Cisco XRv: manual/kinds/vr-xrv.md
           - Cisco CSR1000v: manual/kinds/vr-csr.md
@@ -185,6 +186,7 @@ plugins:
   - redirects:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
+  - typeset
 
 # Customization
 extra:
@@ -211,7 +213,7 @@ markdown_extensions:
   - markdown.extensions.def_list
   - markdown.extensions.footnotes
   - markdown.extensions.meta
-  - markdown.extensions.toc:
+  - toc:
       permalink: "#"
   - pymdownx.arithmatex
   - pymdownx.betterem:

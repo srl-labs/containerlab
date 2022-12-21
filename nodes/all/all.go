@@ -31,6 +31,7 @@ import (
 	vr_vqfx "github.com/srl-labs/containerlab/nodes/vr_vqfx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
 // RegisterAll registers all the nodes/kinds supported by containerlab.
@@ -61,4 +62,5 @@ func RegisterAll() {
 	vr_vqfx.Register()
 	vr_xrv.Register()
 	vr_xrv9k.Register()
+	xrd.Register()
 }
