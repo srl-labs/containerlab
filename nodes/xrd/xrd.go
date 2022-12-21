@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
@@ -122,18 +124,31 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	return err
 }
 
-// genInterfacesEnv calculates how many interfaces were defined for xrd node
-// and populates the content of a required env var.
+// genInterfacesEnv populates the content of a required env var that sets the interface mapping rules.
 func (n *xrd) genInterfacesEnv() {
 	// xrd-control-plane variant needs XR_INTERFACE ENV var to be populated for all active interface
 	// here we take the number of links users set in the topology to get the right # of links
 	var interfaceEnvVar string
 
-	for i, ep := range n.Config().Endpoints {
-		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=Gi0/0/0/%d;", ep.EndpointName, i)
+	for _, ep := range n.Config().Endpoints {
+		// ifName is a linux interface name with dashes swapped for slashes to be used in the config
+		ifName := strings.ReplaceAll(ep.EndpointName, "-", "/")
+		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", ep.EndpointName, ifName)
 	}
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
 
 	n.Cfg.Env = utils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (n *xrd) CheckInterfaceName() error {
+	ifRe := regexp.MustCompile(`^Gi0-0-0-\d+$`)
+	for _, e := range n.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. SR Linux interfaces should be named as Gi0-0-0-X where X is the interface number", e.EndpointName)
+		}
+	}
+
+	return nil
 }

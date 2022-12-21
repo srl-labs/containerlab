@@ -13,4 +13,4 @@ topology:
       startup-config: xrd.cfg
 
   links:
-    - endpoints: ["srl:e1-1", "xrd:eth1"]
+    - endpoints: ["srl:e1-1", "xrd:Gi0-0-0-0"]
