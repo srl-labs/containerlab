@@ -11,23 +11,22 @@ import (
 	"github.com/google/shlex"
 )
 
-type ExecOutputFormat string
-
 const (
-	ExecFormatJSON  ExecOutputFormat = "json"
-	ExecFormatPlain ExecOutputFormat = "plain"
+	ExecFormatJSON  string = "json"
+	ExecFormatPlain string = "plain"
 )
 
 var ErrRunExecNotSupported = errors.New("exec not supported for this kind")
 
-func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
+// ParseExecOutputFormat parses the exec output format user input.
+func ParseExecOutputFormat(s string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
-	case string(ExecFormatJSON):
+	case ExecFormatJSON:
 		return ExecFormatJSON, nil
-	case string(ExecFormatPlain), "table":
+	case ExecFormatPlain, "table":
 		return ExecFormatPlain, nil
 	}
-	return "", fmt.Errorf("cannot parse %q as 'ExecOutputFormat'", s)
+	return "", fmt.Errorf("cannot parse %q as execution output format, supported output formats %q", s, []string{ExecFormatJSON, ExecFormatPlain})
 }
 
 // ExecCmd represents an exec command.
@@ -58,7 +57,7 @@ type ExecResultHolder interface {
 	GetStdErrByteSlice() []byte
 	GetReturnCode() int
 	GetCmdString() string
-	GetEntryInFormat(format ExecOutputFormat) (string, error)
+	GetEntryInFormat(format string) (string, error)
 	String() string
 }
 
@@ -98,7 +97,7 @@ func (e *ExecResult) String() string {
 	return fmt.Sprintf("Cmd: %s\nReturnCode: %d\nStdOut:\n%s\nStdErr:\n%s\n", e.GetCmdString(), e.ReturnCode, e.Stdout, e.Stderr)
 }
 
-func (e *ExecResult) GetEntryInFormat(format ExecOutputFormat) (string, error) {
+func (e *ExecResult) GetEntryInFormat(format string) (string, error) {
 	var result string
 	switch format {
 	case ExecFormatJSON:
@@ -178,7 +177,7 @@ func (ec *ExecCollection) AddAll(cId string, e []ExecResultHolder) {
 	ec.execEntries[cId] = append(ec.execEntries[cId], e...)
 }
 
-func (ec *ExecCollection) GetInFormat(format ExecOutputFormat) (string, error) {
+func (ec *ExecCollection) GetInFormat(format string) (string, error) {
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:
