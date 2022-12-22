@@ -33,6 +33,21 @@ func (m *MockExecResultHolder) EXPECT() *MockExecResultHolderMockRecorder {
 	return m.recorder
 }
 
+// Dump mocks base method.
+func (m *MockExecResultHolder) Dump(format string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Dump", format)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Dump indicates an expected call of Dump.
+func (mr *MockExecResultHolderMockRecorder) Dump(format interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dump", reflect.TypeOf((*MockExecResultHolder)(nil).Dump), format)
+}
+
 // GetCmdString mocks base method.
 func (m *MockExecResultHolder) GetCmdString() string {
 	m.ctrl.T.Helper()
@@ -45,21 +60,6 @@ func (m *MockExecResultHolder) GetCmdString() string {
 func (mr *MockExecResultHolderMockRecorder) GetCmdString() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCmdString", reflect.TypeOf((*MockExecResultHolder)(nil).GetCmdString))
-}
-
-// GetEntryInFormat mocks base method.
-func (m *MockExecResultHolder) GetEntryInFormat(format string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEntryInFormat", format)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetEntryInFormat indicates an expected call of GetEntryInFormat.
-func (mr *MockExecResultHolderMockRecorder) GetEntryInFormat(format interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntryInFormat", reflect.TypeOf((*MockExecResultHolder)(nil).GetEntryInFormat), format)
 }
 
 // GetReturnCode mocks base method.

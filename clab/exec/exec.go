@@ -57,10 +57,11 @@ type ExecResultHolder interface {
 	GetStdErrByteSlice() []byte
 	GetReturnCode() int
 	GetCmdString() string
-	GetEntryInFormat(format string) (string, error)
+	Dump(format string) (string, error)
 	String() string
 }
 
+// ExecResult represents a result of a command execution.
 type ExecResult struct {
 	Cmd        []string `json:"cmd"`
 	ReturnCode int      `json:"return-code"`
@@ -97,7 +98,8 @@ func (e *ExecResult) String() string {
 	return fmt.Sprintf("Cmd: %s\nReturnCode: %d\nStdOut:\n%s\nStdErr:\n%s\n", e.GetCmdString(), e.ReturnCode, e.Stdout, e.Stderr)
 }
 
-func (e *ExecResult) GetEntryInFormat(format string) (string, error) {
+// Dump dumps execution result as a string in one of the provided formats.
+func (e *ExecResult) Dump(format string) (string, error) {
 	var result string
 	switch format {
 	case ExecFormatJSON:
