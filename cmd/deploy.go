@@ -262,7 +262,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// write to log
-	execCollection.WriteLogInfo()
+	execCollection.Log()
 
 	// log new version availability info if ready
 	newVerNotification(vCh)

@@ -26,7 +26,8 @@ func ParseExecOutputFormat(s string) (string, error) {
 	case ExecFormatPlain, "table":
 		return ExecFormatPlain, nil
 	}
-	return "", fmt.Errorf("cannot parse %q as execution output format, supported output formats %q", s, []string{ExecFormatJSON, ExecFormatPlain})
+	return "", fmt.Errorf("cannot parse %q as execution output format, supported output formats %q",
+		s, []string{ExecFormatJSON, ExecFormatPlain})
 }
 
 // ExecCmd represents an exec command.
@@ -215,10 +216,20 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 	return result.String(), nil
 }
 
-func (ec *ExecCollection) WriteLogInfo() {
+// Log writes to the log execution results stored in ExecCollection.
+// If execution result contains error, the error log facility is used,
+// otherwise it is logged as INFO.
+func (ec *ExecCollection) Log() {
 	for k, execResults := range ec.execEntries {
 		for _, er := range execResults {
-			log.Infof("Executed command '%s' on %s. stdout:\n%s", er.GetCmdString(), k, er.GetStdOutString())
+			switch {
+			case er.GetReturnCode() != 0 || er.GetStdErrString() != "":
+				log.Errorf("Failed to execute command '%s' on node %s. rc=%d,\nstdout:\n%s\nstderr:\n%s",
+					er.GetCmdString(), k, er.GetReturnCode(), er.GetStdOutString(), er.GetStdErrString())
+			default:
+				log.Infof("Executed command '%s' on node %s. stdout:\n%s",
+					er.GetCmdString(), k, er.GetStdOutString())
+			}
 		}
 	}
 }
