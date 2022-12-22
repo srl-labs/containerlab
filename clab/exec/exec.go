@@ -15,7 +15,7 @@ type ExecOutputFormat string
 
 const (
 	ExecFormatJSON  ExecOutputFormat = "json"
-	ExecFormatPLAIN ExecOutputFormat = "plain"
+	ExecFormatPlain ExecOutputFormat = "plain"
 )
 
 var ErrRunExecNotSupported = errors.New("exec not supported for this kind")
@@ -24,8 +24,8 @@ func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case string(ExecFormatJSON):
 		return ExecFormatJSON, nil
-	case string(ExecFormatPLAIN), "table":
-		return ExecFormatPLAIN, nil
+	case string(ExecFormatPlain), "table":
+		return ExecFormatPlain, nil
 	}
 	return "", fmt.Errorf("cannot parse %q as 'ExecOutputFormat'", s)
 }
@@ -107,7 +107,7 @@ func (e *ExecResult) GetEntryInFormat(format ExecOutputFormat) (string, error) {
 			return "", err
 		}
 		result = string(byteData)
-	case ExecFormatPLAIN:
+	case ExecFormatPlain:
 		result = e.String()
 	}
 	return result, nil
@@ -187,7 +187,7 @@ func (ec *ExecCollection) GetInFormat(format ExecOutputFormat) (string, error) {
 			return "", err
 		}
 		result.Write(byteData)
-	case ExecFormatPLAIN:
+	case ExecFormatPlain:
 		printSep := false
 		for k, execResults := range ec.execEntries {
 			if len(execResults) == 0 {

@@ -14,7 +14,7 @@ func TestParseExecOutputFormat(t *testing.T) {
 	}{
 		{
 			name:    "Valid value: plain",
-			want:    ExecFormatPLAIN,
+			want:    ExecFormatPlain,
 			wantErr: false,
 			args: args{
 				s: "plain",
@@ -22,7 +22,7 @@ func TestParseExecOutputFormat(t *testing.T) {
 		},
 		{
 			name:    "Valid value: pLAiN",
-			want:    ExecFormatPLAIN,
+			want:    ExecFormatPlain,
 			wantErr: false,
 			args: args{
 				s: "plain",
@@ -38,7 +38,7 @@ func TestParseExecOutputFormat(t *testing.T) {
 		},
 		{
 			name:    "Valid value: table (mapped to plain)",
-			want:    ExecFormatPLAIN,
+			want:    ExecFormatPlain,
 			wantErr: false,
 			args: args{
 				s: "table",
