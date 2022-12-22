@@ -63,7 +63,7 @@ type ExecResultHolder interface {
 
 type ExecResult struct {
 	Cmd        []string `json:"cmd"`
-	ReturnCode int      `json:"returnCode"`
+	ReturnCode int      `json:"return-code"`
 	Stdout     string   `json:"stdout"`
 	Stderr     string   `json:"stderr"`
 }
