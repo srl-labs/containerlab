@@ -177,7 +177,8 @@ func (ec *ExecCollection) AddAll(cId string, e []ExecResultHolder) {
 	ec.execEntries[cId] = append(ec.execEntries[cId], e...)
 }
 
-func (ec *ExecCollection) GetInFormat(format string) (string, error) {
+// Dump dumps the contents of ExecCollection as a string in one of the provided formats.
+func (ec *ExecCollection) Dump(format string) (string, error) {
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:

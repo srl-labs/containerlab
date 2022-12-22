@@ -76,7 +76,7 @@ var execCmd = &cobra.Command{
 			resultCollection.Add(node.Config().ShortName, execResult)
 		}
 
-		output, err := resultCollection.GetInFormat(outputFormat)
+		output, err := resultCollection.Dump(outputFormat)
 		if err != nil {
 			return err
 		}
