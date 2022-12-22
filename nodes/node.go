@@ -85,7 +85,7 @@ type Node interface {
 	// RunExecs executes all exec commands specified for the node.
 	RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error)
 	// RunExec execute a single command for a given node.
-	RunExec(ctx context.Context, execCmd exec.ExecCmd) (exec.ExecResultHolder, error)
+	RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error)
 }
 
 type Initializer func() Node

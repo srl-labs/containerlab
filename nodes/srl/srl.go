@@ -276,7 +276,6 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 func (s *srl) SaveConfig(ctx context.Context) error {
 	cmd, _ := exec.NewExecCmdFromString(saveCmd)
 	execResult, err := s.RunExec(ctx, cmd)
-
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
 	}
@@ -462,7 +461,10 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
 
-	execCmd := exec.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String())})
+	execCmd := exec.NewExecCmdFromSlice([]string{
+		"bash", "-c",
+		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
+	})
 	_, err = s.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
@@ -489,7 +491,10 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
 
-	cmd := exec.NewExecCmdFromSlice([]string{"bash", "-c", fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr)})
+	cmd := exec.NewExecCmdFromSlice([]string{
+		"bash", "-c",
+		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
+	})
 	_, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err

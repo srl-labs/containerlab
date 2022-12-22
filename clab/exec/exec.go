@@ -18,9 +18,7 @@ const (
 	ExecFormatPLAIN ExecOutputFormat = "plain"
 )
 
-var (
-	ErrRunExecNotSupported = errors.New("exec not supported for this kind")
-)
+var ErrRunExecNotSupported = errors.New("exec not supported for this kind")
 
 func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
@@ -32,25 +30,23 @@ func ParseExecOutputFormat(s string) (ExecOutputFormat, error) {
 	return "", fmt.Errorf("cannot parse %q as 'ExecOutputFormat'", s)
 }
 
-type ExecCmd interface {
-	GetCmd() []string
-	GetCmdString() string
+// ExecCmd represents an exec command.
+type ExecCmd struct {
+	Cmd []string `json:"cmd"` // Cmd is a slice-based representation of a string command.
 }
 
-type ExecOp struct {
-	Cmd []string `json:"cmd"`
-}
-
-func NewExecCmdFromString(cmd string) (ExecCmd, error) {
-	result := &ExecOp{}
+// NewExecCmdFromString creates ExecCmd for a string-based command.
+func NewExecCmdFromString(cmd string) (*ExecCmd, error) {
+	result := &ExecCmd{}
 	if err := result.SetCmd(cmd); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func NewExecCmdFromSlice(cmd []string) ExecCmd {
-	return &ExecOp{
+// NewExecCmdFromSlice creates ExecCmd for a command represented as a slice of strings.
+func NewExecCmdFromSlice(cmd []string) *ExecCmd {
+	return &ExecCmd{
 		Cmd: cmd,
 	}
 }
@@ -73,13 +69,13 @@ type ExecResult struct {
 	Stderr     string   `json:"stderr"`
 }
 
-func NewExecResult(op ExecCmd) *ExecResult {
+func NewExecResult(op *ExecCmd) *ExecResult {
 	er := &ExecResult{Cmd: op.GetCmd()}
 	return er
 }
 
-// SetCmd sets the command that is to be executed
-func (e *ExecOp) SetCmd(cmd string) error {
+// SetCmd sets the command that is to be executed.
+func (e *ExecCmd) SetCmd(cmd string) error {
 	c, err := shlex.Split(cmd)
 	if err != nil {
 		return err
@@ -88,13 +84,13 @@ func (e *ExecOp) SetCmd(cmd string) error {
 	return nil
 }
 
-// GetCmd sets the command that is to be executed
-func (e *ExecOp) GetCmd() []string {
+// GetCmd sets the command that is to be executed.
+func (e *ExecCmd) GetCmd() []string {
 	return e.Cmd
 }
 
-// GetCmdString sets the command that is to be executed
-func (e *ExecOp) GetCmdString() string {
+// GetCmdString sets the command that is to be executed.
+func (e *ExecCmd) GetCmdString() string {
 	return strings.Join(e.Cmd, " ")
 }
 
@@ -117,7 +113,7 @@ func (e *ExecResult) GetEntryInFormat(format ExecOutputFormat) (string, error) {
 	return result, nil
 }
 
-// GetCmdString returns the initially parsed cmd as a string for e.g. log output purpose
+// GetCmdString returns the initially parsed cmd as a string for e.g. log output purpose.
 func (e *ExecResult) GetCmdString() string {
 	return strings.Join(e.Cmd, " ")
 }

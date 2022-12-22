@@ -288,7 +288,7 @@ func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecR
 }
 
 // RunExec executes a single command for a node.
-func (d *DefaultNode) RunExec(ctx context.Context, execCmd exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
 	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, execCmd.GetCmdString(), err)
@@ -298,8 +298,8 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd exec.ExecCmd) (exec.E
 }
 
 // RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
-// This is to be overriden if the nodes implementation differs
-func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, execCmd exec.ExecCmd) error {
+// This is to be overriden if the nodes implementation differs.
+func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, execCmd.GetCmdString(), err)

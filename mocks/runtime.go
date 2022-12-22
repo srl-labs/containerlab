@@ -109,7 +109,7 @@ func (mr *MockContainerRuntimeMockRecorder) DeleteNet(arg0 interface{}) *gomock.
 }
 
 // Exec mocks base method.
-func (m *MockContainerRuntime) Exec(ctx context.Context, cID string, execCmd exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (m *MockContainerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exec", ctx, cID, execCmd)
 	ret0, _ := ret[0].(exec.ExecResultHolder)
@@ -124,7 +124,7 @@ func (mr *MockContainerRuntimeMockRecorder) Exec(ctx, cID, execCmd interface{}) 
 }
 
 // ExecNotWait mocks base method.
-func (m *MockContainerRuntime) ExecNotWait(ctx context.Context, cID string, execCmd exec.ExecCmd) error {
+func (m *MockContainerRuntime) ExecNotWait(ctx context.Context, cID string, execCmd *exec.ExecCmd) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ExecNotWait", ctx, cID, execCmd)
 	ret0, _ := ret[0].(error)
