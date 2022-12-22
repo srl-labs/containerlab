@@ -9,7 +9,7 @@ func TestParseExecOutputFormat(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    ExecOutputFormat
+		want    string
 		wantErr bool
 	}{
 		{
