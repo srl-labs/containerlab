@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	exec "github.com/srl-labs/containerlab/clab/exec"
 )
 
 // MockExecResultHolder is a mock of ExecResultHolder interface.
@@ -49,7 +48,7 @@ func (mr *MockExecResultHolderMockRecorder) GetCmdString() *gomock.Call {
 }
 
 // GetEntryInFormat mocks base method.
-func (m *MockExecResultHolder) GetEntryInFormat(format exec.ExecOutputFormat) (string, error) {
+func (m *MockExecResultHolder) GetEntryInFormat(format string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEntryInFormat", format)
 	ret0, _ := ret[0].(string)
