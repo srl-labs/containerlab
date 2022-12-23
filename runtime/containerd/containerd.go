@@ -25,6 +25,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -699,22 +700,24 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
 
-func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, cmd []string) ([]byte, []byte, error) {
-	return c.internalExec(ctx, containername, cmd, false)
+func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec *exec.ExecCmd) (exec.ExecResultHolder, error) {
+	return c.internalExec(ctx, containername, exec, false)
 }
 
-func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, cmd []string) error {
-	_, _, err := c.internalExec(ctx, containername, cmd, true)
+func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, exec *exec.ExecCmd) error {
+	_, err := c.internalExec(ctx, containername, exec, true)
 	return err
 }
 
-func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string, cmd []string, detach bool) ([]byte, []byte, error) { // skipcq: RVV-A0005
+func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string,
+	execCmd *exec.ExecCmd, detach bool,
+) (exec.ExecResultHolder, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 	container, err := c.client.LoadContainer(ctx, containername)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var stdinbuf, stdoutbuf, stderrbuf bytes.Buffer
@@ -724,14 +727,14 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 
 	spec, err := container.Spec(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	pspec := spec.Process
 	pspec.Terminal = false
-	pspec.Args = cmd
+	pspec.Args = execCmd.GetCmd()
 	task, err := container.Task(ctx, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	needToDelete := true
@@ -744,14 +747,14 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 		log.Debugf("Deleting old process with exec-id %s", clabExecId)
 		_, err := p.Delete(ctx, containerd.WithProcessKill)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
 	process, err := task.Exec(ctx, clabExecId, pspec, ioCreator)
 	// task, err := container.NewTask(ctx, cio.NewCreator(cio_opt))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var statusC <-chan containerd.ExitStatus
@@ -770,23 +773,32 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 
 		statusC, err = process.Wait(ctx)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
 	if err := process.Start(ctx); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+
+	execResult := exec.NewExecResult(execCmd)
+
 	if !detach {
 		status := <-statusC
 		code, _, err := status.Result()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		log.Infof("Exit code: %d", code)
+		intCode, _ := strconv.Atoi(fmt.Sprint(code))
+
+		execResult.SetReturnCode(intCode)
+		execResult.SetStdErr(stderrbuf.Bytes())
+		execResult.SetStdOut(stdoutbuf.Bytes())
 	}
-	return stdoutbuf.Bytes(), stderrbuf.Bytes(), nil
+
+	return execResult, nil
 }
 
 func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID string) error {

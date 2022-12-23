@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -49,12 +50,14 @@ func (s *sonic) PreDeploy(_ context.Context, _, _, _ string) error {
 func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
-	err := s.Runtime.ExecNotWait(ctx, s.Cfg.ContainerID, []string{"supervisord"})
+	cmd, _ := exec.NewExecCmdFromString("supervisord")
+	err := s.RunExecTypeWoWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}
 
-	err = s.Runtime.ExecNotWait(ctx, s.Cfg.ContainerID, []string{"supervisorctl start bgpd"})
+	cmd, _ = exec.NewExecCmdFromString("supervisorctl start bgpd")
+	err = s.RunExecTypeWoWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}

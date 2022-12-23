@@ -63,7 +63,7 @@ func main() {
 
 func checkResponse(res interface{}, err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // skipcq: RVV-A0003
 	}
 	switch v := res.(type) {
 	case gosnappi.MetricsResponse:
@@ -73,7 +73,7 @@ func checkResponse(res interface{}, err error) {
 			log.Println("WARNING:", w)
 		}
 	default:
-		log.Fatal("Unknown response type:", v)
+		log.Fatal("Unknown response type:", v) // skipcq: RVV-A0003
 	}
 }
 
@@ -123,7 +123,7 @@ func waitFor(fn func() bool, timeout time.Duration) {
 			return
 		}
 		if time.Since(start) > timeout {
-			log.Fatal("Timeout occurred !")
+			log.Fatal("Timeout occurred !") // skipcq: RVV-A0003
 		}
 
 		time.Sleep(500 * time.Millisecond)

@@ -21,7 +21,7 @@ type SSHSession struct {
 
 type SSHTransportOption func(*SSHTransport) error
 
-// The SSH reply, executed command and the prompt.
+// SSHReply is SSH reply, executed command and the prompt.
 type SSHReply struct{ result, prompt, command string }
 
 // SSHTransport setting needs to be set before calling Connect()
@@ -52,7 +52,7 @@ type SSHTransport struct {
 	K SSHKind
 }
 
-// Add username & password authentication.
+// WithUserNamePassword adds username & password authentication.
 func WithUserNamePassword(username, password string) SSHTransportOption {
 	return func(tx *SSHTransport) error {
 		tx.SSHConfig.User = username
@@ -64,7 +64,7 @@ func WithUserNamePassword(username, password string) SSHTransportOption {
 	}
 }
 
-// Add a basic username & password to a config
+// HostKeyCallback adds a basic username & password to a config.
 // Will initialize the config if required.
 func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 	return func(tx *SSHTransport) error {
@@ -109,7 +109,7 @@ func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SS
 	return nil, fmt.Errorf("no transport implemented for kind: %s", node.Kind)
 }
 
-// Creates the channel reading the SSH connection
+// InChannel creates the channel reading the SSH connection.
 //
 // The first prompt is saved in LoginMessages
 //
@@ -311,7 +311,7 @@ func (t *SSHTransport) Close() {
 	t.ses.Close()
 }
 
-// Create a new SSH session (Dial, open in/out pipes and start the shell)
+// NewSSHSession creates a new SSH session (Dial, open in/out pipes and start the shell)
 // pass the authentication details in sshConfig.
 func NewSSHSession(host string, sshConfig *ssh.ClientConfig) (*SSHSession, error) {
 	if !strings.Contains(host, ":") {
@@ -369,7 +369,7 @@ func (ses *SSHSession) Close() {
 	ses.Session.Close()
 }
 
-// The LogString will include the entire SSHReply
+// LogString will include the entire SSHReply
 //   Each field will be prefixed by a character.
 //   # - command sent
 //   | - result received

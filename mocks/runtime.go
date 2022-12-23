@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	exec "github.com/srl-labs/containerlab/clab/exec"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	types "github.com/srl-labs/containerlab/types"
 )
@@ -108,33 +109,32 @@ func (mr *MockContainerRuntimeMockRecorder) DeleteNet(arg0 interface{}) *gomock.
 }
 
 // Exec mocks base method.
-func (m *MockContainerRuntime) Exec(arg0 context.Context, arg1 string, arg2 []string) ([]byte, []byte, error) {
+func (m *MockContainerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Exec", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].([]byte)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret := m.ctrl.Call(m, "Exec", ctx, cID, execCmd)
+	ret0, _ := ret[0].(exec.ExecResultHolder)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Exec indicates an expected call of Exec.
-func (mr *MockContainerRuntimeMockRecorder) Exec(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) Exec(ctx, cID, execCmd interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockContainerRuntime)(nil).Exec), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockContainerRuntime)(nil).Exec), ctx, cID, execCmd)
 }
 
 // ExecNotWait mocks base method.
-func (m *MockContainerRuntime) ExecNotWait(arg0 context.Context, arg1 string, arg2 []string) error {
+func (m *MockContainerRuntime) ExecNotWait(ctx context.Context, cID string, execCmd *exec.ExecCmd) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecNotWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ExecNotWait", ctx, cID, execCmd)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ExecNotWait indicates an expected call of ExecNotWait.
-func (mr *MockContainerRuntimeMockRecorder) ExecNotWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) ExecNotWait(ctx, cID, execCmd interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecNotWait", reflect.TypeOf((*MockContainerRuntime)(nil).ExecNotWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecNotWait", reflect.TypeOf((*MockContainerRuntime)(nil).ExecNotWait), ctx, cID, execCmd)
 }
 
 // GetContainerStatus mocks base method.

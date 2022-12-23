@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -81,6 +82,10 @@ type Node interface {
 	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
 	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assgined by runtime
 	UpdateConfigWithRuntimeInfo(context.Context) error
+	// RunExecs executes all exec commands specified for the node.
+	RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error)
+	// RunExec execute a single command for a given node.
+	RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error)
 }
 
 type Initializer func() Node

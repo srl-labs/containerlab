@@ -7,6 +7,8 @@ package ovs
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -53,3 +55,9 @@ func (*ovs) Deploy(_ context.Context) error                { return nil }
 func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*ovs) Delete(_ context.Context) error                { return nil }
+
+func (o *ovs) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
+	log.Warnf("Exec operation is not implemented for kind %q", o.Config().Kind)
+
+	return nil, exec.ErrRunExecNotSupported
+}

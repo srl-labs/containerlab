@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 )
 
 const banner = `................................................................
@@ -26,16 +27,16 @@ const banner = `................................................................
 
 // banner returns a banner string with a docs version filled in based on the version information queried from the node.
 func (s *srl) banner(ctx context.Context) (string, error) {
-	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, []string{
-		"sr_cli", "-d", "info from state /system information version | grep version",
-	})
+	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
+
+	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return "", err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, stdout, stderr)
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
-	v := s.parseVersionString(string(stdout))
+	v := s.parseVersionString(execResult.GetStdOutString())
 
 	// if minor is a single digit value, we need to add extra space to patch version
 	// to have banner table aligned nicely

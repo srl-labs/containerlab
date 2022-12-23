@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -43,7 +44,7 @@ var (
 	//go:embed ceos.cfg
 	cfgTemplate string
 
-	saveCmd = []string{"Cli", "-p", "15", "-c", "wr"}
+	saveCmd = "Cli -p 15 -c wr"
 )
 
 // Register registers the node in the global Node map.
@@ -107,13 +108,14 @@ func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) error {
-	_, stderr, err := n.Runtime.Exec(ctx, n.Cfg.LongName, saveCmd)
+	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
-	if len(stderr) > 0 {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, string(stderr))
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
 	confPath := n.Cfg.LabDir + "/flash/startup-config"

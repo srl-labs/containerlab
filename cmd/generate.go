@@ -309,7 +309,11 @@ func saveTopoFile(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+
 	_, err = f.Write(data)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
 }

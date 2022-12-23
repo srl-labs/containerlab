@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -398,12 +399,12 @@ func (c *IgniteRuntime) GetNSPath(ctx context.Context, ctrId string) (string, er
 	return result, nil
 }
 
-func (*IgniteRuntime) Exec(context.Context, string, []string) ([]byte, []byte, error) {
+func (*IgniteRuntime) Exec(_ context.Context, _ string, _ *exec.ExecCmd) (exec.ExecResultHolder, error) {
 	log.Infof("Exec is not yet implemented for Ignite runtime")
-	return []byte{}, []byte{}, nil
+	return nil, nil
 }
 
-func (*IgniteRuntime) ExecNotWait(context.Context, string, []string) error {
+func (*IgniteRuntime) ExecNotWait(_ context.Context, _ string, _ *exec.ExecCmd) error {
 	log.Infof("ExecNotWait is not yet implemented for Ignite runtime")
 	return nil
 }

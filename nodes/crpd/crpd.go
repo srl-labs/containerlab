@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -29,7 +30,8 @@ var (
 	//go:embed sshd_config
 	sshdCfg string
 
-	saveCmd = []string{"cli", "show", "conf"}
+	saveCmd       = "cli show conf"
+	sshRestartCmd = "service ssh restart"
 )
 
 // Register registers the node in the global Node map.
@@ -70,31 +72,34 @@ func (s *crpd) PreDeploy(_ context.Context, _, _, _ string) error {
 
 func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
-	_, stderr, err := s.Runtime.Exec(ctx, s.Cfg.ContainerID, []string{"service", "ssh", "restart"})
+
+	cmd, _ := exec.NewExecCmdFromString(sshRestartCmd)
+	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	if len(stderr) > 0 {
-		return fmt.Errorf("crpd post-deploy failed: %s", string(stderr))
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
 	}
 
 	return err
 }
 
 func (s *crpd) SaveConfig(ctx context.Context) error {
-	stdout, stderr, err := s.Runtime.Exec(ctx, s.Cfg.LongName, saveCmd)
+	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
+		return err
 	}
 
-	if len(stderr) > 0 {
-		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, string(stderr))
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
 	}
 
 	// path by which to save a config
 	confPath := s.Cfg.LabDir + "/config/juniper.conf"
-	err = os.WriteFile(confPath, stdout, 0777) // skipcq: GO-S2306
+	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(), 0777) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.Cfg.ShortName, err)
 	}
