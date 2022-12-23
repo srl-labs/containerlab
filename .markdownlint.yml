@@ -1,3 +1,4 @@
+"MD026": false # allow trailing punctuation to support icons shortcodes at the end of a sentence
 "MD038": false
 "MD033": false # inline html
 "MD013": false # line-length
