@@ -43,6 +43,7 @@ Juniper vMX node launched with containerlab can be managed via the following int
     Default user credentials: `admin:admin@123`
 
 ## Interfaces mapping
+
 vr-vmx container can have up to 90 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
@@ -53,12 +54,16 @@ When containerlab launches vr-vmx node, it will assign IPv4/6 address to the `et
 
 Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
 
-
 ## Features and options
+
 ### Node configuration
+
 vr-vmx nodes come up with a basic configuration where only the control plane and line cards are provisioned, as well as the `admin` users and management interfaces such as NETCONF, SNMP, gNMI.
 
+Starting with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) v0.8.2 VMX will make use of the management VRF[^1].
+
 #### Startup configuration
+
 It is possible to make vMX nodes boot up with a user-defined startup-config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind user sets the path to the config file that will be mounted to a container and used as a startup-config:
 
 ```yaml
@@ -74,12 +79,15 @@ With this knob containerlab is instructed to take a file `myconfig.txt` from the
 Configuration is applied after the node is started, thus it can contain partial configuration snippets that you desire to add on top of the default config that a node boots up with.
 
 ## Lab examples
+
 The following labs feature vr-vmx node:
 
-- [SR Linux and Juniper vMX](../../lab-examples/vr-vmx.md)
+* [SR Linux and Juniper vMX](../../lab-examples/vr-vmx.md)
 
 ## Known issues and limitations
 
 * when listing docker containers, vr-vmx containers will always report unhealthy status. Do not rely on this status.
 * vMX requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.
+
+[^1]: https://github.com/hellt/vrnetlab/pull/98

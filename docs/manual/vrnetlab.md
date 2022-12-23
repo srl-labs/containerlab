@@ -44,6 +44,7 @@ The following table provides a link between the version combinations:
 |                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.2)         | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                          |
 |                  | [`0.7.0`](https://github.com/hellt/vrnetlab/tree/v0.7.0)         | startup-config support for vqfx and vmx                                                                                                                  |
 | `0.32.2`         | [`0.8.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.0) | startup-config support for the rest of the kinds, support for multi line card SR OS                                                                      |
+| `0.34.0`         | [`0.8.2`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.2) | startup-config support for PANOS, ISA support for Nokia VSR-I and MGMT VRF for VMX                                                                       |
 
 ### Building vrnetlab images
 
