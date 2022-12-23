@@ -49,7 +49,8 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 
 			// create socket and get its ID
 			sockCmd := createSockCmd(ms, n.Config().LongName)
-			cmd, _ := exec.NewExecCmdFromString(fmt.Sprintf(`/bin/sh -c "%s | awk 'NR==4 {print $2}'"`, sockCmd))
+			cmd, _ := exec.NewExecCmdFromString(fmt.Sprintf(
+				`/bin/sh -c "%s | awk 'NR==4 {print $2}'"`, sockCmd))
 			log.Debugf("Running mysocketio command %s", cmd)
 
 			execResult, err := node.RunExec(ctx, cmd)
@@ -59,7 +60,8 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 			sockID := strings.TrimSpace(execResult.GetStdOutString())
 
 			// create tunnel and get its ID
-			cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf(`/bin/sh -c "mysocketctl tunnel create -s %s | awk 'NR==4 {print $4}'"`, sockID))
+			cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf(
+				`/bin/sh -c "mysocketctl tunnel create -s %s | awk 'NR==4 {print $4}'"`, sockID))
 			log.Debugf("Running mysocketio command %q", cmd)
 			execResult, err = node.RunExec(ctx, cmd)
 			if err != nil {
@@ -73,7 +75,8 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 			if node.Config().Extras != nil && node.Config().Extras.MysocketProxy != "" {
 				proxy = fmt.Sprintf("--proxy %s", node.Config().Extras.MysocketProxy)
 			}
-			cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf(`/bin/sh -c "mysocketctl tunnel connect --host %s -p %d -s %s -t %s %s > socket-%s-%s-%d.log"`,
+			cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf(
+				`/bin/sh -c "mysocketctl tunnel connect --host %s -p %d -s %s -t %s %s > socket-%s-%s-%d.log"`,
 				n.Config().LongName, ms.Port, sockID, tunID, proxy,
 				n.Config().ShortName, ms.Stype, ms.Port))
 			log.Debugf("Running mysocketio command %q", cmd)

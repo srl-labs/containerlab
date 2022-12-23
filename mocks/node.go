@@ -227,7 +227,7 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot i
 }
 
 // RunExec mocks base method.
-func (m *MockNode) RunExec(ctx context.Context, execCmd exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (m *MockNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunExec", ctx, execCmd)
 	ret0, _ := ret[0].(exec.ExecResultHolder)

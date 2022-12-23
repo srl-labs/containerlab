@@ -84,8 +84,9 @@ type NodeConfig struct {
 	User       string            `json:"user,omitempty"`
 	Entrypoint string            `json:"entrypoint,omitempty"`
 	Cmd        string            `json:"cmd,omitempty"`
-	Exec       []string          `json:"exec,omitempty"`
-	Env        map[string]string `json:"env,omitempty"`
+	// Exec is a list of commands to execute inside the container backing the node.
+	Exec []string          `json:"exec,omitempty"`
+	Env  map[string]string `json:"env,omitempty"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
