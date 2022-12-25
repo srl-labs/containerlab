@@ -80,7 +80,7 @@ type Node interface {
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() runtime.ContainerRuntime        // GetRuntime returns the nodes assigned runtime
 	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
-	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assgined by runtime
+	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assigned by runtime
 	UpdateConfigWithRuntimeInfo(context.Context) error
 	// RunExecs executes all exec commands specified for the node.
 	RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error)
