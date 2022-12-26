@@ -6,6 +6,7 @@ package ext_container
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -86,4 +87,23 @@ func (e *extcont) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) 
 		return err
 	}
 	return nil
+}
+
+func (d *extcont) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
+		{
+			FilterType: "name",
+			Match:      fmt.Sprintf("^%s$", d.Cfg.ShortName), // this regexp ensure we have an exact match for name
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// set the kind name label
+	for _, c := range cnts {
+		c.Labels["clab-node-kind"] = kindnames[0]
+	}
+
+	return cnts, err
 }

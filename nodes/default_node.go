@@ -133,7 +133,7 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]types.GenericContain
 }
 
 func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
-	cnts, err := d.GetContainers(ctx)
+	cnts, err := d.OverwriteNode.GetContainers(ctx)
 	if err != nil {
 		return err
 	}
@@ -239,6 +239,7 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
+	GetContainers(ctx context.Context) ([]types.GenericContainer, error)
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
