@@ -34,11 +34,11 @@ var (
 	sshRestartCmd = "service ssh restart"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(rr nodes.NodeRergistryRegistrator) {
+	rr.Register(kindnames, func() nodes.Node {
 		return new(crpd)
-	})
+	}, nil)
 }
 
 type crpd struct {

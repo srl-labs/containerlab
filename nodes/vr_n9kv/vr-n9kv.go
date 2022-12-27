@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/cloudflare/cfssl/log"
 	"github.com/srl-labs/containerlab/nodes"
 
 	"github.com/srl-labs/containerlab/types"
@@ -17,24 +16,18 @@ import (
 )
 
 var kindnames = []string{"vr-n9kv", "vr-cisco_n9kv"}
+var defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 const (
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
-
-	defaultUser     = "admin"
-	defaultPassword = "admin"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(rr nodes.NodeRergistryRegistrator) {
+	rr.Register(kindnames, func() nodes.Node {
 		return new(vrN9kv)
-	})
-	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
-	if err != nil {
-		log.Error(err)
-	}
+	}, defaultCredentials)
 }
 
 type vrN9kv struct {
@@ -54,8 +47,8 @@ func (s *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           defaultUser,
-		"PASSWORD":           defaultPassword,
+		"USERNAME":           defaultCredentials.GetUsername(),
+		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
 	}
@@ -70,7 +63,7 @@ func (s *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
 }

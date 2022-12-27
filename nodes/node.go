@@ -33,9 +33,6 @@ var (
 	// a map of node kinds overriding the default global runtime.
 	NonDefaultRuntimes = map[string]string{}
 
-	// Nodes is a map of all supported kinds and their init functions.
-	Nodes = map[string]Initializer{}
-
 	DefaultConfigTemplates = map[string]string{
 		"vr-sros": "",
 	}
@@ -86,14 +83,6 @@ type Node interface {
 	RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error)
 	// RunExec execute a single command for a given node.
 	RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error)
-}
-
-type Initializer func() Node
-
-func Register(names []string, initFn Initializer) {
-	for _, name := range names {
-		Nodes[name] = initFn
-	}
 }
 
 type NodeOption func(Node)

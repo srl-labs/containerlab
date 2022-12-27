@@ -61,7 +61,7 @@ type Config struct {
 }
 
 // ParseTopology parses the lab topology.
-func (c *CLab) parseTopology() error {
+func (c *CLab) parseTopology(nodeFactory nodes.NodeFactory) error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 
 	cwd, _ := filepath.Abs(os.Getenv("PWD"))
@@ -135,7 +135,7 @@ func (c *CLab) parseTopology() error {
 
 	var err error
 	for idx, nodeName := range nodeNames {
-		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
+		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx, nodeFactory)
 		if err != nil {
 			return err
 		}
@@ -152,25 +152,19 @@ func (c *CLab) parseTopology() error {
 }
 
 // NewNode initializes a new node object.
-func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int) error {
+func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int, nodeFactory nodes.NodeFactory) error {
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
 	}
 
-	// Init
-	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
-	if !ok {
-		// collect all kind names registered by the nodes in a slice
-		kinds := make([]string, 0, len(nodes.Nodes))
-		for k := range nodes.Nodes {
-			kinds = append(kinds, k)
-		}
-		return fmt.Errorf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
+	// construct node
+	n, err := nodeFactory.NewNodeOfKind(nodeCfg.Kind)
+	if err != nil {
+		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
-	n := nodeInitializer()
-	// Init
 
+	// Init
 	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)

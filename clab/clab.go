@@ -23,8 +23,6 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-var once sync.Once // nolint:gochecknoglobals
-
 type CLab struct {
 	Config        *Config   `json:"config,omitempty"`
 	TopoFile      *TopoFile `json:"topofile,omitempty"`
@@ -113,8 +111,12 @@ func WithTopoFile(file, varsFile string) ClabOption {
 
 // NewContainerLab function defines a new container lab.
 func NewContainerLab(opts ...ClabOption) (*CLab, error) {
-	// register all nodes just once
-	once.Do(allNodes.RegisterAll)
+
+	// init a new NodeRegistry
+	NodeKindRegistry := nodes.NewNodeRegistry()
+
+	// register all nodes
+	allNodes.RegisterAll(NodeKindRegistry)
 
 	c := &CLab{
 		Config: &Config{
@@ -137,7 +139,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 	var err error
 	if c.TopoFile.path != "" {
-		err = c.parseTopology()
+		err = c.parseTopology(NodeKindRegistry)
 	}
 
 	return c, err

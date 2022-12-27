@@ -73,6 +73,7 @@ var (
 		"net.ipv6.conf.all.autoconf":       "0",
 		"net.ipv6.conf.default.autoconf":   "0",
 	}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	srlTypes = map[string]string{
 		"ixrd1":  "7220IXRD1.yml",
@@ -104,15 +105,11 @@ var (
 			Parse(srlConfigCmdsTpl)
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(rr nodes.NodeRergistryRegistrator) {
+	rr.Register(kindnames, func() nodes.Node {
 		return new(srl)
-	})
-	err := nodes.SetDefaultCredentials(kindnames, "admin", "admin")
-	if err != nil {
-		log.Error(err)
-	}
+	}, defaultCredentials)
 }
 
 type srl struct {

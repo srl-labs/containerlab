@@ -17,23 +17,20 @@ import (
 )
 
 var kindnames = []string{"vr-veos", "vr-arista_veos"}
+var defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 const (
 	scrapliPlatformName = "arista_eos"
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
-
-	defaultUser     = "admin"
-	defaultPassword = "admin"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(rr nodes.NodeRergistryRegistrator) {
+	rr.Register(kindnames, func() nodes.Node {
 		return new(vrVEOS)
-	})
-	nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
+	}, defaultCredentials)
 }
 
 type vrVEOS struct {
@@ -53,8 +50,8 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           defaultUser,
-		"PASSWORD":           defaultPassword,
+		"USERNAME":           defaultCredentials.GetUsername(),
+		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
 	}
@@ -69,7 +66,7 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
 }
@@ -81,8 +78,8 @@ func (s *vrVEOS) PreDeploy(_ context.Context, _, _, _ string) error {
 
 func (s *vrVEOS) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(s.Cfg.LongName,
-		defaultUser,
-		defaultPassword,
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {

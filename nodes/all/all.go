@@ -5,6 +5,7 @@
 package all
 
 import (
+	"github.com/srl-labs/containerlab/nodes"
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
@@ -35,32 +36,32 @@ import (
 )
 
 // RegisterAll registers all the nodes/kinds supported by containerlab.
-func RegisterAll() {
-	bridge.Register()
-	ceos.Register()
-	checkpoint_cloudguard.Register()
-	crpd.Register()
-	cvx.Register()
-	ext_container.Register()
-	host.Register()
-	ipinfusion_ocnos.Register()
-	keysight_ixiacone.Register()
-	linux.Register()
-	mysocketio.Register()
-	ovs.Register()
-	sonic.Register()
-	srl.Register()
-	vr_csr.Register()
-	vr_ftosv.Register()
-	vr_n9kv.Register()
-	vr_nxos.Register()
-	vr_pan.Register()
-	vr_ros.Register()
-	vr_sros.Register()
-	vr_veos.Register()
-	vr_vmx.Register()
-	vr_vqfx.Register()
-	vr_xrv.Register()
-	vr_xrv9k.Register()
-	xrd.Register()
+func RegisterAll(r nodes.NodeRergistryRegistrator) {
+	bridge.Register(r)
+	ceos.Register(r)
+	checkpoint_cloudguard.Register(r)
+	crpd.Register(r)
+	cvx.Register(r)
+	ext_container.Register(r)
+	host.Register(r)
+	ipinfusion_ocnos.Register(r)
+	keysight_ixiacone.Register(r)
+	linux.Register(r)
+	mysocketio.Register(r)
+	ovs.Register(r)
+	sonic.Register(r)
+	srl.Register(r)
+	vr_csr.Register(r)
+	vr_ftosv.Register(r)
+	vr_n9kv.Register(r)
+	vr_nxos.Register(r)
+	vr_pan.Register(r)
+	vr_ros.Register(r)
+	vr_sros.Register(r)
+	vr_veos.Register(r)
+	vr_vmx.Register(r)
+	vr_vqfx.Register(r)
+	vr_xrv.Register(r)
+	vr_xrv9k.Register(r)
+	xrd.Register(r)
 }
