@@ -35,6 +35,7 @@ func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
+	s.Cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
 	return nil
 }
 
@@ -55,6 +56,13 @@ func (*ovs) Deploy(_ context.Context) error                { return nil }
 func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*ovs) Delete(_ context.Context) error                { return nil }
+func (*ovs) DeleteNetnsSymlink() (err error)               { return nil }
+
+// UpdateConfigWithRuntimeInfo is a noop for bridges.
+func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
+
+// GetContainers is a noop for bridges.
+func (*ovs) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
 
 func (o *ovs) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", o.Config().Kind)
