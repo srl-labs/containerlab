@@ -14,11 +14,6 @@ import (
 )
 
 var kindnames = []string{"checkpoint_cloudguard"}
-
-const (
-	scrapliPlatformName = "checkpoint_cloudguard"
-)
-
 var defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 // Register registers the node in the NodeRegistry.
