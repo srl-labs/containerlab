@@ -107,7 +107,7 @@ func (d *DefaultNode) Deploy(ctx context.Context) error {
 }
 
 func (d *DefaultNode) Delete(ctx context.Context) error {
-	return d.Runtime.DeleteContainer(ctx, d.Cfg.LongName)
+	return d.Runtime.DeleteContainer(ctx, d.OverwriteNode.GetRuntimeContainerName())
 }
 
 func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
@@ -120,7 +120,7 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]types.GenericContain
 	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
-			Match:      fmt.Sprintf("^%s$", d.Cfg.LongName), // this regexp ensure we have an exact match for name
+			Match:      fmt.Sprintf("^%s$", d.OverwriteNode.GetRuntimeContainerName()), // this regexp ensure we have an exact match for name
 		},
 	})
 	if err != nil {
@@ -134,6 +134,10 @@ func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 	cnts, err := d.OverwriteNode.GetContainers(ctx)
 	if err != nil {
 		return err
+	}
+
+	if len(cnts) == 0 {
+		return fmt.Errorf("no container runtime information retrieved")
 	}
 
 	// TODO: rdodin: evaluate the necessity of this function, since runtime data may be updated by the runtime

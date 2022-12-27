@@ -15,6 +15,7 @@ import (
 	"github.com/awalterschulze/gographviz"
 	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -185,8 +186,8 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []types.GenericContainer) {
 	containerNames := make(map[string]struct{})
 	for _, cont := range containers {
-		log.Debugf("looking for node name %s", cont.Labels[NodeNameLabel])
-		if node, ok := c.Nodes[cont.Labels[NodeNameLabel]]; ok {
+		log.Debugf("looking for node name %s", cont.Labels[labels.NodeNameLabel])
+		if node, ok := c.Nodes[cont.Labels[labels.NodeNameLabel]]; ok {
 			containerNames[node.Config().ShortName] = struct{}{}
 			g.Nodes = append(g.Nodes, types.ContainerDetails{
 				Name:        node.Config().ShortName,

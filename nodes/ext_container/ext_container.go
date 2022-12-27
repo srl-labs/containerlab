@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -62,9 +63,23 @@ func (*extcont) Delete(_ context.Context) error { return nil }
 func (*extcont) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*extcont) PullImage(_ context.Context) error             { return nil }
 
-// will return the name used by the runtime to identify the container
+// GetRuntimeContainerName will return the name used by the runtime to identify the container
 // e.g. ext-cotnainer will use Cfg.ShortName while most other containers will use
 // Cfg.LongName
 func (e *extcont) GetRuntimeContainerName() string {
 	return e.Cfg.ShortName
+}
+
+func (e *extcont) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+	cnts, err := e.DefaultNode.GetContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// we need to artifically add the Node Kind Label
+	// this label data is e.g. used in the table printed after deployment
+	for _, c := range cnts {
+		c.Labels[labels.NodeKindLabel] = kindnames[0]
+	}
+	return cnts, nil
 }

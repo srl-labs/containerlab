@@ -1,6 +1,10 @@
 package clab
 
-import "context"
+import (
+	"context"
+
+	"github.com/srl-labs/containerlab/labels"
+)
 
 func (c *CLab) CreateNetwork(ctx context.Context) error {
 	// create docker network or use existing one
@@ -10,7 +14,7 @@ func (c *CLab) CreateNetwork(ctx context.Context) error {
 
 	// save mgmt bridge name as a label
 	for _, n := range c.Nodes {
-		n.Config().Labels[NodeMgmtNetBr] = c.GlobalRuntime().Mgmt().Bridge
+		n.Config().Labels[labels.NodeMgmtNetBr] = c.GlobalRuntime().Mgmt().Bridge
 	}
 
 	return nil

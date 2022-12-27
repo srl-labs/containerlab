@@ -16,6 +16,7 @@ import (
 
 	"github.com/mackerelio/go-osstat/memory"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -36,16 +37,6 @@ const (
 	DefaultVethLinkMTU = 9500
 	// containerlab's reserved OUI.
 	ClabOUI = "aa:c1:ab"
-
-	// label names.
-	ContainerlabLabel = "containerlab"
-	NodeNameLabel     = "clab-node-name"
-	NodeKindLabel     = "clab-node-kind"
-	NodeTypeLabel     = "clab-node-type"
-	NodeGroupLabel    = "clab-node-group"
-	NodeLabDirLabel   = "clab-node-lab-dir"
-	TopoFileLabel     = "clab-topo-file"
-	NodeMgmtNetBr     = "clab-mgmt-net-bridge"
 
 	// clab specific topology variables.
 	clabDirVar = "__clabDir__"
@@ -482,7 +473,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
 	for _, cnt := range containers {
-		if cnt.Labels[ContainerlabLabel] == c.Config.Name {
+		if cnt.Labels[labels.ContainerlabLabel] == c.Config.Name {
 			return fmt.Errorf("the '%s' lab has already been deployed. Destroy the lab before deploying a lab with the same name", c.Config.Name)
 		}
 	}
@@ -648,13 +639,13 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 		cfg.Labels = map[string]string{}
 	}
 
-	cfg.Labels[ContainerlabLabel] = c.Config.Name
-	cfg.Labels[NodeNameLabel] = cfg.ShortName
-	cfg.Labels[NodeKindLabel] = cfg.Kind
-	cfg.Labels[NodeTypeLabel] = cfg.NodeType
-	cfg.Labels[NodeGroupLabel] = cfg.Group
-	cfg.Labels[NodeLabDirLabel] = cfg.LabDir
-	cfg.Labels[TopoFileLabel] = c.TopoFile.path
+	cfg.Labels[labels.ContainerlabLabel] = c.Config.Name
+	cfg.Labels[labels.NodeNameLabel] = cfg.ShortName
+	cfg.Labels[labels.NodeKindLabel] = cfg.Kind
+	cfg.Labels[labels.NodeTypeLabel] = cfg.NodeType
+	cfg.Labels[labels.NodeGroupLabel] = cfg.Group
+	cfg.Labels[labels.NodeLabDirLabel] = cfg.LabDir
+	cfg.Labels[labels.TopoFileLabel] = c.TopoFile.path
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
