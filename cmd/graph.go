@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -73,7 +74,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	var containers []types.GenericContainer
 	// if offline mode is not enforced, list containers matching lab name
 	if !offline {
-		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: "containerlab", Operator: "="}}
+		labels := []*types.GenericFilter{{FilterType: "label", Match: c.Config.Name, Field: labels.ContainerlabLabel, Operator: "="}}
 		containers, err = c.ListContainers(ctx, labels)
 		if err != nil {
 			return err

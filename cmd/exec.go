@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	labels      []string
-	execFormat  string
-	execCommand string
+	labels_param []string
+	execFormat   string
+	execCommand  string
 )
 
 // execCmd represents the exec command.
@@ -89,6 +89,6 @@ var execCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(execCmd)
 	execCmd.Flags().StringVarP(&execCommand, "cmd", "", "", "command to execute")
-	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
+	execCmd.Flags().StringSliceVarP(&labels_param, "label", "", []string{}, "labels to filter container subset")
 	execCmd.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")
 }
