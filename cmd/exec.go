@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	labels      []string
-	execFormat  string
-	execCommand string
+	labels       []string
+	execFormat   string
+	execCommands []string
 )
 
 // execCmd represents the exec command.
@@ -28,11 +28,11 @@ var execCmd = &cobra.Command{
 	Short:   "execute a command on one or multiple containers",
 	PreRunE: sudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if execCommand == "" {
+		if len(execCommands) == 0 {
 			return errors.New("provide command to execute")
 		}
 
-		outputFormat, err := exec.ParseExecOutputFormat(format)
+		outputFormat, err := exec.ParseExecOutputFormat(execFormat)
 		if err != nil {
 			return err
 		}
@@ -59,21 +59,23 @@ var execCmd = &cobra.Command{
 		resultCollection := exec.NewExecCollection()
 
 		for _, node := range c.Nodes {
-			execCmd, err := exec.NewExecCmdFromString(execCommand)
-			if err != nil {
-				// do not stop exec for other nodes if some failed
-				log.Error(err)
-			}
-
-			execResult, err := node.RunExec(ctx, execCmd)
-			if err != nil {
-				// skip nodes that do not support exec
-				if err == exec.ErrRunExecNotSupported {
-					continue
+			for _, execCommand := range execCommands {
+				execCmd, err := exec.NewExecCmdFromString(execCommand)
+				if err != nil {
+					// do not stop exec for other nodes if some failed
+					log.Error(err)
 				}
-				return err
+
+				execResult, err := node.RunExec(ctx, execCmd)
+				if err != nil {
+					// skip nodes that do not support exec
+					if err == exec.ErrRunExecNotSupported {
+						continue
+					}
+					return err
+				}
+				resultCollection.Add(node.Config().ShortName, execResult)
 			}
-			resultCollection.Add(node.Config().ShortName, execResult)
 		}
 
 		output, err := resultCollection.Dump(outputFormat)
@@ -88,7 +90,7 @@ var execCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(execCmd)
-	execCmd.Flags().StringVarP(&execCommand, "cmd", "", "", "command to execute")
+	execCmd.Flags().StringArrayVarP(&execCommands, "cmd", "", []string{}, "command to execute")
 	execCmd.Flags().StringSliceVarP(&labels, "label", "", []string{}, "labels to filter container subset")
 	execCmd.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")
 }

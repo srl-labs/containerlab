@@ -26,9 +26,9 @@ import (
 )
 
 var (
-	format  string
-	details bool
-	all     bool
+	inspectFormat string
+	details       bool
+	all           bool
 )
 
 // inspectCmd represents the inspect command.
@@ -45,7 +45,7 @@ func init() {
 	rootCmd.AddCommand(inspectCmd)
 
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
-	inspectCmd.Flags().StringVarP(&format, "format", "f", "table", "output format. One of [table, json]")
+	inspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 }
 
@@ -121,7 +121,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	err = printContainerInspect(containers, format)
+	err = printContainerInspect(containers, inspectFormat)
 	return err
 }
 
