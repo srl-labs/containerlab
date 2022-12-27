@@ -46,14 +46,12 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	return dn
 }
 
-func (d *DefaultNode) PostDeploy(_ context.Context, _ map[string]Node) error {
-	return nil
-}
-func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                   { d.Mgmt = mgmt }
-func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)            { d.Runtime = r }
-func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime              { return d.Runtime }
-func (d *DefaultNode) Config() *types.NodeConfig                         { return d.Cfg }
-func (d *DefaultNode) PreDeploy(_ context.Context, _, _, _ string) error { return nil }
+func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                     { d.Mgmt = mgmt }
+func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)              { d.Runtime = r }
+func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                { return d.Runtime }
+func (d *DefaultNode) Config() *types.NodeConfig                           { return d.Cfg }
+func (*DefaultNode) PreDeploy(_ context.Context, _, _, _ string) error     { return nil }
+func (*DefaultNode) PostDeploy(_ context.Context, _ map[string]Node) error { return nil }
 
 func (d *DefaultNode) SaveConfig(_ context.Context) error {
 	// nodes should have the save method defined on their respective structs.
@@ -157,8 +155,8 @@ func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
 func (d *DefaultNode) DeleteNetnsSymlink() error {
-	log.Debugf("Deleting %s network namespace", d.Config().LongName)
-	return utils.DeleteNetnsSymlink(d.Config().LongName)
+	log.Debugf("Deleting %s network namespace", d.OverwriteNode.GetRuntimeContainerName())
+	return utils.DeleteNetnsSymlink(d.OverwriteNode.GetRuntimeContainerName())
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
@@ -177,7 +175,7 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 
 	rcfg := utils.ResolvePath(cfg, topoDir)
 	if !utils.FileExists(rcfg) {
-		return fmt.Errorf("node %q startup-config file not found by the path %s", d.Config().ShortName, rcfg)
+		return fmt.Errorf("node %q startup-config file not found by the path %s", d.OverwriteNode.GetRuntimeContainerName(), rcfg)
 	}
 
 	return nil
@@ -240,6 +238,7 @@ type NodeOverwrites interface {
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
 	GetContainers(ctx context.Context) ([]types.GenericContainer, error)
+	GetRuntimeContainerName() string
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -270,7 +269,7 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 
 // RunExecs executes cmds commands for a node. Commands is a list of strings.
 func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error) {
-	results := []exec.ExecResultHolder{}
+	var results []exec.ExecResultHolder
 	for _, cmd := range cmds {
 		execCmd, err := exec.NewExecCmdFromString(cmd)
 		if err != nil {
@@ -288,11 +287,18 @@ func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecR
 	return results, nil
 }
 
+// GetRuntimeContainerName will return the name used by the runtime to identify the container
+// e.g. ext-cotnainer will use Cfg.ShortName while most other containers will use
+// Cfg.LongName
+func (d *DefaultNode) GetRuntimeContainerName() string {
+	return d.Cfg.LongName
+}
+
 // RunExec executes a single command for a node.
 func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
-	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, execCmd)
+	execResult, err := d.GetRuntime().Exec(ctx, d.OverwriteNode.GetRuntimeContainerName(), execCmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, execCmd.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v", d.OverwriteNode.GetRuntimeContainerName(), execCmd.GetCmdString(), err)
 		return nil, err
 	}
 	return execResult, nil
@@ -301,9 +307,9 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.
 // RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
 // This is to be overriden if the nodes implementation differs.
 func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) error {
-	err := d.GetRuntime().ExecNotWait(ctx, d.Cfg.LongName, execCmd)
+	err := d.GetRuntime().ExecNotWait(ctx, d.OverwriteNode.GetRuntimeContainerName(), execCmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, execCmd.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v", d.OverwriteNode.GetRuntimeContainerName(), execCmd.GetCmdString(), err)
 		return err
 	}
 	return nil
