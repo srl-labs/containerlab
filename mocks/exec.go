@@ -8,7 +8,81 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	exec "github.com/srl-labs/containerlab/clab/exec"
 )
+
+// MockExecResultHolderSetter is a mock of ExecResultHolderSetter interface.
+type MockExecResultHolderSetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockExecResultHolderSetterMockRecorder
+}
+
+// MockExecResultHolderSetterMockRecorder is the mock recorder for MockExecResultHolderSetter.
+type MockExecResultHolderSetterMockRecorder struct {
+	mock *MockExecResultHolderSetter
+}
+
+// NewMockExecResultHolderSetter creates a new mock instance.
+func NewMockExecResultHolderSetter(ctrl *gomock.Controller) *MockExecResultHolderSetter {
+	mock := &MockExecResultHolderSetter{ctrl: ctrl}
+	mock.recorder = &MockExecResultHolderSetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockExecResultHolderSetter) EXPECT() *MockExecResultHolderSetterMockRecorder {
+	return m.recorder
+}
+
+// GetExecResultHolder mocks base method.
+func (m *MockExecResultHolderSetter) GetExecResultHolder() exec.ExecResultHolder {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecResultHolder")
+	ret0, _ := ret[0].(exec.ExecResultHolder)
+	return ret0
+}
+
+// GetExecResultHolder indicates an expected call of GetExecResultHolder.
+func (mr *MockExecResultHolderSetterMockRecorder) GetExecResultHolder() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecResultHolder", reflect.TypeOf((*MockExecResultHolderSetter)(nil).GetExecResultHolder))
+}
+
+// SetReturnCode mocks base method.
+func (m *MockExecResultHolderSetter) SetReturnCode(arg0 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetReturnCode", arg0)
+}
+
+// SetReturnCode indicates an expected call of SetReturnCode.
+func (mr *MockExecResultHolderSetterMockRecorder) SetReturnCode(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReturnCode", reflect.TypeOf((*MockExecResultHolderSetter)(nil).SetReturnCode), arg0)
+}
+
+// SetStdErr mocks base method.
+func (m *MockExecResultHolderSetter) SetStdErr(arg0 []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetStdErr", arg0)
+}
+
+// SetStdErr indicates an expected call of SetStdErr.
+func (mr *MockExecResultHolderSetterMockRecorder) SetStdErr(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStdErr", reflect.TypeOf((*MockExecResultHolderSetter)(nil).SetStdErr), arg0)
+}
+
+// SetStdOut mocks base method.
+func (m *MockExecResultHolderSetter) SetStdOut(arg0 []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetStdOut", arg0)
+}
+
+// SetStdOut indicates an expected call of SetStdOut.
+func (mr *MockExecResultHolderSetterMockRecorder) SetStdOut(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStdOut", reflect.TypeOf((*MockExecResultHolderSetter)(nil).SetStdOut), arg0)
+}
 
 // MockExecResultHolder is a mock of ExecResultHolder interface.
 type MockExecResultHolder struct {
@@ -34,7 +108,7 @@ func (m *MockExecResultHolder) EXPECT() *MockExecResultHolderMockRecorder {
 }
 
 // Dump mocks base method.
-func (m *MockExecResultHolder) Dump(format string) (string, error) {
+func (m *MockExecResultHolder) Dump(format exec.ExecFormat) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Dump", format)
 	ret0, _ := ret[0].(string)

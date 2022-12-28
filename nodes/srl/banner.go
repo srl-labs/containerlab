@@ -29,7 +29,7 @@ const banner = `................................................................
 func (s *srl) banner(ctx context.Context) (string, error) {
 	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
 
-	execResult, err := s.RunExec(ctx, cmd)
+	execResult, err := s.RunExec(ctx, cmd, exec.NewExecResult)
 	if err != nil {
 		return "", err
 	}

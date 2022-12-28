@@ -276,7 +276,7 @@ func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error
 
 func (s *srl) SaveConfig(ctx context.Context) error {
 	cmd, _ := exec.NewExecCmdFromString(saveCmd)
-	execResult, err := s.RunExec(ctx, cmd)
+	execResult, err := s.RunExec(ctx, cmd, exec.NewExecResult)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
 	}
@@ -305,7 +305,7 @@ func (s *srl) Ready(ctx context.Context) error {
 		default:
 			// two commands are checked, first if the mgmt_server is running
 			cmd, _ := exec.NewExecCmdFromString(mgmtServerRdyCmd)
-			execResult, err := s.RunExec(ctx, cmd)
+			execResult, err := s.RunExec(ctx, cmd, exec.NewExecResult)
 			if err != nil {
 				time.Sleep(retryTimer)
 				continue
@@ -325,7 +325,7 @@ func (s *srl) Ready(ctx context.Context) error {
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
 			cmd, _ = exec.NewExecCmdFromString(readyForConfigCmd)
-			execResult, err = s.RunExec(ctx, cmd)
+			execResult, err = s.RunExec(ctx, cmd, exec.NewExecResult)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
@@ -466,7 +466,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
 	})
-	_, err = s.RunExec(ctx, execCmd)
+	_, err = s.RunExec(ctx, execCmd, exec.NewExecResult)
 	if err != nil {
 		return err
 	}
@@ -476,7 +476,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	execResult, err := s.RunExec(ctx, cmd)
+	execResult, err := s.RunExec(ctx, cmd, exec.NewExecResult)
 	if err != nil {
 		return err
 	}
@@ -496,13 +496,13 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
 	})
-	_, err := s.RunExec(ctx, cmd)
+	_, err := s.RunExec(ctx, cmd, exec.NewExecResult)
 	if err != nil {
 		return err
 	}
 
 	cmd, _ = exec.NewExecCmdFromString(`bash -c "sr_cli -ed --post 'commit save' < tmp/clab-config"`)
-	execResult, err := s.RunExec(ctx, cmd)
+	execResult, err := s.RunExec(ctx, cmd, exec.NewExecResult)
 	if err != nil {
 		return err
 	}

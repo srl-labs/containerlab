@@ -109,18 +109,18 @@ func (mr *MockContainerRuntimeMockRecorder) DeleteNet(arg0 interface{}) *gomock.
 }
 
 // Exec mocks base method.
-func (m *MockContainerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (m *MockContainerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd, erhcf exec.ExecResultHolderCreateFn) (exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Exec", ctx, cID, execCmd)
+	ret := m.ctrl.Call(m, "Exec", ctx, cID, execCmd, erhcf)
 	ret0, _ := ret[0].(exec.ExecResultHolder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Exec indicates an expected call of Exec.
-func (mr *MockContainerRuntimeMockRecorder) Exec(ctx, cID, execCmd interface{}) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) Exec(ctx, cID, execCmd, erhcf interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockContainerRuntime)(nil).Exec), ctx, cID, execCmd)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockContainerRuntime)(nil).Exec), ctx, cID, execCmd, erhcf)
 }
 
 // ExecNotWait mocks base method.

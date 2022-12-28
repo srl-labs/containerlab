@@ -32,7 +32,7 @@ var execCmd = &cobra.Command{
 			return errors.New("provide command to execute")
 		}
 
-		outputFormat, err := exec.ParseExecOutputFormat(format)
+		outputFormat, err := exec.ParseExecOutputFormat(execFormat)
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,10 @@ var execCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		// create a new collection of execution results
 		resultCollection := exec.NewExecCollection()
+		// retrieve the create function for the output specific ResultHolder
+		execResultHolderCreateFn := exec.GetResultHolderCreateFnFor(outputFormat)
 
 		for _, node := range c.Nodes {
 			execCmd, err := exec.NewExecCmdFromString(execCommand)
@@ -65,7 +68,7 @@ var execCmd = &cobra.Command{
 				log.Error(err)
 			}
 
-			execResult, err := node.RunExec(ctx, execCmd)
+			execResult, err := node.RunExec(ctx, execCmd, execResultHolderCreateFn)
 			if err != nil {
 				// skip nodes that do not support exec
 				if err == exec.ErrRunExecNotSupported {

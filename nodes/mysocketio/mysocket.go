@@ -32,7 +32,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 	log.Debugf("Running postdeploy mysocketio command %s", removeSocketCmd)
 
 	cmd, _ := exec.NewExecCmdFromString(removeSocketCmd)
-	_, err := node.RunExec(ctx, cmd)
+	_, err := node.RunExec(ctx, cmd, exec.NewExecResult)
 	if err != nil {
 		return fmt.Errorf("failed to remove existing sockets: %v", err)
 	}
@@ -53,7 +53,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 				`/bin/sh -c "%s | awk 'NR==4 {print $2}'"`, sockCmd))
 			log.Debugf("Running mysocketio command %s", cmd)
 
-			execResult, err := node.RunExec(ctx, cmd)
+			execResult, err := node.RunExec(ctx, cmd, exec.NewExecResult)
 			if err != nil {
 				return fmt.Errorf("failed to create mysocketio socket: %v", err)
 			}
@@ -63,7 +63,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 			cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf(
 				`/bin/sh -c "mysocketctl tunnel create -s %s | awk 'NR==4 {print $4}'"`, sockID))
 			log.Debugf("Running mysocketio command %q", cmd)
-			execResult, err = node.RunExec(ctx, cmd)
+			execResult, err = node.RunExec(ctx, cmd, exec.NewExecResult)
 			if err != nil {
 				return fmt.Errorf("failed to create mysocketio socket: %v", err)
 			}

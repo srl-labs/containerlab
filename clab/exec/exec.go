@@ -11,23 +11,43 @@ import (
 	"github.com/google/shlex"
 )
 
+type ExecFormat string
+
 const (
-	ExecFormatJSON  string = "json"
-	ExecFormatPlain string = "plain"
+	ExecFormatJSON  ExecFormat = "json"
+	ExecFormatPlain ExecFormat = "plain"
 )
 
 var ErrRunExecNotSupported = errors.New("exec not supported for this kind")
 
+type ExecResultHolderCreateFn func(*ExecCmd) ExecResultHolderSetter
+
+type ExecResultHolderSetter interface {
+	GetExecResultHolder() ExecResultHolder
+	SetReturnCode(int)
+	SetStdOut([]byte)
+	SetStdErr([]byte)
+}
+
 // ParseExecOutputFormat parses the exec output format user input.
-func ParseExecOutputFormat(s string) (string, error) {
+func ParseExecOutputFormat(s string) (ExecFormat, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
-	case ExecFormatJSON:
+	case string(ExecFormatJSON):
 		return ExecFormatJSON, nil
-	case ExecFormatPlain, "table":
+	case string(ExecFormatPlain), "table":
 		return ExecFormatPlain, nil
 	}
 	return "", fmt.Errorf("cannot parse %q as execution output format, supported output formats %q",
-		s, []string{ExecFormatJSON, ExecFormatPlain})
+		s, []string{string(ExecFormatJSON), string(ExecFormatPlain)})
+}
+
+func GetResultHolderCreateFnFor(eof ExecFormat) ExecResultHolderCreateFn {
+	switch eof {
+	case ExecFormatJSON:
+		return NewExecResultJson
+	}
+	// default is the plain result
+	return NewExecResult
 }
 
 // ExecCmd represents an exec command.
@@ -58,7 +78,7 @@ type ExecResultHolder interface {
 	GetStdErrByteSlice() []byte
 	GetReturnCode() int
 	GetCmdString() string
-	Dump(format string) (string, error)
+	Dump(format ExecFormat) (string, error)
 	String() string
 }
 
@@ -70,8 +90,28 @@ type ExecResult struct {
 	Stderr     string   `json:"stderr"`
 }
 
-func NewExecResult(op *ExecCmd) *ExecResult {
+func NewExecResult(op *ExecCmd) ExecResultHolderSetter {
 	er := &ExecResult{Cmd: op.GetCmd()}
+	return er
+}
+
+type ExecResultJson struct {
+	ExecResult
+	Stdout json.RawMessage `json:"stdout"`
+}
+
+func (erj *ExecResultJson) SetStdOut(b []byte) {
+	erj.Stdout = b
+}
+
+func (e *ExecResultJson) GetExecResultHolder() ExecResultHolder {
+	return e
+}
+
+func NewExecResultJson(op *ExecCmd) ExecResultHolderSetter {
+	er := &ExecResultJson{
+		ExecResult: ExecResult{Cmd: op.GetCmd()},
+	}
 	return er
 }
 
@@ -99,8 +139,12 @@ func (e *ExecResult) String() string {
 	return fmt.Sprintf("Cmd: %s\nReturnCode: %d\nStdOut:\n%s\nStdErr:\n%s\n", e.GetCmdString(), e.ReturnCode, e.Stdout, e.Stderr)
 }
 
+func (e *ExecResult) GetExecResultHolder() ExecResultHolder {
+	return e
+}
+
 // Dump dumps execution result as a string in one of the provided formats.
-func (e *ExecResult) Dump(format string) (string, error) {
+func (e *ExecResult) Dump(format ExecFormat) (string, error) {
 	var result string
 	switch format {
 	case ExecFormatJSON:
@@ -181,7 +225,7 @@ func (ec *ExecCollection) AddAll(cId string, e []ExecResultHolder) {
 }
 
 // Dump dumps the contents of ExecCollection as a string in one of the provided formats.
-func (ec *ExecCollection) Dump(format string) (string, error) {
+func (ec *ExecCollection) Dump(format ExecFormat) (string, error) {
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:

@@ -227,33 +227,33 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot i
 }
 
 // RunExec mocks base method.
-func (m *MockNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (m *MockNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd, erhcf exec.ExecResultHolderCreateFn) (exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunExec", ctx, execCmd)
+	ret := m.ctrl.Call(m, "RunExec", ctx, execCmd, erhcf)
 	ret0, _ := ret[0].(exec.ExecResultHolder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RunExec indicates an expected call of RunExec.
-func (mr *MockNodeMockRecorder) RunExec(ctx, execCmd interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) RunExec(ctx, execCmd, erhcf interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNode)(nil).RunExec), ctx, execCmd)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNode)(nil).RunExec), ctx, execCmd, erhcf)
 }
 
 // RunExecs mocks base method.
-func (m *MockNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error) {
+func (m *MockNode) RunExecs(ctx context.Context, cmds []string, erhcf exec.ExecResultHolderCreateFn) ([]exec.ExecResultHolder, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunExecs", ctx, cmds)
+	ret := m.ctrl.Call(m, "RunExecs", ctx, cmds, erhcf)
 	ret0, _ := ret[0].([]exec.ExecResultHolder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RunExecs indicates an expected call of RunExecs.
-func (mr *MockNodeMockRecorder) RunExecs(ctx, cmds interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) RunExecs(ctx, cmds, erhcf interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecs", reflect.TypeOf((*MockNode)(nil).RunExecs), ctx, cmds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecs", reflect.TypeOf((*MockNode)(nil).RunExecs), ctx, cmds, erhcf)
 }
 
 // SaveConfig mocks base method.

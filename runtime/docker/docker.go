@@ -683,7 +683,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.
-func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd, erhcf exec.ExecResultHolderCreateFn) (exec.ExecResultHolder, error) {
 	cont, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
 		return nil, err
@@ -731,13 +731,13 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 		return nil, err
 	}
 
-	execResult := exec.NewExecResult(execCmd)
+	execResult := erhcf(execCmd)
 
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(execInspect.ExitCode)
 	execResult.SetStdOut(outBuf.Bytes())
 	execResult.SetStdErr(errBuf.Bytes())
-	return execResult, nil
+	return execResult.GetExecResultHolder(), nil
 }
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.

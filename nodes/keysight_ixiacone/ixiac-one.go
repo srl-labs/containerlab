@@ -60,7 +60,7 @@ func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
 		cmd, _ := exec.NewExecCmdFromString(ixiacOneCmd)
-		execResult, err := l.RunExec(ctx, cmd)
+		execResult, err := l.RunExec(ctx, cmd, exec.NewExecResult)
 		if err != nil {
 			return err
 		}

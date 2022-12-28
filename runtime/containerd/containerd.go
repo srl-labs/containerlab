@@ -700,17 +700,17 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
 
-func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec *exec.ExecCmd) (exec.ExecResultHolder, error) {
-	return c.internalExec(ctx, containername, exec, false)
+func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec *exec.ExecCmd, erhcf exec.ExecResultHolderCreateFn) (exec.ExecResultHolder, error) {
+	return c.internalExec(ctx, containername, exec, false, erhcf)
 }
 
 func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername string, exec *exec.ExecCmd) error {
-	_, err := c.internalExec(ctx, containername, exec, true)
+	_, err := c.internalExec(ctx, containername, exec, true, nil)
 	return err
 }
 
 func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string,
-	execCmd *exec.ExecCmd, detach bool,
+	execCmd *exec.ExecCmd, detach bool, erhcf exec.ExecResultHolderCreateFn,
 ) (exec.ExecResultHolder, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
@@ -781,8 +781,7 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 		return nil, err
 	}
 
-	execResult := exec.NewExecResult(execCmd)
-
+	execResult := erhcf(execCmd)
 	if !detach {
 		status := <-statusC
 		code, _, err := status.Result()
@@ -798,7 +797,7 @@ func (c *ContainerdRuntime) internalExec(ctx context.Context, containername stri
 		execResult.SetStdOut(stdoutbuf.Bytes())
 	}
 
-	return execResult, nil
+	return execResult.GetExecResultHolder(), nil
 }
 
 func (c *ContainerdRuntime) DeleteContainer(ctx context.Context, containerID string) error {

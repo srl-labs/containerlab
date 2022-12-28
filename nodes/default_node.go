@@ -268,7 +268,7 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 }
 
 // RunExecs executes cmds commands for a node. Commands is a list of strings.
-func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error) {
+func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string, erhcf exec.ExecResultHolderCreateFn) ([]exec.ExecResultHolder, error) {
 	results := []exec.ExecResultHolder{}
 	for _, cmd := range cmds {
 		execCmd, err := exec.NewExecCmdFromString(cmd)
@@ -276,7 +276,7 @@ func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecR
 			return nil, err
 		}
 
-		er, err := d.RunExec(ctx, execCmd)
+		er, err := d.RunExec(ctx, execCmd, erhcf)
 		if err != nil {
 			return nil, err
 		}
@@ -288,8 +288,8 @@ func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecR
 }
 
 // RunExec executes a single command for a node.
-func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
-	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, execCmd)
+func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd, erhcf exec.ExecResultHolderCreateFn) (exec.ExecResultHolder, error) {
+	execResult, err := d.GetRuntime().Exec(ctx, d.Cfg.LongName, execCmd, erhcf)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v", d.Cfg.LongName, execCmd.GetCmdString(), err)
 		return nil, err

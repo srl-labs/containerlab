@@ -66,8 +66,8 @@ func (e *extcont) PullImage(_ context.Context) error             { return nil }
 
 // RunExecType is the final function that calls the runtime to execute a type.Exec on a container
 // This is to be overriden if the nodes implementation differs.
-func (e *extcont) RunExecType(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
-	execResult, err := e.GetRuntime().Exec(ctx, e.Cfg.ShortName, execCmd)
+func (e *extcont) RunExecType(ctx context.Context, execCmd *exec.ExecCmd, erhcf exec.ExecResultHolderCreateFn) (exec.ExecResultHolder, error) {
+	execResult, err := e.GetRuntime().Exec(ctx, e.Cfg.ShortName, execCmd, erhcf)
 	if err != nil {
 		// On Ext-container we have to use the shortname, whilst default is to use longname
 		log.Errorf("%s: failed to execute cmd: %q with error %v", e.Cfg.ShortName, execCmd.GetCmdString(), err)
