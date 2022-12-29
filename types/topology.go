@@ -483,3 +483,20 @@ func (t *Topology) ImportEnvs() {
 		n.ImportEnvs()
 	}
 }
+
+func (t *Topology) GetDns(name string) *DnsOptions {
+	if ndef, ok := t.Nodes[name]; ok {
+		node_dns := ndef.GetDns()
+		if node_dns != nil {
+			return node_dns
+		}
+
+		kind_dns := t.GetKind(t.GetNodeKind(name)).GetDns()
+		if kind_dns != nil {
+			return kind_dns
+		}
+
+		return t.GetDefaults().GetDns()
+	}
+	return nil
+}

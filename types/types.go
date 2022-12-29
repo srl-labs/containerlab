@@ -135,8 +135,9 @@ type NodeConfig struct {
 	DeploymentStatus string `json:"deployment-status,omitempty"`
 
 	// Extras
-	Extras  *Extras  `json:"extras,omitempty"` // Extra node parameters
-	WaitFor []string `json:"wait-for,omitempty"`
+	Extras  *Extras     `json:"extras,omitempty"` // Extra node parameters
+	WaitFor []string    `json:"wait-for,omitempty"`
+	DNS     *DnsOptions `json:"dns,omitempty"`
 }
 
 type HostRequirements struct {

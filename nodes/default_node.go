@@ -122,6 +122,7 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]types.GenericContain
 	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
+			Operator:   "=",
 			Match:      fmt.Sprintf("^%s$", d.Cfg.LongName), // this regexp ensure we have an exact match for name
 		},
 	})

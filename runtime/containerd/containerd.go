@@ -94,6 +94,9 @@ func (c *ContainerdRuntime) WithMgmtNet(n *types.MgmtNet) {
 		}
 		n.Bridge = "br-" + netname
 	}
+	if n.MTU == "" {
+		n.MTU = "9500"
+	}
 	c.mgmt = n
 }
 
@@ -161,9 +164,6 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
 	var img containerd.Image
-	if !strings.Contains(node.Image, ":") {
-		node.Image = node.Image + ":latest"
-	}
 	img, err := c.client.GetImage(ctx, node.Image)
 	if err != nil {
 		// try fetching the image with canonical name
@@ -329,6 +329,13 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 			return nil, err
 		}
 		result, _ := current.NewResultFromResult(res)
+
+		// set DNS configuration defined in topology
+		if node.DNS != nil {
+			result.DNS.Nameservers = node.DNS.Servers
+			result.DNS.Options = node.DNS.Options
+			result.DNS.Search = node.DNS.Search
+		}
 
 		ipv4, ipv6, ipv4Gw := "", "", ""
 		ipv4nm, ipv6nm := 0, 0
@@ -556,7 +563,7 @@ func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string
 	gFilter := types.GenericFilter{
 		FilterType: "name",
 		Field:      "",
-		Operator:   "",
+		Operator:   "=",
 		Match:      containerID,
 	}
 	ctrs, err := c.ListContainers(ctx, []*types.GenericFilter{&gFilter})
@@ -593,8 +600,9 @@ func (*ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) strin
 			if !isExistsOperator {
 				filterstring = filterstring + operator + "\"" + filterEntry.Match + "\"" + delim
 			}
-
-		} // more might be implemented later
+		} else if filterEntry.FilterType == "name" {
+			filterstring = "name" + operator + filterEntry.Match
+		}
 	}
 	log.Debug("Filterstring: " + filterstring)
 	return filterstring

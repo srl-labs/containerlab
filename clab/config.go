@@ -233,6 +233,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		// Extras
 		Extras:  c.Config.Topology.GetNodeExtras(nodeName),
 		WaitFor: c.Config.Topology.GetWaitFor(nodeName),
+		DNS:     c.Config.Topology.GetDns(nodeName),
 	}
 
 	var err error

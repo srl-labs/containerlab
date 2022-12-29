@@ -409,6 +409,13 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		Resources:   resources,
 		AutoRemove:  *node.AutoRemove,
 	}
+
+	if node.DNS != nil {
+		containerHostConfig.DNS = node.DNS.Servers
+		containerHostConfig.DNSSearch = node.DNS.Search
+		containerHostConfig.DNSOptions = node.DNS.Options
+	}
+
 	containerNetworkingConfig := &network.NetworkingConfig{}
 
 	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
