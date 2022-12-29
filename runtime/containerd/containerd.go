@@ -601,7 +601,8 @@ func (*ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) strin
 				filterstring = filterstring + operator + "\"" + filterEntry.Match + "\"" + delim
 			}
 		} else if filterEntry.FilterType == "name" {
-			filterstring = "name" + operator + filterEntry.Match
+			match := strings.TrimRight(strings.TrimLeft(filterEntry.Match, "^"), "$")
+			filterstring = "id==" + match
 		}
 	}
 	log.Debug("Filterstring: " + filterstring)
