@@ -5,17 +5,22 @@ MKDOCS_VER = 8.3.9
 # make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
 MKDOCS_INS_VER = 8.5.11-insiders-4.27.0-hellt
 
+DATE := $(shell date)
+COMMIT_HASH := $(shell git rev-parse --short HEAD)
+
+LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd.date=$(DATE)'
+
 include .mk/lint.mk
 
 all: build
 
 build:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$$(date)'" main.go
+	go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
 
 build-with-podman:
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$$(date)'" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
 
 test:
 	go test -race ./... -v
@@ -67,9 +72,9 @@ oci-push: build-with-podman
 	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - ./containerlab deploy.... Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
 	@echo 'If https proxy is configured in your environment, pass the proxies via --env HTTPS_PROXY="<proxy-address>" flag of the docker run command.'
 # push to ttl.sh
-	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$$(git rev-parse --short HEAD):1d ./containerlab
-	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$$(git rev-parse --short HEAD):1d"
+	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$(COMMIT_HASH):1d ./containerlab
+	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$(COMMIT_HASH):1d"
 # push to ghcr.io
 	@echo ""
-	docker run --rm -v $$(pwd)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v0.12.0 push ghcr.io/srl-labs/clab-oci:$$(git rev-parse --short HEAD) ./containerlab
-	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ghcr.io/srl-labs/clab-oci:$$(git rev-parse --short HEAD)"
+	docker run --rm -v $$(pwd)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v0.12.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab
+	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH)"
