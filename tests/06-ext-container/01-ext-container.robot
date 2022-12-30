@@ -53,7 +53,7 @@ Verify ip and thereby exec on ext2
 
 Verify ping from ext1 to ext2 on eth1
     ${result} =    Run Process
-    ...    docker exec ext1 ping -w 2 -c 2 192.168.0.2       shell=True
+    ...    ${runtime} exec ext1 ping -w 2 -c 2 192.168.0.2       shell=True
     Log    ${result.stderr}
     Log    ${result.stdout}
     Should Be Equal As Integers    ${result.rc}    0
@@ -62,5 +62,5 @@ Verify ping from ext1 to ext2 on eth1
 *** Keywords ***
 Cleanup
     Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-    Run    docker rm -f ext1
-    Run    docker rm -f ext2
+    Run    ${runtime} rm -f ext1
+    Run    ${runtime} rm -f ext2
