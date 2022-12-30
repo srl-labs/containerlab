@@ -44,7 +44,7 @@ clint:
 docs:
 	docker run -v $$(pwd):/docs --entrypoint mkdocs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
 
-.PHONY: serve
+.PHONY: site
 site:
 	docker run -it --rm -p 8000:8000 -v $$(pwd):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
 
@@ -61,7 +61,7 @@ htmltest:
 
 # build containerlab bin and push it as an OCI artifact to ttl.sh and ghcr registries
 # to obtain the pushed artifact use: docker run --rm -v $(pwd):/workspace ghcr.io/deislabs/oras:v0.11.1 pull ttl.sh/<image-name>
-.PHONY: ttl-push
+.PHONY: oci-push
 oci-push: build-with-podman
 	@echo
 	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - ./containerlab deploy.... Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
