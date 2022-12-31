@@ -39,6 +39,7 @@ jobs:
               - 'utils/**'
               - '.github/workflows/cicd.yml'
               - 'go.mod'
+              - 'Makefile'
             docs:
               - "docs/**"
               - "lab-examples/**"
@@ -70,7 +71,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build containerlab
-        run: CGO_ENABLED=0 go build -o containerlab -ldflags="-s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(git rev-parse --short HEAD)' -X 'github.com/srl-labs/containerlab/cmd.date=$(date)'" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+        run: make build-with-podman BINARY=containerlab
       # store clab binary as artifact
       - uses: actions/upload-artifact@v3
         with:
