@@ -39,7 +39,7 @@ func (b *border0) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// set default image
 	if b.Cfg.Image == "" {
-		b.Cfg.Image = "ghcr.io/steiler/containerlab-border0.com"
+		b.Cfg.Image = "ghcr.io/srl-labs/containerlab-border0.com:latest"
 	}
 
 	// prepare host and container paths for border0.com config bind
