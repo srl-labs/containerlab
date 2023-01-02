@@ -336,7 +336,7 @@ func ParseSocketCfg(s, host string) (*configSocket, error) {
 	// split the socket definition string
 	split := strings.Split(s, "/")
 	if len(split) > 3 {
-		return result, fmt.Errorf("wrong mysocketio publish section %s. should be <type>/<port-number>[/<policyname>,] i.e. tcp/22, tls/22/mypolicy1 or tls/22/mypolicy1,myotherpolicy", s)
+		return result, fmt.Errorf("wrong publish section %q. should be <type>/<port-number>[/<policyname>,] i.e. tls/22, tls/22/mypolicy1 or tls/22/mypolicy1,myotherpolicy", s)
 	}
 
 	// process SocketType
