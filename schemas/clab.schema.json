@@ -75,6 +75,7 @@
                         "bridge",
                         "ovs-bridge",
                         "mysocketio",
+                        "border0",
                         "host",
                         "keysight_ixia-c-one",
                         "ipinfusion_ocnos",
