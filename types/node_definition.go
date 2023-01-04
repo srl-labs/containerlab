@@ -65,17 +65,8 @@ type NodeDefinition struct {
 	Extras *Extras `yaml:"extras,omitempty"`
 	// List of node names to wait for before satarting this particular node
 	WaitFor []string `yaml:"wait-for,omitempty"`
-	// DNS options
-	DNS *DnsOptions `yaml:"dns,omitempty"`
-}
-
-type DnsOptions struct {
-	// DNS servers
-	Servers []string `yaml:"servers,omitempty"`
-	// DNS options
-	Options []string `yaml:"options,omitempty"`
-	// DNS Search Domains
-	Search []string `yaml:"search,omitempty"`
+	// DNS configuration
+	DNS *DNSConfig `yaml:"dns,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -317,7 +308,7 @@ func (n *NodeDefinition) GetWaitFor() []string {
 	return n.WaitFor
 }
 
-func (n *NodeDefinition) GetDns() *DnsOptions {
+func (n *NodeDefinition) GetDns() *DNSConfig {
 	if n == nil {
 		return nil
 	}
