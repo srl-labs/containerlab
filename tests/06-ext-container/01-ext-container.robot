@@ -5,10 +5,9 @@ Resource          ../common.robot
 Suite Teardown    Run Keyword    Cleanup
 
 *** Variables ***
-${lab-name}       06-01-ext-container
-${lab-file-name}  02-ext-container.clab.yml
+${lab-name}       06-ext-container
+${lab-file-name}  01-ext-container.clab.yml
 ${runtime}        docker
-${key-name}       test
 
 *** Test Cases ***
 Start ext-containers
