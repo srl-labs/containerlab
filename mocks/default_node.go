@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	types "github.com/srl-labs/containerlab/types"
 )
 
 // MockNodeOverwrites is a mock of NodeOverwrites interface.
@@ -46,6 +47,35 @@ func (m *MockNodeOverwrites) CheckInterfaceName() error {
 func (mr *MockNodeOverwritesMockRecorder) CheckInterfaceName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceName", reflect.TypeOf((*MockNodeOverwrites)(nil).CheckInterfaceName))
+}
+
+// GetContainerName mocks base method.
+func (m *MockNodeOverwrites) GetContainerName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainerName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetContainerName indicates an expected call of GetContainerName.
+func (mr *MockNodeOverwritesMockRecorder) GetContainerName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerName", reflect.TypeOf((*MockNodeOverwrites)(nil).GetContainerName))
+}
+
+// GetContainers mocks base method.
+func (m *MockNodeOverwrites) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainers", ctx)
+	ret0, _ := ret[0].([]types.GenericContainer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainers indicates an expected call of GetContainers.
+func (mr *MockNodeOverwritesMockRecorder) GetContainers(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockNodeOverwrites)(nil).GetContainers), ctx)
 }
 
 // GetImages mocks base method.
