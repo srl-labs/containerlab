@@ -1,5 +1,5 @@
-BIN_DIR = $$(pwd)/bin
-BINARY = $$(pwd)/bin/containerlab
+BIN_DIR = $(CURDIR)/bin
+BINARY = $(CURDIR)/bin/containerlab
 MKDOCS_VER = 8.3.9
 # insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
 # make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
@@ -43,25 +43,25 @@ lint:
 	golangci-lint run
 
 clint:
-	docker run -it --rm -v $$(pwd):/app -w /app golangci/golangci-lint:v1.47.1 golangci-lint run --timeout 5m -v
+	docker run -it --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:v1.47.1 golangci-lint run --timeout 5m -v
 
 .PHONY: docs
 docs:
-	docker run -v $$(pwd):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
+	docker run -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
 
 .PHONY: site
 site:
-	docker run -it --rm -p 8000:8000 -v $$(pwd):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
+	docker run -it --rm -p 8000:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
 
 # serve the site locally using mkdocs-material insiders container
 .PHONY: serve-insiders
 serve-insiders:
-	docker run -it --rm -p 8001:8000 -v $$(pwd):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
+	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
 
 .PHONY: htmltest
 htmltest:
-	docker run --rm -v $$(pwd):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
-	docker run --rm -v $$(pwd):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
+	docker run --rm -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
+	docker run --rm -v $(CURDIR):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 
 # build containerlab bin and push it as an OCI artifact to ttl.sh and ghcr registries
@@ -72,9 +72,9 @@ oci-push: build-with-podman
 	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - ./containerlab deploy.... Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
 	@echo 'If https proxy is configured in your environment, pass the proxies via --env HTTPS_PROXY="<proxy-address>" flag of the docker run command.'
 # push to ttl.sh
-	docker run --rm -v $$(pwd)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$(COMMIT_HASH):1d ./containerlab
+	docker run --rm -v $(CURDIR)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$(COMMIT_HASH):1d ./containerlab
 	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$(COMMIT_HASH):1d"
 # push to ghcr.io
 	@echo ""
-	docker run --rm -v $$(pwd)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v0.12.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab
+	docker run --rm -v $(CURDIR)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v0.12.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab
 	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH)"

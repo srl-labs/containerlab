@@ -1,10 +1,10 @@
-GOFUMPT_CMD := docker run --rm -it -e GOFUMPT_SPLIT_LONG_LINES=on -v $(shell pwd):/work ghcr.io/hellt/gofumpt:0.3.1
+GOFUMPT_CMD := docker run --rm -it -e GOFUMPT_SPLIT_LONG_LINES=on -v $(CURDIR):/work ghcr.io/hellt/gofumpt:0.3.1
 GOFUMPT_FLAGS := -l -w .
 
-GODOT_CMD := docker run --rm -it -v $(shell pwd):/work ghcr.io/hellt/godot:1.4.11
+GODOT_CMD := docker run --rm -it -v $(CURDIR):/work ghcr.io/hellt/godot:1.4.11
 GODOT_FLAGS := -w .
 
-GOLANGCI_CMD := docker run -it --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:v1.47.2 golangci-lint
+GOLANGCI_CMD := docker run -it --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:v1.47.2 golangci-lint
 GOLANGCI_FLAGS := --config ./.github/workflows/linters/.golangci.yml run -v --fix
 
 
