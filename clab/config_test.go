@@ -376,55 +376,55 @@ func TestLabelsInit(t *testing.T) {
 			got:  "test_data/topo1.yml",
 			node: "node1",
 			want: map[string]string{
-				labels.ContainerlabLabel: "topo1",
-				labels.NodeNameLabel:     "node1",
-				labels.NodeKindLabel:     "srl",
-				labels.NodeTypeLabel:     "ixrd2",
-				labels.NodeGroupLabel:    "",
-				labels.NodeLabDirLabel:   "../clab-topo1/node1",
-				labels.TopoFileLabel:     "topo1.yml",
+				labels.Containerlab: "topo1",
+				labels.NodeName:     "node1",
+				labels.NodeKind:     "srl",
+				labels.NodeType:     "ixrd2",
+				labels.NodeGroup:    "",
+				labels.NodeLabDir:   "../clab-topo1/node1",
+				labels.TopoFile:     "topo1.yml",
 			},
 		},
 		"custom_node_label": {
 			got:  "test_data/topo1.yml",
 			node: "node2",
 			want: map[string]string{
-				labels.ContainerlabLabel: "topo1",
-				labels.NodeNameLabel:     "node2",
-				labels.NodeKindLabel:     "srl",
-				labels.NodeTypeLabel:     "ixrd2",
-				labels.NodeGroupLabel:    "",
-				labels.NodeLabDirLabel:   "../clab-topo1/node2",
-				labels.TopoFileLabel:     "topo1.yml",
-				"node-label":             "value",
+				labels.Containerlab: "topo1",
+				labels.NodeName:     "node2",
+				labels.NodeKind:     "srl",
+				labels.NodeType:     "ixrd2",
+				labels.NodeGroup:    "",
+				labels.NodeLabDir:   "../clab-topo1/node2",
+				labels.TopoFile:     "topo1.yml",
+				"node-label":        "value",
 			},
 		},
 		"custom_kind_label": {
 			got:  "test_data/topo2.yml",
 			node: "node1",
 			want: map[string]string{
-				labels.ContainerlabLabel: "topo2",
-				labels.NodeNameLabel:     "node1",
-				labels.NodeKindLabel:     "srl",
-				labels.NodeTypeLabel:     "ixrd2",
-				labels.NodeGroupLabel:    "",
-				labels.NodeLabDirLabel:   "../clab-topo2/node1",
-				labels.TopoFileLabel:     "topo2.yml",
-				"kind-label":             "value",
+				labels.Containerlab: "topo2",
+				labels.NodeName:     "node1",
+				labels.NodeKind:     "srl",
+				labels.NodeType:     "ixrd2",
+				labels.NodeGroup:    "",
+				labels.NodeLabDir:   "../clab-topo2/node1",
+				labels.TopoFile:     "topo2.yml",
+				"kind-label":        "value",
 			},
 		},
 		"custom_default_label": {
 			got:  "test_data/topo3.yml",
 			node: "node2",
 			want: map[string]string{
-				labels.ContainerlabLabel: "topo3",
-				labels.NodeNameLabel:     "node2",
-				labels.NodeKindLabel:     "srl",
-				labels.NodeTypeLabel:     "ixrd2",
-				labels.NodeGroupLabel:    "",
-				labels.NodeLabDirLabel:   "../clab-topo3/node2",
-				labels.TopoFileLabel:     "topo3.yml",
-				"default-label":          "value",
+				labels.Containerlab: "topo3",
+				labels.NodeName:     "node2",
+				labels.NodeKind:     "srl",
+				labels.NodeType:     "ixrd2",
+				labels.NodeGroup:    "",
+				labels.NodeLabDir:   "../clab-topo3/node2",
+				labels.TopoFile:     "topo3.yml",
+				"default-label":     "value",
 			},
 		},
 	}
@@ -442,8 +442,8 @@ func TestLabelsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.want[labels.NodeLabDirLabel] = utils.ResolvePath(tc.want[labels.NodeLabDirLabel], c.TopoFile.dir)
-			tc.want[labels.TopoFileLabel] = utils.ResolvePath(tc.want[labels.TopoFileLabel], c.TopoFile.dir)
+			tc.want[labels.NodeLabDir] = utils.ResolvePath(tc.want[labels.NodeLabDir], c.TopoFile.dir)
+			tc.want[labels.TopoFile] = utils.ResolvePath(tc.want[labels.TopoFile], c.TopoFile.dir)
 
 			labels := c.Nodes[tc.node].Config().Labels
 

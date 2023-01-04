@@ -76,7 +76,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		// list all containerlab containers
 		filter := []*types.GenericFilter{{
 			FilterType: "label", Match: c.Config.Name,
-			Field: labels.ContainerlabLabel, Operator: "exists",
+			Field: labels.Containerlab, Operator: "exists",
 		}}
 		containers, err := c.ListContainers(ctx, filter)
 		if err != nil {
@@ -88,7 +88,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 		// get unique topo files from all labs
 		for i := range containers {
-			topos[containers[i].Labels[labels.TopoFileLabel]] = struct{}{}
+			topos[containers[i].Labels[labels.TopoFile]] = struct{}{}
 		}
 	}
 

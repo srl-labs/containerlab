@@ -473,7 +473,7 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
 	for _, cnt := range containers {
-		if cnt.Labels[labels.ContainerlabLabel] == c.Config.Name {
+		if cnt.Labels[labels.Containerlab] == c.Config.Name {
 			return fmt.Errorf("the '%s' lab has already been deployed. Destroy the lab before deploying a lab with the same name", c.Config.Name)
 		}
 	}
@@ -639,13 +639,13 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 		cfg.Labels = map[string]string{}
 	}
 
-	cfg.Labels[labels.ContainerlabLabel] = c.Config.Name
-	cfg.Labels[labels.NodeNameLabel] = cfg.ShortName
-	cfg.Labels[labels.NodeKindLabel] = cfg.Kind
-	cfg.Labels[labels.NodeTypeLabel] = cfg.NodeType
-	cfg.Labels[labels.NodeGroupLabel] = cfg.Group
-	cfg.Labels[labels.NodeLabDirLabel] = cfg.LabDir
-	cfg.Labels[labels.TopoFileLabel] = c.TopoFile.path
+	cfg.Labels[labels.Containerlab] = c.Config.Name
+	cfg.Labels[labels.NodeName] = cfg.ShortName
+	cfg.Labels[labels.NodeKind] = cfg.Kind
+	cfg.Labels[labels.NodeType] = cfg.NodeType
+	cfg.Labels[labels.NodeGroup] = cfg.Group
+	cfg.Labels[labels.NodeLabDir] = cfg.LabDir
+	cfg.Labels[labels.TopoFile] = c.TopoFile.path
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added

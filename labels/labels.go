@@ -1,13 +1,13 @@
 package labels
 
 const (
-	// label names.
-	ContainerlabLabel = "containerlab"
-	NodeNameLabel     = "clab-node-name"
-	NodeKindLabel     = "clab-node-kind"
-	NodeTypeLabel     = "clab-node-type"
-	NodeGroupLabel    = "clab-node-group"
-	NodeLabDirLabel   = "clab-node-lab-dir"
-	TopoFileLabel     = "clab-topo-file"
-	NodeMgmtNetBr     = "clab-mgmt-net-bridge"
+	// label names constants.
+	Containerlab  = "containerlab"
+	NodeName      = "clab-node-name"
+	NodeKind      = "clab-node-kind"
+	NodeType      = "clab-node-type"
+	NodeGroup     = "clab-node-group"
+	NodeLabDir    = "clab-node-lab-dir"
+	TopoFile      = "clab-topo-file"
+	NodeMgmtNetBr = "clab-mgmt-net-bridge"
 )

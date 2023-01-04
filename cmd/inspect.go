@@ -95,12 +95,15 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		// or when just the name is given
 		if name != "" {
 			// if name is set, filter for name
-			glabels = []*types.GenericFilter{{FilterType: "label", Match: name, Field: labels.ContainerlabLabel, Operator: "="}}
+			glabels = []*types.GenericFilter{{
+				FilterType: "label", Match: name,
+				Field: labels.Containerlab, Operator: "=",
+			}}
 		} else {
 			// this is the --all case
 			glabels = []*types.GenericFilter{{
 				FilterType: "label",
-				Field:      labels.ContainerlabLabel, Operator: "exists",
+				Field:      labels.Containerlab, Operator: "exists",
 			}}
 		}
 		containers, err = c.ListContainers(ctx, glabels)
@@ -156,10 +159,10 @@ func printContainerInspect(containers []types.GenericContainer, format string) e
 
 		// get topo file path relative of the cwd
 		cwd, _ := os.Getwd()
-		path, _ := filepath.Rel(cwd, cont.Labels[labels.TopoFileLabel])
+		path, _ := filepath.Rel(cwd, cont.Labels[labels.TopoFile])
 
 		cdet := &types.ContainerDetails{
-			LabName:     cont.Labels[labels.ContainerlabLabel],
+			LabName:     cont.Labels[labels.Containerlab],
 			LabPath:     path,
 			Image:       cont.Image,
 			State:       cont.State,
@@ -171,13 +174,13 @@ func printContainerInspect(containers []types.GenericContainer, format string) e
 		if len(cont.Names) > 0 {
 			cdet.Name = cont.Names[0]
 		}
-		if kind, ok := cont.Labels[labels.NodeKindLabel]; ok {
+		if kind, ok := cont.Labels[labels.NodeKind]; ok {
 			cdet.Kind = kind
 			if slices.Contains(mysocketionode.Kindnames, kind) {
 				printMysocket = true
 			}
 		}
-		if group, ok := cont.Labels[labels.NodeGroupLabel]; ok {
+		if group, ok := cont.Labels[labels.NodeGroup]; ok {
 			cdet.Group = group
 		}
 		contDetails = append(contDetails, *cdet)
@@ -329,7 +332,7 @@ func mySocketIoTokenFileFromBindMounts(containers []types.GenericContainer) []*T
 	result := []*TokenFileResults{}
 	for _, node := range containers {
 		// if not mysocketio kind then continue
-		if !slices.Contains(mysocketionode.Kindnames, node.Labels[labels.NodeKindLabel]) {
+		if !slices.Contains(mysocketionode.Kindnames, node.Labels[labels.NodeKind]) {
 			continue
 		}
 
@@ -347,7 +350,7 @@ func mySocketIoTokenFileFromBindMounts(containers []types.GenericContainer) []*T
 			continue
 		}
 		result = append(result, &TokenFileResults{
-			Labname: node.Labels[labels.ContainerlabLabel],
+			Labname: node.Labels[labels.Containerlab],
 			File:    filepath,
 		})
 	}

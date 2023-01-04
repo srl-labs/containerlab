@@ -186,8 +186,8 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []types.GenericContainer) {
 	containerNames := make(map[string]struct{})
 	for _, cont := range containers {
-		log.Debugf("looking for node name %s", cont.Labels[labels.NodeNameLabel])
-		if node, ok := c.Nodes[cont.Labels[labels.NodeNameLabel]]; ok {
+		log.Debugf("looking for node name %s", cont.Labels[labels.NodeName])
+		if node, ok := c.Nodes[cont.Labels[labels.NodeName]]; ok {
 			containerNames[node.Config().ShortName] = struct{}{}
 			g.Nodes = append(g.Nodes, types.ContainerDetails{
 				Name:        node.Config().ShortName,

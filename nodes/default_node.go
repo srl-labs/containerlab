@@ -179,7 +179,8 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 
 	rcfg := utils.ResolvePath(cfg, topoDir)
 	if !utils.FileExists(rcfg) {
-		return fmt.Errorf("node %q startup-config file not found by the path %s", d.OverwriteNode.GetContainerName(), rcfg)
+		return fmt.Errorf("node %q startup-config file not found by the path %s",
+			d.OverwriteNode.GetContainerName(), rcfg)
 	}
 
 	return nil
@@ -301,7 +302,8 @@ func (d *DefaultNode) GetContainerName() string {
 func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
 	execResult, err := d.GetRuntime().Exec(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", d.OverwriteNode.GetContainerName(), execCmd.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v",
+			d.OverwriteNode.GetContainerName(), execCmd.GetCmdString(), err)
 		return nil, err
 	}
 	return execResult, nil
@@ -312,7 +314,8 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.
 func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", d.OverwriteNode.GetContainerName(), execCmd.GetCmdString(), err)
+		log.Errorf("%s: failed to execute cmd: %q with error %v",
+			d.OverwriteNode.GetContainerName(), execCmd.GetCmdString(), err)
 		return err
 	}
 	return nil
