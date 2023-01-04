@@ -74,11 +74,11 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 		// list all containerlab containers
-		filter_labels := []*types.GenericFilter{{
+		filter := []*types.GenericFilter{{
 			FilterType: "label", Match: c.Config.Name,
 			Field: labels.ContainerlabLabel, Operator: "exists",
 		}}
-		containers, err := c.ListContainers(ctx, filter_labels)
+		containers, err := c.ListContainers(ctx, filter)
 		if err != nil {
 			return err
 		}
