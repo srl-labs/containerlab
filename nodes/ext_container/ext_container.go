@@ -63,10 +63,9 @@ func (*extcont) Delete(_ context.Context) error { return nil }
 func (*extcont) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*extcont) PullImage(_ context.Context) error             { return nil }
 
-// GetRuntimeContainerName will return the name used by the runtime to identify the container
-// e.g. ext-cotnainer will use Cfg.ShortName while most other containers will use
-// Cfg.LongName
-func (e *extcont) GetRuntimeContainerName() string {
+// GetContainerName returns the short name for the ext-container node, since for these nodes
+// container name is specified in the topology file entirely.
+func (e *extcont) GetContainerName() string {
 	return e.Cfg.ShortName
 }
 
