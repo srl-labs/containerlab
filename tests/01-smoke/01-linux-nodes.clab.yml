@@ -26,6 +26,14 @@ topology:
         - 56180:80
       mgmt_ipv4: 172.20.20.100
       mgmt_ipv6: 2001:172:20:20::100
+      dns:
+        servers:
+          - 8.8.8.8
+          - 1.2.3.4
+        search:
+          - my.domain
+        options:
+          - rotate
     l3:
       kind: linux
       image: nginx:stable-alpine
