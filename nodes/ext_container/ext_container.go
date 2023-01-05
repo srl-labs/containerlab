@@ -9,8 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -58,32 +57,28 @@ func (e *extcont) Deploy(ctx context.Context) error {
 }
 
 // Delete we will not mess with external containers on delete.
-func (e *extcont) Delete(_ context.Context) error { return nil }
+func (*extcont) Delete(_ context.Context) error { return nil }
 
 // GetImages don't matter for external containers.
-func (e *extcont) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (e *extcont) PullImage(_ context.Context) error             { return nil }
+func (*extcont) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (*extcont) PullImage(_ context.Context) error             { return nil }
 
-// RunExecType is the final function that calls the runtime to execute a type.Exec on a container
-// This is to be overriden if the nodes implementation differs.
-func (e *extcont) RunExecType(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
-	execResult, err := e.GetRuntime().Exec(ctx, e.Cfg.ShortName, execCmd)
-	if err != nil {
-		// On Ext-container we have to use the shortname, whilst default is to use longname
-		log.Errorf("%s: failed to execute cmd: %q with error %v", e.Cfg.ShortName, execCmd.GetCmdString(), err)
-		return nil, err
-	}
-	return execResult, nil
+// GetContainerName returns the short name for the ext-container node, since for these nodes
+// container name is specified in the topology file entirely.
+func (e *extcont) GetContainerName() string {
+	return e.Cfg.ShortName
 }
 
-// RunExecType is the final function that calls the runtime to execute a type.Exec on a container
-// This is to be overriden if the nodes implementation differs.
-func (e *extcont) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) error {
-	err := e.GetRuntime().ExecNotWait(ctx, e.Cfg.ShortName, execCmd)
+func (e *extcont) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+	cnts, err := e.DefaultNode.GetContainers(ctx)
 	if err != nil {
-		// On Ext-container we have to use the shortname, whilst default is to use longname
-		log.Errorf("%s: failed to execute cmd: %q with error %v", e.Cfg.ShortName, execCmd.GetCmdString(), err)
-		return err
+		return nil, err
 	}
-	return nil
+
+	// we need to artifically add the Node Kind Label
+	// this label data is e.g. used in the table printed after deployment
+	for _, c := range cnts {
+		c.Labels[labels.NodeKind] = kindnames[0]
+	}
+	return cnts, nil
 }

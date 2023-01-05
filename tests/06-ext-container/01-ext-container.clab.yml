@@ -1,0 +1,19 @@
+# Copyright 2022 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: 06-ext-container
+
+topology:
+  nodes:
+    ext1:
+      kind: ext-container
+      exec:
+        - "ip address add dev eth1 192.168.0.1/24"
+    ext2:
+      kind: ext-container
+      exec:
+        - "ip address add dev eth1 192.168.0.2/24"
+
+  links:
+    - endpoints: ["ext1:eth1", "ext2:eth1"]

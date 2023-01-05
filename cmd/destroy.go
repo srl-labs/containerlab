@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
@@ -73,11 +74,11 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 		// list all containerlab containers
-		labels := []*types.GenericFilter{{
+		filter := []*types.GenericFilter{{
 			FilterType: "label", Match: c.Config.Name,
-			Field: "containerlab", Operator: "exists",
+			Field: labels.Containerlab, Operator: "exists",
 		}}
-		containers, err := c.ListContainers(ctx, labels)
+		containers, err := c.ListContainers(ctx, filter)
 		if err != nil {
 			return err
 		}
@@ -87,7 +88,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 		// get unique topo files from all labs
 		for i := range containers {
-			topos[containers[i].Labels["clab-topo-file"]] = struct{}{}
+			topos[containers[i].Labels[labels.TopoFile]] = struct{}{}
 		}
 	}
 

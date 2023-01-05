@@ -214,6 +214,49 @@ jobs:
           name: 01-smoke-log
           path: ./tests/out/*.html
 
+  ext-container-tests:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        runtime:
+          - "docker"
+    needs:
+      - unit-test
+      - build-containerlab
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v3
+        with:
+          name: containerlab
+      - name: Move containerlab to usr/bin
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+          cache: pip
+          cache-dependency-path: "tests/requirements.txt"
+      - name: Install robotframework
+        run: |
+          pip install -r tests/requirements.txt
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run tests
+        run: |
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/06-ext-container
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: 06-ext-container-log
+          path: ./tests/out/*.html
+
   ceos-basic-tests:
     runs-on: ubuntu-20.04
     strategy:

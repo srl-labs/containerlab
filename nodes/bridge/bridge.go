@@ -104,13 +104,13 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	return nil
 }
 
-func (b *bridge) PullImage(_ context.Context) error { return nil }
+func (*bridge) PullImage(_ context.Context) error { return nil }
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
-func (b *bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
+func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers is a noop for bridges.
-func (b *bridge) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
+func (*bridge) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
 
 func (b *bridge) RunExecs(_ context.Context, _ []string) ([]cExec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)

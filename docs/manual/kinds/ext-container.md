@@ -51,3 +51,5 @@ topology:
       exec:
         - ip address add 192.168.0.1/24 dev eth1
 ```
+
+1. `external-node1` is the name of a container launched outside of containerlab. In the case of a Docker runtime, this is a name displayed by `docker ps` command.
