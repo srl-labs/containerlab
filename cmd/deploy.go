@@ -47,6 +47,8 @@ var skipPostDeploy bool
 // template file for topology data export.
 var exportTemplate string
 
+var deployFormat string
+
 // deployCmd represents the deploy command.
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -64,6 +66,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	deployCmd.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
 	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false,
 		"regenerate configuration artifacts and overwrite previous ones if any")
 	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
@@ -268,7 +271,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	newVerNotification(vCh)
 
 	// print table summary
-	return printContainerInspect(containers, format)
+	return printContainerInspect(containers, deployFormat)
 }
 
 func setFlags(conf *clab.Config) {

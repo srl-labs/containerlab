@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cloudflare/cfssl v1.6.3
-	github.com/containerd/containerd v1.6.13
+	github.com/containerd/containerd v1.6.14
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.1.1
 	github.com/containers/common v0.50.1
