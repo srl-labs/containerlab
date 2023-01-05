@@ -137,10 +137,10 @@ func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ interface{}) *gomock.C
 }
 
 // GetContainers mocks base method.
-func (m *MockNode) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+func (m *MockNode) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContainers", ctx)
-	ret0, _ := ret[0].([]types.GenericContainer)
+	ret0, _ := ret[0].([]runtime.GenericContainer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

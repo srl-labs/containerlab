@@ -61,7 +61,7 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	// GetContainers returns a pointer to GenericContainer that the node uses.
-	GetContainers(ctx context.Context) ([]types.GenericContainer, error)
+	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	DeleteNetnsSymlink() (err error)
 	Config() *types.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.

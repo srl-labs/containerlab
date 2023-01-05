@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -47,8 +48,8 @@ func (*host) WithMgmtNet(*types.MgmtNet)                    {}
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
-func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) {
-	return []types.GenericContainer{
+func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
+	return []runtime.GenericContainer{
 		{
 			Names:   []string{"Host"},
 			State:   "running",
@@ -56,7 +57,7 @@ func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) 
 			ShortID: "N/A",
 			Image:   "-",
 			Status:  "running",
-			NetworkSettings: types.GenericMgmtIPs{
+			NetworkSettings: runtime.GenericMgmtIPs{
 				IPv4addr: "N/A",
 				IPv4pLen: 0,
 				IPv4Gw:   "N/A",

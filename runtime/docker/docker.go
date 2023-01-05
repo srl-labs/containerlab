@@ -520,7 +520,7 @@ func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *
 }
 
 // ListContainers lists all containers using the provided filters.
-func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
+func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -570,8 +570,8 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	return d.produceGenericContainerList(ctrs, nr)
 }
 
-func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*types.GenericContainer, error) {
-	var ctr *types.GenericContainer
+func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*runtime.GenericContainer, error) {
+	var ctr *runtime.GenericContainer
 	gFilter := types.GenericFilter{
 		FilterType: "name",
 		Field:      "",
@@ -609,8 +609,8 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 // Transform docker-specific to generic container format.
 func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container,
 	inputNetworkResources []dockerTypes.NetworkResource,
-) ([]types.GenericContainer, error) {
-	var result []types.GenericContainer
+) ([]runtime.GenericContainer, error) {
+	var result []runtime.GenericContainer
 
 	for idx := range inputContainers {
 		i := inputContainers[idx]
@@ -622,7 +622,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			names = append(names, strings.TrimLeft(n, "/"))
 		}
 
-		ctr := types.GenericContainer{
+		ctr := runtime.GenericContainer{
 			Names:           names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
@@ -630,8 +630,9 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			State:           i.State,
 			Status:          i.Status,
 			Labels:          i.Labels,
-			NetworkSettings: types.GenericMgmtIPs{},
+			NetworkSettings: runtime.GenericMgmtIPs{},
 		}
+		ctr.SetRuntime(d)
 
 		bridgeName := d.mgmt.Network
 
@@ -669,7 +670,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 		}
 
 		// populating mounts information
-		var mount types.ContainerMount
+		var mount runtime.ContainerMount
 		for _, m := range i.Mounts {
 			mount.Source = m.Source
 			mount.Destination = m.Destination

@@ -214,10 +214,10 @@ func (mr *MockContainerRuntimeMockRecorder) Init(arg0 ...interface{}) *gomock.Ca
 }
 
 // ListContainers mocks base method.
-func (m *MockContainerRuntime) ListContainers(arg0 context.Context, arg1 []*types.GenericFilter) ([]types.GenericContainer, error) {
+func (m *MockContainerRuntime) ListContainers(arg0 context.Context, arg1 []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListContainers", arg0, arg1)
-	ret0, _ := ret[0].([]types.GenericContainer)
+	ret0, _ := ret[0].([]runtime.GenericContainer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

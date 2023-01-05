@@ -208,7 +208,7 @@ func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
 }
 
 // ListContainers returns a list of all available containers in the system in a containerlab-specific struct.
-func (r *PodmanRuntime) ListContainers(ctx context.Context, filters []*types.GenericFilter) ([]types.GenericContainer, error) {
+func (r *PodmanRuntime) ListContainers(ctx context.Context, filters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err

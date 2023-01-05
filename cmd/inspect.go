@@ -82,7 +82,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var containers []types.GenericContainer
+	var containers []runtime.GenericContainer
 
 	// if the topo file is available, use it
 	if topo != "" {
@@ -149,7 +149,7 @@ func toTableData(det []types.ContainerDetails) [][]string {
 	return tabData
 }
 
-func printContainerInspect(containers []types.GenericContainer, format string) error {
+func printContainerInspect(containers []runtime.GenericContainer, format string) error {
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 	// do not print published ports unless mysocketio kind is found
 	printMysocket := false
@@ -328,7 +328,7 @@ type TokenFileResults struct {
 // mySocketIoTokenFileFromBindMounts runs through the provided slice of GenericContainers to deduce the mysocketio containers
 // if those are found the bindmounts are evaluated to find the hostpath to the referenced ".mysocketio_token" files. Since multiple
 // labs might be started the result is a slice of "".mysocketio_token" files.
-func mySocketIoTokenFileFromBindMounts(containers []types.GenericContainer) []*TokenFileResults {
+func mySocketIoTokenFileFromBindMounts(containers []runtime.GenericContainer) []*TokenFileResults {
 	result := []*TokenFileResults{}
 	for _, node := range containers {
 		// if not mysocketio kind then continue

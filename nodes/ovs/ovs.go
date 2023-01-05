@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -62,7 +63,7 @@ func (*ovs) DeleteNetnsSymlink() (err error)               { return nil }
 func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers is a noop for bridges.
-func (*ovs) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
+func (*ovs) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) { return nil, nil }
 
 func (o *ovs) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", o.Config().Kind)

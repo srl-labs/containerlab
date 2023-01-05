@@ -116,7 +116,7 @@ func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
 	}
 }
 
-func (d *DefaultNode) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
@@ -242,7 +242,7 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
-	GetContainers(ctx context.Context) ([]types.GenericContainer, error)
+	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	GetContainerName() string
 }
 
