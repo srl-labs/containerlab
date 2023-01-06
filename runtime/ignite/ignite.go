@@ -302,9 +302,9 @@ func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.Gene
 
 	var labelStrings []string
 	for _, gf := range gfilters {
-		if gf.FilterType == "label" && gf.Operator == "=" {
+		if gf.FilterType == "name" && gf.Operator == "=" {
 			labelStrings = append(labelStrings, fmt.Sprintf(
-				"{{.ObjectMeta.Labels.%s}}=%s", gf.Field, gf.Match))
+				"{{.ObjectMeta.Name%s}}=%s", gf.Field, gf.Match))
 		}
 	}
 

@@ -596,7 +596,7 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 	for _, filterentry := range gfilters {
 		filterstr := filterentry.Field
 		if filterentry.Operator != "exists" {
-			filterstr = filterstr + filterentry.Operator + filterentry.Match
+			filterstr = filterstr + filterentry.Match
 		}
 
 		log.Debugf("Filter key: %s, filter value: %s", filterentry.FilterType, filterstr)
