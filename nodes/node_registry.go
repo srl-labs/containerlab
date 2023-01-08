@@ -21,8 +21,8 @@ func NewNodeRegistry() *NodeRegistry {
 	}
 }
 
-// Register registers the node' init function for a provided names
-func (r *NodeRegistry) Register(names []string, initf Initializer, credentials CredentialsGetter) error {
+// Register registers the node' init function for all provided names
+func (r *NodeRegistry) Register(names []string, initf Initializer, credentials *Credentials) error {
 	newEntry := newRegistryEntry(names, initf, credentials)
 	return r.addEntry(newEntry)
 }
@@ -67,10 +67,10 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 type nodeRegistryEntry struct {
 	nodeKindNames []string
 	initFunction  Initializer
-	credentials   CredentialsGetter
+	credentials   *Credentials
 }
 
-func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials CredentialsGetter) *nodeRegistryEntry {
+func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials) *nodeRegistryEntry {
 	return &nodeRegistryEntry{
 		nodeKindNames: nodeKindNames,
 		initFunction:  initFunction,
@@ -78,13 +78,14 @@ func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credenti
 	}
 }
 
+// Credentials defines NOS SSH credentials
 type Credentials struct {
 	username string
 	password string
 }
 
 // NewCredentials constructor for the Credentials struct
-func NewCredentials(username, password string) CredentialsGetter {
+func NewCredentials(username, password string) *Credentials {
 	return &Credentials{
 		username: username,
 		password: password,
@@ -97,9 +98,4 @@ func (c *Credentials) GetUsername() string {
 
 func (c *Credentials) GetPassword() string {
 	return c.password
-}
-
-type CredentialsGetter interface {
-	GetUsername() string
-	GetPassword() string
 }
