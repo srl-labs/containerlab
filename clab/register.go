@@ -2,10 +2,9 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package all
+package clab
 
 import (
-	"github.com/srl-labs/containerlab/nodes"
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
@@ -35,33 +34,33 @@ import (
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
-// RegisterAll registers all the nodes/kinds supported by containerlab.
-func RegisterAll(r *nodes.NodeRegistry) {
-	bridge.Register(r)
-	ceos.Register(r)
-	checkpoint_cloudguard.Register(r)
-	crpd.Register(r)
-	cvx.Register(r)
-	ext_container.Register(r)
-	host.Register(r)
-	ipinfusion_ocnos.Register(r)
-	keysight_ixiacone.Register(r)
-	linux.Register(r)
-	mysocketio.Register(r)
-	ovs.Register(r)
-	sonic.Register(r)
-	srl.Register(r)
-	vr_csr.Register(r)
-	vr_ftosv.Register(r)
-	vr_n9kv.Register(r)
-	vr_nxos.Register(r)
-	vr_pan.Register(r)
-	vr_ros.Register(r)
-	vr_sros.Register(r)
-	vr_veos.Register(r)
-	vr_vmx.Register(r)
-	vr_vqfx.Register(r)
-	vr_xrv.Register(r)
-	vr_xrv9k.Register(r)
-	xrd.Register(r)
+// RegisterNodes registers all the nodes/kinds supported by containerlab.
+func (c *CLab) RegisterNodes() {
+	bridge.Register(c.reg)
+	ceos.Register(c.reg)
+	checkpoint_cloudguard.Register(c.reg)
+	crpd.Register(c.reg)
+	cvx.Register(c.reg)
+	ext_container.Register(c.reg)
+	host.Register(c.reg)
+	ipinfusion_ocnos.Register(c.reg)
+	keysight_ixiacone.Register(c.reg)
+	linux.Register(c.reg)
+	mysocketio.Register(c.reg)
+	ovs.Register(c.reg)
+	sonic.Register(c.reg)
+	srl.Register(c.reg)
+	vr_csr.Register(c.reg)
+	vr_ftosv.Register(c.reg)
+	vr_n9kv.Register(c.reg)
+	vr_nxos.Register(c.reg)
+	vr_pan.Register(c.reg)
+	vr_ros.Register(c.reg)
+	vr_sros.Register(c.reg)
+	vr_veos.Register(c.reg)
+	vr_vmx.Register(c.reg)
+	vr_vqfx.Register(c.reg)
+	vr_xrv.Register(c.reg)
+	vr_xrv9k.Register(c.reg)
+	xrd.Register(c.reg)
 }

@@ -15,7 +15,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	allNodes "github.com/srl-labs/containerlab/nodes/all"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
@@ -129,7 +128,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	c.reg = nodes.NewNodeRegistry()
 
 	// register all nodes
-	allNodes.RegisterAll(c.reg)
+	c.RegisterNodes()
 
 	for _, opt := range opts {
 		err := opt(c)

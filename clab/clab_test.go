@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/srl-labs/containerlab/mocks"
 	"github.com/srl-labs/containerlab/nodes"
-	_ "github.com/srl-labs/containerlab/nodes/all"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
