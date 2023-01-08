@@ -21,22 +21,22 @@ func NewNodeRegistry() *NodeRegistry {
 	}
 }
 
-// Register is used to register the init function for a kind under all the
-// provided string names in the string slice
+// Register registers the node' init function for a provided names
 func (r *NodeRegistry) Register(names []string, initf Initializer, credentials CredentialsGetter) error {
 	newEntry := newRegistryEntry(names, initf, credentials)
 	return r.addEntry(newEntry)
 }
 
-// finally add the node to the registry index
+// addEntry adds the node entry to the registry
 func (r *NodeRegistry) addEntry(entry *nodeRegistryEntry) error {
 	for _, name := range entry.nodeKindNames {
 		if _, exists := r.nodeIndex[name]; exists {
 			return fmt.Errorf("node kind %q already registered in Node Registry", name)
 		}
-		// if not a duplicate, add entry
+
 		r.nodeIndex[name] = entry
 	}
+
 	return nil
 }
 
@@ -60,11 +60,8 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	}
 	// sort and return
 	sort.Strings(result)
-	return result
-}
 
-type NodeFactory interface {
-	NewNodeOfKind(nodeKindName string) (Node, error)
+	return result
 }
 
 type nodeRegistryEntry struct {
@@ -74,12 +71,11 @@ type nodeRegistryEntry struct {
 }
 
 func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials CredentialsGetter) *nodeRegistryEntry {
-	result := &nodeRegistryEntry{
+	return &nodeRegistryEntry{
 		nodeKindNames: nodeKindNames,
 		initFunction:  initFunction,
 		credentials:   credentials,
 	}
-	return result
 }
 
 type Credentials struct {
