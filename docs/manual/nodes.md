@@ -395,6 +395,26 @@ nodes:
       mgmt_ipv6: 2001:172:20:20::100
 ```
 
+### DNS
+
+To influence the DNS configuration a particular node uses, the `dns` configuration knob should be used. Within this blob, DNS server addresses, options and search domains can be provisioned.
+
+```yaml
+topology:
+  nodes:
+    r1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      dns:
+        servers:
+          - 1.1.1.1
+          - 8.8.4.4
+        search:
+          - foo.com
+        options:
+          - some-opt
+```
+
 ### publish
 
 !!!danger

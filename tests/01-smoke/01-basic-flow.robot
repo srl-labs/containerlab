@@ -167,6 +167,31 @@ Verify iptables allow rule is set
     ...    ignore_case=True
     ...    collapse_spaces=True
 
+Verify DNS-Server Config
+    [Documentation]     Check if the DNS config did take effect
+    Skip If    '${runtime}' != 'docker'
+    ${output} =    Run
+    ...    sudo ${runtime} inspect clab-${lab-name}-l2 -f '{{ .HostConfig.Dns }}'
+    Log    ${output}
+    Should Contain  ${output}   8.8.8.8
+    Should Contain  ${output}   1.2.3.4
+
+Verify DNS-Search Config
+    [Documentation]     Check if the DNS config did take effect
+    Skip If    '${runtime}' != 'docker'
+    ${output} =    Run
+    ...    sudo ${runtime} inspect clab-${lab-name}-l2 -f '{{ .HostConfig.DnsSearch }}'
+    Log    ${output}
+    Should Contain  ${output}   my.domain
+
+Verify DNS-Options Config
+    [Documentation]     Check if the DNS config did take effect
+    Skip If    '${runtime}' != 'docker'
+    ${output} =    Run
+    ...    sudo ${runtime} inspect clab-${lab-name}-l2 -f '{{ .HostConfig.DnsOptions }}'
+    Log    ${output}
+    Should Contain  ${output}   rotate
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup

@@ -65,6 +65,8 @@ type NodeDefinition struct {
 	Extras *Extras `yaml:"extras,omitempty"`
 	// List of node names to wait for before satarting this particular node
 	WaitFor []string `yaml:"wait-for,omitempty"`
+	// DNS configuration
+	DNS *DNSConfig `yaml:"dns,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -304,6 +306,13 @@ func (n *NodeDefinition) GetWaitFor() []string {
 		return []string{}
 	}
 	return n.WaitFor
+}
+
+func (n *NodeDefinition) GetDns() *DNSConfig {
+	if n == nil {
+		return nil
+	}
+	return n.DNS
 }
 
 // ImportEnvs imports all environment variales defined in the shell

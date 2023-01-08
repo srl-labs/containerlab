@@ -22,6 +22,11 @@ var topologyTestSet = map[string]struct {
 					CPU:        1,
 					Memory:     "1G",
 					AutoRemove: boolptr(true),
+					DNS: &DNSConfig{
+						Servers: []string{"1.1.1.1"},
+						Search:  []string{"foo.com"},
+						Options: []string{"someopt"},
+					},
 				},
 			},
 		},
@@ -31,6 +36,11 @@ var topologyTestSet = map[string]struct {
 				CPU:        1,
 				Memory:     "1G",
 				AutoRemove: boolptr(true),
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
 			},
 		},
 	},
@@ -68,6 +78,11 @@ var topologyTestSet = map[string]struct {
 					CPU:        1,
 					Memory:     "1G",
 					AutoRemove: boolptr(true),
+					DNS: &DNSConfig{
+						Servers: []string{"8.8.8.8"},
+						Search:  []string{"bar.com"},
+						Options: []string{"someotheropt"},
+					},
 				},
 			},
 			Nodes: map[string]*NodeDefinition{
@@ -81,6 +96,11 @@ var topologyTestSet = map[string]struct {
 					},
 					Memory:     "2G",
 					AutoRemove: boolptr(false),
+					DNS: &DNSConfig{
+						Servers: []string{"1.1.1.1"},
+						Search:  []string{"foo.com"},
+						Options: []string{"someopt"},
+					},
 				},
 			},
 		},
@@ -117,6 +137,11 @@ var topologyTestSet = map[string]struct {
 				CPU:        1,
 				Memory:     "2G",
 				AutoRemove: boolptr(false),
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
 			},
 		},
 	},
@@ -158,6 +183,11 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:    2,
 					Memory: "2G",
+					DNS: &DNSConfig{
+						Servers: []string{"1.1.1.1"},
+						Search:  []string{"foo.com"},
+						Options: []string{"someopt"},
+					},
 				},
 			},
 			Nodes: map[string]*NodeDefinition{
@@ -200,6 +230,11 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:    1,
 				Memory: "2G",
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
 			},
 		},
 	},
@@ -235,6 +270,11 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:    1,
 				Memory: "1G",
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
 			},
 			Nodes: map[string]*NodeDefinition{
 				"node1": {},
@@ -272,6 +312,11 @@ var topologyTestSet = map[string]struct {
 				CPU:        1,
 				Memory:     "1G",
 				AutoRemove: boolptr(false),
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
 			},
 		},
 	},
@@ -482,6 +527,20 @@ func TestGetNodeAutoRemove(t *testing.T) {
 			t.Errorf("item %q exp %v", name, item.want["node1"].AutoRemove)
 			t.Errorf("item %q got %v", name, autoremove)
 			t.Fail()
+		}
+	}
+}
+
+func TestGetNodeDNS(t *testing.T) {
+	for name, item := range topologyTestSet {
+		t.Logf("%q test item", name)
+
+		autoremove := item.input.GetNodeDns("node1")
+
+		t.Logf("%q test item result: %v", name, autoremove)
+
+		if d := cmp.Diff(item.want["node1"].DNS, autoremove); d != "" {
+			t.Fatalf("DNS config object doesn't match.\nGot: %+v\nWant: %+v\nDiff\n%s", autoremove, item.want["node1"].DNS, d)
 		}
 	}
 }

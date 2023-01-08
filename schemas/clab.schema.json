@@ -67,7 +67,8 @@
                         "ipinfusion_ocnos",
                         "checkpoint_cloudguard",
                         "ext-container",
-                        "xrd"
+                        "xrd",
+                        "cisco_xrd"
                     ]
                 },
                 "license": {
@@ -274,6 +275,10 @@
                     "uniqueItems": true,
                     "description": "Define which nodes should be started before this node will start",
                     "markdownDescription": "[wait-for](https://containerlab.dev/manual/nodes/#cmd) defines which nodes should be started before this node will start"
+                },
+                "dns": {
+                    "type": "object",
+                    "$ref": "#/definitions/dns-config"
                 }
             },
             "if": {
@@ -368,6 +373,37 @@
                     "type": "object",
                     "description": "config variables passed to config engine",
                     "markdownDescription": "config variables passed to config engine"
+                }
+            }
+        },
+        "dns-config": {
+            "type": "object",
+            "description": "Node's DNS configuration option",
+            "markdownDescription": "Node's [DNS configuration options](https://containerlab.dev/manual/nodes/#dns)",
+            "properties": {
+                "servers": {
+                    "type": "array",
+                    "description": "DNS server addresses",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "search": {
+                    "type": "array",
+                    "description": "DNS search domains",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "options": {
+                    "type": "array",
+                    "description": "DNS options",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
                 }
             }
         }

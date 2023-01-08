@@ -172,9 +172,6 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{NSMode: "host"},
 			// UseImageResolvConf:  false,
-			// DNSServers:          nil,
-			// DNSSearch:           nil,
-			// DNSOptions:          nil,
 			UseImageHosts: false,
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
@@ -217,13 +214,26 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 			Expose:              expose,
 			Networks:            nets,
 			// UseImageResolvConf:  false,
-			// DNSServers:          nil,
-			// DNSSearch:           nil,
-			// DNSOptions:          nil,
 			UseImageHosts: false,
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
+		if cfg.DNS != nil {
+			var dnsServers []net.IP
+			// DNS Servers need to be provided as net.IP so we need to convert the strings.
+			for _, servip := range cfg.DNS.Servers {
+				netip := net.ParseIP(servip)
+				if netip != nil {
+					dnsServers = append(dnsServers, netip)
+				} else {
+					log.Errorf("%q given as DNS server is not a valid IP", servip)
+				}
+			}
+			specNetConfig.DNSServers = dnsServers
+			specNetConfig.DNSSearch = cfg.DNS.Search
+			specNetConfig.DNSOptions = cfg.DNS.Options
+		}
+
 	default:
 		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
 	}

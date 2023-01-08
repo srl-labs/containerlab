@@ -220,10 +220,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 		AutoRemove:      c.Config.Topology.GetNodeAutoRemove(nodeName),
 		SANs:            c.Config.Topology.GetSANs(nodeName),
-
-		// Extras
-		Extras:  c.Config.Topology.GetNodeExtras(nodeName),
-		WaitFor: c.Config.Topology.GetWaitFor(nodeName),
+		Extras:          c.Config.Topology.GetNodeExtras(nodeName),
+		WaitFor:         c.Config.Topology.GetWaitFor(nodeName),
+		DNS:             c.Config.Topology.GetNodeDns(nodeName),
 	}
 
 	var err error
