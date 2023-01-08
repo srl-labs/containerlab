@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -61,11 +60,10 @@ var execCmd = &cobra.Command{
 			name = c.Config.Name
 		}
 
-		filters := []*types.GenericFilter{{FilterType: "label", Match: name, Field: "containerlab", Operator: "="}}
-		filters = append(filters, types.FilterFromLabelStrings(labelsFilter)...)
+		filters := types.FilterFromLabelStrings(labelsFilter)
 
-		// list all containers matching the filters
-		gcl, err := c.ListContainers(ctx, filters)
+		// list all nodes matching the filters
+		nodes, err := c.ListNodes(ctx, filters)
 		if err != nil {
 			return err
 		}
@@ -78,25 +76,24 @@ var execCmd = &cobra.Command{
 		for _, execCmdStr := range execCommands {
 			execCmd, err := exec.NewExecCmdFromString(execCmdStr)
 			if err != nil {
-				// do not stop exec for other nodes if some failed
-				log.Error(err)
+				return err
 			}
 			execCmds = append(execCmds, execCmd)
 		}
 
 		// run the exec commands on all the cotnainers matching the filter
-		for _, gc := range gcl {
+		for _, node := range nodes {
 			// iterate over the commands
 			for _, execCmd := range execCmds {
 				// execute the commands
-				execResult, err := gc.RunExec(ctx, execCmd)
+				execResult, err := node.RunExec(ctx, execCmd)
 				if err != nil {
 					// skip nodes that do not support exec
 					if err == exec.ErrRunExecNotSupported {
 						continue
 					}
 				}
-				resultCollection.Add(gc.Names[0], execResult)
+				resultCollection.Add(node.Cfg.ShortName, execResult)
 			}
 		}
 
