@@ -27,8 +27,8 @@ var ixiacStatusConfig = struct {
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(rr nodes.NodeRergistryRegistrator) {
-	rr.Register(kindnames, func() nodes.Node {
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(ixiacOne)
 	}, nil)
 }

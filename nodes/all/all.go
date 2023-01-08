@@ -36,7 +36,7 @@ import (
 )
 
 // RegisterAll registers all the nodes/kinds supported by containerlab.
-func RegisterAll(r nodes.NodeRergistryRegistrator) {
+func RegisterAll(r *nodes.NodeRegistry) {
 	bridge.Register(r)
 	ceos.Register(r)
 	checkpoint_cloudguard.Register(r)

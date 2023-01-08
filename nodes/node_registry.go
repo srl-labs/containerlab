@@ -63,10 +63,6 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	return result
 }
 
-type NodeRergistryRegistrator interface {
-	Register(names []string, initf Initializer, credentials CredentialsGetter) error
-}
-
 type NodeFactory interface {
 	NewNodeOfKind(nodeKindName string) (Node, error)
 }

@@ -12,8 +12,8 @@ import (
 var Kindnames = []string{"mysocketio"}
 
 // Register registers the node in the NodeRegistry.
-func Register(rr nodes.NodeRergistryRegistrator) {
-	rr.Register(Kindnames, func() nodes.Node {
+func Register(r *nodes.NodeRegistry) {
+	r.Register(Kindnames, func() nodes.Node {
 		return new(mySocketIO)
 	}, nil)
 }
