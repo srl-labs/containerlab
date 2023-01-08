@@ -61,7 +61,7 @@ type Config struct {
 }
 
 // ParseTopology parses the lab topology.
-func (c *CLab) parseTopology(nodeFactory nodes.NodeFactory) error {
+func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
 
 	cwd, _ := filepath.Abs(os.Getenv("PWD"))
@@ -135,7 +135,7 @@ func (c *CLab) parseTopology(nodeFactory nodes.NodeFactory) error {
 
 	var err error
 	for idx, nodeName := range nodeNames {
-		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx, nodeFactory)
+		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
 		if err != nil {
 			return err
 		}
@@ -152,14 +152,14 @@ func (c *CLab) parseTopology(nodeFactory nodes.NodeFactory) error {
 }
 
 // NewNode initializes a new node object.
-func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int, nodeFactory nodes.NodeFactory) error {
+func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int) error {
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
 	}
 
 	// construct node
-	n, err := nodeFactory.NewNodeOfKind(nodeCfg.Kind)
+	n, err := c.reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
 		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}

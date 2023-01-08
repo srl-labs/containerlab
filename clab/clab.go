@@ -32,6 +32,8 @@ type CLab struct {
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	Dir           *Directory `json:"dir,omitempty"`
+	// reg is a registry of node kinds
+	reg *nodes.NodeRegistry
 
 	timeout time.Duration
 }
@@ -111,13 +113,6 @@ func WithTopoFile(file, varsFile string) ClabOption {
 
 // NewContainerLab function defines a new container lab.
 func NewContainerLab(opts ...ClabOption) (*CLab, error) {
-
-	// init a new NodeRegistry
-	NodeKindRegistry := nodes.NewNodeRegistry()
-
-	// register all nodes
-	allNodes.RegisterAll(NodeKindRegistry)
-
 	c := &CLab{
 		Config: &Config{
 			Mgmt:     new(types.MgmtNet),
@@ -130,6 +125,12 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Runtimes: make(map[string]runtime.ContainerRuntime),
 	}
 
+	// init a new NodeRegistry
+	c.reg = nodes.NewNodeRegistry()
+
+	// register all nodes
+	allNodes.RegisterAll(c.reg)
+
 	for _, opt := range opts {
 		err := opt(c)
 		if err != nil {
@@ -139,7 +140,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 	var err error
 	if c.TopoFile.path != "" {
-		err = c.parseTopology(NodeKindRegistry)
+		err = c.parseTopology()
 	}
 
 	return c, err
