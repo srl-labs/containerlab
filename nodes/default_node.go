@@ -309,9 +309,9 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.
 	return execResult, nil
 }
 
-// RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
-// This is to be overriden if the nodes implementation differs.
-func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) error {
+// RunExecNotWait executes a command for a node, and doesn't block waiting for the output.
+// Should be overriden if the nodes implementation differs.
+func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v",

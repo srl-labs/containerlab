@@ -51,13 +51,13 @@ func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
 	cmd, _ := exec.NewExecCmdFromString("supervisord")
-	err := s.RunExecTypeWoWait(ctx, cmd)
+	err := s.RunExecNotWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}
 
 	cmd, _ = exec.NewExecCmdFromString("supervisorctl start bgpd")
-	err = s.RunExecTypeWoWait(ctx, cmd)
+	err = s.RunExecNotWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}

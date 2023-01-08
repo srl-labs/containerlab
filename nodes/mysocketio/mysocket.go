@@ -80,7 +80,7 @@ func createMysocketTunnels(ctx context.Context, node *mySocketIO, nodesMap map[s
 				n.Config().LongName, ms.Port, sockID, tunID, proxy,
 				n.Config().ShortName, ms.Stype, ms.Port))
 			log.Debugf("Running mysocketio command %q", cmd)
-			err = node.RunExecTypeWoWait(ctx, cmd)
+			err = node.RunExecNotWait(ctx, cmd)
 			if err != nil {
 				return err
 			}
