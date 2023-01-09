@@ -7,12 +7,13 @@ package k8s_kind
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime/docker"
+	"github.com/srl-labs/containerlab/runtime/podman"
 	"github.com/srl-labs/containerlab/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -125,6 +126,8 @@ func (k *k8s_kind) getProvider() (*cluster.Provider, error) {
 	switch k.Runtime.GetName() {
 	case docker.RuntimeName:
 		kindProviderOptions = cluster.ProviderWithDocker()
+	case podman.RuntimeName:
+		kindProviderOptions = cluster.ProviderWithPodman()
 	default:
 		return nil, fmt.Errorf("runtime %s not supported by the k8s_kind node kind", k.Runtime.GetName())
 	}
@@ -142,7 +145,7 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 
 	if configfile != "" {
 		// open and read the file
-		data, err := ioutil.ReadFile(configfile)
+		data, err := os.ReadFile(configfile)
 		if err != nil {
 			return nil, err
 		}
