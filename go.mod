@@ -36,8 +36,8 @@ require (
 	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.4.0
-	golang.org/x/sys v0.3.0
-	golang.org/x/term v0.3.0
+	golang.org/x/sys v0.4.0
+	golang.org/x/term v0.4.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
