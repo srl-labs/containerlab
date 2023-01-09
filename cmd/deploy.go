@@ -257,6 +257,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// execute commands specified for nodes with `exec` node parameter
 	execCollection := exec.NewExecCollection()
 	for _, n := range c.Nodes {
+		// do not try to execute commands if the list is empty
+		if len(n.Config().Exec) == 0 {
+			continue
+		}
+
 		execResult, err := n.RunExecs(ctx, n.Config().Exec)
 		if err != nil {
 			log.Warnf("Failed to exec commands for node %q", n.Config().ShortName)
