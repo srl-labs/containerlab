@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/podman"
@@ -22,10 +23,11 @@ import (
 
 var kindnames = []string{"k8s-kind"}
 
-func init() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the global Node map.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(k8s_kind)
-	})
+	}, nil)
 }
 
 type k8s_kind struct {
@@ -85,7 +87,7 @@ func (k *k8s_kind) Deploy(_ context.Context) error {
 	return err
 }
 
-func (k *k8s_kind) GetRuntimeInformation(ctx context.Context) ([]types.GenericContainer, error) {
+func (k *k8s_kind) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
 	containeList, err := k.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "label",
@@ -165,18 +167,7 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 	return clusterConfig, nil
 }
 
-func (k *k8s_kind) RunExecConfig(_ context.Context) ([]types.ExecResultHolder, error) {
-	// It might be usefull to execute the same set of commands on all
-	// resulting kind nodes, but that's not implemented yet. So we give the hint to use ext-container
-	if k.Cfg.Exec != nil && len(k.Cfg.Exec) > 0 {
-		log.Errorf("Exec not implemented on k8s-kind use ext-container and reference the resulting kind cluster nodes seperately.")
-	}
-	return []types.ExecResultHolder{}, nil
-}
-
-func (k *k8s_kind) RunExecType(_ context.Context, _ types.ExecOperation) (types.ExecResultHolder, error) {
-	// It might be usefull to execute the same set of commands on all
-	// resulting kind nodes, but that's not implemented yet. So we give the hint to use ext-container
-	log.Errorf("Exec not implemented on k8s-kind use ext-container and reference the resulting kind cluster nodes seperately.")
-	return nil, types.ErrRunExecTypeNotSupported
+func (k *k8s_kind) RunExecs(_ context.Context, _ []string) ([]cExec.ExecResultHolder, error) {
+	log.Warnf("Exec operation is not implemented for kind %q", k.Config().Kind)
+	return nil, cExec.ErrRunExecNotSupported
 }
