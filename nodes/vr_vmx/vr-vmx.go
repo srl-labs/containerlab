@@ -17,25 +17,20 @@ import (
 )
 
 var kindnames = []string{"vr-vmx", "vr-juniper_vmx"}
+var defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 
 const (
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
 
 	scrapliPlatformName = "juniper_junos"
-	defaultUser         = "admin"
-	defaultPassword     = "admin@123"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(vrVMX)
-	})
-	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
-	if err != nil {
-		log.Error(err)
-	}
+	}, defaultCredentials)
 }
 
 type vrVMX struct {
@@ -54,8 +49,8 @@ func (s *vrVMX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           defaultUser,
-		"PASSWORD":           defaultPassword,
+		"USERNAME":           defaultCredentials.GetUsername(),
+		"PASSWORD":           defaultCredentials.GetPassword(),
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
@@ -66,7 +61,7 @@ func (s *vrVMX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, configDirName), ":/config"))
 
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
 }
@@ -78,8 +73,8 @@ func (s *vrVMX) PreDeploy(_ context.Context, _, _, _ string) error {
 
 func (s *vrVMX) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(s.Cfg.LongName,
-		defaultUser,
-		defaultPassword,
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {

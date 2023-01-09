@@ -47,11 +47,11 @@ var (
 	saveCmd = "Cli -p 15 -c wr"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(ceos)
-	})
+	}, nil)
 }
 
 type ceos struct {

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -127,7 +126,7 @@ func readTemplateVariables(topo, varsFile string) (interface{}, error) {
 		return nil, nil
 	}
 READFILE:
-	data, err := ioutil.ReadFile(varsFile)
+	data, err := os.ReadFile(varsFile)
 	if err != nil {
 		return nil, err
 	}

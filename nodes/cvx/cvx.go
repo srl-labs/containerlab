@@ -23,11 +23,11 @@ var memoryReqs = map[string]string{
 	"4.4.0": "768MB",
 }
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(cvx)
-	})
+	}, nil)
 	nodes.SetNonDefaultRuntimePerKind(kindnames, ignite.RuntimeName)
 }
 

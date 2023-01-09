@@ -21,8 +21,9 @@ import (
 )
 
 var (
-	kindnames = []string{"xrd", "cisco_xrd"}
-	xrdEnv    = map[string]string{
+	kindnames          = []string{"xrd", "cisco_xrd"}
+	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+	xrdEnv             = map[string]string{
 		"XR_FIRST_BOOT_CONFIG": "/etc/xrd/first-boot.cfg",
 		"XR_MGMT_INTERFACES":   "linux:eth0,xr_name=Mg0/RP0/CPU0/0,chksum,snoop_v4,snoop_v6",
 	}
@@ -33,19 +34,13 @@ var (
 
 const (
 	scrapliPlatformName = "cisco_iosxr"
-	defaultUser         = "clab"
-	defaultPassword     = "clab@123"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(xrd)
-	})
-	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
-	if err != nil {
-		log.Error(err)
-	}
+	}, defaultCredentials)
 }
 
 type xrd struct {
@@ -81,8 +76,8 @@ func (n *xrd) PreDeploy(ctx context.Context, _, _, _ string) error {
 
 func (n *xrd) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(n.Cfg.LongName,
-		defaultUser,
-		defaultPassword,
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {

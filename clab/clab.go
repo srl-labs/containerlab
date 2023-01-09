@@ -15,15 +15,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	allNodes "github.com/srl-labs/containerlab/nodes/all"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 )
-
-var once sync.Once // nolint:gochecknoglobals
 
 type CLab struct {
 	Config        *Config   `json:"config,omitempty"`
@@ -34,6 +31,8 @@ type CLab struct {
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	Dir           *Directory `json:"dir,omitempty"`
+	// reg is a registry of node kinds
+	reg *nodes.NodeRegistry
 
 	timeout time.Duration
 }
@@ -113,9 +112,6 @@ func WithTopoFile(file, varsFile string) ClabOption {
 
 // NewContainerLab function defines a new container lab.
 func NewContainerLab(opts ...ClabOption) (*CLab, error) {
-	// register all nodes just once
-	once.Do(allNodes.RegisterAll)
-
 	c := &CLab{
 		Config: &Config{
 			Mgmt:     new(types.MgmtNet),
@@ -127,6 +123,12 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Links:    make(map[int]*types.Link),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
 	}
+
+	// init a new NodeRegistry
+	c.reg = nodes.NewNodeRegistry()
+
+	// register all nodes
+	c.RegisterNodes()
 
 	for _, opt := range opts {
 		err := opt(c)

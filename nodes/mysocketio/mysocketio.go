@@ -11,11 +11,11 @@ import (
 
 var Kindnames = []string{"mysocketio"}
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(Kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(Kindnames, func() nodes.Node {
 		return new(mySocketIO)
-	})
+	}, nil)
 }
 
 type mySocketIO struct {

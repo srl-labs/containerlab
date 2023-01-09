@@ -15,11 +15,11 @@ import (
 
 var kindnames = []string{"host"}
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(host)
-	})
+	}, nil)
 }
 
 type host struct {

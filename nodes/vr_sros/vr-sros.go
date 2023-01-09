@@ -19,26 +19,21 @@ import (
 )
 
 var kindnames = []string{"vr-sros", "vr-nokia_sros"}
+var defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 const (
 	vrsrosDefaultType   = "sr-1"
 	scrapliPlatformName = "nokia_sros"
-	defaultUser         = "admin"
-	defaultPassword     = "admin"
 	configDirName       = "tftpboot"
 	startupCfgFName     = "config.txt"
 	licenseFName        = "license.txt"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(vrSROS)
-	})
-	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
-	if err != nil {
-		log.Error(err)
-	}
+	}, defaultCredentials)
 }
 
 type vrSROS struct {
@@ -92,8 +87,8 @@ func (s *vrSROS) PreDeploy(_ context.Context, _, _, _ string) error {
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(s.Cfg.LongName,
-		defaultUser,
-		defaultPassword,
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {

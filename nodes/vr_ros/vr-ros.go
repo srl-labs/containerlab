@@ -15,20 +15,18 @@ import (
 )
 
 var kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
+var defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 const (
-	defaultUser     = "admin"
-	defaultPassword = "admin"
-
 	configDirName   = "ftpboot"
 	startupCfgFName = "config.auto.rsc"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(vrRos)
-	})
+	}, defaultCredentials)
 }
 
 type vrRos struct {
@@ -47,8 +45,8 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"USERNAME":           defaultUser,
-		"PASSWORD":           defaultPassword,
+		"USERNAME":           defaultCredentials.GetUsername(),
+		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
 	}
@@ -62,7 +60,7 @@ func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
 }

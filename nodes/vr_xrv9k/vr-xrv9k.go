@@ -17,26 +17,20 @@ import (
 )
 
 var kindnames = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
+var defaultCredentials = nodes.NewCredentials("clab", "clab@123")
 
 const (
 	scrapliPlatformName = "cisco_iosxr"
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
-
-	defaultUser     = "clab"
-	defaultPassword = "clab@123"
 )
 
-// Register registers the node in the global Node map.
-func Register() {
-	nodes.Register(kindnames, func() nodes.Node {
+// Register registers the node in the NodeRegistry.
+func Register(r *nodes.NodeRegistry) {
+	r.Register(kindnames, func() nodes.Node {
 		return new(vrXRV9K)
-	})
-	err := nodes.SetDefaultCredentials(kindnames, defaultUser, defaultPassword)
-	if err != nil {
-		log.Error(err)
-	}
+	}, defaultCredentials)
 }
 
 type vrXRV9K struct {
@@ -55,8 +49,8 @@ func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           "clab",
-		"PASSWORD":           "clab@123",
+		"USERNAME":           defaultCredentials.GetUsername(),
+		"PASSWORD":           defaultCredentials.GetPassword(),
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "12288",
@@ -74,7 +68,7 @@ func (s *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace",
-		s.Cfg.Env["USERNAME"], s.Cfg.Env["PASSWORD"], s.Cfg.ShortName,
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.ShortName,
 		s.Cfg.Env["CONNECTION_MODE"], s.Cfg.Env["VCPU"], s.Cfg.Env["RAM"])
 
 	return nil
@@ -87,8 +81,8 @@ func (s *vrXRV9K) PreDeploy(_ context.Context, _, _, _ string) error {
 
 func (s *vrXRV9K) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(s.Cfg.LongName,
-		defaultUser,
-		defaultPassword,
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {

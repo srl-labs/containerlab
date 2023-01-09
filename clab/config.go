@@ -149,19 +149,13 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return err
 	}
 
-	// Init
-	nodeInitializer, ok := nodes.Nodes[nodeCfg.Kind]
-	if !ok {
-		// collect all kind names registered by the nodes in a slice
-		kinds := make([]string, 0, len(nodes.Nodes))
-		for k := range nodes.Nodes {
-			kinds = append(kinds, k)
-		}
-		return fmt.Errorf("node %q refers to a kind %q which is not supported. Supported kinds are %q", nodeCfg.ShortName, nodeCfg.Kind, kinds)
+	// construct node
+	n, err := c.reg.NewNodeOfKind(nodeCfg.Kind)
+	if err != nil {
+		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
-	n := nodeInitializer()
-	// Init
 
+	// Init
 	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
