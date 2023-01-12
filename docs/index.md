@@ -6,6 +6,8 @@ hide:
 
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Github all releases](https://img.shields.io/github/downloads/srl-labs/containerlab/total.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
+[![Twitter](https://img.shields.io/twitter/follow/go_containerlab?style=flat-square&label=%40go_containerlab&logo=twitter&color=00c9ff&labelColor=bec8d2)](https://twitter.com/go_containerlab)
+[![Discord](https://img.shields.io/discord/860500297297821756?style=flat-square&label=discord&logo=discord&color=00c9ff&labelColor=bec8d2)](https://discord.gg/vAyddtaEV9)
 
 ---
 
