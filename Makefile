@@ -3,7 +3,7 @@ BINARY = $(CURDIR)/bin/containerlab
 MKDOCS_VER = 8.3.9
 # insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
 # make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
-MKDOCS_INS_VER = 8.5.11-insiders-4.27.0-hellt
+MKDOCS_INS_VER = 9.0.4-insiders-4.27.1-hellt
 
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
