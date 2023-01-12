@@ -6,12 +6,13 @@ package ovs
 
 import (
 	"context"
+	"fmt"
 
+	goOvs "github.com/digitalocean/go-openvswitch/ovs"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"ovs-bridge"}
@@ -27,28 +28,29 @@ type ovs struct {
 	nodes.DefaultNode
 }
 
-func (s *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 
-	s.Cfg = cfg
+	n.Cfg = cfg
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
-	s.Cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
+	n.Cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
 	return nil
 }
 
-func (s *ovs) CheckDeploymentConditions(_ context.Context) error {
-	err := s.VerifyHostRequirements()
-	if err != nil {
-		return err
+func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
+	// check if ovs bridge exists
+	c := goOvs.New(
+		// Prepend "sudo" to all commands.
+		goOvs.Sudo(),
+	)
+
+	if _, err := c.VSwitch.Get.Bridge(n.Cfg.ShortName); err != nil {
+		return fmt.Errorf("could not find ovs bridge %q", n.Cfg.ShortName)
 	}
-	// check bridge exists
-	_, err = utils.BridgeByName(s.Cfg.ShortName)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
