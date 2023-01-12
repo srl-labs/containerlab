@@ -8,7 +8,7 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
+	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -26,13 +26,13 @@ type host struct {
 	nodes.DefaultNode
 }
 
-func (s *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 
-	s.Cfg = cfg
+	n.Cfg = cfg
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
 
 	return nil
@@ -68,8 +68,9 @@ func (*host) GetContainers(_ context.Context) ([]types.GenericContainer, error) 
 	}, nil
 }
 
-func (h *host) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
-	log.Warnf("Exec operation is not implemented for kind %q", h.Config().Kind)
+// RunExec is not implemented for host kind
+func (n *host) RunExec(_ context.Context, _ *cExec.ExecCmd) (cExec.ExecResultHolder, error) {
+	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
-	return nil, exec.ErrRunExecNotSupported
+	return nil, cExec.ErrRunExecNotSupported
 }

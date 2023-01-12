@@ -257,16 +257,21 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// execute commands specified for nodes with `exec` node parameter
 	execCollection := exec.NewExecCollection()
 	for _, n := range c.Nodes {
-		// do not try to execute commands if the list is empty
-		if len(n.Config().Exec) == 0 {
-			continue
-		}
 
-		execResult, err := n.RunExecs(ctx, n.Config().Exec)
-		if err != nil {
-			log.Warnf("Failed to exec commands for node %q", n.Config().ShortName)
+		for _, e := range n.Config().Exec {
+			exec, err := exec.NewExecCmdFromString(e)
+			if err != nil {
+				log.Warnf("Failed to parse the command string: %s, %v", e, err)
+			}
+
+			res, err := n.RunExec(ctx, exec)
+			if err != nil {
+				// kinds which do not support exec functionality are skipped
+				continue
+			}
+
+			execCollection.Add(n.Config().ShortName, res)
 		}
-		execCollection.AddAll(n.Config().ShortName, execResult)
 	}
 
 	// write to log

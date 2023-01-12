@@ -241,21 +241,6 @@ func (mr *MockNodeMockRecorder) RunExec(ctx, execCmd interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNode)(nil).RunExec), ctx, execCmd)
 }
 
-// RunExecs mocks base method.
-func (m *MockNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunExecs", ctx, cmds)
-	ret0, _ := ret[0].([]exec.ExecResultHolder)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RunExecs indicates an expected call of RunExecs.
-func (mr *MockNodeMockRecorder) RunExecs(ctx, cmds interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExecs", reflect.TypeOf((*MockNode)(nil).RunExecs), ctx, cmds)
-}
-
 // SaveConfig mocks base method.
 func (m *MockNode) SaveConfig(arg0 context.Context) error {
 	m.ctrl.T.Helper()
