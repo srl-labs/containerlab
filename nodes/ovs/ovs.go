@@ -9,8 +9,6 @@ import (
 	"fmt"
 
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -65,9 +63,3 @@ func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers is a noop for bridges.
 func (*ovs) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
-
-func (o *ovs) RunExecs(_ context.Context, _ []string) ([]exec.ExecResultHolder, error) {
-	log.Warnf("Exec operation is not implemented for kind %q", o.Config().Kind)
-
-	return nil, exec.ErrRunExecNotSupported
-}

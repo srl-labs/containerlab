@@ -272,26 +272,6 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 	return nil
 }
 
-// RunExecs executes cmds commands for a node. Commands is a list of strings.
-func (d *DefaultNode) RunExecs(ctx context.Context, cmds []string) ([]exec.ExecResultHolder, error) {
-	var results []exec.ExecResultHolder
-	for _, cmd := range cmds {
-		execCmd, err := exec.NewExecCmdFromString(cmd)
-		if err != nil {
-			return nil, err
-		}
-
-		er, err := d.RunExec(ctx, execCmd)
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, er)
-	}
-
-	return results, nil
-}
-
 // GetContainerName returns the name used by the runtime to identify the container
 // e.g. ext-container nodes use the name as defined in the topo file, while most other containers use long (prefixed) name.
 func (d *DefaultNode) GetContainerName() string {
