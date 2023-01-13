@@ -189,16 +189,6 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:
-		// when json format is requested, we check if stdout is a valid json
-		// to nicely display native json output that exec might have produced with `json` tag
-		// for _, results := range ec.execEntries {
-		// 	for _, r := range results {
-		// 		if json.Valid([]byte(r.Stdout)) {
-		// 			r.Json = json.RawMessage([]byte(r.Stdout))
-		// 		}
-		// 	}
-		// }
-
 		byteData, err := json.MarshalIndent(ec.execEntries, "", "  ")
 		if err != nil {
 			return "", err
