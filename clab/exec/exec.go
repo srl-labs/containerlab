@@ -224,10 +224,10 @@ func (ec *ExecCollection) Log() {
 		for _, er := range execResults {
 			switch {
 			case er.GetReturnCode() != 0 || er.GetStdErrString() != "":
-				log.Errorf("Failed to execute command '%s' on node %s. rc=%d,\nstdout:\n%s\nstderr:\n%s",
+				log.Errorf("Failed to execute command %q on the node %q. rc=%d,\nstdout:\n%s\nstderr:\n%s",
 					er.GetCmdString(), k, er.GetReturnCode(), er.GetStdOutString(), er.GetStdErrString())
 			default:
-				log.Infof("Executed command '%s' on node %s. stdout:\n%s",
+				log.Infof("Executed command %q on the node %q. stdout:\n%s",
 					er.GetCmdString(), k, er.GetStdOutString())
 			}
 		}

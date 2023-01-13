@@ -19,14 +19,17 @@ With the global `--topo | -t` flag a user specifies from which lab to take the c
 When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
 
 #### cmd
+
 The command to be executed on the nodes is provided with `--cmd` flag. The command is provided as a string, thus it needs to be quoted to accommodate for spaces or special characters.
 
 #### format
+
 The `--format | -f` flag allows to select between plain text format output or a json variant. Consult with the examples below to see the differences between these two formatting options.
 
 Defaults to `plain` output format.
 
 #### label
+
 By default `exec` command will attempt to execute the command across all the nodes of a lab. To limit the scope of the execution, the users can leverage the `--label` flag to filter out the nodes of interest.
 
 ### Examples
@@ -46,6 +49,7 @@ INFO[0000] clab-srl02-srl2: stdout:
     inet 172.20.20.2/24 brd 172.20.20.255 scope global dummy-mgmt0
        valid_lft forever preferred_lft forever
 ```
+
 #### Execute a command on a node referenced by its name
 
 Show ipv4 information from a specific node of the lab with a plain text output
