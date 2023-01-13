@@ -177,48 +177,6 @@ func DisableTxOffload(n *NodeConfig) error {
 	return err
 }
 
-// GenericContainer stores generic container data.
-type GenericContainer struct {
-	Names           []string
-	ID              string
-	ShortID         string // trimmed ID for display purposes
-	Image           string
-	State           string
-	Status          string
-	Labels          map[string]string
-	Pid             int
-	NetworkSettings GenericMgmtIPs
-	Mounts          []ContainerMount
-}
-
-type ContainerMount struct {
-	Source      string
-	Destination string
-}
-
-func (ctr *GenericContainer) GetContainerIPv4() string {
-	if ctr.NetworkSettings.IPv4addr == "" {
-		return "N/A"
-	}
-	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
-}
-
-func (ctr *GenericContainer) GetContainerIPv6() string {
-	if ctr.NetworkSettings.IPv6addr == "" {
-		return "N/A"
-	}
-	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
-}
-
-type GenericMgmtIPs struct {
-	IPv4addr string
-	IPv4pLen int
-	IPv4Gw   string
-	IPv6addr string
-	IPv6pLen int
-	IPv6Gw   string
-}
-
 type GenericFilter struct {
 	// defined by now "label" / "name" [then only Match is required]
 	FilterType string
@@ -230,6 +188,10 @@ type GenericFilter struct {
 	Match string
 }
 
+// FilterFromLabelStrings creates a GenericFilter based on the list of label=value pairs or just label entries.
+// A filter of type `label` is created.
+// For each label=value input label, a filter with the Field matching the label and Match matching the value is created.
+// For each standalone label, a filter with Operator=exists and Field matching the label is created.
 func FilterFromLabelStrings(labels []string) []*GenericFilter {
 	gfl := []*GenericFilter{}
 	var gf *GenericFilter

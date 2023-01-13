@@ -297,8 +297,8 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 	return nil
 }
 
-func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]types.GenericContainer, error) {
-	var result []types.GenericContainer
+func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
+	var result []runtime.GenericContainer
 
 	var labelStrings []string
 	for _, gf := range gfilters {
@@ -337,8 +337,8 @@ func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.Gene
 	return c.produceGenericContainerList(filteredVMs)
 }
 
-func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*types.GenericContainer, error) {
-	var result *types.GenericContainer
+func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*runtime.GenericContainer, error) {
+	var result *runtime.GenericContainer
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {
 		return result, err
@@ -356,18 +356,19 @@ func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*ty
 }
 
 // Transform docker-specific to generic container format.
-func (*IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]types.GenericContainer, error) {
-	var result []types.GenericContainer
+func (ir *IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]runtime.GenericContainer, error) {
+	var result []runtime.GenericContainer
 
 	for _, i := range input {
-		ctr := types.GenericContainer{
+		ctr := runtime.GenericContainer{
 			Names:           []string{i.Name},
 			ID:              i.GetUID().String(),
 			ShortID:         i.PrefixedID(),
 			Labels:          i.Labels,
 			Image:           i.Spec.Image.OCI.Normalized(),
-			NetworkSettings: types.GenericMgmtIPs{},
+			NetworkSettings: runtime.GenericMgmtIPs{},
 		}
+		ctr.SetRuntime(ir)
 
 		if i.Status.Runtime != nil && i.Status.Runtime.ID != "" && len(i.Status.Runtime.ID) > 12 {
 			ctr.ShortID = i.Status.Runtime.ID[:12]

@@ -69,7 +69,7 @@ func (e *extcont) GetContainerName() string {
 	return e.Cfg.ShortName
 }
 
-func (e *extcont) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+func (e *extcont) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	cnts, err := e.DefaultNode.GetContainers(ctx)
 	if err != nil {
 		return nil, err

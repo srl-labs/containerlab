@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/srl-labs/containerlab/types"
+	runtime "github.com/srl-labs/containerlab/runtime"
 )
 
 // MockNodeOverwrites is a mock of NodeOverwrites interface.
@@ -64,10 +64,10 @@ func (mr *MockNodeOverwritesMockRecorder) GetContainerName() *gomock.Call {
 }
 
 // GetContainers mocks base method.
-func (m *MockNodeOverwrites) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+func (m *MockNodeOverwrites) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContainers", ctx)
-	ret0, _ := ret[0].([]types.GenericContainer)
+	ret0, _ := ret[0].([]runtime.GenericContainer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

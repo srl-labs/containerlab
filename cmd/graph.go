@@ -71,7 +71,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var containers []types.GenericContainer
+	var containers []runtime.GenericContainer
 	// if offline mode is not enforced, list containers matching lab name
 	if !offline {
 		labels := []*types.GenericFilter{{

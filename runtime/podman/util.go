@@ -21,6 +21,7 @@ import (
 	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -284,14 +285,14 @@ func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs
 // and transforms it into a GenericContainer type.
 func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 	cList []entities.ListContainer,
-) ([]types.GenericContainer, error) {
-	genericList := make([]types.GenericContainer, len(cList))
+) ([]runtime.GenericContainer, error) {
+	genericList := make([]runtime.GenericContainer, len(cList))
 	for i, v := range cList {
 		netSettings, err := r.extractMgmtIP(ctx, v.ID)
 		if err != nil {
 			return nil, err
 		}
-		genericList[i] = types.GenericContainer{
+		genericList[i] = runtime.GenericContainer{
 			Names:           v.Names,
 			ID:              v.ID,
 			ShortID:         v.ID[:12],
@@ -302,14 +303,15 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 			Pid:             v.Pid,
 			NetworkSettings: netSettings,
 		}
+		genericList[i].SetRuntime(r)
 	}
 	log.Debugf("Method produceGenericContainerList returns %+v", genericList)
 	return genericList, nil
 }
 
-func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.GenericMgmtIPs, error) {
+func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (runtime.GenericMgmtIPs, error) {
 	// First get all the data from the inspect
-	toReturn := types.GenericMgmtIPs{}
+	toReturn := runtime.GenericMgmtIPs{}
 	inspectRes, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
 	if err != nil {
 		log.Debugf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
@@ -332,7 +334,7 @@ func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (types.Gene
 	v6addr := mgmtData.GlobalIPv6Address
 	v6pLen := mgmtData.GlobalIPv6PrefixLen
 
-	toReturn = types.GenericMgmtIPs{
+	toReturn = runtime.GenericMgmtIPs{
 		IPv4addr: v4addr,
 		IPv4pLen: v4pLen,
 		IPv6addr: v6addr,

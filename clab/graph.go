@@ -17,6 +17,7 @@ import (
 	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -183,7 +184,7 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 	}
 }
 
-func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []types.GenericContainer) {
+func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []runtime.GenericContainer) {
 	containerNames := make(map[string]struct{})
 	for _, cont := range containers {
 		log.Debugf("looking for node name %s", cont.Labels[labels.NodeName])

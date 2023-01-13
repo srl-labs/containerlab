@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -110,7 +111,7 @@ func (*bridge) PullImage(_ context.Context) error { return nil }
 func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers is a noop for bridges.
-func (*bridge) GetContainers(_ context.Context) ([]types.GenericContainer, error) { return nil, nil }
+func (*bridge) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) { return nil, nil }
 
 // RunExec is not implemented for bridge kind
 func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (cExec.ExecResultHolder, error) {

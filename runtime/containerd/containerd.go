@@ -544,7 +544,7 @@ func (c *ContainerdRuntime) getContainerTask(ctx context.Context, containername 
 	return cont.Task(ctx, nil)
 }
 
-func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]types.GenericContainer, error) {
+func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	log.Debug("listing containers")
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
@@ -558,8 +558,8 @@ func (c *ContainerdRuntime) ListContainers(ctx context.Context, filter []*types.
 }
 
 // GetContainer TODO this will probably not work. need to work out the exact filter format.
-func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string) (*types.GenericContainer, error) {
-	var ctr *types.GenericContainer
+func (c *ContainerdRuntime) GetContainer(ctx context.Context, containerID string) (*runtime.GenericContainer, error) {
+	var ctr *runtime.GenericContainer
 	gFilter := types.GenericFilter{
 		FilterType: "name",
 		Field:      "",
@@ -610,14 +610,14 @@ func (*ContainerdRuntime) buildFilterString(filter []*types.GenericFilter) strin
 }
 
 // Transform docker-specific to generic container format.
-func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context,
+func (c *ContainerdRuntime) produceGenericContainerList(ctx context.Context,
 	input []containerd.Container,
-) ([]types.GenericContainer, error) {
-	var result []types.GenericContainer
+) ([]runtime.GenericContainer, error) {
+	var result []runtime.GenericContainer
 
 	for _, i := range input {
 
-		ctr := types.GenericContainer{}
+		ctr := runtime.GenericContainer{}
 
 		info, err := i.Info(ctx)
 		if err != nil {
@@ -629,6 +629,7 @@ func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context,
 		ctr.ShortID = ctr.ID
 		ctr.Image = info.Image
 		ctr.Labels = info.Labels
+		ctr.SetRuntime(c)
 
 		ctr.NetworkSettings, err = extractIPInfoFromLabels(ctr.Labels)
 		if err != nil {
@@ -673,23 +674,23 @@ func (*ContainerdRuntime) produceGenericContainerList(ctx context.Context,
 	return result, nil
 }
 
-func extractIPInfoFromLabels(labels map[string]string) (types.GenericMgmtIPs, error) {
+func extractIPInfoFromLabels(labels map[string]string) (runtime.GenericMgmtIPs, error) {
 	var ipv4mask int
 	var ipv6mask int
 	var err error
 	if val, exists := labels["clab.ipv4.netmask"]; exists {
 		ipv4mask, err = strconv.Atoi(val)
 		if err != nil {
-			return types.GenericMgmtIPs{}, err
+			return runtime.GenericMgmtIPs{}, err
 		}
 	}
 	if val, exists := labels["clab.ipv6.netmask"]; exists {
 		ipv6mask, err = strconv.Atoi(val)
 		if err != nil {
-			return types.GenericMgmtIPs{}, err
+			return runtime.GenericMgmtIPs{}, err
 		}
 	}
-	return types.GenericMgmtIPs{
+	return runtime.GenericMgmtIPs{
 		IPv4addr: labels["clab.ipv4.addr"], IPv4pLen: ipv4mask,
 		IPv6addr: labels["clab.ipv6.addr"], IPv6pLen: ipv6mask, IPv4Gw: labels["clab.ipv4.gateway"],
 		IPv6Gw: labels["clab.ipv6.gateway"],

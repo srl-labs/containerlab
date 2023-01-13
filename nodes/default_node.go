@@ -116,7 +116,7 @@ func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
 	}
 }
 
-func (d *DefaultNode) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
@@ -242,7 +242,7 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
-	GetContainers(ctx context.Context) ([]types.GenericContainer, error)
+	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	GetContainerName() string
 }
 
@@ -289,9 +289,9 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.
 	return execResult, nil
 }
 
-// RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a container
-// This is to be overriden if the nodes implementation differs.
-func (d *DefaultNode) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) error {
+// RunExecNotWait executes a command for a node, and doesn't block waiting for the output.
+// Should be overriden if the nodes implementation differs.
+func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v",

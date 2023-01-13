@@ -43,7 +43,7 @@ type ContainerRuntime interface {
 	// UnPause / resume a container identified by its name
 	UnpauseContainer(context.Context, string) error
 	// List all containers matching labels
-	ListContainers(context.Context, []*types.GenericFilter) ([]types.GenericContainer, error)
+	ListContainers(context.Context, []*types.GenericFilter) ([]GenericContainer, error)
 	// Get a netns path using the pid of a container
 	GetNSPath(context.Context, string) (string, error)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
