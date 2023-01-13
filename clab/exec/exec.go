@@ -51,13 +51,28 @@ func NewExecCmdFromSlice(cmd []string) *ExecCmd {
 	}
 }
 
+// Stdout type alias for a string is an artificial type
+// to allow for custom marshalling of stdout output which can be either
+// a valid or non valid JSON.
+// For that reason a custom MarshalJSON method is implemented to take care of both.
+type Stdout string
+
+// MarshalJSON implements a custom marshaller for a custom Stdout type.
+func (s Stdout) MarshalJSON() ([]byte, error) {
+	switch {
+	case json.Valid([]byte(s)):
+		return []byte(s), nil
+	default:
+		return json.Marshal(string(s))
+	}
+}
+
 // ExecResult represents a result of a command execution.
 type ExecResult struct {
-	Cmd        []string        `json:"cmd"`
-	ReturnCode int             `json:"return-code"`
-	Stdout     string          `json:"stdout"`
-	Json       json.RawMessage `json:"json"`
-	Stderr     string          `json:"stderr"`
+	Cmd        []string `json:"cmd"`
+	ReturnCode int      `json:"return-code"`
+	Stdout     Stdout   `json:"stdout"`
+	Stderr     string   `json:"stderr"`
 }
 
 func NewExecResult(op *ExecCmd) *ExecResult {
@@ -139,7 +154,7 @@ func (e *ExecResult) GetCmd() []string {
 }
 
 func (e *ExecResult) SetStdOut(data []byte) {
-	e.Stdout = string(data)
+	e.Stdout = Stdout(data)
 }
 
 func (e *ExecResult) SetStdErr(data []byte) {
@@ -176,13 +191,13 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 	case ExecFormatJSON:
 		// when json format is requested, we check if stdout is a valid json
 		// to nicely display native json output that exec might have produced with `json` tag
-		for _, results := range ec.execEntries {
-			for _, r := range results {
-				if json.Valid([]byte(r.Stdout)) {
-					r.Json = json.RawMessage([]byte(r.Stdout))
-				}
-			}
-		}
+		// for _, results := range ec.execEntries {
+		// 	for _, r := range results {
+		// 		if json.Valid([]byte(r.Stdout)) {
+		// 			r.Json = json.RawMessage([]byte(r.Stdout))
+		// 		}
+		// 	}
+		// }
 
 		byteData, err := json.MarshalIndent(ec.execEntries, "", "  ")
 		if err != nil {
