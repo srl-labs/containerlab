@@ -51,23 +51,13 @@ func NewExecCmdFromSlice(cmd []string) *ExecCmd {
 	}
 }
 
-type ExecResultHolder interface {
-	GetStdOutString() string
-	GetStdErrString() string
-	GetStdOutByteSlice() []byte
-	GetStdErrByteSlice() []byte
-	GetReturnCode() int
-	GetCmdString() string
-	Dump(format string) (string, error)
-	String() string
-}
-
 // ExecResult represents a result of a command execution.
 type ExecResult struct {
-	Cmd        []string `json:"cmd"`
-	ReturnCode int      `json:"return-code"`
-	Stdout     string   `json:"stdout"`
-	Stderr     string   `json:"stderr"`
+	Cmd        []string        `json:"cmd"`
+	ReturnCode int             `json:"return-code"`
+	Stdout     string          `json:"stdout"`
+	Json       json.RawMessage `json:"json"`
+	Stderr     string          `json:"stderr"`
 }
 
 func NewExecResult(op *ExecCmd) *ExecResult {
@@ -156,9 +146,8 @@ func (e *ExecResult) SetStdErr(data []byte) {
 	e.Stderr = string(data)
 }
 
-// execEntries is a map indexed by container IDs storing lists of ExecResultHolder.
-// ExecResultHolder is an interface that is backed by the type storing data for the executed command.
-type execEntries map[string][]ExecResultHolder
+// execEntries is a map indexed by container IDs storing lists of ExecResult.
+type execEntries map[string][]*ExecResult
 
 // ExecCollection represents a datastore for exec commands execution results.
 type ExecCollection struct {
@@ -172,11 +161,11 @@ func NewExecCollection() *ExecCollection {
 	}
 }
 
-func (ec *ExecCollection) Add(cId string, e ExecResultHolder) {
+func (ec *ExecCollection) Add(cId string, e *ExecResult) {
 	ec.execEntries[cId] = append(ec.execEntries[cId], e)
 }
 
-func (ec *ExecCollection) AddAll(cId string, e []ExecResultHolder) {
+func (ec *ExecCollection) AddAll(cId string, e []*ExecResult) {
 	ec.execEntries[cId] = append(ec.execEntries[cId], e...)
 }
 
@@ -185,10 +174,21 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:
+		// when json format is requested, we check if stdout is a valid json
+		// to nicely display native json output that exec might have produced with `json` tag
+		for _, results := range ec.execEntries {
+			for _, r := range results {
+				if json.Valid([]byte(r.Stdout)) {
+					r.Json = json.RawMessage([]byte(r.Stdout))
+				}
+			}
+		}
+
 		byteData, err := json.MarshalIndent(ec.execEntries, "", "  ")
 		if err != nil {
 			return "", err
 		}
+
 		result.Write(byteData)
 	case ExecFormatPlain:
 		printSep := false

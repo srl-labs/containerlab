@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -99,6 +100,13 @@ var execCmd = &cobra.Command{
 		switch outputFormat {
 		case exec.ExecFormatPlain:
 			resultCollection.Log()
+		case exec.ExecFormatJSON:
+			out, err := resultCollection.Dump(outputFormat)
+			if err != nil {
+				return fmt.Errorf("failed to print the results collection: %v", err)
+			}
+
+			fmt.Println(out)
 		}
 
 		return err
