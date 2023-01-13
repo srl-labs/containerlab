@@ -400,7 +400,7 @@ func (c *IgniteRuntime) GetNSPath(ctx context.Context, ctrId string) (string, er
 	return result, nil
 }
 
-func (*IgniteRuntime) Exec(_ context.Context, _ string, _ *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (*IgniteRuntime) Exec(_ context.Context, _ string, _ *exec.ExecCmd) (*exec.ExecResult, error) {
 	log.Infof("Exec is not yet implemented for Ignite runtime")
 	return nil, nil
 }

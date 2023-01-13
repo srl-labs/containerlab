@@ -279,7 +279,7 @@ func (d *DefaultNode) GetContainerName() string {
 }
 
 // RunExec executes a single command for a node.
-func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
 	execResult, err := d.GetRuntime().Exec(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v",

@@ -114,7 +114,7 @@ func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil
 func (*bridge) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) { return nil, nil }
 
 // RunExec is not implemented for bridge kind
-func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (cExec.ExecResultHolder, error) {
+func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
 
 	return nil, cExec.ErrRunExecNotSupported

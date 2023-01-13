@@ -68,7 +68,7 @@ func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 func (*ovs) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) { return nil, nil }
 
 // RunExec is not implemented for ovs kind
-func (n *ovs) RunExec(_ context.Context, _ *cExec.ExecCmd) (cExec.ExecResultHolder, error) {
+func (n *ovs) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
 	return nil, cExec.ErrRunExecNotSupported

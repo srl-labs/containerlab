@@ -34,7 +34,7 @@ func (ctr *GenericContainer) SetRuntime(r ContainerRuntime) {
 }
 
 // RunExec executes a single command for a GenericContainer.
-func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
 	containerName := gc.Names[0]
 	execResult, err := gc.runtime.Exec(ctx, containerName, execCmd)
 	if err != nil {
