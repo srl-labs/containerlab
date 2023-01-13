@@ -188,6 +188,10 @@ type GenericFilter struct {
 	Match string
 }
 
+// FilterFromLabelStrings creates a GenericFilter based on the list of label=value pairs or just label entries.
+// A filter of type `label` is created.
+// For each label=value input label, a filter with the Field matching the label and Match matching the value is created.
+// For each standalone label, a filter with Operator=exists and Field matching the label is created.
 func FilterFromLabelStrings(labels []string) []*GenericFilter {
 	gfl := []*GenericFilter{}
 	var gf *GenericFilter

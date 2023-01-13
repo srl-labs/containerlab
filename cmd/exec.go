@@ -62,8 +62,8 @@ var execCmd = &cobra.Command{
 
 		filters := types.FilterFromLabelStrings(labelsFilter)
 
-		// list all nodes matching the filters
-		nodes, err := c.ListNodes(ctx, filters)
+		// list all containers using global runtime using provided filters
+		cnts, err := c.GlobalRuntime().ListContainers(ctx, filters)
 		if err != nil {
 			return err
 		}
@@ -81,19 +81,19 @@ var execCmd = &cobra.Command{
 			execCmds = append(execCmds, execCmd)
 		}
 
-		// run the exec commands on all the cotnainers matching the filter
-		for _, node := range nodes {
+		// run the exec commands on all the containers matching the filter
+		for _, cnt := range cnts {
 			// iterate over the commands
 			for _, execCmd := range execCmds {
 				// execute the commands
-				execResult, err := node.RunExec(ctx, execCmd)
+				execResult, err := cnt.RunExec(ctx, execCmd)
 				if err != nil {
 					// skip nodes that do not support exec
 					if err == exec.ErrRunExecNotSupported {
 						continue
 					}
 				}
-				resultCollection.Add(node.Cfg.ShortName, execResult)
+				resultCollection.Add(cnt.Names[0], execResult)
 			}
 		}
 

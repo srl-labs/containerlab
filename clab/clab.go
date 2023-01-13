@@ -563,6 +563,7 @@ func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContai
 
 		containers = append(containers, cts...)
 	}
+
 	return containers, nil
 }
 
