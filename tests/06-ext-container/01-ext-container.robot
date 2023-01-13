@@ -12,8 +12,8 @@ ${runtime}        docker
 *** Test Cases ***
 Start ext-containers
     Skip If    '${runtime}' == 'containerd'
-    Run     sudo ${runtime} run --name ext1 --rm -d --cap-add NET_ADMIN alpine sleep infinity
-    Run     sudo ${runtime} run --name ext2 --rm -d --cap-add NET_ADMIN alpine sleep infinity
+    Run     sudo ${runtime} run --name ext1 --label clab-node-name=ext1 --rm -d --cap-add NET_ADMIN alpine sleep infinity
+    Run     sudo ${runtime} run --name ext2 --label clab-node-name=ext2 --rm -d --cap-add NET_ADMIN alpine sleep infinity
 
 Deploy ${lab-name} lab
     Skip If    '${runtime}' == 'containerd'
