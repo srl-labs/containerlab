@@ -7,7 +7,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -97,13 +96,12 @@ var execCmd = &cobra.Command{
 			}
 		}
 
-		output, err := resultCollection.Dump(outputFormat)
-		if err != nil {
-			return err
+		switch outputFormat {
+		case exec.ExecFormatPlain:
+			resultCollection.Log()
 		}
-		fmt.Println(output)
 
-		return nil
+		return err
 	},
 }
 
