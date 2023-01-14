@@ -280,7 +280,7 @@ func (n *ceos) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`eth[1-9]+$|et[1-9]+$`)
 	for _, e := range n.Config().Endpoints {
 		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X is >1", e.EndpointName)
+			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X is >1", n.Cfg.ShortName, e.EndpointName)
 		}
 	}
 
