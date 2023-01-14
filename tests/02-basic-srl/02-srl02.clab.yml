@@ -11,6 +11,7 @@ topology:
   nodes:
     srl1:
       kind: srl
+      startup-config: srl1-startup.cli
     srl2:
       kind: srl
       startup-config: srl2-startup.cli
