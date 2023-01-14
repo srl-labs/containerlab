@@ -16,8 +16,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-n9kv", "vr-cisco_n9kv"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"vr-n9kv", "vr-cisco_n9kv"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 const (
 	configDirName   = "config"

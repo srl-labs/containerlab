@@ -14,8 +14,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"checkpoint_cloudguard"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"checkpoint_cloudguard"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {

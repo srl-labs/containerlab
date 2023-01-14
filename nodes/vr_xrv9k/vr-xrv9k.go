@@ -17,8 +17,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
-var defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+var (
+	kindnames          = []string{"vr-xrv9k", "vr-cisco_xrv9k"}
+	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+)
 
 const (
 	scrapliPlatformName = "cisco_iosxr"

@@ -17,8 +17,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-veos", "vr-arista_veos"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"vr-veos", "vr-arista_veos"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 const (
 	scrapliPlatformName = "arista_eos"

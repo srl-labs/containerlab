@@ -16,8 +16,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"ipinfusion_ocnos"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"ipinfusion_ocnos"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 const (
 	scrapliPlatformName = "ipinfusion_ocnos"

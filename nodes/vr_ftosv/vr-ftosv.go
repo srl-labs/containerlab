@@ -15,8 +15,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-ftosv", "vr-dell_ftosv"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"vr-ftosv", "vr-dell_ftosv"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 const (
 	configDirName   = "config"

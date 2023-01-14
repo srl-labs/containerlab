@@ -15,8 +15,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-ros", "vr-mikrotik_ros"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"vr-ros", "vr-mikrotik_ros"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 const (
 	configDirName   = "ftpboot"

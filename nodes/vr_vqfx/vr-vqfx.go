@@ -17,8 +17,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-vqfx", "vr-juniper_vqfx"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin@123")
+var (
+	kindnames          = []string{"vr-vqfx", "vr-juniper_vqfx"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
+)
 
 const (
 	scrapliPlatformName = "juniper_junos"
