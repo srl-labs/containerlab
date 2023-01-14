@@ -2,7 +2,6 @@ package nodes
 
 import (
 	"fmt"
-
 	"sort"
 	"strings"
 )
@@ -14,20 +13,20 @@ type NodeRegistry struct {
 	nodeIndex map[string]*nodeRegistryEntry
 }
 
-// NewNodeRegistry constructs a new Registry
+// NewNodeRegistry constructs a new Registry.
 func NewNodeRegistry() *NodeRegistry {
 	return &NodeRegistry{
 		nodeIndex: map[string]*nodeRegistryEntry{},
 	}
 }
 
-// Register registers the node' init function for all provided names
+// Register registers the node' init function for all provided names.
 func (r *NodeRegistry) Register(names []string, initf Initializer, credentials *Credentials) error {
 	newEntry := newRegistryEntry(names, initf, credentials)
 	return r.addEntry(newEntry)
 }
 
-// addEntry adds the node entry to the registry
+// addEntry adds the node entry to the registry.
 func (r *NodeRegistry) addEntry(entry *nodeRegistryEntry) error {
 	for _, name := range entry.nodeKindNames {
 		if _, exists := r.nodeIndex[name]; exists {
@@ -40,7 +39,7 @@ func (r *NodeRegistry) addEntry(entry *nodeRegistryEntry) error {
 	return nil
 }
 
-// NewNodeOfKind return a new Node of the given Node Kind
+// NewNodeOfKind return a new Node of the given Node Kind.
 func (r *NodeRegistry) NewNodeOfKind(nodeKindName string) (Node, error) {
 	nodeKindEntry, ok := r.nodeIndex[nodeKindName]
 	if !ok {
@@ -52,7 +51,7 @@ func (r *NodeRegistry) NewNodeOfKind(nodeKindName string) (Node, error) {
 	return nodeKindEntry.initFunction(), nil
 }
 
-// GetRegisteredNodeKindNames returns a sorted slice of all the registered node kind names in the registry
+// GetRegisteredNodeKindNames returns a sorted slice of all the registered node kind names in the registry.
 func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	var result []string
 	for k := range r.nodeIndex {
@@ -78,13 +77,13 @@ func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credenti
 	}
 }
 
-// Credentials defines NOS SSH credentials
+// Credentials defines NOS SSH credentials.
 type Credentials struct {
 	username string
 	password string
 }
 
-// NewCredentials constructor for the Credentials struct
+// NewCredentials constructor for the Credentials struct.
 func NewCredentials(username, password string) *Credentials {
 	return &Credentials{
 		username: username,

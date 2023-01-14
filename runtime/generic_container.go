@@ -28,7 +28,7 @@ type ContainerMount struct {
 	Destination string
 }
 
-// SetRuntime sets the runtime for this GenericContainer
+// SetRuntime sets the runtime for this GenericContainer.
 func (ctr *GenericContainer) SetRuntime(r ContainerRuntime) {
 	ctr.runtime = r
 }

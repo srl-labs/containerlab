@@ -59,7 +59,7 @@ Arista cEOS node launched with containerlab can be managed via the following int
 
 ceos container uses the following mapping for its linux interfaces:
 
-* `eth0` - management interface connected to the containerlab management network
+* `eth0`[^5] - management interface connected to the containerlab management network
 * `eth1` - first data interface
 
 When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ceos node will boot with that addresses configured. Data interfaces `eth1+` need to be configured with IP addressing manually.
@@ -400,3 +400,4 @@ sudo ip6tables -P INPUT ACCEPT
 [^2]: feel free to omit the IP addressing for Management interface, as it will be configured by containerlab when ceos node boots.
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
 [^4]: for example, Ubuntu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).
+[^5]: interface name can also be `et` instead of `eth`.
