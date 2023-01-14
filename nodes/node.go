@@ -68,7 +68,7 @@ type Node interface {
 	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node
 	WithRuntime(runtime.ContainerRuntime) // WithRuntime provides the runtime for the node
-	// CheckInterfaceName checks if a name of the interface referenced in the topology file correct
+	// CheckInterfaceName checks if a name of the interface referenced in the topology file is correct for this node
 	CheckInterfaceName() error
 	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
 	VerifyStartupConfig(topoDir string) error

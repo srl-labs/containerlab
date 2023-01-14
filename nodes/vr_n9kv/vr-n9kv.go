@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 
 	"github.com/srl-labs/containerlab/nodes"
 
@@ -71,4 +72,18 @@ func (s *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (s *vrN9kv) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (n *vrN9kv) CheckInterfaceName() error {
+	// allow eth and et interfaces
+	// https://regex101.com/r/C3Fhr0/1
+	ifRe := regexp.MustCompile(`eth[1-9]+$`)
+	for _, e := range n.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >1", n.Cfg.ShortName, e.EndpointName)
+		}
+	}
+
+	return nil
 }
