@@ -168,13 +168,13 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 }
 
 // RunExec is not implemented for this kind.
-func (k *k8s_kind) RunExec(_ context.Context, _ *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (k *k8s_kind) RunExec(_ context.Context, _ *exec.ExecCmd) (*exec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", k.Config().Kind)
 	return nil, exec.ErrRunExecNotSupported
 }
 
 // RunExecNotWait is not implemented for this kind.
-func (k *k8s_kind) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd) error {
+func (k *k8s_kind) RunExecNotWait(_ context.Context, _ *exec.ExecCmd) error {
 	log.Warnf("RunExecNotWait operation is not implemented for kind %q", k.Config().Kind)
 	return exec.ErrRunExecNotSupported
 }
