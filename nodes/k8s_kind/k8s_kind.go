@@ -12,7 +12,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
-	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
@@ -169,9 +168,9 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 }
 
 // RunExec is not implemented for this kind.
-func (k *k8s_kind) RunExec(_ context.Context, _ *cExec.ExecCmd) (cExec.ExecResultHolder, error) {
+func (k *k8s_kind) RunExec(_ context.Context, _ *exec.ExecCmd) (exec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", k.Config().Kind)
-	return nil, cExec.ErrRunExecNotSupported
+	return nil, exec.ErrRunExecNotSupported
 }
 
 // RunExecNotWait is not implemented for this kind.
