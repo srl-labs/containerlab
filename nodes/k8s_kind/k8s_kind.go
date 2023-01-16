@@ -16,7 +16,6 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
-	"github.com/srl-labs/containerlab/runtime/podman"
 	"github.com/srl-labs/containerlab/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -130,7 +129,7 @@ func (k *k8s_kind) getProvider() (*cluster.Provider, error) {
 	switch k.Runtime.GetName() {
 	case docker.RuntimeName:
 		kindProviderOptions = cluster.ProviderWithDocker()
-	case podman.RuntimeName:
+	case "podman": // this is an ugly workaround because podman is generally excluded via golang tags ... should be "podman.RuntimeName"
 		kindProviderOptions = cluster.ProviderWithPodman()
 	default:
 		return nil, fmt.Errorf("runtime %s not supported by the k8s_kind node kind", k.Runtime.GetName())
