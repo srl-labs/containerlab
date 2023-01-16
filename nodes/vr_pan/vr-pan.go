@@ -8,14 +8,17 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-pan", "vr-paloalto_panos"}
-var defaultCredentials = nodes.NewCredentials("admin", "Admin@123")
+var (
+	kindnames          = []string{"vr-pan", "vr-paloalto_panos"}
+	defaultCredentials = nodes.NewCredentials("admin", "Admin@123")
+)
 
 const (
 	configDirName   = "config"
@@ -72,4 +75,18 @@ func (s *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (s *vrPan) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (n *vrPan) CheckInterfaceName() error {
+	// allow eth and et interfaces
+	// https://regex101.com/r/C3Fhr0/1
+	ifRe := regexp.MustCompile(`eth[1-9]+$`)
+	for _, e := range n.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >1", n.Cfg.ShortName, e.EndpointName)
+		}
+	}
+
+	return nil
 }

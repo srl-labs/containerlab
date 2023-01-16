@@ -18,8 +18,10 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vr-sros", "vr-nokia_sros"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"vr-sros", "vr-nokia_sros"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 const (
 	vrsrosDefaultType   = "sr-1"

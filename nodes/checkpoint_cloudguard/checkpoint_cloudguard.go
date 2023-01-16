@@ -7,14 +7,17 @@ package checkpoint_cloudguard
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"checkpoint_cloudguard"}
-var defaultCredentials = nodes.NewCredentials("admin", "admin")
+var (
+	kindnames          = []string{"checkpoint_cloudguard"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+)
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
@@ -55,5 +58,19 @@ func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOpt
 
 func (n *CheckpointCloudguard) PreDeploy(_ context.Context, _, _, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	return nil
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (n *CheckpointCloudguard) CheckInterfaceName() error {
+	// allow eth and et interfaces
+	// https://regex101.com/r/C3Fhr0/1
+	ifRe := regexp.MustCompile(`eth[1-9]+$`)
+	for _, e := range n.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >1", n.Cfg.ShortName, e.EndpointName)
+		}
+	}
+
 	return nil
 }

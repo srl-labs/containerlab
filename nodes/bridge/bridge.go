@@ -113,7 +113,7 @@ func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil
 // GetContainers is a noop for bridges.
 func (*bridge) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) { return nil, nil }
 
-// RunExec is not implemented for bridge kind
+// RunExec is a noop for bridge kind.
 func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
 
