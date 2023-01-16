@@ -78,6 +78,13 @@ Ensure srl1 is reachable over ssh with public key auth
     ...    keyfile=${key-path}
     ...    try_for=10
 
+Ensure srl1 can ping srl2 over ethernet-1/1 interface
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip netns exec srbase-default ping 192.168.0.1 -c2 -w 3s"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    0% packet loss
+
 *** Keywords ***
 Cleanup
     Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
