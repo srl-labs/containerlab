@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -60,7 +61,15 @@ var execCmd = &cobra.Command{
 			name = c.Config.Name
 		}
 
-		filters := types.FilterFromLabelStrings(labelsFilter)
+		var filters []*types.GenericFilter
+		switch {
+		case len(labelsFilter) != 0:
+			filters = types.FilterFromLabelStrings(labelsFilter)
+		default:
+			// when user-defined labels are not provided we should filter the nodes of the lab
+			labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
+			filters = types.FilterFromLabelStrings(labFilter)
+		}
 
 		// list all containers using global runtime using provided filters
 		cnts, err := c.GlobalRuntime().ListContainers(ctx, filters)
