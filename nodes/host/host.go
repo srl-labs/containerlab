@@ -69,8 +69,8 @@ func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error
 	}, nil
 }
 
-// RunExec is not implemented for host kind.
-func (n *host) RunExec(_ context.Context, _ *cExec.ExecCmd) (cExec.ExecResultHolder, error) {
+// RunExec is a noop for host kind.
+func (n *host) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
 	return nil, cExec.ErrRunExecNotSupported

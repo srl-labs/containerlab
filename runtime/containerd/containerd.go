@@ -710,7 +710,7 @@ func (c *ContainerdRuntime) GetNSPath(ctx context.Context, containername string)
 	return "/proc/" + strconv.Itoa(int(task.Pid())) + "/ns/net", nil
 }
 
-func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec *exec.ExecCmd) (exec.ExecResultHolder, error) {
+func (c *ContainerdRuntime) Exec(ctx context.Context, containername string, exec *exec.ExecCmd) (*exec.ExecResult, error) {
 	return c.internalExec(ctx, containername, exec, false)
 }
 
@@ -721,7 +721,7 @@ func (c *ContainerdRuntime) ExecNotWait(ctx context.Context, containername strin
 
 func (c *ContainerdRuntime) internalExec(ctx context.Context, containername string,
 	execCmd *exec.ExecCmd, detach bool,
-) (exec.ExecResultHolder, error) { // skipcq: RVV-A0005
+) (*exec.ExecResult, error) { // skipcq: RVV-A0005
 
 	clabExecId := "clabexec"
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)

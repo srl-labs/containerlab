@@ -51,22 +51,27 @@ func NewExecCmdFromSlice(cmd []string) *ExecCmd {
 	}
 }
 
-type ExecResultHolder interface {
-	GetStdOutString() string
-	GetStdErrString() string
-	GetStdOutByteSlice() []byte
-	GetStdErrByteSlice() []byte
-	GetReturnCode() int
-	GetCmdString() string
-	Dump(format string) (string, error)
-	String() string
+// Stdout type alias for a string is an artificial type
+// to allow for custom marshalling of stdout output which can be either
+// a valid or non valid JSON.
+// For that reason a custom MarshalJSON method is implemented to take care of both.
+type Stdout string
+
+// MarshalJSON implements a custom marshaller for a custom Stdout type.
+func (s Stdout) MarshalJSON() ([]byte, error) {
+	switch {
+	case json.Valid([]byte(s)):
+		return []byte(s), nil
+	default:
+		return json.Marshal(string(s))
+	}
 }
 
 // ExecResult represents a result of a command execution.
 type ExecResult struct {
 	Cmd        []string `json:"cmd"`
 	ReturnCode int      `json:"return-code"`
-	Stdout     string   `json:"stdout"`
+	Stdout     Stdout   `json:"stdout"`
 	Stderr     string   `json:"stderr"`
 }
 
@@ -149,16 +154,15 @@ func (e *ExecResult) GetCmd() []string {
 }
 
 func (e *ExecResult) SetStdOut(data []byte) {
-	e.Stdout = string(data)
+	e.Stdout = Stdout(data)
 }
 
 func (e *ExecResult) SetStdErr(data []byte) {
 	e.Stderr = string(data)
 }
 
-// execEntries is a map indexed by container IDs storing lists of ExecResultHolder.
-// ExecResultHolder is an interface that is backed by the type storing data for the executed command.
-type execEntries map[string][]ExecResultHolder
+// execEntries is a map indexed by container IDs storing lists of ExecResult.
+type execEntries map[string][]*ExecResult
 
 // ExecCollection represents a datastore for exec commands execution results.
 type ExecCollection struct {
@@ -172,11 +176,11 @@ func NewExecCollection() *ExecCollection {
 	}
 }
 
-func (ec *ExecCollection) Add(cId string, e ExecResultHolder) {
+func (ec *ExecCollection) Add(cId string, e *ExecResult) {
 	ec.execEntries[cId] = append(ec.execEntries[cId], e)
 }
 
-func (ec *ExecCollection) AddAll(cId string, e []ExecResultHolder) {
+func (ec *ExecCollection) AddAll(cId string, e []*ExecResult) {
 	ec.execEntries[cId] = append(ec.execEntries[cId], e...)
 }
 
@@ -189,6 +193,7 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
 		result.Write(byteData)
 	case ExecFormatPlain:
 		printSep := false
