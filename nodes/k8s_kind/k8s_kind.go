@@ -11,8 +11,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/podman"
 	"github.com/srl-labs/containerlab/types"
@@ -87,7 +89,7 @@ func (k *k8s_kind) Deploy(_ context.Context) error {
 	return err
 }
 
-func (k *k8s_kind) GetContainers(ctx context.Context) ([]types.GenericContainer, error) {
+func (k *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	containeList, err := k.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "label",
@@ -167,7 +169,14 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 	return clusterConfig, nil
 }
 
-func (k *k8s_kind) RunExecs(_ context.Context, _ []string) ([]cExec.ExecResultHolder, error) {
+// RunExec is not implemented for this kind.
+func (k *k8s_kind) RunExec(_ context.Context, _ *cExec.ExecCmd) (cExec.ExecResultHolder, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", k.Config().Kind)
 	return nil, cExec.ErrRunExecNotSupported
+}
+
+// RunExecNotWait is not implemented for this kind.
+func (k *k8s_kind) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd) error {
+	log.Warnf("RunExecNotWait operation is not implemented for kind %q", k.Config().Kind)
+	return exec.ErrRunExecNotSupported
 }
