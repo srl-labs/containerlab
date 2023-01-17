@@ -88,6 +88,7 @@ var (
 		"ixr6e":  "7250IXR6e.yml",
 		"ixr10":  "7250IXR10.yml",
 		"ixr10e": "7250IXR10e.yml",
+		"fiji":   "fiji.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
