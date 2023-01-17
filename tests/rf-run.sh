@@ -7,4 +7,4 @@
 # $1 - container runtime: [docker, containerd]
 # $2 - test suite to execute
 
-robot --consolecolors on -r none --variable runtime:$1 -l ./tests/out/$(basename $2)-$1-log --output ./tests/out/$(basename $2)-$1-out $2
+robot --consolecolors on -r none --variable runtime:$1 -l ./tests/out/$(basename $2)-$1-log --output ./tests/out/$(basename $2)-$1-out.xml $2

@@ -1,10 +1,12 @@
 *** Settings ***
 Library           OperatingSystem
 Library           String
+Library     Process
 Suite Setup       Setup
 Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 *** Variables ***
+${lab-file}       01-linux-nodes.clab.yml
 ${lab-name}       2-linux-nodes
 ${runtime}        docker
 # runtime command to execute tasks in a container
@@ -30,12 +32,47 @@ Deploy ${lab-name} lab
     # save output to be used in next steps
     Set Suite Variable    ${deploy-output}    ${output}
 
-Ensure exec command works
+Ensure exec node option works
     [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works. NOTE that containerd runtime is excluded because it often doesn't have one of the exec commands. To be investigated further.
     Skip If    '${runtime}' == 'containerd'
     # ensure exec commands work
     Should Contain    ${deploy-output}    this_is_an_exec_test
     Should Contain    ${deploy-output}    ID=alpine
+
+Exec command with no filtering
+    [Documentation]    This tests ensures that when `exec` command is called without user provided filters, the command is executed on all nodes of the lab.
+    Skip If    '${runtime}' == 'containerd'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
+    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
+    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l2\\". stdout:\\nl2
+    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l3\\". stdout:\\nl3
+
+Exec command with filtering
+    [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
+    Skip If    '${runtime}' == 'containerd'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
+    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
+    Should Not Contain    ${output}    stdout:\\nl2
+    Should Not Contain    ${output}    stdout:\\nl3
+
+Exec command with json output and filtering
+    [Documentation]    This tests ensures that when `exec` command is called with user provided filters and json output, the command is executed ONLY on selected nodes of the lab and the actual JSON is populated to stdout.
+    Skip If    '${runtime}' == 'containerd'
+    ${output} =    Process.Run Process
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    # check if output contains the json value from the /test.json file
+    Should Contain    ${output.stdout}    is cool
 
 Inspect ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
