@@ -12,6 +12,7 @@ topology:
       cmd: ash -c "echo $MYVAR > /tmp/var && sleep 9999"
       binds:
         - /tmp/clab-01-test.txt:/01-test.txt
+        - 01-test.json:/test.json
       env:
         MYVAR: MYVAR is SET
       exec:
