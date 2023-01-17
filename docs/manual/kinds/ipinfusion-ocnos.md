@@ -4,9 +4,12 @@ search:
 ---
 # IPInfusion OcNOS
 
-IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
+IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind in the [topology file](../topo-def-file.md). It is built using either [boxen](https://github.com/carlmontanari/boxen) project or [hellt/vrnetlab](https://github.com/hellt/vrnetlab/tree/master/ocnos) and essentially is a Qemu VM packaged in a docker container format.
 
 ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
+
+!!!warning
+    OcNOS VM disk images need to be altered to support telnet serial access and ethX interfaces name style. This can be done by modifying the grub config file, as [shown](https://github.com/hellt/vrnetlab/pull/99) here](https://github.com/hellt/vrnetlab/pull/99).
 
 ## Managing ipinfusion_ocnos nodes
 
@@ -36,6 +39,7 @@ IPInfusion OcNOS node launched with containerlab can be managed via the followin
     Default user credentials: `ocnos:ocnos`
 
 ## Interfaces mapping
+
 ipinfusion_ocnos container can have up to 144 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
