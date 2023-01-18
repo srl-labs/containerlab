@@ -37,9 +37,6 @@ var (
 		"vr-sros": "",
 	}
 
-	// DefaultCredentials holds default username and password per each kind.
-	defaultCredentials = map[string][]string{}
-
 	// ErrCommandExecError is an error returned when a command is failed to execute on a given node.
 	ErrCommandExecError = errors.New("command execution error")
 )
