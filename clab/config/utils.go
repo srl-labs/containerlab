@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -33,11 +33,11 @@ const (
 type Dict map[string]interface{}
 
 // PrepareVars variables for all nodes. This will also prepare all variables for the links.
-func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[string]*NodeConfig {
+func PrepareVars(c *clab.CLab) map[string]*NodeConfig {
 	res := make(map[string]*NodeConfig)
 
 	// preparing all nodes vars
-	for _, node := range nodes {
+	for _, node := range c.Nodes {
 		nodeCfg := node.Config()
 		name := nodeCfg.ShortName
 		vars := make(map[string]interface{})
@@ -64,14 +64,18 @@ func PrepareVars(nodes map[string]nodes.Node, links map[int]*types.Link) map[str
 			vars[vkRole] = nodeCfg.Kind
 		}
 
+		// error is not checked, yeah, bad.
+		creds, _ := c.Reg.KindCredentials(nodeCfg.Kind)
+
 		res[name] = &NodeConfig{
-			TargetNode: nodeCfg,
-			Vars:       vars,
+			TargetNode:  nodeCfg,
+			Vars:        vars,
+			Credentials: creds,
 		}
 	}
 
 	// prepare all links
-	for lIdx, link := range links {
+	for lIdx, link := range c.Links {
 		varsA := make(Dict)
 		varsB := make(Dict)
 		err := prepareLinkVars(link, varsA, varsB)

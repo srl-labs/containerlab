@@ -26,7 +26,8 @@ var TemplatePaths []string
 var DebugCount int
 
 type NodeConfig struct {
-	TargetNode *types.NodeConfig
+	TargetNode  *types.NodeConfig
+	Credentials []string // Node's credentials
 	// All the variables used to render the template
 	Vars map[string]interface{}
 	// the Rendered templates

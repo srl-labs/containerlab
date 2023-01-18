@@ -34,7 +34,7 @@ var configTemplateCmd = &cobra.Command{
 			return err
 		}
 
-		allConfig := config.PrepareVars(c.Nodes, c.Links)
+		allConfig := config.PrepareVars(c)
 		if templateVarOnly {
 			for _, n := range configFilter {
 				conf := allConfig[n]

@@ -100,26 +100,3 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 		n.WithRuntime(r)
 	}
 }
-
-// SetDefaultCredentials register default credentials per provided kindname.
-func SetDefaultCredentials(kindnames []string, user, password string) error {
-	// iterate over the kindnames
-	for _, kindname := range kindnames {
-		// check the default credentials for the kindname is not yet already registed
-		if _, exists := defaultCredentials[kindname]; exists {
-			return fmt.Errorf("kind with the name '%s' exists already", kindname)
-		}
-		// register the credentials
-		defaultCredentials[kindname] = []string{user, password}
-	}
-	return nil
-}
-
-// GetDefaultCredentialsForKind retrieve the default credentials for a certain kind
-// the first element in the slice is the Username, the second is the password.
-func GetDefaultCredentialsForKind(kind string) ([]string, error) {
-	if _, exists := defaultCredentials[kind]; !exists {
-		return nil, fmt.Errorf("default credentials entry for kind %s does not exist", kind)
-	}
-	return defaultCredentials[kind], nil
-}

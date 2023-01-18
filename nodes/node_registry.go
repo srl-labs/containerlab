@@ -63,6 +63,18 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	return result
 }
 
+// KindCredentials returns registered credentials for a given kind name
+func (r *NodeRegistry) KindCredentials(kind string) ([]string, error) {
+	var e *nodeRegistryEntry
+	var ok bool
+	if e, ok = r.nodeIndex[kind]; !ok {
+		return nil, fmt.Errorf("kind %s is not found in the registry", kind)
+	}
+
+	return []string{e.credentials.GetUsername(), e.credentials.GetPassword()}, nil
+
+}
+
 type nodeRegistryEntry struct {
 	nodeKindNames []string
 	initFunction  Initializer

@@ -31,8 +31,8 @@ type CLab struct {
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	Dir           *Directory `json:"dir,omitempty"`
-	// reg is a registry of node kinds
-	reg *nodes.NodeRegistry
+	// Reg is a registry of node kinds
+	Reg *nodes.NodeRegistry
 
 	timeout time.Duration
 }
@@ -125,7 +125,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	}
 
 	// init a new NodeRegistry
-	c.reg = nodes.NewNodeRegistry()
+	c.Reg = nodes.NewNodeRegistry()
 
 	// register all nodes
 	c.RegisterNodes()
