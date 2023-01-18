@@ -188,6 +188,30 @@ topology:
     - endpoints: ["ceos_rtr1:et2", "ceos_rtr3:et1"]
 ```
 
+As discussed in the above section, it's possible to define custom interface mapping for cEOS. Nevertheless if the only purpose of renaming the interfaces is to add breakouts ("/1", etc.) to the interface naming to match the future physical setup, it is possible to use underscores ("_") instead.
+
+For example:
+
+```yaml
+    name: ceos
+
+    topology:
+      nodes:
+        ceos1:
+          kind: ceos
+          image: ceos:4.28.0F
+        ceos2: 
+          kind: ceos
+          image: ceos:4.28.0F
+    links:
+        - endpoints: ["ceos1:eth1_1", "ceos2:eth2_1_1"]
+```
+
+This topology will be equivalent to ceos1:Ethernet1/1 connected to ceos2:Ethernet2/1/1.
+
+WARNING:
+> This feature can not be used in together with interface mapping. If the interface mapping is in use, all names must be redefined in the map and underscore naming option will not work. Also it's only possible to rename Ethernet interfaces this way, not management ports.
+
 ## Features and options
 
 ### Node configuration
