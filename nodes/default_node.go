@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"text/template"
 
 	"github.com/hairyhenderson/gomplate/v3"
@@ -166,8 +167,17 @@ func (d *DefaultNode) DeleteNetnsSymlink() error {
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+// Checks the name pattern that is common for VM-based nodes. Container-based nodes override this function to implement
+// custom name checks.
 func (d *DefaultNode) CheckInterfaceName() error {
-	log.Debugf("Interface name check is not implemented for %q kind", d.Cfg.Kind)
+	// allow ethX interface names
+	// https://regex101.com/r/C3Fhr0/2
+	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
+	for _, e := range d.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >0", d.Cfg.ShortName, e.EndpointName)
+		}
+	}
 
 	return nil
 }
