@@ -28,98 +28,100 @@ var execCmd = &cobra.Command{
 	Use:     "exec",
 	Short:   "execute a command on one or multiple containers",
 	PreRunE: sudoCheck,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(execCommands) == 0 {
-			return errors.New("provide command to execute")
-		}
+	RunE:    execFn,
+}
 
-		outputFormat, err := exec.ParseExecOutputFormat(execFormat)
-		if err != nil {
-			return err
-		}
+func execFn(cmd *cobra.Command, args []string) error {
+	if len(execCommands) == 0 {
+		return errors.New("provide command to execute")
+	}
 
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo, varsFile),
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
-		}
-		c, err := clab.NewContainerLab(opts...)
-		if err != nil {
-			return err
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		if name == "" {
-			name = c.Config.Name
-		}
-
-		var filters []*types.GenericFilter
-		switch {
-		case len(labelsFilter) != 0:
-			filters = types.FilterFromLabelStrings(labelsFilter)
-		default:
-			// when user-defined labels are not provided we should filter the nodes of the lab
-			labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
-			filters = types.FilterFromLabelStrings(labFilter)
-		}
-
-		// list all containers using global runtime using provided filters
-		cnts, err := c.GlobalRuntime().ListContainers(ctx, filters)
-		if err != nil {
-			return err
-		}
-
-		// prepare the exec collection and the exec command
-		resultCollection := exec.NewExecCollection()
-
-		// build execs from the string input
-		var execCmds []*exec.ExecCmd
-		for _, execCmdStr := range execCommands {
-			execCmd, err := exec.NewExecCmdFromString(execCmdStr)
-			if err != nil {
-				return err
-			}
-			execCmds = append(execCmds, execCmd)
-		}
-
-		// run the exec commands on all the containers matching the filter
-		for _, cnt := range cnts {
-			// iterate over the commands
-			for _, execCmd := range execCmds {
-				// execute the commands
-				execResult, err := cnt.RunExec(ctx, execCmd)
-				if err != nil {
-					// skip nodes that do not support exec
-					if err == exec.ErrRunExecNotSupported {
-						continue
-					}
-				}
-				resultCollection.Add(cnt.Names[0], execResult)
-			}
-		}
-
-		switch outputFormat {
-		case exec.ExecFormatPlain:
-			resultCollection.Log()
-		case exec.ExecFormatJSON:
-			out, err := resultCollection.Dump(outputFormat)
-			if err != nil {
-				return fmt.Errorf("failed to print the results collection: %v", err)
-			}
-
-			fmt.Println(out)
-		}
-
+	outputFormat, err := exec.ParseExecOutputFormat(execFormat)
+	if err != nil {
 		return err
-	},
+	}
+
+	opts := []clab.ClabOption{
+		clab.WithTimeout(timeout),
+		clab.WithTopoFile(topo, varsFile),
+		clab.WithRuntime(rt,
+			&runtime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: graceful,
+			},
+		),
+	}
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if name == "" {
+		name = c.Config.Name
+	}
+
+	var filters []*types.GenericFilter
+	switch {
+	case len(labelsFilter) != 0:
+		filters = types.FilterFromLabelStrings(labelsFilter)
+	default:
+		// when user-defined labels are not provided we should filter the nodes of the lab
+		labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
+		filters = types.FilterFromLabelStrings(labFilter)
+	}
+
+	// list all containers using global runtime using provided filters
+	cnts, err := c.GlobalRuntime().ListContainers(ctx, filters)
+	if err != nil {
+		return err
+	}
+
+	// prepare the exec collection and the exec command
+	resultCollection := exec.NewExecCollection()
+
+	// build execs from the string input
+	var execCmds []*exec.ExecCmd
+	for _, execCmdStr := range execCommands {
+		execCmd, err := exec.NewExecCmdFromString(execCmdStr)
+		if err != nil {
+			return err
+		}
+		execCmds = append(execCmds, execCmd)
+	}
+
+	// run the exec commands on all the containers matching the filter
+	for _, cnt := range cnts {
+		// iterate over the commands
+		for _, execCmd := range execCmds {
+			// execute the commands
+			execResult, err := cnt.RunExec(ctx, execCmd)
+			if err != nil {
+				// skip nodes that do not support exec
+				if err == exec.ErrRunExecNotSupported {
+					continue
+				}
+			}
+			resultCollection.Add(cnt.Names[0], execResult)
+		}
+	}
+
+	switch outputFormat {
+	case exec.ExecFormatPlain:
+		resultCollection.Log()
+	case exec.ExecFormatJSON:
+		out, err := resultCollection.Dump(outputFormat)
+		if err != nil {
+			return fmt.Errorf("failed to print the results collection: %v", err)
+		}
+
+		fmt.Println(out)
+	}
+
+	return err
 }
 
 func init() {
