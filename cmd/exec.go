@@ -31,7 +31,7 @@ var execCmd = &cobra.Command{
 	RunE:    execFn,
 }
 
-func execFn(cmd *cobra.Command, args []string) error {
+func execFn(_ *cobra.Command, _ []string) error {
 	if len(execCommands) == 0 {
 		return errors.New("provide command to execute")
 	}
