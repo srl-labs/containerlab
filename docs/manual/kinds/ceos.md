@@ -168,7 +168,7 @@ With the following topology file, containerlab is instructed to take a `mymappin
 
     This way the bind is set only once, and nodes of `ceos` kind will have these binds applied.
 
-## Additional interface naming considerations
+### Additional interface naming considerations
 
 While many users will be fine with the default ceos naming of `eth`, some ceos users may find that they need to name their interfaces `et`. Interfaces named `et` provide consistency with the underlying interface mappings within ceos. This enables the correct operation of commands/features which depend on `et` format interface naming.
 
@@ -182,35 +182,33 @@ topology:
     env:
       INTFTYPE: et
   nodes:
-  { ... snipped misc. node definition for brevity ... }
+  # --snip--
   links:
     - endpoints: ["ceos_rtr1:et1", "ceos_rtr2:et1"]
     - endpoints: ["ceos_rtr1:et2", "ceos_rtr3:et1"]
 ```
 
-As discussed in the above section, it's possible to define custom interface mapping for cEOS. Nevertheless if the only purpose of renaming the interfaces is to add breakouts ("/1", etc.) to the interface naming to match the future physical setup, it is possible to use underscores ("_") instead.
-
-For example:
+If the only purpose of renaming the interfaces is to add breakouts ("/1", etc.) to the interface naming to match the future physical setup, it is possible to use underscores ("_") in the interface names.
 
 ```yaml
-    name: ceos
+name: ceos
 
-    topology:
-      nodes:
-        ceos1:
-          kind: ceos
-          image: ceos:4.28.0F
-        ceos2: 
-          kind: ceos
-          image: ceos:4.28.0F
-    links:
-        - endpoints: ["ceos1:eth1_1", "ceos2:eth2_1_1"]
+topology:
+  nodes:
+    ceos1:
+      kind: ceos
+      image: ceos:4.28.0F
+    ceos2: 
+      kind: ceos
+      image: ceos:4.28.0F
+links:
+    - endpoints: ["ceos1:eth1_1", "ceos2:eth2_1_1"]
 ```
 
-This topology will be equivalent to ceos1:Ethernet1/1 connected to ceos2:Ethernet2/1/1.
+This topology will be equivalent to `ceos1:Ethernet1/1` connected to `ceos2:Ethernet2/1/1`.
 
-WARNING:
-> This feature can not be used in together with interface mapping. If the interface mapping is in use, all names must be redefined in the map and underscore naming option will not work. Also it's only possible to rename Ethernet interfaces this way, not management ports.
+!!!note
+    This feature can not be used together with interface mapping. If the interface mapping is in use, all names must be redefined in the map and the underscore naming option will not work. Also, it's only possible to rename Ethernet interfaces this way, not management ports.
 
 ## Features and options
 
