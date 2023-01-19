@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/srl-labs/containerlab/clab/config/transport"
-	"github.com/srl-labs/containerlab/nodes"
 )
 
 func Send(cs *NodeConfig, _ string) error {
@@ -17,8 +16,7 @@ func Send(cs *NodeConfig, _ string) error {
 	}
 
 	if ct == "ssh" {
-
-		ssh_cred, err := nodes.GetDefaultCredentialsForKind(cs.TargetNode.Kind)
+		ssh_cred := cs.Credentials
 		if err != nil {
 			return err
 		}

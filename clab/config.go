@@ -150,7 +150,7 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	}
 
 	// construct node
-	n, err := c.reg.NewNodeOfKind(nodeCfg.Kind)
+	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
 		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
