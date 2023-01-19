@@ -3,11 +3,8 @@ package types
 import (
 	"fmt"
 	"runtime"
-	"strings"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/srl-labs/containerlab/virt"
 )
 
@@ -89,25 +86,4 @@ func (h *HostRequirements) verifyMinVCpu() (bool, int) {
 	// if != 0 then amount of vCPUs must be greater-equal the requirement
 	boolResult := h.MinVCPU == 0 || h.MinVCPU != 0 && h.MinVCPU <= runtime.NumCPU()
 	return boolResult, runtime.NumCPU()
-}
-
-func DisableTxOffload(n *NodeConfig) error {
-	// skip this if node runs in host mode
-	if strings.ToLower(n.NetworkMode) == "host" {
-		return nil
-	}
-	// disable tx checksum offload for linux containers on eth0 interfaces
-	nodeNS, err := ns.GetNS(n.NSPath)
-	if err != nil {
-		return err
-	}
-	err = nodeNS.Do(func(_ ns.NetNS) error {
-		// disabling offload on eth0 interface
-		err := utils.EthtoolTXOff("eth0")
-		if err != nil {
-			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
-		}
-		return err
-	})
-	return err
 }
