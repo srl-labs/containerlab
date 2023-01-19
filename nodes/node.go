@@ -33,10 +33,6 @@ var (
 	// a map of node kinds overriding the default global runtime.
 	NonDefaultRuntimes = map[string]string{}
 
-	DefaultConfigTemplates = map[string]string{
-		"vr-sros": "",
-	}
-
 	// DefaultCredentials holds default username and password per each kind.
 	defaultCredentials = map[string][]string{}
 
