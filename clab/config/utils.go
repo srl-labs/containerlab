@@ -64,7 +64,6 @@ func PrepareVars(c *clab.CLab) map[string]*NodeConfig {
 			vars[vkRole] = nodeCfg.Kind
 		}
 
-		// error is not checked, yeah, bad.
 		creds := c.Reg.Kind(nodeCfg.Kind).Credentials().Slice()
 
 		res[name] = &NodeConfig{
