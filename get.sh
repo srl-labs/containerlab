@@ -234,11 +234,7 @@ setPkgInstaller() {
         if [[ -n "$VARIANT_ID" && $VARIANT_ID == "coreos" ]]; then
             PKG_INSTALLER="rpm-ostree install --uninstall=containerlab --idempotent"
         else
-          if [ "$(printf '%s\n' "$TAG_WO_VER" "v$version" | sort -V | head -n1)" = "$TAG_WO_VER" ]; then
-              PKG_INSTALLER="rpm -U --oldpackage"
-          else
-              PKG_INSTALLER="rpm -U"
-          fi
+            PKG_INSTALLER="rpm -U --oldpackage"
         fi
     fi
 }
