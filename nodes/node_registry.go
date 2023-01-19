@@ -63,22 +63,23 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	return result
 }
 
-// KindCredentials returns registered credentials for a given kind name
-func (r *NodeRegistry) KindCredentials(kind string) ([]string, error) {
-	var e *nodeRegistryEntry
-	var ok bool
-	if e, ok = r.nodeIndex[kind]; !ok {
-		return nil, fmt.Errorf("kind %s is not found in the registry", kind)
-	}
-
-	return []string{e.credentials.GetUsername(), e.credentials.GetPassword()}, nil
-
+func (r *NodeRegistry) Kind(kind string) *nodeRegistryEntry {
+	return r.nodeIndex[kind]
 }
 
 type nodeRegistryEntry struct {
 	nodeKindNames []string
 	initFunction  Initializer
 	credentials   *Credentials
+}
+
+// Credentials returns entry's credentials.
+func (e *nodeRegistryEntry) Credentials() *Credentials {
+	if e == nil {
+		return nil
+	}
+
+	return e.credentials
 }
 
 func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials) *nodeRegistryEntry {
@@ -104,9 +105,26 @@ func NewCredentials(username, password string) *Credentials {
 }
 
 func (c *Credentials) GetUsername() string {
+	if c == nil {
+		return ""
+	}
+
 	return c.username
 }
 
 func (c *Credentials) GetPassword() string {
+	if c == nil {
+		return ""
+	}
+
 	return c.password
+}
+
+// Slice returns credentials as a slice.
+func (c *Credentials) Slice() []string {
+	if c == nil {
+		return nil
+	}
+
+	return []string{c.GetUsername(), c.GetPassword()}
 }
