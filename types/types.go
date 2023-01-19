@@ -12,7 +12,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/srl-labs/containerlab/virt"
 )
 
 // Link is a struct that contains the information of a link between 2 containers.
@@ -137,23 +136,6 @@ type NodeConfig struct {
 	Extras  *Extras    `json:"extras,omitempty"`
 	WaitFor []string   `json:"wait-for,omitempty"`
 	DNS     *DNSConfig `json:"dns,omitempty"`
-}
-
-type HostRequirements struct {
-	SSSE3        bool `json:"ssse3,omitempty"`         // ssse3 cpu instruction
-	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
-}
-
-// Verify checks if host requirements are met.
-func (h *HostRequirements) Verify() error {
-	if h.VirtRequired && !virt.VerifyVirtSupport() {
-		return fmt.Errorf("the CPU virtualization support is required, but not available")
-	}
-	if h.SSSE3 && !virt.VerifySSSE3Support() {
-		return fmt.Errorf("the SSSE3 CPU feature required, but not available")
-	}
-
-	return nil
 }
 
 func DisableTxOffload(n *NodeConfig) error {

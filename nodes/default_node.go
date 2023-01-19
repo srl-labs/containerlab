@@ -29,7 +29,7 @@ type DefaultNode struct {
 	Cfg              *types.NodeConfig
 	Mgmt             *types.MgmtNet
 	Runtime          runtime.ContainerRuntime
-	HostRequirements types.HostRequirements
+	HostRequirements *types.HostRequirements
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
@@ -40,7 +40,7 @@ type DefaultNode struct {
 // This allows DefaultNode to access fields of the specific node struct in the methods defined for DefaultNode.
 func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	dn := &DefaultNode{
-		HostRequirements: types.HostRequirements{},
+		HostRequirements: types.NewHostRequirements(),
 		OverwriteNode:    n,
 	}
 

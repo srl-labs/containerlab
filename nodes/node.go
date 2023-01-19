@@ -25,7 +25,6 @@ const (
 	NodeKindBridge = "bridge"
 	NodeKindHOST   = "host"
 	NodeKindOVS    = "ovs-bridge"
-	NodeKindSRL    = "srl"
 )
 
 var (
