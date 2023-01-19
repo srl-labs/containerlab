@@ -29,7 +29,7 @@ const (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrNXOS)
-	}, defaultCredentials)
+	}, defaultCredentials, nil)
 }
 
 type vrNXOS struct {

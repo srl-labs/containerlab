@@ -18,9 +18,13 @@ var kindnames = []string{"host"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	// indicate bridge interfaces are based on the root namespace
+	kindProperties := types.NewKindProperties()
+	kindProperties.IsRootNamespaceBased = true
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(host)
-	}, nil)
+	}, nil, kindProperties)
 }
 
 type host struct {

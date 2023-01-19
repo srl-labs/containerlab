@@ -33,7 +33,7 @@ const (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrCsr)
-	}, defaultCredentials)
+	}, defaultCredentials, nil)
 }
 
 type vrCsr struct {

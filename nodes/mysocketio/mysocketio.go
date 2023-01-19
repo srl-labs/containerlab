@@ -15,7 +15,7 @@ var Kindnames = []string{"mysocketio"}
 func Register(r *nodes.NodeRegistry) {
 	r.Register(Kindnames, func() nodes.Node {
 		return new(mySocketIO)
-	}, nil)
+	}, nil, nil)
 }
 
 type mySocketIO struct {

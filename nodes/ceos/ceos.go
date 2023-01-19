@@ -52,7 +52,7 @@ var (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(ceos)
-	}, nil)
+	}, nil, nil)
 }
 
 type ceos struct {

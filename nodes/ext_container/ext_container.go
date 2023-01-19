@@ -21,7 +21,7 @@ var kindnames = []string{"ext-container"}
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(extcont)
-	}, nil)
+	}, nil, nil)
 }
 
 type extcont struct {

@@ -110,7 +110,7 @@ var (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(srl)
-	}, defaultCredentials)
+	}, defaultCredentials, nil)
 }
 
 type srl struct {
@@ -126,9 +126,6 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.HostRequirements.SSSE3 = true
 
 	s.Cfg = cfg
-	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
-	// to not rely on certain kind names
-	s.Cfg.Kind = nodes.NodeKindSRL
 	for _, o := range opts {
 		o(s)
 	}

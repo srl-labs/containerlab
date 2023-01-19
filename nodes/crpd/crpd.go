@@ -39,7 +39,7 @@ var (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(crpd)
-	}, nil)
+	}, nil, nil)
 }
 
 type crpd struct {

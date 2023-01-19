@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/srl-labs/containerlab/types"
 )
 
 type Initializer func() Node
@@ -21,8 +23,8 @@ func NewNodeRegistry() *NodeRegistry {
 }
 
 // Register registers the node' init function for all provided names.
-func (r *NodeRegistry) Register(names []string, initf Initializer, credentials *Credentials) error {
-	newEntry := newRegistryEntry(names, initf, credentials)
+func (r *NodeRegistry) Register(names []string, initf Initializer, credentials *Credentials, kindproperties *types.KindProperties) error {
+	newEntry := newRegistryEntry(names, initf, credentials, kindproperties)
 	return r.addEntry(newEntry)
 }
 
@@ -63,17 +65,34 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	return result
 }
 
+// GetKindEntry returns a sorted slice of all the registered node kind names in the registry.
+func (r *NodeRegistry) GetKindEntry(name string) *nodeRegistryEntry {
+	return r.nodeIndex[name]
+}
+
 type nodeRegistryEntry struct {
 	nodeKindNames []string
 	initFunction  Initializer
 	credentials   *Credentials
+	// containes properties that are kind specific
+	kindProperties *types.KindProperties
 }
 
-func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials) *nodeRegistryEntry {
+// GetKindProperties retrieve the kind properties
+func (n *nodeRegistryEntry) GetKindProperties() *types.KindProperties {
+	return n.kindProperties
+}
+
+func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials, kindProperties *types.KindProperties) *nodeRegistryEntry {
+	// default KindProperties if nil
+	if kindProperties == nil {
+		kindProperties = types.NewKindProperties()
+	}
 	return &nodeRegistryEntry{
-		nodeKindNames: nodeKindNames,
-		initFunction:  initFunction,
-		credentials:   credentials,
+		nodeKindNames:  nodeKindNames,
+		initFunction:   initFunction,
+		credentials:    credentials,
+		kindProperties: kindProperties,
 	}
 }
 

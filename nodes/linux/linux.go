@@ -20,7 +20,7 @@ var kindnames = []string{"linux"}
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(linux)
-	}, nil)
+	}, nil, nil)
 }
 
 type linux struct {

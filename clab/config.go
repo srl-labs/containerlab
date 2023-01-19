@@ -6,7 +6,6 @@ package clab
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -501,7 +500,8 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	for _, l := range c.Links {
 		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
-			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
+			nodeKindProperties := c.reg.GetKindEntry(e.Node.Kind).GetKindProperties()
+			if nodeKindProperties.IsRootNamespaceBased {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
 					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
 					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
@@ -566,9 +566,6 @@ func (c *CLab) CheckResources() error {
 	log.Debugf("Number of vcpu: %d", vcpu)
 	if vcpu < 2 {
 		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
-		if c.HasKind(nodes.NodeKindSRL) {
-			return errors.New("not enough vcpus. Nokia SR Linux nodes require at least 2 vcpus")
-		}
 	}
 
 	// get memory usage on the host and check available memory

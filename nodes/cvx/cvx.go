@@ -27,7 +27,7 @@ var memoryReqs = map[string]string{
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(cvx)
-	}, nil)
+	}, nil, nil)
 	nodes.SetNonDefaultRuntimePerKind(kindnames, ignite.RuntimeName)
 }
 

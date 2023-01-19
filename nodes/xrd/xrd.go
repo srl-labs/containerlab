@@ -40,7 +40,7 @@ const (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(xrd)
-	}, defaultCredentials)
+	}, defaultCredentials, nil)
 }
 
 type xrd struct {

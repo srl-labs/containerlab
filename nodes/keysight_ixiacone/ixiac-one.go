@@ -30,7 +30,7 @@ var ixiacStatusConfig = struct {
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(ixiacOne)
-	}, nil)
+	}, nil, nil)
 }
 
 type ixiacOne struct {

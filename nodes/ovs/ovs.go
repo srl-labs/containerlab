@@ -20,9 +20,13 @@ var kindnames = []string{"ovs-bridge"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	// indicate bridge interfaces are based on the root namespace
+	kindProperties := types.NewKindProperties()
+	kindProperties.IsRootNamespaceBased = true
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(ovs)
-	}, nil)
+	}, nil, kindProperties)
 }
 
 type ovs struct {

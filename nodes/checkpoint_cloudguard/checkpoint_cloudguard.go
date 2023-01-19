@@ -23,7 +23,7 @@ var (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(CheckpointCloudguard)
-	}, defaultCredentials)
+	}, defaultCredentials, nil)
 }
 
 type CheckpointCloudguard struct {

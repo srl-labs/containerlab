@@ -21,7 +21,7 @@ var kindnames = []string{"sonic-vs"}
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(sonic)
-	}, nil)
+	}, nil, nil)
 }
 
 type sonic struct {
