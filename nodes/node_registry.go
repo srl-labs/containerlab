@@ -12,13 +12,13 @@ type Initializer func() Node
 
 type NodeRegistry struct {
 	// the nodeindex is a helping struct to speedup kind lookups.
-	nodeIndex map[string]*nodeRegistryEntry
+	nodeIndex map[string]*NodeRegistryEntry
 }
 
 // NewNodeRegistry constructs a new Registry.
 func NewNodeRegistry() *NodeRegistry {
 	return &NodeRegistry{
-		nodeIndex: map[string]*nodeRegistryEntry{},
+		nodeIndex: map[string]*NodeRegistryEntry{},
 	}
 }
 
@@ -29,7 +29,7 @@ func (r *NodeRegistry) Register(names []string, initf Initializer, credentials *
 }
 
 // addEntry adds the node entry to the registry.
-func (r *NodeRegistry) addEntry(entry *nodeRegistryEntry) error {
+func (r *NodeRegistry) addEntry(entry *NodeRegistryEntry) error {
 	for _, name := range entry.nodeKindNames {
 		if _, exists := r.nodeIndex[name]; exists {
 			return fmt.Errorf("node kind %q already registered in Node Registry", name)
@@ -66,11 +66,11 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 }
 
 // GetKindEntry returns a sorted slice of all the registered node kind names in the registry.
-func (r *NodeRegistry) GetKindEntry(name string) *nodeRegistryEntry {
+func (r *NodeRegistry) GetKindEntry(name string) *NodeRegistryEntry {
 	return r.nodeIndex[name]
 }
 
-type nodeRegistryEntry struct {
+type NodeRegistryEntry struct {
 	nodeKindNames []string
 	initFunction  Initializer
 	credentials   *Credentials
@@ -79,16 +79,16 @@ type nodeRegistryEntry struct {
 }
 
 // GetKindProperties retrieve the kind properties
-func (n *nodeRegistryEntry) GetKindProperties() *types.KindProperties {
+func (n *NodeRegistryEntry) GetKindProperties() *types.KindProperties {
 	return n.kindProperties
 }
 
-func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials, kindProperties *types.KindProperties) *nodeRegistryEntry {
+func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials, kindProperties *types.KindProperties) *NodeRegistryEntry {
 	// default KindProperties if nil
 	if kindProperties == nil {
 		kindProperties = types.NewKindProperties()
 	}
-	return &nodeRegistryEntry{
+	return &NodeRegistryEntry{
 		nodeKindNames:  nodeKindNames,
 		initFunction:   initFunction,
 		credentials:    credentials,
