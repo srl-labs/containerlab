@@ -37,9 +37,6 @@ var (
 		"vr-sros": "",
 	}
 
-	// DefaultCredentials holds default username and password per each kind.
-	defaultCredentials = map[string][]string{}
-
 	// ErrCommandExecError is an error returned when a command is failed to execute on a given node.
 	ErrCommandExecError = errors.New("command execution error")
 )
@@ -99,27 +96,4 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 	return func(n Node) {
 		n.WithRuntime(r)
 	}
-}
-
-// SetDefaultCredentials register default credentials per provided kindname.
-func SetDefaultCredentials(kindnames []string, user, password string) error {
-	// iterate over the kindnames
-	for _, kindname := range kindnames {
-		// check the default credentials for the kindname is not yet already registed
-		if _, exists := defaultCredentials[kindname]; exists {
-			return fmt.Errorf("kind with the name '%s' exists already", kindname)
-		}
-		// register the credentials
-		defaultCredentials[kindname] = []string{user, password}
-	}
-	return nil
-}
-
-// GetDefaultCredentialsForKind retrieve the default credentials for a certain kind
-// the first element in the slice is the Username, the second is the password.
-func GetDefaultCredentialsForKind(kind string) ([]string, error) {
-	if _, exists := defaultCredentials[kind]; !exists {
-		return nil, fmt.Errorf("default credentials entry for kind %s does not exist", kind)
-	}
-	return defaultCredentials[kind], nil
 }

@@ -10,13 +10,13 @@ type Initializer func() Node
 
 type NodeRegistry struct {
 	// the nodeindex is a helping struct to speedup kind lookups.
-	nodeIndex map[string]*nodeRegistryEntry
+	nodeIndex map[string]*NodeRegistryEntry
 }
 
 // NewNodeRegistry constructs a new Registry.
 func NewNodeRegistry() *NodeRegistry {
 	return &NodeRegistry{
-		nodeIndex: map[string]*nodeRegistryEntry{},
+		nodeIndex: map[string]*NodeRegistryEntry{},
 	}
 }
 
@@ -27,7 +27,7 @@ func (r *NodeRegistry) Register(names []string, initf Initializer, credentials *
 }
 
 // addEntry adds the node entry to the registry.
-func (r *NodeRegistry) addEntry(entry *nodeRegistryEntry) error {
+func (r *NodeRegistry) addEntry(entry *NodeRegistryEntry) error {
 	for _, name := range entry.nodeKindNames {
 		if _, exists := r.nodeIndex[name]; exists {
 			return fmt.Errorf("node kind %q already registered in Node Registry", name)
@@ -63,14 +63,27 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	return result
 }
 
-type nodeRegistryEntry struct {
+func (r *NodeRegistry) Kind(kind string) *NodeRegistryEntry {
+	return r.nodeIndex[kind]
+}
+
+type NodeRegistryEntry struct {
 	nodeKindNames []string
 	initFunction  Initializer
 	credentials   *Credentials
 }
 
-func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials) *nodeRegistryEntry {
-	return &nodeRegistryEntry{
+// Credentials returns entry's credentials.
+func (e *NodeRegistryEntry) Credentials() *Credentials {
+	if e == nil {
+		return nil
+	}
+
+	return e.credentials
+}
+
+func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials) *NodeRegistryEntry {
+	return &NodeRegistryEntry{
 		nodeKindNames: nodeKindNames,
 		initFunction:  initFunction,
 		credentials:   credentials,
@@ -92,9 +105,26 @@ func NewCredentials(username, password string) *Credentials {
 }
 
 func (c *Credentials) GetUsername() string {
+	if c == nil {
+		return ""
+	}
+
 	return c.username
 }
 
 func (c *Credentials) GetPassword() string {
+	if c == nil {
+		return ""
+	}
+
 	return c.password
+}
+
+// Slice returns credentials as a slice.
+func (c *Credentials) Slice() []string {
+	if c == nil {
+		return nil
+	}
+
+	return []string{c.GetUsername(), c.GetPassword()}
 }

@@ -71,7 +71,7 @@ func configRun(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	allConfig := config.PrepareVars(c.Nodes, c.Links)
+	allConfig := config.PrepareVars(c)
 
 	err = config.RenderAll(allConfig)
 	if err != nil {
