@@ -34,7 +34,7 @@ detectOS() {
     # Minimalist GNU for Windows
     mingw*) OS='windows' ;;
     esac
-    
+
     if [ -f /etc/os-release ]; then
         OS_ID="$(. /etc/os-release && echo "$ID")"
     fi
@@ -42,11 +42,11 @@ detectOS() {
         ubuntu|debian|raspbian)
             PKG_FORMAT="deb"
         ;;
-        
+
         centos|rhel|sles)
             PKG_FORMAT="rpm"
         ;;
-        
+
         *)
             if type "rpm" &>/dev/null; then
                 PKG_FORMAT="rpm"
@@ -137,18 +137,34 @@ checkInstalledVersion() {
             echo "${BINARY_NAME} is already at its ${DESIRED_VERSION:-latest ($version)}" version
             return 0
         else
-            echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
-            echo "You are running containerlab $version version"
-            UPGR_NEEDED="Y"
-            # check if stdin is open (i.e. capable of getting users input)
-            if [ -t 0 ]; then
-                read -e -p "Proceed with upgrade? [Y/n]: " -i "Y" UPGR_NEEDED
+            if [ "$(printf '%s\n' "$TAG_WO_VER" "$version" | sort -V | head -n1)" = "$TAG_WO_VER" ]; then
+                echo "A newer ${BINARY_NAME} version $version is already installed"
+                echo "You are running ${BINARY_NAME} version $version"
+                echo "You are trying to downgrade to ${BINARY_NAME} version ${TAG_WO_VER}"
+                echo "Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
+                UPGR_NEEDED="Y"
+                # check if stdin is open (i.e. capable of getting users input)
+                if [ -t 0 ]; then
+                    read -e -p "Proceed with downgrade? [Y/n]: " -i "Y" UPGR_NEEDED
+                fi
+                if [ "$UPGR_NEEDED" == "Y" ]; then
+                    return 1
+                fi
+                return 0
+            else
+                echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
+                echo "You are running containerlab $version version"
+                UPGR_NEEDED="Y"
+                # check if stdin is open (i.e. capable of getting users input)
+                if [ -t 0 ]; then
+                    read -e -p "Proceed with upgrade? [Y/n]: " -i "Y" UPGR_NEEDED
+                fi
+                if [ "$UPGR_NEEDED" == "Y" ]; then
+                    return 1
+                fi
+                return 0
             fi
-            if [ "$UPGR_NEEDED" == "Y" ]; then
-                return 1
-            fi
-            return 0
-        fi
+          fi
     else
         return 1
     fi
@@ -218,7 +234,11 @@ setPkgInstaller() {
         if [[ -n "$VARIANT_ID" && $VARIANT_ID == "coreos" ]]; then
             PKG_INSTALLER="rpm-ostree install --uninstall=containerlab --idempotent"
         else
-            PKG_INSTALLER="rpm -U"
+          if [ "$(printf '%s\n' "$TAG_WO_VER" "v$version" | sort -V | head -n1)" = "$TAG_WO_VER" ]; then
+              PKG_INSTALLER="rpm -U --oldpackage"
+          else
+              PKG_INSTALLER="rpm -U"
+          fi
         fi
     fi
 }
