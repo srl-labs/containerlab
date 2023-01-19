@@ -478,8 +478,6 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	for _, l := range c.Links {
 		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
-			// TODO: THIS IS MEANT TO BE REPLACE WITH A CHECK AGAINST THE KINDPROPERTIES -> IsRootNamespaceBased. FURTHER REFACTORYING required,
-			// because that field is available in Node, not in NodeConfig.
 			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
 					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
