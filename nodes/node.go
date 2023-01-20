@@ -33,10 +33,6 @@ var (
 	// a map of node kinds overriding the default global runtime.
 	NonDefaultRuntimes = map[string]string{}
 
-	DefaultConfigTemplates = map[string]string{
-		"vr-sros": "",
-	}
-
 	// ErrCommandExecError is an error returned when a command is failed to execute on a given node.
 	ErrCommandExecError = errors.New("command execution error")
 )

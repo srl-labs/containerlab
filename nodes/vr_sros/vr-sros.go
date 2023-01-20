@@ -52,9 +52,6 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	if s.Cfg.StartupConfig == "" {
-		s.Cfg.StartupConfig = nodes.DefaultConfigTemplates[s.Cfg.Kind]
-	}
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
 	if s.Cfg.NodeType == "" {
 		s.Cfg.NodeType = vrsrosDefaultType
