@@ -28,61 +28,66 @@ type linux struct {
 	vmChans *operations.VMChannels
 }
 
-func (l *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	l.DefaultNode = *nodes.NewDefaultNode(l)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 
-	l.Cfg = cfg
+	n.Cfg = cfg
 	for _, o := range opts {
-		o(l)
+		o(n)
 	}
 
 	// make ipv6 enabled on all linux node interfaces
 	// but not for the nodes with host network mode, as this is not supported on gh action runners
-	if l.Config().NetworkMode != "host" {
+	if n.Config().NetworkMode != "host" {
 		cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
 	}
 
 	return nil
 }
 
-func (l *linux) Deploy(ctx context.Context) error {
-	cID, err := l.Runtime.CreateContainer(ctx, l.Cfg)
+func (n *linux) Deploy(ctx context.Context) error {
+	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {
 		return err
 	}
-	intf, err := l.Runtime.StartContainer(ctx, cID, l.Cfg)
+	intf, err := n.Runtime.StartContainer(ctx, cID, n.Cfg)
 
 	if vmChans, ok := intf.(*operations.VMChannels); ok {
-		l.vmChans = vmChans
+		n.vmChans = vmChans
 	}
 
 	return err
 }
 
-func (l *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
-	log.Debugf("Running postdeploy actions for Linux '%s' node", l.Cfg.ShortName)
-	if err := types.DisableTxOffload(l.Cfg); err != nil {
+func (n *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
+	if err := types.DisableTxOffload(n.Cfg); err != nil {
 		return err
 	}
 
 	// when ignite runtime is in use
-	if l.vmChans != nil {
-		return <-l.vmChans.SpawnFinished
+	if n.vmChans != nil {
+		return <-n.vmChans.SpawnFinished
 	}
 
 	return nil
 }
 
-func (l *linux) GetImages(_ context.Context) map[string]string {
+func (n *linux) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
-	images[nodes.ImageKey] = l.Cfg.Image
+	images[nodes.ImageKey] = n.Cfg.Image
 
 	// ignite runtime additionally needs a kernel and sandbox image
-	if l.Runtime.GetName() != ignite.RuntimeName {
+	if n.Runtime.GetName() != ignite.RuntimeName {
 		return images
 	}
-	images[nodes.KernelKey] = l.Cfg.Kernel
-	images[nodes.SandboxKey] = l.Cfg.Sandbox
+	images[nodes.KernelKey] = n.Cfg.Kernel
+	images[nodes.SandboxKey] = n.Cfg.Sandbox
 	return images
+}
+
+// CheckInterfaceName is a noop for linux containers as they can have any names.
+func (n *linux) CheckInterfaceName() error {
+	return nil
 }
