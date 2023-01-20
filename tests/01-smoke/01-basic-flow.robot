@@ -1,7 +1,7 @@
 *** Settings ***
 Library           OperatingSystem
 Library           String
-Library     Process
+Library           Process
 Suite Setup       Setup
 Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
@@ -102,7 +102,7 @@ Verify links in node l1
 
 Verify links in node l2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth1
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show some1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
@@ -127,7 +127,7 @@ Ensure "inspect all" outputs IP addresses
     ${ipv4} =    String.Strip String    ${data}[9]
     Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
     # verify ipv6 address
-    Run Keyword  Match IPv6 Address    ${data}[10]
+    Run Keyword    Match IPv6 Address    ${data}[10]
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -205,29 +205,29 @@ Verify iptables allow rule is set
     ...    collapse_spaces=True
 
 Verify DNS-Server Config
-    [Documentation]     Check if the DNS config did take effect
+    [Documentation]    Check if the DNS config did take effect
     Skip If    '${runtime}' != 'docker'
     ${output} =    Run
     ...    sudo ${runtime} inspect clab-${lab-name}-l2 -f '{{ .HostConfig.Dns }}'
     Log    ${output}
-    Should Contain  ${output}   8.8.8.8
-    Should Contain  ${output}   1.2.3.4
+    Should Contain    ${output}    8.8.8.8
+    Should Contain    ${output}    1.2.3.4
 
 Verify DNS-Search Config
-    [Documentation]     Check if the DNS config did take effect
+    [Documentation]    Check if the DNS config did take effect
     Skip If    '${runtime}' != 'docker'
     ${output} =    Run
     ...    sudo ${runtime} inspect clab-${lab-name}-l2 -f '{{ .HostConfig.DnsSearch }}'
     Log    ${output}
-    Should Contain  ${output}   my.domain
+    Should Contain    ${output}    my.domain
 
 Verify DNS-Options Config
-    [Documentation]     Check if the DNS config did take effect
+    [Documentation]    Check if the DNS config did take effect
     Skip If    '${runtime}' != 'docker'
     ${output} =    Run
     ...    sudo ${runtime} inspect clab-${lab-name}-l2 -f '{{ .HostConfig.DnsOptions }}'
     Log    ${output}
-    Should Contain  ${output}   rotate
+    Should Contain    ${output}    rotate
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output

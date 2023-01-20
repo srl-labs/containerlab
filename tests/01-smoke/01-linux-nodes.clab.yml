@@ -41,5 +41,5 @@ topology:
       network-mode: host
 
   links:
-    - endpoints: ["l1:eth1", "l2:eth1"]
+    - endpoints: ["l1:eth1", "l2:some1"]
     - endpoints: ["l1:eth2", "l2:eth2"]
