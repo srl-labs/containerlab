@@ -75,7 +75,7 @@ func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = d.OverwriteNode.VerifyLicenseFiles(ctx)
+	err = d.OverwriteNode.VerifyLicenseFileExists(ctx)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ type NodeOverwrites interface {
 	GetImages(ctx context.Context) map[string]string
 	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	GetContainerName() string
-	VerifyLicenseFiles(context.Context) error
+	VerifyLicenseFileExists(context.Context) error
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -308,8 +308,8 @@ func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd)
 	return nil
 }
 
-// VerifyLicenseFiles the default implementation of the VerifyLicenseFiles function checks for the exact existence of a file with the provided name in the LabDir
-func (d *DefaultNode) VerifyLicenseFiles(_ context.Context) error {
+// VerifyLicenseFileExists checks if a license file with a provided path exists.
+func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 	if d.Config().License == "" {
 		return nil
 	}
