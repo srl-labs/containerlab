@@ -22,16 +22,9 @@ import (
 var (
 	kindnames          = []string{"c8000", "cisco_c8000"}
 	defaultCredentials = nodes.NewCredentials("cisco", "cisco123")
-	c8000Env             = map[string]string{
-		//"XR_FIRST_BOOT_CONFIG": "/startup.cfg",
-	}
 
 	//go:embed c8000.cfg
 	cfgTemplate string
-
-        //skorka
-        //configHostDir =	"/config"
-	//configFileName = "startup.cfg"
 )
 
 const (
@@ -61,17 +54,12 @@ func (n *c8000) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Binds = append(n.Cfg.Binds,
 		// mount first-boot config file
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "first-boot.cfg"), ":/startup.cfg"),
-                //skorka fmt.Sprint(filepath.Join(n.Cfg.LabDir, configHostDir, configFileName), ":/startup.cfg"))
-
-		// persist data by mounting /xr-storage
-		// fmt.Sprint(filepath.Join(n.Cfg.LabDir, "xr-storage"), ":/xr-storage"),
 	)
 
 	return nil
 }
 
 func (n *c8000) PreDeploy(ctx context.Context, _, _, _ string) error {
-	//skorka n.genInterfacesEnv()
 
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 
@@ -94,9 +82,6 @@ func (n *c8000) SaveConfig(_ context.Context) error {
 
 func (n *c8000) create8000Files(_ context.Context) error {
 	nodeCfg := n.Config()
-
-	// generate xr-storage directory
-	// skorka utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0777)
 
 	// generate first-boot config
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
