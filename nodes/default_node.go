@@ -76,6 +76,10 @@ func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	err = d.OverwriteNode.VerifyLicenseFileExists(ctx)
+	if err != nil {
+		return err
+	}
 	err = d.OverwriteNode.PullImage(ctx)
 	if err != nil {
 		return err
@@ -256,6 +260,7 @@ type NodeOverwrites interface {
 	GetImages(ctx context.Context) map[string]string
 	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	GetContainerName() string
+	VerifyLicenseFileExists(context.Context) error
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -309,6 +314,19 @@ func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd)
 		log.Errorf("%s: failed to execute cmd: %q with error %v",
 			d.OverwriteNode.GetContainerName(), execCmd.GetCmdString(), err)
 		return err
+	}
+	return nil
+}
+
+// VerifyLicenseFileExists checks if a license file with a provided path exists.
+func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
+	if d.Config().License == "" {
+		return nil
+	}
+
+	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
+	if !utils.FileExists(rlic) {
+		return fmt.Errorf("license file of node %q not found by the path %s", d.Config().ShortName, rlic)
 	}
 	return nil
 }
