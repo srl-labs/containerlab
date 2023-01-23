@@ -5,15 +5,13 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
-	"text/template"
 
 	cfssllog "github.com/cloudflare/cfssl/log"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/cert/cfssl_ca"
 )
 
 var (
@@ -84,31 +82,7 @@ var signCertCmd = &cobra.Command{
 }
 
 func createCA(_ *cobra.Command, _ []string) error {
-	csr := `{
-	"CN": "{{.CommonName}}",
-	"key": {
-		"algo": "rsa",
-		"size": 2048
-	},
-	"names": [{
-		"C": "{{.Country}}",
-		"L": "{{.Locality}}",
-		"O": "{{.Organization}}",
-		"OU": "{{.OrganizationUnit}}"
-	}],
-	"ca": {
-		"expiry": "{{.Expiry}}"
-	}
-}
-`
 	var err error
-	opts := []clab.ClabOption{
-		clab.WithTimeout(timeout),
-	}
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return err
-	}
 
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
@@ -122,69 +96,48 @@ func createCA(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	c.Dir = &clab.Directory{
-		LabCARoot: path,
-	}
-
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	csrTpl, err := template.New("csr").Parse(csr)
-	if err != nil {
-		return err
-	}
+	certStorage := cert.NewLocalDiskCertStorage(path)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage)
 
-	_, err = cert.GenerateRootCa(c.Dir.LabCARoot, csrTpl, cert.CaRootInput{
+	caCertInput := &cert.CaCertInput{
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,
 		Organization:     organization,
 		OrganizationUnit: organizationUnit,
 		Expiry:           expiry,
-		NamePrefix:       caNamePrefix,
-	},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to generate rootCa: %v", err)
 	}
+
+	caCert, err := rootCa.GenerateRootCert(caCertInput)
+	if err != nil {
+		return err
+	}
+
+	if caCertPath != "" {
+		err = caCert.Write(caCertPath, caKeyPath, "")
+		if err != nil {
+			return err
+		}
+	} else {
+		err = certStorage.StoreCaCert(caCert)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // create node certificate and sign it with CA.
 func signCert(_ *cobra.Command, _ []string) error {
-	csr := `{
-		"CN": "{{.CommonName}}",
-		"hosts": [
-			{{- range $i, $e := .Hosts}}
-			{{- if $i}},{{end}}
-			"{{.}}"
-			{{- end}}
-		],
-		"key": {
-			"algo": "rsa",
-			"size": 2048
-		},
-		"names": [{
-			"C": "{{.Country}}",
-			"L": "{{.Locality}}",
-			"O": "{{.Organization}}",
-			"OU": "{{.OrganizationUnit}}"
-		}]
-	}
-	`
 	var err error
 
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
 		cfssllog.Level = cfssllog.LevelDebug
-	}
-
-	// Check that CA path/key is set
-	if caCertPath == "" {
-		return fmt.Errorf("CA cert path not set")
-	}
-	if caKeyPath == "" {
-		return fmt.Errorf("CA key path not set")
 	}
 
 	if path == "" {
@@ -194,15 +147,35 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
-		certHosts, commonName, country, locality, organization, organizationUnit)
+	certStorage := cert.NewLocalDiskCertStorage(path)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage)
 
-	csrTpl, err := template.New("csr").Parse(csr)
+	var caCert *cert.Certificate
+	if caCertPath != "" {
+		// try loading the CA certificarte from disk via the explicite given path
+		caCert, err = cert.LoadCertificateFromDisk(caCertPath, caKeyPath, "")
+		if err != nil {
+			return err
+		}
+
+	} else {
+		// try loading the CA Certificate based on the default directory layout
+		caCert, err = certStorage.LoadCaCert()
+		if err != nil {
+			return err
+		}
+	}
+
+	// provide the root Cert to the CA
+	err = rootCa.SetRootCertificate(caCert)
 	if err != nil {
 		return err
 	}
 
-	_, err = cert.GenerateCert(caCertPath, caKeyPath, csrTpl, cert.CertInput{
+	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
+		certHosts, commonName, country, locality, organization, organizationUnit)
+
+	nodeCert, err := rootCa.GenerateCert(&cert.NodeCertInput{
 		Hosts:            certHosts,
 		CommonName:       commonName,
 		Country:          country,
@@ -211,11 +184,14 @@ func signCert(_ *cobra.Command, _ []string) error {
 		OrganizationUnit: organizationUnit,
 		Expiry:           expiry,
 		Name:             certNamePrefix,
-	},
-		path,
-	)
+	})
 	if err != nil {
-		return fmt.Errorf("failed to generate and sign certificate: %v", err)
+		return err
+	}
+	// store the cert
+	err = certStorage.StoreNodeCert(certHosts[0], nodeCert)
+	if err != nil {
+		return err
 	}
 
 	return nil

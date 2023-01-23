@@ -14,6 +14,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/cert"
+	"github.com/srl-labs/containerlab/cert/cfssl_ca"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
@@ -31,8 +33,10 @@ type CLab struct {
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	Dir           *Directory `json:"dir,omitempty"`
-	// Reg is a registry of node kinds
-	Reg *nodes.NodeRegistry
+	// reg is a registry of node kinds
+	Reg         *nodes.NodeRegistry
+	rootCA      cert.CertificateAuthority
+	certStorage cert.CertStorage
 
 	timeout time.Duration
 }
@@ -141,6 +145,10 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	if c.TopoFile.path != "" {
 		err = c.parseTopology()
 	}
+
+	// init the Certificate Authority
+	c.certStorage = cert.NewLocalDiskCertStorage(c.Dir.LabCA)
+	c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage)
 
 	return c, err
 }
@@ -590,6 +598,60 @@ func (c *CLab) VethCleanup(_ context.Context) error {
 		err := c.RemoveHostOrBridgeVeth(link)
 		if err != nil {
 			log.Infof("Error during veth cleanup: %v", err)
+		}
+	}
+	return nil
+}
+
+func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CaCertInput) error {
+	// try loading the Root CA cert data
+	caCertificate, err := c.certStorage.LoadCaCert()
+	if err != nil {
+		// if loading certs failed, try to generate new RootCA
+		caCertificate, err := c.rootCA.GenerateRootCert(caCertInput)
+		if err != nil {
+			return fmt.Errorf("failed generating new Root CA %v", err)
+		}
+		// store the root CA
+		err = c.certStorage.StoreCaCert(caCertificate)
+		if err != nil {
+			return nil
+		}
+	}
+	err = c.rootCA.SetRootCertificate(caCertificate)
+	return err
+}
+
+func (c *CLab) GenerateMissingNodeCerts() error {
+	for _, n := range c.Nodes {
+		nodeConfig := n.Config()
+		// the per node certificate directory
+
+		// try loading existing certificats from disk
+		_, err := c.certStorage.LoadNodeCert(nodeConfig.ShortName)
+		// if this fails, generate new certificat
+		if err != nil {
+			log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
+
+			// collect cert details
+			certInput := &cert.NodeCertInput{
+				Name:     nodeConfig.ShortName,
+				LongName: nodeConfig.LongName,
+				Fqdn:     nodeConfig.Fqdn,
+				SANs:     nodeConfig.SANs,
+				Prefix:   c.Config.Name,
+			}
+			// Generate the cert for the node
+			nodeCert, err := c.rootCA.GenerateCert(certInput)
+			if err != nil {
+				return err
+			}
+
+			// persist the cert via certStorage
+			err = c.certStorage.StoreNodeCert(nodeConfig.ShortName, nodeCert)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

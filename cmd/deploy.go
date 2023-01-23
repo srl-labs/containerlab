@@ -148,7 +148,16 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if debug {
 		cfssllog.Level = cfssllog.LevelDebug
 	}
-	if err := cert.CreateRootCA(c.Config.Name, c.Dir.LabCARoot, c.Nodes); err != nil {
+
+	// define the attributes used to generate the Root-CA Cert
+	caCertInput := &cert.CaCertInput{
+		Prefix: c.Config.Name,
+	}
+	if err := c.LoadOrGenerateRootCA(caCertInput); err != nil {
+		return err
+	}
+
+	if err := c.GenerateMissingNodeCerts(); err != nil {
 		return err
 	}
 
