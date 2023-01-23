@@ -7,7 +7,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.3
 	github.com/containerd/containerd v1.6.15
 	github.com/containernetworking/cni v1.1.2
-	github.com/containernetworking/plugins v1.1.1
+	github.com/containernetworking/plugins v1.2.0
 	github.com/containers/common v0.50.1
 	github.com/containers/podman/v4 v4.3.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
@@ -33,7 +33,7 @@ require (
 	github.com/scrapli/scrapligo v1.1.4
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
-	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
+	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.5.0
 	golang.org/x/sys v0.4.0
@@ -126,7 +126,7 @@ require (
 	github.com/containers/storage v1.43.0 // indirect
 	github.com/coreos/go-iptables v0.6.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/coreos/go-systemd/v22 v22.4.0 // indirect
+	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/creack/pty v1.1.18 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
@@ -255,7 +255,7 @@ require (
 	github.com/rs/zerolog v1.26.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1 // indirect
+	github.com/safchain/ethtool v0.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
