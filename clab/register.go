@@ -6,6 +6,7 @@ package clab
 
 import (
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
+	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
@@ -63,4 +64,5 @@ func (c *CLab) RegisterNodes() {
 	vr_xrv.Register(c.Reg)
 	vr_xrv9k.Register(c.Reg)
 	xrd.Register(c.Reg)
+	c8000.Register(c.Reg)
 }
