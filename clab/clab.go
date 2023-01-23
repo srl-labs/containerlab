@@ -613,7 +613,7 @@ func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CaCertInput) error {
 	caCertificate, err := c.certStorage.LoadCaCert()
 	if err != nil {
 		// if loading certs failed, try to generate new RootCA
-		caCertificate, err := c.rootCA.GenerateRootCert(caCertInput)
+		caCertificate, err = c.rootCA.GenerateRootCert(caCertInput)
 		if err != nil {
 			return fmt.Errorf("failed generating new Root CA %v", err)
 		}
@@ -622,9 +622,14 @@ func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CaCertInput) error {
 		if err != nil {
 			return nil
 		}
+	} else {
+		// if no error occured, set root cert
+		err = c.rootCA.SetRootCertificate(caCertificate)
+		if err != nil {
+			return nil
+		}
 	}
-	err = c.rootCA.SetRootCertificate(caCertificate)
-	return err
+	return nil
 }
 
 func (c *CLab) GenerateMissingNodeCerts() error {
