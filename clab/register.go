@@ -6,6 +6,7 @@ package clab
 
 import (
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
+	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
@@ -32,7 +33,6 @@ import (
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
-	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.
