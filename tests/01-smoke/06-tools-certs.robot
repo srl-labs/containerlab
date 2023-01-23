@@ -22,7 +22,7 @@ Create CA certificate
 
 Create and sign end node certificates
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab tools cert sign --ca-cert ${root-ca-dir}/root-ca.pem --ca-key ${root-ca-dir}/root-ca-key.pem --hosts node.io,192.168.0.1 --path ${node-cert-dir}
+    ...    sudo containerlab tools cert sign --ca-cert ${root-ca-dir}/root-ca/root-ca.pem --ca-key ${root-ca-dir}/root-ca/root-ca-key.pem --hosts node.io,192.168.0.1 --path ${node-cert-dir}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Creating and signing certificate: Hosts=[\\"node.io\\" \\"192.168.0.1\\"], CN=containerlab.dev, C=Internet, L=Server, O=Containerlab, OU=Containerlab Tools
