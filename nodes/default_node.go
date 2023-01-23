@@ -17,6 +17,7 @@ import (
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -47,12 +48,12 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	return dn
 }
 
-func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                     { d.Mgmt = mgmt }
-func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)              { d.Runtime = r }
-func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                { return d.Runtime }
-func (d *DefaultNode) Config() *types.NodeConfig                           { return d.Cfg }
-func (*DefaultNode) PreDeploy(_ context.Context, _, _, _ string) error     { return nil }
-func (*DefaultNode) PostDeploy(_ context.Context, _ map[string]Node) error { return nil }
+func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                      { d.Mgmt = mgmt }
+func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)               { d.Runtime = r }
+func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                 { return d.Runtime }
+func (d *DefaultNode) Config() *types.NodeConfig                            { return d.Cfg }
+func (*DefaultNode) PreDeploy(_ context.Context, _ *cert.Certificate) error { return nil }
+func (*DefaultNode) PostDeploy(_ context.Context, _ map[string]Node) error  { return nil }
 
 func (d *DefaultNode) SaveConfig(_ context.Context) error {
 	// nodes should have the save method defined on their respective structs.

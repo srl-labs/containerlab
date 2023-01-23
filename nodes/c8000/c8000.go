@@ -13,6 +13,7 @@ import (
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -59,7 +60,7 @@ func (n *c8000) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *c8000) PreDeploy(ctx context.Context, _, _, _ string) error {
+func (n *c8000) PreDeploy(ctx context.Context, _ *cert.Certificate) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 
 	return n.create8000Files(ctx)

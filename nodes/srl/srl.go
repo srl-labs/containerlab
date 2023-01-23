@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -178,8 +179,12 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot string) error {
+func (s *srl) PreDeploy(_ context.Context, certificate *cert.Certificate) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+
+	// set the certificate data
+	s.Config().TLSCert = string(certificate.Cert)
+	s.Config().TLSKey = string(certificate.Key)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if s.Cfg.Extras != nil && len(s.Cfg.Extras.SRLAgents) != 0 {

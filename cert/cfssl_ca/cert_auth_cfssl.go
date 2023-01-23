@@ -33,7 +33,7 @@ func NewCertificatAuthorityCloudflair(certStorage cert.CertStorage) cert.Certifi
 	}
 }
 
-// LoadRootCertificate tries to load the root certificat if it fails returns an error
+// SetRootCertificate tries to load the root certificat if it fails returns an error
 func (ca *CertificatAuthorityCloudflare) SetRootCertificate(caCert *cert.Certificate) error {
 	ca.rootCert = caCert
 	return ca.initCaStructs()

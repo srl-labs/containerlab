@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -61,7 +62,7 @@ func (s *IPInfusionOcNOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) 
 	return nil
 }
 
-func (s *IPInfusionOcNOS) PreDeploy(_ context.Context, _, _, _ string) error {
+func (s *IPInfusionOcNOS) PreDeploy(_ context.Context, _ *cert.Certificate) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nil
 }
