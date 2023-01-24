@@ -56,22 +56,8 @@ func (c *CertStorageLocalDisk) StoreNodeCert(nodeName string, cert *Certificate)
 	// create a folder for the node if it does not exist
 	utils.CreateDirectory(path.Join(c.baseFolder, nodeName), 0777)
 
-	err := utils.CreateFile(c.getCertAbsFilename(nodeName), string(cert.Cert))
-	if err != nil {
-		return err
-	}
-	err = utils.CreateFile(c.getKeyAbsFilename(nodeName), string(cert.Key))
-	if err != nil {
-		return err
-	}
-	// try only storing the csr if its length is >0
-	if len(cert.Csr) != 0 {
-		err = utils.CreateFile(c.getCSRAbsFilename(nodeName), string(cert.Csr))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	// write cert files
+	return cert.Write(c.getCertAbsFilename(nodeName), c.getKeyAbsFilename(nodeName), c.getCSRAbsFilename(nodeName))
 }
 
 // GetCertKeyAbsFilename returns the path to a key file for the given identifier

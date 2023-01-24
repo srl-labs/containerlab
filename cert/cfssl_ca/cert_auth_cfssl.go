@@ -113,7 +113,7 @@ func templatetoCSR(csrJSONTpl *template.Template, input any) (*csr.CertificateRe
 	return req, nil
 }
 
-// GenerateCert generates and signs a certificate passed as input
+// GenerateNodeCert generates and signs a certificate passed as input
 func (ca *CertificatAuthorityCloudflare) GenerateNodeCert(input *cert.CsrInputNode) (*cert.Certificate, error) {
 	// parse the nodeCSRTemplate
 	certTpl, err := template.New("node-cert").Parse(NodeCSRTempl)
