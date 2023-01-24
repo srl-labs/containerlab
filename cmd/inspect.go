@@ -64,6 +64,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithDebug(debug),
 	}
 
 	if topo != "" {

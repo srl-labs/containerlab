@@ -32,7 +32,7 @@ type CLab struct {
 	Links         map[int]*types.Link                 `json:"links,omitempty"`
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
-	Dir           *Directory `json:"dir,omitempty"`
+	Dir           *Directories `json:"dir,omitempty"`
 	// reg is a registry of node kinds
 	Reg         *nodes.NodeRegistry
 	rootCA      cert.CertificateAuthority
@@ -41,7 +41,7 @@ type CLab struct {
 	timeout time.Duration
 }
 
-type Directory struct {
+type Directories struct {
 	Lab       string
 	LabCA     string
 	LabCARoot string
@@ -56,6 +56,14 @@ func WithTimeout(dur time.Duration) ClabOption {
 			return errors.New("zero or negative timeouts are not allowed")
 		}
 		c.timeout = dur
+		return nil
+	}
+}
+
+// WithDebug set debug mode
+func WithDebug(debug bool) ClabOption {
+	return func(c *CLab) error {
+		c.Config.Debug = debug
 		return nil
 	}
 }
@@ -149,7 +157,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	// init the Certificate Authority
 	if c.Dir != nil && c.Dir.LabCA != "" {
 		c.certStorage = cert.NewLocalDiskCertStorage(c.Dir.LabCA)
-		c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage, c.GlobalRuntime().Config().Debug)
+		c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage, c.Config.Debug)
 	}
 
 	return c, err

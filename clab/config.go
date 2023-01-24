@@ -49,6 +49,8 @@ type Config struct {
 	Prefix   *string         `json:"prefix,omitempty"`
 	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology *types.Topology `json:"topology,omitempty"`
+	// stores the debug flag
+	Debug bool `json:"debug"`
 }
 
 // ParseTopology parses the lab topology.
@@ -62,7 +64,7 @@ func (c *CLab) parseTopology() error {
 		*c.Config.Prefix = defaultPrefix
 	}
 
-	c.Dir = &Directory{}
+	c.Dir = &Directories{}
 	// labDir is always named clab-$labName, regardless of the prefix
 	labDir := strings.Join([]string{"clab", c.Config.Name}, "-")
 	c.Dir.Lab = filepath.Join(cwd, labDir)

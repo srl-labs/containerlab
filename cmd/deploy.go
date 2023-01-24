@@ -91,6 +91,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithDebug(debug),
 	}
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {

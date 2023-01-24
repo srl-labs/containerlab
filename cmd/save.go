@@ -37,6 +37,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 					GracefulShutdown: graceful,
 				},
 			),
+			clab.WithDebug(debug),
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {
