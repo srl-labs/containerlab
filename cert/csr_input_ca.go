@@ -1,8 +1,7 @@
 package cert
 
-// NodeCertInput struct.
-type NodeCertInput struct {
-	Hosts            []string
+// CsrInputCa struct.
+type CsrInputCa struct {
 	CommonName       string
 	Country          string
 	Locality         string
@@ -10,9 +9,6 @@ type NodeCertInput struct {
 	OrganizationUnit string
 	Expiry           string
 
-	Name     string
-	LongName string
-	Fqdn     string
-	SANs     []string
-	Prefix   string
+	Prefix string
+	Names  map[string]string // Not used right now
 }

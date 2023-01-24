@@ -149,7 +149,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	// init the Certificate Authority
 	if c.Dir != nil && c.Dir.LabCA != "" {
 		c.certStorage = cert.NewLocalDiskCertStorage(c.Dir.LabCA)
-		c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage)
+		c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage, c.GlobalRuntime().Config().Debug)
 	}
 
 	return c, err
@@ -610,7 +610,7 @@ func (c *CLab) VethCleanup(_ context.Context) error {
 	return nil
 }
 
-func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CaCertInput) error {
+func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CsrInputCa) error {
 	// try loading the Root CA cert data
 	caCertificate, err := c.certStorage.LoadCaCert()
 	if err != nil {
@@ -646,7 +646,7 @@ func (c *CLab) GenerateMissingNodeCerts() error {
 			log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
 
 			// collect cert details
-			certInput := &cert.NodeCertInput{
+			certInput := &cert.CsrInputNode{
 				Name:     nodeConfig.ShortName,
 				LongName: nodeConfig.LongName,
 				Fqdn:     nodeConfig.Fqdn,
@@ -654,7 +654,7 @@ func (c *CLab) GenerateMissingNodeCerts() error {
 				Prefix:   c.Config.Name,
 			}
 			// Generate the cert for the node
-			nodeCert, err := c.rootCA.GenerateCert(certInput)
+			nodeCert, err := c.rootCA.GenerateNodeCert(certInput)
 			if err != nil {
 				return err
 			}

@@ -13,6 +13,7 @@ const (
 	cSRPostfix           = ".csr"
 )
 
+// CertStorage defined the interface used to manage certificate storage
 type CertStorage interface {
 	LoadCaCert() (*Certificate, error)
 	LoadNodeCert(nodeName string) (*Certificate, error)
@@ -20,6 +21,7 @@ type CertStorage interface {
 	StoreNodeCert(nodeName string, cert *Certificate) error
 }
 
+// CertStorageLocalDisk is a CertificateStorage implementation, that stores certificates in the given folder
 type CertStorageLocalDisk struct {
 	baseFolder string
 }

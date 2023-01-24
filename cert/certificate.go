@@ -8,6 +8,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+// Certificate stores the combination of Cert and Key along with the CSR if available.
 type Certificate struct {
 	Key  []byte
 	Csr  []byte

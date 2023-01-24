@@ -13,6 +13,7 @@ import (
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/cloudflare/cfssl/initca"
+	cfssllog "github.com/cloudflare/cfssl/log"
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
 	log "github.com/sirupsen/logrus"
@@ -26,7 +27,13 @@ type CertificatAuthorityCloudflare struct {
 }
 
 // NewCertificatAuthorityCloudflair retruns a newly constructed CertificatAuthority
-func NewCertificatAuthorityCloudflair(certStorage cert.CertStorage) cert.CertificateAuthority {
+func NewCertificatAuthorityCloudflair(certStorage cert.CertStorage, debug bool) cert.CertificateAuthority {
+	// setup loglevel for cfssl
+	cfssllog.Level = cfssllog.LevelError
+	if debug {
+		cfssllog.Level = cfssllog.LevelDebug
+	}
+
 	return &CertificatAuthorityCloudflare{
 		rootCert:  nil,
 		certStore: certStorage,
@@ -59,7 +66,7 @@ func (ca *CertificatAuthorityCloudflare) initCaStructs() error {
 }
 
 // GenerateRootCert generates a new RootCA
-func (ca *CertificatAuthorityCloudflare) GenerateRootCert(input *cert.CaCertInput) (*cert.Certificate, error) {
+func (ca *CertificatAuthorityCloudflare) GenerateRootCert(input *cert.CsrInputCa) (*cert.Certificate, error) {
 	log.Debug("Creating root CA")
 	var err error
 
@@ -107,7 +114,7 @@ func templatetoCSR(csrJSONTpl *template.Template, input any) (*csr.CertificateRe
 }
 
 // GenerateCert generates and signs a certificate passed as input
-func (ca *CertificatAuthorityCloudflare) GenerateCert(input *cert.NodeCertInput) (*cert.Certificate, error) {
+func (ca *CertificatAuthorityCloudflare) GenerateNodeCert(input *cert.CsrInputNode) (*cert.Certificate, error) {
 	// parse the nodeCSRTemplate
 	certTpl, err := template.New("node-cert").Parse(NodeCSRTempl)
 	if err != nil {

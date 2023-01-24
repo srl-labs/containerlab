@@ -7,7 +7,6 @@ package cmd
 import (
 	"os"
 
-	cfssllog "github.com/cloudflare/cfssl/log"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
@@ -84,11 +83,6 @@ var signCertCmd = &cobra.Command{
 func createCA(_ *cobra.Command, _ []string) error {
 	var err error
 
-	cfssllog.Level = cfssllog.LevelError
-	if debug {
-		cfssllog.Level = cfssllog.LevelDebug
-	}
-
 	if path == "" {
 		path, err = os.Getwd()
 		if err != nil {
@@ -100,9 +94,9 @@ func createCA(_ *cobra.Command, _ []string) error {
 		commonName, country, locality, organization, organizationUnit, expiry)
 
 	certStorage := cert.NewLocalDiskCertStorage(path)
-	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
 
-	caCertInput := &cert.CaCertInput{
+	caCertInput := &cert.CsrInputCa{
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,
@@ -135,11 +129,6 @@ func createCA(_ *cobra.Command, _ []string) error {
 func signCert(_ *cobra.Command, _ []string) error {
 	var err error
 
-	cfssllog.Level = cfssllog.LevelError
-	if debug {
-		cfssllog.Level = cfssllog.LevelDebug
-	}
-
 	if path == "" {
 		path, err = os.Getwd()
 		if err != nil {
@@ -148,7 +137,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	}
 
 	certStorage := cert.NewLocalDiskCertStorage(path)
-	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
 
 	var caCert *cert.Certificate
 	if caCertPath != "" {
@@ -175,7 +164,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
 		certHosts, commonName, country, locality, organization, organizationUnit)
 
-	nodeCert, err := rootCa.GenerateCert(&cert.NodeCertInput{
+	nodeCert, err := rootCa.GenerateNodeCert(&cert.CsrInputNode{
 		Hosts:            certHosts,
 		CommonName:       commonName,
 		Country:          country,

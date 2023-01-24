@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	cfssllog "github.com/cloudflare/cfssl/log"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
@@ -144,13 +143,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	cfssllog.Level = cfssllog.LevelError
-	if debug {
-		cfssllog.Level = cfssllog.LevelDebug
-	}
-
 	// define the attributes used to generate the Root-CA Cert
-	caCertInput := &cert.CaCertInput{
+	caCertInput := &cert.CsrInputCa{
 		Prefix: c.Config.Name,
 	}
 	if err := c.LoadOrGenerateRootCA(caCertInput); err != nil {
