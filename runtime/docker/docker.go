@@ -460,11 +460,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
 
-	_, b, err := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
-	if err != nil {
-		return err
-	}
-
+	_, b, _ := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
 	if pullpolicy == types.PullPolicyNever {
 		if b == nil {
 			// image not found but pull policy = never

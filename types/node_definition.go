@@ -20,7 +20,7 @@ type NodeDefinition struct {
 	AutoRemove           *bool             `yaml:"auto-remove,omitempty"`
 	Config               *ConfigDispatcher `yaml:"config,omitempty"`
 	Image                string            `yaml:"image,omitempty"`
-	ImagePullPolicy      string            `json:"image-pull-policy,omitempty"`
+	ImagePullPolicy      string            `yaml:"image-pull-policy,omitempty"`
 	License              string            `yaml:"license,omitempty"`
 	Position             string            `yaml:"position,omitempty"`
 	Entrypoint           string            `yaml:"entrypoint,omitempty"`
@@ -134,7 +134,7 @@ func (n *NodeDefinition) GetImage() string {
 }
 
 func (n *NodeDefinition) GetImagePullPolicy() PullPolicyValue {
-	if n == nil {
+	if n.ImagePullPolicy == "" {
 		return ""
 	}
 	return ParsePullPolicyValue(n.ImagePullPolicy)
