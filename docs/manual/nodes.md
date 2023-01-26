@@ -61,6 +61,16 @@ We use `<repository>` image name throughout the docs articles. This means that t
 docker tag srlinux:20.6.1-286 srlinux:latest
 ```
 
+### image-pull-policy
+
+With `image-pull-policy` the user defines the policy to use for fetching the container image.
+Valid values are:
+- `Never` - Do not at all try to download the image from its registry. An error will be thrown and the execution is stopped if the image is not available locally.
+- `Always` - Always try to download the image from its registry. An error will be thrown if the pulling fails.
+- `IfNotPresent` - Will only try to download a newer container image if the image is not already present. (If e.g. the :latest tag has been updated, continerlab will still run the old latest)
+
+The default setting for containerlab is `IfNotPresent`.
+
 ### subject alternative names (SAN)
 
 With `SANs` the user sets the Subject Alternative Names that will be added to the node's certificate. Host names that are set by default are:

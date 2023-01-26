@@ -455,13 +455,28 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 }
 
 // PullImageIfRequired pulls the image if it is not found in the local registry store.
-func (d *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName string) error {
+func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpolicy types.PullPolicyValue) error {
 	log.Debugf("Looking up %s Docker image", imageName)
 
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
 
 	_, b, err := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
-	if err == nil && b != nil {
+	if err != nil {
+		return err
+	}
+
+	if pullpolicy == types.PullPolicyNever {
+		if b == nil {
+			// image not found but pull policy = never
+			return fmt.Errorf("image %s not found locally, but image-pull-policy is %s", imageName, pullpolicy)
+		} else {
+			// image present, all good
+			log.Debugf("Image %s present, skip pulling", imageName)
+			return nil
+		}
+	}
+	if pullpolicy == types.PullPolicyIfNotPresent && b != nil {
+		// pull policy == IfNotPresent and image is present
 		log.Debugf("Image %s present, skip pulling", imageName)
 		return nil
 	}

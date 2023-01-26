@@ -126,7 +126,7 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	return nil
 }
 
-func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) error {
+func (r *PodmanRuntime) PullImage(ctx context.Context, image string, pullPolicy types.PullPolicyValue) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
@@ -140,6 +140,23 @@ func (r *PodmanRuntime) PullImageIfRequired(ctx context.Context, image string) e
 	if err != nil {
 		return err
 	}
+
+	if pullPolicy == types.PullPolicyNever {
+		if ex {
+			// image present, all good
+			log.Debugf("Image %s present, skip pulling", image)
+			return nil
+		} else {
+			// image not found but pull policy = never
+			return fmt.Errorf("image %s not found locally, but image-pull-policy is %s", image, pullPolicy)
+		}
+	}
+	if pullPolicy == types.PullPolicyIfNotPresent && ex == true {
+		// pull policy == IfNotPresent and image is present
+		log.Debugf("Image %s present, skip pulling", image)
+		return nil
+	}
+
 	// Pull the image if it doesn't exist
 	if !ex {
 		_, err = images.Pull(ctx, canonicalImage, &images.PullOptions{})

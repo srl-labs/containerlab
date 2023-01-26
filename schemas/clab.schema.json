@@ -13,6 +13,16 @@
                     "description": "container image to use for this node",
                     "markdownDescription": "container [image](https://containerlab.dev/manual/nodes/#image) to use for this node"
                 },
+                "image-pull-policy": {
+                    "type": "string",
+                    "description": "policy for pulling the referenced cotnainer image",
+                    "markdownDescription": "container [image-pull-policy](https://containerlab.dev/manual/nodes/#image-pull-policy) to use for this node",
+                    "enum":[
+                        "always",
+                        "never",
+                        "ifnotpresent"
+                    ]
+                },
                 "SANs": {
                     "type": "array",
                     "description": "list of subject alternative names (SAN) to use for this node",

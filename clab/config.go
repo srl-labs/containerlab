@@ -194,6 +194,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		NodeType:        c.Config.Topology.GetNodeType(nodeName),
 		Position:        c.Config.Topology.GetNodePosition(nodeName),
 		Image:           c.Config.Topology.GetNodeImage(nodeName),
+		ImagePullPolicy: c.Config.Topology.GetNodeImagePullPolicy(nodeName),
 		User:            c.Config.Topology.GetNodeUser(nodeName),
 		Entrypoint:      c.Config.Topology.GetNodeEntrypoint(nodeName),
 		Cmd:             c.Config.Topology.GetNodeCmd(nodeName),

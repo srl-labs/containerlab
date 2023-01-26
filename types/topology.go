@@ -243,6 +243,20 @@ func (t *Topology) GetNodeImage(name string) string {
 	return ""
 }
 
+func (t *Topology) GetNodeImagePullPolicy(name string) PullPolicyValue {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetImagePullPolicy() != "" {
+			return ndef.GetImagePullPolicy()
+		}
+		if t.GetKind(t.GetNodeKind(name)).GetImagePullPolicy() != "" {
+			return t.GetKind(t.GetNodeKind(name)).GetImagePullPolicy()
+		}
+		return t.GetDefaults().GetImagePullPolicy()
+	}
+	// lets   on the default set in the ParsePullPolicyValue hence use "" as input.
+	return ParsePullPolicyValue("")
+}
+
 func (t *Topology) GetNodeGroup(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if ndef.GetGroup() != "" {
