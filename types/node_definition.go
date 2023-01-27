@@ -133,11 +133,11 @@ func (n *NodeDefinition) GetImage() string {
 	return n.Image
 }
 
-func (n *NodeDefinition) GetImagePullPolicy() PullPolicyValue {
-	if n.ImagePullPolicy == "" {
+func (n *NodeDefinition) GetImagePullPolicy() string {
+	if n == nil {
 		return ""
 	}
-	return ParsePullPolicyValue(n.ImagePullPolicy)
+	return n.ImagePullPolicy
 }
 
 func (n *NodeDefinition) GetLicense() string {

@@ -246,16 +246,16 @@ func (t *Topology) GetNodeImage(name string) string {
 func (t *Topology) GetNodeImagePullPolicy(name string) PullPolicyValue {
 	if ndef, ok := t.Nodes[name]; ok {
 		if pp := ndef.GetImagePullPolicy(); pp != "" {
-			return pp
+			return ParsePullPolicyValue(pp)
 		}
 		if pp := t.GetKind(t.GetNodeKind(name)).GetImagePullPolicy(); pp != "" {
-			return pp
+			return ParsePullPolicyValue(pp)
 		}
 		if pp := t.GetDefaults().GetImagePullPolicy(); pp != "" {
-			return pp
+			return ParsePullPolicyValue(pp)
 		}
 	}
-	// lets   on the default set in the ParsePullPolicyValue hence use "" as input.
+	// let ParsePullPolicyValue return a default value for missing pull policy.
 	return ParsePullPolicyValue("")
 }
 
