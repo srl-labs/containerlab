@@ -21,6 +21,8 @@ const (
 	ImageKey   = "image"
 	KernelKey  = "kernel"
 	SandboxKey = "sandbox"
+
+	NodeKindSRL = "srl"
 )
 
 var (
