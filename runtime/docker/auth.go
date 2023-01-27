@@ -16,6 +16,9 @@ import (
 const (
 	dockerDefaultConfigDir  = ".docker"
 	dockerDefaultConfigFile = "config.json"
+	dockerHubDomain         = "docker.io"
+	// dockerV1IndexAuthKey is a key under which credentials for dockerhub images are stored
+	dockerV1IndexAuthKey = "https://index.docker.io/v1/"
 )
 
 type DockerConfigAuth struct {
@@ -86,13 +89,13 @@ func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error)
 
 	imageDomain := getImageDomainName(imageName)
 
-	var auth DockerConfigAuth
-	var ok bool
-	if auth, ok = dockerConfig.Auths[imageDomain]; !ok {
+	auth := getAuthString(imageDomain, dockerConfig.Auths)
+
+	if auth == "" {
 		return "", nil
 	}
 
-	decodedAuth, err := base64.URLEncoding.DecodeString(auth.Auth)
+	decodedAuth, err := base64.URLEncoding.DecodeString(auth)
 	if err != nil {
 		return "", err
 	}
@@ -115,4 +118,25 @@ func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error)
 
 	authString := base64.URLEncoding.EncodeToString(encodedJSON)
 	return authString, nil
+}
+
+// getAuthString fetches the authentication string from config.json
+// for a given image domain name.
+func getAuthString(imageDomain string, auths map[string]DockerConfigAuth) string {
+	log.Debugf("getting auth string for %s", imageDomain)
+
+	var auth DockerConfigAuth
+	var ok bool
+
+	if auth, ok = auths[imageDomain]; !ok {
+		// for docker.io domain we also lookup dockerIndexAuthKey
+		if imageDomain == dockerHubDomain {
+			return getAuthString(dockerV1IndexAuthKey, auths)
+		}
+
+		return ""
+	}
+
+	log.Debugf("found auth string for %s:%s", imageDomain, auth.Auth)
+	return auth.Auth
 }
