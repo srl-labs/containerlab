@@ -21,12 +21,9 @@ const (
 	ImageKey   = "image"
 	KernelKey  = "kernel"
 	SandboxKey = "sandbox"
-
-	NodeKindSRL = "srl"
 )
 
 var (
-	NodeKind string
 	// a map of node kinds overriding the default global runtime.
 	NonDefaultRuntimes = map[string]string{}
 
