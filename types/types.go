@@ -296,6 +296,7 @@ type DNSConfig struct {
 	Search []string `yaml:"search,omitempty"`
 }
 
+// PullPolicyValue represents Image pull policy values.
 type PullPolicyValue string
 
 const (
@@ -305,7 +306,7 @@ const (
 )
 
 // ParsePullPolicyValue parses the given string and tries to map it to
-// a valid PullPolicyValue. If it fails defaults to PullPolicyIfNotPresent
+// a valid PullPolicyValue. Defaults to PullPolicyIfNotPresent.
 func ParsePullPolicyValue(s string) PullPolicyValue {
 	// remove whitespace and convert to lower
 	s = strings.TrimSpace(strings.ToLower(s))
@@ -317,7 +318,7 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 	case "ifnotpresent":
 		return PullPolicyIfNotPresent
 	}
+
 	// default to IfNotPresent
 	return PullPolicyIfNotPresent
-
 }
