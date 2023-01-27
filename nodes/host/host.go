@@ -35,7 +35,7 @@ func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(n)
 	}
-
+	n.Cfg.IsRootNamespaceBased = true
 	return nil
 }
 func (*host) Deploy(_ context.Context) error                { return nil }

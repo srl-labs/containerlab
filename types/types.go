@@ -134,9 +134,10 @@ type NodeConfig struct {
 	// status that is set by containerlab to indicate deployment stage
 	DeploymentStatus string `json:"deployment-status,omitempty"`
 	// Extra node parameters
-	Extras  *Extras    `json:"extras,omitempty"`
-	WaitFor []string   `json:"wait-for,omitempty"`
-	DNS     *DNSConfig `json:"dns,omitempty"`
+	Extras               *Extras    `json:"extras,omitempty"`
+	WaitFor              []string   `json:"wait-for,omitempty"`
+	DNS                  *DNSConfig `json:"dns,omitempty"`
+	IsRootNamespaceBased bool
 }
 
 func DisableTxOffload(n *NodeConfig) error {
