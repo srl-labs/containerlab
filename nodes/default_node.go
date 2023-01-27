@@ -97,7 +97,7 @@ func (d *DefaultNode) PullImage(ctx context.Context) error {
 }
 
 func (d *DefaultNode) VerifyHostRequirements() error {
-	return d.HostRequirements.Verify()
+	return d.HostRequirements.Verify(d.Cfg.Kind, d.Cfg.ShortName)
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context) error {

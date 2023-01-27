@@ -35,7 +35,7 @@ func NewHostRequirements() *HostRequirements {
 	}
 }
 
-func (h *HostRequirements) Verify() error {
+func (h *HostRequirements) Verify(kindName, nodeName string) error {
 	// check virtualization Support
 	if h.VirtRequired && !virt.VerifyVirtSupport() {
 		return fmt.Errorf("the CPU virtualization support is required, but not available")
