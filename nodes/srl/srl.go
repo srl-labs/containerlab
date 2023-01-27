@@ -126,8 +126,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.HostRequirements.SSSE3 = true
 	s.HostRequirements.MinVCPU = 2
 	s.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
-	s.HostRequirements.MinFreeMemoryGb = 2
-	s.HostRequirements.MinFreeMemoryGbFailAction = types.FailBehaviourLog
+	s.HostRequirements.MinAvailMemoryGb = 2
+	s.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
 
 	s.Cfg = cfg
 	for _, o := range opts {

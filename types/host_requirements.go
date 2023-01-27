@@ -16,8 +16,8 @@ type HostRequirements struct {
 	MinVCPU           int           `json:"min-vcpu,omitempty"`
 	MinVCPUFailAction FailBehaviour `json:"min-vcpu-fail-action,omitempty"`
 	// The minimum amount of memory this node requires
-	MinFreeMemoryGb           int           `json:"min-free-memory,omitempty"`
-	MinFreeMemoryGbFailAction FailBehaviour `json:"min-free-memory-fail-action,omitempty"`
+	MinAvailMemoryGb           int           `json:"min-free-memory,omitempty"`
+	MinAvailMemoryGbFailAction FailBehaviour `json:"min-free-memory-fail-action,omitempty"`
 }
 
 type FailBehaviour int
@@ -30,8 +30,8 @@ const (
 // NewHostRequirements is the constructor for new HostRequirements structs.
 func NewHostRequirements() *HostRequirements {
 	return &HostRequirements{
-		MinVCPUFailAction:         FailBehaviourLog,
-		MinFreeMemoryGbFailAction: FailBehaviourLog,
+		MinVCPUFailAction:          FailBehaviourLog,
+		MinAvailMemoryGbFailAction: FailBehaviourLog,
 	}
 }
 
@@ -47,7 +47,7 @@ func (h *HostRequirements) Verify() error {
 	// check minimum vCPUs
 	if valid, num := h.verifyMinVCpu(); !valid {
 		message := fmt.Sprintf("the topology requires minimum %d vCPUs, but the host has %d vCPUs", h.MinVCPU, num)
-		switch h.MinFreeMemoryGbFailAction {
+		switch h.MinAvailMemoryGbFailAction {
 		case FailBehaviourError:
 			return fmt.Errorf(message)
 		case FailBehaviourLog:
@@ -56,8 +56,8 @@ func (h *HostRequirements) Verify() error {
 	}
 	// check minimum FreeMemory
 	if valid, num := h.verifyMinAvailMemory(); !valid {
-		message := fmt.Sprintf("the defined minimum free memory based on the nodes in your topology is %d GB whilst only %d GB memory is free", h.MinFreeMemoryGb, num)
-		switch h.MinFreeMemoryGbFailAction {
+		message := fmt.Sprintf("the defined minimum available memory based on the nodes in your topology is %d GB whilst only %d GB memory is available", h.MinAvailMemoryGb, num)
+		switch h.MinAvailMemoryGbFailAction {
 		case FailBehaviourError:
 			return fmt.Errorf(message)
 		case FailBehaviourLog:
@@ -70,16 +70,16 @@ func (h *HostRequirements) Verify() error {
 // verifyMinAvailMemory verifies that the node requirement for minimum free memory is met.
 // It returns a bool indicating if the requirement is met and the amount of available memory in GB.
 func (h *HostRequirements) verifyMinAvailMemory() (bool, uint64) {
-	freeMemG := virt.GetSysMemory(virt.MemoryTypeAvailable) / 1024 / 1024 / 1024
+	availMemGB := virt.GetSysMemory(virt.MemoryTypeAvailable) / 1024 / 1024 / 1024
 
 	// if the MinFreeMemory amount is 0, there is no requirement defined, so result is true
-	if h.MinFreeMemoryGb == 0 {
-		return true, freeMemG
+	if h.MinAvailMemoryGb == 0 {
+		return true, availMemGB
 	}
 
 	// amount of Free Memory must be greater-equal the requirement
-	boolResult := uint64(h.MinFreeMemoryGb) <= freeMemG
-	return boolResult, freeMemG
+	result := uint64(h.MinAvailMemoryGb) <= availMemGB
+	return result, availMemGB
 }
 
 // verifyMinVCpu verifies that the node requirement for minimum vCPU count is met.
@@ -92,6 +92,6 @@ func (h *HostRequirements) verifyMinVCpu() (bool, int) {
 	}
 
 	// count of vCPUs must be greater-equal the requirement
-	boolResult := h.MinVCPU <= numCpu
-	return boolResult, numCpu
+	result := h.MinVCPU <= numCpu
+	return result, numCpu
 }
