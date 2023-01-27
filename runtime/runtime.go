@@ -30,7 +30,7 @@ type ContainerRuntime interface {
 	// Delete container (bridge) network
 	DeleteNet(context.Context) error
 	// Pull container image if not present
-	PullImageIfRequired(context.Context, string) error
+	PullImage(context.Context, string, types.PullPolicyValue) error
 	// CreateContainer creates a container, but does not start it
 	CreateContainer(context.Context, *types.NodeConfig) (string, error)
 	// Start pre-created container by its name. Returns an extra interface that can be used to receive signals

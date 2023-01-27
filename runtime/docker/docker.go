@@ -454,19 +454,31 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
 }
 
-// PullImageIfRequired pulls the image if it is not found in the local registry store.
-func (d *DockerRuntime) PullImageIfRequired(ctx context.Context, imageName string) error {
+// PullImage pulls the container image using the provided image pull policy value.
+func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpolicy types.PullPolicyValue) error {
 	log.Debugf("Looking up %s Docker image", imageName)
 
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
 
-	_, b, err := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
-	if err == nil && b != nil {
+	_, b, _ := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
+	switch pullpolicy {
+	case types.PullPolicyNever:
+		if b == nil {
+			// image not found but pull policy = never
+			return fmt.Errorf("image %s not found locally, and image-pull-policy=%s prevents containerlab from pulling it", imageName, pullpolicy)
+		}
+		// image present, all good
 		log.Debugf("Image %s present, skip pulling", imageName)
 		return nil
+	case types.PullPolicyIfNotPresent:
+		if b != nil {
+			// pull policy == IfNotPresent and image is present
+			log.Debugf("Image %s present, skip pulling", imageName)
+			return nil
+		}
 	}
 
-	// If Image doesn't exist, we need to pull it
+	// If Image doesn't exist or pullpolicy=always, we need to pull it
 	authString := ""
 
 	// get docker config based on an empty path (default docker config path will be assumed)

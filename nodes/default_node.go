@@ -92,7 +92,7 @@ func (d *DefaultNode) PullImage(ctx context.Context) error {
 		if imageName == "" {
 			return fmt.Errorf("missing required %q attribute for node %q", imageKey, d.Cfg.ShortName)
 		}
-		err := d.Runtime.PullImageIfRequired(ctx, imageName)
+		err := d.Runtime.PullImage(ctx, imageName, d.Config().ImagePullPolicy)
 		if err != nil {
 			return err
 		}
