@@ -21,10 +21,6 @@ const (
 	ImageKey   = "image"
 	KernelKey  = "kernel"
 	SandboxKey = "sandbox"
-
-	NodeKindBridge = "bridge"
-	NodeKindHOST   = "host"
-	NodeKindOVS    = "ovs-bridge"
 )
 
 var (
