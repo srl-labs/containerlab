@@ -12,7 +12,7 @@ const (
 	MemoryTypeAvailable
 )
 
-// GetSysMemory reports on total installed or available memory (in bytes)
+// GetSysMemory reports on total installed or available memory (in bytes).
 func GetSysMemory(mt MemoryType) uint64 {
 	memoryResult, err := memory.Get()
 	if err != nil {

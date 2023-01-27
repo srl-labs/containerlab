@@ -9,11 +9,14 @@ import (
 )
 
 type HostRequirements struct {
-	SSSE3                     bool          `json:"ssse3,omitempty"`         // ssse3 cpu instruction
-	VirtRequired              bool          `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
-	MinVCPU                   int           `json:"min-vcpu,omitempty"`      // the minimum amount of vcpus this node requires
-	MinVCPUFailAction         FailBehaviour `json:"min-vcpu-fail-action,omitempty"`
-	MinFreeMemoryGb           int           `json:"min-free-memory,omitempty"` // The minimum amount of memory this node requires
+	SSSE3 bool `json:"ssse3,omitempty"` // ssse3 cpu instruction
+	// indicates that KVM virtualization is required for this node to run
+	VirtRequired bool `json:"virt-required,omitempty"`
+	// the minimum amount of vcpus this node requires
+	MinVCPU           int           `json:"min-vcpu,omitempty"`
+	MinVCPUFailAction FailBehaviour `json:"min-vcpu-fail-action,omitempty"`
+	// The minimum amount of memory this node requires
+	MinFreeMemoryGb           int           `json:"min-free-memory,omitempty"`
 	MinFreeMemoryGbFailAction FailBehaviour `json:"min-free-memory-fail-action,omitempty"`
 }
 
@@ -24,7 +27,7 @@ const (
 	FailBehaviourError
 )
 
-// NewHostRequirements is the constructor for new HostRequirements structs
+// NewHostRequirements is the constructor for new HostRequirements structs.
 func NewHostRequirements() *HostRequirements {
 	return &HostRequirements{
 		MinVCPUFailAction:         FailBehaviourLog,
@@ -65,7 +68,7 @@ func (h *HostRequirements) Verify() error {
 }
 
 // verifyMinAvailMemory verifies that the node requirement for minimum free memory is met.
-// It returns a bool indicating if the requirement is met and the amount of available memory in GB
+// It returns a bool indicating if the requirement is met and the amount of available memory in GB.
 func (h *HostRequirements) verifyMinAvailMemory() (bool, uint64) {
 	freeMemG := virt.GetSysMemory(virt.MemoryTypeAvailable) / 1024 / 1024 / 1024
 
