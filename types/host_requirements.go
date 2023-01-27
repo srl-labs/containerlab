@@ -38,15 +38,15 @@ func NewHostRequirements() *HostRequirements {
 func (h *HostRequirements) Verify(kindName, nodeName string) error {
 	// check virtualization Support
 	if h.VirtRequired && !virt.VerifyVirtSupport() {
-		return fmt.Errorf("the CPU virtualization support is required, but not available")
+		return fmt.Errorf("for node %q (%s) the CPU virtualization support is required, but not available", nodeName, kindName)
 	}
 	// check SSSE3 support
 	if h.SSSE3 && !virt.VerifySSSE3Support() {
-		return fmt.Errorf("the SSSE3 CPU feature is required, but not available")
+		return fmt.Errorf("for node %q (%s) the SSSE3 CPU feature is required, but not available", nodeName, kindName)
 	}
 	// check minimum vCPUs
 	if valid, num := h.verifyMinVCpu(); !valid {
-		message := fmt.Sprintf("the topology requires minimum %d vCPUs, but the host has %d vCPUs", h.MinVCPU, num)
+		message := fmt.Sprintf("node %q (%s) requires minimum %d vCPUs, but the host only has %d vCPUs", nodeName, kindName, h.MinVCPU, num)
 		switch h.MinAvailMemoryGbFailAction {
 		case FailBehaviourError:
 			return fmt.Errorf(message)
@@ -56,7 +56,7 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 	}
 	// check minimum FreeMemory
 	if valid, num := h.verifyMinAvailMemory(); !valid {
-		message := fmt.Sprintf("the defined minimum available memory based on the nodes in your topology is %d GB whilst only %d GB memory is available", h.MinAvailMemoryGb, num)
+		message := fmt.Sprintf("node %q (%s) has a minimum available memory requirement of %d GB whilst only %d GB memory is available", nodeName, kindName, h.MinAvailMemoryGb, num)
 		switch h.MinAvailMemoryGbFailAction {
 		case FailBehaviourError:
 			return fmt.Errorf(message)
