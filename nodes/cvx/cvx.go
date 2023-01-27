@@ -3,6 +3,7 @@ package cvx
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -108,4 +109,18 @@ func (c *cvx) GetImages(_ context.Context) map[string]string {
 	images[nodes.KernelKey] = c.Cfg.Kernel
 	images[nodes.SandboxKey] = c.Cfg.Sandbox
 	return images
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (c *cvx) CheckInterfaceName() error {
+	// allow ethX interface names
+	// https://regex101.com/r/C3Fhr0/2
+	ifRe := regexp.MustCompile(`swp[0-9]+$`)
+	for _, e := range c.Config().Endpoints {
+		if !ifRe.MatchString(e.EndpointName) {
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as swpX, where X is >=0", c.Cfg.ShortName, e.EndpointName)
+		}
+	}
+
+	return nil
 }
