@@ -122,10 +122,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if err = c.CheckResources(); err != nil {
-		return err
-	}
-
 	log.Info("Creating lab directory: ", c.Dir.Lab)
 	utils.CreateDirectory(c.Dir.Lab, 0755)
 

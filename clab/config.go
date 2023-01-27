@@ -6,15 +6,12 @@ package clab
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
-	"github.com/mackerelio/go-osstat/memory"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
@@ -535,34 +532,6 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
-	}
-
-	return nil
-}
-
-// CheckResources runs container host resources check.
-func (c *CLab) CheckResources() error {
-	vcpu := runtime.NumCPU()
-	log.Debugf("Number of vcpu: %d", vcpu)
-	if vcpu < 2 {
-		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
-		if c.HasKind(nodes.NodeKindSRL) {
-			return errors.New("not enough vcpus. Nokia SR Linux nodes require at least 2 vcpus")
-		}
-	}
-
-	// get memory usage on the host and check available memory
-	mem, err := memory.Get()
-	if err != nil {
-		return err
-	}
-
-	availMemGi := mem.Available / 1024 / 1024 / 1024
-
-	log.Debugf("Detected available memory on host: %d bytes/%d Gi", mem.Available, availMemGi)
-
-	if availMemGi < 1 {
-		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", availMemGi)
 	}
 
 	return nil
