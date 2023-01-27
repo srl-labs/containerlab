@@ -43,47 +43,52 @@ func (h *HostRequirements) Verify() error {
 	}
 	// check minimum vCPUs
 	if valid, num := h.verifyMinVCpu(); !valid {
-		message := fmt.Sprintf("the defined minimum vCPU amount based on the nodes in your topology is %d whilst only %d vCPUs are available", h.MinVCPU, num)
+		message := fmt.Sprintf("the topology requires minimum %d vCPUs, but the host has %d vCPUs", h.MinVCPU, num)
 		switch h.MinFreeMemoryGbFailAction {
 		case FailBehaviourError:
 			return fmt.Errorf(message)
 		case FailBehaviourLog:
 			log.Error(message)
-		default:
-			log.Error(message)
 		}
 	}
 	// check minimum FreeMemory
-	if valid, num := h.verifyMinFreeMemory(); !valid {
+	if valid, num := h.verifyMinAvailMemory(); !valid {
 		message := fmt.Sprintf("the defined minimum free memory based on the nodes in your topology is %d GB whilst only %d GB memory is free", h.MinFreeMemoryGb, num)
 		switch h.MinFreeMemoryGbFailAction {
 		case FailBehaviourError:
 			return fmt.Errorf(message)
 		case FailBehaviourLog:
 			log.Error(message)
-		default:
-			log.Error(message)
 		}
 	}
-
 	return nil
 }
 
-// verifyMinFreeMemory verify that the amount of free memory with the requirement
-// it returns a bool indicating if the requirement is satisfied and the amount of free memory in GB
-func (h *HostRequirements) verifyMinFreeMemory() (bool, uint64) {
-	// if the MinFreeMemory amount is 0, there is no requirement defined, so result is true
-	// if != 0 then amount of Free Memory must be greater-equal the requirement
+// verifyMinAvailMemory verifies that the node requirement for minimum free memory is met.
+// It returns a bool indicating if the requirement is met and the amount of available memory in GB
+func (h *HostRequirements) verifyMinAvailMemory() (bool, uint64) {
 	freeMemG := virt.GetSysMemory(virt.MemoryTypeAvailable) / 1024 / 1024 / 1024
 
-	boolResult := h.MinFreeMemoryGb == 0 || h.MinFreeMemoryGb != 0 && uint64(h.MinFreeMemoryGb) <= freeMemG
+	// if the MinFreeMemory amount is 0, there is no requirement defined, so result is true
+	if h.MinFreeMemoryGb == 0 {
+		return true, freeMemG
+	}
+
+	// amount of Free Memory must be greater-equal the requirement
+	boolResult := uint64(h.MinFreeMemoryGb) <= freeMemG
 	return boolResult, freeMemG
 }
 
-// verifyMinVCpu verify that the amount of re
+// verifyMinVCpu verifies that the node requirement for minimum vCPU count is met.
 func (h *HostRequirements) verifyMinVCpu() (bool, int) {
+	numCpu := runtime.NumCPU()
+
 	// if the minCPU amount is 0, there is no requirement defined, so result is true
-	// if != 0 then amount of vCPUs must be greater-equal the requirement
-	boolResult := h.MinVCPU == 0 || h.MinVCPU != 0 && h.MinVCPU <= runtime.NumCPU()
-	return boolResult, runtime.NumCPU()
+	if h.MinVCPU == 0 {
+		return true, numCpu
+	}
+
+	// count of vCPUs must be greater-equal the requirement
+	boolResult := h.MinVCPU <= numCpu
+	return boolResult, numCpu
 }

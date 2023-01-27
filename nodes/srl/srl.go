@@ -125,7 +125,7 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// set virtualization requirement
 	s.HostRequirements.SSSE3 = true
 	s.HostRequirements.MinVCPU = 2
-	s.HostRequirements.MinVCPUFailAction = types.FailBehaviourLog
+	s.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
 	s.HostRequirements.MinFreeMemoryGb = 2
 	s.HostRequirements.MinFreeMemoryGbFailAction = types.FailBehaviourLog
 

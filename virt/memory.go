@@ -5,6 +5,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type MemoryType int
+
+const (
+	MemoryTypeTotal MemoryType = iota
+	MemoryTypeAvailable
+)
+
 // GetSysMemory reports on total installed or available memory (in bytes)
 func GetSysMemory(mt MemoryType) uint64 {
 	memoryResult, err := memory.Get()
@@ -20,10 +27,3 @@ func GetSysMemory(mt MemoryType) uint64 {
 	}
 	return 0
 }
-
-type MemoryType int
-
-const (
-	MemoryTypeTotal MemoryType = iota
-	MemoryTypeAvailable
-)
