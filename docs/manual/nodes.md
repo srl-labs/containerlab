@@ -63,13 +63,23 @@ docker tag srlinux:20.6.1-286 srlinux:latest
 
 ### image-pull-policy
 
-With `image-pull-policy` the user defines the policy to use for fetching the container image.
-Valid values are:
-- `Never` - Do not at all try to download the image from its registry. An error will be thrown and the execution is stopped if the image is not available locally.
-- `Always` - Always try to download the image from its registry. An error will be thrown if the pulling fails.
-- `IfNotPresent` - Will only try to download a newer container image if the image is not already present. (If e.g. the :latest tag has been updated, continerlab will still run the old latest)
+With `image-pull-policy` a user defines the container image pull policy.
 
-The default setting for containerlab is `IfNotPresent`.
+Valid values are:
+
+- `IfNotPresent` - Pull container image if it is not already present. (If e.g. the `:latest` tag has been updated on a remote registry, containerlab will not re-pull it, if an image with the same tag is already present)
+- `Never` - Do not at all try to pull the image from a registry. An error will be thrown and the execution is stopped if the image is not available locally.
+- `Always` - Always try to pull the new image from a registry. An error will be thrown if pull fails. This will ensure fetching latest image version even if it exists locally.
+
+The default value is `IfNotPresent`.
+
+```yaml
+topology:
+  nodes:
+    srl:
+      image: ghcr.io/nokia/srlinux
+      image-pull-policy: Always
+```
 
 ### subject alternative names (SAN)
 
