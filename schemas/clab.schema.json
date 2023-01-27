@@ -17,10 +17,13 @@
                     "type": "string",
                     "description": "policy for pulling the referenced cotnainer image",
                     "markdownDescription": "container [image-pull-policy](https://containerlab.dev/manual/nodes/#image-pull-policy) to use for this node",
-                    "enum":[
+                    "enum": [
                         "always",
+                        "Always",
                         "never",
-                        "ifnotpresent"
+                        "Never",
+                        "ifnotpresent",
+                        "IfNotPresent"
                     ]
                 },
                 "SANs": {
