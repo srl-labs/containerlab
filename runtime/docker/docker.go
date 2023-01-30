@@ -499,12 +499,12 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
+
 	// must read from reader, otherwise image is not properly pulled
 	_, _ = io.Copy(io.Discard, reader)
 	log.Infof("Done pulling %s", canonicalImageName)
 
-	return nil
+	return reader.Close()
 }
 
 // StartContainer starts a docker container.
@@ -634,7 +634,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	for idx := range inputContainers {
 		i := inputContainers[idx]
 
-		names := []string{}
+		var names []string
 		for _, n := range i.Names {
 			// the docker names seem to always come with a "/" in the first position
 			// we trim it as slashes are not required in a single host setting
