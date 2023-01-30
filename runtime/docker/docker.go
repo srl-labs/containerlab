@@ -667,9 +667,12 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			}
 		}
 
+		// check if global bridge name belongs to a container network settings
+		// applicable for ext-containers
 		_, ok := i.NetworkSettings.Networks[bridgeName]
 
 		// if by now we failed to find a docker network name using the network resources created by docker
+		// or (in case of external containers) the clab's bridge name doesn't belong to the container
 		// we take whatever the first network is listed in the original container network settings
 		// this is to derive the network name if the network is not created by clab
 		if bridgeName == "" || !ok {
