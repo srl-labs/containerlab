@@ -667,10 +667,12 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			}
 		}
 
+		_, ok := i.NetworkSettings.Networks[bridgeName]
+
 		// if by now we failed to find a docker network name using the network resources created by docker
 		// we take whatever the first network is listed in the original container network settings
 		// this is to derive the network name if the network is not created by clab
-		if bridgeName == "" {
+		if bridgeName == "" || !ok {
 			// only if there is a single network associated with the container
 			if len(i.NetworkSettings.Networks) == 1 {
 				for n := range i.NetworkSettings.Networks {
