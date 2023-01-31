@@ -236,10 +236,10 @@ func writeCertFiles(certs *Certificates, filesPrefix string) {
 // CreateRootCA creates RootCA key/certificate if it is needed by the topology.
 func CreateRootCA(configName, labCARoot string, ns map[string]nodes.Node) error {
 	rootCANeeded := false
-	// check if srl kinds defined in topo
-	// for them we need to create rootCA and certs
+	// TODO: change constants to node properties
+	// for nokia srlinux we create CA by default
 	for _, n := range ns {
-		if n.Config().Kind == "srl" {
+		if n.Config().Kind == "srl" || n.Config().Kind == "nokia_srlinux" {
 			rootCANeeded = true
 			break
 		}

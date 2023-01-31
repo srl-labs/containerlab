@@ -200,6 +200,7 @@ func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot strin
 			SANs:     s.Cfg.SANs,
 			Prefix:   configName,
 		}
+
 		nodeCerts, err = cert.GenerateCert(
 			path.Join(labCARoot, "root-ca.pem"),
 			path.Join(labCARoot, "root-ca-key.pem"),

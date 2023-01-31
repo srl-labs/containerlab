@@ -13,7 +13,8 @@ topology:
       kind: srl
       startup-config: srl1-startup.cli
     srl2:
-      kind: srl
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
       startup-config: srl2-startup.cli
 
   links:
