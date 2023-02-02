@@ -23,25 +23,16 @@ import (
 )
 
 type CLab struct {
-	Config        *Config   `json:"config,omitempty"`
-	TopoFile      *TopoFile `json:"topofile,omitempty"`
+	Config        *Config `json:"config,omitempty"`
+	TopoPaths     *types.TopoPaths
 	m             *sync.RWMutex
 	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
 	Links         map[int]*types.Link                 `json:"links,omitempty"`
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
-	Dir           *Directory `json:"dir,omitempty"`
 	// Reg is a registry of node kinds
-	Reg *nodes.NodeRegistry
-
+	Reg     *nodes.NodeRegistry
 	timeout time.Duration
-}
-
-type Directory struct {
-	Lab       string
-	LabCA     string
-	LabCARoot string
-	LabGraph  string
 }
 
 type ClabOption func(c *CLab) error
@@ -117,7 +108,6 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 			Mgmt:     new(types.MgmtNet),
 			Topology: types.NewTopology(),
 		},
-		TopoFile: new(TopoFile),
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]nodes.Node),
 		Links:    make(map[int]*types.Link),
@@ -138,7 +128,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	}
 
 	var err error
-	if c.TopoFile.path != "" {
+	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
 	}
 
@@ -330,7 +320,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				}
 
 				// PreDeploy
-				err := node.PreDeploy(ctx, c.Config.Name, c.Dir.LabCA, c.Dir.LabCARoot)
+				err := node.PreDeploy(ctx, c.Config.Name, c.TopoPaths.GetCABaseDir(), c.TopoPaths.GetCARootCertDir())
 				if err != nil {
 					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue

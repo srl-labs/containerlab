@@ -51,7 +51,7 @@ var g *gographviz.Graph
 func (c *CLab) GenerateGraph(_ string) error {
 	log.Info("Generating lab graph...")
 	g = gographviz.NewGraph()
-	if err := g.SetName(c.TopoFile.name); err != nil {
+	if err := g.SetName(c.TopoPaths.GetTopologyFilename()); err != nil {
 		return err
 	}
 	if err := g.SetDir(false); err != nil {
@@ -81,7 +81,7 @@ func (c *CLab) GenerateGraph(_ string) error {
 				attr["fontcolor"] = "black"
 			}
 		}
-		if err := g.AddNode(c.TopoFile.name, node.Config().ShortName, attr); err != nil {
+		if err := g.AddNode(c.TopoPaths.GetTopologyFilename(), node.Config().ShortName, attr); err != nil {
 			return err
 		}
 
@@ -103,15 +103,15 @@ func (c *CLab) GenerateGraph(_ string) error {
 	}
 
 	// create graph directory
-	utils.CreateDirectory(c.Dir.Lab, 0755)
-	utils.CreateDirectory(c.Dir.LabGraph, 0755)
+	utils.CreateDirectory(c.TopoPaths.GetTopologyWorkDir(), 0755)
+	utils.CreateDirectory(c.TopoPaths.GetGraphDir(), 0755)
 
 	// create graph filename
-	dotfile := c.Dir.LabGraph + "/" + c.TopoFile.name + ".dot"
+	dotfile := c.TopoPaths.GetGraphFilename(".dot")
 	utils.CreateFile(dotfile, g.String())
 	log.Infof("Created %s", dotfile)
 
-	pngfile := c.Dir.LabGraph + "/" + c.TopoFile.name + ".png"
+	pngfile := c.TopoPaths.GetGraphFilename(".png")
 
 	// Only try to create png
 	if commandExists("dot") {
