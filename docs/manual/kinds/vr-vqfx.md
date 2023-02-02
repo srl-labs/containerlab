@@ -23,15 +23,15 @@ Juniper vQFX node launched with containerlab can be managed via the following in
     docker exec -it <container-name/id> bash
     ```
 === "CLI via SSH"
-    to connect to the vQFX CLI (password `admin@123`)
+    to connect to the vQFX CLI (password `Juniper`)
     ```bash
-    ssh admin@<container-name/id>
+    ssh root@<container-name/id>
     ```
 === "NETCONF"
     Coming soon
 
 !!!info
-    Default user credentials: `admin:admin@123`
+    Default user credentials: `root:Juniper`
 
 ## Interfaces mapping
 
