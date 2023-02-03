@@ -46,7 +46,6 @@ set / system tls server-profile clab-profile authenticate-client false
 {{- end }}
 set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
 set / system gnmi-server rate-limit 65000
-set / system gnmi-server commit-save false
 set / system gnmi-server trace-options [ request response common ]
 set / system gnmi-server unix-socket admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
