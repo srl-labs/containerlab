@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  GOVER: 1.18.4
+  GOVER: 1.19.5
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.0.4-insiders-4.27.1-hellt
   GORELEASER_VER: v1.11.4
