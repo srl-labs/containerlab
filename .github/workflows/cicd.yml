@@ -104,7 +104,7 @@ jobs:
       - run: go test -cover ./...
       - name: Staticcheck
         run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
           staticcheck ./...
 
   build-podman-v4:
