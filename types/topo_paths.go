@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	ansibleInventory   = "ansible-inventory.yml"
-	topologyExportData = "topology-data.json"
-	authzKeys          = "authorized_keys"
-	caFolder           = "ca"
-	rootCaFolder       = "root"
-	graph              = "graph"
-	workDirPrefix      = "clab-"
-	backupFileSuffix   = ".bak"
-	backupFilePrefix   = "."
+	ansibleInventoryFileName  = "ansible-inventory.yml"
+	topologyExportDatFileName = "topology-data.json"
+	authzKeysFileName         = "authorized_keys"
+	caFolder                  = "ca"
+	rootCaFolder              = "root"
+	graph                     = "graph"
+	workDirPrefix             = "clab-"
+	backupFileSuffix          = ".bak"
+	backupFilePrefix          = "."
 )
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
@@ -89,7 +89,7 @@ func (t *TopoPaths) GetCANodeDir(nodename string) string {
 
 // GetAuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile.
 func (t *TopoPaths) GetAuthorizedKeysFilename() string {
-	return path.Join(t.topologyWorkDir, authzKeys)
+	return path.Join(t.topologyWorkDir, authzKeysFileName)
 }
 
 // GetGraphDir returns the directory that takes the graphs.
@@ -113,12 +113,12 @@ func (t *TopoPaths) GetNodeDir(nodeName string) string {
 
 // GetTopoExportFile returns the path for the topology-export file.
 func (t *TopoPaths) GetTopoExportFile() string {
-	return path.Join(t.topologyWorkDir, topologyExportData)
+	return path.Join(t.topologyWorkDir, topologyExportDatFileName)
 }
 
 // GetAnsibleInventoryFileAbs returns the path to the ansible-inventory.
 func (t *TopoPaths) GetAnsibleInventoryFileAbs() string {
-	return path.Join(t.topologyWorkDir, ansibleInventory)
+	return path.Join(t.topologyWorkDir, ansibleInventoryFileName)
 }
 
 // GetTopologyFilenameAbs returns the absolute path to the topology file.
