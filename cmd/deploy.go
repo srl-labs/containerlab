@@ -110,8 +110,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 		_ = destroyLab(ctx, c)
-		log.Infof("Removing %s directory...", c.TopoPaths.TopologyWorkDir())
-		if err := os.RemoveAll(c.TopoPaths.TopologyWorkDir()); err != nil {
+		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
+		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return err
 		}
 	}
@@ -120,8 +120,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	log.Info("Creating lab directory: ", c.TopoPaths.TopologyWorkDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyWorkDir(), 0755)
+	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 
 	// create an empty ansible inventory file that will get populated later
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work

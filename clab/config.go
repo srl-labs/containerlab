@@ -506,7 +506,7 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		elems := strings.Split(binds[i], ":")
 
 		// replace special variable
-		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyWorkDir(), nodeDirVar, nodedir)
+		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyLabDir(), nodeDirVar, nodedir)
 		hp := r.Replace(elems[0])
 		hp = utils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 

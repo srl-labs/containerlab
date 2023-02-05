@@ -15,16 +15,16 @@ const (
 	caFolder                  = "ca"
 	rootCaFolder              = "root"
 	graph                     = "graph"
-	workDirPrefix             = "clab-"
+	labDirPrefix              = "clab-"
 	backupFileSuffix          = ".bak"
 	backupFilePrefix          = "."
 )
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
-// generally all these paths are deduced from two main paths. The topology file path and the work dir path.
+// generally all these paths are deduced from two main paths. The topology file path and the lab dir path.
 type TopoPaths struct {
-	topologyConfigFile string
-	topologyWorkDir    string
+	topoFile string
+	labDir   string
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
@@ -43,8 +43,8 @@ func (t *TopoPaths) SetTopologyName(topologyName string) error {
 	if err != nil {
 		return err
 	}
-	wd_path := path.Join(cwd, workDirPrefix+topologyName)
-	return t.SetWorkDir(wd_path)
+	wd_path := path.Join(cwd, labDirPrefix+topologyName)
+	return t.SetLabDir(wd_path)
 }
 
 // SetTopologyFilePath sets the topology file path.
@@ -58,23 +58,24 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	if err != nil {
 		return err
 	}
-	t.topologyConfigFile = absTopoFile
+	t.topoFile = absTopoFile
 	return nil
 }
 
-// SetWorkDir explicitly sets the WorkDir. Use UpdateWorkDir to deduce workdir from CWD/"clab-"+Filename of the topology file.
-func (t *TopoPaths) SetWorkDir(workDir string) error {
-	absWorkDir, err := filepath.Abs(workDir)
+// SetLabDir explicitly sets the labDir.
+func (t *TopoPaths) SetLabDir(labDir string) error {
+	absLabDir, err := filepath.Abs(labDir)
 	if err != nil {
 		return err
 	}
-	t.topologyWorkDir = absWorkDir
+	t.labDir = absLabDir
+
 	return nil
 }
 
 // CABaseDir returns the root of the CA directory structure.
 func (t *TopoPaths) CABaseDir() string {
-	return path.Join(t.topologyWorkDir, caFolder)
+	return path.Join(t.labDir, caFolder)
 }
 
 // CARootCertDir returns the directory that contains the root CA certificat and key.
@@ -89,12 +90,12 @@ func (t *TopoPaths) CANodeDir(nodename string) string {
 
 // AuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile.
 func (t *TopoPaths) AuthorizedKeysFilename() string {
-	return path.Join(t.topologyWorkDir, authzKeysFileName)
+	return path.Join(t.labDir, authzKeysFileName)
 }
 
 // GraphDir returns the directory that takes the graphs.
 func (t *TopoPaths) GraphDir() string {
-	return path.Join(t.topologyWorkDir, graph)
+	return path.Join(t.labDir, graph)
 }
 
 // GraphFilename returns the filename for a given graph file with the provided fileending.
@@ -106,30 +107,30 @@ func (t *TopoPaths) GraphFilename(fileEnding string) string {
 	return path.Join(t.GraphDir(), t.TopologyFilename()+fileEnding)
 }
 
-// NodeDir returns the working dir for the provided node.
+// NodeDir returns the directory in the labDir for the provided node.
 func (t *TopoPaths) NodeDir(nodeName string) string {
-	return path.Join(t.topologyWorkDir, nodeName)
+	return path.Join(t.labDir, nodeName)
 }
 
 // TopoExportFile returns the path for the topology-export file.
 func (t *TopoPaths) TopoExportFile() string {
-	return path.Join(t.topologyWorkDir, topologyExportDatFileName)
+	return path.Join(t.labDir, topologyExportDatFileName)
 }
 
 // AnsibleInventoryFileAbs returns the path to the ansible-inventory.
 func (t *TopoPaths) AnsibleInventoryFileAbs() string {
-	return path.Join(t.topologyWorkDir, ansibleInventoryFileName)
+	return path.Join(t.labDir, ansibleInventoryFileName)
 }
 
 // TopologyFilenameAbs returns the absolute path to the topology file.
 func (t *TopoPaths) TopologyFilenameAbs() string {
-	return t.topologyConfigFile
+	return t.topoFile
 }
 
 // TopologyFilenameFull returns the full filename of the topology file
 // without any additional paths.
 func (t *TopoPaths) TopologyFilenameFull() string {
-	return filepath.Base(t.topologyConfigFile)
+	return filepath.Base(t.topoFile)
 }
 
 // TopologyFilename returns the topology file name, truncated by the file extension.
@@ -147,7 +148,7 @@ func (t *TopoPaths) TopologyFileIsSet() bool {
 	if t == nil {
 		return false
 	}
-	return t.topologyConfigFile != ""
+	return t.topoFile != ""
 }
 
 // TopologyBakFileAbs returns the backup topology file name.
@@ -157,10 +158,10 @@ func (t *TopoPaths) TopologyBakFileAbs() string {
 
 // TopologyFileDir returns the abs path to the topology file directory.
 func (t *TopoPaths) TopologyFileDir() string {
-	return filepath.Dir(t.topologyConfigFile)
+	return filepath.Dir(t.topoFile)
 }
 
-// TopologyWorkDir returns the workdir.
-func (t *TopoPaths) TopologyWorkDir() string {
-	return t.topologyWorkDir
+// TopologyLabDir returns the lab directory.
+func (t *TopoPaths) TopologyLabDir() string {
+	return t.labDir
 }

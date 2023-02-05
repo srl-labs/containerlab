@@ -103,7 +103,7 @@ func (c *CLab) GenerateGraph(_ string) error {
 	}
 
 	// create graph directory
-	utils.CreateDirectory(c.TopoPaths.TopologyWorkDir(), 0755)
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0755)
 
 	// create graph filename
