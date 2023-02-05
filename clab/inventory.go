@@ -15,7 +15,7 @@ import (
 
 // GenerateInventories generate various inventory files and writes it to a lab location.
 func (c *CLab) GenerateInventories() error {
-	ansibleInvFPath := c.TopoPaths.GetAnsibleInventoryFileAbs()
+	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbs()
 	f, err := os.Create(ansibleInvFPath)
 	if err != nil {
 		return err

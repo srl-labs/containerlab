@@ -25,14 +25,14 @@ const (
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	p := utils.ResolvePath(pubKeysGlob, c.TopoPaths.GetTopologyFileDir())
+	p := utils.ResolvePath(pubKeysGlob, c.TopoPaths.TopologyFileDir())
 
 	all, err := filepath.Glob(p)
 	if err != nil {
 		return fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f := utils.ResolvePath(authzKeysFPath, c.TopoPaths.GetTopologyFileDir())
+	f := utils.ResolvePath(authzKeysFPath, c.TopoPaths.TopologyFileDir())
 
 	if utils.FileExists(f) {
 		log.Debugf("%s found, adding the public keys it contains", f)
@@ -51,7 +51,7 @@ func (c *CLab) CreateAuthzKeysFile() error {
 		b.Write(rb)
 	}
 
-	clabAuthzKeysFPath := c.TopoPaths.GetAuthorizedKeysFilename()
+	clabAuthzKeysFPath := c.TopoPaths.AuthorizedKeysFilename()
 	if err := utils.CreateFile(clabAuthzKeysFPath, b.String()); err != nil {
 		return err
 	}

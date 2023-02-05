@@ -110,8 +110,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 		_ = destroyLab(ctx, c)
-		log.Infof("Removing %s directory...", c.TopoPaths.GetTopologyWorkDir())
-		if err := os.RemoveAll(c.TopoPaths.GetTopologyWorkDir()); err != nil {
+		log.Infof("Removing %s directory...", c.TopoPaths.TopologyWorkDir())
+		if err := os.RemoveAll(c.TopoPaths.TopologyWorkDir()); err != nil {
 			return err
 		}
 	}
@@ -120,19 +120,19 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	log.Info("Creating lab directory: ", c.TopoPaths.GetTopologyWorkDir())
-	utils.CreateDirectory(c.TopoPaths.GetTopologyWorkDir(), 0755)
+	log.Info("Creating lab directory: ", c.TopoPaths.TopologyWorkDir())
+	utils.CreateDirectory(c.TopoPaths.TopologyWorkDir(), 0755)
 
 	// create an empty ansible inventory file that will get populated later
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
-	ansibleInvFPath := c.TopoPaths.GetAnsibleInventoryFileAbs()
+	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbs()
 	_, err = os.Create(ansibleInvFPath)
 	if err != nil {
 		return err
 	}
 
 	// in an similar fashion, create an empty topology data file
-	topoDataFPath := c.TopoPaths.GetTopoExportFile()
+	topoDataFPath := c.TopoPaths.TopoExportFile()
 	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
 		return err
@@ -142,7 +142,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if debug {
 		cfssllog.Level = cfssllog.LevelDebug
 	}
-	if err := cert.CreateRootCA(c.Config.Name, c.TopoPaths.GetCARootCertDir(), c.Nodes); err != nil {
+	if err := cert.CreateRootCA(c.Config.Name, c.TopoPaths.CARootCertDir(), c.Nodes); err != nil {
 		return err
 	}
 

@@ -37,15 +37,15 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	}
 
 	// load the topology file/template
-	topologyTemplate, err := template.New(c.TopoPaths.GetTopologyFilenameFull()).
+	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameFull()).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
-		ParseFiles(c.TopoPaths.GetTopologyFilenameAbs())
+		ParseFiles(c.TopoPaths.TopologyFilenameAbs())
 	if err != nil {
 		return err
 	}
 
 	// read template variables
-	templateVars, err := readTemplateVariables(c.TopoPaths.GetTopologyFilenameAbs(), varsFile)
+	templateVars, err := readTemplateVariables(c.TopoPaths.TopologyFilenameAbs(), varsFile)
 	if err != nil {
 		return err
 	}
@@ -60,8 +60,8 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	}
 
 	// create a hidden file that will contain the rendered topology
-	if !strings.HasPrefix(c.TopoPaths.GetTopologyFilenameFull(), ".") {
-		backupFPath := c.TopoPaths.GetTopologyBakFileAbs()
+	if !strings.HasPrefix(c.TopoPaths.TopologyFilenameFull(), ".") {
+		backupFPath := c.TopoPaths.TopologyBakFileAbs()
 		err = utils.CreateFile(backupFPath, buf.String())
 		if err != nil {
 			log.Warnf("Could not write rendered topology: %v", err)
