@@ -27,7 +27,7 @@ type TopoPaths struct {
 	topologyWorkDir    string
 }
 
-// NewTopoPaths constructs a new TopoPaths instance
+// NewTopoPaths constructs a new TopoPaths instance.
 func NewTopoPaths(topologyFile string) (*TopoPaths, error) {
 	t := &TopoPaths{}
 	err := t.SetTopologyFilePath(topologyFile)
@@ -47,7 +47,7 @@ func (t *TopoPaths) SetTopologyName(topologyName string) error {
 	return t.SetWorkDir(wd_path)
 }
 
-// SetTopologyFilePath sets the topology file path
+// SetTopologyFilePath sets the topology file path.
 func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	absTopoFile, err := filepath.Abs(topologyFile)
 	if err != nil {
@@ -72,32 +72,32 @@ func (t *TopoPaths) SetWorkDir(workDir string) error {
 	return nil
 }
 
-// GetCABaseDir returns the root of the CA directory structure
+// GetCABaseDir returns the root of the CA directory structure.
 func (t *TopoPaths) GetCABaseDir() string {
 	return path.Join(t.topologyWorkDir, caFolder)
 }
 
-// GetCARootCertDir returns the directory that contains the root CA certificat and key
+// GetCARootCertDir returns the directory that contains the root CA certificat and key.
 func (t *TopoPaths) GetCARootCertDir() string {
 	return path.Join(t.GetCABaseDir(), rootCaFolder)
 }
 
-// GetCANodeDir returns the directory that contains the certificat data for the given node
+// GetCANodeDir returns the directory that contains the certificat data for the given node.
 func (t *TopoPaths) GetCANodeDir(nodename string) string {
 	return path.Join(t.GetCABaseDir(), nodename)
 }
 
-// GetAuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile
+// GetAuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile.
 func (t *TopoPaths) GetAuthorizedKeysFilename() string {
 	return path.Join(t.topologyWorkDir, authzKeys)
 }
 
-// GetGraphDir returns the directory that takes the graphs
+// GetGraphDir returns the directory that takes the graphs.
 func (t *TopoPaths) GetGraphDir() string {
 	return path.Join(t.topologyWorkDir, graph)
 }
 
-// GetGraphFilename returns the filename for a given graph file with the provided fileending
+// GetGraphFilename returns the filename for a given graph file with the provided fileending.
 func (t *TopoPaths) GetGraphFilename(fileEnding string) string {
 	// if a fileending is provided and does not start with . add the .
 	if len(fileEnding) > 0 && !strings.HasPrefix(fileEnding, ".") {
@@ -106,33 +106,33 @@ func (t *TopoPaths) GetGraphFilename(fileEnding string) string {
 	return path.Join(t.GetGraphDir(), t.GetTopologyFilename()+fileEnding)
 }
 
-// GetNodeDir returns the working dir for the provided node
+// GetNodeDir returns the working dir for the provided node.
 func (t *TopoPaths) GetNodeDir(nodeName string) string {
 	return path.Join(t.topologyWorkDir, nodeName)
 }
 
-// GetTopoExportFile returns the path for the topology-export file
+// GetTopoExportFile returns the path for the topology-export file.
 func (t *TopoPaths) GetTopoExportFile() string {
 	return path.Join(t.topologyWorkDir, topologyExportData)
 }
 
-// GetAnsibleInventoryFileAbs returns the path to the ansible-inventory
+// GetAnsibleInventoryFileAbs returns the path to the ansible-inventory.
 func (t *TopoPaths) GetAnsibleInventoryFileAbs() string {
 	return path.Join(t.topologyWorkDir, ansibleInventory)
 }
 
-// GetTopologyFilenameAbs returns the absolute path to the topology file
+// GetTopologyFilenameAbs returns the absolute path to the topology file.
 func (t *TopoPaths) GetTopologyFilenameAbs() string {
 	return t.topologyConfigFile
 }
 
 // GetTopologyFilenameFull returns the full filename of the topology file
-// without any additional paths
+// without any additional paths.
 func (t *TopoPaths) GetTopologyFilenameFull() string {
 	return filepath.Base(t.topologyConfigFile)
 }
 
-// GetTopologyFilename returns the topology file name, truncated by the file extension
+// GetTopologyFilename returns the topology file name, truncated by the file extension.
 func (t *TopoPaths) GetTopologyFilename() string {
 	baseName := t.GetTopologyFilenameFull()
 	r := regexp.MustCompile(`[\.-]clab\.`)
@@ -150,17 +150,17 @@ func (t *TopoPaths) TopologyFileIsSet() bool {
 	return t.topologyConfigFile != ""
 }
 
-// GetTopologyBakFileAbs returns the backup topology file name
+// GetTopologyBakFileAbs returns the backup topology file name.
 func (t *TopoPaths) GetTopologyBakFileAbs() string {
 	return path.Join(t.GetTopologyFileDir(), backupFilePrefix+t.GetTopologyFilenameFull()+backupFileSuffix)
 }
 
-// GetTopologyFileDir returns the abs path to the topology file directory
+// GetTopologyFileDir returns the abs path to the topology file directory.
 func (t *TopoPaths) GetTopologyFileDir() string {
 	return filepath.Dir(t.topologyConfigFile)
 }
 
-// GetTopologyWorkDir returns the workdir
+// GetTopologyWorkDir returns the workdir.
 func (t *TopoPaths) GetTopologyWorkDir() string {
 	return t.topologyWorkDir
 }

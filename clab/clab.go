@@ -320,7 +320,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				}
 
 				// PreDeploy
-				err := node.PreDeploy(ctx, c.Config.Name, c.TopoPaths.GetCABaseDir(), c.TopoPaths.GetCARootCertDir())
+				err := node.PreDeploy(ctx, c.Config.Name,
+					c.TopoPaths.GetCABaseDir(), c.TopoPaths.GetCARootCertDir())
 				if err != nil {
 					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
