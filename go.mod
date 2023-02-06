@@ -21,7 +21,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.3
 	github.com/hashicorp/go-version v1.6.0
-	github.com/joho/godotenv v1.4.0
+	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v0.0.0-20210226120601-1b79e63a70a0
 	github.com/kellerza/template v0.0.6
 	github.com/klauspost/cpuid v1.3.1
