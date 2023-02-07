@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -95,13 +94,14 @@ func (t *TopoPaths) GraphDir() string {
 	return path.Join(t.labDir, graph)
 }
 
-// GraphFilename returns the filename for a given graph file with the provided fileending.
-func (t *TopoPaths) GraphFilename(fileEnding string) string {
-	// if a fileending is provided and does not start with . add the .
-	if len(fileEnding) > 0 && !strings.HasPrefix(fileEnding, ".") {
-		fileEnding = "." + fileEnding
+// GraphFilename returns the filename for a given graph file with the provided extension.
+func (t *TopoPaths) GraphFilename(ext string) string {
+	// add `.` to the extension if not provided
+	if len(ext) > 0 && !strings.HasPrefix(ext, ".") {
+		ext = "." + ext
 	}
-	return path.Join(t.GraphDir(), t.TopologyFilenameWithoutExt()+fileEnding)
+
+	return path.Join(t.GraphDir(), t.TopologyFilenameWithoutExt()+ext)
 }
 
 // NodeDir returns the directory in the labDir for the provided node.
@@ -132,19 +132,16 @@ func (t *TopoPaths) TopologyFilenameBase() string {
 
 // TopologyFilenameWithoutExt returns the topology file name without the file extension.
 func (t *TopoPaths) TopologyFilenameWithoutExt() string {
-	baseName := t.TopologyFilenameBase()
-	r := regexp.MustCompile(`[\.-]clab\.`)
-	loc := r.FindStringIndex(baseName)
-	if len(loc) > 0 {
-		return baseName[0:loc[0]]
-	}
-	return strings.TrimSuffix(baseName, path.Ext(baseName))
+	name := t.TopologyFilenameBase()
+
+	return name[:len(name)-len(filepath.Ext(name))]
 }
 
 func (t *TopoPaths) TopologyFileIsSet() bool {
 	if t == nil {
 		return false
 	}
+
 	return t.topoFile != ""
 }
 
