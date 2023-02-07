@@ -3,6 +3,7 @@ package cert
 import (
 	"path"
 
+	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -27,9 +28,9 @@ type CertStorageLocalDisk struct {
 }
 
 // NewLocalDiskCertStorage inits a new NewLocalDiskCertStorage and returns a pointer to it
-func NewLocalDiskCertStorage(baseFolder string) *CertStorageLocalDisk {
+func NewLocalDiskCertStorage(paths *types.TopoPaths) *CertStorageLocalDisk {
 	return &CertStorageLocalDisk{
-		baseFolder: baseFolder,
+		baseFolder: paths.CABaseDir(),
 	}
 }
 
