@@ -31,9 +31,9 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.3-0.20220825212826-86290f6a00fb
 	github.com/pkg/errors v0.9.1
 	github.com/scrapli/scrapligo v1.1.6
-	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
+	github.com/tklauser/numcpus v0.6.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.5.0
@@ -51,7 +51,6 @@ require (
 	github.com/cloudflare/circl v1.1.0 // indirect
 	github.com/container-orchestrated-devices/container-device-interface v0.5.3 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7 // indirect
-	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/errors v0.20.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
@@ -76,9 +75,6 @@ require (
 	github.com/sigstore/sigstore v1.5.1 // indirect
 	github.com/theupdateframework/go-tuf v0.5.2-0.20221207161717-9cb61d6e65f5 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
-	github.com/tklauser/go-sysconf v0.3.11 // indirect
-	github.com/tklauser/numcpus v0.6.0 // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.mongodb.org/mongo-driver v1.11.1 // indirect
 	inet.af/netaddr v0.0.0-20220617031823-097006376321 // indirect
 )

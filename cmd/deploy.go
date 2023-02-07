@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	cfssllog "github.com/cloudflare/cfssl/log"
-	"github.com/shirou/gopsutil/cpu"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
@@ -20,6 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/tklauser/numcpus"
 )
 
 const (
@@ -304,7 +304,7 @@ func determineWorkerCount(nodeCount, linkCount, maxWorkerCount uint) (nodeWorker
 	// if maxWorkerCount is not set (==0) use cpu count as max
 	if maxWorkerCount <= 0 {
 		// retrieve vCPU count
-		vCpus, err := cpu.Counts(true)
+		vCpus, err := numcpus.GetOnline()
 		if err != nil {
 			return 0, 0, err
 		}
