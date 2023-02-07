@@ -50,7 +50,7 @@ type Config struct {
 
 // ParseTopology parses the lab topology.
 func (c *CLab) parseTopology() error {
-	log.Infof("Parsing & checking topology file: %s", c.TopoPaths.TopologyFilenameFull())
+	log.Infof("Parsing & checking topology file: %s", c.TopoPaths.TopologyFilenameBase())
 
 	err := c.TopoPaths.SetLabDir(c.Config.Name)
 	if err != nil {
@@ -581,7 +581,7 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[labels.NodeType] = cfg.NodeType
 	cfg.Labels[labels.NodeGroup] = cfg.Group
 	cfg.Labels[labels.NodeLabDir] = cfg.LabDir
-	cfg.Labels[labels.TopoFile] = c.TopoPaths.TopologyFilenameAbs()
+	cfg.Labels[labels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added

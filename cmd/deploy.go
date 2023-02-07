@@ -125,7 +125,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// create an empty ansible inventory file that will get populated later
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
-	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbs()
+	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 	_, err = os.Create(ansibleInvFPath)
 	if err != nil {
 		return err

@@ -44,12 +44,15 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	if err != nil {
 		return err
 	}
+
 	// make sure topo file exists
 	_, err = os.Stat(absTopoFile)
 	if err != nil {
 		return err
 	}
+
 	t.topoFile = absTopoFile
+
 	return nil
 }
 
@@ -98,7 +101,7 @@ func (t *TopoPaths) GraphFilename(fileEnding string) string {
 	if len(fileEnding) > 0 && !strings.HasPrefix(fileEnding, ".") {
 		fileEnding = "." + fileEnding
 	}
-	return path.Join(t.GraphDir(), t.TopologyFilename()+fileEnding)
+	return path.Join(t.GraphDir(), t.TopologyFilenameWithoutExt()+fileEnding)
 }
 
 // NodeDir returns the directory in the labDir for the provided node.
@@ -111,25 +114,25 @@ func (t *TopoPaths) TopoExportFile() string {
 	return path.Join(t.labDir, topologyExportDatFileName)
 }
 
-// AnsibleInventoryFileAbs returns the path to the ansible-inventory.
-func (t *TopoPaths) AnsibleInventoryFileAbs() string {
+// AnsibleInventoryFileAbsPath returns the absolute path to the ansible-inventory file.
+func (t *TopoPaths) AnsibleInventoryFileAbsPath() string {
 	return path.Join(t.labDir, ansibleInventoryFileName)
 }
 
-// TopologyFilenameAbs returns the absolute path to the topology file.
-func (t *TopoPaths) TopologyFilenameAbs() string {
+// TopologyFilenameAbsPath returns the absolute path to the topology file.
+func (t *TopoPaths) TopologyFilenameAbsPath() string {
 	return t.topoFile
 }
 
-// TopologyFilenameFull returns the full filename of the topology file
+// TopologyFilenameBase returns the full filename of the topology file
 // without any additional paths.
-func (t *TopoPaths) TopologyFilenameFull() string {
+func (t *TopoPaths) TopologyFilenameBase() string {
 	return filepath.Base(t.topoFile)
 }
 
-// TopologyFilename returns the topology file name, truncated by the file extension.
-func (t *TopoPaths) TopologyFilename() string {
-	baseName := t.TopologyFilenameFull()
+// TopologyFilenameWithoutExt returns the topology file name without the file extension.
+func (t *TopoPaths) TopologyFilenameWithoutExt() string {
+	baseName := t.TopologyFilenameBase()
 	r := regexp.MustCompile(`[\.-]clab\.`)
 	loc := r.FindStringIndex(baseName)
 	if len(loc) > 0 {
@@ -145,9 +148,9 @@ func (t *TopoPaths) TopologyFileIsSet() bool {
 	return t.topoFile != ""
 }
 
-// TopologyBakFileAbs returns the backup topology file name.
-func (t *TopoPaths) TopologyBakFileAbs() string {
-	return path.Join(t.TopologyFileDir(), backupFilePrefix+t.TopologyFilenameFull()+backupFileSuffix)
+// TopologyBakFileAbsPath returns the backup topology file name.
+func (t *TopoPaths) TopologyBakFileAbsPath() string {
+	return path.Join(t.TopologyFileDir(), backupFilePrefix+t.TopologyFilenameBase()+backupFileSuffix)
 }
 
 // TopologyFileDir returns the abs path to the topology file directory.

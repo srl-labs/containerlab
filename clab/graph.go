@@ -51,7 +51,7 @@ var g *gographviz.Graph
 func (c *CLab) GenerateGraph(_ string) error {
 	log.Info("Generating lab graph...")
 	g = gographviz.NewGraph()
-	if err := g.SetName(c.TopoPaths.TopologyFilename()); err != nil {
+	if err := g.SetName(c.TopoPaths.TopologyFilenameWithoutExt()); err != nil {
 		return err
 	}
 	if err := g.SetDir(false); err != nil {
@@ -81,7 +81,7 @@ func (c *CLab) GenerateGraph(_ string) error {
 				attr["fontcolor"] = "black"
 			}
 		}
-		if err := g.AddNode(c.TopoPaths.TopologyFilename(), node.Config().ShortName, attr); err != nil {
+		if err := g.AddNode(c.TopoPaths.TopologyFilenameWithoutExt(), node.Config().ShortName, attr); err != nil {
 			return err
 		}
 
