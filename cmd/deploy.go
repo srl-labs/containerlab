@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	cfssllog "github.com/cloudflare/cfssl/log"
+	"github.com/shirou/gopsutil/cpu"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
@@ -155,15 +156,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	nodeWorkers := uint(len(c.Nodes))
-	linkWorkers := uint(len(c.Links))
-
-	if maxWorkers > 0 && maxWorkers < nodeWorkers {
-		nodeWorkers = maxWorkers
-	}
-
-	if maxWorkers > 0 && maxWorkers < linkWorkers {
-		linkWorkers = maxWorkers
+	// determine the node and link worker counts
+	nodeWorkers, linkWorkers, err := determineWorkerCount(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
+	if err != nil {
+		return err
 	}
 
 	// extraHosts holds host entries for nodes with static IPv4/6 addresses
@@ -290,4 +286,39 @@ func setFlags(conf *clab.Config) {
 	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
 		conf.Mgmt.IPv6Subnet = v6
 	}
+}
+
+// determineWorkerCount calculates the number of parralel threads for the creation of links and nodes.
+// The maximum number of Threads reported for links and nodes is the definet number of nodes and links provided.
+// If maxWorkerCount is > 0, it will be used as a cut-off value. At max the maxWorkerCount threads will be returned
+// However if the node or link count is less, just the node or link count is returned.
+// If maxWorkerCount is unset (<=0) then the number of vCPUs is considered as the cut-off value also considering the
+// amount of links and nodes. returned nodeWorker and linkWorker counts will never be more then the provided nodeCount and linkCount.
+func determineWorkerCount(nodeCount, linkCount, maxWorkerCount uint) (nodeWorkers, linkWorkers uint, err error) {
+	// init number of Workers to the number of links and nodes
+	nodeWorkers = nodeCount
+	linkWorkers = linkCount
+
+	// default maxThreadCount to maxWorkerCount
+	maxThreadCount := maxWorkerCount
+	// if maxWorkerCount is not set (==0) use cpu count as max
+	if maxWorkerCount <= 0 {
+		// retrieve vCPU count
+		vCpus, err := cpu.Counts(true)
+		if err != nil {
+			return 0, 0, err
+		}
+		// convert to uint and set as comparative Value
+		maxThreadCount = uint(vCpus)
+	}
+	// limit nodeWorkers to maxThread count
+	if maxThreadCount < nodeWorkers {
+		nodeWorkers = maxThreadCount
+	}
+	// limit linkWorkers to maxThread count
+	if maxThreadCount < linkWorkers {
+		linkWorkers = maxThreadCount
+	}
+	log.Debugf("NodeWorkers: %d, Linkworkers: %d", nodeWorkers, linkWorkers)
+	return nodeWorkers, linkWorkers, nil
 }
