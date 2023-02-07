@@ -50,23 +50,17 @@ type Config struct {
 
 // ParseTopology parses the lab topology.
 func (c *CLab) parseTopology() error {
-	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
+	log.Infof("Parsing & checking topology file: %s", c.TopoPaths.TopologyFilenameBase())
 
-	cwd, _ := filepath.Abs(os.Getenv("PWD"))
+	err := c.TopoPaths.SetLabDir(c.Config.Name)
+	if err != nil {
+		return err
+	}
 
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
 		*c.Config.Prefix = defaultPrefix
 	}
-
-	c.Dir = &Directory{}
-	// labDir is always named clab-$labName, regardless of the prefix
-	labDir := strings.Join([]string{"clab", c.Config.Name}, "-")
-	c.Dir.Lab = filepath.Join(cwd, labDir)
-
-	c.Dir.LabCA = filepath.Join(c.Dir.Lab, "ca")
-	c.Dir.LabCARoot = filepath.Join(c.Dir.LabCA, "root")
-	c.Dir.LabGraph = filepath.Join(c.Dir.Lab, "graph")
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
@@ -121,7 +115,6 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	var err error
 	for idx, nodeName := range nodeNames {
 		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
 		if err != nil {
@@ -184,7 +177,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		ShortName:       nodeName, // just the node name as seen in the topo file
 		LongName:        longName, // by default clab-$labName-$nodeName
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
-		LabDir:          filepath.Join(c.Dir.Lab, nodeName),
+		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
 		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
@@ -220,7 +213,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	var err error
 
 	// Load content of the EnvVarFiles
-	envFileContent, err := utils.LoadEnvVarFiles(c.TopoFile.dir,
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
 		c.Config.Topology.GetNodeEnvFiles(nodeName))
 	if err != nil {
 		return nil, err
@@ -235,7 +228,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		return nil, err
 	}
 	// resolve the startup config path to an abs path
-	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoFile.dir)
+	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
@@ -245,7 +238,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		return nil, err
 	}
 	// resolve the lic path to an abs path
-	nodeCfg.License = utils.ResolvePath(p, c.TopoFile.dir)
+	nodeCfg.License = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	// initialize bind mounts
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
@@ -513,9 +506,9 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		elems := strings.Split(binds[i], ":")
 
 		// replace special variable
-		r := strings.NewReplacer(clabDirVar, c.Dir.Lab, nodeDirVar, nodedir)
+		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyLabDir(), nodeDirVar, nodedir)
 		hp := r.Replace(elems[0])
-		hp = utils.ResolvePath(hp, c.TopoFile.dir)
+		hp = utils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
 		_, err := os.Stat(hp)
 		if err != nil {
@@ -588,7 +581,7 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[labels.NodeType] = cfg.NodeType
 	cfg.Labels[labels.NodeGroup] = cfg.Group
 	cfg.Labels[labels.NodeLabDir] = cfg.LabDir
-	cfg.Labels[labels.TopoFile] = c.TopoFile.path
+	cfg.Labels[labels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added

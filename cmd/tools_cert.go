@@ -13,7 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/clab"
 )
 
 var (
@@ -102,13 +101,6 @@ func createCA(_ *cobra.Command, _ []string) error {
 }
 `
 	var err error
-	opts := []clab.ClabOption{
-		clab.WithTimeout(timeout),
-	}
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return err
-	}
 
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
@@ -122,10 +114,6 @@ func createCA(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	c.Dir = &clab.Directory{
-		LabCARoot: path,
-	}
-
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
@@ -134,7 +122,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	_, err = cert.GenerateRootCa(c.Dir.LabCARoot, csrTpl, cert.CaRootInput{
+	_, err = cert.GenerateRootCa(path, csrTpl, cert.CaRootInput{
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,

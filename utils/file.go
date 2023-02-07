@@ -22,14 +22,11 @@ var (
 )
 
 // FileExists returns true if a file referenced by filename exists & accessible.
-//
 func FileExists(filename string) bool {
 	f, err := os.Stat(filename)
 	if err != nil {
-		log.Debugf("error while trying to access file %v: %v", filename, err)
 		return false
 	}
-
 	return !f.IsDir()
 }
 

@@ -442,8 +442,8 @@ func TestLabelsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.want[labels.NodeLabDir] = utils.ResolvePath(tc.want[labels.NodeLabDir], c.TopoFile.dir)
-			tc.want[labels.TopoFile] = utils.ResolvePath(tc.want[labels.TopoFile], c.TopoFile.dir)
+			tc.want[labels.NodeLabDir] = utils.ResolvePath(tc.want[labels.NodeLabDir], c.TopoPaths.TopologyFileDir())
+			tc.want[labels.TopoFile] = utils.ResolvePath(tc.want[labels.TopoFile], c.TopoPaths.TopologyFileDir())
 
 			labels := c.Nodes[tc.node].Config().Labels
 

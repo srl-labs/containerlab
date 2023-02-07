@@ -3,7 +3,6 @@ package ignite
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -217,7 +216,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 		udevRules = append(udevRules, fmt.Sprintf(udevRuleTemplate, ep.MAC, ep.EndpointName))
 	}
 
-	udevFile, err := ioutil.TempFile("/tmp", fmt.Sprintf("%s-udev", vm.Name))
+	udevFile, err := os.CreateTemp("/tmp", fmt.Sprintf("%s-udev", vm.Name))
 	if err != nil {
 		return nil, err
 	}

@@ -128,7 +128,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 
 		if cleanup {
-			err = os.RemoveAll(clab.Dir.Lab)
+			err = os.RemoveAll(clab.TopoPaths.TopologyLabDir())
 			if err != nil {
 				log.Errorf("error deleting lab directory: %v", err)
 			}
