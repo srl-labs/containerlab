@@ -12,7 +12,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/srl-labs/containerlab/virt"
 )
 
 // Link is a struct that contains the information of a link between 2 containers.
@@ -75,15 +74,16 @@ type NodeConfig struct {
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`
 	// path to config file that is actually mounted to the container and is a result of templation
-	ResConfig  string            `json:"config-abs-path,omitempty"`
-	NodeType   string            `json:"type,omitempty"`
-	Position   string            `json:"position,omitempty"`
-	License    string            `json:"license,omitempty"`
-	Image      string            `json:"image,omitempty"`
-	Sysctls    map[string]string `json:"sysctls,omitempty"`
-	User       string            `json:"user,omitempty"`
-	Entrypoint string            `json:"entrypoint,omitempty"`
-	Cmd        string            `json:"cmd,omitempty"`
+	ResConfig       string            `json:"config-abs-path,omitempty"`
+	NodeType        string            `json:"type,omitempty"`
+	Position        string            `json:"position,omitempty"`
+	License         string            `json:"license,omitempty"`
+	Image           string            `json:"image,omitempty"`
+	ImagePullPolicy PullPolicyValue   `json:"image-pull-policy,omitempty"`
+	Sysctls         map[string]string `json:"sysctls,omitempty"`
+	User            string            `json:"user,omitempty"`
+	Entrypoint      string            `json:"entrypoint,omitempty"`
+	Cmd             string            `json:"cmd,omitempty"`
 	// Exec is a list of commands to execute inside the container backing the node.
 	Exec []string          `json:"exec,omitempty"`
 	Env  map[string]string `json:"env,omitempty"`
@@ -134,26 +134,10 @@ type NodeConfig struct {
 	// status that is set by containerlab to indicate deployment stage
 	DeploymentStatus string `json:"deployment-status,omitempty"`
 	// Extra node parameters
-	Extras  *Extras    `json:"extras,omitempty"`
-	WaitFor []string   `json:"wait-for,omitempty"`
-	DNS     *DNSConfig `json:"dns,omitempty"`
-}
-
-type HostRequirements struct {
-	SSSE3        bool `json:"ssse3,omitempty"`         // ssse3 cpu instruction
-	VirtRequired bool `json:"virt-required,omitempty"` // indicates that KVM virtualization is required for this node to run
-}
-
-// Verify checks if host requirements are met.
-func (h *HostRequirements) Verify() error {
-	if h.VirtRequired && !virt.VerifyVirtSupport() {
-		return fmt.Errorf("the CPU virtualization support is required, but not available")
-	}
-	if h.SSSE3 && !virt.VerifySSSE3Support() {
-		return fmt.Errorf("the SSSE3 CPU feature required, but not available")
-	}
-
-	return nil
+	Extras               *Extras    `json:"extras,omitempty"`
+	WaitFor              []string   `json:"wait-for,omitempty"`
+	DNS                  *DNSConfig `json:"dns,omitempty"`
+	IsRootNamespaceBased bool
 }
 
 func DisableTxOffload(n *NodeConfig) error {
@@ -293,4 +277,31 @@ type DNSConfig struct {
 	Options []string `yaml:"options,omitempty"`
 	// DNS Search Domains
 	Search []string `yaml:"search,omitempty"`
+}
+
+// PullPolicyValue represents Image pull policy values.
+type PullPolicyValue string
+
+const (
+	PullPolicyAlways       PullPolicyValue = "Always"
+	PullPolicyNever        PullPolicyValue = "Never"
+	PullPolicyIfNotPresent PullPolicyValue = "IfNotPresent"
+)
+
+// ParsePullPolicyValue parses the given string and tries to map it to
+// a valid PullPolicyValue. Defaults to PullPolicyIfNotPresent.
+func ParsePullPolicyValue(s string) PullPolicyValue {
+	// remove whitespace and convert to lower
+	s = strings.TrimSpace(strings.ToLower(s))
+	switch s {
+	case "always":
+		return PullPolicyAlways
+	case "never":
+		return PullPolicyNever
+	case "ifnotpresent":
+		return PullPolicyIfNotPresent
+	}
+
+	// default to IfNotPresent
+	return PullPolicyIfNotPresent
 }

@@ -22,15 +22,9 @@ const (
 	ImageKey   = "image"
 	KernelKey  = "kernel"
 	SandboxKey = "sandbox"
-
-	NodeKindBridge = "bridge"
-	NodeKindHOST   = "host"
-	NodeKindOVS    = "ovs-bridge"
-	NodeKindSRL    = "srl"
 )
 
 var (
-	NodeKind string
 	// a map of node kinds overriding the default global runtime.
 	NonDefaultRuntimes = map[string]string{}
 

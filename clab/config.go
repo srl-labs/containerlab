@@ -6,15 +6,12 @@ package clab
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
-	"github.com/mackerelio/go-osstat/memory"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
@@ -55,23 +52,17 @@ type Config struct {
 
 // ParseTopology parses the lab topology.
 func (c *CLab) parseTopology() error {
-	log.Infof("Parsing & checking topology file: %s", c.TopoFile.fullName)
+	log.Infof("Parsing & checking topology file: %s", c.TopoPaths.TopologyFilenameBase())
 
-	cwd, _ := filepath.Abs(os.Getenv("PWD"))
+	err := c.TopoPaths.SetLabDir(c.Config.Name)
+	if err != nil {
+		return err
+	}
 
 	if c.Config.Prefix == nil {
 		c.Config.Prefix = new(string)
 		*c.Config.Prefix = defaultPrefix
 	}
-
-	c.Dir = &Directories{}
-	// labDir is always named clab-$labName, regardless of the prefix
-	labDir := strings.Join([]string{"clab", c.Config.Name}, "-")
-	c.Dir.Lab = filepath.Join(cwd, labDir)
-
-	c.Dir.LabCA = filepath.Join(c.Dir.Lab, "ca")
-	c.Dir.LabCARoot = filepath.Join(c.Dir.LabCA, "root")
-	c.Dir.LabGraph = filepath.Join(c.Dir.Lab, "graph")
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
@@ -126,7 +117,6 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	var err error
 	for idx, nodeName := range nodeNames {
 		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
 		if err != nil {
@@ -189,13 +179,14 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		ShortName:       nodeName, // just the node name as seen in the topo file
 		LongName:        longName, // by default clab-$labName-$nodeName
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
-		LabDir:          filepath.Join(c.Dir.Lab, nodeName),
+		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
 		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
 		NodeType:        c.Config.Topology.GetNodeType(nodeName),
 		Position:        c.Config.Topology.GetNodePosition(nodeName),
 		Image:           c.Config.Topology.GetNodeImage(nodeName),
+		ImagePullPolicy: c.Config.Topology.GetNodeImagePullPolicy(nodeName),
 		User:            c.Config.Topology.GetNodeUser(nodeName),
 		Entrypoint:      c.Config.Topology.GetNodeEntrypoint(nodeName),
 		Cmd:             c.Config.Topology.GetNodeCmd(nodeName),
@@ -224,7 +215,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	var err error
 
 	// Load content of the EnvVarFiles
-	envFileContent, err := utils.LoadEnvVarFiles(c.TopoFile.dir,
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
 		c.Config.Topology.GetNodeEnvFiles(nodeName))
 	if err != nil {
 		return nil, err
@@ -239,7 +230,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		return nil, err
 	}
 	// resolve the startup config path to an abs path
-	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoFile.dir)
+	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
@@ -249,7 +240,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		return nil, err
 	}
 	// resolve the lic path to an abs path
-	nodeCfg.License = utils.ResolvePath(p, c.TopoFile.dir)
+	nodeCfg.License = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	// initialize bind mounts
 	binds := c.Config.Topology.GetNodeBinds(nodeName)
@@ -483,7 +474,7 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	for _, l := range c.Links {
 		endpoints := [2]*types.Endpoint{l.A, l.B}
 		for _, e := range endpoints {
-			if e.Node.Kind == nodes.NodeKindBridge || e.Node.Kind == nodes.NodeKindOVS || e.Node.Kind == nodes.NodeKindHOST {
+			if e.Node.IsRootNamespaceBased {
 				if _, ok := rootNsIfaces[e.EndpointName]; ok {
 					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
 					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
@@ -517,9 +508,9 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		elems := strings.Split(binds[i], ":")
 
 		// replace special variable
-		r := strings.NewReplacer(clabDirVar, c.Dir.Lab, nodeDirVar, nodedir)
+		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyLabDir(), nodeDirVar, nodedir)
 		hp := r.Replace(elems[0])
-		hp = utils.ResolvePath(hp, c.TopoFile.dir)
+		hp = utils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
 		_, err := os.Stat(hp)
 		if err != nil {
@@ -537,34 +528,6 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		}
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
-	}
-
-	return nil
-}
-
-// CheckResources runs container host resources check.
-func (c *CLab) CheckResources() error {
-	vcpu := runtime.NumCPU()
-	log.Debugf("Number of vcpu: %d", vcpu)
-	if vcpu < 2 {
-		log.Warn("Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu")
-		if c.HasKind(nodes.NodeKindSRL) {
-			return errors.New("not enough vcpus. Nokia SR Linux nodes require at least 2 vcpus")
-		}
-	}
-
-	// get memory usage on the host and check available memory
-	mem, err := memory.Get()
-	if err != nil {
-		return err
-	}
-
-	availMemGi := mem.Available / 1024 / 1024 / 1024
-
-	log.Debugf("Detected available memory on host: %d bytes/%d Gi", mem.Available, availMemGi)
-
-	if availMemGi < 1 {
-		log.Warnf("it appears that container host has low memory available: ~%dGi. This might lead to runtime errors. Consider freeing up more memory.", availMemGi)
 	}
 
 	return nil
@@ -620,7 +583,7 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[labels.NodeType] = cfg.NodeType
 	cfg.Labels[labels.NodeGroup] = cfg.Group
 	cfg.Labels[labels.NodeLabDir] = cfg.LabDir
-	cfg.Labels[labels.TopoFile] = c.TopoFile.path
+	cfg.Labels[labels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added

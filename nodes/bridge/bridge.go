@@ -46,6 +46,7 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		o(s)
 	}
 	s.Cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
+	s.Cfg.IsRootNamespaceBased = true
 	return nil
 }
 

@@ -30,7 +30,7 @@ type DefaultNode struct {
 	Cfg              *types.NodeConfig
 	Mgmt             *types.MgmtNet
 	Runtime          runtime.ContainerRuntime
-	HostRequirements types.HostRequirements
+	HostRequirements *types.HostRequirements
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
@@ -41,7 +41,7 @@ type DefaultNode struct {
 // This allows DefaultNode to access fields of the specific node struct in the methods defined for DefaultNode.
 func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	dn := &DefaultNode{
-		HostRequirements: types.HostRequirements{},
+		HostRequirements: types.NewHostRequirements(),
 		OverwriteNode:    n,
 	}
 
@@ -93,7 +93,7 @@ func (d *DefaultNode) PullImage(ctx context.Context) error {
 		if imageName == "" {
 			return fmt.Errorf("missing required %q attribute for node %q", imageKey, d.Cfg.ShortName)
 		}
-		err := d.Runtime.PullImageIfRequired(ctx, imageName)
+		err := d.Runtime.PullImage(ctx, imageName, d.Config().ImagePullPolicy)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (d *DefaultNode) PullImage(ctx context.Context) error {
 }
 
 func (d *DefaultNode) VerifyHostRequirements() error {
-	return d.HostRequirements.Verify()
+	return d.HostRequirements.Verify(d.Cfg.Kind, d.Cfg.ShortName)
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context) error {

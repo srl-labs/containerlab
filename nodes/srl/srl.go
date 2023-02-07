@@ -45,6 +45,8 @@ set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
 set / system tls server-profile clab-profile authenticate-client false
 {{- end }}
 set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
+set / system gnmi-server rate-limit 65000
+set / system gnmi-server trace-options [ request response common ]
 set / system gnmi-server unix-socket admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
@@ -124,11 +126,12 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.DefaultNode = *nodes.NewDefaultNode(s)
 	// set virtualization requirement
 	s.HostRequirements.SSSE3 = true
+	s.HostRequirements.MinVCPU = 2
+	s.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
+	s.HostRequirements.MinAvailMemoryGb = 2
+	s.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
 
 	s.Cfg = cfg
-	// TODO: this is just a QUICKFIX. clab/config.go needs to be fixed
-	// to not rely on certain kind names
-	s.Cfg.Kind = nodes.NodeKindSRL
 	for _, o := range opts {
 		o(s)
 	}

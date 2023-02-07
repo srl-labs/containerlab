@@ -136,18 +136,30 @@ func (c *ContainerdRuntime) DeleteNet(context.Context) error {
 	return utils.DeleteLinkByName(bridgename)
 }
 
-func (c *ContainerdRuntime) PullImageIfRequired(ctx context.Context, imagename string) error {
-	log.Debugf("Looking up %s container image", imagename)
+func (c *ContainerdRuntime) PullImage(ctx context.Context, imageName string, pullPolicy types.PullPolicyValue) error {
+	log.Debugf("Looking up %s container image", imageName)
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
-	if !strings.Contains(imagename, ":") {
-		imagename = imagename + ":latest"
+	if !strings.Contains(imageName, ":") {
+		imageName = imageName + ":latest"
 	}
-	_, err := c.client.GetImage(ctx, imagename)
-	if err == nil {
-		log.Debugf("Image %s present, skip pulling", imagename)
+	_, err := c.client.GetImage(ctx, imageName)
+	if pullPolicy == types.PullPolicyNever {
+		if err != nil {
+			// image not found but pull policy = never
+			return fmt.Errorf("image %s not found locally, but image-pull-policy is %s", imageName, pullPolicy)
+		} else {
+			// image present, all good
+			log.Debugf("Image %s present, skip pulling", imageName)
+			return nil
+		}
+	}
+	if pullPolicy == types.PullPolicyIfNotPresent && err == nil {
+		// pull policy == IfNotPresent and image is present
+		log.Debugf("Image %s present, skip pulling", imageName)
 		return nil
 	}
-	n := utils.GetCanonicalImageName(imagename)
+
+	n := utils.GetCanonicalImageName(imageName)
 	_, err = c.client.Pull(ctx, n, containerd.WithPullUnpack)
 	if err != nil {
 		return err

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl_ca"
+	"github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -82,7 +83,6 @@ var signCertCmd = &cobra.Command{
 
 func createCA(_ *cobra.Command, _ []string) error {
 	var err error
-
 	if path == "" {
 		path, err = os.Getwd()
 		if err != nil {
@@ -93,7 +93,12 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	certStorage := cert.NewLocalDiskCertStorage(path)
+	topoPaths, err := types.NewTopoPaths(path)
+	if err != nil {
+		return err
+	}
+
+	certStorage := cert.NewLocalDiskCertStorage(topoPaths)
 	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
 
 	caCertInput := &cert.CsrInputCa{
@@ -136,7 +141,12 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	certStorage := cert.NewLocalDiskCertStorage(path)
+	topoPaths, err := types.NewTopoPaths(path)
+	if err != nil {
+		return err
+	}
+
+	certStorage := cert.NewLocalDiskCertStorage(topoPaths)
 	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
 
 	var caCert *cert.Certificate

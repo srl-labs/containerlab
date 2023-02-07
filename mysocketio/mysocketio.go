@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	h "net/http"
 	"os"
 	"strings"
@@ -54,7 +54,7 @@ func (c *Client) Request(method, url string, target, data interface{}) error {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 204 {
-		responseData, _ := ioutil.ReadAll(resp.Body)
+		responseData, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("failed to create object (%d) %v", resp.StatusCode, string(responseData))
 	}
 
@@ -74,7 +74,7 @@ func GetToken(tokenfile string) (string, error) {
 	if _, err := os.Stat(tokenfile); os.IsNotExist(err) {
 		return "", errors.New("please login first (no token found)")
 	}
-	content, err := ioutil.ReadFile(tokenfile)
+	content, err := os.ReadFile(tokenfile)
 	if err != nil {
 		return "", err
 	}

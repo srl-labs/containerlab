@@ -61,6 +61,26 @@ We use `<repository>` image name throughout the docs articles. This means that t
 docker tag srlinux:20.6.1-286 srlinux:latest
 ```
 
+### image-pull-policy
+
+With `image-pull-policy` a user defines the container image pull policy.
+
+Valid values are:
+
+- `IfNotPresent` - Pull container image if it is not already present. (If e.g. the `:latest` tag has been updated on a remote registry, containerlab will not re-pull it, if an image with the same tag is already present)
+- `Never` - Do not at all try to pull the image from a registry. An error will be thrown and the execution is stopped if the image is not available locally.
+- `Always` - Always try to pull the new image from a registry. An error will be thrown if pull fails. This will ensure fetching latest image version even if it exists locally.
+
+The default value is `IfNotPresent`.
+
+```yaml
+topology:
+  nodes:
+    srl:
+      image: ghcr.io/nokia/srlinux
+      image-pull-policy: Always
+```
+
 ### subject alternative names (SAN)
 
 With `SANs` the user sets the Subject Alternative Names that will be added to the node's certificate. Host names that are set by default are:

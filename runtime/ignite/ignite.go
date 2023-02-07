@@ -3,7 +3,6 @@ package ignite
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -139,7 +138,9 @@ func (c *IgniteRuntime) DeleteNet(ctx context.Context) error {
 	return c.ctrRuntime.DeleteNet(ctx)
 }
 
-func (*IgniteRuntime) PullImageIfRequired(_ context.Context, imageName string) error {
+// PullImage pulls the provided image name if it does not exist.
+// Ignite does ignore the pullPolicy though
+func (*IgniteRuntime) PullImage(_ context.Context, imageName string, pullPolicy types.PullPolicyValue) error {
 	ociRef, err := meta.NewOCIImageRef(imageName)
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI image ref %q: %s", imageName, err)
@@ -215,7 +216,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 		udevRules = append(udevRules, fmt.Sprintf(udevRuleTemplate, ep.MAC, ep.EndpointName))
 	}
 
-	udevFile, err := ioutil.TempFile("/tmp", fmt.Sprintf("%s-udev", vm.Name))
+	udevFile, err := os.CreateTemp("/tmp", fmt.Sprintf("%s-udev", vm.Name))
 	if err != nil {
 		return nil, err
 	}

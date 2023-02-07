@@ -8,7 +8,6 @@ import (
 	"context"
 	"net"
 	"os"
-	"path/filepath"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -23,7 +22,6 @@ import (
 
 const (
 	// file name of a topology export data.
-	topoExportFName            = "topology-data.json"
 	defaultExportTemplateFPath = "/etc/containerlab/templates/export/auto.tmpl"
 )
 
@@ -112,8 +110,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 		_ = destroyLab(ctx, c)
-		log.Infof("Removing %s directory...", c.Dir.Lab)
-		if err := os.RemoveAll(c.Dir.Lab); err != nil {
+		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
+		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return err
 		}
 	}
@@ -122,23 +120,19 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if err = c.CheckResources(); err != nil {
-		return err
-	}
-
-	log.Info("Creating lab directory: ", c.Dir.Lab)
-	utils.CreateDirectory(c.Dir.Lab, 0755)
+	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 
 	// create an empty ansible inventory file that will get populated later
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
-	ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
+	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 	_, err = os.Create(ansibleInvFPath)
 	if err != nil {
 		return err
 	}
 
 	// in an similar fashion, create an empty topology data file
-	topoDataFPath := filepath.Join(c.Dir.Lab, topoExportFName)
+	topoDataFPath := c.TopoPaths.TopoExportFile()
 	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
 		return err

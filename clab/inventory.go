@@ -7,7 +7,6 @@ package clab
 import (
 	"io"
 	"os"
-	"path/filepath"
 	"sort"
 	"text/template"
 
@@ -16,7 +15,7 @@ import (
 
 // GenerateInventories generate various inventory files and writes it to a lab location.
 func (c *CLab) GenerateInventories() error {
-	ansibleInvFPath := filepath.Join(c.Dir.Lab, "ansible-inventory.yml")
+	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 	f, err := os.Create(ansibleInvFPath)
 	if err != nil {
 		return err

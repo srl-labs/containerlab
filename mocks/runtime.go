@@ -256,18 +256,18 @@ func (mr *MockContainerRuntimeMockRecorder) PauseContainer(arg0, arg1 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseContainer", reflect.TypeOf((*MockContainerRuntime)(nil).PauseContainer), arg0, arg1)
 }
 
-// PullImageIfRequired mocks base method.
-func (m *MockContainerRuntime) PullImageIfRequired(arg0 context.Context, arg1 string) error {
+// PullImage mocks base method.
+func (m *MockContainerRuntime) PullImage(arg0 context.Context, arg1 string, arg2 types.PullPolicyValue) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PullImageIfRequired", arg0, arg1)
+	ret := m.ctrl.Call(m, "PullImage", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PullImageIfRequired indicates an expected call of PullImageIfRequired.
-func (mr *MockContainerRuntimeMockRecorder) PullImageIfRequired(arg0, arg1 interface{}) *gomock.Call {
+// PullImage indicates an expected call of PullImage.
+func (mr *MockContainerRuntimeMockRecorder) PullImage(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImageIfRequired", reflect.TypeOf((*MockContainerRuntime)(nil).PullImageIfRequired), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockContainerRuntime)(nil).PullImage), arg0, arg1, arg2)
 }
 
 // StartContainer mocks base method.
