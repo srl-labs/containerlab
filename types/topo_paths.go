@@ -38,15 +38,6 @@ func NewTopoPaths(topologyFile string) (*TopoPaths, error) {
 	return t, err
 }
 
-func (t *TopoPaths) SetTopologyName(topologyName string) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	wd_path := path.Join(cwd, labDirPrefix+topologyName)
-	return t.SetLabDir(wd_path)
-}
-
 // SetTopologyFilePath sets the topology file path.
 func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	absTopoFile, err := filepath.Abs(topologyFile)
@@ -62,13 +53,16 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-// SetLabDir explicitly sets the labDir.
-func (t *TopoPaths) SetLabDir(labDir string) error {
-	absLabDir, err := filepath.Abs(labDir)
+// SetLabDir sets the labDir.
+func (t *TopoPaths) SetLabDir(topologyName string) error {
+	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	t.labDir = absLabDir
+
+	ldPath := path.Join(cwd, labDirPrefix+topologyName)
+
+	t.labDir = ldPath
 
 	return nil
 }
