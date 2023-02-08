@@ -184,7 +184,7 @@ func (t *TopoPaths) NodeCertCSRAbsFilename(identifier string) string {
 	return path.Join(t.CANodeDir(identifier), identifier+cSRPostfix)
 }
 
-// RootCaFolder returns the folder name for the root ca
+// RootCaIdentifier returns the folder name for the root ca
 func (t *TopoPaths) RootCaIdentifier() string {
 	return rootCaIdentifier
 }

@@ -110,6 +110,8 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	utils.CreateDirectory(path, 0777)
+
 	err = caCert.Write(gopath.Join(path, caNamePrefix+".pem"), gopath.Join(path, caNamePrefix+"-key.pem"), "")
 	if err != nil {
 		return err
