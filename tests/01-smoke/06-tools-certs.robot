@@ -15,14 +15,14 @@ ${node-cert-dir}    /tmp/clab-tests/certs/06-node-cert
 *** Test Cases ***
 Create CA certificate
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab tools cert ca create --path ${root-ca-dir} --name root-ca --expiry 1m
+    ...    sudo containerlab tools cert ca create --path ${root-ca-dir} --name root-ca --expiry 1m -d
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Certificate attributes: CN=containerlab.dev, C=Internet, L=Server, O=Containerlab, OU=Containerlab Tools, Validity period=1m
 
 Create and sign end node certificates
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab tools cert sign --ca-cert ${root-ca-dir}/root-ca/root-ca.pem --ca-key ${root-ca-dir}/root-ca/root-ca-key.pem --hosts node.io,192.168.0.1 --path ${node-cert-dir}
+    ...    sudo containerlab tools cert sign --ca-cert ${root-ca-dir}/root-ca.pem --ca-key ${root-ca-dir}/root-ca-key.pem --hosts node.io,192.168.0.1 --path ${node-cert-dir} -d
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Creating and signing certificate: Hosts=[\\"node.io\\" \\"192.168.0.1\\"], CN=containerlab.dev, C=Internet, L=Server, O=Containerlab, OU=Containerlab Tools
