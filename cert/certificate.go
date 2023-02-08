@@ -55,16 +55,19 @@ func LoadCertificateFromDisk(certFilename, keyFilename, csrFilename string) (*Ce
 
 // Write writes the cert content to disk
 func (c *Certificate) Write(certFile, keyFile, csrFile string) error {
+	log.Debugf("writing cert file %s", certFile)
 	err := utils.CreateFile(certFile, string(c.Cert))
 	if err != nil {
 		return err
 	}
+	log.Debugf("writing key file %s", certFile)
 	err = utils.CreateFile(keyFile, string(c.Key))
 	if err != nil {
 		return err
 	}
 	// try only storing the csr if its length is >0
 	if len(c.Csr) != 0 && csrFile != "" {
+		log.Debugf("writing csr file %s", certFile)
 		err = utils.CreateFile(csrFile, string(c.Csr))
 		if err != nil {
 			return err

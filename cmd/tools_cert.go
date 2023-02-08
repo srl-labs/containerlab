@@ -6,12 +6,14 @@ package cmd
 
 import (
 	"os"
+	gopath "path"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl_ca"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -43,7 +45,7 @@ func init() {
 	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "87600h", "certificate validity period")
 	CACreateCmd.Flags().StringVarP(&path, "path", "p", "",
 		"path to write certificates to. Default is current working directory")
-	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "ca", "certificate/key filename prefix")
+	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "root-ca", "certificate/key filename prefix")
 
 	signCertCmd.Flags().StringSliceVarP(&certHosts, "hosts", "", []string{},
 		"comma separate list of hosts of a certificate")
@@ -93,12 +95,12 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	topoPaths, err := types.NewTopoPaths(path)
+	caPath, err := types.NewCaTopoPaths(path)
 	if err != nil {
 		return err
 	}
 
-	certStorage := cert.NewLocalDiskCertStorage(topoPaths)
+	certStorage := cert.NewLocalDiskCertStorage(caPath)
 	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
 
 	caCertInput := &cert.CsrInputCa{
@@ -115,13 +117,8 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if caCertPath != "" {
-		err = caCert.Write(caCertPath, caKeyPath, "")
-		if err != nil {
-			return err
-		}
-	} else {
-		err = certStorage.StoreCaCert(caCert)
+	if path != "" {
+		err = caCert.Write(gopath.Join(path, caNamePrefix+".pem"), gopath.Join(path, caNamePrefix+"-key.pem"), "")
 		if err != nil {
 			return err
 		}
@@ -141,22 +138,22 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	topoPaths, err := types.NewTopoPaths(path)
+	caPath, err := types.NewCaTopoPaths(path)
 	if err != nil {
 		return err
 	}
 
-	certStorage := cert.NewLocalDiskCertStorage(topoPaths)
+	certStorage := cert.NewLocalDiskCertStorage(caPath)
 	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
 
 	var caCert *cert.Certificate
+	log.Debugf("caCertPath: %q", caCertPath)
 	if caCertPath != "" {
 		// try loading the CA certificarte from disk via the explicite given path
 		caCert, err = cert.LoadCertificateFromDisk(caCertPath, caKeyPath, "")
 		if err != nil {
 			return err
 		}
-
 	} else {
 		// try loading the CA Certificate based on the default directory layout
 		caCert, err = certStorage.LoadCaCert()
@@ -187,8 +184,15 @@ func signCert(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+
+	if certNamePrefix == "" {
+		certNamePrefix = certHosts[0]
+	}
+
+	utils.CreateDirectory(path, 0777)
+
 	// store the cert
-	err = certStorage.StoreNodeCert(certHosts[0], nodeCert)
+	err = nodeCert.Write(gopath.Join(path, certNamePrefix+".pem"), gopath.Join(path, certNamePrefix+".key"), gopath.Join(path, certNamePrefix+".csr"))
 	if err != nil {
 		return err
 	}

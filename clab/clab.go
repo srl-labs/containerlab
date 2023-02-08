@@ -143,13 +143,11 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	var err error
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
+
+		// init the Certificate Authority
+		c.certStorage = cert.NewLocalDiskCertStorage(c.TopoPaths)
+		c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage, c.Config.Debug)
 	}
-
-	// init the Certificate Authority
-
-	c.certStorage = cert.NewLocalDiskCertStorage(c.TopoPaths)
-	c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage, c.Config.Debug)
-
 	return c, err
 }
 

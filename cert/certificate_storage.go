@@ -1,17 +1,8 @@
 package cert
 
 import (
-	"path"
-
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-)
-
-const (
-	rootCaFilenamePrefix = "root-ca"
-	certPostfix          = ".pem"
-	keyPostfix           = "-key.pem"
-	cSRPostfix           = ".csr"
 )
 
 // CertStorage defined the interface used to manage certificate storage
@@ -24,54 +15,39 @@ type CertStorage interface {
 
 // CertStorageLocalDisk is a CertificateStorage implementation, that stores certificates in the given folder
 type CertStorageLocalDisk struct {
-	baseFolder string
+	paths types.CaPaths
 }
 
 // NewLocalDiskCertStorage inits a new NewLocalDiskCertStorage and returns a pointer to it
-func NewLocalDiskCertStorage(paths *types.TopoPaths) *CertStorageLocalDisk {
+func NewLocalDiskCertStorage(paths types.CaPaths) *CertStorageLocalDisk {
 	return &CertStorageLocalDisk{
-		baseFolder: paths.CABaseDir(),
+		paths: paths,
 	}
 }
 
 // LoadCaCert loads and returns the CA certificat from disk or the error that occured while trying to read it
 func (c *CertStorageLocalDisk) LoadCaCert() (*Certificate, error) {
-	return c.LoadNodeCert(rootCaFilenamePrefix)
+	return c.LoadNodeCert(c.paths.RootCaIdentifier())
 }
 
 // LoadNodeCert loads and returns the certificat from disk matching the provided identifier or the error that occured while trying to read it
 func (c *CertStorageLocalDisk) LoadNodeCert(nodeName string) (*Certificate, error) {
-	certFilename := c.getCertAbsFilename(nodeName)
-	keyFilename := c.getKeyAbsFilename(nodeName)
-	csrFilename := c.getCSRAbsFilename(nodeName)
+	certFilename := c.paths.NodeCertAbsFilename(nodeName)
+	keyFilename := c.paths.NodeCertKeyAbsFilename(nodeName)
+	csrFilename := c.paths.NodeCertCSRAbsFilename(nodeName)
 	return LoadCertificateFromDisk(certFilename, keyFilename, csrFilename)
 }
 
 // StoreCaCert stores the given CA certificate in a file in the baseFolder
 func (c *CertStorageLocalDisk) StoreCaCert(cert *Certificate) error {
-	return c.StoreNodeCert(rootCaFilenamePrefix, cert)
+	return c.StoreNodeCert(c.paths.RootCaIdentifier(), cert)
 }
 
 // StoreNodeCert stores the given certificate in a file in the baseFolder
 func (c *CertStorageLocalDisk) StoreNodeCert(nodeName string, cert *Certificate) error {
 	// create a folder for the node if it does not exist
-	utils.CreateDirectory(path.Join(c.baseFolder, nodeName), 0777)
+	utils.CreateDirectory(c.paths.CANodeDir(nodeName), 0777)
 
 	// write cert files
-	return cert.Write(c.getCertAbsFilename(nodeName), c.getKeyAbsFilename(nodeName), c.getCSRAbsFilename(nodeName))
-}
-
-// GetCertKeyAbsFilename returns the path to a key file for the given identifier
-func (c *CertStorageLocalDisk) getKeyAbsFilename(identifier string) string {
-	return path.Join(c.baseFolder, identifier, identifier+keyPostfix)
-}
-
-// GetCertKeyAbsFilename returns the path to a cert file for the given identifier
-func (c *CertStorageLocalDisk) getCertAbsFilename(identifier string) string {
-	return path.Join(c.baseFolder, identifier, identifier+certPostfix)
-}
-
-// GetCertKeyAbsFilename returns the path to a csr file for the given identifier
-func (c *CertStorageLocalDisk) getCSRAbsFilename(identifier string) string {
-	return path.Join(c.baseFolder, identifier, identifier+cSRPostfix)
+	return cert.Write(c.paths.NodeCertAbsFilename(nodeName), c.paths.NodeCertKeyAbsFilename(nodeName), c.paths.NodeCertCSRAbsFilename(nodeName))
 }

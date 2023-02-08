@@ -12,11 +12,14 @@ const (
 	topologyExportDatFileName = "topology-data.json"
 	authzKeysFileName         = "authorized_keys"
 	caFolder                  = "ca"
-	rootCaFolder              = "root"
+	rootCaIdentifier          = "root"
 	graph                     = "graph"
 	labDirPrefix              = "clab-"
 	backupFileSuffix          = ".bak"
 	backupFilePrefix          = "."
+	certPostfix               = ".pem"
+	keyPostfix                = "-key.pem"
+	cSRPostfix                = ".csr"
 )
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
@@ -35,6 +38,12 @@ func NewTopoPaths(topologyFile string) (*TopoPaths, error) {
 	}
 
 	return t, err
+}
+
+func NewCaTopoPaths(labDir string) (CaPaths, error) {
+	return &TopoPaths{
+		labDir: labDir,
+	}, nil
 }
 
 // SetTopologyFilePath sets the topology file path.
@@ -76,7 +85,7 @@ func (t *TopoPaths) CABaseDir() string {
 
 // CARootCertDir returns the directory that contains the root CA certificat and key.
 func (t *TopoPaths) CARootCertDir() string {
-	return path.Join(t.CABaseDir(), rootCaFolder)
+	return path.Join(t.CABaseDir(), rootCaIdentifier)
 }
 
 // CANodeDir returns the directory that contains the certificat data for the given node.
@@ -158,4 +167,24 @@ func (t *TopoPaths) TopologyFileDir() string {
 // TopologyLabDir returns the lab directory.
 func (t *TopoPaths) TopologyLabDir() string {
 	return t.labDir
+}
+
+// NodeCertKeyAbsFilename returns the path to a key file for the given identifier
+func (t *TopoPaths) NodeCertKeyAbsFilename(identifier string) string {
+	return path.Join(t.CANodeDir(identifier), identifier+keyPostfix)
+}
+
+// NodeCertAbsFilename returns the path to a cert file for the given identifier
+func (t *TopoPaths) NodeCertAbsFilename(identifier string) string {
+	return path.Join(t.CANodeDir(identifier), identifier+certPostfix)
+}
+
+// NodeCertCSRAbsFilename returns the path to a csr file for the given identifier
+func (t *TopoPaths) NodeCertCSRAbsFilename(identifier string) string {
+	return path.Join(t.CANodeDir(identifier), identifier+cSRPostfix)
+}
+
+// RootCaFolder returns the folder name for the root ca
+func (t *TopoPaths) RootCaIdentifier() string {
+	return rootCaIdentifier
 }
