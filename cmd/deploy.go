@@ -156,8 +156,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// determine the node and link worker counts
-	nodeWorkers, linkWorkers, err := determineWorkerCount(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
+	// determine the number of node and link worker
+	nodeWorkers, linkWorkers, err := countWorkers(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
 	if err != nil {
 		return err
 	}
@@ -288,37 +288,40 @@ func setFlags(conf *clab.Config) {
 	}
 }
 
-// determineWorkerCount calculates the number of parralel threads for the creation of links and nodes.
-// The maximum number of Threads reported for links and nodes is the definet number of nodes and links provided.
-// If maxWorkerCount is > 0, it will be used as a cut-off value. At max the maxWorkerCount threads will be returned
-// However if the node or link count is less, just the node or link count is returned.
-// If maxWorkerCount is unset (<=0) then the number of vCPUs is considered as the cut-off value also considering the
-// amount of links and nodes. returned nodeWorker and linkWorker counts will never be more then the provided nodeCount and linkCount.
-func determineWorkerCount(nodeCount, linkCount, maxWorkerCount uint) (nodeWorkers, linkWorkers uint, err error) {
+// countWorkers calculates the number workers used for the creation of links and nodes.
+// If a user provided --max-workers value it is used for both links and nodes workers.
+// If maxWorkers is not set then the workers are limited by the number of available CPUs when
+// number of nodes/links exceeds the number of available CPUs.
+func countWorkers(nodeCount, linkCount, maxWorkers uint) (nodeWorkers, linkWorkers uint, err error) {
 	// init number of Workers to the number of links and nodes
 	nodeWorkers = nodeCount
 	linkWorkers = linkCount
 
-	// default maxThreadCount to maxWorkerCount
-	maxThreadCount := maxWorkerCount
-	// if maxWorkerCount is not set (==0) use cpu count as max
-	if maxWorkerCount <= 0 {
+	switch {
+	// if maxWorkers is not set, limit workers number by number of available CPUs
+	case maxWorkers <= 0:
 		// retrieve vCPU count
 		vCpus, err := numcpus.GetOnline()
 		if err != nil {
 			return 0, 0, err
 		}
-		// convert to uint and set as comparative Value
-		maxThreadCount = uint(vCpus)
+
+		numCPUs := uint(vCpus)
+
+		// limit node/link workers only if there is more node/links thans CPU cores available
+		if nodeCount > numCPUs {
+			nodeWorkers = numCPUs
+		}
+
+		if linkCount > numCPUs {
+			linkWorkers = numCPUs
+		}
+	case maxWorkers > 0:
+		nodeWorkers = maxWorkers
+		linkWorkers = maxWorkers
 	}
-	// limit nodeWorkers to maxThread count
-	if maxThreadCount < nodeWorkers {
-		nodeWorkers = maxThreadCount
-	}
-	// limit linkWorkers to maxThread count
-	if maxThreadCount < linkWorkers {
-		linkWorkers = maxThreadCount
-	}
-	log.Debugf("NodeWorkers: %d, Linkworkers: %d", nodeWorkers, linkWorkers)
+
+	log.Debugf("Number of Node workers: %d, Number of Link workers: %d", nodeWorkers, linkWorkers)
+
 	return nodeWorkers, linkWorkers, nil
 }
