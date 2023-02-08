@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl_ca"
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -95,13 +94,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	caPath, err := types.NewCaTopoPaths(path)
-	if err != nil {
-		return err
-	}
-
-	certStorage := cert.NewLocalDiskCertStorage(caPath)
-	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(nil, debug)
 
 	caCertInput := &cert.CsrInputCa{
 		CommonName:       commonName,
@@ -117,11 +110,9 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if path != "" {
-		err = caCert.Write(gopath.Join(path, caNamePrefix+".pem"), gopath.Join(path, caNamePrefix+"-key.pem"), "")
-		if err != nil {
-			return err
-		}
+	err = caCert.Write(gopath.Join(path, caNamePrefix+".pem"), gopath.Join(path, caNamePrefix+"-key.pem"), "")
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -138,25 +129,13 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	caPath, err := types.NewCaTopoPaths(path)
-	if err != nil {
-		return err
-	}
-
-	certStorage := cert.NewLocalDiskCertStorage(caPath)
-	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(certStorage, debug)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(nil, debug)
 
 	var caCert *cert.Certificate
 	log.Debugf("caCertPath: %q", caCertPath)
 	if caCertPath != "" {
 		// try loading the CA certificarte from disk via the explicite given path
 		caCert, err = cert.LoadCertificateFromDisk(caCertPath, caKeyPath, "")
-		if err != nil {
-			return err
-		}
-	} else {
-		// try loading the CA Certificate based on the default directory layout
-		caCert, err = certStorage.LoadCaCert()
 		if err != nil {
 			return err
 		}
