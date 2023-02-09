@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -515,12 +514,8 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 			// check if the hostpath mount has a reference to ansible-inventory.yml or topology-data.json
 			// if that is the case, we do not emit an error on missing file, since these files
 			// will be created by containerlab upon lab deployment
-			labdir := filepath.Base(filepath.Dir(nodedir))
-			s := strings.Split(hp, string(os.PathSeparator))
-			// creating a path from last two elements of a resolved host path
-			h := filepath.Join(s[len(s)-2], s[len(s)-1])
-			if h != filepath.Join(labdir, "ansible-inventory.yml") &&
-				h != filepath.Join(labdir, "topology-data.json") {
+			if hp != c.TopoPaths.AnsibleInventoryFileAbsPath() &&
+				hp != c.TopoPaths.TopoExportFile() {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
