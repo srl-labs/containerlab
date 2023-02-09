@@ -96,6 +96,11 @@ Useful when running in an automated environments with restricted network access.
 
 Example command-line usage: `CLAB_VERSION_CHECK=disable containerlab deploy`
 
+#### CLAB_LABS_BASE_DIR
+
+Can be set to alter the [lab directory](../manual/conf-artifacts.md#identifying-a-lab-directory) destination.
+The default is to create this directory in the current working dir. 
+
 ### Examples
 
 #### Deploy a lab using the given topology file
