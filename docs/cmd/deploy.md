@@ -96,9 +96,9 @@ Useful when running in an automated environments with restricted network access.
 
 Example command-line usage: `CLAB_VERSION_CHECK=disable containerlab deploy`
 
-#### CLAB_LAB_DIR
+#### CLAB_LABDIR_BASE
 
-To change the [lab directory](../manual/conf-artifacts.md#identifying-a-lab-directory) location, set `CLAB_LAB_DIR`` env variable accordingly.
+To change the [lab directory](../manual/conf-artifacts.md#identifying-a-lab-directory) location, set `CLAB_LABDIR_BASE` environment variable accordingly. It denotes the base directory in which the lab directory will be created.
 
 The default behavior is to create the lab directory in the current working dir.
 
