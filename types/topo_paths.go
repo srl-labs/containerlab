@@ -57,9 +57,9 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 
 // SetLabDir sets the labDir.
 func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
-	// if "CLAB_LABS_BASE_DIR" Env Var is set, use that dir as a base
+	// if "CLAB_LAB_DIR" Env Var is set, use that dir as a base
 	// for the labDir, otherwise use PWD.
-	baseDir := os.Getenv("CLAB_LABS_BASE_DIR")
+	baseDir := os.Getenv("CLAB_LAB_DIR")
 	if baseDir == "" {
 		baseDir, err = os.Getwd()
 		if err != nil {
