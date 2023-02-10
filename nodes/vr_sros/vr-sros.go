@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
@@ -88,6 +89,29 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 	return createVrSROSFiles(s)
 }
 
+func (s *vrSROS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+	// if we got a partial config, it's time to load and apply it
+	if isPartialConfigFile(s.Cfg.StartupConfig) {
+		// read the file
+		bcfg, err := utils.ReadFileContent(s.Cfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+		// convert []byte to string config
+		cfg := string(bcfg)
+		// replace \r\n by \n and then split by \n
+		cfgSlc := strings.Split(strings.ReplaceAll(cfg, "\r\n", "\n"), "\n")
+		// apply config to node
+		log.Infof("Applying partial config %s to %s", s.Cfg.StartupConfig, s.Cfg.LongName)
+		err = netconf.ApplyConfig(s.Cfg.MgmtIPv4Address, scrapliPlatformName, defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), cfgSlc)
+		if err != nil {
+			return err
+		}
+		log.Infof("%s successfully configured", s.Cfg.LongName)
+	}
+	return nil
+}
+
 func (s *vrSROS) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(s.Cfg.LongName,
 		defaultCredentials.GetUsername(),
@@ -117,9 +141,22 @@ func (s *vrSROS) CheckInterfaceName() error {
 }
 
 func createVrSROSFiles(node nodes.Node) error {
-	nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
 
 	nodeCfg := node.Config()
+
+	// cache the value of the StartupConfig
+	startUpConfigCache := nodeCfg.StartupConfig
+	// if the config is a partial one, we set StartupConfig to "" such that
+	// nodes.LoadStartupConfigFileVr(...) behaves correctly
+	// and does not take the config as a full config
+	// afterwards we restore the StartupConfig value again.
+	if isPartialConfigFile(nodeCfg.StartupConfig) {
+		nodeCfg.StartupConfig = ""
+	}
+	nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+
+	// restore the cached value
+	nodeCfg.StartupConfig = startUpConfigCache
 
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
@@ -132,4 +169,9 @@ func createVrSROSFiles(node nodes.Node) error {
 	}
 
 	return nil
+}
+
+// isPartialConfigFile returns true if the provided config is a partial config
+func isPartialConfigFile(c string) bool {
+	return strings.Contains(c, ".partial.")
 }
