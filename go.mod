@@ -9,7 +9,7 @@ require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.2.0
 	github.com/containers/common v0.51.0
-	github.com/containers/podman/v4 v4.4.0
+	github.com/containers/podman/v4 v4.4.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker v20.10.23+incompatible
