@@ -30,6 +30,8 @@ var (
 	//go:embed sshd_config
 	sshdCfg string
 
+	defaultCredentials = nodes.NewCredentials("root", "clab123")
+
 	saveCmd       = "cli show conf"
 	sshRestartCmd = "service ssh restart"
 )
@@ -38,7 +40,7 @@ var (
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(crpd)
-	}, nil)
+	}, defaultCredentials)
 }
 
 type crpd struct {
