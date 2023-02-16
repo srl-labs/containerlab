@@ -67,7 +67,7 @@ func (ca *CA) initCaStructs() error {
 }
 
 // GenerateRootCert generates a new RootCA
-func (ca *CA) GenerateRootCert(input *cert.CsrInputCa) (*cert.Certificate, error) {
+func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error) {
 	log.Debug("Creating root CA")
 	var err error
 
@@ -115,7 +115,7 @@ func templatetoCSR(csrJSONTpl *template.Template, input any) (*csr.CertificateRe
 }
 
 // GenerateNodeCert generates and signs a certificate passed as input
-func (ca *CA) GenerateNodeCert(input *cert.CsrInputNode) (*cert.Certificate, error) {
+func (ca *CA) GenerateNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
 	// parse the nodeCSRTemplate
 	certTpl, err := template.New("node-cert").Parse(NodeCSRTemplate)
 	if err != nil {

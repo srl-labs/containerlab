@@ -1,7 +1,19 @@
 package cert
 
-// CsrInputNode struct.
-type CsrInputNode struct {
+// CACSRInput struct.
+type CACSRInput struct {
+	CommonName       string
+	Country          string
+	Locality         string
+	Organization     string
+	OrganizationUnit string
+	Expiry           string
+
+	Prefix string
+}
+
+// NodeCSRInput struct.
+type NodeCSRInput struct {
 	Hosts            []string
 	CommonName       string
 	Country          string

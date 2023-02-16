@@ -139,7 +139,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// define the attributes used to generate the Root-CA Cert
-	caCertInput := &cert.CsrInputCa{
+	caCertInput := &cert.CACSRInput{
 		Prefix: c.Config.Name,
 	}
 	if err := c.LoadOrGenerateRootCA(caCertInput); err != nil {

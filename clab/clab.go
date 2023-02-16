@@ -606,7 +606,7 @@ func (c *CLab) VethCleanup(_ context.Context) error {
 	return nil
 }
 
-func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CsrInputCa) error {
+func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CACSRInput) error {
 	// try loading the Root CA cert data
 	caCertificate, err := c.certStorage.LoadCaCert()
 	if err != nil {
@@ -642,7 +642,7 @@ func (c *CLab) GenerateMissingNodeCerts() error {
 			log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
 
 			// collect cert details
-			certInput := &cert.CsrInputNode{
+			certInput := &cert.NodeCSRInput{
 				Name:     nodeConfig.ShortName,
 				LongName: nodeConfig.LongName,
 				Fqdn:     nodeConfig.Fqdn,

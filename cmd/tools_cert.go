@@ -94,9 +94,9 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	rootCa := cfssl.NewCA(nil, debug)
+	ca := cfssl.NewCA(nil, debug)
 
-	caCertInput := &cert.CsrInputCa{
+	csrInput := &cert.CACSRInput{
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,
@@ -105,7 +105,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 		Expiry:           expiry,
 	}
 
-	caCert, err := rootCa.GenerateRootCert(caCertInput)
+	caCert, err := ca.GenerateRootCert(csrInput)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
 		certHosts, commonName, country, locality, organization, organizationUnit)
 
-	nodeCert, err := rootCa.GenerateNodeCert(&cert.CsrInputNode{
+	nodeCert, err := rootCa.GenerateNodeCert(&cert.NodeCSRInput{
 		Hosts:            certHosts,
 		CommonName:       commonName,
 		Country:          country,

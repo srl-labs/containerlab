@@ -7,8 +7,8 @@ type CertificateAuthority interface {
 	SetRootCertificate(cert *Certificate) error
 	// GenerateRootCert will make the CertificateAuthority generate a new Root CA certificate, init the internal state, such that node
 	// certs can be generated and return the Root-CA Certificate (Cert, Key and CSR)
-	GenerateRootCert(input *CsrInputCa) (*Certificate, error)
+	GenerateRootCert(input *CACSRInput) (*Certificate, error)
 	// GenerateNodeCert requests a new Node certificate from the CertificateAuthority, which will generate the Certificates and will sign those
 	// with the already setup Root CA cert.
-	GenerateNodeCert(input *CsrInputNode) (*Certificate, error)
+	GenerateNodeCert(input *NodeCSRInput) (*Certificate, error)
 }
