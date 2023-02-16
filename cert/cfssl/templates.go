@@ -1,6 +1,6 @@
-package cfssl_ca
+package cfssl
 
-var rootCACSRTempl string = `{
+var rootCACSRTemplate string = `{
     "CN": "{{.Prefix}} Root CA",
     "key": {
        "algo": "rsa",
@@ -18,7 +18,7 @@ var rootCACSRTempl string = `{
 }
 `
 
-var NodeCSRTempl string = `{
+var NodeCSRTemplate string = `{
     "CN": "{{.Name}}.{{.Prefix}}.io",
     "key": {
       "algo": "rsa",

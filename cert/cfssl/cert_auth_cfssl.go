@@ -1,4 +1,4 @@
-package cfssl_ca
+package cfssl
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ type CertificatAuthorityCloudflare struct {
 	certStore cert.CertStorage
 }
 
-// NewCertificatAuthorityCloudflare retruns a CertificatAuthority created with Cloudflare CFSSL.
-func NewCertificatAuthorityCloudflare(certStorage cert.CertStorage, debug bool) *CertificatAuthorityCloudflare {
+// NewCertificatAuthority retruns a CertificatAuthority created with Cloudflare CFSSL.
+func NewCertificatAuthority(certStorage cert.CertStorage, debug bool) *CertificatAuthorityCloudflare {
 	// setup loglevel for cfssl
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
@@ -71,7 +71,7 @@ func (ca *CertificatAuthorityCloudflare) GenerateRootCert(input *cert.CsrInputCa
 	var err error
 
 	// parse template for the RootCertCSR
-	tpl, err := template.New("ca-csr").Parse(rootCACSRTempl)
+	tpl, err := template.New("ca-csr").Parse(rootCACSRTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Root CA CSR Template: %v", err)
 	}
@@ -116,7 +116,7 @@ func templatetoCSR(csrJSONTpl *template.Template, input any) (*csr.CertificateRe
 // GenerateNodeCert generates and signs a certificate passed as input
 func (ca *CertificatAuthorityCloudflare) GenerateNodeCert(input *cert.CsrInputNode) (*cert.Certificate, error) {
 	// parse the nodeCSRTemplate
-	certTpl, err := template.New("node-cert").Parse(NodeCSRTempl)
+	certTpl, err := template.New("node-cert").Parse(NodeCSRTemplate)
 	if err != nil {
 		log.Errorf("failed to parse Node CSR Template: %v", err)
 	}
