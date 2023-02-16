@@ -44,11 +44,11 @@ func NewCA(certStorage cert.CertStorage, debug bool) *CA {
 // SetRootCertificate tries to load the root certificat if it fails returns an error
 func (ca *CA) SetRootCertificate(caCert *cert.Certificate) error {
 	ca.rootCert = caCert
-	return ca.initCaStructs()
+	return ca.setSigner()
 }
 
-// initCaStructs initializes the CA internal structs. It is meant to be called after either generating a new CA cert or
-func (ca *CA) initCaStructs() error {
+// setSigner sets the signer for the CA.
+func (ca *CA) setSigner() error {
 	var err error
 
 	// init signingConf
@@ -89,7 +89,7 @@ func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error
 		Cert: certBytes,
 	}
 
-	return ca.rootCert, ca.initCaStructs()
+	return ca.rootCert, nil
 }
 
 // csrFromInput creates a new *csr.CertificateRequest from the input.
@@ -159,7 +159,7 @@ func (ca *CA) GenerateNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, err
 	return result, nil
 }
 
-// NewSignerFromCertificate will init a new signer from the internal *cert.Certificate type
+// NewSignerFromCertificate inits a new signer from the internal *cert.Certificate type.
 func NewSignerFromCertificate(caCert *cert.Certificate, policy *config.Signing) (signer.Signer, error) {
 	parsedCa, err := helpers.ParseCertificatePEM(caCert.Cert)
 	if err != nil {
