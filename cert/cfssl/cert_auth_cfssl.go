@@ -66,40 +66,43 @@ func (ca *CA) initCaStructs() error {
 	return nil
 }
 
-// GenerateRootCert generates a new RootCA
+// GenerateRootCert generates a new root CA certificate and key based on the CSR input.
 func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error) {
 	log.Debug("Creating root CA")
 	var err error
 
-	// parse template for the RootCertCSR
-	tpl, err := template.New("ca-csr").Parse(rootCACSRTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse Root CA CSR Template: %v", err)
-	}
-
-	certSignReq, err := templatetoCSR(tpl, input)
+	csr, err := csrFromInput(input)
 	if err != nil {
 		return nil, err
 	}
 
 	var keyBytes, csrPEMBytes, certBytes []byte
-	certBytes, csrPEMBytes, keyBytes, err = initca.New(certSignReq)
+
+	certBytes, csrPEMBytes, keyBytes, err = initca.New(csr)
 	if err != nil {
 		return nil, err
 	}
+
 	ca.rootCert = &cert.Certificate{
 		Key:  keyBytes,
 		Csr:  csrPEMBytes,
 		Cert: certBytes,
 	}
+
 	return ca.rootCert, ca.initCaStructs()
 }
 
-// templatetoCSR converts a given template with its input into a *csr.CertificateRequest
-func templatetoCSR(csrJSONTpl *template.Template, input any) (*csr.CertificateRequest, error) {
+// csrFromInput creates a new *csr.CertificateRequest from the input.
+func csrFromInput(input any) (*csr.CertificateRequest, error) {
 	var err error
+
+	tpl, err := template.New("ca-csr").Parse(rootCACSRTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse template: %v", err)
+	}
+
 	csrBuff := new(bytes.Buffer)
-	err = csrJSONTpl.Execute(csrBuff, input)
+	err = tpl.Execute(csrBuff, input)
 	if err != nil {
 		return nil, err
 	}
@@ -107,23 +110,19 @@ func templatetoCSR(csrJSONTpl *template.Template, input any) (*csr.CertificateRe
 	req := &csr.CertificateRequest{
 		KeyRequest: csr.NewKeyRequest(),
 	}
+
 	err = json.Unmarshal(csrBuff.Bytes(), req)
 	if err != nil {
 		return nil, err
 	}
+
 	return req, nil
 }
 
 // GenerateNodeCert generates and signs a certificate passed as input
 func (ca *CA) GenerateNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
-	// parse the nodeCSRTemplate
-	certTpl, err := template.New("node-cert").Parse(NodeCSRTemplate)
-	if err != nil {
-		log.Errorf("failed to parse Node CSR Template: %v", err)
-	}
-
 	// generate certrequest via tempalte and input
-	certreq, err := templatetoCSR(certTpl, input)
+	certreq, err := csrFromInput(input)
 	if err != nil {
 		return nil, err
 	}
