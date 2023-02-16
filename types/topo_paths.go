@@ -17,9 +17,9 @@ const (
 	labDirPrefix              = "clab-"
 	backupFileSuffix          = ".bak"
 	backupFilePrefix          = "."
-	certPostfix               = ".pem"
-	keyPostfix                = "-key.pem"
-	cSRPostfix                = ".csr"
+	CertFileSuffix            = ".pem"
+	KeyFileSuffix             = "-key.pem"
+	CSRFileSuffix             = ".csr"
 )
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
@@ -171,17 +171,17 @@ func (t *TopoPaths) TopologyLabDir() string {
 
 // NodeCertKeyAbsFilename returns the path to a key file for the given identifier
 func (t *TopoPaths) NodeCertKeyAbsFilename(identifier string) string {
-	return path.Join(t.CANodeDir(identifier), identifier+keyPostfix)
+	return path.Join(t.CANodeDir(identifier), identifier+KeyFileSuffix)
 }
 
 // NodeCertAbsFilename returns the path to a cert file for the given identifier
 func (t *TopoPaths) NodeCertAbsFilename(identifier string) string {
-	return path.Join(t.CANodeDir(identifier), identifier+certPostfix)
+	return path.Join(t.CANodeDir(identifier), identifier+CertFileSuffix)
 }
 
 // NodeCertCSRAbsFilename returns the path to a csr file for the given identifier
 func (t *TopoPaths) NodeCertCSRAbsFilename(identifier string) string {
-	return path.Join(t.CANodeDir(identifier), identifier+cSRPostfix)
+	return path.Join(t.CANodeDir(identifier), identifier+CSRFileSuffix)
 }
 
 // RootCaIdentifier returns the folder name for the root ca

@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -82,6 +83,7 @@ var signCertCmd = &cobra.Command{
 	RunE:  signCert,
 }
 
+// createCA creates a new CA certificate and key and writes them to the specified path.
 func createCA(_ *cobra.Command, _ []string) error {
 	var err error
 	if path == "" {
@@ -112,7 +114,11 @@ func createCA(_ *cobra.Command, _ []string) error {
 
 	utils.CreateDirectory(path, 0777)
 
-	err = caCert.Write(gopath.Join(path, caNamePrefix+".pem"), gopath.Join(path, caNamePrefix+"-key.pem"), "")
+	err = caCert.Write(
+		gopath.Join(path, caNamePrefix+types.CertFileSuffix),
+		gopath.Join(path, caNamePrefix+types.KeyFileSuffix),
+		"",
+	)
 	if err != nil {
 		return err
 	}
