@@ -20,34 +20,35 @@ import (
 	cert "github.com/srl-labs/containerlab/cert"
 )
 
-type CertificatAuthorityCloudflare struct {
+// CA is a Certificate Authority.
+type CA struct {
 	rootCert  *cert.Certificate
 	signer    signer.Signer
 	certStore cert.CertStorage
 }
 
-// NewCertificatAuthority retruns a CertificatAuthority created with Cloudflare CFSSL.
-func NewCertificatAuthority(certStorage cert.CertStorage, debug bool) *CertificatAuthorityCloudflare {
+// NewCA initializes a Certificate Authority.
+func NewCA(certStorage cert.CertStorage, debug bool) *CA {
 	// setup loglevel for cfssl
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
 		cfssllog.Level = cfssllog.LevelDebug
 	}
 
-	return &CertificatAuthorityCloudflare{
+	return &CA{
 		rootCert:  nil,
 		certStore: certStorage,
 	}
 }
 
 // SetRootCertificate tries to load the root certificat if it fails returns an error
-func (ca *CertificatAuthorityCloudflare) SetRootCertificate(caCert *cert.Certificate) error {
+func (ca *CA) SetRootCertificate(caCert *cert.Certificate) error {
 	ca.rootCert = caCert
 	return ca.initCaStructs()
 }
 
 // initCaStructs initializes the CA internal structs. It is meant to be called after either generating a new CA cert or
-func (ca *CertificatAuthorityCloudflare) initCaStructs() error {
+func (ca *CA) initCaStructs() error {
 	var err error
 
 	// init signingConf
@@ -66,7 +67,7 @@ func (ca *CertificatAuthorityCloudflare) initCaStructs() error {
 }
 
 // GenerateRootCert generates a new RootCA
-func (ca *CertificatAuthorityCloudflare) GenerateRootCert(input *cert.CsrInputCa) (*cert.Certificate, error) {
+func (ca *CA) GenerateRootCert(input *cert.CsrInputCa) (*cert.Certificate, error) {
 	log.Debug("Creating root CA")
 	var err error
 
@@ -114,7 +115,7 @@ func templatetoCSR(csrJSONTpl *template.Template, input any) (*csr.CertificateRe
 }
 
 // GenerateNodeCert generates and signs a certificate passed as input
-func (ca *CertificatAuthorityCloudflare) GenerateNodeCert(input *cert.CsrInputNode) (*cert.Certificate, error) {
+func (ca *CA) GenerateNodeCert(input *cert.CsrInputNode) (*cert.Certificate, error) {
 	// parse the nodeCSRTemplate
 	certTpl, err := template.New("node-cert").Parse(NodeCSRTemplate)
 	if err != nil {
