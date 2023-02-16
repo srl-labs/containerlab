@@ -8,8 +8,6 @@ type CACSRInput struct {
 	Organization     string
 	OrganizationUnit string
 	Expiry           string
-
-	Prefix string
 }
 
 // NodeCSRInput struct.

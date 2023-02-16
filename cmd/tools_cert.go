@@ -45,7 +45,7 @@ func init() {
 	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "87600h", "certificate validity period")
 	CACreateCmd.Flags().StringVarP(&path, "path", "p", "",
 		"path to write certificates to. Default is current working directory")
-	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "root-ca", "certificate/key filename prefix")
+	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "ca", "certificate/key filename prefix")
 
 	signCertCmd.Flags().StringSliceVarP(&certHosts, "hosts", "", []string{},
 		"comma separate list of hosts of a certificate")
