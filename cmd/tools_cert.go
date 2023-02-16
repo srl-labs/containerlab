@@ -94,7 +94,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(nil, debug)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflare(nil, debug)
 
 	caCertInput := &cert.CsrInputCa{
 		CommonName:       commonName,
@@ -131,7 +131,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	rootCa := cfssl_ca.NewCertificatAuthorityCloudflair(nil, debug)
+	rootCa := cfssl_ca.NewCertificatAuthorityCloudflare(nil, debug)
 
 	var caCert *cert.Certificate
 	log.Debugf("caCertPath: %q", caCertPath)

@@ -26,8 +26,8 @@ type CertificatAuthorityCloudflare struct {
 	certStore cert.CertStorage
 }
 
-// NewCertificatAuthorityCloudflair retruns a newly constructed CertificatAuthority
-func NewCertificatAuthorityCloudflair(certStorage cert.CertStorage, debug bool) cert.CertificateAuthority {
+// NewCertificatAuthorityCloudflare retruns a newly constructed CertificatAuthority
+func NewCertificatAuthorityCloudflare(certStorage cert.CertStorage, debug bool) cert.CertificateAuthority {
 	// setup loglevel for cfssl
 	cfssllog.Level = cfssllog.LevelError
 	if debug {

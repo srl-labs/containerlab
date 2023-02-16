@@ -146,7 +146,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 		// init the Certificate Authority
 		c.certStorage = cert.NewLocalDiskCertStorage(c.TopoPaths)
-		c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflair(c.certStorage, c.Config.Debug)
+		c.rootCA = cfssl_ca.NewCertificatAuthorityCloudflare(c.certStorage, c.Config.Debug)
 	}
 	return c, err
 }
