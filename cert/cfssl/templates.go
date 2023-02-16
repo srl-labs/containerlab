@@ -1,19 +1,20 @@
 package cfssl
 
-var rootCACSRTemplate string = `{
-    "CN": "{{.Prefix}} Root CA",
+// CACSRTemplate is the template for the CA CSR.
+var CACSRTemplate string = `{
+    "CN": "{{.CommonName}}",
     "key": {
        "algo": "rsa",
        "size": 2048
     },
     "names": [{
-       "C": "BE",
-       "L": "Antwerp",
-       "O": "Nokia",
-       "OU": "Container lab"
+      "C": "{{.Country}}",
+      "L": "{{.Locality}}",
+      "O": "{{.Organization}}",
+      "OU": "{{.OrganizationUnit}}"
     }],
     "ca": {
-       "expiry": "262800h"
+       "expiry": "{{.Expiry}}"
     }
 }
 `

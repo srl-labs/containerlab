@@ -96,7 +96,7 @@ func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error
 func csrFromInput(input any) (*csr.CertificateRequest, error) {
 	var err error
 
-	tpl, err := template.New("ca-csr").Parse(rootCACSRTemplate)
+	tpl, err := template.New("ca-csr").Parse(CACSRTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %v", err)
 	}
