@@ -44,11 +44,11 @@ func NewCA(certStorage cert.CertStorage, debug bool) *CA {
 // SetRootCertificate tries to load the root certificat if it fails returns an error
 func (ca *CA) SetRootCertificate(caCert *cert.Certificate) error {
 	ca.rootCert = caCert
-	return ca.setSigner()
+	return ca.initSigner()
 }
 
-// setSigner sets the signer for the CA.
-func (ca *CA) setSigner() error {
+// initSigner inits the signer for the CA.
+func (ca *CA) initSigner() error {
 	var err error
 
 	// init signingConf
@@ -87,6 +87,11 @@ func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error
 		Key:  keyBytes,
 		Csr:  csrPEMBytes,
 		Cert: certBytes,
+	}
+
+	err = ca.initSigner()
+	if err != nil {
+		return nil, err
 	}
 
 	return ca.rootCert, nil
