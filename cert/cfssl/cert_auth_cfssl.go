@@ -98,10 +98,17 @@ func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error
 }
 
 // csrFromInput creates a new *csr.CertificateRequest from the input.
+// Based on the input type it will use the appropriate template.
 func csrFromInput(input any) (*csr.CertificateRequest, error) {
 	var err error
+	var tpl *template.Template
 
-	tpl, err := template.New("ca-csr").Parse(CACSRTemplate)
+	switch input.(type) {
+	case *cert.CACSRInput:
+		tpl, err = template.New("ca-csr").Parse(CACSRTemplate)
+	case *cert.NodeCSRInput:
+		tpl, err = template.New("node-csr").Parse(NodeCSRTemplate)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %v", err)
 	}
