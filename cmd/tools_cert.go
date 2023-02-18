@@ -6,7 +6,7 @@ package cmd
 
 import (
 	"os"
-	gopath "path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -112,11 +112,11 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	utils.CreateDirectory(path, 0777)
+	utils.CreateDirectory(path, 0777) // skipcq: GSC-G302
 
 	err = caCert.Write(
-		gopath.Join(path, caNamePrefix+types.CertFileSuffix),
-		gopath.Join(path, caNamePrefix+types.KeyFileSuffix),
+		filepath.Join(path, caNamePrefix+types.CertFileSuffix),
+		filepath.Join(path, caNamePrefix+types.KeyFileSuffix),
 		"",
 	)
 	if err != nil {
@@ -179,7 +179,10 @@ func signCert(_ *cobra.Command, _ []string) error {
 	utils.CreateDirectory(path, 0777)
 
 	// store the cert
-	err = nodeCert.Write(gopath.Join(path, certNamePrefix+".pem"), gopath.Join(path, certNamePrefix+".key"), gopath.Join(path, certNamePrefix+".csr"))
+	err = nodeCert.Write(
+		filepath.Join(path, certNamePrefix+".pem"),
+		filepath.Join(path, certNamePrefix+".key"),
+		filepath.Join(path, certNamePrefix+".csr"))
 	if err != nil {
 		return err
 	}
