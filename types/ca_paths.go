@@ -7,6 +7,3 @@ type CaPaths interface {
 	CANodeDir(string) string
 	RootCaIdentifier() string
 }
-
-type CaPathsImpl struct {
-}
