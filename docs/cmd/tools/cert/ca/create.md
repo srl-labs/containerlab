@@ -12,8 +12,8 @@ The `create` sub-command under the `tools cert ca` command creates a Certificate
 
 ### Name
 
-To set a name under which the certificate and key files will be save the `--name | -n` flag can be used. A name set to `myname` will create files `myname.pem`, `myname-key.pem` and `myname.csr`.  
-Default value is `ca`.
+To set a name under which the certificate and key files will be saved, use the `--name | -n` flag. A name set to `myname` will create files `myname.pem`, `mynamey.key` and `myname.csr`.  
+The default value is `ca`.
 
 ### Path
 

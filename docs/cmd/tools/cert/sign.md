@@ -12,16 +12,16 @@ The `sign` sub-command under the `tools cert` command creates a private key and 
 
 ### Name
 
-To set a name under which the certificate and key files will be save the `--name | -n` flag can be used. A name set to `mynode` will create files `mynode.pem`, `mynode-key.pem` and `mynode.csr`.  
-Default value is `cert`.
+To set a name under which the certificate and key files will be saved, use the `--name | -n` flag. A name set to `mynode` will create files `mynode.pem`, `mynode.key` and `mynode.csr`.  
+The default value is `cert`.
 
 ### Path
 
-A directory path under which the generated files will be placed is set with `--path | -p` flag. Defaults to current working directory.
+A directory path under which the generated files will be placed is set with `--path | -p` flag. Defaults to acurrent working directory.
 
 ### CA Cert and CA Key
 
-To indicate which CA should sign the certificate request, the command takes a path to CA certificate and CA key files.
+To indicate which CA should sign the certificate request, the provide a path to the CA certificate and key files.
 
 `--ca-cert` flag sets the path to the CA certificate file.  
 `--ca-key` flag sets the path to the CA private key file.
@@ -58,7 +58,7 @@ Certificate Organization Unit (OU) field is set with `--ou` flag. Defaults to `C
 # saving both files under the default name `cert` in the PWD
 # and signed by the CA identified by cert ca.pem and key ca-key.pem
 containerlab tools cert sign --ca-cert /tmp/ca.pem \
-             --ca-key /tmp/ca-key.pem \
+             --ca-key /tmp/ca.key \
              --hosts node.io,192.168.0.1
 ```
 
