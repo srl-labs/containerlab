@@ -1,25 +1,16 @@
 package cert
 
 import (
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
-// CertStorage defines the interface used to manage certificate storage.
-type CertStorage interface {
-	LoadCaCert() (*Certificate, error)
-	LoadNodeCert(nodeName string) (*Certificate, error)
-	StoreCaCert(cert *Certificate) error
-	StoreNodeCert(nodeName string, cert *Certificate) error
-}
-
 // LocalDirCertStorage is a certificate storage, that stores certificates in a local directory.
 type LocalDirCertStorage struct {
-	paths types.CaPaths
+	paths CaPaths
 }
 
 // NewLocalDirCertStorage inits a new LocalDirCertStorage.
-func NewLocalDirCertStorage(paths types.CaPaths) *LocalDirCertStorage {
+func NewLocalDirCertStorage(paths CaPaths) *LocalDirCertStorage {
 	return &LocalDirCertStorage{
 		paths: paths,
 	}

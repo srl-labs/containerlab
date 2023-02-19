@@ -40,7 +40,7 @@ func NewTopoPaths(topologyFile string) (*TopoPaths, error) {
 	return t, err
 }
 
-func NewCaTopoPaths(labDir string) (CaPaths, error) {
+func NewCaTopoPaths(labDir string) (*TopoPaths, error) {
 	return &TopoPaths{
 		labDir: labDir,
 	}, nil

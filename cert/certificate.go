@@ -80,3 +80,11 @@ func (c *Certificate) Write(certPath, keyPath, csrPath string) error {
 
 	return nil
 }
+
+type CaPaths interface {
+	NodeCertKeyAbsFilename(identifier string) string
+	NodeCertAbsFilename(identifier string) string
+	NodeCertCSRAbsFilename(identifier string) string
+	CANodeDir(string) string
+	RootCaIdentifier() string
+}
