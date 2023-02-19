@@ -173,10 +173,6 @@ func signCert(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if certNamePrefix == "" {
-		certNamePrefix = certHosts[0]
-	}
-
 	utils.CreateDirectory(path, 0777) // skipcq: GSC-G302
 
 	err = nodeCert.Write(
