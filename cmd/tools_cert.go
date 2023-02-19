@@ -44,7 +44,7 @@ func init() {
 	CACreateCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
 	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "87600h", "certificate validity period")
 	CACreateCmd.Flags().StringVarP(&path, "path", "p", "",
-		"path to write certificates to. Default is current working directory")
+		"path to write certificate and key to. Default is current working directory")
 	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "ca", "certificate/key filename prefix")
 
 	signCertCmd.Flags().StringSliceVarP(&certHosts, "hosts", "", []string{},
@@ -73,7 +73,7 @@ var CACmd = &cobra.Command{
 
 var CACreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "create ca certificate and keys",
+	Short: "create ca certificate and key",
 	RunE:  createCA,
 }
 
@@ -126,7 +126,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-// create node certificate and sign it with CA.
+// signCert creates node certificate and sign it with CA.
 func signCert(_ *cobra.Command, _ []string) error {
 	var err error
 
@@ -137,20 +137,20 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	rootCa := cfssl.NewCA(nil, debug)
+	ca := cfssl.NewCA(nil, debug)
 
 	var caCert *cert.Certificate
-	log.Debugf("caCertPath: %q", caCertPath)
+
+	log.Debugf("CA cert path: %q", caCertPath)
 	if caCertPath != "" {
-		// try loading the CA certificarte from disk via the explicite given path
-		caCert, err = cert.LoadCertificateFromDisk(caCertPath, caKeyPath, "")
+		caCert, err = cert.NewCertificateFromFile(caCertPath, caKeyPath, "")
 		if err != nil {
 			return err
 		}
 	}
 
-	// provide the root Cert to the CA
-	err = rootCa.SetRootCertificate(caCert)
+	// set loaded certificate to a CA and initialize a signer
+	err = ca.SetRootCertificate(caCert)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
 		certHosts, commonName, country, locality, organization, organizationUnit)
 
-	nodeCert, err := rootCa.GenerateNodeCert(&cert.NodeCSRInput{
+	nodeCert, err := ca.GenerateNodeCert(&cert.NodeCSRInput{
 		Hosts:            certHosts,
 		CommonName:       commonName,
 		Country:          country,
@@ -176,13 +176,12 @@ func signCert(_ *cobra.Command, _ []string) error {
 		certNamePrefix = certHosts[0]
 	}
 
-	utils.CreateDirectory(path, 0777)
+	utils.CreateDirectory(path, 0777) // skipcq: GSC-G302
 
-	// store the cert
 	err = nodeCert.Write(
-		filepath.Join(path, certNamePrefix+".pem"),
-		filepath.Join(path, certNamePrefix+".key"),
-		filepath.Join(path, certNamePrefix+".csr"))
+		filepath.Join(path, certNamePrefix+types.CertFileSuffix),
+		filepath.Join(path, certNamePrefix+types.KeyFileSuffix),
+		filepath.Join(path, certNamePrefix+types.CSRFileSuffix))
 	if err != nil {
 		return err
 	}

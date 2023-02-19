@@ -18,7 +18,7 @@ const (
 	backupFileSuffix          = ".bak"
 	backupFilePrefix          = "."
 	CertFileSuffix            = ".pem"
-	KeyFileSuffix             = "-key.pem"
+	KeyFileSuffix             = ".key"
 	CSRFileSuffix             = ".csr"
 )
 

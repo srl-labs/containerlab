@@ -41,7 +41,7 @@ func NewCA(certStorage cert.CertStorage, debug bool) *CA {
 	}
 }
 
-// SetRootCertificate tries to load the root certificat if it fails returns an error
+// SetRootCertificate sets the root certificate with the provided certificate and initializes the signer.
 func (ca *CA) SetRootCertificate(caCert *cert.Certificate) error {
 	ca.rootCert = caCert
 	return ca.initSigner()

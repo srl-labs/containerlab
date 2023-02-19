@@ -22,6 +22,7 @@ Create CA certificate
     # check the cert contents with openssl
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    openssl x509 -in ${root-ca-dir}/root-ca.pem -text
+    Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Issuer: C = Internet, L = CICD, O = Containerlab, OU = Containerlab Tools, CN = containerlab.dev
 

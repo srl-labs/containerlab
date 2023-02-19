@@ -10,41 +10,41 @@ import (
 
 // Certificate stores the combination of Cert and Key along with the CSR if available.
 type Certificate struct {
+	Cert []byte
 	Key  []byte
 	Csr  []byte
-	Cert []byte
 }
 
-// LoadCertificateFromDisk loads a set of cert, key and possibly the existing csr file into a Certificate struct, returnung the pointer
-func LoadCertificateFromDisk(certFilename, keyFilename, csrFilename string) (*Certificate, error) {
+// NewCertificateFromFile creates a new Certificate by loading cert, key and csr (if exists) from respecting files.
+func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Certificate, error) {
 	cert := &Certificate{}
 
 	// Cert
-	_, err := os.Stat(certFilename)
+	_, err := os.Stat(certFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed loading cert file %v", err)
 	}
-	cert.Cert, err = utils.ReadFileContent(certFilename)
+	cert.Cert, err = utils.ReadFileContent(certFilePath)
 	if err != nil {
 		return nil, err
 	}
 
 	// Key
-	_, err = os.Stat(keyFilename)
+	_, err = os.Stat(keyFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed loading key file %v", err)
 	}
-	cert.Key, err = utils.ReadFileContent(keyFilename)
+	cert.Key, err = utils.ReadFileContent(keyFilePath)
 	if err != nil {
 		return nil, err
 	}
 
 	// CSR
-	_, err = os.Stat(csrFilename)
+	_, err = os.Stat(csrFilePath)
 	if err != nil {
-		log.Debugf("failed loading csr %s, continuing anyways", csrFilename)
+		log.Debugf("failed loading csr %s, continuing anyways", csrFilePath)
 	} else {
-		cert.Csr, err = utils.ReadFileContent(csrFilename)
+		cert.Csr, err = utils.ReadFileContent(csrFilePath)
 		if err != nil {
 			return nil, err
 		}

@@ -35,7 +35,7 @@ func (c *CertStorageLocalDisk) LoadNodeCert(nodeName string) (*Certificate, erro
 	certFilename := c.paths.NodeCertAbsFilename(nodeName)
 	keyFilename := c.paths.NodeCertKeyAbsFilename(nodeName)
 	csrFilename := c.paths.NodeCertCSRAbsFilename(nodeName)
-	return LoadCertificateFromDisk(certFilename, keyFilename, csrFilename)
+	return NewCertificateFromFile(certFilename, keyFilename, csrFilename)
 }
 
 // StoreCaCert stores the given CA certificate in a file in the baseFolder
