@@ -145,7 +145,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		err = c.parseTopology()
 
 		// init the Certificate Authority
-		c.certStorage = cert.NewLocalDiskCertStorage(c.TopoPaths)
+		c.certStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
 		c.CA = cfssl.NewCA(c.certStorage, c.Config.Debug)
 	}
 	return c, err
