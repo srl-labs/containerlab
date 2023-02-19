@@ -15,10 +15,15 @@ ${node-cert-dir}    /tmp/clab-tests/certs/06-node-cert
 *** Test Cases ***
 Create CA certificate
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab tools cert ca create --path ${root-ca-dir} --name root-ca --expiry 1m -d
+    ...    sudo containerlab tools cert ca create --path ${root-ca-dir} --name root-ca --expiry 1m --locality CICD -d
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Certificate attributes: CN=containerlab.dev, C=Internet, L=Server, O=Containerlab, OU=Containerlab Tools, Validity period=1m
+    Should Contain    ${output}    Certificate attributes: CN=containerlab.dev, C=Internet, L=CICD, O=Containerlab, OU=Containerlab Tools, Validity period=1m
+    # check the cert contents with openssl
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    openssl x509 -in ${root-ca-dir}/root-ca.pem -text
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Issuer: C = Internet, L = CICD, O = Containerlab, OU = Containerlab Tools, CN = containerlab.dev
 
 Create and sign end node certificates
     ${rc}    ${output} =    Run And Return Rc And Output

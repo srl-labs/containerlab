@@ -38,9 +38,9 @@ func init() {
 	CACmd.AddCommand(CACreateCmd)
 
 	CACreateCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
-	CACreateCmd.Flags().StringVarP(&country, "c", "", "Internet", "Country")
-	CACreateCmd.Flags().StringVarP(&locality, "l", "", "Server", "Location")
-	CACreateCmd.Flags().StringVarP(&organization, "o", "", "Containerlab", "Organization")
+	CACreateCmd.Flags().StringVarP(&country, "country", "c", "Internet", "Country")
+	CACreateCmd.Flags().StringVarP(&locality, "locality", "l", "Server", "Location")
+	CACreateCmd.Flags().StringVarP(&organization, "organization", "o", "Containerlab", "Organization")
 	CACreateCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
 	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "87600h", "certificate validity period")
 	CACreateCmd.Flags().StringVarP(&path, "path", "p", "",
@@ -52,9 +52,9 @@ func init() {
 	signCertCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
 	signCertCmd.Flags().StringVarP(&caCertPath, "ca-cert", "", "", "Path to CA certificate")
 	signCertCmd.Flags().StringVarP(&caKeyPath, "ca-key", "", "", "Path to CA private key")
-	signCertCmd.Flags().StringVarP(&country, "c", "", "Internet", "Country")
-	signCertCmd.Flags().StringVarP(&locality, "l", "", "Server", "Location")
-	signCertCmd.Flags().StringVarP(&organization, "o", "", "Containerlab", "Organization")
+	signCertCmd.Flags().StringVarP(&country, "country", "c", "Internet", "Country")
+	signCertCmd.Flags().StringVarP(&locality, "locality", "l", "Server", "Location")
+	signCertCmd.Flags().StringVarP(&organization, "organization", "o", "Containerlab", "Organization")
 	signCertCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
 	signCertCmd.Flags().StringVarP(&path, "path", "p", "",
 		"path to write certificate and key to. Default is current working directory")

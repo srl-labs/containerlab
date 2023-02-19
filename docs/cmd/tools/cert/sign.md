@@ -1,46 +1,56 @@
 # Cert sign
-### Description
+
+## Description
 
 The `sign` sub-command under the `tools cert` command creates a private key and a certificate and signs the created certificate with a given Certificate Authority.
 
-### Usage
+## Usage
 
 `containerlab tools cert sign [local-flags]`
 
-### Flags
+## Flags
 
-#### Name
+### Name
+
 To set a name under which the certificate and key files will be save the `--name | -n` flag can be used. A name set to `mynode` will create files `mynode.pem`, `mynode-key.pem` and `mynode.csr`.  
 Default value is `cert`.
 
-#### Path
+### Path
+
 A directory path under which the generated files will be placed is set with `--path | -p` flag. Defaults to current working directory.
 
-#### CA Cert and CA Key
+### CA Cert and CA Key
+
 To indicate which CA should sign the certificate request, the command takes a path to CA certificate and CA key files.
 
 `--ca-cert` flag sets the path to the CA certificate file.  
 `--ca-key` flag sets the path to the CA private key file.
 
-#### Common Name
+### Common Name
+
 Certificate Common Name (CN) field is set with `--cn` flag. Defaults to `containerlab.dev`.
 
-#### Hosts
+### Hosts
+
 To add Subject Alternative Names (SAN) use the `--hosts` flag that takes a comma separate list of SAN values. Users can provide both DNS names and IP address, and the values will be placed into the DSN SAN and IP SAN automatically.
 
-#### Country
-Certificate Country (C) field is set with `--c` flag. Defaults to `Internet`.
+### Country
 
-#### Locality
-Certificate Locality (L) field is set with `--l` flag. Defaults to `Server`.
+Certificate Country (C) field is set with `--country | -c` flag. Defaults to `Internet`.
 
-#### Organization
-Certificate Organization (O) field is set with `--o` flag. Defaults to `Containerlab`.
+### Locality
 
-#### Organization Unit
+Certificate Locality (L) field is set with `--locality | -l` flag. Defaults to `Server`.
+
+### Organization
+
+Certificate Organization (O) field is set with `--organization | -o` flag. Defaults to `Containerlab`.
+
+### Organization Unit
+
 Certificate Organization Unit (OU) field is set with `--ou` flag. Defaults to `Containerlab Tools`.
 
-### Examples
+## Examples
 
 ```bash
 # create a private key and certificate and sign the latter
