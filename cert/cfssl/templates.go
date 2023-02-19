@@ -20,22 +20,22 @@ var CACSRTemplate string = `{
 `
 
 var NodeCSRTemplate string = `{
-    "CN": "{{.Name}}.{{.Prefix}}.io",
+    "CN": "{{.CommonName}}",
+    "hosts": [
+      {{- range $i, $e := .Hosts}}
+      {{- if $i}},{{end}}
+      "{{.}}"
+      {{- end}}
+    ],
     "key": {
       "algo": "rsa",
       "size": 2048
     },
     "names": [{
-      "C": "BE",
-      "L": "Antwerp",
-      "O": "Nokia",
-      "OU": "Container lab"
-    }],
-    "hosts": [
-      "{{.Name}}",
-      "{{.LongName}}",
-      "{{.Fqdn}}"
-      {{range .SANs}},"{{.}}"{{end}}
-    ]
-}
+      "C": "{{.Country}}",
+      "L": "{{.Locality}}",
+      "O": "{{.Organization}}",
+      "OU": "{{.OrganizationUnit}}"
+    }]
+  }
 `

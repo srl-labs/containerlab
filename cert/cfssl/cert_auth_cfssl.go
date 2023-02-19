@@ -68,7 +68,7 @@ func (ca *CA) initSigner() error {
 
 // GenerateRootCert generates a new root CA certificate and key based on the CSR input.
 func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error) {
-	log.Debug("Creating root CA")
+	log.Debug("Creating root CA certificate and key")
 	var err error
 
 	csr, err := csrFromInput(input)
@@ -131,18 +131,17 @@ func csrFromInput(input any) (*csr.CertificateRequest, error) {
 	return req, nil
 }
 
-// GenerateNodeCert generates and signs a certificate passed as input
+// GenerateNodeCert generates certificate and signs an end-user (node) certificate based on the NodeCSR input.
 func (ca *CA) GenerateNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
-	// generate certrequest via tempalte and input
-	certreq, err := csrFromInput(input)
+	nodeCsr, err := csrFromInput(input)
 	if err != nil {
 		return nil, err
 	}
 
-	// generate a cert key
-	var key, csrBytes []byte
+	// process csr request
+	var keyBytes, csrBytes []byte
 	gen := &csr.Generator{Validator: genkey.Validator}
-	csrBytes, key, err = gen.ProcessRequest(certreq)
+	csrBytes, keyBytes, err = gen.ProcessRequest(nodeCsr)
 	if err != nil {
 		return nil, err
 	}
@@ -151,23 +150,25 @@ func (ca *CA) GenerateNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, err
 	signReq := signer.SignRequest{
 		Request: string(csrBytes),
 	}
-	// sign cert
+
+	// sign cert with CA
 	var certBytes []byte
 	certBytes, err = ca.signer.Sign(signReq)
 	if err != nil {
 		return nil, err
 	}
-	// perform checks
-	if len(certreq.Hosts) == 0 && len(signReq.Hosts) == 0 {
+
+	// perform checks for hosts
+	if len(nodeCsr.Hosts) == 0 && len(signReq.Hosts) == 0 {
 		log.Warning(generator.CSRNoHostMessage)
 	}
 
-	// construct result
 	result := &cert.Certificate{
-		Key:  key,
-		Csr:  csrBytes,
 		Cert: certBytes,
+		Key:  keyBytes,
+		Csr:  csrBytes,
 	}
+
 	return result, nil
 }
 
