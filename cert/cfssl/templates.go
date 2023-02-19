@@ -19,6 +19,7 @@ var CACSRTemplate string = `{
 }
 `
 
+// NodeCSRTemplate is the template for the node CSR.
 var NodeCSRTemplate string = `{
     "CN": "{{.CommonName}}",
     "hosts": [

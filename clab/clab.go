@@ -34,7 +34,7 @@ type CLab struct {
 	globalRuntime string
 	// reg is a registry of node kinds
 	Reg         *nodes.NodeRegistry
-	rootCA      cert.CertificateAuthority
+	CA          cert.CertificateAuthority
 	certStorage cert.CertStorage
 
 	timeout time.Duration
@@ -146,7 +146,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 		// init the Certificate Authority
 		c.certStorage = cert.NewLocalDiskCertStorage(c.TopoPaths)
-		c.rootCA = cfssl.NewCA(c.certStorage, c.Config.Debug)
+		c.CA = cfssl.NewCA(c.certStorage, c.Config.Debug)
 	}
 	return c, err
 }
@@ -611,7 +611,7 @@ func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CACSRInput) error {
 	caCertificate, err := c.certStorage.LoadCaCert()
 	if err != nil {
 		// if loading certs failed, try to generate new RootCA
-		caCertificate, err = c.rootCA.GenerateRootCert(caCertInput)
+		caCertificate, err = c.CA.GenerateRootCert(caCertInput)
 		if err != nil {
 			return fmt.Errorf("failed generating new Root CA %v", err)
 		}
@@ -622,7 +622,7 @@ func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CACSRInput) error {
 		}
 	} else {
 		// if no error occured, set root cert
-		err = c.rootCA.SetRootCertificate(caCertificate)
+		err = c.CA.SetRootCertificate(caCertificate)
 		if err != nil {
 			return nil
 		}
@@ -650,7 +650,7 @@ func (c *CLab) GenerateMissingNodeCerts() error {
 				Prefix:   c.Config.Name,
 			}
 			// Generate the cert for the node
-			nodeCert, err := c.rootCA.GenerateNodeCert(certInput)
+			nodeCert, err := c.CA.GenerateNodeCert(certInput)
 			if err != nil {
 				return err
 			}
