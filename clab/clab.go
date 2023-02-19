@@ -33,9 +33,10 @@ type CLab struct {
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	// reg is a registry of node kinds
-	Reg         *nodes.NodeRegistry
-	CA          cert.CertificateAuthority
-	certStorage cert.CertStorage
+	Reg *nodes.NodeRegistry
+	CA  cert.CertificateAuthority
+	// certStorage is a storage for certificates.
+	certStorage CertStorage
 
 	timeout time.Duration
 }
@@ -114,6 +115,14 @@ func WithTopoFile(file, varsFile string) ClabOption {
 	}
 }
 
+// CertStorage defines the interface used to manage certificate storage.
+type CertStorage interface {
+	LoadCaCert() (*cert.Certificate, error)
+	LoadNodeCert(nodeName string) (*cert.Certificate, error)
+	StoreCaCert(cert *cert.Certificate) error
+	StoreNodeCert(nodeName string, cert *cert.Certificate) error
+}
+
 // NewContainerLab function defines a new container lab.
 func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	c := &CLab{
@@ -144,9 +153,9 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
 
-		// init the Certificate Authority
+		// init the Cert storage and CA
 		c.certStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-		c.CA = cfssl.NewCA(c.certStorage, c.Config.Debug)
+		c.CA = cfssl.NewCA(c.Config.Debug)
 	}
 	return c, err
 }

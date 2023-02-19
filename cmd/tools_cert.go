@@ -96,7 +96,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	ca := cfssl.NewCA(nil, debug)
+	ca := cfssl.NewCA(debug)
 
 	csrInput := &cert.CACSRInput{
 		CommonName:       commonName,
@@ -137,7 +137,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	ca := cfssl.NewCA(nil, debug)
+	ca := cfssl.NewCA(debug)
 
 	var caCert *cert.Certificate
 

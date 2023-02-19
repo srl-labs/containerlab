@@ -22,13 +22,12 @@ import (
 
 // CA is a Certificate Authority.
 type CA struct {
-	rootCert  *cert.Certificate
-	signer    signer.Signer
-	certStore cert.CertStorage
+	rootCert *cert.Certificate
+	signer   signer.Signer
 }
 
 // NewCA initializes a Certificate Authority.
-func NewCA(certStorage cert.CertStorage, debug bool) *CA {
+func NewCA(debug bool) *CA {
 	// setup loglevel for cfssl
 	cfssllog.Level = cfssllog.LevelError
 	if debug {
@@ -36,8 +35,7 @@ func NewCA(certStorage cert.CertStorage, debug bool) *CA {
 	}
 
 	return &CA{
-		rootCert:  nil,
-		certStore: certStorage,
+		rootCert: nil,
 	}
 }
 
