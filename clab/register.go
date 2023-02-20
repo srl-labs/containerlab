@@ -5,6 +5,7 @@
 package clab
 
 import (
+	border0 "github.com/srl-labs/containerlab/nodes/border0"
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
 	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
