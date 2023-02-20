@@ -128,8 +128,8 @@ func csrFromInput(input any) (*csr.CertificateRequest, error) {
 	return req, nil
 }
 
-// GenerateNodeCert generates certificate and signs an end-user (node) certificate based on the NodeCSR input.
-func (ca *CA) GenerateNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
+// GenerateAndSignNodeCert generates certificate and signs an end-user (node) certificate based on the NodeCSR input.
+func (ca *CA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
 	nodeCsr, err := csrFromInput(input)
 	if err != nil {
 		return nil, err

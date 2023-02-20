@@ -33,10 +33,8 @@ type CLab struct {
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	// reg is a registry of node kinds
-	Reg *nodes.NodeRegistry
-	CA  CertificateAuthority
-	// certStorage is a storage for certificates.
-	certStorage CertStorage
+	Reg  *nodes.NodeRegistry
+	Cert *Cert
 
 	timeout time.Duration
 }
@@ -126,6 +124,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Nodes:    make(map[string]nodes.Node),
 		Links:    make(map[int]*types.Link),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
+		Cert:     &Cert{},
 	}
 
 	// init a new NodeRegistry
@@ -146,8 +145,8 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		err = c.parseTopology()
 
 		// init the Cert storage and CA
-		c.certStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-		c.CA = cfssl.NewCA(c.Config.Debug)
+		c.Cert.storage = cert.NewLocalDirCertStorage(c.TopoPaths)
+		c.Cert.ca = cfssl.NewCA(c.Config.Debug)
 	}
 	return c, err
 }
@@ -336,7 +335,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
-				nodecert, err := c.certStorage.LoadNodeCert(node.Config().ShortName)
+				nodecert, err := c.Cert.storage.LoadNodeCert(node.Config().ShortName)
 				if err != nil {
 					return
 				}

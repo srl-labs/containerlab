@@ -158,7 +158,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
 		certHosts, commonName, country, locality, organization, organizationUnit)
 
-	nodeCert, err := ca.GenerateNodeCert(
+	nodeCert, err := ca.GenerateAndSignNodeCert(
 		&cert.NodeCSRInput{
 			Hosts:            certHosts,
 			CommonName:       commonName,
