@@ -107,7 +107,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 		Expiry:           expiry,
 	}
 
-	caCert, err := ca.GenerateRootCert(csrInput)
+	caCert, err := ca.GenerateCACert(csrInput)
 	if err != nil {
 		return err
 	}

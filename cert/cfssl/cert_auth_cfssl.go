@@ -64,8 +64,8 @@ func (ca *CA) initSigner() error {
 	return nil
 }
 
-// GenerateRootCert generates a new root CA certificate and key based on the CSR input.
-func (ca *CA) GenerateRootCert(input *cert.CACSRInput) (*cert.Certificate, error) {
+// GenerateCACert generates a new CA certificate and key based on the CSR input.
+func (ca *CA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) {
 	log.Debug("Creating root CA certificate and key")
 	var err error
 

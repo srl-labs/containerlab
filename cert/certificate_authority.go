@@ -5,10 +5,8 @@ package cert
 type CertificateAuthority interface {
 	// SetCACert sets CA Certificate to the CertificateAuthority implementation
 	SetCACert(cert *Certificate) error
-	// GenerateRootCert will make the CertificateAuthority generate a new Root CA certificate, init the internal state, such that node
-	// certs can be generated and return the Root-CA Certificate (Cert, Key and CSR)
-	GenerateRootCert(input *CACSRInput) (*Certificate, error)
-	// GenerateNodeCert requests a new Node certificate from the CertificateAuthority, which will generate the Certificates and will sign those
-	// with the already setup Root CA cert.
+	// GenerateCACert generates a CA certificate, key and CSR based on the provided input.
+	GenerateCACert(input *CACSRInput) (*Certificate, error)
+	// GenerateNodeCert generates a node certificate, key and CSR based on the provided input and signs it with the CA.
 	GenerateNodeCert(input *NodeCSRInput) (*Certificate, error)
 }

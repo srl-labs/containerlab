@@ -143,7 +143,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		CommonName: c.Config.Name,
 	}
 
-	if err := c.LoadOrGenerateRootCA(caCertInput); err != nil {
+	if err := c.LoadOrGenerateCA(caCertInput); err != nil {
 		return err
 	}
 
