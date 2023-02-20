@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	cert "github.com/srl-labs/containerlab/cert"
 	exec "github.com/srl-labs/containerlab/clab/exec"
 	nodes "github.com/srl-labs/containerlab/nodes"
 	runtime "github.com/srl-labs/containerlab/runtime"
@@ -213,17 +214,17 @@ func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1 interface{}) *gomock.Call 
 }
 
 // PreDeploy mocks base method.
-func (m *MockNode) PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error {
+func (m *MockNode) PreDeploy(ctx context.Context, certificate *cert.Certificate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreDeploy", ctx, configName, labCADir, labCARoot)
+	ret := m.ctrl.Call(m, "PreDeploy", ctx, certificate)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PreDeploy indicates an expected call of PreDeploy.
-func (mr *MockNodeMockRecorder) PreDeploy(ctx, configName, labCADir, labCARoot interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PreDeploy(ctx, certificate interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, configName, labCADir, labCARoot)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, certificate)
 }
 
 // RunExec mocks base method.

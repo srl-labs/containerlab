@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -50,7 +51,7 @@ type Node interface {
 	Config() *types.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
 	CheckDeploymentConditions(context.Context) error
-	PreDeploy(ctx context.Context, configName, labCADir, labCARoot string) error
+	PreDeploy(ctx context.Context, certificate *cert.Certificate) error
 	Deploy(context.Context) error // Deploy triggers the deployment of this node
 	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node

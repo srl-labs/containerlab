@@ -45,6 +45,9 @@ type Config struct {
 	Prefix   *string         `json:"prefix,omitempty"`
 	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology *types.Topology `json:"topology,omitempty"`
+	// the debug flag value as passed via cli
+	// may be used by other packages to enable debug logging
+	Debug bool `json:"debug"`
 }
 
 // ParseTopology parses the lab topology.

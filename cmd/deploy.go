@@ -10,7 +10,6 @@ import (
 	"os"
 	"sync"
 
-	cfssllog "github.com/cloudflare/cfssl/log"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
@@ -91,6 +90,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithDebug(debug),
 	}
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
@@ -139,11 +139,18 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	cfssllog.Level = cfssllog.LevelError
-	if debug {
-		cfssllog.Level = cfssllog.LevelDebug
+	// define the attributes used to generate the CA Cert
+	caCertInput := &cert.CACSRInput{
+		CommonName:   c.Config.Name + " lab CA",
+		Expiry:       "87600h",
+		Organization: "containerlab",
 	}
-	if err := cert.CreateRootCA(c.Config.Name, c.TopoPaths.CARootCertDir(), c.Nodes); err != nil {
+
+	if err := c.LoadOrGenerateCA(caCertInput); err != nil {
+		return err
+	}
+
+	if err := c.GenerateMissingNodeCerts(); err != nil {
 		return err
 	}
 

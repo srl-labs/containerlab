@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -98,7 +99,7 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *ceos) PreDeploy(ctx context.Context, _, _, _ string) error {
+func (n *ceos) PreDeploy(ctx context.Context, _ *cert.Certificate) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return n.createCEOSFiles(ctx)
 }

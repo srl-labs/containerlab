@@ -14,6 +14,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/cert"
+	"github.com/srl-labs/containerlab/cert/cfssl"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
@@ -30,8 +32,10 @@ type CLab struct {
 	Links         map[int]*types.Link                 `json:"links,omitempty"`
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
-	// Reg is a registry of node kinds
-	Reg     *nodes.NodeRegistry
+	// reg is a registry of node kinds
+	Reg  *nodes.NodeRegistry
+	Cert *Cert
+
 	timeout time.Duration
 }
 
@@ -43,6 +47,14 @@ func WithTimeout(dur time.Duration) ClabOption {
 			return errors.New("zero or negative timeouts are not allowed")
 		}
 		c.timeout = dur
+		return nil
+	}
+}
+
+// WithDebug sets debug mode.
+func WithDebug(debug bool) ClabOption {
+	return func(c *CLab) error {
+		c.Config.Debug = debug
 		return nil
 	}
 }
@@ -112,6 +124,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Nodes:    make(map[string]nodes.Node),
 		Links:    make(map[int]*types.Link),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
+		Cert:     &Cert{},
 	}
 
 	// init a new NodeRegistry
@@ -130,8 +143,11 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	var err error
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
-	}
 
+		// init the Cert storage and CA
+		c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
+		c.Cert.CA = cfssl.NewCA(c.Config.Debug)
+	}
 	return c, err
 }
 
@@ -319,9 +335,13 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
+				nodecert, err := c.Cert.LoadNodeCert(node.Config().ShortName)
+				if err != nil {
+					return
+				}
+
 				// PreDeploy
-				err := node.PreDeploy(ctx, c.Config.Name,
-					c.TopoPaths.CABaseDir(), c.TopoPaths.CARootCertDir())
+				err = node.PreDeploy(ctx, nodecert)
 				if err != nil {
 					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue

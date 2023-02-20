@@ -182,43 +182,12 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *srl) PreDeploy(_ context.Context, configName, labCADir, labCARoot string) error {
+func (s *srl) PreDeploy(_ context.Context, certificate *cert.Certificate) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	// retrieve node certificates
-	nodeCerts, err := cert.RetrieveNodeCertData(s.Cfg, labCADir)
-	// if not available on disk, create cert in next step
-	if err != nil {
-		// create CERT
-		certTpl, err := template.New("node-cert").Parse(cert.NodeCSRTempl)
-		if err != nil {
-			log.Errorf("failed to parse Node CSR Template: %v", err)
-		}
-		log.Debugf("creating node certificate for %s", s.Cfg.SANs)
 
-		certInput := cert.CertInput{
-			Name:     s.Cfg.ShortName,
-			LongName: s.Cfg.LongName,
-			Fqdn:     s.Cfg.Fqdn,
-			SANs:     s.Cfg.SANs,
-			Prefix:   configName,
-		}
-
-		nodeCerts, err = cert.GenerateCert(
-			path.Join(labCARoot, "root-ca.pem"),
-			path.Join(labCARoot, "root-ca-key.pem"),
-			certTpl,
-			certInput,
-			path.Join(labCADir, certInput.Name),
-		)
-		if err != nil {
-			log.Errorf("failed to generate certificates for node %s: %v", s.Cfg.ShortName, err)
-		}
-		log.Debugf("%s CSR: %s", s.Cfg.ShortName, string(nodeCerts.Csr))
-		log.Debugf("%s Cert: %s", s.Cfg.ShortName, string(nodeCerts.Cert))
-		log.Debugf("%s Key: %s", s.Cfg.ShortName, string(nodeCerts.Key))
-	}
-	s.Cfg.TLSCert = string(nodeCerts.Cert)
-	s.Cfg.TLSKey = string(nodeCerts.Key)
+	// set the certificate data
+	s.Config().TLSCert = string(certificate.Cert)
+	s.Config().TLSKey = string(certificate.Key)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if s.Cfg.Extras != nil && len(s.Cfg.Extras.SRLAgents) != 0 {

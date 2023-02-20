@@ -2,7 +2,7 @@ When containerlab deploys a lab it creates a Lab Directory in the **current work
 
 Things like:
 
-* Root CA certificate and node' TLS certificate and private keys
+* CA certificate and node' TLS certificate and private keys
 * node config file (if applicable and supported by the kind)
 * node-specific files and directories that are required to launch the container
 * license files if needed
@@ -13,6 +13,7 @@ all these artifacts will be available under a Lab Directory.
     If you configure a node with [`binds`](nodes.md#binds) mounts and the source of the bind is not within the lab directory already, containerlab will copy over the source files/dirs into the lab directory on users behalf.
 
 ### Identifying a lab directory
+
 The lab directory name follows the `clab-<lab_name>` template. Thus, if the name of your lab is `srl02` you will find the `clab-srl02` directory created in the current working directory.
 
 ```
@@ -20,7 +21,7 @@ The lab directory name follows the `clab-<lab_name>` template. Thus, if the name
 total 4.0K
 drwxr-xr-x  5 root root   40 Dec  1 22:11 .
 drwxr-xr-x 23 root root 4.0K Dec  1 22:11 ..
-drwxr-xr-x  5 root root   42 Dec  1 22:11 ca
+drwxr-xr-x  5 root root   42 Dec  1 22:11 .tls
 drwxr-xr-x  3 root root   79 Dec  1 22:11 srl1
 drwxr-xr-x  3 root root   79 Dec  1 22:11 srl2
 ```
@@ -28,6 +29,7 @@ drwxr-xr-x  3 root root   79 Dec  1 22:11 srl2
 The contents of this directory will contain kind-specific files and directories. Containerlab will name directories after the node names and will only created those if they are needed. For instance, by default any node of kind `linux` will not have it's own directory under the Lab Directory.
 
 ### Persistance of a lab directory
+
 When a user first deploy a lab, the Lab Directory gets created if it was not present. Depending on a node's kind, this directory might act as a persistent storage area for a node. A common case is having the configuration file saved when the changes are made to the node via management interfaces.
 
 Below is an example of the `srl1` node directory contents. It keeps a directory that is mounted to containers configuration path, as well as stores additional files needed to launch and configure the node.

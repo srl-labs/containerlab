@@ -1,40 +1,49 @@
 # CA Create
-### Description
+
+## Description
 
 The `create` sub-command under the `tools cert ca` command creates a Certificate Authority (CA) certificate and its private key.
 
-### Usage
+## Usage
 
 `containerlab tools cert ca create [local-flags]`
 
-### Flags
+## Flags
 
-#### Name
-To set a name under which the certificate and key files will be save the `--name | -n` flag can be used. A name set to `myname` will create files `myname.pem`, `myname-key.pem` and `myname.csr`.  
-Default value is `ca`.
+### Name
 
-#### Path
+To set a name under which the certificate and key files will be saved, use the `--name | -n` flag. A name set to `myname` will create files `myname.pem`, `mynamey.key` and `myname.csr`.  
+The default value is `ca`.
+
+### Path
+
 A directory path under which the generated files will be placed is set with `--path | -p` flag. Defaults to current working directory.
 
-#### Expiry
+### Expiry
+
 Certificate validity period is set as a duration interval with `--expiry | -e` flag. Defaults to `87600h`, which is 10 years.
 
-#### Common Name
+### Common Name
+
 Certificate Common Name (CN) field is set with `--cn` flag. Defaults to `containerlab.dev`.
 
-#### Country
-Certificate Country (C) field is set with `--c` flag. Defaults to `Internet`.
+### Country
 
-#### Locality
-Certificate Locality (L) field is set with `--l` flag. Defaults to `Server`.
+Certificate Country (C) field is set with `--country | -c` flag. Defaults to `Internet`.
 
-#### Organization
-Certificate Organization (O) field is set with `--o` flag. Defaults to `Containerlab`.
+### Locality
 
-#### Organization Unit
+Certificate Locality (L) field is set with `--locality | -l` flag. Defaults to `Server`.
+
+### Organization
+
+Certificate Organization (O) field is set with `--organization | -o` flag. Defaults to `Containerlab`.
+
+### Organization Unit
+
 Certificate Organization Unit (OU) field is set with `--ou` flag. Defaults to `Containerlab Tools`.
 
-### Examples
+## Examples
 
 ```bash
 # create CA cert and key in the current dir.

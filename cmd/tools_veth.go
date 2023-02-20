@@ -53,6 +53,7 @@ var vethCreateCmd = &cobra.Command{
 					GracefulShutdown: graceful,
 				},
 			),
+			clab.WithDebug(debug),
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {
