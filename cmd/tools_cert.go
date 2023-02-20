@@ -150,7 +150,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	}
 
 	// set loaded certificate to a CA and initialize a signer
-	err = ca.SetRootCertificate(caCert)
+	err = ca.SetCACert(caCert)
 	if err != nil {
 		return err
 	}

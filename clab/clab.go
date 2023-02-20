@@ -616,7 +616,7 @@ func (c *CLab) VethCleanup(_ context.Context) error {
 }
 
 func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CACSRInput) error {
-	// try loading the Root CA cert data
+	// try loading the CA cert, and if it fails, generate a new one
 	caCertificate, err := c.certStorage.LoadCaCert()
 	if err != nil {
 		// if loading certs failed, try to generate new RootCA
@@ -629,13 +629,14 @@ func (c *CLab) LoadOrGenerateRootCA(caCertInput *cert.CACSRInput) error {
 		if err != nil {
 			return nil
 		}
-	} else {
-		// if no error occured, set root cert
-		err = c.CA.SetRootCertificate(caCertificate)
-		if err != nil {
-			return nil
-		}
 	}
+
+	// set CA cert that was either loaded or generated
+	err = c.CA.SetCACert(caCertificate)
+	if err != nil {
+		return nil
+	}
+
 	return nil
 }
 

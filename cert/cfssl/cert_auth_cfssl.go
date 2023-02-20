@@ -39,8 +39,8 @@ func NewCA(debug bool) *CA {
 	}
 }
 
-// SetRootCertificate sets the root certificate with the provided certificate and initializes the signer.
-func (ca *CA) SetRootCertificate(caCert *cert.Certificate) error {
+// SetCACert sets the CA certificate with the provided certificate and initializes the signer.
+func (ca *CA) SetCACert(caCert *cert.Certificate) error {
 	ca.rootCert = caCert
 	return ca.initSigner()
 }
