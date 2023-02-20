@@ -11,8 +11,8 @@ const (
 	ansibleInventoryFileName  = "ansible-inventory.yml"
 	topologyExportDatFileName = "topology-data.json"
 	authzKeysFileName         = "authorized_keys"
-	caFolder                  = "ca"
-	rootCaIdentifier          = "root"
+	tlsDir                    = ".tls"
+	caDir                     = "ca"
 	graph                     = "graph"
 	labDirPrefix              = "clab-"
 	backupFileSuffix          = ".bak"
@@ -78,19 +78,19 @@ func (t *TopoPaths) SetLabDir(topologyName string) error {
 	return nil
 }
 
-// CABaseDir returns the root of the CA directory structure.
-func (t *TopoPaths) CABaseDir() string {
-	return path.Join(t.labDir, caFolder)
+// TLSBaseDir returns the path of the TLS directory structure.
+func (t *TopoPaths) TLSBaseDir() string {
+	return path.Join(t.labDir, tlsDir)
 }
 
 // CARootCertDir returns the directory that contains the root CA certificat and key.
 func (t *TopoPaths) CARootCertDir() string {
-	return path.Join(t.CABaseDir(), rootCaIdentifier)
+	return path.Join(t.TLSBaseDir(), caDir)
 }
 
-// CANodeDir returns the directory that contains the certificat data for the given node.
-func (t *TopoPaths) CANodeDir(nodename string) string {
-	return path.Join(t.CABaseDir(), nodename)
+// NodeTLSDir returns the directory that contains the certificat data for the given node.
+func (t *TopoPaths) NodeTLSDir(nodename string) string {
+	return path.Join(t.TLSBaseDir(), nodename)
 }
 
 // AuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile.
@@ -170,21 +170,21 @@ func (t *TopoPaths) TopologyLabDir() string {
 }
 
 // NodeCertKeyAbsFilename returns the path to a key file for the given identifier
-func (t *TopoPaths) NodeCertKeyAbsFilename(identifier string) string {
-	return path.Join(t.CANodeDir(identifier), identifier+KeyFileSuffix)
+func (t *TopoPaths) NodeCertKeyAbsFilename(nodeName string) string {
+	return path.Join(t.NodeTLSDir(nodeName), nodeName+KeyFileSuffix)
 }
 
 // NodeCertAbsFilename returns the path to a cert file for the given identifier
-func (t *TopoPaths) NodeCertAbsFilename(identifier string) string {
-	return path.Join(t.CANodeDir(identifier), identifier+CertFileSuffix)
+func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
+	return path.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
 }
 
 // NodeCertCSRAbsFilename returns the path to a csr file for the given identifier
-func (t *TopoPaths) NodeCertCSRAbsFilename(identifier string) string {
-	return path.Join(t.CANodeDir(identifier), identifier+CSRFileSuffix)
+func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
+	return path.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
 }
 
-// RootCaIdentifier returns the folder name for the root ca
-func (t *TopoPaths) RootCaIdentifier() string {
-	return rootCaIdentifier
+// CaDir returns the dir name of the CA directory structure.
+func (t *TopoPaths) CaDir() string {
+	return caDir
 }

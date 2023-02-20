@@ -16,12 +16,13 @@ func NewLocalDirCertStorage(paths CaPaths) *LocalDirCertStorage {
 	}
 }
 
-// LoadCaCert loads and returns the CA certificat from disk or the error that occured while trying to read it
+// LoadCaCert loads the CA certificate from disk.
 func (c *LocalDirCertStorage) LoadCaCert() (*Certificate, error) {
-	return c.LoadNodeCert(c.paths.RootCaIdentifier())
+	return c.LoadNodeCert(c.paths.CaDir())
 }
 
-// LoadNodeCert loads and returns the certificat from disk matching the provided identifier or the error that occured while trying to read it
+// LoadNodeCert loads the node certificate from disk.
+// Used to load CA certificate as well, as CA certificate can be seen as node named "ca".
 func (c *LocalDirCertStorage) LoadNodeCert(nodeName string) (*Certificate, error) {
 	certFilename := c.paths.NodeCertAbsFilename(nodeName)
 	keyFilename := c.paths.NodeCertKeyAbsFilename(nodeName)
@@ -31,13 +32,13 @@ func (c *LocalDirCertStorage) LoadNodeCert(nodeName string) (*Certificate, error
 
 // StoreCaCert stores the given CA certificate in a file in the baseFolder
 func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
-	return c.StoreNodeCert(c.paths.RootCaIdentifier(), cert)
+	return c.StoreNodeCert(c.paths.CaDir(), cert)
 }
 
 // StoreNodeCert stores the given certificate in a file in the baseFolder
 func (c *LocalDirCertStorage) StoreNodeCert(nodeName string, cert *Certificate) error {
 	// create a folder for the node if it does not exist
-	utils.CreateDirectory(c.paths.CANodeDir(nodeName), 0777)
+	utils.CreateDirectory(c.paths.NodeTLSDir(nodeName), 0777)
 
 	// write cert files
 	return cert.Write(c.paths.NodeCertAbsFilename(nodeName), c.paths.NodeCertKeyAbsFilename(nodeName), c.paths.NodeCertCSRAbsFilename(nodeName))
