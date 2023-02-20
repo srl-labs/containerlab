@@ -7,9 +7,10 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 )
 
+// Cert is a wrapper struct for the Certificate Authority and the Certificate Storage interfaces.
 type Cert struct {
-	ca      CA
-	storage CertStorage
+	CA
+	CertStorage
 }
 
 // CA is an interface that wraps methods needed to generate CA and Node certificates.
@@ -33,22 +34,22 @@ type CertStorage interface {
 // LoadOrGenerateCA loads the CA certificate from the storage, or generates a new one if it does not exist.
 func (c *CLab) LoadOrGenerateCA(caCertInput *cert.CACSRInput) error {
 	// try loading the CA cert, and if it fails, generate a new one
-	caCertificate, err := c.Cert.storage.LoadCaCert()
+	caCertificate, err := c.Cert.LoadCaCert()
 	if err != nil {
 		// if loading certs failed, try to generate new RootCA
-		caCertificate, err = c.Cert.ca.GenerateCACert(caCertInput)
+		caCertificate, err = c.Cert.GenerateCACert(caCertInput)
 		if err != nil {
 			return fmt.Errorf("failed generating new Root CA %v", err)
 		}
 		// store the root CA
-		err = c.Cert.storage.StoreCaCert(caCertificate)
+		err = c.Cert.StoreCaCert(caCertificate)
 		if err != nil {
 			return nil
 		}
 	}
 
 	// set CA cert that was either loaded or generated
-	err = c.Cert.ca.SetCACert(caCertificate)
+	err = c.Cert.SetCACert(caCertificate)
 	if err != nil {
 		return nil
 	}
@@ -62,7 +63,7 @@ func (c *CLab) GenerateMissingNodeCerts() error {
 		nodeConfig := n.Config()
 
 		// try loading existing certificates from disk and generate new ones if they do not exist
-		_, err := c.Cert.storage.LoadNodeCert(nodeConfig.ShortName)
+		_, err := c.Cert.LoadNodeCert(nodeConfig.ShortName)
 		if err != nil {
 			log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
 
@@ -80,13 +81,13 @@ func (c *CLab) GenerateMissingNodeCerts() error {
 				Organization: "containerlab",
 			}
 			// Generate the cert for the node
-			nodeCert, err := c.Cert.ca.GenerateAndSignNodeCert(certInput)
+			nodeCert, err := c.Cert.GenerateAndSignNodeCert(certInput)
 			if err != nil {
 				return err
 			}
 
 			// persist the cert via certStorage
-			err = c.Cert.storage.StoreNodeCert(nodeConfig.ShortName, nodeCert)
+			err = c.Cert.StoreNodeCert(nodeConfig.ShortName, nodeCert)
 			if err != nil {
 				return err
 			}

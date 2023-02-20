@@ -145,8 +145,8 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		err = c.parseTopology()
 
 		// init the Cert storage and CA
-		c.Cert.storage = cert.NewLocalDirCertStorage(c.TopoPaths)
-		c.Cert.ca = cfssl.NewCA(c.Config.Debug)
+		c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
+		c.Cert.CA = cfssl.NewCA(c.Config.Debug)
 	}
 	return c, err
 }
@@ -335,7 +335,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
-				nodecert, err := c.Cert.storage.LoadNodeCert(node.Config().ShortName)
+				nodecert, err := c.Cert.LoadNodeCert(node.Config().ShortName)
 				if err != nil {
 					return
 				}
