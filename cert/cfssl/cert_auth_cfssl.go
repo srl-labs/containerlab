@@ -7,7 +7,6 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/cloudflare/cfssl/api/generator"
 	"github.com/cloudflare/cfssl/cli/genkey"
 	"github.com/cloudflare/cfssl/config"
 	"github.com/cloudflare/cfssl/csr"
@@ -154,11 +153,6 @@ func (ca *CA) GenerateNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, err
 	certBytes, err = ca.signer.Sign(signReq)
 	if err != nil {
 		return nil, err
-	}
-
-	// perform checks for hosts
-	if len(nodeCsr.Hosts) == 0 && len(signReq.Hosts) == 0 {
-		log.Warning(generator.CSRNoHostMessage)
 	}
 
 	result := &cert.Certificate{
