@@ -30,16 +30,17 @@ func (c *LocalDirCertStorage) LoadNodeCert(nodeName string) (*Certificate, error
 	return NewCertificateFromFile(certFilename, keyFilename, csrFilename)
 }
 
-// StoreCaCert stores the given CA certificate in a file in the baseFolder
+// StoreCaCert stores the given CA certificate in a file in the baseFolder.
 func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
 	return c.StoreNodeCert(c.paths.CaDir(), cert)
 }
 
-// StoreNodeCert stores the given certificate in a file in the baseFolder
+// StoreNodeCert stores the given certificate in a file in the baseFolder.
 func (c *LocalDirCertStorage) StoreNodeCert(nodeName string, cert *Certificate) error {
 	// create a folder for the node if it does not exist
 	utils.CreateDirectory(c.paths.NodeTLSDir(nodeName), 0777)
 
 	// write cert files
-	return cert.Write(c.paths.NodeCertAbsFilename(nodeName), c.paths.NodeCertKeyAbsFilename(nodeName), c.paths.NodeCertCSRAbsFilename(nodeName))
+	return cert.Write(c.paths.NodeCertAbsFilename(nodeName),
+		c.paths.NodeCertKeyAbsFilename(nodeName), c.paths.NodeCertCSRAbsFilename(nodeName))
 }

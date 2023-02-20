@@ -1,7 +1,7 @@
 package cert
 
 // CertificateAuthority is the interface satisfied by the CertificateAuthority implementation.
-// it is used to generate root certificates as well as node based certificates signed by the root ca
+// it is used to generate root certificates as well as node based certificates signed by the root ca.
 type CertificateAuthority interface {
 	// SetRootCertificate provides the externally loaded Root Certificate (Cert and Key) to the CertificateAuthority implementation
 	SetRootCertificate(cert *Certificate) error

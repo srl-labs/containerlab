@@ -169,17 +169,17 @@ func (t *TopoPaths) TopologyLabDir() string {
 	return t.labDir
 }
 
-// NodeCertKeyAbsFilename returns the path to a key file for the given identifier
+// NodeCertKeyAbsFilename returns the path to a key file for the given identifier.
 func (t *TopoPaths) NodeCertKeyAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+KeyFileSuffix)
 }
 
-// NodeCertAbsFilename returns the path to a cert file for the given identifier
+// NodeCertAbsFilename returns the path to a cert file for the given identifier.
 func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
 }
 
-// NodeCertCSRAbsFilename returns the path to a csr file for the given identifier
+// NodeCertCSRAbsFilename returns the path to a csr file for the given identifier.
 func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
 }

@@ -53,7 +53,7 @@ func WithTimeout(dur time.Duration) ClabOption {
 	}
 }
 
-// WithDebug sets debug mode
+// WithDebug sets debug mode.
 func WithDebug(debug bool) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Debug = debug
