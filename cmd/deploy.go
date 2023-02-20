@@ -140,7 +140,9 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// define the attributes used to generate the CA Cert
 	caCertInput := &cert.CACSRInput{
-		CommonName: c.Config.Name,
+		CommonName:   c.Config.Name + " lab CA",
+		Expiry:       "87600h",
+		Organization: "containerlab",
 	}
 
 	if err := c.LoadOrGenerateCA(caCertInput); err != nil {

@@ -167,7 +167,6 @@ func signCert(_ *cobra.Command, _ []string) error {
 			Organization:     organization,
 			OrganizationUnit: organizationUnit,
 			Expiry:           expiry,
-			Name:             certNamePrefix,
 		})
 	if err != nil {
 		return err

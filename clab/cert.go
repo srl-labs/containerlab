@@ -51,24 +51,28 @@ func (c *CLab) LoadOrGenerateCA(caCertInput *cert.CACSRInput) error {
 	return nil
 }
 
+// GenerateMissingNodeCerts generates missing node certificates and stores them in the storage.
 func (c *CLab) GenerateMissingNodeCerts() error {
 	for _, n := range c.Nodes {
 		nodeConfig := n.Config()
-		// the per node certificate directory
 
-		// try loading existing certificats from disk
+		// try loading existing certificates from disk and generate new ones if they do not exist
 		_, err := c.certStorage.LoadNodeCert(nodeConfig.ShortName)
-		// if this fails, generate new certificat
 		if err != nil {
 			log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
 
+			hosts := []string{
+				nodeConfig.ShortName,
+				nodeConfig.LongName,
+				nodeConfig.ShortName + "." + c.Config.Name + ".io",
+			}
+			hosts = append(hosts, nodeConfig.SANs...)
+
 			// collect cert details
 			certInput := &cert.NodeCSRInput{
-				Name:     nodeConfig.ShortName,
-				LongName: nodeConfig.LongName,
-				Fqdn:     nodeConfig.Fqdn,
-				SANs:     nodeConfig.SANs,
-				Prefix:   c.Config.Name,
+				CommonName:   nodeConfig.ShortName + "." + c.Config.Name + ".io",
+				Hosts:        hosts,
+				Organization: "containerlab",
 			}
 			// Generate the cert for the node
 			nodeCert, err := c.CA.GenerateNodeCert(certInput)
@@ -83,5 +87,6 @@ func (c *CLab) GenerateMissingNodeCerts() error {
 			}
 		}
 	}
+
 	return nil
 }

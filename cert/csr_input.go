@@ -19,10 +19,4 @@ type NodeCSRInput struct {
 	Organization     string
 	OrganizationUnit string
 	Expiry           string
-
-	Name     string
-	LongName string
-	Fqdn     string
-	SANs     []string
-	Prefix   string
 }
