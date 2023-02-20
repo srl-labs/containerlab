@@ -65,4 +65,5 @@ func (c *CLab) RegisterNodes() {
 	vr_xrv9k.Register(c.Reg)
 	xrd.Register(c.Reg)
 	c8000.Register(c.Reg)
+	border0.Register()
 }
