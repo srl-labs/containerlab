@@ -67,7 +67,7 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *xrd) PreDeploy(ctx context.Context, _ *cert.Certificate) error {
+func (n *xrd) PreDeploy(ctx context.Context, _ *cert.Certificate, _ string) error {
 	n.genInterfacesEnv()
 
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)

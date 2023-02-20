@@ -56,7 +56,7 @@ func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOpt
 	return nil
 }
 
-func (n *CheckpointCloudguard) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (n *CheckpointCloudguard) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return nil
 }

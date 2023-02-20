@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/border0_api"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -15,10 +16,10 @@ import (
 
 var Kindnames = []string{"border0"}
 
-func Register() {
-	nodes.Register(Kindnames, func() nodes.Node {
+func Register(r *nodes.NodeRegistry) {
+	r.Register(Kindnames, func() nodes.Node {
 		return new(border0)
-	})
+	}, nil)
 }
 
 type border0 struct {
@@ -68,7 +69,7 @@ func (b *border0) CheckDeploymentConditions(ctx context.Context) error {
 	return nil
 }
 
-func (b *border0) PreDeploy(_ context.Context, topologyName, _, _ string) error {
+func (b *border0) PreDeploy(_ context.Context, certificate *cert.Certificate, topologyName string) error {
 	utils.CreateDirectory(b.Cfg.LabDir, 0777)
 
 	// setup the mount for the Static Socket Plugin config file

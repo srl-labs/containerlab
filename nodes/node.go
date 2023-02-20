@@ -52,7 +52,7 @@ type Node interface {
 	Config() *types.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
 	CheckDeploymentConditions(context.Context) error
-	PreDeploy(ctx context.Context, certificate *cert.Certificate) error
+	PreDeploy(ctx context.Context, certificate *cert.Certificate, topologyName string) error
 	Deploy(context.Context) error // Deploy triggers the deployment of this node
 	PostDeploy(context.Context, map[string]Node) error
 	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node

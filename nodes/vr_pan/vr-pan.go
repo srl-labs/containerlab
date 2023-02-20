@@ -72,7 +72,7 @@ func (n *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vrPan) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (n *vrPan) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
