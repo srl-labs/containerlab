@@ -270,18 +270,18 @@ topology:
 
 ### TLS
 
-By default, containerlab will generate TLS certificates and keys for each SR Linux node of a lab. The TLS-related files that containerlab creates are located in the so-called CA directory, which can be found by the `<lab-directory>/ca/` path. Here is a list of files that containerlab creates relative to the CA directory
+By default, containerlab will generate TLS certificates and keys for each SR Linux node of a lab. The TLS-related files that containerlab creates are located in the TLS directory, which can be found by the `<lab-directory>/.tls/` path. Here is a list of files that containerlab creates relative to the TLS directory:
 
-1. Root CA certificate - `root/root-ca.pem`
-2. Root CA private key - `root/root-ca-key.pem`
-3. Node certificate - `<node-name>/<node-name>.pem`
-4. Node private key - `<node-name>/<node-name>-key.pem`
+1. CA certificate - `./ca/ca.pem`
+2. CA private key - `./ca/ca.key`
+3. Node certificate - `./<node-name>/<node-name>.pem`
+4. Node private key - `./<node-name>/<node-name>.key`
 
 The generated TLS files will persist between lab deployments. This means that if you destroyed a lab and deployed it again, the TLS files from the initial lab deployment will be used.
 
-In case user-provided certificates/keys need to be used, the `root-ca.pem`, `<node-name>.pem` and `<node-name>-key.pem` files must be copied by the paths outlined above for containerlab to take them into account when deploying a lab.
+In case user-provided certificates/keys need to be used, the `ca.pem`, `<node-name>.pem` and `<node-name>.key` files must be copied by the paths outlined above for containerlab to take them into account when deploying a lab.
 
-In case only `root-ca.pem` and `root-ca-key.pem` files are provided, the node certificates will be generated using these CA files.
+In case only `ca.pem` and `ca.key` files are provided, the node certificates will be generated using these CA files.
 
 Nokia SR Linux nodes support setting of [SANs](../nodes.md#subject-alternative-names-san).
 
