@@ -93,6 +93,7 @@ nav:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
+      - "0.37": rn/0.37.md
       - "0.36": rn/0.36.md
       - "0.35": rn/0.35.md
       - "0.34": rn/0.34.md
@@ -147,11 +148,12 @@ theme:
 
   features:
     - navigation.top
-    - navigation.instant
+    # - navigation.instant
     - navigation.tabs
     - search.suggest
     - content.code.annotate
     - content.code.copy
+    - content.code.select
     - content.action.edit
     - toc.follow
     - content.tooltips
@@ -232,7 +234,9 @@ markdown_extensions:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
   - pymdownx.highlight:
-      linenums_style: pymdownx-inline
+      line_spans: __span
+      anchor_linenums: true
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.magiclink:
