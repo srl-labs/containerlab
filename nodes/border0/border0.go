@@ -7,7 +7,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/border0_api"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -69,11 +68,11 @@ func (b *border0) CheckDeploymentConditions(ctx context.Context) error {
 	return nil
 }
 
-func (b *border0) PreDeploy(_ context.Context, _ *cert.Certificate, topologyName string) error {
+func (b *border0) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(b.Cfg.LabDir, 0777)
 
 	// setup the mount for the Static Socket Plugin config file
-	b.topologyName = topologyName
+	b.topologyName = params.TopologyName
 	border0Mount := fmt.Sprintf("%s:%s:ro", b.hostborder0yamlPath, b.containerborder0yamlPath)
 	b.Cfg.Binds = append(b.Cfg.Binds, border0Mount)
 
@@ -85,7 +84,7 @@ func (b *border0) PreDeploy(_ context.Context, _ *cert.Certificate, topologyName
 	return nil
 }
 
-func (b *border0) PostDeploy(ctx context.Context, nodesMap map[string]nodes.Node) error {
+func (b *border0) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	// disable tx offloading
 	log.Debugf("Running postdeploy actions for border0.com node %q", b.Cfg.ShortName)
 	err := types.DisableTxOffload(b.Cfg)
@@ -95,7 +94,7 @@ func (b *border0) PostDeploy(ctx context.Context, nodesMap map[string]nodes.Node
 
 	log.Infof("Creating border0.com tunnels...")
 	// create a configuration for border0.com
-	config, err := border0_api.CreateBorder0Config(ctx, nodesMap, b.topologyName)
+	config, err := border0_api.CreateBorder0Config(ctx, params.Nodes, b.topologyName)
 	if err != nil {
 		return err
 	}

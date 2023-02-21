@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -68,7 +67,7 @@ func (n *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vrRos) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
+func (n *vrRos) PreDeploy(_ context.Context, _ *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
@@ -76,4 +75,5 @@ func (n *vrRos) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) erro
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *vrRos) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Cfg.Endpoints)
+
 }

@@ -73,7 +73,7 @@ func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (c *cvx) Deploy(ctx context.Context) error {
+func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	// CreateContainer is no-op in case of ignite runtime
 	cID, err := c.Runtime.CreateContainer(ctx, c.Cfg)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *cvx) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (c *cvx) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (c *cvx) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for cvx '%s' node", c.Cfg.ShortName)
 	if c.vmChans == nil {
 		return nil

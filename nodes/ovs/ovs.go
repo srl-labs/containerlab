@@ -56,11 +56,11 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 	return nil
 }
 
-func (*ovs) Deploy(_ context.Context) error                { return nil }
-func (*ovs) PullImage(_ context.Context) error             { return nil }
-func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (*ovs) Delete(_ context.Context) error                { return nil }
-func (*ovs) DeleteNetnsSymlink() (err error)               { return nil }
+func (*ovs) Deploy(_ context.Context, _ *nodes.DeployParams) error { return nil }
+func (*ovs) PullImage(_ context.Context) error                     { return nil }
+func (*ovs) GetImages(_ context.Context) map[string]string         { return map[string]string{} }
+func (*ovs) Delete(_ context.Context) error                        { return nil }
+func (*ovs) DeleteNetnsSymlink() (err error)                       { return nil }
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }

@@ -50,14 +50,14 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (*bridge) Deploy(_ context.Context) error                { return nil }
-func (*bridge) Delete(_ context.Context) error                { return nil }
-func (*bridge) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (*bridge) Deploy(_ context.Context, _ *nodes.DeployParams) error { return nil }
+func (*bridge) Delete(_ context.Context) error                        { return nil }
+func (*bridge) GetImages(_ context.Context) map[string]string         { return map[string]string{} }
 
 // DeleteNetnsSymlink is a noop for bridge nodes.
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
-func (b *bridge) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (b *bridge) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 	return b.installIPTablesBridgeFwdRule()
 }
 

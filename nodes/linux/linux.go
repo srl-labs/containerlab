@@ -46,7 +46,7 @@ func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *linux) Deploy(ctx context.Context) error {
+func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (n *linux) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (n *linux) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (n *linux) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
 	if err := types.DisableTxOffload(n.Cfg); err != nil {
 		return err
