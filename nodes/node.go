@@ -43,6 +43,16 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 	return nil
 }
 
+type PreDeployParams struct {
+	Certificate *cert.Certificate
+}
+
+type DeployParams struct{}
+
+type PostDeployParams struct {
+	Nodes map[string]Node
+}
+
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	// GetContainers returns a pointer to GenericContainer that the node uses.
@@ -51,9 +61,9 @@ type Node interface {
 	Config() *types.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
 	CheckDeploymentConditions(context.Context) error
-	PreDeploy(ctx context.Context, certificate *cert.Certificate) error
-	Deploy(context.Context) error // Deploy triggers the deployment of this node
-	PostDeploy(context.Context, map[string]Node) error
+	PreDeploy(ctx context.Context, params *PreDeployParams) error
+	Deploy(context.Context, *DeployParams) error // Deploy triggers the deployment of this node
+	PostDeploy(ctx context.Context, params *PostDeployParams) error
 	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node
 	WithRuntime(runtime.ContainerRuntime) // WithRuntime provides the runtime for the node
 	// CheckInterfaceName checks if a name of the interface referenced in the topology file is correct for this node

@@ -10,7 +10,6 @@ import (
 	"path"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -74,7 +73,7 @@ func (s *vrVEOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrVEOS) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (s *vrVEOS) PreDeploy(_ context.Context, _ *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
 }

@@ -34,7 +34,7 @@ func (s *mySocketIO) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error
 	return nil
 }
 
-func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) error {
+func (s *mySocketIO) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for mysocketio '%s' node", s.Cfg.ShortName)
 	err := types.DisableTxOffload(s.Cfg)
 	if err != nil {
@@ -42,6 +42,6 @@ func (s *mySocketIO) PostDeploy(ctx context.Context, ns map[string]nodes.Node) e
 	}
 
 	log.Infof("Creating mysocketio tunnels...")
-	err = createMysocketTunnels(ctx, s, ns)
+	err = createMysocketTunnels(ctx, s, params.Nodes)
 	return err
 }

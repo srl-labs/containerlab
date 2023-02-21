@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -43,12 +42,12 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *sonic) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (s *sonic) PreDeploy(_ context.Context, _ *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nil
 }
 
-func (s *sonic) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (s *sonic) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
 	cmd, _ := exec.NewExecCmdFromString("supervisord")

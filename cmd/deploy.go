@@ -224,7 +224,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		for _, node := range c.Nodes {
 			go func(node nodes.Node, wg *sync.WaitGroup) {
 				defer wg.Done()
-				err := node.PostDeploy(ctx, c.Nodes)
+
+				err := node.PostDeploy(ctx, &nodes.PostDeployParams{Nodes: c.Nodes})
 				if err != nil {
 					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
 				}

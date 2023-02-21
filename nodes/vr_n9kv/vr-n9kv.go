@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/nodes"
 
 	"github.com/srl-labs/containerlab/types"
@@ -71,7 +70,7 @@ func (s *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrN9kv) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (s *vrN9kv) PreDeploy(_ context.Context, _ *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
 }

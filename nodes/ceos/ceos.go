@@ -18,7 +18,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -99,12 +98,12 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *ceos) PreDeploy(ctx context.Context, _ *cert.Certificate) error {
+func (n *ceos) PreDeploy(ctx context.Context, _ *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return n.createCEOSFiles(ctx)
 }
 
-func (n *ceos) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (n *ceos) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
 	return n.ceosPostDeploy(ctx)
 }

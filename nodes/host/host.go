@@ -38,11 +38,11 @@ func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.IsRootNamespaceBased = true
 	return nil
 }
-func (*host) Deploy(_ context.Context) error                { return nil }
-func (*host) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (*host) PullImage(_ context.Context) error             { return nil }
-func (*host) Delete(_ context.Context) error                { return nil }
-func (*host) WithMgmtNet(*types.MgmtNet)                    {}
+func (*host) Deploy(_ context.Context, _ *nodes.DeployParams) error { return nil }
+func (*host) GetImages(_ context.Context) map[string]string         { return map[string]string{} }
+func (*host) PullImage(_ context.Context) error                     { return nil }
+func (*host) Delete(_ context.Context) error                        { return nil }
+func (*host) WithMgmtNet(*types.MgmtNet)                            {}
 
 // UpdateConfigWithRuntimeInfo is a noop for hosts.
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }

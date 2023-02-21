@@ -12,7 +12,6 @@ import (
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -80,7 +79,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrSROS) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (s *vrSROS) PreDeploy(_ context.Context, _ *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return createVrSROSFiles(s)
 }
