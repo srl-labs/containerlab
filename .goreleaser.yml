@@ -17,9 +17,10 @@ builds:
     goarch:
       - amd64
       - arm64
-    hooks:
-      post:
-        - upx "{{ .Path }}"
+    # removing upx compression due to https://github.com/srl-labs/containerlab/issues/1264
+    # hooks:
+    #   post:
+    #     - upx "{{ .Path }}"
 dockers:
   - goos: linux
     goarch: amd64
