@@ -9,7 +9,7 @@ require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.2.0
 	github.com/containers/common v0.51.0
-	github.com/containers/podman/v4 v4.4.1
+	github.com/containers/podman/v4 v4.4.2
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker v23.0.1+incompatible
@@ -139,7 +139,7 @@ require (
 	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/containers/buildah v1.29.0 // indirect
 	github.com/containers/image v3.0.2+incompatible // indirect
-	github.com/containers/image/v5 v5.24.0 // indirect
+	github.com/containers/image/v5 v5.24.1 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.1.7 // indirect
 	github.com/containers/psgo v1.8.0 // indirect
