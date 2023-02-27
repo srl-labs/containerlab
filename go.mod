@@ -28,7 +28,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.3
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/opencontainers/runtime-spec v1.0.3-0.20220825212826-86290f6a00fb
+	github.com/opencontainers/runtime-spec v1.1.0-rc.1
 	github.com/pkg/errors v0.9.1
 	github.com/scrapli/scrapligo v1.1.6
 	github.com/sirupsen/logrus v1.9.0
