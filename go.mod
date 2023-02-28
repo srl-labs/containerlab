@@ -22,7 +22,7 @@ require (
 	github.com/hairyhenderson/gomplate/v3 v3.11.4
 	github.com/hashicorp/go-version v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/jsimonetti/rtnetlink v0.0.0-20210226120601-1b79e63a70a0
+	github.com/jsimonetti/rtnetlink v1.3.1
 	github.com/kellerza/template v0.0.6
 	github.com/klauspost/cpuid v1.3.1
 	github.com/mackerelio/go-osstat v0.2.3
@@ -47,7 +47,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/cilium/ebpf v0.7.0 // indirect
+	github.com/cilium/ebpf v0.10.0 // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
 	github.com/container-orchestrated-devices/container-device-interface v0.5.3 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7 // indirect
@@ -66,6 +66,7 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20221109233200-85aa52084eaf // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mdlayher/socket v0.4.0 // indirect
 	github.com/mistifyio/go-zfs/v3 v3.0.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
@@ -229,7 +230,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmoiron/sqlx v1.3.4 // indirect
 	github.com/jonboulle/clockwork v0.3.0 // indirect
-	github.com/josharian/native v0.0.0-20200817173448-b6b71def0850 // indirect
+	github.com/josharian/native v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
@@ -240,7 +241,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/mdlayher/netlink v1.4.0 // indirect
+	github.com/mdlayher/netlink v1.7.1 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
