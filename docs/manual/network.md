@@ -44,7 +44,7 @@ When no information about the management network is provided within the topo def
 2. configure the IPv4/6 addressing pertaining to this docker network
 
 !!!info
-    We often refer to `clab` docker network simply as _management network_ since its the network to which management interfaces of the containerized NOS'es are connected.
+    We often refer to `clab` docker network simply as _management network_ since it's the network to which management interfaces of the containerized NOS'es are connected.
 
 The addressing information that containerlab will use on this network:
 
@@ -258,7 +258,7 @@ d2169a14e334        clab                bridge              local
 ❯ docker network inspect clab -f {{.ID}} | head -c 12
 d2169a14e334
 
-# now the name is known and its easy to show bridge state
+# now the name is known and it's easy to show bridge state
 ❯ brctl show br-d2169a14e334
 bridge name	        bridge id		    STP enabled	  interfaces
 br-d2169a14e334		8000.0242fe382b74	no		      vetha57b950
