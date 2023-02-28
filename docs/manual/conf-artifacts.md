@@ -14,7 +14,8 @@ all these artifacts will be available under a Lab Directory.
 
 ### Identifying a lab directory
 
-The lab directory name follows the `clab-<lab_name>` template. Thus, if the name of your lab is `srl02` you will find the `clab-srl02` directory created in the current working directory.
+The lab directory name follows the `clab-<lab_name>` template. Thus, if the name of your lab is `srl02` you will find the `clab-srl02` directory created by default in the current working directory. The location can be altered via the [CLAB_LABDIR_BASE](../cmd/deploy.md#clab_labdir_base) envorinment variable.
+
 
 ```
 ❯ ls -lah clab-srl02
