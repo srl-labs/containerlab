@@ -37,7 +37,7 @@ ip netns exec $netns_name ip link
 ```
 
 ## Capturing with tcpdump/wireshark
-Now when it is clear which netns names corresponds to which container and which interfaces are available inside the given lab node, its extremely easy to start capturing traffic.
+Now when it is clear which netns names corresponds to which container and which interfaces are available inside the given lab node, it's extremely easy to start capturing traffic.
 
 ### local capture
 From the containerlab host to capture from any interface inside a container simply use:

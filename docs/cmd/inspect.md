@@ -11,7 +11,7 @@ The `inspect` command provides the information about the deployed labs.
 ### Flags
 
 #### all
-With the local `--all` flag its possible to list all deployed labs in a single table. The output will also show the relative path to the topology file that was used to spawn this lab.
+With the local `--all` flag it's possible to list all deployed labs in a single table. The output will also show the relative path to the topology file that was used to spawn this lab.
 
 The lab name and path values will be set for the first node of such lab, to reduce the clutter. Refer to the [examples](#examples) section for more details.
 

@@ -57,7 +57,7 @@ We use `<repository>` image name throughout the docs articles. This means that t
 
 ```bash
 # tagging srlinux:20.6.1-286 as srlinux:latest
-# after this change its possible to use `srlinux:latest` or `srlinux` image name
+# after this change it's possible to use `srlinux:latest` or `srlinux` image name
 docker tag srlinux:20.6.1-286 srlinux:latest
 ```
 
@@ -261,12 +261,12 @@ The variables values are merged when the same vars are defined on multiple level
 topology:
   defaults:
     env:
-      ENV1: 3 # ENV1=3 will be set if its not set on kind or node level
+      ENV1: 3 # ENV1=3 will be set if it's not set on kind or node level
       ENV2: glob # ENV2=glob will be set for all nodes
   kinds:
     srl:
       env:
-        ENV1: 2 # ENV1=2 will be set to if its not set on node level
+        ENV1: 2 # ENV1=2 will be set to if it's not set on node level
         ENV3: kind # ENV3=kind will be set for all nodes of srl kind
   nodes:
     node1:
