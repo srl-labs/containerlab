@@ -16,6 +16,7 @@ import (
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -50,8 +51,15 @@ func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                       { d
 func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d.Runtime = r }
 func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
 func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
-func (*DefaultNode) PreDeploy(_ context.Context, _ *PreDeployParams) error   { return nil }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
+
+func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
+	_, err := d.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
+	return nil
+}
 
 func (d *DefaultNode) SaveConfig(_ context.Context) error {
 	// nodes should have the save method defined on their respective structs.
@@ -323,4 +331,48 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 		return fmt.Errorf("license file of node %q not found by the path %s", d.Config().ShortName, rlic)
 	}
 	return nil
+}
+
+// CertificateLoadOrGenerate implements the plain default function used by a node to obtain a certificate
+// returns a cert.Cert if the Certificate.Issue option is set to true. Returns nil otherwise.
+// returns an error if any problem occured on certificate load or generation
+func (d *DefaultNode) CertificateLoadOrGenerate(certInfra *cert.Cert, topoName string) (nodeCert *cert.Certificate, err error) {
+
+	nodeCert = nil
+	// if a cert is to be issued
+	if d.Cfg.Certificate != nil && d.Cfg.Certificate.Issue {
+		nodeConfig := d.Cfg
+
+		// try loading existing certificates from disk and generate new ones if they do not exist
+		_, err := certInfra.LoadNodeCert(nodeConfig.ShortName)
+		if err != nil {
+			log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
+
+			hosts := []string{
+				nodeConfig.ShortName,
+				nodeConfig.LongName,
+				nodeConfig.ShortName + "." + topoName + ".io",
+			}
+			hosts = append(hosts, nodeConfig.SANs...)
+
+			// collect cert details
+			certInput := &cert.NodeCSRInput{
+				CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
+				Hosts:        hosts,
+				Organization: "containerlab",
+			}
+			// Generate the cert for the node
+			nodeCert, err = certInfra.GenerateAndSignNodeCert(certInput)
+			if err != nil {
+				return nil, err
+			}
+
+			// persist the cert via certStorage
+			err = certInfra.StoreNodeCert(nodeConfig.ShortName, nodeCert)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return nodeCert, nil
 }

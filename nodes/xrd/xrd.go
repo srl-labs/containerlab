@@ -66,10 +66,14 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *xrd) PreDeploy(ctx context.Context, _ *nodes.PreDeployParams) error {
+func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	_, err := n.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
 
 	return n.createXRDFiles(ctx)
 }

@@ -131,6 +131,14 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
 
 	s.Cfg = cfg
+
+	// force cert generation for SR Linux nodes
+	if s.Cfg.Certificate == nil {
+		s.Cfg.Certificate = &types.CertificateConfig{
+			Issue: true,
+		}
+	}
+
 	for _, o := range opts {
 		o(s)
 	}
@@ -184,9 +192,14 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 
+	certificate, err := s.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
+
 	// set the certificate data
-	s.Config().TLSCert = string(params.Certificate.Cert)
-	s.Config().TLSKey = string(params.Certificate.Key)
+	s.Config().TLSCert = string(certificate.Cert)
+	s.Config().TLSKey = string(certificate.Key)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if s.Cfg.Extras != nil && len(s.Cfg.Extras.SRLAgents) != 0 {

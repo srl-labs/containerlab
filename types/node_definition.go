@@ -68,6 +68,8 @@ type NodeDefinition struct {
 	WaitFor []string `yaml:"wait-for,omitempty"`
 	// DNS configuration
 	DNS *DNSConfig `yaml:"dns,omitempty"`
+	// Certificate Configuration
+	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 }
 
 func (n *NodeDefinition) GetKind() string {
@@ -321,6 +323,13 @@ func (n *NodeDefinition) GetDns() *DNSConfig {
 		return nil
 	}
 	return n.DNS
+}
+
+func (n *NodeDefinition) GetCertificateConfig() *CertificateConfig {
+	if n == nil {
+		return nil
+	}
+	return n.Certificate
 }
 
 // ImportEnvs imports all environment variales defined in the shell

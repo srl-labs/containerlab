@@ -687,5 +687,20 @@ srl1 <- [  ]
 DEBU[0004] node creation graph is successfully validated as being acyclic 
 ```
 
+### certificate
+Setting the issue knob under certificate to true will generate a TLS certificate for the enclosing node.
+The certificate will be stored in the [<LAB_DIR>](./conf-artifacts/#identifying-a-lab-directory) under the `.tls/<NODE_NAME>/` folder.
+```
+name: cert-gen
+
+topology:
+  nodes:
+    a1:
+      kind: linux
+      image: alpine:latest
+      certificate:
+        issue: true
+```
+
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.

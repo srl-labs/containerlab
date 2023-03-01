@@ -47,7 +47,7 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 }
 
 type PreDeployParams struct {
-	Certificate  *cert.Certificate
+	Cert         *cert.Cert
 	TopologyName string
 }
 

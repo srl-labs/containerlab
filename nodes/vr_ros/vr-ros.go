@@ -67,13 +67,16 @@ func (n *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vrRos) PreDeploy(_ context.Context, _ *nodes.PreDeployParams) error {
+func (n *vrRos) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	_, err := n.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *vrRos) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Cfg.Endpoints)
-
 }

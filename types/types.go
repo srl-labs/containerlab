@@ -138,6 +138,7 @@ type NodeConfig struct {
 	WaitFor              []string   `json:"wait-for,omitempty"`
 	DNS                  *DNSConfig `json:"dns,omitempty"`
 	IsRootNamespaceBased bool
+	Certificate          *CertificateConfig
 }
 
 func DisableTxOffload(n *NodeConfig) error {
@@ -248,6 +249,12 @@ type DNSConfig struct {
 	Options []string `yaml:"options,omitempty"`
 	// DNS Search Domains
 	Search []string `yaml:"search,omitempty"`
+}
+
+type CertificateConfig struct {
+	Issue bool `yaml:"issue,omitempty"`
+	// additional params would go here, e.g. if
+	// different algos would be needed or so
 }
 
 // PullPolicyValue represents Image pull policy values.

@@ -34,7 +34,7 @@ type CLab struct {
 	globalRuntime string
 	// reg is a registry of node kinds
 	Reg  *nodes.NodeRegistry
-	Cert *Cert
+	Cert *cert.Cert
 
 	timeout time.Duration
 }
@@ -124,7 +124,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Nodes:    make(map[string]nodes.Node),
 		Links:    make(map[int]*types.Link),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
-		Cert:     &Cert{},
+		Cert:     &cert.Cert{},
 	}
 
 	// init a new NodeRegistry
@@ -335,16 +335,14 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
-				nodecert, err := c.Cert.LoadNodeCert(node.Config().ShortName)
-				if err != nil {
-					return
-				}
-
 				// PreDeploy
-				err = node.PreDeploy(ctx, &nodes.PreDeployParams{
-					Certificate:  nodecert,
-					TopologyName: c.Config.Name,
-				})
+				err := node.PreDeploy(
+					ctx,
+					&nodes.PreDeployParams{
+						Cert:         c.Cert,
+						TopologyName: c.Config.Name,
+					},
+				)
 				if err != nil {
 					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue

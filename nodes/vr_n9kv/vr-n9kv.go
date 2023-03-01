@@ -70,8 +70,12 @@ func (n *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vrN9kv) PreDeploy(_ context.Context, _ *nodes.PreDeployParams) error {
+func (n *vrN9kv) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	_, err := n.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
