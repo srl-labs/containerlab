@@ -92,3 +92,23 @@ func (n *vrVMX) SaveConfig(_ context.Context) error {
 func (n *vrVMX) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Cfg.Endpoints)
 }
+
+func (s *vrVMX) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+	if s.Cfg.License != "" {
+		log.Infof("adding license to node %s", s.Cfg.ShortName)
+		bdata, err := utils.ReadFileContent(s.Cfg.License)
+		if err != nil {
+			return err
+		}
+		err = netconf.LicenseAdd(
+			s.Cfg.LongName,
+			defaultCredentials.GetUsername(),
+			defaultCredentials.GetPassword(),
+			string(bdata),
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
