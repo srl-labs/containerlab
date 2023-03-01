@@ -689,7 +689,7 @@ DEBU[0004] node creation graph is successfully validated as being acyclic
 
 ### certificate
 Setting the issue knob under certificate to true will generate a TLS certificate for the enclosing node.
-The certificate will be stored in the [<LAB_DIR>](./conf-artifacts/#identifying-a-lab-directory) under the `.tls/<NODE_NAME>/` folder.
+The certificate will be stored in the [<LAB_DIR>](conf-artifacts.md#identifying-a-lab-directory) under the `.tls/<NODE_NAME>/` folder.
 ```
 name: cert-gen
 
