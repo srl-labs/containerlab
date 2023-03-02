@@ -170,9 +170,7 @@ func (d *DefaultNode) DeleteNetnsSymlink() error {
 	return utils.DeleteNetnsSymlink(d.OverwriteNode.GetContainerName())
 }
 
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-// Checks the name pattern that is common for VM-based nodes. Container-based nodes override this function to implement
-// custom name checks.
+// CheckInterfaceName checks if a name of the interface referenced in the topology file is in the expected range of name values.
 func (d *DefaultNode) CheckInterfaceName() error {
 	return nil
 }
