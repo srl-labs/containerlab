@@ -76,9 +76,9 @@ SR Linux system expects interfaces inside the container to be named in a specifi
 
 With that naming convention in mind:
 
-* `e1-1` - first ethernet interface on line card #1
-* `e1-2` - second interface on line card #1
-* `e2-1` - first interface on line card #2
+* `e1-1` - first ethernet interface on line card 1
+* `e1-2` - second interface on line card 1
+* `e2-1` - first interface on line card 2
 
 These interface names are seen in the Linux shell; however, when configuring the interfaces via SR Linux CLI, the interfaces should be named as `ethernet-X/Y` where `X/Y` is the `linecard/port` combination.
 
