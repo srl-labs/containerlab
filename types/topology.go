@@ -163,7 +163,6 @@ func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
 		if cfg == "" {
 			cfg = t.GetDefaults().GetStartupConfig()
 		}
-
 	}
 	return cfg, nil
 }

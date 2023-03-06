@@ -8,8 +8,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
@@ -229,6 +231,21 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
+
+	// download http or https referenced configs
+	if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
+		// download the file to tmp location
+		tmpLoc := filepath.Join(os.TempDir(), "clab-downloads")
+		utils.CreateDirectory(tmpLoc, 0755)
+		filename := fmt.Sprintf("%s-%d.download", nodeCfg.ShortName, time.Now().Unix())
+		absFile := filepath.Join(tmpLoc, filename)
+		err := utils.CopyFileContents(p, absFile, 0755)
+		if err != nil {
+			return nil, err
+		}
+		p = absFile
+	}
+
 	// resolve the startup config path to an abs path
 	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
