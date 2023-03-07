@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -175,4 +176,23 @@ func ResolvePath(p, base string) string {
 		p = filepath.Join(base, p)
 	}
 	return p
+}
+
+const (
+	CalcFilename_Undefined = "undefined"
+)
+
+// CalcFilename tries to deduce a filename from the given url
+// returns "undefined" if facing issues
+func CalcFilename(rawUrl string) string {
+	u, err := url.Parse(rawUrl)
+	if err != nil {
+		return CalcFilename_Undefined
+	}
+	pathElems := strings.Split(u.Path, "/")
+	lastPathElem := pathElems[len(pathElems)-1]
+	if len(lastPathElem) == 0 {
+		return CalcFilename_Undefined
+	}
+	return lastPathElem
 }

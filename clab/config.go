@@ -8,10 +8,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
@@ -234,16 +232,20 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 
 	// download http or https referenced configs
 	if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
-		// download the file to tmp location
-		tmpLoc := filepath.Join(os.TempDir(), "clab-downloads")
+		tmpLoc := c.TopoPaths.StartupConfigDownloadDir()
 		utils.CreateDirectory(tmpLoc, 0755)
-		filename := fmt.Sprintf("%s-%d.download", nodeCfg.ShortName, time.Now().Unix())
-		absFile := filepath.Join(tmpLoc, filename)
-		err := utils.CopyFileContents(p, absFile, 0755)
+		// Try to deduce a filename from the url
+		postfix := utils.CalcFilename(p)
+		// Deduce the absolute destination filename for the downloaded content
+		absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, postfix)
+		log.Debugf("Fetching startup-config %q for node %q storing as %q", p, nodeCfg.ShortName, absDestFile)
+		// download the file to tmp location
+		err := utils.CopyFileContents(p, absDestFile, 0755)
 		if err != nil {
 			return nil, err
 		}
-		p = absFile
+		// adjust the nodeconfig by pointing startup-config to the local downloaded file
+		p = absDestFile
 	}
 
 	// resolve the startup config path to an abs path
