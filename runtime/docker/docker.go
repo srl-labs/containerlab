@@ -833,6 +833,8 @@ func (d *DockerRuntime) processNetworkMode(
 	netMode := strings.SplitN(node.NetworkMode, ":", 2)
 
 	switch netMode[0] {
+	case "none":
+		containerHostConfig.NetworkMode = "none"
 	// clab allows its containers to be attached to a netns of another container
 	// this can be a container that is managed by clab, or an external container.
 	case "container":
