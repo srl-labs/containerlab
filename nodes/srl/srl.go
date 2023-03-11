@@ -425,6 +425,11 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		b,
 	}
 
+	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning
+	// during the template execution
+	tplData.TLSKey = strings.TrimSpace(tplData.TLSKey)
+	tplData.TLSCert = strings.TrimSpace(tplData.TLSCert)
+
 	buf := new(bytes.Buffer)
 	err = srlCfgTpl.Execute(buf, tplData)
 	if err != nil {
