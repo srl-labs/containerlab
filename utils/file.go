@@ -125,7 +125,12 @@ func CreateFile(file, content string) (err error) {
 		return err
 	}
 
-	_, err = f.WriteString(content + "\n")
+	// add newline if missing
+	if !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+
+	_, err = f.WriteString(content)
 	if err != nil {
 		return err
 	}
