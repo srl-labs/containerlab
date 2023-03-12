@@ -35,4 +35,7 @@ site/
 __rd*
 tests/out
 **/.*clab.y?ml
+
+# ignore clab backup topo files in test directories
 clab/test_data/*.bak
+tests/**/*.bak
