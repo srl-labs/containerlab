@@ -267,10 +267,16 @@ func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
 	}
 
+	mtu := l.MTU
+
+	if mtu == 0 {
+		mtu = DefaultVethLinkMTU
+	}
+
 	return &types.Link{
 		A:      c.NewEndpoint(l.Endpoints[0]),
 		B:      c.NewEndpoint(l.Endpoints[1]),
-		MTU:    DefaultVethLinkMTU,
+		MTU:    mtu,
 		Labels: l.Labels,
 		Vars:   l.Vars,
 	}

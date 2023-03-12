@@ -287,9 +287,20 @@ Management network is used to provide management access to the NOS containers, i
 
 The above diagram shows how links are created in the topology definition file. In this example, the datapath consists of the two virtual point-to-point wires between SR Linux and cEOS containers. These links are created on-demand by containerlab itself.
 
-The p2p links are provided by the `veth` device pairs where each end of the `veth` pair is attached to a respective container. The MTU on these veth links is set to 9500, so a regular 9212 MTU on the network links shouldn't be a problem.
+The p2p links are provided by the `veth` device pairs where each end of the `veth` pair is attached to a respective container.
 
-### host links
+### Link MTU
+
+The MTU on the veth links is set by default to 9500B, so a regular jumbo frame shouldn't traverse the links without problems. If you need to change the MTU, you can do so by setting the `mtu` property in the link definition:
+
+```yaml
+topology:
+  links:
+    - endpoints: ["router2:eth2", "router3:eth1"]
+      mtu: 1500
+```
+
+### Host links
 
 It is also possible to interconnect container' data interface not with other container or add it to a [bridge](kinds/bridge.md), but to attach it to a host's root namespace. This is, for example, needed to create a L2 connectivity between containerlab nodes running on different VMs (aka multi-node labs).
 
