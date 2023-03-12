@@ -21,11 +21,11 @@ const (
 	CertFileSuffix            = ".pem"
 	KeyFileSuffix             = ".key"
 	CSRFileSuffix             = ".csr"
-	startupConfigDlSubDir     = "clab-download"
 )
 
 var (
-	startupConfigDlBaseDir = os.TempDir()
+	// clabTmpDir is the directory where clab stores temporary and/or downloaded files.
+	clabTmpDir = filepath.Join(os.TempDir() + "clab")
 )
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
@@ -143,15 +143,13 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 	return t.topoFile
 }
 
-// StartupConfigDownloadDir returns the StartupConfg Download directory.
-// If a non-local startup config is provied (e.g. http/https) then config needs
-// to be downloaded and this provides the directory for storing the configs.
-func (t *TopoPaths) StartupConfigDownloadDir() string {
-	return filepath.Join(startupConfigDlBaseDir, startupConfigDlSubDir)
+// ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
+func (t *TopoPaths) ClabTmpDir() string {
+	return clabTmpDir
 }
 
 func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node string, postfix string) string {
-	return filepath.Join(t.StartupConfigDownloadDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
+	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
 }
 
 // TopologyFilenameBase returns the full filename of the topology file

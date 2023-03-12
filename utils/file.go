@@ -179,20 +179,16 @@ func ResolvePath(p, base string) string {
 }
 
 const (
-	CalcFilename_Undefined = "undefined"
+	UndefinedFileName = "undefined"
 )
 
-// CalcFilename tries to deduce a filename from the given url
-// returns "undefined" if facing issues
-func CalcFilename(rawUrl string) string {
+// FilenameForURL extracts a filename from a given url
+// returns "undefined" when unsuccessful.
+func FilenameForURL(rawUrl string) string {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
-		return CalcFilename_Undefined
+		return UndefinedFileName
 	}
-	pathElems := strings.Split(u.Path, "/")
-	lastPathElem := pathElems[len(pathElems)-1]
-	if len(lastPathElem) == 0 {
-		return CalcFilename_Undefined
-	}
-	return lastPathElem
+
+	return filepath.Base(u.Path)
 }

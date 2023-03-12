@@ -6,7 +6,7 @@ package utils
 
 import "testing"
 
-func Test_CalcFilename(t *testing.T) {
+func TestFilenameForURL(t *testing.T) {
 	type args struct {
 		rawUrl string
 	}
@@ -27,7 +27,7 @@ func Test_CalcFilename(t *testing.T) {
 			args: args{
 				rawUrl: "http://myserver.foo/download/raw/",
 			},
-			want: CalcFilename_Undefined,
+			want: "raw",
 		},
 		{
 			name: "with get parameters",
@@ -39,8 +39,8 @@ func Test_CalcFilename(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CalcFilename(tt.args.rawUrl); got != tt.want {
-				t.Errorf("calcFilename() = %v, want %v", got, tt.want)
+			if got := FilenameForURL(tt.args.rawUrl); got != tt.want {
+				t.Errorf("got: %v, want: %v", got, tt.want)
 			}
 		})
 	}

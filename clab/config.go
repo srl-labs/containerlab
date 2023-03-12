@@ -271,17 +271,17 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 
 	// if the startup-config is a remote file, download it to the temp directory
 	if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
-		tmpLoc := c.TopoPaths.StartupConfigDownloadDir()
+		tmpLoc := c.TopoPaths.ClabTmpDir()
 
 		utils.CreateDirectory(tmpLoc, 0755)
 
-		// Try to deduce a filename from the url
-		postfix := utils.CalcFilename(p)
+		// get file name from an URL
+		fname := utils.FilenameForURL(p)
 
 		// Deduce the absolute destination filename for the downloaded content
-		absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, postfix)
+		absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
 
-		log.Debugf("Fetching startup-config %q for node %q storing as %q", p, nodeCfg.ShortName, absDestFile)
+		log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
 		// download the file to tmp location
 
 		err := utils.CopyFileContents(p, absDestFile, 0755)
