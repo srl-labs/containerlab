@@ -25,7 +25,7 @@ const (
 
 var (
 	// clabTmpDir is the directory where clab stores temporary and/or downloaded files.
-	clabTmpDir = filepath.Join(os.TempDir() + "clab")
+	clabTmpDir = filepath.Join(os.TempDir(), ".clab")
 )
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
@@ -148,6 +148,8 @@ func (t *TopoPaths) ClabTmpDir() string {
 	return clabTmpDir
 }
 
+// StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file
+// when it is downloaded from a remote location to the clab temp directory.
 func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node string, postfix string) string {
 	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
 }
