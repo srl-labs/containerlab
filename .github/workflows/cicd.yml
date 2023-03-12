@@ -101,11 +101,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - run: go test -cover ./...
       - name: Staticcheck
         run: |
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
+
+      - run: go test -cover ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
 
   build-podman-v4:
     env:
