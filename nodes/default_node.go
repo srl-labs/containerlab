@@ -171,6 +171,7 @@ func (d *DefaultNode) DeleteNetnsSymlink() error {
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file is in the expected range of name values.
+// A no-op for the default node, specific nodes should implement this method.
 func (*DefaultNode) CheckInterfaceName() error {
 	return nil
 }

@@ -40,47 +40,47 @@ type vrVQFX struct {
 	nodes.DefaultNode
 }
 
-func (s *vrVQFX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrVQFX) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
-	s.HostRequirements.VirtRequired = true
+	n.HostRequirements.VirtRequired = true
 
-	s.Cfg = cfg
+	n.Cfg = cfg
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
-		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
+		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
+		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
+	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
 
-	if s.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
+	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
-		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
+		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
 }
 
-func (s *vrVQFX) PreDeploy(_ context.Context, _ *cert.Certificate) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
+func (n *vrVQFX) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
-func (s *vrVQFX) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(s.Cfg.LongName,
+func (n *vrVQFX) SaveConfig(_ context.Context) error {
+	err := netconf.SaveConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -89,6 +89,11 @@ func (s *vrVQFX) SaveConfig(_ context.Context) error {
 		return err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
+	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
 	return nil
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (n *vrVQFX) CheckInterfaceName() error {
+	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Cfg.Endpoints)
 }
