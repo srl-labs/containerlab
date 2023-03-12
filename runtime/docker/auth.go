@@ -17,7 +17,7 @@ const (
 	dockerDefaultConfigDir  = ".docker"
 	dockerDefaultConfigFile = "config.json"
 	dockerHubDomain         = "docker.io"
-	// dockerV1IndexAuthKey is a key under which credentials for dockerhub images are stored
+	// dockerV1IndexAuthKey is a key under which credentials for dockerhub images are stored.
 	dockerV1IndexAuthKey = "https://index.docker.io/v1/"
 )
 

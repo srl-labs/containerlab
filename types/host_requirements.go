@@ -56,7 +56,8 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 	}
 	// check minimum FreeMemory
 	if valid, num := h.verifyMinAvailMemory(); !valid {
-		message := fmt.Sprintf("node %q (%s) has a minimum available memory requirement of %d GB whilst only %d GB memory is available", nodeName, kindName, h.MinAvailMemoryGb, num)
+		message := fmt.Sprintf("node %q (%s) has a minimum available memory requirement of %d GB whilst only %d GB memory is available",
+			nodeName, kindName, h.MinAvailMemoryGb, num)
 		switch h.MinAvailMemoryGbFailAction {
 		case FailBehaviourError:
 			return fmt.Errorf(message)

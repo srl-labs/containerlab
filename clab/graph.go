@@ -81,7 +81,8 @@ func (c *CLab) GenerateGraph(_ string) error {
 				attr["fontcolor"] = "black"
 			}
 		}
-		if err := g.AddNode(c.TopoPaths.TopologyFilenameWithoutExt(), node.Config().ShortName, attr); err != nil {
+		if err := g.AddNode(c.TopoPaths.TopologyFilenameWithoutExt(),
+			node.Config().ShortName, attr); err != nil {
 			return err
 		}
 

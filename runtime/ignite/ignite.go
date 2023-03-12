@@ -139,7 +139,7 @@ func (c *IgniteRuntime) DeleteNet(ctx context.Context) error {
 }
 
 // PullImage pulls the provided image name if it does not exist.
-// Ignite does ignore the pullPolicy though
+// Ignite does ignore the pullPolicy though.
 func (*IgniteRuntime) PullImage(_ context.Context, imageName string, pullPolicy types.PullPolicyValue) error {
 	ociRef, err := meta.NewOCIImageRef(imageName)
 	if err != nil {
