@@ -494,6 +494,10 @@ sidecar-node:
 
 Container name used after `container:` portion can refer to a node defined in containerlab topology or can refer to a name of a container that was launched outside of containerlab. This is useful when containerlab node needs to connect to a network namespace of a container deployed by 3rd party management tool (e.g. k8s kind).
 
+#### none mode
+
+If you want to completely disable the networking stack on a container, you can use the `none` network mode. In this mode containerlab will deploy nodes without `eth0` interface and docker networking. See [docker docs](https://docs.docker.com/network/none/) for more details.
+
 ### runtime
 
 By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman`, `containerd`, and `ignite` runtimes.
