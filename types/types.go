@@ -142,7 +142,7 @@ type NodeConfig struct {
 
 func DisableTxOffload(n *NodeConfig) error {
 	// skip this if node runs in host mode
-	if strings.ToLower(n.NetworkMode) == "host" {
+	if strings.ToLower(n.NetworkMode) == "host" || strings.ToLower(n.NetworkMode) == "none" {
 		return nil
 	}
 	// disable tx checksum offload for linux containers on eth0 interfaces

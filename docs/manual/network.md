@@ -7,6 +7,7 @@ In this document we will discuss the networking concepts that containerlab emplo
 2. Interconnect containers to create network topologies of users choice
 
 ## Management network
+
 As governed by the well-established container [networking principles](https://docs.docker.com/network/) containers are able to get network connectivity using various drivers/methods. The most common networking driver that is enabled by default for docker-managed containers is the [bridge driver](https://docs.docker.com/network/bridge/).
 
 The bridge driver connects containers to a linux bridge interface named `docker0` on most linux operating systems. The containers are then able to communicate with each other and the host via this virtual switch (bridge interface).
@@ -38,6 +39,7 @@ As seen from the topology definition file, the lab consists of the two SR Linux 
 The diagram above shows that these two nodes are not only interconnected between themselves, but also connected to a bridge interface on the lab host. This is driven by the containerlab default management network settings.
 
 ### default settings
+
 When no information about the management network is provided within the topo definition file, containerlab will do the following
 
 1. create, if not already created, a docker network named `clab`
@@ -89,6 +91,7 @@ The output above shows that srl1 container has been assigned `172.20.20.3/24 / 2
 ```
 
 Now it's possible to reach the assigned IP address from the lab host as well as from other containers connected to this management network.
+
 ```bash
 # ping srl1 management interface from srl2
 ❯ docker exec -it clab-srl02-srl2 sr_cli "ping 172.20.20.3 network-instance mgmt"
@@ -102,9 +105,11 @@ PING 172.20.20.3 (172.20.20.3) 56(84) bytes of data.
     If you run multiple labs without changing the default management settings, the containers of those labs will end up connecting to the same management network with their management interface.
 
 ### host mode networking
+
 In addition to the bridge-based management network containerlab supports launching nodes in [host networking mode](https://docs.docker.com/network/host/). In this mode containers are attached to the host network namespace. Host mode is enabled with [network-mode](nodes.md#network-mode) node setting.
 
 ### configuring management network
+
 Most of the time there is no need to change the defaults for management network configuration, but sometimes it is needed. For example, it might be that the default network ranges are overlapping with the existing addressing scheme on the lab host, or it might be desirable to have predefined management IP addresses.
 
 For such cases, the users need to add the `mgmt` container at the top level of their topology definition file:
@@ -124,6 +129,7 @@ topology:
 With these settings in place, container will get their IP addresses from the specified ranges accordingly.
 
 #### user-defined addresses
+
 By default, container runtime will assign the management IP addresses for the containers. But sometimes, it's helpful to have user-defined addressing in the management network.
 
 For such cases, users can define the desired IPv4/6 addresses on a per-node basis:
@@ -149,6 +155,7 @@ Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses
     2. IPv4/6 addresses set on a node level must be from the management network range.
 
 #### MTU
+
 The MTU of the management network defaults to an MTU value of `docker0` interface, but it can be set to a user defined value:
 
 ```yaml
@@ -160,6 +167,7 @@ mgmt:
 This will result in every interface connected to that network to inherit this MTU value.
 
 #### network name
+
 The default container network name is `clab`. To customize this name, users should specify a new value within the `network` element:
 
 ```yaml
@@ -168,6 +176,7 @@ mgmt:
 ```
 
 #### default docker network
+
 To make clab nodes start in the default docker network `bridge`, which uses the `docker0` bridge interface, users need to mention this explicitly in the configuration:
 
 ```yaml
@@ -178,6 +187,7 @@ mgmt:
 Since `bridge` network is created by default by docker, using its name in the configuration will make nodes to connect to this network.
 
 #### bridge name
+
 By default, containerlab will create a linux bridge backing the management docker network with the following name `br-<network-id>`. The network-id part is coming from the docker network ID that docker manages.
 
 We allow our users to change the bridge name that the management network will use. This can be used to connect containers to an already existing bridge with other workloads connected:
@@ -204,6 +214,7 @@ mgmt:
 ```
 
 #### external access
+
 Starting with `0.24.0` release containerlab will enable external access to the nodes by default. This means that external systems/hosts will be able to communicate with the nodes of your topology without requiring any manual configuration.
 
 To allow external communications containerlab installs a rule in the `DOCKER-USER` iptables chain, allowing all packets targeting containerlab's management network. The rule looks like follows:
@@ -216,7 +227,7 @@ Chain DOCKER-USER (1 references)
  768K 4728M RETURN     all  --  *      *       0.0.0.0/0            0.0.0.0/0          
 ```
 
-1.  The `br-03d953ed46df` bridge interface is the interface that backs up the containerlab's management network.
+1. The `br-03d953ed46df` bridge interface is the interface that backs up the containerlab's management network.
 
 The rule will be removed together with the management network.
 
@@ -230,7 +241,7 @@ topology:
 # your regular topology definition
 ```
 
-1.  When set to `false`, containerlab will not touch iptables rules. On most docker installations this will result in restricted external access.
+1. When set to `false`, containerlab will not touch iptables rules. On most docker installations this will result in restricted external access.
 
 ???error "'missing DOCKER-USER iptables chain' error"
     Containerlab will throw an error "missing DOCKER-USER iptables chain" when this chain is not found. This error is typically caused by two factors
@@ -241,6 +252,7 @@ topology:
     When docker is correctly installed, additional iptables chains will become available and the error will not appear.
 
 ### connection details
+
 When containerlab needs to create the management network, it asks the docker daemon to do this. Docker will fulfill the request and will create a network with the underlying linux bridge interface backing it. The bridge interface name is generated by the docker daemon, but it is easy to find it:
 
 ```bash
@@ -260,14 +272,15 @@ d2169a14e334
 
 # now the name is known and it's easy to show bridge state
 ❯ brctl show br-d2169a14e334
-bridge name	        bridge id		    STP enabled	  interfaces
-br-d2169a14e334		8000.0242fe382b74	no		      vetha57b950
-							                          vethe9da10a
+bridge name         bridge id      STP enabled   interfaces
+br-d2169a14e334  8000.0242fe382b74 no        vetha57b950
+                                 vethe9da10a
 ```
 
 As explained in the beginning of this article, containers will connect to this docker network. This connection is carried out by the `veth` devices created and attached with one end to bridge interface in the lab host and the other end in the container namespace. This is illustrated by the bridge output above and the diagram at the beginning the of the article.
 
 ## Point-to-point links
+
 Management network is used to provide management access to the NOS containers, it does not carry control or dataplane traffic. In containerlab we create additional point-to-point links between the containers to provide the datapath between the lab nodes.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:11,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
@@ -277,6 +290,7 @@ The above diagram shows how links are created in the topology definition file. I
 The p2p links are provided by the `veth` device pairs where each end of the `veth` pair is attached to a respective container. The MTU on these veth links is set to 9500, so a regular 9212 MTU on the network links shouldn't be a problem.
 
 ### host links
+
 It is also possible to interconnect container' data interface not with other container or add it to a [bridge](kinds/bridge.md), but to attach it to a host's root namespace. This is, for example, needed to create a L2 connectivity between containerlab nodes running on different VMs (aka multi-node labs).
 
 This "host-connectivity" is achieved by using a reserved node name - `host` - referenced in the endpoints section. Consider the following example where an SR Linux container has its only data interface connected to a hosts root namespace via veth interface:
@@ -304,6 +318,7 @@ ip link
 ```
 
 ### Additional connections to management network
+
 By default every lab node will be connected to the docker network named `clab` which acts as a management network for the nodes.
 
 In addition to that mandatory connection, users can attach additional interfaces to this management network. This might be needed, for example, when data interface of a node needs to talk to the nodes on the management network.
@@ -333,6 +348,7 @@ This is best illustrated with the following diagram:
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:14,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
 ## DNS
+
 When containerlab finishes the nodes deployment, it also creates static DNS entries inside the `/etc/hosts` file so that users can access the nodes using their DNS names.
 
 The DNS entries are created for each node's IPv4/6 address, and follow the pattern - `clab-$labName-$nodeName`.
