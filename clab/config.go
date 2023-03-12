@@ -224,37 +224,17 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
 
 	log.Debugf("node config: %+v", nodeCfg)
-	// initialize config
-	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+
+	// process startup-config
+	err = c.processStartupConfig(nodeCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// download http or https referenced configs
-	if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
-		tmpLoc := c.TopoPaths.StartupConfigDownloadDir()
-		utils.CreateDirectory(tmpLoc, 0755)
-		// Try to deduce a filename from the url
-		postfix := utils.CalcFilename(p)
-		// Deduce the absolute destination filename for the downloaded content
-		absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, postfix)
-		log.Debugf("Fetching startup-config %q for node %q storing as %q", p, nodeCfg.ShortName, absDestFile)
-		// download the file to tmp location
-		err := utils.CopyFileContents(p, absDestFile, 0755)
-		if err != nil {
-			return nil, err
-		}
-		// adjust the nodeconfig by pointing startup-config to the local downloaded file
-		p = absDestFile
-	}
-
-	// resolve the startup config path to an abs path
-	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
-
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 
 	// initialize license field
-	p, err = c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	p, err := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	if err != nil {
 		return nil, err
 	}
@@ -278,6 +258,45 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
 
 	return nodeCfg, nil
+}
+
+// processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
+// It handles remote files and local files. And returns an absolute path to the startup-config file.
+func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
+	// process startup-config
+	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+	if err != nil {
+		return err
+	}
+
+	// if the startup-config is a remote file, download it to the temp directory
+	if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
+		tmpLoc := c.TopoPaths.StartupConfigDownloadDir()
+
+		utils.CreateDirectory(tmpLoc, 0755)
+
+		// Try to deduce a filename from the url
+		postfix := utils.CalcFilename(p)
+
+		// Deduce the absolute destination filename for the downloaded content
+		absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, postfix)
+
+		log.Debugf("Fetching startup-config %q for node %q storing as %q", p, nodeCfg.ShortName, absDestFile)
+		// download the file to tmp location
+
+		err := utils.CopyFileContents(p, absDestFile, 0755)
+		if err != nil {
+			return err
+		}
+
+		// adjust the nodeconfig by pointing startup-config to the local downloaded file
+		p = absDestFile
+	}
+
+	// resolve the startup config path to an abs path
+	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+
+	return nil
 }
 
 // NewLink initializes a new link object.
