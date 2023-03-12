@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  GOVER: 1.18.4
+  GOVER: 1.20.2
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.0.13-insiders-4.32.0-hellt
   GORELEASER_VER: v1.11.4
@@ -19,7 +19,7 @@ env:
 
 jobs:
   file-changes:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       code: ${{ steps.filter.outputs.code }}
       docs: ${{ steps.filter.outputs.docs }}
@@ -48,7 +48,7 @@ jobs:
               - '.github/workflows/cicd.yml'
 
   build-containerlab:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -79,7 +79,7 @@ jobs:
           path: containerlab
 
   unit-test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -104,13 +104,13 @@ jobs:
       - run: go test -cover ./...
       - name: Staticcheck
         run: |
-          go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
+          go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
 
   build-podman-v4:
     env:
       CGO_ENABLED: 1 # CGO is required for podman
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -164,7 +164,7 @@ jobs:
           path: bin
 
   smoke-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         runtime:
@@ -215,7 +215,7 @@ jobs:
           path: ./tests/out/*.html
 
   ext-container-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         runtime:
@@ -258,7 +258,7 @@ jobs:
           path: ./tests/out/*.html
 
   ceos-basic-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         runtime:
@@ -304,7 +304,7 @@ jobs:
           path: ./tests/out/*.html
 
   srlinux-basic-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         runtime:
@@ -353,7 +353,7 @@ jobs:
           path: ./tests/out/*.html
 
   ixiac-one-basic-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         runtime:
@@ -390,7 +390,7 @@ jobs:
           path: ./tests/out/*.html
 
   docs-test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: file-changes
     if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
@@ -423,7 +423,7 @@ jobs:
           config: docs/htmltest.yml
 
   build-and-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - docs-test
@@ -470,7 +470,7 @@ jobs:
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
 
   publish-docs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
     needs: build-and-release
     steps:
@@ -492,7 +492,7 @@ jobs:
   # it skips the code build/release and proceeds with docs publishing
   # the intended usage is to provide fixes/updates to docs, which do not require code changes
   update-docs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/docs-publish'
     needs: docs-test
     steps:
