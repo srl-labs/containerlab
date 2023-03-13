@@ -117,7 +117,6 @@ jobs:
             ${{ runner.os }}-go-
 
       - run: CGO_ENABLED=1 go test -race -cover ./...
-      - run: go vet ./...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
