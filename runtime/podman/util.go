@@ -353,7 +353,7 @@ func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
 	err := utils.EthtoolTXOff(brName)
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offload for interface %q: %v", brName, err)
-		return err
+		return nil
 	}
 	log.Debugf("Successully disabled Tx checksum offload for interface %q", brName)
 	return nil
@@ -462,6 +462,10 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 
 // postStartActions performs misc. tasks that are needed after the container starts.
 func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *types.NodeConfig) error {
+	// skip if hostnetwork or none
+	if cfg.NetworkMode == "host" || cfg.NetworkMode == "none" {
+		return nil
+	}
 	var err error
 	// Add NSpath to the node config struct
 	cfg.NSPath, err = r.GetNSPath(ctx, cID)
