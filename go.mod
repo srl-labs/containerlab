@@ -19,6 +19,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
+	github.com/h2non/gock v1.2.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.4
 	github.com/hashicorp/go-version v1.6.0
 	github.com/joho/godotenv v1.5.1
@@ -65,6 +66,7 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/go-openapi/validate v0.22.0 // indirect
 	github.com/google/go-containerregistry v0.13.0 // indirect
+	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20221109233200-85aa52084eaf // indirect

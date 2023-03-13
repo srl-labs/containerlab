@@ -17,7 +17,6 @@ import (
 	ipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
 	keysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	linux "github.com/srl-labs/containerlab/nodes/linux"
-	mysocketio "github.com/srl-labs/containerlab/nodes/mysocketio"
 	ovs "github.com/srl-labs/containerlab/nodes/ovs"
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
@@ -48,7 +47,6 @@ func (c *CLab) RegisterNodes() {
 	ipinfusion_ocnos.Register(c.Reg)
 	keysight_ixiacone.Register(c.Reg)
 	linux.Register(c.Reg)
-	mysocketio.Register(c.Reg)
 	ovs.Register(c.Reg)
 	sonic.Register(c.Reg)
 	srl.Register(c.Reg)

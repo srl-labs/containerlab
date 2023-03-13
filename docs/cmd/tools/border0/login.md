@@ -1,4 +1,4 @@
-# Mysocketio login
+# border0 login
 
 ### Description
 
@@ -24,7 +24,7 @@ The `--password | -p` sets the password for a user. If flag is not set, the prom
 # Login with password entered from the prompt
 containerlab tools border0.com login -e myemail@dot.com
 Password:
-INFO[0000] Written border0.com token to a file /root/containerlab/.mysocketio_token
+INFO[0000] Written border0.com token to a file /root/containerlab/.border0_token
 
 # Login with password passed as a flag
 containerlab tools border0.com login -e myemail@dot.com -p Pa$$word

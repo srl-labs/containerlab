@@ -457,12 +457,7 @@ topology:
 
 ### publish
 
-!!!danger
-    Mysocket.io service used in containerlab was recently rebranded to [border0.com](https://www.border0.com/), therefore this particular functionality is not available.
-
-    We have to refactor the publishing feature to use border0 service and would gladly accept PRs.
-
-Container lab integrates with [mysocket.io](https://mysocket.io) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with customers/partners/colleagues.
+Container lab integrates with [border0.com](https://border0.com) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with customers/partners/colleagues.
 
 This integration is extensively covered on [Publish ports](published-ports.md) page.
 

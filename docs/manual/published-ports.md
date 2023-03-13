@@ -1,7 +1,3 @@
-!!!danger
-    Mysocket.io service used in containerlab was recently rebranded to [border0.com](https://www.border0.com/), therefore this particular functionality is not available.
-
-    We have to refactor the publishing feature to use border0 service and would gladly accept PRs.
 
 Labs are typically deployed in the isolated environments, such as company's internal network, cloud region or even a laptop. The lab nodes can happily talk to each other and, if needed, can reach Internet in the outbound direction.
 
