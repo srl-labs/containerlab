@@ -53,7 +53,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: WillAbides/setup-go-faster@v1.8.0
         with:
           go-version: ${{ env.GOVER }}
 
@@ -84,7 +84,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: WillAbides/setup-go-faster@v1.8.0
         with:
           go-version: ${{ env.GOVER }}
 
@@ -102,11 +102,12 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Staticcheck
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck ./...
+        uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          install-go: false
 
       - run: go test -cover ./...
+      - run: go vet ./...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -134,7 +135,7 @@ jobs:
           repository: containers/podman
           ref: v4.1.1
 
-      - uses: actions/setup-go@v3
+      - uses: WillAbides/setup-go-faster@v1.8.0
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         with:
           go-version: ${{ env.GOVER }}
@@ -440,7 +441,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: WillAbides/setup-go-faster@v1.8.0
         with:
           go-version: ${{ env.GOVER }}
 
