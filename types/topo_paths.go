@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,11 +23,17 @@ const (
 	CSRFileSuffix             = ".csr"
 )
 
+var (
+	// clabTmpDir is the directory where clab stores temporary and/or downloaded files.
+	clabTmpDir = filepath.Join(os.TempDir(), ".clab")
+)
+
 // TopoPaths creates all the required absolute paths and filenames for a topology.
 // generally all these paths are deduced from two main paths. The topology file path and the lab dir path.
 type TopoPaths struct {
 	topoFile string
 	labDir   string
+	topoName string
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
@@ -66,6 +73,7 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 
 // SetLabDir sets the labDir.
 func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
+	t.topoName = topologyName
 	// if "CLAB_LABDIR_BASE" Env Var is set, use that dir as a base
 	// for the labDir, otherwise use PWD.
 	baseDir := os.Getenv("CLAB_LABDIR_BASE")
@@ -133,6 +141,17 @@ func (t *TopoPaths) AnsibleInventoryFileAbsPath() string {
 // TopologyFilenameAbsPath returns the absolute path to the topology file.
 func (t *TopoPaths) TopologyFilenameAbsPath() string {
 	return t.topoFile
+}
+
+// ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
+func (t *TopoPaths) ClabTmpDir() string {
+	return clabTmpDir
+}
+
+// StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file
+// when it is downloaded from a remote location to the clab temp directory.
+func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node string, postfix string) string {
+	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
 }
 
 // TopologyFilenameBase returns the full filename of the topology file

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -180,4 +181,19 @@ func ResolvePath(p, base string) string {
 		p = filepath.Join(base, p)
 	}
 	return p
+}
+
+const (
+	UndefinedFileName = "undefined"
+)
+
+// FilenameForURL extracts a filename from a given url
+// returns "undefined" when unsuccessful.
+func FilenameForURL(rawUrl string) string {
+	u, err := url.Parse(rawUrl)
+	if err != nil {
+		return UndefinedFileName
+	}
+
+	return filepath.Base(u.Path)
 }

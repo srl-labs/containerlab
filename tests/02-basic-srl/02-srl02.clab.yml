@@ -15,7 +15,7 @@ topology:
     srl2:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
-      startup-config: srl2-startup.cli
+      startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
 
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
