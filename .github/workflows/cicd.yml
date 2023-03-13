@@ -105,8 +105,9 @@ jobs:
         uses: dominikh/staticcheck-action@v1.3.0
         with:
           install-go: false
+          cache-key: ${{ runner.os }}-go-
 
-      - run: go test -race -cover ./...
+      - run: CGO_ENABLED=1 go test -race -cover ./...
       - run: go vet ./...
 
       - name: Upload coverage to Codecov
