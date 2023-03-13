@@ -116,7 +116,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - run: CGO_ENABLED=1 go test -race -cover ./...
+      - run: CGO_ENABLED=1 go test -race ./... -coverprofile coverage.out -covermode atomic
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
