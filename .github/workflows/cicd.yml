@@ -15,7 +15,7 @@ env:
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.0.13-insiders-4.32.0-hellt
   GORELEASER_VER: v1.11.4
-  PODMAN_VER: v4.1.1
+  PODMAN_VER: v4.4.2
 
 jobs:
   file-changes:
@@ -142,7 +142,7 @@ jobs:
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         with:
           repository: containers/podman
-          ref: v4.4.2
+          ref: ${{ env.PODMAN_VER }}
 
       - uses: WillAbides/setup-go-faster@v1.8.0
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
