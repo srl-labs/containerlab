@@ -78,6 +78,21 @@ jobs:
           name: containerlab
           path: containerlab
 
+  staticcheck:
+    runs-on: ubuntu-22.04
+    needs: file-changes
+    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v3
+      - uses: WillAbides/setup-go-faster@v1.8.0
+        with:
+          go-version: ${{ env.GOVER }}
+
+      - name: Staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+
   unit-test:
     runs-on: ubuntu-22.04
     needs: file-changes
@@ -100,11 +115,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Staticcheck
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck ./...
 
       - run: CGO_ENABLED=1 go test -race -cover ./...
       - run: go vet ./...
@@ -178,6 +188,7 @@ jobs:
         # - "containerd"
     needs:
       - unit-test
+      - staticcheck
       - build-containerlab
       - build-podman-v4
     steps:
@@ -227,6 +238,7 @@ jobs:
           - "docker"
     needs:
       - unit-test
+      - staticcheck
       - build-containerlab
     steps:
       - name: Checkout
@@ -271,6 +283,7 @@ jobs:
           # - "containerd"
     needs:
       - unit-test
+      - staticcheck
       - build-containerlab
     steps:
       - name: Checkout
@@ -317,6 +330,7 @@ jobs:
           - "podman"
     needs:
       - unit-test
+      - staticcheck
       - build-containerlab
     steps:
       - name: Checkout
@@ -365,6 +379,7 @@ jobs:
           - "docker"
     needs:
       - unit-test
+      - staticcheck
       - build-containerlab
     steps:
       - name: Checkout
