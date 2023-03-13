@@ -434,6 +434,9 @@ jobs:
       - docs-test
       - smoke-tests
       - ceos-basic-tests
+      - srlinux-basic-tests
+      - ixiac-one-basic-tests
+      - ext-container-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v3
