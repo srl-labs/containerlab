@@ -102,10 +102,9 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Staticcheck
-        uses: dominikh/staticcheck-action@v1.3.0
-        with:
-          install-go: false
-          cache-key: ${{ runner.os }}-go-
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
 
       - run: CGO_ENABLED=1 go test -race -cover ./...
       - run: go vet ./...
