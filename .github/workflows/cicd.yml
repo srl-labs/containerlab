@@ -124,7 +124,7 @@ jobs:
   build-podman-v4:
     env:
       CGO_ENABLED: 1 # CGO is required for podman
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -178,7 +178,7 @@ jobs:
           path: bin
 
   smoke-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         runtime:
