@@ -144,7 +144,9 @@ Verify port forwarding for node l2
     Should Contain    ${output}    Thank you for using nginx
 
 Verify static ipv4 mgmt addressing for l2
-    Skip If    '${runtime}' == 'containerd'
+    # excluding podman runtime, since static mgmt addressing stopped working in ubuntu 22.04
+    # see https://github.com/srl-labs/containerlab/issues/1291
+    Skip If    '${runtime}' != 'docker'
     ${rc}    ${ipv4} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -4 a sh eth0 | cut -d ' ' -f7
     Log    ${ipv4}
