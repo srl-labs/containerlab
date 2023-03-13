@@ -165,7 +165,7 @@ jobs:
 
       - name: Add build packages
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
-        run: sudo apt install -y libsystemd-dev libseccomp-dev pkg-config golang-github-proglottis-gpgme-dev
+        run: sudo apt update && sudo apt install -y libsystemd-dev libseccomp-dev pkg-config golang-github-proglottis-gpgme-dev
 
       - name: Build podman v4
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
