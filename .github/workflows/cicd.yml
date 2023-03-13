@@ -142,7 +142,7 @@ jobs:
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         with:
           repository: containers/podman
-          ref: v4.1.1
+          ref: v4.4.2
 
       - uses: WillAbides/setup-go-faster@v1.8.0
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
