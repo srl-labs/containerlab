@@ -36,39 +36,44 @@ type vrRos struct {
 	nodes.DefaultNode
 }
 
-func (s *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
-	s.HostRequirements.VirtRequired = true
+	n.HostRequirements.VirtRequired = true
 
-	s.Cfg = cfg
+	n.Cfg = cfg
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
-		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
-		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
+		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
+		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
+	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
 
-	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, "ftpboot"), ":/ftpboot"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, "ftpboot"), ":/ftpboot"))
 
-	if s.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
+	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
-		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
+		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.ShortName, s.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
 }
 
-func (s *vrRos) PreDeploy(_ context.Context, _ *cert.Certificate) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
+func (n *vrRos) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+}
+
+// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
+func (n *vrRos) CheckInterfaceName() error {
+	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Cfg.Endpoints)
 }
