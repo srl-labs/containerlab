@@ -153,8 +153,9 @@ Verify static ipv4 mgmt addressing for l2
     Should Be Equal As Strings    ${ipv4}    ${n2-ipv4}
 
 Verify static ipv6 mgmt addressing for l2
-    # skipping for containerd
-    Skip If    '${runtime}' == 'containerd'
+    # excluding podman runtime, since static mgmt addressing stopped working in ubuntu 22.04
+    # see https://github.com/srl-labs/containerlab/issues/1291
+    Skip If    '${runtime}' != 'docker'
     ${rc}    ${ipv6} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l2 ip -o -6 a sh eth0 | cut -d ' ' -f7 | head -1
     Log    ${ipv6}
