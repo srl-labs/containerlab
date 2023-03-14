@@ -234,7 +234,10 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 			specNetConfig.DNSSearch = cfg.DNS.Search
 			specNetConfig.DNSOptions = cfg.DNS.Options
 		}
-
+	case "none":
+		specNetConfig = specgen.ContainerNetworkConfig{
+			NetNS: specgen.Namespace{NSMode: specgen.None},
+		}
 	default:
 		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
 	}
