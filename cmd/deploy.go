@@ -76,7 +76,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
 		defaultExportTemplateFPath, "template file for topology data export")
 
-	deployCmd.Flags().StringSliceVarP(&deployFilter, "filter", "f", []string{},
+	deployCmd.Flags().StringSliceVarP(&deployFilter, "filter", "", []string{},
 		"comma separated list of nodes to include, optional")
 }
 
