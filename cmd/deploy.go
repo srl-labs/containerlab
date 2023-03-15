@@ -84,7 +84,7 @@ func init() {
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
-	log.Infof("Containerlab v%s started", version)
+	log.Infof("Containerlab v%s started, %+v", version, deployFilter)
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),

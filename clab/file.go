@@ -18,7 +18,6 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
@@ -80,23 +79,28 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 
 	// If a subset of nodes is specified, remove other nodes and links referring to them
 	if len(deployFilter) > 0 {
-		newNodes := make(map[string]nodes.Node)
-		newLinks := make(map[int]*types.Link)
+		log.Infof("Applying deployFilter %+v", deployFilter)
 
-		for name, node := range c.Nodes {
+		newNodes := make(map[string]*types.NodeDefinition)
+		newLinks := make([]*types.LinkConfig, 0)
+
+		for name, node := range c.Config.Topology.Nodes {
 			if slices.Contains(deployFilter, name) {
+				log.Infof("Including node %s", name)
 				newNodes[name] = node
+			} else {
+				log.Infof("Excluding node %s", name)
 			}
 		}
-		c.Nodes = newNodes
+		c.Config.Topology.Nodes = newNodes
 
-		for i, l := range c.Links {
-			if slices.Contains(deployFilter, l.A.Node.ShortName) &&
-				slices.Contains(deployFilter, l.B.Node.ShortName) {
+		for i, l := range c.Config.Topology.Links {
+			if len(l.Endpoints) != 2 || (slices.Contains(deployFilter, l.Endpoints[0]) &&
+				slices.Contains(deployFilter, l.Endpoints[1])) {
 				newLinks[i] = l
 			}
 		}
-		c.Links = newLinks
+		c.Config.Topology.Links = newLinks
 	}
 
 	c.Config.Topology.ImportEnvs()
