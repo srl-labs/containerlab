@@ -29,7 +29,7 @@ const (
 
 // GetTopology parses the topology file into c.Conf structure
 // as well as populates the TopoFile structure with the topology file related information.
-func (c *CLab) GetTopology(topo, varsFile string) error {
+func (c *CLab) GetTopology(topo, varsFile string, nodeFilter []string) error {
 	var err error
 
 	c.TopoPaths, err = types.NewTopoPaths(topo)
@@ -78,14 +78,14 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	}
 
 	// If a subset of nodes is specified, remove other nodes and links referring to them
-	if len(deployFilter) > 0 {
-		log.Infof("Applying deployFilter %+v", deployFilter)
+	if len(nodeFilter) > 0 {
+		log.Infof("Applying nodeFilter %+v", nodeFilter)
 
 		newNodes := make(map[string]*types.NodeDefinition)
 		newLinks := make([]*types.LinkConfig, 0)
 
 		for name, node := range c.Config.Topology.Nodes {
-			if slices.Contains(deployFilter, name) {
+			if slices.Contains(nodeFilter, name) {
 				log.Debugf("Including node %s", name)
 				newNodes[name] = node
 			} else {
@@ -100,7 +100,7 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 			} else {
 				ep1 := strings.Split(l.Endpoints[0], ":")[0]
 				ep2 := strings.Split(l.Endpoints[1], ":")[0]
-				if slices.Contains(deployFilter, ep1) && slices.Contains(deployFilter, ep2) {
+				if slices.Contains(nodeFilter, ep1) && slices.Contains(nodeFilter, ep2) {
 					log.Debugf("Including link %+v", l)
 					newLinks = append(newLinks, l)
 				} else {
