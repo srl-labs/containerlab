@@ -86,18 +86,26 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 
 		for name, node := range c.Config.Topology.Nodes {
 			if slices.Contains(deployFilter, name) {
-				log.Infof("Including node %s", name)
+				log.Debugf("Including node %s", name)
 				newNodes[name] = node
 			} else {
-				log.Infof("Excluding node %s", name)
+				log.Debugf("Excluding node %s", name)
 			}
 		}
 		c.Config.Topology.Nodes = newNodes
 
-		for i, l := range c.Config.Topology.Links {
-			if len(l.Endpoints) != 2 || (slices.Contains(deployFilter, l.Endpoints[0]) &&
-				slices.Contains(deployFilter, l.Endpoints[1])) {
-				newLinks[i] = l
+		for _, l := range c.Config.Topology.Links {
+			if len(l.Endpoints) != 2 {
+				newLinks = append(newLinks, l)
+			} else {
+				ep1 := strings.Split(l.Endpoints[0], ":")[0]
+				ep2 := strings.Split(l.Endpoints[1], ":")[0]
+				if slices.Contains(deployFilter, ep1) && slices.Contains(deployFilter, ep2) {
+					log.Debugf("Including link %+v", l)
+					newLinks = append(newLinks, l)
+				} else {
+					log.Debugf("Excluding link %+v between %s and %s", l, ep1, ep2)
+				}
 			}
 		}
 		c.Config.Topology.Links = newLinks
