@@ -15,8 +15,10 @@ import (
 
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
+	"k8s.io/utils/strings/slices"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
@@ -74,6 +76,27 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	err = yaml.UnmarshalStrict(yamlFile, c.Config)
 	if err != nil {
 		return err
+	}
+
+	// If a subset of nodes is specified, remove other nodes and links referring to them
+	if len(deployFilter) > 0 {
+		newNodes := make(map[string]nodes.Node)
+		newLinks := make(map[int]*types.Link)
+
+		for name, node := range c.Nodes {
+			if slices.Contains(deployFilter, name) {
+				newNodes[name] = node
+			}
+		}
+		c.Nodes = newNodes
+
+		for i, l := range c.Links {
+			if slices.Contains(deployFilter, l.A.Node.ShortName) &&
+				slices.Contains(deployFilter, l.B.Node.ShortName) {
+				newLinks[i] = l
+			}
+		}
+		c.Links = newLinks
 	}
 
 	c.Config.Topology.ImportEnvs()
