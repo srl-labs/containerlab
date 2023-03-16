@@ -22,7 +22,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
-	"k8s.io/utils/strings/slices"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 type CLab struct {
@@ -129,7 +129,7 @@ func WithNodeFilter(nodeFilter []string) ClabOption {
 
 			// remove nodes
 			for name, node := range c.Config.Topology.Nodes {
-				if slices.Contains(nodeFilter, name) {
+				if _, exists := utils.StringInSlice(nodeFilter, name); exists {
 					log.Debugf("Including node %s", name)
 					newNodes[name] = node
 				} else {
@@ -146,7 +146,11 @@ func WithNodeFilter(nodeFilter []string) ClabOption {
 				} else {
 					ep1 := strings.Split(l.Endpoints[0], ":")[0]
 					ep2 := strings.Split(l.Endpoints[1], ":")[0]
-					if slices.Contains(nodeFilter, ep1) && slices.Contains(nodeFilter, ep2) {
+
+					_, containsAside := utils.StringInSlice(nodeFilter, ep1)
+					_, containsBside := utils.StringInSlice(nodeFilter, ep2)
+
+					if containsAside && containsBside {
 						log.Debugf("Including link %+v", l)
 						newLinks = append(newLinks, l)
 					} else {
