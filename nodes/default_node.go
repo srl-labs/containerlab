@@ -133,6 +133,11 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericConta
 	if err != nil {
 		return nil, err
 	}
+	// check that we retrieved some container information
+	// otherwise throw ErrContainersNotFound error
+	if len(cnts) == 0 {
+		return nil, fmt.Errorf("Node: %s. %w", d.GetContainerName(), ErrContainersNotFound)
+	}
 
 	return cnts, err
 }
