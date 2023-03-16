@@ -29,7 +29,8 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		}
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo, varsFile, []string{}),
+			clab.WithTopoFile(topo, varsFile),
+			clab.WithNodeFilter(nodeFilter),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,
@@ -66,5 +67,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 }
 
 func init() {
+	saveCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+		"comma separated list of nodes to include, optional")
 	rootCmd.AddCommand(saveCmd)
 }

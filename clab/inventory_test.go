@@ -60,7 +60,7 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got, "", []string{}),
+				WithTopoFile(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {

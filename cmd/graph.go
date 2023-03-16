@@ -45,7 +45,8 @@ func graphFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile, []string{}),
+		clab.WithTopoFile(topo, varsFile),
+		clab.WithNodeFilter(nodeFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,
@@ -131,4 +132,6 @@ func init() {
 		"Go html template used to generate the graph")
 	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath,
 		"Serve static files from the specified directory")
+	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+		"comma separated list of nodes to include, optional")
 }

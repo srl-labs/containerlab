@@ -60,7 +60,8 @@ func configRun(_ *cobra.Command, args []string) error {
 
 	c, err := clab.NewContainerLab(
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile, configFilter),
+		clab.WithTopoFile(topo, varsFile),
+		clab.WithNodeFilter(nodeFilter),
 		clab.WithDebug(debug),
 	)
 	if err != nil {
@@ -154,6 +155,9 @@ func init() {
 	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{},
 		"comma separated list of nodes to include")
 	configCmd.Flags().SortFlags = false
+
+	configCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+		"comma separated list of nodes to include, optional")
 
 	configCmd.AddCommand(configSendCmd)
 	configSendCmd.Flags().AddFlagSet(configCmd.Flags())

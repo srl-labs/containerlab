@@ -22,6 +22,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"k8s.io/utils/strings/slices"
 )
 
 type CLab struct {
@@ -100,16 +101,63 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
-func WithTopoFile(file, varsFile string, deployFilter []string) ClabOption {
+func WithTopoFile(file, varsFile string) ClabOption {
 	return func(c *CLab) error {
 		if file == "" {
 			return fmt.Errorf("provide a path to the clab topology file")
 		}
-		if err := c.GetTopology(file, varsFile, deployFilter); err != nil {
+		if err := c.GetTopology(file, varsFile); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
 
 		return c.initMgmtNetwork()
+	}
+}
+
+// WithNodeFilter allows for the filtering of nodes from a topology
+//
+// !!! Since this is altering the clab.config.Topology.[Nodes,Links] it must only
+// be called after WithTopoFile(). !!!
+func WithNodeFilter(nodeFilter []string) ClabOption {
+	return func(c *CLab) error {
+		// If a subset of nodes is specified, remove other nodes and links referring to them
+		if len(nodeFilter) > 0 {
+			log.Infof("Applying nodeFilter %+v", nodeFilter)
+
+			newNodes := map[string]*types.NodeDefinition{}
+			newLinks := []*types.LinkConfig{}
+
+			// remove nodes
+			for name, node := range c.Config.Topology.Nodes {
+				if slices.Contains(nodeFilter, name) {
+					log.Debugf("Including node %s", name)
+					newNodes[name] = node
+				} else {
+					log.Debugf("Excluding node %s", name)
+				}
+			}
+			// replace the original collection of nodes with the filtered
+			c.Config.Topology.Nodes = newNodes
+
+			// remove links
+			for _, l := range c.Config.Topology.Links {
+				if len(l.Endpoints) != 2 {
+					newLinks = append(newLinks, l)
+				} else {
+					ep1 := strings.Split(l.Endpoints[0], ":")[0]
+					ep2 := strings.Split(l.Endpoints[1], ":")[0]
+					if slices.Contains(nodeFilter, ep1) && slices.Contains(nodeFilter, ep2) {
+						log.Debugf("Including link %+v", l)
+						newLinks = append(newLinks, l)
+					} else {
+						log.Debugf("Excluding link %+v between %s and %s", l, ep1, ep2)
+					}
+				}
+			}
+			// replace the original collection of links with the filtered
+			c.Config.Topology.Links = newLinks
+		}
+		return nil
 	}
 }
 

@@ -43,6 +43,8 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
+	inspectCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+		"comma separated list of nodes to include, optional")
 }
 
 func inspectFn(_ *cobra.Command, _ []string) error {
@@ -63,7 +65,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	}
 
 	if topo != "" {
-		opts = append(opts, clab.WithTopoFile(topo, varsFile, []string{}))
+		opts = append(opts,
+			clab.WithTopoFile(topo, varsFile),
+			clab.WithNodeFilter(nodeFilter),
+		)
 	}
 
 	c, err := clab.NewContainerLab(opts...)

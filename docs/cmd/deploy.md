@@ -77,9 +77,9 @@ Following values are accepted, ordered from most verbose to least: `trace`, `deb
 
 It should be useful to enable more verbose logging when something doesn't work as expected, to better understand what's going on, and to provide more useful output logs when reporting containerlab issues, while making it more terse in production environments.
 
-#### filter
+#### node-filter
 
-The local `--filter` flag allows a user to specify a subset of nodes from the topology to deploy, instead of all (default). This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full representative topology.
+The local `--node-filter` flag allows a user to specify a subset of nodes from the topology to deploy, instead of all (default). This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full representative topology.
 
 ### Environment variables
 

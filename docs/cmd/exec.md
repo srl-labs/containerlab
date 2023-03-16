@@ -32,6 +32,10 @@ Defaults to `plain` output format.
 
 By default `exec` command will attempt to execute the command across all the nodes of a lab. To limit the scope of the execution, the users can leverage the `--label` flag to filter out the nodes of interest.
 
+#### node-filter
+
+The local `--node-filter` flag allows a user to specify a subset of nodes from the topology to exec the command(s) on, instead of all (default). Applies to executions where the topology file is provided.
+
 ### Examples
 
 #### Execute a command on all nodes of the lab

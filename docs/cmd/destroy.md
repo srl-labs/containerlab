@@ -35,6 +35,10 @@ Do not try to remove the management network. Usually the management docker netwo
 #### all
 Destroy command provided with `--all | -a` flag will perform the deletion of all the labs running on the container host. It will not touch containers launched manually.
 
+#### node-filter
+
+The local `--node-filter` flag allows a user to specify a subset of nodes from the topology to destroy, instead of all (default). This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full representative topology.
+
 ### Examples
 
 #### Destroy a lab described in the given topology file
