@@ -47,6 +47,9 @@ var exportTemplate string
 
 var deployFormat string
 
+// subset of nodes to deploy
+var deployFilter []string
+
 // deployCmd represents the deploy command.
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -72,17 +75,20 @@ func init() {
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
 		defaultExportTemplateFPath, "template file for topology data export")
+
+	deployCmd.Flags().StringSliceVarP(&deployFilter, "filter", "", []string{},
+		"comma separated list of nodes to include, optional")
 }
 
 // deployFn function runs deploy sub command.
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
-	log.Infof("Containerlab v%s started", version)
+	log.Infof("Containerlab v%s started, %+v", version, deployFilter)
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile),
+		clab.WithTopoFile(topo, varsFile, deployFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,

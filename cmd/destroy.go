@@ -96,7 +96,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	for topo := range topos {
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo, varsFile),
+			clab.WithTopoFile(topo, varsFile, []string{}), // TODO could support filter)
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,

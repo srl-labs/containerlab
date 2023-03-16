@@ -45,7 +45,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile),
+		clab.WithTopoFile(topo, varsFile, []string{}),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,
