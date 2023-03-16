@@ -1,6 +1,7 @@
 *** Settings ***
 Library           OperatingSystem
 Library           SSHLibrary
+Library           Collections
 Suite Teardown    Run Keyword    Cleanup
 Resource          ../common.robot
 
@@ -21,6 +22,8 @@ Deploy ${lab-name} lab
     Should Be Equal As Integers    ${rc}    0
 
 Verify link eth1 in keysight_ixia-c-one node n1
+    # give time for the link to come up
+    Sleep    10s
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${ixia-node-name} --cmd "docker exec -t ixia-c-port-dp-${ifc1-name} ip link show ${ifc1-name}"
     Log    ${output}
