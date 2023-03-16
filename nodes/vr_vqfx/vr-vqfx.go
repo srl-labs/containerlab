@@ -98,22 +98,13 @@ func (n *vrVQFX) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Cfg.Endpoints)
 }
 
-func (n *vrVQFX) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (n *vrVQFX) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
 	if n.Cfg.License != "" {
-		log.Infof("adding license to node %s", n.Cfg.ShortName)
-		bdata, err := utils.ReadFileContent(n.Cfg.License)
-		if err != nil {
-			return err
-		}
-		err = netconf.LicenseAdd(
-			n.Cfg.LongName,
-			defaultCredentials.GetUsername(),
-			defaultCredentials.GetPassword(),
-			string(bdata),
-		)
+		err := nodes.JunosAddLicense(ctx, n, defaultCredentials, n.Cfg.LongName, n.Cfg.License)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

@@ -15,52 +15,6 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 )
 
-func LicenseAdd(addr, username, password, licenseData string) error {
-	opts := []util.Option{
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(username),
-		options.WithAuthPassword(password),
-		options.WithTransportType(transport.StandardTransport),
-		options.WithPort(830),
-	}
-
-	d, err := netconf.NewDriver(
-		addr,
-		opts...,
-	)
-	if err != nil {
-		return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)
-	}
-
-	err = d.Open()
-	if err != nil {
-		return fmt.Errorf("failed to open netconf driver for %s: %+v", addr, err)
-	}
-	defer d.Close()
-
-	resp, err := d.RPC(createFilterOption(fmt.Sprintf("<rpc><request-license-add><key-data>%s</key-data></request-license-add></rpc>", licenseData)))
-	if err != nil {
-		return err
-	}
-	if resp.Failed != nil {
-		return resp.Failed
-	}
-
-	return nil
-}
-
-func createFilterOption(filter string) util.Option {
-	return func(x interface{}) error {
-		oo, ok := x.(*netconf.OperationOptions)
-
-		if !ok {
-			return util.ErrIgnoredOption
-		}
-		oo.Filter = filter
-		return nil
-	}
-}
-
 // SaveConfig saves the running config to the startup by means
 // of invoking a netconf rpc <copy-config> from running to startup datastore
 // this method is used on the network elements that can't perform configuration save via other means.
