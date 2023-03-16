@@ -152,7 +152,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 					return err
 				}
 			}
-			log.Debugf("bridge %q has ipv4 adrr of %q and ipv6 addr of %q", d.mgmt.Bridge, v4gw, v6gw)
+			log.Debugf("bridge %q has ipv4 addr of %q and ipv6 addr of %q", d.mgmt.Bridge, v4gw, v6gw)
 		}
 
 		if d.mgmt.IPv4Subnet != "" {

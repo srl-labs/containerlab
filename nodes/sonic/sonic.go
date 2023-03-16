@@ -43,7 +43,7 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *sonic) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (s *sonic) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return nil
 }

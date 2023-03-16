@@ -70,7 +70,7 @@ func (n *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vrFtosv) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (n *vrFtosv) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }

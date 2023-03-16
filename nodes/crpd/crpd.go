@@ -68,7 +68,7 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *crpd) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (s *crpd) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return createCRPDFiles(s)
 }

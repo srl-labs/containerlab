@@ -62,7 +62,7 @@ func (n *IPInfusionOcNOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) 
 	return nil
 }
 
-func (n *IPInfusionOcNOS) PreDeploy(_ context.Context, _ *cert.Certificate) error {
+func (n *IPInfusionOcNOS) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	return nil
 }

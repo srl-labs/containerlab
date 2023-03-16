@@ -341,7 +341,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				}
 
 				// PreDeploy
-				err = node.PreDeploy(ctx, nodecert)
+				err = node.PreDeploy(ctx, nodecert, c.Config.Name)
 				if err != nil {
 					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue

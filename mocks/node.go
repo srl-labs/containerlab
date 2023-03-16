@@ -214,17 +214,17 @@ func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1 interface{}) *gomock.Call 
 }
 
 // PreDeploy mocks base method.
-func (m *MockNode) PreDeploy(ctx context.Context, certificate *cert.Certificate) error {
+func (m *MockNode) PreDeploy(ctx context.Context, certificate *cert.Certificate, topologyName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreDeploy", ctx, certificate)
+	ret := m.ctrl.Call(m, "PreDeploy", ctx, certificate, topologyName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PreDeploy indicates an expected call of PreDeploy.
-func (mr *MockNodeMockRecorder) PreDeploy(ctx, certificate interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PreDeploy(ctx, certificate, topologyName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, certificate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, certificate, topologyName)
 }
 
 // RunExec mocks base method.

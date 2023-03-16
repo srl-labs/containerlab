@@ -236,37 +236,8 @@ type ContainerDetails struct {
 	IPv6Address string `json:"ipv6_address,omitempty"`
 }
 
-type MySocketIoEntry struct {
-	SocketId  *string `json:"socket_id,omitempty"`
-	DnsName   *string `json:"dns_name,omitempty"`
-	Ports     []int   `json:"ports,omitempty"`
-	Type      *string `json:"type,omitempty"`
-	CloudAuth bool    `json:"cloud_auth,omitempty"`
-	Name      *string `json:"name,omitempty"`
-	LabName   *string `json:"lab_name,omitempty"`
-}
-
-// isClabEntry checks that the entry name contains clab
-// then we assume its a clab entry.
-func (mse *MySocketIoEntry) isClabEntry() bool {
-	splitName := strings.Split(*mse.Name, "-")
-	return strings.Contains(*mse.Name, "clab") && len(splitName) >= 4
-}
-
-// getContainerName deduce the containername from the name of the mysocketio entry
-// precondition is that isClabEntry returned true.
-// clab-slr01-srlnode1-tcp-22 -> slr01-srlnode1.
-func (mse *MySocketIoEntry) getContainerName() (string, error) {
-	splitName := strings.Split(*mse.Name, "-")
-	if len(splitName) < 4 {
-		return "", fmt.Errorf("issue with entry %s. does not seem to be a clab based mysocketio entry", *mse.Name)
-	}
-	return strings.Join(splitName[1:len(splitName)-2], "-"), nil
-}
-
 type LabData struct {
 	Containers []ContainerDetails `json:"containers"`
-	MySocketIo []*MySocketIoEntry `json:"mysocketio"`
 }
 
 // DNSConfig represents DNS configuration options a node has.

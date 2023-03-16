@@ -182,7 +182,7 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *srl) PreDeploy(_ context.Context, certificate *cert.Certificate) error {
+func (s *srl) PreDeploy(_ context.Context, certificate *cert.Certificate, _ string) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 
 	// set the certificate data

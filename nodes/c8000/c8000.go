@@ -60,7 +60,7 @@ func (n *c8000) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *c8000) PreDeploy(ctx context.Context, _ *cert.Certificate) error {
+func (n *c8000) PreDeploy(ctx context.Context, _ *cert.Certificate, _ string) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 
 	return n.create8000Files(ctx)

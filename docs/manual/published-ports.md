@@ -1,7 +1,3 @@
-!!!danger
-    Mysocket.io service used in containerlab was recently rebranded to [border0.com](https://www.border0.com/), therefore this particular functionality is not available.
-
-    We have to refactor the publishing feature to use border0 service and would gladly accept PRs.
 
 Labs are typically deployed in the isolated environments, such as company's internal network, cloud region or even a laptop. The lab nodes can happily talk to each other and, if needed, can reach Internet in the outbound direction.
 
@@ -21,9 +17,9 @@ Check out the short video demonstrating the integration:
     frameborder="0">
 </iframe>
 
-Containerlab made all of these use cases possible by integrating with [mysocket.io](https://mysocket.io) service. Mysocket.io provides personal and secure tunnels for https/https/tls/tcp ports over global anycast[^1] network spanning US, Europe and Asia.
+Containerlab made all of these use cases possible by integrating with [border0.com](https://border0.com) service. border0.com provides personal and secure tunnels for https/https/tls/tcp/ssh ports over global anycast[^1] network spanning US, Europe and Asia.
 
-To make a certain port of a node available via mysocket.io tunnel provide a `publish` container under the node/kind/default section of the topology:
+To make a certain port of a node available via border0.com tunnel provide a `publish` container under the node/kind/default section of the topology:
 
 ```yaml
 name: demo
@@ -34,11 +30,11 @@ topology:
       publish:
         # tcp port 22 will be published and accessible to anyone
         - tcp/22
-        # tcp port 57400 will be published for a specific user only
-        - tls/57400/user@domain.com
+        # tcp port 57400 will be published using a specific EXISTING border0.com policy
+        - tls/57400/MyBorder0Policy
         # http service running over 10200 will be published
-        # for any authenticated user within gmail domain
-        - http/10200/gmail.com
+        # considering the two existing policies MyBorder0Policy and MyOtherPolicy
+        - http/10200/MyBorder0Policy,MyOtherPolicy
 ```
 
 <!-- <video width="100%" controls>
@@ -47,20 +43,20 @@ topology:
 
 ## Registration
 
-Tunnels set up by mysocket.io are associated with a user who set them, thus users are required to register within the service. Luckily, the registration is a split second process carried out via a [web portal](https://portal.mysocket.io/register). All it takes is an email and a password.
+Tunnels set up by border0.com are associated with a user who sets them, thus users are required to register within the service. Luckily, the registration is a split second process carried out via a [web portal](https://portal.border0.com/register). All it takes is an email and a password (or an existing google / github account).
 
 ## Acquiring a token
 
-To authenticate with mysocket.io service a user needs to acquire the token by logging into the service. A helper command [`mysocketio login`](../cmd/tools/mysocketio/login.md) has been added to containerlab to help with that:
+To authenticate with border0.com service a user needs to acquire the token by logging into the service. A helper command [`border0 login`](../cmd/tools/border0/login.md) has been added to containerlab to help with that:
 
 ```bash
 # Login with password entered from the prompt
-containerlab tools mysocketio login -e myemail@dot.com
+containerlab tools border0 login -e myemail@dot.com
 Password:
-INFO[0000] Written mysocketio token to a file /root/containerlab/.mysocketio_token
+INFO[0000] Written border0 token to a file /root/containerlab/.border0_token
 ```
 
-The acquired token will be saved under `.mysocketio_token` filename in the current working directory.
+The acquired token will be saved under `.border0_token` filename in the current working directory.
 
 !!!info
     The token is valid for 5 hours, once the token expires, the already established tunnels will continue to work, but to establish new tunnels a new token must be provided.
@@ -76,25 +72,27 @@ topology:
     r1:
       kind: srl
       publish:
-        - tcp/22     # tcp port 22 will be exposed
-        - tcp/57400  # tcp port 57400 will be exposed
+        - tls/22     # tcp port 22 will be exposed
+        - tls/57400  # tcp port 57400 will be exposed
 ```
 
-The `publish` section holds a list of `<type>/<port-number>[/<allowed-domains-and-email>` strings, where
+The `publish` section holds a list of `<type>/<port-number>[/<border0-policy>` strings, where
 
-* `<type>` must be one of the supported mysocket.io socket type[^2] - http/https/tls/tcp
+* `<type>` must be one of the supported border0.com socket type[^2] - http/https/tls/ssh
+!!!note
+    The ssh type is special in a way, that the border0.com service terminates the ssh connection to provide recording / replay capabilities etc. but therefore requires injection of an SSH-CA into the lab nodes, for the border0.com service to be able to establish the proxied ssh session to the containers. Therefore the tls kind should commonly be the right choise for the type.
 * `<port>` must be a single valid port value
-* `<allowed-domains-and-email>` an optional element restricting access to published ports for a list of users' emails or domains. Read more about in the [Identity Aware tunnels](#identity-aware-tunnels) section.
+* `<border0-policy>` an optional element restricting access to published ports based on border0.com defined policies [border0.com policies](#border0com-policies) section.
 
 !!!note
-    For a regular mysocketio account the maximum number of tunnels is limited to:  
-      - tcp based tunnels: 5  
+    For a regular border0.com account the maximum number of tunnels is limited to:  
+      - tls based tunnels: 5
       - http based tunnels: 10  
-    If >5 tcp tunnels are required users should launch a VM in a lab, expose it's SSH service and use this VM as a jumpbox.
+    If >5 tcp tunnels are required users should launch a container / VM in a lab, expose it's SSH service and use it as a jumphost.
 
-## Add mysocketio node
+## Add border0.com node
 
-Containerlab integrates with mysocket.io service by leveraging `mysocketctl` application packaged in a [container](https://github.com/users/hellt/packages/container/package/mysocketctl) format. In order for the ports indicated in the `publish` block to be published, a user needs to add a `mysocketio` node to the topology. The complete topology file could look like this:
+Containerlab integrates with border0.com service by leveraging a [container](https://github.com/srl-labs/containerlab-border0.com) that has the border0.com client binary integrated. In order for the ports indicated in the `publish` block to be published, a user needs to add a `border0` node to the topology. The complete topology file could look like this:
 
 ```yaml
 name: publish
@@ -104,7 +102,7 @@ topology:
       kind: srl
       image: ghcr.io/nokia/srlinux
       publish:
-        - tcp/22     # tcp port 22 will be exposed
+        - tls/22     # tcp port 22 will be exposed
 
     grafana:
       kind: linux
@@ -112,124 +110,32 @@ topology:
       publish:
         - http/3000  # grafana' default http port will be published
 
-    # adding mysocketio container which has mysocketctl client inside
-    mysocketio:
-      kind: mysocketio
-      image: ghcr.io/hellt/mysocketctl:0.5.0
-      binds:
-        - .mysocketio_token:/root/.mysocketio_token # bind mount API token
+    # adding mysocketio container which has border0 client packaged
+    border0:
+      kind: border0
 ```
 
-The `mysocketio` node is a tiny linux container with mysocketctl client installed. Containerlab uses this node to create the sockets and start the tunnels as per `publish` block instructions.
+The `border0` node is a tiny linux container with border0 client installed. Containerlab uses this node to create the sockets and start the tunnels as per `publish` block instructions.
 
-Pay specific attention to `binds` section defined for mysocketio node. With this section we provide a path to the API token that we acquired before launching the lab. This token is used to authenticate with mysocketio API service.
+Internally containerlab utilizes the [Static Sockets Plugin](https://docs.border0.com/docs/static-sockets-plugin) to provide the necessary configuration to the border0 process.
 
-## Explore published ports
+## Border0.com policies
 
-When a user launches a lab with published ports it will be presented with a summary table after the lab deployment process finishes:
+Policies are used to control who has access to what Sockets and under what conditions. Think of policies as advanced, Identity-, application-aware, and context-aware firewall rules. Unlike traditional firewalls or access control list (ACL) rules, Border0 policies allow you to define access rules based on Identity, time of day, application type, and location. (see [https://docs.border0.com/docs/policies])
 
-```
-+---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
-| # |         Name          | Container ID |              Image              |    Kind    | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
-| 1 | clab-sock-r1          | 9cefd6cdb239 | srlinux:20.6.3-145              | srl        |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
-| 2 | clab-sock-mysocketctl | 8f5385beb97e | ghcr.io/hellt/mysocketctl:0.5.0 | mysocketio |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
-+---+-----------------------+--------------+---------------------------------+------------+-------+---------+----------------+----------------------+
-Published ports:
-┌──────────────────────────────────────┬──────────────────────────────────────┬─────────┬──────┬────────────┬────────────────────────┐
-│ SOCKET ID                            │ DNS NAME                             │ PORT(S) │ TYPE │ CLOUD AUTH │ NAME                   │
-├──────────────────────────────────────┼──────────────────────────────────────┼─────────┼──────┼────────────┼────────────────────────┤
-│ 444ed853-d3b6-448c-8f0a-6854b3578848 │ wild-water-9221.edge.mysocket.io     │ 80, 443 │ http │ false      │ clab-grafana-http-3000 │
-│ 287e5962-29ac-4ca1-8e01-e0333d399070 │ falling-wave-5735.edge.mysocket.io   │ 54506   │ tcp  │ false      │ clab-r1-tcp-22         │
-└──────────────────────────────────────┴──────────────────────────────────────┴─────────┴──────┴────────────┴────────────────────────┘
-```
+Within the `publish` block it is possible to provide a list of comma separated policy names which will be attached to the published port in question.
 
-The **Published ports** table lists the published ports and their corresponding DNS names. Looking at the NAME column users can quickly discover which tunnel corresponds to which node-port. The socket name follows the `clab-<node-name>-<type>-<port>` pattern.
-
-To access the published port, users need to combine the DNS name and the Port to derive the full address. For the exposed SSH port, for example, the ssh client can use the following command to access remote SSH service:
-
-```
-ssh user@falling-wave-5735.edge.mysocket.io -p 54506
-```
-
-!!!warning
-    When a lab with published ports start, containerlab first removes all previously established tunnels. This means that any manually set up tunnels for this account will get removed.
-
-## Identity aware tunnels
-
-In the previous examples the published ports were created in a way that makes them accessible to anyone on the Internet who knows the exact domain name and port of a respective tunnel. Although being convenient, this approach is not secure, since there is no control over who can access the ports you published.
-
-If additional security is needed, containerlab users should define the published ports using Identity Awareness[^3] feature of mysocketio. With Identity aware sockets users are allowed to specify a list of email addresses or domains which will have access to a certain port.
-
-Consider the following snippet:
-
-```yaml
-topology:
-  nodes:
-    leaf1:
-      publish:
-        - tcp/22/dodin.roman@gmail.com,contractor@somewhere.com
-    leaf2:
-      publish:
-        - tcp/22
-
-    grafana:
-      publish:
-        - http/3000/gmail.com,nokia.com,colleague@somedomain.com
-```
-
-Within the same `publish` block it is possible to provide a list of comma separated emails and/or domains which will be allowed to access the published port in question.
-
-Authentication is carried out by OAuth via Google, GitHub, Facebook and Mysocket.io providers. When accessing a secured tunnel, a browser page is opened asking to authenticate:
-
-<p align=center>
-<img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/e5bdca34c5570d47cf1e1b73f77c5395/image.png" width="50%">
-</p>
+Authentication is carried out by OAuth via Google or GitHub providers.
 
 Once authenticated via any of the available providers the sessions will establish.
 
 ### TCP/TLS
 
-With Identity Aware sockets used for SSH[^4] service, a client must have [mysocketctl](https://download.edge.mysocket.io/) client installed and use the following command to establish a connection:
+With Identity Aware sockets used for SSH[^4] service, a client must have [border0](https://docs.border0.com/docs/quick-start) client installed and use the following command to establish a connection:
 
 ```bash
 ssh <ssh-username>@<mysocket-tunnel-address> \
-    -o 'ProxyCommand=mysocketctl client tls --host %h'
+    -o 'ProxyCommand=border0 client tls --host %h'
 ```
 
 As with HTTP services, a browser page will appear asking to proceed with authentication. Upon successful authentication, the SSH session will establish.
-
-## Proxy
-
-Mysocketio uses SSH as a dataplane to build tunnels, thus it needs to be able to have external SSH access towards the `ssh.mysocket.io` SSH server.
-
-Chances are high that in your environment external SSH access might be blocked, preventing mysocket to setup tunnels. A possible solution for such environments would be to leverage the ability to tunnel SSH traffic via HTTP(S) proxies.
-
-If your HTTP(S) proxy supports CONNECT method and is able to pass non-HTTP payloads, it is quite likely that mysocketio service will work.
-
-To configure HTTP(S) proxy for mysocketio use the `mysocket-proxy` parameter in the `extras` section of the node definition:
-
-```yaml
-    mysocketio:
-      kind: mysocketio
-      image: ghcr.io/hellt/mysocketctl:0.5.0
-      binds:
-        - .mysocketio_token:/root/.mysocketio_token
-      extras:
-        mysocket-proxy: http://192.168.0.1:8000
-```
-
-## Troubleshooting
-
-To check the health status of the established tunnels execute the following command to check the logs created on mysocketio container:
-
-```
-docker exec -it <mysocketio-node-name> /bin/sh -c "cat socket*"
-```
-
-This command will display all the logs for the published ports. If something is not right, you will see the errors in the log.
-
-[^1]: https://mysocket.readthedocs.io/en/latest/about/about.html#build-on-a-global-anycast-network
-[^2]: https://mysocket.readthedocs.io/en/latest/about/about.html#features
-[^3]: Identity aware [HTTP](https://www.mysocket.io/post/introducing-identity-aware-sockets-enabling-zero-trust-access-for-your-private-services) and [TCP](https://www.mysocket.io/post/introducing-ssh-zero-trust-identity-aware-tcp-sockets) tunnels are available.
-[^4]: [Read more](https://www.mysocket.io/post/introducing-ssh-zero-trust-identity-aware-tcp-sockets) about Identity Aware sockets for TCP in the official blog.
