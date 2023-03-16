@@ -82,7 +82,7 @@ The `publish` section holds a list of `<type>/<port-number>[/<border0-policy>` s
 !!!note
     The ssh type is special in a way, that the border0.com service terminates the ssh connection to provide recording / replay capabilities etc. but therefore requires injection of an SSH-CA into the lab nodes, for the border0.com service to be able to establish the proxied ssh session to the containers. Therefore the tls kind should commonly be the right choise for the type.
 * `<port>` must be a single valid port value
-* `<border0-policy>` an optional element restricting access to published ports based on border0.com defined policies [border0.com policies](#border0.com policies) section.
+* `<border0-policy>` an optional element restricting access to published ports based on border0.com defined policies [border0.com policies](#border0com-policies) section.
 
 !!!note
     For a regular border0.com account the maximum number of tunnels is limited to:  
@@ -119,10 +119,9 @@ The `border0` node is a tiny linux container with border0 client installed. Cont
 
 Internally containerlab utilizes the [Static Sockets Plugin](https://docs.border0.com/docs/static-sockets-plugin) to provide the necessary configuration to the border0 process.
 
-
 ## Border0.com policies
-Policies are used to control who has access to what Sockets and under what conditions. Think of policies as advanced, Identity-, application-aware, and context-aware firewall rules. Unlike traditional firewalls or access control list (ACL) rules, Border0 policies allow you to define access rules based on Identity, time of day, application type, and location. (see [https://docs.border0.com/docs/policies])
 
+Policies are used to control who has access to what Sockets and under what conditions. Think of policies as advanced, Identity-, application-aware, and context-aware firewall rules. Unlike traditional firewalls or access control list (ACL) rules, Border0 policies allow you to define access rules based on Identity, time of day, application type, and location. (see [https://docs.border0.com/docs/policies])
 
 Within the `publish` block it is possible to provide a list of comma separated policy names which will be attached to the published port in question.
 
