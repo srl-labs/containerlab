@@ -3,6 +3,7 @@ package nodes
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
@@ -14,6 +15,7 @@ import (
 )
 
 func JunosAddLicense(ctx context.Context, n Node, defaultCredentials *Credentials, name, license string) error {
+	log.Infof("adding license to node %s", name)
 	// get container infos
 	cnts, err := n.GetContainers(ctx)
 	if err != nil {
@@ -21,33 +23,41 @@ func JunosAddLicense(ctx context.Context, n Node, defaultCredentials *Credential
 	}
 
 	// figure out if we have an ipv4 or an v6 available
-	var mgmtAddr string
-	if mgmtAddr = cnts[0].GetContainerIPv4(); mgmtAddr == "N/A" {
-		mgmtAddr = cnts[0].GetContainerIPv6()
+	var mgmtIpPrefix string
+	if mgmtIpPrefix = cnts[0].GetContainerIPv4(); mgmtIpPrefix == "N/A" {
+		mgmtIpPrefix = cnts[0].GetContainerIPv6()
 	}
 
-	// if any ip (v4 or v6) is present add the license
-	if mgmtAddr != "N/A" {
-		log.Infof("adding license to node %s", name)
-		bdata, err := utils.ReadFileContent(license)
-		if err != nil {
-			return err
-		}
-		err = junosAddLicenseNetconf(
-			mgmtAddr,
-			defaultCredentials.GetUsername(),
-			defaultCredentials.GetPassword(),
-			string(bdata),
-		)
-		if err != nil {
-			return err
-		}
-	} else {
-		log.Errorf("unable to add license to node %s. no mgmt ip available", name)
+	// if no valid v4 and v6 ip is present return err
+	ip, _, err := net.ParseCIDR(mgmtIpPrefix)
+	if err != nil {
+		return err
 	}
+
+	// extract the ip as string
+	mgmtIp := ip.String()
+
+	// reading license file content
+	bdata, err := utils.ReadFileContent(license)
+	if err != nil {
+		return err
+	}
+
+	// applying license to node
+	err = junosAddLicenseNetconf(
+		mgmtIp,
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
+		string(bdata),
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
+// junosAddLicenseNetconf utilizes scrapligo to push the license via netconf to the node
 func junosAddLicenseNetconf(addr, username, password, licenseData string) error {
 	opts := []util.Option{
 		options.WithAuthNoStrictKey(),
