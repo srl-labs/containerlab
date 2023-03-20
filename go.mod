@@ -26,7 +26,7 @@ require (
 	github.com/jsimonetti/rtnetlink v1.3.1
 	github.com/kellerza/template v0.0.6
 	github.com/klauspost/cpuid v1.3.1
-	github.com/mackerelio/go-osstat v0.2.3
+	github.com/mackerelio/go-osstat v0.2.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/runtime-spec v1.1.0-rc.1
