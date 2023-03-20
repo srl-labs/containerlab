@@ -70,7 +70,8 @@ func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	n.genInterfacesEnv()
 
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	_, err := n.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+
+	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
 	}

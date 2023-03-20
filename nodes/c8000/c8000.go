@@ -62,7 +62,7 @@ func (n *c8000) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (n *c8000) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 
-	_, err := n.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
 	}

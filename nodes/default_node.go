@@ -54,7 +54,7 @@ func (d *DefaultNode) Config() *types.NodeConfig                             { r
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
 
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
-	_, err := d.CertificateLoadOrGenerate(params.Cert, params.TopologyName)
+	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
 	}
@@ -333,46 +333,46 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 	return nil
 }
 
-// CertificateLoadOrGenerate implements the plain default function used by a node to obtain a certificate
-// returns a cert.Cert if the Certificate.Issue option is set to true. Returns nil otherwise.
-// returns an error if any problem occured on certificate load or generation
-func (d *DefaultNode) CertificateLoadOrGenerate(certInfra *cert.Cert, topoName string) (nodeCert *cert.Certificate, err error) {
+// LoadOrGenerateCertificate loads a certificate using a certificate storage provider
+// provided in certInfra or generates a new one if it does not exist.
+func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName string) (nodeCert *cert.Certificate, err error) {
+	// early return if certificate generation is not required
+	if d.Cfg.Certificate == nil || !d.Cfg.Certificate.Issue {
+		return nil, nil
+	}
 
-	nodeCert = nil
-	// if a cert is to be issued
-	if d.Cfg.Certificate != nil && d.Cfg.Certificate.Issue {
-		nodeConfig := d.Cfg
+	nodeConfig := d.Cfg
 
-		// try loading existing certificates from disk and generate new ones if they do not exist
-		_, err := certInfra.LoadNodeCert(nodeConfig.ShortName)
+	// try loading existing certificates from disk and generate new ones if they do not exist
+	nodeCert, err = certInfra.LoadNodeCert(nodeConfig.ShortName)
+	if err != nil {
+		log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
+
+		hosts := []string{
+			nodeConfig.ShortName,
+			nodeConfig.LongName,
+			nodeConfig.ShortName + "." + topoName + ".io",
+		}
+		hosts = append(hosts, nodeConfig.SANs...)
+
+		// collect cert details
+		certInput := &cert.NodeCSRInput{
+			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
+			Hosts:        hosts,
+			Organization: "containerlab",
+		}
+		// Generate the cert for the node
+		nodeCert, err = certInfra.GenerateAndSignNodeCert(certInput)
 		if err != nil {
-			log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
+			return nil, err
+		}
 
-			hosts := []string{
-				nodeConfig.ShortName,
-				nodeConfig.LongName,
-				nodeConfig.ShortName + "." + topoName + ".io",
-			}
-			hosts = append(hosts, nodeConfig.SANs...)
-
-			// collect cert details
-			certInput := &cert.NodeCSRInput{
-				CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
-				Hosts:        hosts,
-				Organization: "containerlab",
-			}
-			// Generate the cert for the node
-			nodeCert, err = certInfra.GenerateAndSignNodeCert(certInput)
-			if err != nil {
-				return nil, err
-			}
-
-			// persist the cert via certStorage
-			err = certInfra.StoreNodeCert(nodeConfig.ShortName, nodeCert)
-			if err != nil {
-				return nil, err
-			}
+		// persist the cert via certStorage
+		err = certInfra.StoreNodeCert(nodeConfig.ShortName, nodeCert)
+		if err != nil {
+			return nil, err
 		}
 	}
+
 	return nodeCert, nil
 }
