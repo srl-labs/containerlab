@@ -51,12 +51,15 @@ type PreDeployParams struct {
 	TopologyName string
 }
 
+// DeployParams contains parameters for the Deploy function.
 type DeployParams struct{}
 
+// PostDeployParams contains parameters for the PostDeploy function.
 type PostDeployParams struct {
 	Nodes map[string]Node
 }
 
+// Node is an interface that defines the behavior of a node.
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	// GetContainers returns a pointer to GenericContainer that the node uses.

@@ -150,10 +150,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// if err := c.GenerateMissingNodeCerts(); err != nil {
-	// 	return err
-	// }
-
 	if err := c.CreateAuthzKeysFile(); err != nil {
 		return err
 	}
