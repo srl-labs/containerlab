@@ -531,5 +531,6 @@ func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 
 		return t.GetDefaults().GetCertificateConfig()
 	}
+
 	return nil
 }
