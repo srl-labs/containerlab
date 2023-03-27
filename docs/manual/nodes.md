@@ -688,9 +688,13 @@ DEBU[0004] node creation graph is successfully validated as being acyclic
 ```
 
 ### certificate
-Setting the issue knob under certificate to true will generate a TLS certificate for the enclosing node.
-The certificate will be stored in the [<LAB_DIR>](conf-artifacts.md#identifying-a-lab-directory) under the `.tls/<NODE_NAME>/` folder.
-```
+
+To automatically generate a TLS certificate for a node and sign it with the Certificate Authority created by containerlab, use `certificate.issue: true` parameter.  
+The signed certificate will be stored in the [Lab directory](conf-artifacts.md#identifying-a-lab-directory) under the `.tls/<NODE_NAME>/` folder.
+
+Note, that nodes which by default rely on TLS-enabled interfaces will generate a certificate regardless of this parameter.
+
+```yaml
 name: cert-gen
 
 topology:
