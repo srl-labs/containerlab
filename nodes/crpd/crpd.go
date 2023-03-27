@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -68,12 +67,16 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *crpd) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
+func (s *crpd) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
 	return createCRPDFiles(s)
 }
 
-func (s *crpd) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 
 	cmd, _ := exec.NewExecCmdFromString(sshRestartCmd)

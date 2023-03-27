@@ -16,7 +16,7 @@ import (
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
 	log "github.com/sirupsen/logrus"
-	cert "github.com/srl-labs/containerlab/cert"
+	"github.com/srl-labs/containerlab/cert"
 )
 
 // CA is a Certificate Authority.

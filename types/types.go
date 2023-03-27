@@ -111,7 +111,9 @@ type NodeConfig struct {
 	TLSCert              string `json:"tls-cert,omitempty"`
 	TLSKey               string `json:"-"` // Do not marshal into JSON - highly sensitive data
 	TLSAnchor            string `json:"tls-anchor,omitempty"`
-	NSPath               string `json:"nspath,omitempty"` // network namespace path for this node
+	// TLS Certificate configuration
+	Certificate *CertificateConfig
+	NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
 	// list of ports to publish with mysocketctl
 	Publish []string `json:"publish,omitempty"`
 	// Extra /etc/hosts entries for all nodes.
@@ -248,6 +250,14 @@ type DNSConfig struct {
 	Options []string `yaml:"options,omitempty"`
 	// DNS Search Domains
 	Search []string `yaml:"search,omitempty"`
+}
+
+// CertificateConfig represents the configuration of a TLS infrastructure used by a node.
+type CertificateConfig struct {
+	// default false value indicates that the node does not use TLS
+	Issue bool `yaml:"issue,omitempty"`
+	// additional params would go here, e.g. if
+	// different algos would be needed or so
 }
 
 // PullPolicyValue represents Image pull policy values.

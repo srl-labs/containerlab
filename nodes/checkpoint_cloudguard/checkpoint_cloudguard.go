@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -56,8 +55,12 @@ func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOpt
 	return nil
 }
 
-func (n *CheckpointCloudguard) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
+func (n *CheckpointCloudguard) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
 	return nil
 }
 

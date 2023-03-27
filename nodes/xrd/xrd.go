@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -67,10 +66,15 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *xrd) PreDeploy(ctx context.Context, _ *cert.Certificate, _ string) error {
+func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+
+	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
 
 	return n.createXRDFiles(ctx)
 }

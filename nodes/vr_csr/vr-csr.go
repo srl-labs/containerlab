@@ -10,7 +10,6 @@ import (
 	"path"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -74,9 +73,13 @@ func (n *vrCsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vrCsr) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+func (s *vrCsr) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
+	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
 }
 
 func (n *vrCsr) SaveConfig(_ context.Context) error {

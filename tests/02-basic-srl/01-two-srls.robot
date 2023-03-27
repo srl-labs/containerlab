@@ -86,6 +86,20 @@ Ensure srl1 can ping srl2 over ethernet-1/1 interface
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
 
+Verify TLS works with JSON-RPC with skipping certificate check
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    curl -k 'https://admin:NokiaSrl1!@clab-${lab-name}-srl1/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    error
+
+Verify TLS works with JSON-RPC and certificate check
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    curl --cacert ./clab-${lab-name}/.tls/ca/ca.pem 'https://admin:NokiaSrl1!@clab-${lab-name}-srl1/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    error
+
 *** Keywords ***
 Cleanup
     Run    sudo %{CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

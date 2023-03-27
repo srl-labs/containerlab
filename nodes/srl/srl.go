@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -132,6 +131,14 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
 
 	s.Cfg = cfg
+
+	// force cert generation for SR Linux nodes
+	if s.Cfg.Certificate == nil {
+		s.Cfg.Certificate = &types.CertificateConfig{
+			Issue: true,
+		}
+	}
+
 	for _, o := range opts {
 		o(s)
 	}
@@ -182,8 +189,13 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *srl) PreDeploy(_ context.Context, certificate *cert.Certificate, _ string) error {
+func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+
+	certificate, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
 
 	// set the certificate data
 	s.Config().TLSCert = string(certificate.Cert)
@@ -219,10 +231,10 @@ func (s *srl) PreDeploy(_ context.Context, certificate *cert.Certificate, _ stri
 	return s.createSRLFiles()
 }
 
-func (s *srl) PostDeploy(ctx context.Context, nodes map[string]nodes.Node) error {
+func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := s.populateHosts(ctx, nodes); err != nil {
+	if err := s.populateHosts(ctx, params.Nodes); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
 	}
 

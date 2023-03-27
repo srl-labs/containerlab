@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	cert "github.com/srl-labs/containerlab/cert"
 	exec "github.com/srl-labs/containerlab/clab/exec"
 	nodes "github.com/srl-labs/containerlab/nodes"
 	runtime "github.com/srl-labs/containerlab/runtime"
@@ -110,17 +109,17 @@ func (mr *MockNodeMockRecorder) DeleteNetnsSymlink() *gomock.Call {
 }
 
 // Deploy mocks base method.
-func (m *MockNode) Deploy(arg0 context.Context) error {
+func (m *MockNode) Deploy(arg0 context.Context, arg1 *nodes.DeployParams) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", arg0)
+	ret := m.ctrl.Call(m, "Deploy", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockNodeMockRecorder) Deploy(arg0 interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) Deploy(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0, arg1)
 }
 
 // GenerateConfig mocks base method.
@@ -200,31 +199,31 @@ func (mr *MockNodeMockRecorder) Init(arg0 interface{}, arg1 ...interface{}) *gom
 }
 
 // PostDeploy mocks base method.
-func (m *MockNode) PostDeploy(arg0 context.Context, arg1 map[string]nodes.Node) error {
+func (m *MockNode) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostDeploy", arg0, arg1)
+	ret := m.ctrl.Call(m, "PostDeploy", ctx, params)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PostDeploy indicates an expected call of PostDeploy.
-func (mr *MockNodeMockRecorder) PostDeploy(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PostDeploy(ctx, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), ctx, params)
 }
 
 // PreDeploy mocks base method.
-func (m *MockNode) PreDeploy(ctx context.Context, certificate *cert.Certificate, topologyName string) error {
+func (m *MockNode) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreDeploy", ctx, certificate, topologyName)
+	ret := m.ctrl.Call(m, "PreDeploy", ctx, params)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PreDeploy indicates an expected call of PreDeploy.
-func (mr *MockNodeMockRecorder) PreDeploy(ctx, certificate, topologyName interface{}) *gomock.Call {
+func (mr *MockNodeMockRecorder) PreDeploy(ctx, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, certificate, topologyName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, params)
 }
 
 // RunExec mocks base method.

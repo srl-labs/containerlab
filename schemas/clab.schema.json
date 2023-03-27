@@ -294,6 +294,10 @@
                 "dns": {
                     "type": "object",
                     "$ref": "#/definitions/dns-config"
+                },
+                "certificate": {
+                    "type": "object",
+                    "$ref": "#/definitions/certificate-config"
                 }
             },
             "if": {
@@ -388,6 +392,17 @@
                     "type": "object",
                     "description": "config variables passed to config engine",
                     "markdownDescription": "config variables passed to config engine"
+                }
+            }
+        },
+        "certificate-config":{
+            "type": "object",
+            "description": "Node's Certificate configuration option",
+            "markdownDescription": "Node's [Certificate configuration options](https://containerlab.dev/manual/nodes/#certificate)",
+            "properties": {
+                "issue": {
+                    "description": "Set to `true` to generate a TLS certificate for the node",
+                    "markdownDescription": "Set to `true` to [generate a TLS certificate for the node](https://containerlab.dev/manual/nodes/#certificate)"
                 }
             }
         },

@@ -47,12 +47,20 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	return dn
 }
 
-func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                                { d.Mgmt = mgmt }
-func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                         { d.Runtime = r }
-func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                           { return d.Runtime }
-func (d *DefaultNode) Config() *types.NodeConfig                                      { return d.Cfg }
-func (*DefaultNode) PreDeploy(_ context.Context, _ *cert.Certificate, _ string) error { return nil }
-func (*DefaultNode) PostDeploy(_ context.Context, _ map[string]Node) error            { return nil }
+func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                       { d.Mgmt = mgmt }
+func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d.Runtime = r }
+func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
+func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
+func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
+
+// PreDeploy is a common method for all nodes that is called before the node is deployed.
+func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
+	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
+	return nil
+}
 
 func (d *DefaultNode) SaveConfig(_ context.Context) error {
 	// nodes should have the save method defined on their respective structs.
@@ -104,7 +112,7 @@ func (d *DefaultNode) VerifyHostRequirements() error {
 	return d.HostRequirements.Verify(d.Cfg.Kind, d.Cfg.ShortName)
 }
 
-func (d *DefaultNode) Deploy(ctx context.Context) error {
+func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
 	if err != nil {
 		return err
@@ -324,4 +332,48 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 		return fmt.Errorf("license file of node %q not found by the path %s", d.Config().ShortName, rlic)
 	}
 	return nil
+}
+
+// LoadOrGenerateCertificate loads a certificate using a certificate storage provider
+// provided in certInfra or generates a new one if it does not exist.
+func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName string) (nodeCert *cert.Certificate, err error) {
+	// early return if certificate generation is not required
+	if d.Cfg.Certificate == nil || !d.Cfg.Certificate.Issue {
+		return nil, nil
+	}
+
+	nodeConfig := d.Cfg
+
+	// try loading existing certificates from disk and generate new ones if they do not exist
+	nodeCert, err = certInfra.LoadNodeCert(nodeConfig.ShortName)
+	if err != nil {
+		log.Debugf("creating node certificate for %s", nodeConfig.ShortName)
+
+		hosts := []string{
+			nodeConfig.ShortName,
+			nodeConfig.LongName,
+			nodeConfig.ShortName + "." + topoName + ".io",
+		}
+		hosts = append(hosts, nodeConfig.SANs...)
+
+		// collect cert details
+		certInput := &cert.NodeCSRInput{
+			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
+			Hosts:        hosts,
+			Organization: "containerlab",
+		}
+		// Generate the cert for the node
+		nodeCert, err = certInfra.GenerateAndSignNodeCert(certInput)
+		if err != nil {
+			return nil, err
+		}
+
+		// persist the cert via certStorage
+		err = certInfra.StoreNodeCert(nodeConfig.ShortName, nodeCert)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return nodeCert, nil
 }

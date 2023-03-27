@@ -27,6 +27,9 @@ var topologyTestSet = map[string]struct {
 						Search:  []string{"foo.com"},
 						Options: []string{"someopt"},
 					},
+					Certificate: &CertificateConfig{
+						Issue: true,
+					},
 				},
 			},
 		},
@@ -40,6 +43,9 @@ var topologyTestSet = map[string]struct {
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
+				},
+				Certificate: &CertificateConfig{
+					Issue: true,
 				},
 			},
 		},
@@ -82,6 +88,9 @@ var topologyTestSet = map[string]struct {
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
+					},
+					Certificate: &CertificateConfig{
+						Issue: true,
 					},
 				},
 			},
@@ -141,6 +150,9 @@ var topologyTestSet = map[string]struct {
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
+				},
+				Certificate: &CertificateConfig{
+					Issue: true,
 				},
 			},
 		},
@@ -535,12 +547,26 @@ func TestGetNodeDNS(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
 
-		autoremove := item.input.GetNodeDns("node1")
+		dns := item.input.GetNodeDns("node1")
 
-		t.Logf("%q test item result: %v", name, autoremove)
+		t.Logf("%q test item result: %v", name, dns)
 
-		if d := cmp.Diff(item.want["node1"].DNS, autoremove); d != "" {
-			t.Fatalf("DNS config object doesn't match.\nGot: %+v\nWant: %+v\nDiff\n%s", autoremove, item.want["node1"].DNS, d)
+		if d := cmp.Diff(item.want["node1"].DNS, dns); d != "" {
+			t.Fatalf("DNS config object doesn't match.\nGot: %+v\nWant: %+v\nDiff\n%s", dns, item.want["node1"].DNS, d)
+		}
+	}
+}
+
+func TestGetNodeCertificateConfig(t *testing.T) {
+	for name, item := range topologyTestSet {
+		t.Logf("%q test item", name)
+
+		cert := item.input.GetCertificateConfig("node1")
+
+		t.Logf("%q test item result: %v", name, cert)
+
+		if d := cmp.Diff(item.want["node1"].Certificate, cert); d != "" {
+			t.Fatalf("Certificate config objects don't match.\nGot: %+v\nWant: %+v\nDiff\n%s", cert, item.want["node1"].Certificate, d)
 		}
 	}
 }

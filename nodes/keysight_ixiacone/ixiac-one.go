@@ -49,7 +49,7 @@ func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (l *ixiacOne) PostDeploy(ctx context.Context, _ map[string]nodes.Node) error {
+func (l *ixiacOne) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.Cfg.ShortName)
 	return l.ixiacPostDeploy(ctx)
 }
