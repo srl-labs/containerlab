@@ -5,8 +5,10 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -98,13 +100,18 @@ func createCA(_ *cobra.Command, _ []string) error {
 
 	ca := cfssl.NewCA(debug)
 
+	expDuration, err := time.ParseDuration(expiry)
+	if err != nil {
+		return fmt.Errorf("failed parsing expiry %s", expiry)
+	}
+
 	csrInput := &cert.CACSRInput{
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,
 		Organization:     organization,
 		OrganizationUnit: organizationUnit,
-		Expiry:           expiry,
+		Expiry:           expDuration,
 	}
 
 	caCert, err := ca.GenerateCACert(csrInput)
@@ -158,6 +165,11 @@ func signCert(_ *cobra.Command, _ []string) error {
 	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
 		certHosts, commonName, country, locality, organization, organizationUnit)
 
+	expDuration, err := time.ParseDuration(expiry)
+	if err != nil {
+		return fmt.Errorf("failed parsing expiry %s", expiry)
+	}
+
 	nodeCert, err := ca.GenerateAndSignNodeCert(
 		&cert.NodeCSRInput{
 			Hosts:            certHosts,
@@ -166,7 +178,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 			Locality:         locality,
 			Organization:     organization,
 			OrganizationUnit: organizationUnit,
-			Expiry:           expiry,
+			Expiry:           expDuration,
 		})
 	if err != nil {
 		return err

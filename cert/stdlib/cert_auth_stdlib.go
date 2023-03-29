@@ -1,0 +1,157 @@
+package stdlib
+
+import (
+	"bytes"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"time"
+
+	"github.com/srl-labs/containerlab/cert"
+	"golang.org/x/crypto/ssh"
+)
+
+type StdLibCA struct {
+	key  crypto.PrivateKey
+	cert *x509.Certificate
+}
+
+// NewCA initializes a Certificate Authority.
+func NewCA(debug bool) *StdLibCA {
+	return &StdLibCA{}
+}
+
+func (ca *StdLibCA) SetCACert(cert *cert.Certificate) error {
+	var err error
+
+	// PEM to DER
+	pbCert, _ := pem.Decode(cert.Cert)
+
+	// parse the Certificate
+	ca.cert, err = x509.ParseCertificate(pbCert.Bytes)
+	if err != nil {
+		return err
+	}
+
+	// Parse the PrivateKey
+	ca.key, err = ssh.ParseRawPrivateKey(cert.Key)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GenerateCACert generates a CA certificate, key and CSR based on the provided input.
+func (ca *StdLibCA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) {
+
+	// prepare the certificate template
+	certTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2019),
+		Subject: pkix.Name{
+			CommonName:         input.CommonName,
+			Country:            []string{input.Country},
+			Locality:           []string{input.Locality},
+			Organization:       []string{input.Organization},
+			OrganizationalUnit: []string{input.OrganizationUnit},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(input.Expiry),
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+	}
+
+	// generate key
+	caPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	// create the certificate
+	caBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &caPrivKey.PublicKey, caPrivKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// convert Certificate into PEM format
+	caPEM := new(bytes.Buffer)
+	pem.Encode(caPEM, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	})
+
+	// convert Private Key into PEM format
+	caPrivKeyPEM := new(bytes.Buffer)
+	pem.Encode(caPrivKeyPEM, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
+	})
+
+	// create the clab certificate struct
+	clabCert := &cert.Certificate{
+		Cert: caPEM.Bytes(),
+		Key:  caPrivKeyPEM.Bytes(),
+	}
+
+	return clabCert, nil
+}
+
+// GenerateAndSignNodeCert generates and signs a node certificate, key and CSR based on the provided input and signs it with the CA.
+func (ca *StdLibCA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
+
+	certTemplate := &x509.Certificate{
+		RawSubject:   []byte{},
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			Organization:       []string{input.Organization},
+			OrganizationalUnit: []string{input.OrganizationUnit},
+			CommonName:         input.CommonName,
+			Country:            []string{input.Country},
+			Locality:           []string{input.Locality},
+		},
+		DNSNames: input.Hosts,
+		// IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(1, 0, 0), // HARDCODED 1 year
+		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+
+	newPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	// create the certificate
+	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, ca.cert, &newPrivKey.PublicKey, ca.key)
+	if err != nil {
+		return nil, err
+	}
+
+	certPEM := new(bytes.Buffer)
+	pem.Encode(certPEM, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	})
+
+	certPrivKeyPEM := new(bytes.Buffer)
+	pem.Encode(certPrivKeyPEM, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(newPrivKey),
+	})
+
+	// create the clab certificate struct
+	clabCert := &cert.Certificate{
+		Cert: certPEM.Bytes(),
+		Key:  certPrivKeyPEM.Bytes(),
+	}
+
+	return clabCert, nil
+}
