@@ -6,6 +6,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -89,9 +91,16 @@ func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
 }
 
 // SetExternalCaFiles sets the filename for the cert and key files if externally generated should be used
-func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) {
+func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
+	if !utils.FileExists(certFile) {
+		return fmt.Errorf("external CA cert file %s does not exist", certFile)
+	}
+	if !utils.FileExists(keyFile) {
+		return fmt.Errorf("external CA key file %s does not exist", keyFile)
+	}
 	t.explicitCaCertFile = certFile
 	t.explicitCaKeyFile = keyFile
+	return nil
 }
 
 // TLSBaseDir returns the path of the TLS directory structure.

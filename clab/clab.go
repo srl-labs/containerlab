@@ -124,8 +124,7 @@ func WithKeepMgmtNet() ClabOption {
 // Must not be executed, hence added prior to WithTopoFile() ClabOption
 func WithExternalCA(certFile, KeyFile string) ClabOption {
 	return func(c *CLab) error {
-		c.TopoPaths.SetExternalCaFiles(certFile, KeyFile)
-		return nil
+		return c.TopoPaths.SetExternalCaFiles(certFile, KeyFile)
 	}
 }
 
