@@ -11,7 +11,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/scrapli/scrapligo/driver/network"
+	"github.com/scrapli/scrapligo/driver/options"
+	scraplilogging "github.com/scrapli/scrapligo/logging"
+	"github.com/scrapli/scrapligo/platform"
+	"github.com/scrapli/scrapligo/transport"
+	"github.com/scrapli/scrapligo/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
@@ -92,18 +99,9 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 func (s *vrSROS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
 	// if we got a partial config, it's time to load and apply it
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
-		// read the file
-		bcfg, err := utils.ReadFileContent(s.Cfg.StartupConfig)
-		if err != nil {
-			return err
-		}
-		// convert []byte to string config
-		cfg := string(bcfg)
-		// replace \r\n by \n and then split by \n
-		cfgSlc := strings.Split(strings.ReplaceAll(cfg, "\r\n", "\n"), "\n")
 		// apply config to node
 		log.Infof("Applying partial config %s to %s", s.Cfg.StartupConfig, s.Cfg.LongName)
-		err = netconf.ApplyConfig(s.Cfg.MgmtIPv4Address, scrapliPlatformName, defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), cfgSlc)
+		err := applyConfig(s.Cfg.MgmtIPv4Address, scrapliPlatformName, defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.StartupConfig)
 		if err != nil {
 			return err
 		}
@@ -173,5 +171,60 @@ func createVrSROSFiles(node nodes.Node) error {
 
 // isPartialConfigFile returns true if the provided config is a partial config
 func isPartialConfigFile(c string) bool {
-	return strings.Contains(c, ".partial.")
+	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
+}
+
+func applyConfig(addr, platformName, username, password string, configFile string) error {
+	var err error
+	var d *network.Driver
+	x := 100
+	for i := 0; i < x; i++ {
+
+		li, err := scraplilogging.NewInstance(
+			scraplilogging.WithLevel("debug"),
+			scraplilogging.WithLogger(log.Debugln))
+		if err != nil {
+			return err
+		}
+
+		opts := []util.Option{
+			options.WithAuthNoStrictKey(),
+			options.WithAuthUsername(username),
+			options.WithAuthPassword(password),
+			options.WithTransportType(transport.StandardTransport),
+			options.WithTimeoutOps(5 * time.Second),
+			options.WithLogger(li),
+		}
+
+		p, err := platform.NewPlatform(platformName, addr, opts...)
+		if err != nil {
+			return fmt.Errorf("failed to create platform; error: %+v", err)
+		}
+
+		d, err = p.GetNetworkDriver()
+		if err != nil {
+			return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)
+		}
+
+		err = d.Open()
+		if err == nil {
+			break
+		}
+		log.Debugf("not yet ready - %v", err)
+		time.Sleep(time.Second * 3)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to open netconf driver for %s: %+v", addr, err)
+	}
+	defer d.Close()
+
+	mr, err := d.SendConfigsFromFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to send command; error: %+v", err)
+	}
+
+	if mr.Failed != nil {
+		return fmt.Errorf("response object indicates failure: %+v", mr.Failed)
+	}
+	return nil
 }
