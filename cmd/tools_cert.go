@@ -149,6 +149,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 
 	log.Debugf("CA cert path: %q", caCertPath)
 	if caCertPath != "" {
+		// TODO: we might also honor the External CA env vars here
 		caCert, err = cert.NewCertificateFromFile(caCertPath, caKeyPath, "")
 		if err != nil {
 			return err

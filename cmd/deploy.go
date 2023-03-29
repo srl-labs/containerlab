@@ -123,6 +123,9 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		),
 		clab.WithDebug(debug),
 	}
+
+	opts = PrepareExternalCAOptionEnviron(opts)
+
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return err
@@ -321,6 +324,16 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// print table summary
 	return printContainerInspect(containers, deployFormat)
+}
+
+func PrepareExternalCAOptionEnviron(opts []clab.ClabOption) []clab.ClabOption {
+	keyFile := os.Getenv("CLAB_CA_KEY_FILE")
+	certFile := os.Getenv("CLAB_CA_CERT_FILE")
+
+	if keyFile != "" && certFile != "" {
+		opts = append(opts, clab.WithExternalCA(certFile, keyFile))
+	}
+	return opts
 }
 
 func setFlags(conf *clab.Config) {

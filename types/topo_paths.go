@@ -29,9 +29,11 @@ var clabTmpDir = filepath.Join(os.TempDir(), ".clab")
 // TopoPaths creates all the required absolute paths and filenames for a topology.
 // generally all these paths are deduced from two main paths. The topology file path and the lab dir path.
 type TopoPaths struct {
-	topoFile string
-	labDir   string
-	topoName string
+	topoFile           string
+	labDir             string
+	topoName           string
+	explicitCaCertFile string // if an external CA certificate is used the name to the Cert file is stored here
+	explicitCaKeyFile  string // if an external CA certificate is used the name to the Key file is stored here
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
@@ -86,14 +88,15 @@ func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
 	return nil
 }
 
+// SetExternalCaFiles sets the filename for the cert and key files if externally generated should be used
+func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) {
+	t.explicitCaCertFile = certFile
+	t.explicitCaKeyFile = keyFile
+}
+
 // TLSBaseDir returns the path of the TLS directory structure.
 func (t *TopoPaths) TLSBaseDir() string {
 	return path.Join(t.labDir, tlsDir)
-}
-
-// CARootCertDir returns the directory that contains the root CA certificat and key.
-func (t *TopoPaths) CARootCertDir() string {
-	return path.Join(t.TLSBaseDir(), caDir)
 }
 
 // NodeTLSDir returns the directory that contains the certificat data for the given node.
@@ -203,7 +206,20 @@ func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
 }
 
-// CaDir returns the dir name of the CA directory structure.
-func (t *TopoPaths) CaDir() string {
-	return caDir
+func (t *TopoPaths) CaCertFile() string {
+	if t.explicitCaCertFile != "" {
+		return t.explicitCaCertFile
+	}
+	return t.NodeCertAbsFilename(caDir)
+}
+
+func (t *TopoPaths) CaKeyFile() string {
+	if t.explicitCaKeyFile != "" {
+		return t.explicitCaKeyFile
+	}
+	return t.NodeCertKeyAbsFilename(caDir)
+}
+
+func (t *TopoPaths) CaCSRFile() string {
+	return t.NodeCertCSRAbsFilename(caDir)
 }

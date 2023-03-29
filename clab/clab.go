@@ -120,6 +120,15 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
+// WithExternalCA sets the path to external CA files (Cert & Key)
+// Must not be executed, hence added prior to WithTopoFile() ClabOption
+func WithExternalCA(certFile, KeyFile string) ClabOption {
+	return func(c *CLab) error {
+		c.TopoPaths.SetExternalCaFiles(certFile, KeyFile)
+		return nil
+	}
+}
+
 func WithTopoFile(file, varsFile string) ClabOption {
 	return func(c *CLab) error {
 		if file == "" {
