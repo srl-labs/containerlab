@@ -21,7 +21,7 @@ type StdLibCA struct {
 }
 
 // NewCA initializes a Certificate Authority.
-func NewCA(debug bool) *StdLibCA {
+func NewCA( /* debug */ _ bool) *StdLibCA {
 	return &StdLibCA{}
 }
 
