@@ -172,6 +172,11 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		if group, ok := cont.Labels[labels.NodeGroup]; ok {
 			cdet.Group = group
 		}
+
+		if kind, ok := cont.Labels[labels.NodeKind]; ok {
+			cdet.Kind = kind
+		}
+
 		contDetails = append(contDetails, *cdet)
 	}
 
