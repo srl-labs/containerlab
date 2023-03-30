@@ -186,14 +186,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// define the attributes used to generate the CA Cert
-	caCertInput := &cert.CACSRInput{
-		CommonName:   c.Config.Name + " lab CA",
-		Expiry:       time.Until(time.Now().AddDate(1, 0, 0)), // should expire in a year from now
-		Organization: "containerlab",
-	}
-
-	if err := c.LoadOrGenerateCA(caCertInput); err != nil {
+	if err := certificateAuthoritySetup(c); err != nil {
 		return err
 	}
 
@@ -324,6 +317,49 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// print table summary
 	return printContainerInspect(containers, deployFormat)
+}
+
+func certificateAuthoritySetup(c *clab.CLab) error {
+	s := c.Config.Settings
+
+	// Set defaults for the CA parameters
+	keylength := 2048
+	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)).String() // 1 year as default
+	// validityDuration, err := time.ParseDuration(s.CertificateAuthority.Validity)
+	// if err != nil{
+	// 	return err
+	// }
+
+	// check that Settings.CertificateAuthority exists.
+	if s != nil && s.CertificateAuthority != nil {
+		// if ValidityDuration is set use the value
+		if s.CertificateAuthority.ValidityDuration != "" {
+			validityDuration = s.CertificateAuthority.ValidityDuration
+		}
+		// if KeyLength is set use the value
+		if s.CertificateAuthority.KeyLength != 0 {
+			keylength = s.CertificateAuthority.KeyLength
+		}
+		if s.CertificateAuthority.Cert != "" && s.CertificateAuthority.Key != "" {
+			err := c.TopoPaths.SetExternalCaFiles(s.CertificateAuthority.Cert, s.CertificateAuthority.Key)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// define the attributes used to generate the CA Cert
+	caCertInput := &cert.CACSRInput{
+		CommonName:   c.Config.Name + " lab CA",
+		Expiry:       validityDuration,
+		Organization: "containerlab",
+		KeyLength:    keylength,
+	}
+
+	if err := c.LoadOrGenerateCA(caCertInput); err != nil {
+		return err
+	}
+	return nil
 }
 
 func PrepareExternalCAOptionEnviron(opts []clab.ClabOption) []clab.ClabOption {

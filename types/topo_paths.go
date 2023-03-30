@@ -73,7 +73,7 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-// SetLabDir sets the labDir.
+// SetLabDir sets the labDir foldername (no abs path, but the last element) usually the topology name.
 func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
 	t.topoName = topologyName
 	// if "CLAB_LABDIR_BASE" Env Var is set, use that dir as a base

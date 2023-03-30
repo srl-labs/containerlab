@@ -10,6 +10,7 @@ type CACSRInput struct {
 	Organization     string
 	OrganizationUnit string
 	Expiry           time.Duration
+	KeyLength        int
 }
 
 // NodeCSRInput struct.
