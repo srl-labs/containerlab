@@ -340,6 +340,7 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 		if s.CertificateAuthority.KeyLength != 0 {
 			keylength = s.CertificateAuthority.KeyLength
 		}
+		// if external CA cert and and key are set, propagate to topopaths
 		if s.CertificateAuthority.Cert != "" && s.CertificateAuthority.Key != "" {
 			err := c.TopoPaths.SetExternalCaFiles(s.CertificateAuthority.Cert, s.CertificateAuthority.Key)
 			if err != nil {
@@ -356,10 +357,8 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 		KeyLength:    keylength,
 	}
 
-	if err := c.LoadOrGenerateCA(caCertInput); err != nil {
-		return err
-	}
-	return nil
+	// finally laod and generate the CA
+	return c.LoadOrGenerateCA(caCertInput)
 }
 
 func PrepareExternalCAOptionEnviron(opts []clab.ClabOption) []clab.ClabOption {
