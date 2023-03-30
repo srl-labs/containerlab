@@ -30,6 +30,7 @@ var (
 	certHosts        []string
 	caCertPath       string
 	caKeyPath        string
+	keyLength        int
 )
 
 func init() {
@@ -60,6 +61,7 @@ func init() {
 	signCertCmd.Flags().StringVarP(&path, "path", "p", "",
 		"path to write certificate and key to. Default is current working directory")
 	signCertCmd.Flags().StringVarP(&certNamePrefix, "name", "n", "cert", "certificate/key filename prefix")
+	signCertCmd.Flags().IntVarP(&keyLength, "keylength", "", 2048, "private key length")
 }
 
 var certCmd = &cobra.Command{
@@ -111,6 +113,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 		Organization:     organization,
 		OrganizationUnit: organizationUnit,
 		Expiry:           expDuration,
+		KeyLength:        keyLength,
 	}
 
 	caCert, err := ca.GenerateCACert(csrInput)
@@ -179,6 +182,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 			Organization:     organization,
 			OrganizationUnit: organizationUnit,
 			Expiry:           expDuration,
+			KeyLength:        keyLength,
 		})
 	if err != nil {
 		return err

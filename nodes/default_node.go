@@ -396,6 +396,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
 			Organization: "containerlab",
+			KeyLength:    2048, // TODO: expose via topology file
 		}
 		// Generate the cert for the node
 		nodeCert, err = certInfra.GenerateAndSignNodeCert(certInput)

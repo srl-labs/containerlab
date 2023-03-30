@@ -22,4 +22,5 @@ type NodeCSRInput struct {
 	Organization     string
 	OrganizationUnit string
 	Expiry           time.Duration
+	KeyLength        int
 }

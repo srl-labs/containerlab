@@ -167,10 +167,11 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// force cert generation for SR Linux nodes
 	if s.Cfg.Certificate == nil {
-		s.Cfg.Certificate = &types.CertificateConfig{
-			Issue: true,
-		}
+		// if certificate config deos not exist, create it
+		s.Cfg.Certificate = &types.CertificateConfig{}
 	}
+	// et issue to true, to finally force cert creation
+	s.Cfg.Certificate.Issue = true
 
 	for _, o := range opts {
 		o(s)

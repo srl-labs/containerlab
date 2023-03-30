@@ -30,7 +30,7 @@ var NodeCSRTemplate string = `{
     ],
     "key": {
       "algo": "rsa",
-      "size": 2048
+      "size": {{.KeyLength}}
     },
     "names": [{
       "C": "{{.Country}}",
