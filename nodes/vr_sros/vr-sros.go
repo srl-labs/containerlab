@@ -96,11 +96,14 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 	return createVrSROSFiles(s)
 }
 
-func (s *vrSROS) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
 		log.Infof("Applying partial config %s to %s", s.Cfg.StartupConfig, s.Cfg.LongName)
 
-		err := applyPartialConfig(s.Cfg.MgmtIPv4Address, scrapliPlatformName,
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		defer cancel()
+
+		err := applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
 			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
 			s.Cfg.StartupConfig,
 		)
@@ -169,49 +172,49 @@ func isPartialConfigFile(c string) bool {
 }
 
 // applyPartialConfig applies partial configuration to the SR OS.
-func applyPartialConfig(addr, platformName, username, password string, configFile string) error {
+func applyPartialConfig(ctx context.Context, addr, platformName, username, password string, configFile string) error {
 	var err error
 	var d *network.Driver
-	x := 100
-	for i := 0; i < x; i++ {
 
-		li, err := scraplilogging.NewInstance(
-			scraplilogging.WithLevel("debug"),
-			scraplilogging.WithLogger(log.Debugln))
-		if err != nil {
-			return err
-		}
+	for loop := true; loop; {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
+		default:
+			li, err := scraplilogging.NewInstance(
+				scraplilogging.WithLevel("debug"),
+				scraplilogging.WithLogger(log.Debugln))
+			if err != nil {
+				return err
+			}
 
-		opts := []util.Option{
-			options.WithAuthNoStrictKey(),
-			options.WithAuthUsername(username),
-			options.WithAuthPassword(password),
-			options.WithTransportType(transport.StandardTransport),
-			options.WithTimeoutOps(5 * time.Second),
-			options.WithLogger(li),
-		}
+			opts := []util.Option{
+				options.WithAuthNoStrictKey(),
+				options.WithAuthUsername(username),
+				options.WithAuthPassword(password),
+				options.WithTransportType(transport.StandardTransport),
+				options.WithTimeoutOps(5 * time.Second),
+				options.WithLogger(li),
+			}
 
-		p, err := platform.NewPlatform(platformName, addr, opts...)
-		if err != nil {
-			return fmt.Errorf("failed to create platform; error: %+v", err)
-		}
+			p, err := platform.NewPlatform(platformName, addr, opts...)
+			if err != nil {
+				return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
+			}
 
-		d, err = p.GetNetworkDriver()
-		if err != nil {
-			return fmt.Errorf("could not create netconf driver for %s: %+v", addr, err)
-		}
+			d, err = p.GetNetworkDriver()
+			if err != nil {
+				return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
+			}
 
-		err = d.Open()
-		if err == nil {
-			break
+			err = d.Open()
+			if err == nil {
+				// driver successfully opened, exit the loop
+				loop = false
+			}
+			log.Debugf("%s: not yet ready - %v", addr, err)
 		}
-		log.Debugf("not yet ready - %v", err)
-		time.Sleep(time.Second * 3)
 	}
-	if err != nil {
-		return fmt.Errorf("failed to open netconf driver for %s: %+v", addr, err)
-	}
-	defer d.Close()
 
 	mr, err := d.SendConfigsFromFile(configFile)
 	if err != nil {
