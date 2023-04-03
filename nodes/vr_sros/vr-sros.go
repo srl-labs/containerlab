@@ -97,16 +97,20 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 }
 
 func (s *vrSROS) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
-	// if we got a partial config, it's time to load and apply it
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
-		// apply config to node
 		log.Infof("Applying partial config %s to %s", s.Cfg.StartupConfig, s.Cfg.LongName)
-		err := applyConfig(s.Cfg.MgmtIPv4Address, scrapliPlatformName, defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), s.Cfg.StartupConfig)
+
+		err := applyPartialConfig(s.Cfg.MgmtIPv4Address, scrapliPlatformName,
+			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
+			s.Cfg.StartupConfig,
+		)
 		if err != nil {
 			return err
 		}
-		log.Infof("%s successfully configured", s.Cfg.LongName)
+
+		log.Infof("%s: configuration applied", s.Cfg.LongName)
 	}
+
 	return nil
 }
 
@@ -159,12 +163,13 @@ func createVrSROSFiles(node nodes.Node) error {
 	return nil
 }
 
-// isPartialConfigFile returns true if the provided config is a partial config
+// isPartialConfigFile returns true if the config file name contains .partial substring.
 func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
-func applyConfig(addr, platformName, username, password string, configFile string) error {
+// applyPartialConfig applies partial configuration to the SR OS.
+func applyPartialConfig(addr, platformName, username, password string, configFile string) error {
 	var err error
 	var d *network.Driver
 	x := 100
