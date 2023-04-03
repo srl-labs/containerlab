@@ -139,22 +139,12 @@ func (s *vrSROS) CheckInterfaceName() error {
 }
 
 func createVrSROSFiles(node nodes.Node) error {
-
 	nodeCfg := node.Config()
 
-	// cache the value of the StartupConfig
-	startUpConfigCache := nodeCfg.StartupConfig
-	// if the config is a partial one, we set StartupConfig to "" such that
-	// nodes.LoadStartupConfigFileVr(...) behaves correctly
-	// and does not take the config as a full config
-	// afterwards we restore the StartupConfig value again.
-	if isPartialConfigFile(nodeCfg.StartupConfig) {
-		nodeCfg.StartupConfig = ""
+	// use default startup config load function if config in full form is provided
+	if !isPartialConfigFile(nodeCfg.StartupConfig) {
+		nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
 	}
-	nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
-
-	// restore the cached value
-	nodeCfg.StartupConfig = startUpConfigCache
 
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
