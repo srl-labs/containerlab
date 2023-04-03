@@ -96,7 +96,7 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 	return createVrSROSFiles(s)
 }
 
-func (s *vrSROS) PostDeploy(_ context.Context, _ map[string]nodes.Node) error {
+func (s *vrSROS) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 	// if we got a partial config, it's time to load and apply it
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
 		// apply config to node
