@@ -32,6 +32,7 @@ nav:
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
+          - RARE/freeRtr container: manual/kinds/rare-freertr.md
           - Openvswitch bridge: manual/kinds/ovs-bridge.md
           - External container: manual/kinds/ext-container.md
       - Configuration artifacts: manual/conf-artifacts.md

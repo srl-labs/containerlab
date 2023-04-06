@@ -56,5 +56,6 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Linux bridge**          | [`bridge`](bridge.md)                               | supported |    N/A    |
 | **OvS bridge**            | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
 | **mysocketio node**       | [`mysocketio`](../published-ports.md)               | supported |    N/A    |
+| **RARE/freeRtr node**     | [`linux`](rare-freertr.md)                          | supported | container |
 
 Refer to a specific kind documentation article for kind-specific details.
