@@ -211,18 +211,27 @@ func applyPartialConfig(ctx context.Context, addr, platformName, username, passw
 			if err == nil {
 				// driver successfully opened, exit the loop
 				loop = false
+			} else {
+				log.Debugf("%s: not yet ready - %v", addr, err)
+				time.Sleep(5 * time.Second) // cool-off period
 			}
-			log.Debugf("%s: not yet ready - %v", addr, err)
 		}
 	}
 
 	mr, err := d.SendConfigsFromFile(configFile)
-	if err != nil {
-		return fmt.Errorf("failed to send command; error: %+v", err)
+	if err != nil || mr.Failed != nil {
+		return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
+	}
+	// condfig snippets should not have commit command, so we need to commit manually
+	r, err := d.SendConfig("commit")
+	if err != nil || r.Failed != nil {
+		return fmt.Errorf("failed to commit config; error: %+v %+v", err, mr.Failed)
 	}
 
-	if mr.Failed != nil {
-		return fmt.Errorf("response object indicates failure: %+v", mr.Failed)
+	r, err = d.SendCommand("/admin save")
+	if err != nil || r.Failed != nil {
+		return fmt.Errorf("failed to persist config; error: %+v %+v", err, mr.Failed)
 	}
+
 	return nil
 }
