@@ -98,7 +98,7 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 
 func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
-		log.Infof("Applying partial config %s to %s", s.Cfg.StartupConfig, s.Cfg.LongName)
+		log.Infof("Waiting for %s to boot and apply config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
