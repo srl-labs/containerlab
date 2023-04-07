@@ -153,11 +153,11 @@ func init() {
 	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{},
 		"comma separated list of template names to render")
 	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{},
-		"comma separated list of nodes to include")
+		"comma separated list of nodes to include")
 	configCmd.Flags().SortFlags = false
 
 	configCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include, optional")
+		"comma separated list of nodes to include, optional")
 
 	configCmd.AddCommand(configSendCmd)
 	configSendCmd.Flags().AddFlagSet(configCmd.Flags())
