@@ -216,6 +216,7 @@ func Test_filterClabNodes(t *testing.T) {
 		c           *CLab
 		nodesFilter []string
 		wantNodes   []string
+		wantLinks   [][]string
 		wantErr     bool
 		err         error
 	}{
@@ -236,9 +237,10 @@ func Test_filterClabNodes(t *testing.T) {
 			},
 			nodesFilter: []string{"node1"},
 			wantNodes:   []string{"node1"},
+			wantLinks:   [][]string{},
 			wantErr:     false,
 		},
-		"one node, no links, empty node": {
+		"one node, no links, empty node filter": {
 			c: &CLab{
 				Config: &Config{
 					Topology: &types.Topology{
@@ -252,6 +254,88 @@ func Test_filterClabNodes(t *testing.T) {
 			},
 			nodesFilter: []string{},
 			wantNodes:   []string{"node1"},
+			wantLinks:   [][]string{},
+			wantErr:     false,
+		},
+		"two nodes, one link between them, one filter node": {
+			c: &CLab{
+				Config: &Config{
+					Topology: &types.Topology{
+						Nodes: map[string]*types.NodeDefinition{
+							"node1": {
+								Kind: "linux",
+							},
+							"node2": {
+								Kind: "linux",
+							},
+						},
+						Links: []*types.LinkConfig{
+							{
+								Endpoints: []string{"node1:eth1", "node2:eth2"},
+							},
+						},
+					},
+				},
+			},
+			nodesFilter: []string{"node1"},
+			wantNodes:   []string{"node1"},
+			wantLinks:   [][]string{},
+			wantErr:     false,
+		},
+		"two nodes, one link between them, no filter": {
+			c: &CLab{
+				Config: &Config{
+					Topology: &types.Topology{
+						Nodes: map[string]*types.NodeDefinition{
+							"node1": {
+								Kind: "linux",
+							},
+							"node2": {
+								Kind: "linux",
+							},
+						},
+						Links: []*types.LinkConfig{
+							{
+								Endpoints: []string{"node1:eth1", "node2:eth1"},
+							},
+						},
+					},
+				},
+			},
+			nodesFilter: []string{},
+			wantNodes:   []string{"node1", "node2"},
+			wantLinks:   [][]string{{"node1:eth1", "node2:eth1"}},
+			wantErr:     false,
+		},
+		"three nodes, two links, two nodes in the filter": {
+			c: &CLab{
+				Config: &Config{
+					Topology: &types.Topology{
+						Nodes: map[string]*types.NodeDefinition{
+							"node1": {
+								Kind: "linux",
+							},
+							"node2": {
+								Kind: "linux",
+							},
+							"node3": {
+								Kind: "linux",
+							},
+						},
+						Links: []*types.LinkConfig{
+							{
+								Endpoints: []string{"node1:eth1", "node2:eth1"},
+							},
+							{
+								Endpoints: []string{"node2:eth2", "node3:eth2"},
+							},
+						},
+					},
+				},
+			},
+			nodesFilter: []string{"node1", "node2"},
+			wantNodes:   []string{"node1", "node2"},
+			wantLinks:   [][]string{{"node1:eth1", "node2:eth1"}},
 			wantErr:     false,
 		},
 	}
@@ -274,8 +358,17 @@ func Test_filterClabNodes(t *testing.T) {
 				filteredNodes = append(filteredNodes, n)
 			}
 
+			filteredLinks := make([][]string, 0, len(tt.c.Config.Topology.Links))
+			for _, l := range tt.c.Config.Topology.Links {
+				filteredLinks = append(filteredLinks, l.Endpoints)
+			}
+
 			if cmp.Diff(filteredNodes, tt.wantNodes) != "" {
 				t.Errorf("filterClabNodes() got = %v, want %v", filteredNodes, tt.wantNodes)
+			}
+
+			if cmp.Diff(filteredLinks, tt.wantLinks) != "" {
+				t.Errorf("filterClabNodes() got = %v, want %v", filteredLinks, tt.wantLinks)
 			}
 		})
 	}
