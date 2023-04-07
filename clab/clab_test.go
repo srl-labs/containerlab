@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/mocks"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -206,4 +207,49 @@ func Test_WaitForExternalNodeDependencies_NodeNonExisting(t *testing.T) {
 	// run the check with a node that has no "network-mode: container:<CONTAINERNAME>"
 	c.WaitForExternalNodeDependencies(context.TODO(), "NonExistingNode")
 	// should simply and quickly return
+}
+
+func Test_filterClabNodes(t *testing.T) {
+
+	tests := map[string]struct {
+		c           *CLab
+		nodesFilter []string
+		wantNodes   []string
+		wantErr     bool
+	}{
+		"two nodes, no links, one filter node": {
+			c: &CLab{
+				Config: &Config{
+					Topology: &types.Topology{
+						Nodes: map[string]*types.NodeDefinition{
+							"node1": {
+								Kind: "linux",
+							},
+							"node2": {
+								Kind: "linux",
+							},
+						},
+					},
+				},
+			},
+			nodesFilter: []string{"node1"},
+			wantNodes:   []string{"node1"},
+			wantErr:     false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			filterClabNodes(tt.c, tt.nodesFilter)
+
+			filteredNodes := make([]string, 0, len(tt.c.Config.Topology.Nodes))
+			for n := range tt.c.Config.Topology.Nodes {
+				filteredNodes = append(filteredNodes, n)
+			}
+
+			if cmp.Diff(filteredNodes, tt.wantNodes) != "" {
+				t.Errorf("filterClabNodes() got = %v, want %v", filteredNodes, tt.wantNodes)
+			}
+		})
+	}
 }

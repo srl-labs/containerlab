@@ -16,13 +16,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl"
+	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 type CLab struct {
@@ -114,55 +114,67 @@ func WithTopoFile(file, varsFile string) ClabOption {
 	}
 }
 
-// WithNodeFilter allows for the filtering of nodes from a topology
-//
-// !!! Since this is altering the clab.config.Topology.[Nodes,Links] it must only
-// be called after WithTopoFile(). !!!
+// WithNodeFilter option sets a filter for nodes to be deployed.
+// A filter is a list of node names to be deployed,
+// names are provided exactly as they are listed in the topology file.
+// Since this is altering the clab.config.Topology.[Nodes,Links] it must only
+// be called after WithTopoFile.
 func WithNodeFilter(nodeFilter []string) ClabOption {
 	return func(c *CLab) error {
-		// If a subset of nodes is specified, remove other nodes and links referring to them
-		if len(nodeFilter) > 0 {
-			log.Infof("Applying nodeFilter %+v", nodeFilter)
+		return filterClabNodes(c, nodeFilter)
+	}
 
-			newNodes := map[string]*types.NodeDefinition{}
-			newLinks := []*types.LinkConfig{}
+}
 
-			// remove nodes
-			for name, node := range c.Config.Topology.Nodes {
-				if _, exists := utils.StringInSlice(nodeFilter, name); exists {
-					log.Debugf("Including node %s", name)
-					newNodes[name] = node
-				} else {
-					log.Debugf("Excluding node %s", name)
-				}
-			}
-			// replace the original collection of nodes with the filtered
-			c.Config.Topology.Nodes = newNodes
-
-			// remove links
-			for _, l := range c.Config.Topology.Links {
-				if len(l.Endpoints) != 2 {
-					newLinks = append(newLinks, l)
-				} else {
-					ep1 := strings.Split(l.Endpoints[0], ":")[0]
-					ep2 := strings.Split(l.Endpoints[1], ":")[0]
-
-					_, containsAside := utils.StringInSlice(nodeFilter, ep1)
-					_, containsBside := utils.StringInSlice(nodeFilter, ep2)
-
-					if containsAside && containsBside {
-						log.Debugf("Including link %+v", l)
-						newLinks = append(newLinks, l)
-					} else {
-						log.Debugf("Excluding link %+v between %s and %s", l, ep1, ep2)
-					}
-				}
-			}
-			// replace the original collection of links with the filtered
-			c.Config.Topology.Links = newLinks
-		}
+func filterClabNodes(c *CLab, nodeFilter []string) error {
+	if len(nodeFilter) == 0 {
 		return nil
 	}
+
+	log.Infof("Applying node filter: %q", nodeFilter)
+
+	// newNodes := make(map[string]*types.NodeDefinition, len(c.Config.Topology.Nodes))
+	newLinks := make([]*types.LinkConfig, 0, len(c.Config.Topology.Links))
+
+	// filter nodes
+	for name := range c.Config.Topology.Nodes {
+		if exists := slices.Contains(nodeFilter, name); !exists {
+			log.Debugf("Excluding node %s", name)
+			delete(c.Config.Topology.Nodes, name)
+		}
+	}
+
+	// filter links
+	for _, l := range c.Config.Topology.Links {
+		// get the endpoints of the link and extract the node names
+		// to remove the links which have either side in the node filter
+		splitEpAside := strings.Split(l.Endpoints[0], ":")
+		if len(splitEpAside) != 2 {
+			continue
+		}
+
+		epA := splitEpAside[0]
+
+		splitEpBside := strings.Split(l.Endpoints[1], ":")
+		if len(splitEpBside) != 2 {
+			continue
+		}
+
+		epB := splitEpBside[0]
+
+		containsAside := slices.Contains(nodeFilter, epA)
+		containsBside := slices.Contains(nodeFilter, epB)
+
+		// if both endpoints of a link belong to the node filter, keep the link
+		if containsAside && containsBside {
+			log.Debugf("Including link %+v", l)
+			newLinks = append(newLinks, l)
+		}
+	}
+	// replace the original collection of links with the links that have both endpoints in the node filter
+	c.Config.Topology.Links = newLinks
+
+	return nil
 }
 
 // NewContainerLab function defines a new container lab.
