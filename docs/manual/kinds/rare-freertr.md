@@ -2,34 +2,30 @@
 search:
   boost: 4
 ---
-# RARE/freeRtr overview
+# RARE/freeRtr
 
 [RARE](http://rare.freertr.org) stands for Router for Academia, Research & Education. It is an open source routing platform, used to create a network operating system (NOS) on commodity hardware (a white box switch). RARE uses FreeRtr as a control plane software  and is thus often referred to as RARE/freeRtr.
 
-RARE/freeRtr has the particularity to run interchangeably different dataplanes such P4 INTEL TOFINO, P4 BMv2, DPDK, XDP, libpcap or UNIX UDP raw sockets. This inherent property allows RARE/freeRtr to run multiple use cases requiring different bandwidth capability. 
+???info "what is RARE?"
+    RARE/freeRtr has the particularity to run interchangeably different dataplanes such P4 INTEL TOFINO, P4 BMv2, DPDK, XDP, libpcap or UNIX UDP raw sockets. This inherent property allows RARE/freeRtr to run multiple use cases requiring different bandwidth capability.
 
-It can be used as:
+    It can be used as:
 
-* a full featured versatile DPDK [SOHO](https://wiki.geant.org/x/JK7TC) router able to handle nx1GE, nx10GE and a couple of 100GE.
-* a service provider Metropolitan Arean Network [IPv4/IPv6 MPLS router](https://wiki.geant.org/x/hLDTC) 
-* a full featured [BGP Route Reflector](https://wiki.geant.org/x/q5rTC) 
+    * a full featured versatile DPDK [SOHO](https://wiki.geant.org/x/JK7TC) router able to handle nx1GE, nx10GE and a couple of 100GE.
+    * a service provider Metropolitan Arean Network [IPv4/IPv6 MPLS router](https://wiki.geant.org/x/hLDTC)
+    * a full featured [BGP Route Reflector](https://wiki.geant.org/x/q5rTC)
 
-More information [here](http://docs.freertr.org) and [here](http://rare.freertr.org).
+    More information [here](http://docs.freertr.org) and [here](http://rare.freertr.org).
 
-## RARE/freeRtr containerlab image
+RARE/freeRtr: is a container image that uses `linux` kind to run RARE/freeRtr.
 
-RARE/freeRtr:
+## Getting RARE image
 
-* is using `linux` containerlab `kind`
-* and is enabled with default forwarder: `UNIX UDP raw sockets`
+RARE/freeRtr container image is available to everyone on [GitHub Container Registry](https://ghcr.io/rare-freertr/freertr-containerlab)
 
-```yaml
-# RARE/freeRtr hello world lab
-# clab id: rtr000 
-# rtr1 is connected to rtr2 via their respective eth1
-#
-# rtr1 <--eth1--> rtr2 
-#
+The container image above is a nightly built of [RARE/freeRtr](https://github.com/rare-freertr/freeRtr) control plane `master` branch.
+
+<!-- ```yaml
 name: rtr000
 
 topology:
@@ -52,13 +48,7 @@ topology:
     Create beforehand RARE/freeRtr `__clabNodeDir__/run` folder where all router artefacts are located.
     ```
     mkdir __clabNodeDir__/run
-    ```
-
-!!!info
-    ```
-    ghcr.io/rare-freertr/freertr-containerlab:latest
-    ```
-    the container image above is a nightly built of [RARE/freeRtr](https://github.com/rare-freertr/freeRtr) control plane `master` branch
+    ``` -->
 
 ## Managing RARE/freeRtr nodes
 
@@ -100,7 +90,7 @@ When containerlab launches RARE/freeRtr node:
 
 ### Node configuration
 
-RARE/freeRtr nodes have a dedicated `__clabNodeDir__/run` directory that is used to persist the configuration of the node. 
+RARE/freeRtr nodes have a dedicated `__clabNodeDir__/run` directory that is used to persist the configuration of the node.
 
 #### Default node configuration
 
@@ -120,13 +110,13 @@ It is possible to make RARE/freeRtr nodes to boot up with a user-defined config 
 
 #### Saving configuration
 
-Configuration is saved using `write` command using RARE/freeRtr CLI. The router configuration will be saved at `__clabNodeDir__/run/conf/rtr-sw.txt` 
+Configuration is saved using `write` command using RARE/freeRtr CLI. The router configuration will be saved at `__clabNodeDir__/run/conf/rtr-sw.txt`
 
 ### License
 
 As an open source software, RARE/freeRtr does not require any license file.
 
-## Build RARE/freeRtr Container 
+## Build RARE/freeRtr Container
 
 RARE/freeRTr container can be built:
 
@@ -138,7 +128,7 @@ docker build --no-cache -t freertr-containerlab:latest .
 
 ### File mounts
 
-As previously mentioned it is necessary to create `run` folder for each routers. 
+As previously mentioned it is necessary to create `run` folder for each routers.
 
 In the lab example above:
 
@@ -211,7 +201,7 @@ clab-rtr000/
 * `logs` folder is where RARE/freeRtr logs files are located (output of `show logging`)
 * `pcap` folder is where `pcap` files are located (`packet capture eth1`)
 * `ntfw` folder is where netflow files are stored (future use - not configured currently in default config)
-* `mrt` folder is where `bmp` output files are stored (future use - not configured currently in default config) 
+* `mrt` folder is where `bmp` output files are stored (future use - not configured currently in default config)
 
 ## Lab example
 
