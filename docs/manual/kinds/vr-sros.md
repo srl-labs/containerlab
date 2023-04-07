@@ -224,6 +224,22 @@ Both `flat` and normal syntax can be used in the partial config file. For exampl
     }
 ```
 
+###### Remote partial files
+
+It is possible to provide a partial config file that is located on a remote http(s) server. This can be done by providing a URL to the file. The URL must start with `http://` or `https://` and must point to a file that is accessible from the containerlab host.
+
+!!!note
+    The URL **must have** `.partial` in its name:
+
+```yaml
+name: sros_lab
+topology:
+  nodes:
+    sros:
+      kind: vr-sros
+      startup-config: https://gist.com/<somehash>/staticroute.partial.cfg
+```
+
 #### Configuration save
 
 Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for `vr-sros` nodes via Netconf. The configuration will be saved under `config.txt` file and can be found at the node's directory inside the lab parent directory:
