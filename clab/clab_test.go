@@ -6,6 +6,7 @@ package clab
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -216,6 +217,7 @@ func Test_filterClabNodes(t *testing.T) {
 		nodesFilter []string
 		wantNodes   []string
 		wantErr     bool
+		err         error
 	}{
 		"two nodes, no links, one filter node": {
 			c: &CLab{
@@ -236,11 +238,36 @@ func Test_filterClabNodes(t *testing.T) {
 			wantNodes:   []string{"node1"},
 			wantErr:     false,
 		},
+		"one node, no links, empty node": {
+			c: &CLab{
+				Config: &Config{
+					Topology: &types.Topology{
+						Nodes: map[string]*types.NodeDefinition{
+							"node1": {
+								Kind: "linux",
+							},
+						},
+					},
+				},
+			},
+			nodesFilter: []string{},
+			wantNodes:   []string{"node1"},
+			wantErr:     false,
+		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			filterClabNodes(tt.c, tt.nodesFilter)
+			err := filterClabNodes(tt.c, tt.nodesFilter)
+			if (err != nil) != tt.wantErr {
+				t.Log("hey", tt.c.Config.Topology.Nodes)
+				t.Fatalf("filterClabNodes() error = %v, wantErr %v", err, tt.wantErr)
+			} else {
+				if !errors.Is(err, tt.err) {
+					t.Log("hey", tt.c.Config.Topology.Nodes)
+					t.Fatalf("filterClabNodes() error = %v, wantErr %v", err, tt.err)
+				}
+			}
 
 			filteredNodes := make([]string, 0, len(tt.c.Config.Topology.Nodes))
 			for n := range tt.c.Config.Topology.Nodes {
