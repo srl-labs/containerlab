@@ -1,4 +1,4 @@
-# LAB-000: RARE/freeRtr hello world !
+# RARE/freeRtr hello world !
 
 |                               |                                                                      |
 | ----------------------------- | -------------------------------------------------------------------- |
@@ -11,13 +11,11 @@
 
 ## Description
 
-This lab example consists of two RARE/freeRtr routers connected via their respective `eth1` port.
+This lab example comprises two RARE/freeRtr routers connected via their respective `eth1` port.
 
-The lab configuration is documented in detail at:
-
-https://github.com/rare-freertr/freeRtr-containerlab/blob/main/README.md
+Configuration details such as the bind mounts and access details are outlined on the [Rare's kind page](../manual/kinds/rare-freertr.md).
 
 [topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/rtr/000/rtr000.clab.yml
 
-[^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
+[^1]: Resource requirements are provisional. Consult with docs for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.

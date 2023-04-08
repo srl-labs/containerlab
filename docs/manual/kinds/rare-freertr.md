@@ -17,38 +17,13 @@ search:
 
     More information [here](http://docs.freertr.org) and [here](http://rare.freertr.org).
 
-RARE/freeRtr: is a container image that uses `linux` kind to run RARE/freeRtr.
+RARE/freeRtr: is a container image that uses [`linux`](linux.md) kind to run RARE/freeRtr.
 
 ## Getting RARE image
 
-RARE/freeRtr container image is available to everyone on [GitHub Container Registry](https://ghcr.io/rare-freertr/freertr-containerlab)
+RARE/freeRtr container image is freely available on [GitHub Container Registry](https://ghcr.io/rare-freertr/freertr-containerlab).
 
-The container image above is a nightly built of [RARE/freeRtr](https://github.com/rare-freertr/freeRtr) control plane `master` branch.
-
-<!-- ```yaml
-name: rtr000
-
-topology:
-  nodes:
-    rtr1:
-      kind: linux
-      image: ghcr.io/rare-freertr/freertr-containerlab:latest 
-      binds: 
-        - __clabNodeDir__/run:/rtr/run
-    rtr2:
-      kind: linux
-      image: ghcr.io/rare-freertr/freertr-containerlab:latest 
-      binds: 
-        - __clabNodeDir__/run:/rtr/run
-  links:
-    - endpoints: ["rtr1:eth1","rtr2:eth1"]
-```
-
-!!!warning
-    Create beforehand RARE/freeRtr `__clabNodeDir__/run` folder where all router artefacts are located.
-    ```
-    mkdir __clabNodeDir__/run
-    ``` -->
+The container image is nightly build of a [RARE/freeRtr](https://github.com/rare-freertr/freeRtr) control plane off the `master` branch.
 
 ## Managing RARE/freeRtr nodes
 
@@ -90,27 +65,27 @@ When containerlab launches RARE/freeRtr node:
 
 ### Node configuration
 
-RARE/freeRtr nodes have a dedicated `__clabNodeDir__/run` directory that is used to persist the configuration of the node.
+RARE/freeRtr nodes have a dedicated `/run`[^1] directory that is used to persist the configuration of the node.
 
 #### Default node configuration
 
-RARE/freeRtr configuration consist in 2 files:
+RARE/freeRtr configuration consists of 2 files:
 
 * `rtr-hw.txt` also called freeRtr hardware file
 * `rtr-sw.txt` also called freeRtr software file
 
-This is located into:
+That are located in the `<lab_dir>/<node_name>/run/conf` directory on the container host and mapped into `/rtr/run/conf` inside the container.
 
-* `__clabNodeDir__/run/conf` at the containerlab host server
-* `/rtr/run/conf` inside the container
+!!!note
+    The `<lab_dir>/<node_name>` path can be abbreviated as `__clabNodeDir__` in the topology file. It is a special variable that is replaced with the actual path to the node directory.
 
 #### User defined config
 
-It is possible to make RARE/freeRtr nodes to boot up with a user-defined config instead of a built-in one. In this case you'd have to put `rtr-hw.txt` and `rtr-sw.txt` files into `__clabNodeDir__/run`  
+It is possible to make RARE/freeRtr nodes to boot up with a user-defined config instead of a built-in one. In this case you'd have to put `rtr-hw.txt` and `rtr-sw.txt` files into `<lab_dir>/<node_name>/run/` directory.
 
 #### Saving configuration
 
-Configuration is saved using `write` command using RARE/freeRtr CLI. The router configuration will be saved at `__clabNodeDir__/run/conf/rtr-sw.txt`
+Configuration is saved using `write` command using RARE/freeRtr CLI. The router configuration will be saved at `<lab_dir>/<node_name>/run/`
 
 ### License
 
@@ -207,4 +182,6 @@ clab-rtr000/
 
 The following labs feature RARE/freeRtr node:
 
-* [RARE/freeRtr hello world](../../lab-examples/rare-freertr-000.md)
+* [RARE/freeRtr hello world](../../lab-examples/rare-freertr.md)
+
+[^1]: `/run` directory has to be created in the [Lab directory](../conf-artifacts.md#identifying-a-lab-directory) for each RARE/freeRtr node.
