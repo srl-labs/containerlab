@@ -211,7 +211,6 @@ func Test_WaitForExternalNodeDependencies_NodeNonExisting(t *testing.T) {
 }
 
 func Test_filterClabNodes(t *testing.T) {
-
 	tests := map[string]struct {
 		c           *CLab
 		nodesFilter []string
@@ -336,6 +335,37 @@ func Test_filterClabNodes(t *testing.T) {
 			nodesFilter: []string{"node1", "node2"},
 			wantNodes:   []string{"node1", "node2"},
 			wantLinks:   [][]string{{"node1:eth1", "node2:eth1"}},
+			wantErr:     false,
+		},
+		"three nodes, two links, one nodes in the filter": {
+			c: &CLab{
+				Config: &Config{
+					Topology: &types.Topology{
+						Nodes: map[string]*types.NodeDefinition{
+							"node1": {
+								Kind: "linux",
+							},
+							"node2": {
+								Kind: "linux",
+							},
+							"node3": {
+								Kind: "linux",
+							},
+						},
+						Links: []*types.LinkConfig{
+							{
+								Endpoints: []string{"node1:eth1", "node2:eth1"},
+							},
+							{
+								Endpoints: []string{"node2:eth2", "node3:eth2"},
+							},
+						},
+					},
+				},
+			},
+			nodesFilter: []string{"node1"},
+			wantNodes:   []string{"node1"},
+			wantLinks:   [][]string{},
 			wantErr:     false,
 		},
 	}
