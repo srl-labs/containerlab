@@ -133,5 +133,5 @@ func init() {
 	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath,
 		"Serve static files from the specified directory")
 	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include, optional")
+		"comma separated list of nodes to include")
 }
