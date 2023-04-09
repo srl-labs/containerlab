@@ -24,7 +24,7 @@ The lab is documented in details [here](https://github.com/rare-freertr/freeRtr-
 You'll find information such as:
 
 * How to build `RARE/freeRtr containerlab` image
-* How to lauch `RARE/freeRtr Hello world` lab
+* How to launch `RARE/freeRtr Hello world` lab
 * Lab configuration
 * Lab Verification
 
