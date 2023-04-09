@@ -26,7 +26,7 @@ You'll find information such as:
 * How to build `RARE/freeRtr containerlab` image
 * How to launch `RARE/freeRtr Hello world` lab
 * Lab configuration
-* Lab Verification
+* Lab verification
 
 [^1]: Resource requirements are provisional. Consult with docs for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
