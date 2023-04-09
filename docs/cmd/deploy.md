@@ -79,7 +79,9 @@ It should be useful to enable more verbose logging when something doesn't work a
 
 #### node-filter
 
-The local `--node-filter` flag allows a user to specify a subset of nodes from the topology to deploy, instead of all (default). This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full representative topology.
+The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `deploy` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
+
+When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
 
 ### Environment variables
 
