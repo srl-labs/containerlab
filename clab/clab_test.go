@@ -16,6 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
+	"golang.org/x/exp/slices"
 )
 
 func Test_createNamespaceSharingDependencyOne(t *testing.T) {
@@ -387,6 +388,8 @@ func Test_filterClabNodes(t *testing.T) {
 			for n := range tt.c.Config.Topology.Nodes {
 				filteredNodes = append(filteredNodes, n)
 			}
+			// sort the nodes to make the test deterministic
+			slices.Sort(filteredNodes)
 
 			filteredLinks := make([][]string, 0, len(tt.c.Config.Topology.Links))
 			for _, l := range tt.c.Config.Topology.Links {

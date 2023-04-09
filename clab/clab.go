@@ -16,13 +16,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl"
-	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"golang.org/x/exp/slices"
 )
 
 type CLab struct {

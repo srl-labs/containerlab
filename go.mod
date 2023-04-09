@@ -38,6 +38,7 @@ require (
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.8.0
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/sys v0.7.0
 	golang.org/x/term v0.7.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -85,7 +86,6 @@ require (
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/vbauerster/mpb/v8 v8.3.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317 // indirect
 )
