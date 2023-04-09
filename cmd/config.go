@@ -157,7 +157,7 @@ func init() {
 	configCmd.Flags().SortFlags = false
 
 	configCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include, optional")
+		"comma separated list of nodes to include")
 
 	configCmd.AddCommand(configSendCmd)
 	configSendCmd.Flags().AddFlagSet(configCmd.Flags())
