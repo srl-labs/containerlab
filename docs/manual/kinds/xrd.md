@@ -38,10 +38,10 @@ There are several management interfaces supported by XRd nodes:
     `ssh clab@<container-name>`  
     Password: `clab@123`
 === "gNMI"
-    gNMI server runs on `9339` port in the insecure mode (no TLS).  
+    gNMI server runs on `57400` port in the insecure mode (no TLS).  
     Using [gnmic](https://gnmic.openconfig.net) gNMI client as an example:
     ```bash
-    gnmic -a <container-name/node-mgmt-address>:9339 --insecure \
+    gnmic -a <container-name/node-mgmt-address>:57400 --insecure \
       -u clab -p clab@123 \
       capabilities
     ```
