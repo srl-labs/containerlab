@@ -12,7 +12,6 @@ The exact command that performs configuration save depends on a given kind. The 
 | **Nokia SR OS**    |                                             | delivered via netconf RPC `copy-config running startup` |
 | **Arista cEOS**    | `Cli -p 15 -c wr`                           |                                                         |
 
-
 ### Usage
 
 `containerlab [global-flags] save [local-flags]`
@@ -24,6 +23,12 @@ The exact command that performs configuration save depends on a given kind. The 
 With the global `--topo | -t` or `--name | -n` flag a user specifies from which lab to take the containers and perform the save configuration task.
 
 When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+
+#### node-filter
+
+The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `save` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
+
+When a subset of nodes is specified, containerlab will only attempt to save configuration on the selected nodes.
 
 ### Examples
 
