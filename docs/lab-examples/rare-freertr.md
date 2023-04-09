@@ -17,5 +17,16 @@ Configuration details such as the bind mounts and access details are outlined on
 
 [topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/rtr/000/rtr000.clab.yml
 
+## Full lab instructions
+
+The lab is documented in details [here](https://github.com/rare-freertr/freeRtr-containerlab/blob/main/README.md)
+
+You'll find information such as:
+
+* How to build `RARE/freeRtr containerlab` image
+* How to lauch `RARE/freeRtr Hello world` lab
+* Lab configuration
+* Lab Verification
+
 [^1]: Resource requirements are provisional. Consult with docs for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
