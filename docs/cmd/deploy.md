@@ -83,6 +83,8 @@ The local `--node-filter` flag allows users to specify a subset of topology node
 
 When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
 
+Read more about [node filtering](../manual/node-filtering.md) in the documentation.
+
 ### Environment variables
 
 #### CLAB_RUNTIME

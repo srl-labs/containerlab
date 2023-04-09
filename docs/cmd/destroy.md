@@ -45,6 +45,8 @@ The local `--node-filter` flag allows users to specify a subset of topology node
 When a subset of nodes is specified, containerlab will only destroy those nodes and their links and leave the rest of the topology intact.  
 As such, users can destroy a subset of nodes and links in a lab without destroying the entire topology.
 
+Read more about [node filtering](../manual/node-filtering.md) in the documentation.
+
 ### Examples
 
 #### Destroy a lab described in the given topology file
