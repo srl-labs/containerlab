@@ -9,12 +9,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/weaveworks/ignite/pkg/operations"
 )
 
 var kindnames = []string{"rare"}
@@ -28,7 +25,6 @@ func Register(r *nodes.NodeRegistry) {
 
 type rare struct {
 	nodes.DefaultNode
-	vmChans *operations.VMChannels
 }
 
 func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -59,48 +55,6 @@ func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	}
 
 	return createRAREFiles(n)
-}
-
-func (n *rare) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
-	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
-	if err != nil {
-		return err
-	}
-	intf, err := n.Runtime.StartContainer(ctx, cID, n.Cfg)
-
-	if vmChans, ok := intf.(*operations.VMChannels); ok {
-		n.vmChans = vmChans
-	}
-
-	return err
-}
-
-func (n *rare) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
-	log.Debugf("Running postdeploy actions for RARE/freeRtr '%s' node", n.Cfg.ShortName)
-
-	if err := types.DisableTxOffload(n.Cfg); err != nil {
-		return err
-	}
-
-	// when ignite runtime is in use
-	if n.vmChans != nil {
-		return <-n.vmChans.SpawnFinished
-	}
-
-	return nil
-}
-
-func (n *rare) GetImages(_ context.Context) map[string]string {
-	images := make(map[string]string)
-	images[nodes.ImageKey] = n.Cfg.Image
-
-	// ignite runtime additionally needs a kernel and sandbox image
-	if n.Runtime.GetName() != ignite.RuntimeName {
-		return images
-	}
-	images[nodes.KernelKey] = n.Cfg.Kernel
-	images[nodes.SandboxKey] = n.Cfg.Sandbox
-	return images
 }
 
 func createRAREFiles(node nodes.Node) error {
