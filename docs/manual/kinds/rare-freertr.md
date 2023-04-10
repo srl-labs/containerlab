@@ -65,23 +65,24 @@ When containerlab launches RARE/freeRtr node:
 
 ### Node configuration
 
-RARE/freeRtr nodes have a dedicated `/run`[^1] directory that is used to persist the configuration of the node.
-
-#### Default node configuration
-
-RARE/freeRtr configuration consists of 2 files:
+RARE/freeRtr nodes have a dedicated `/run`[^1] directory that is used to persist the configuration of the node which consists of 2 files:
 
 * `rtr-hw.txt` also called freeRtr hardware file
 * `rtr-sw.txt` also called freeRtr software file
 
-That are located in the `<lab_dir>/<node_name>/run/conf` directory on the container host and mapped into `/rtr/run/conf` inside the container.
-
-!!!note
-    The `<lab_dir>/<node_name>` path can be abbreviated as `__clabNodeDir__` in the topology file. It is a special variable that is replaced with the actual path to the node directory.
-
 #### User defined config
 
-It is possible to make RARE/freeRtr nodes to boot up with a user-defined config instead of a built-in one. In this case you'd have to put `rtr-hw.txt` and `rtr-sw.txt` files into `<lab_dir>/<node_name>/run/` directory.
+It is possible to make RARE/freeRtr nodes to boot up with a user-defined config instead of a default one. In this case you'd have to create `rtr-hw.txt` and `rtr-sw.txt` files and bind mount them to the `/rtr/run/conf` dir:
+
+```yaml
+nodes:
+  rtr1:
+    kind: rare
+    image: ghcr.io/rare-freertr/freertr-containerlab:latest
+    binds:
+      - rtr-hw.txt:/rtr/run/conf/rtr-hw.txt
+      - rtr-sw.txt:/rtr/run/conf/rtr-sw.txt
+```
 
 #### Saving configuration
 
@@ -184,6 +185,6 @@ clab-rtr000/
 
 The following labs feature RARE/freeRtr node:
 
-* [RARE/freeRtr hello world](../../lab-examples/rare-freertr.md)
+* [RARE/freeRtr](../../lab-examples/rare-freertr.md)
 
 [^1]: `/run` directory is created in the [Lab directory](../conf-artifacts.md#identifying-a-lab-directory) for each RARE/freeRtr node.
