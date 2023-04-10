@@ -6,6 +6,8 @@ search:
 
 [RARE](http://rare.freertr.org) stands for Router for Academia, Research & Education. It is an open source routing platform, used to create a network operating system (NOS) on commodity hardware (a white box switch). RARE uses FreeRtr as a control plane software  and is thus often referred to as RARE/freeRtr.
 
+RARE nodes are identified by the `rare` kind in the [topology file](../topo-def-file.md).
+
 ???info "what is RARE?"
     RARE/freeRtr has the particularity to run interchangeably different dataplanes such P4 INTEL TOFINO, P4 BMv2, DPDK, XDP, libpcap or UNIX UDP raw sockets. This inherent property allows RARE/freeRtr to run multiple use cases requiring different bandwidth capability.
 
@@ -16,8 +18,6 @@ search:
     * a full featured [BGP Route Reflector](https://wiki.geant.org/x/q5rTC)
 
     More information [here](http://docs.freertr.org) and [here](http://rare.freertr.org).
-
-RARE/freeRtr: is a container image that uses `rare` `kind` to run.
 
 ## Getting RARE image
 
