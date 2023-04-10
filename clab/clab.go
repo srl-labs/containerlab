@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl"
+	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
@@ -129,6 +130,13 @@ func WithNodeFilter(nodeFilter []string) ClabOption {
 func filterClabNodes(c *CLab, nodeFilter []string) error {
 	if len(nodeFilter) == 0 {
 		return nil
+	}
+
+	// ensure that the node filter is a subset of the nodes in the topology
+	for _, n := range nodeFilter {
+		if _, ok := c.Config.Topology.Nodes[n]; !ok {
+			return fmt.Errorf("%w: node %q is not present in the topology", errs.ErrIncorrectInput, n)
+		}
 	}
 
 	log.Infof("Applying node filter: %q", nodeFilter)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/mocks"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -368,6 +369,27 @@ func Test_filterClabNodes(t *testing.T) {
 			wantNodes:   []string{"node1"},
 			wantLinks:   [][]string{},
 			wantErr:     false,
+		},
+		"two nodes, no links, one filter node with a wrong name": {
+			c: &CLab{
+				Config: &Config{
+					Topology: &types.Topology{
+						Nodes: map[string]*types.NodeDefinition{
+							"node1": {
+								Kind: "linux",
+							},
+							"node2": {
+								Kind: "linux",
+							},
+						},
+					},
+				},
+			},
+			nodesFilter: []string{"wrongName"},
+			wantNodes:   []string{"node1", "node2"},
+			wantLinks:   [][]string{},
+			wantErr:     true,
+			err:         errs.ErrIncorrectInput,
 		},
 	}
 
