@@ -57,6 +57,7 @@ func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	if err != nil {
 		return nil
 	}
+
 	return createRAREFiles(n)
 }
 
@@ -106,10 +107,6 @@ func createRAREFiles(node nodes.Node) error {
 	nodeCfg := node.Config()
 	// create "run" directory that will be bind mounted to rare node
 	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0777)
-	return nil
-}
 
-// CheckInterfaceName is a noop for rare containers as they can have any names.
-func (n *rare) CheckInterfaceName() error {
 	return nil
 }
