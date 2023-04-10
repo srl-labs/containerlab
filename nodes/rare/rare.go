@@ -13,11 +13,11 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/weaveworks/ignite/pkg/operations"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/weaveworks/ignite/pkg/operations"
 )
 
-var kindnames = []string{"rare","rare_freertr","freertr"}
+var kindnames = []string{"rare"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
@@ -52,12 +52,12 @@ func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-        utils.CreateDirectory(n.Cfg.LabDir, 0777)
-        _, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-        if err != nil {
-                return nil
-        }
-        return createRAREFiles(n)
+	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return nil
+	}
+	return createRAREFiles(n)
 }
 
 func (n *rare) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
@@ -103,9 +103,9 @@ func (n *rare) GetImages(_ context.Context) map[string]string {
 }
 
 func createRAREFiles(node nodes.Node) error {
-        nodeCfg := node.Config()
-        // create "run" directory that will be bind mounted to rare node
-        utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0777)
+	nodeCfg := node.Config()
+	// create "run" directory that will be bind mounted to rare node
+	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0777)
 	return nil
 }
 
