@@ -81,6 +81,7 @@
                         "checkpoint_cloudguard",
                         "ext-container",
                         "xrd",
+                        "rare",
                         "cisco_xrd",
                         "c8000",
                         "cisco_c8000"
@@ -614,6 +615,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "xrd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "rare": {
                             "$ref": "#/definitions/node-config"
                         },
                         "c8000": {

@@ -3,14 +3,10 @@ name: rtr000
 topology:
   nodes:
     rtr1:
-      kind: linux
+      kind: rare
       image: ghcr.io/rare-freertr/freertr-containerlab:latest
-      binds:
-        - __clabNodeDir__/run:/rtr/run
     rtr2:
-      kind: linux
+      kind: rare
       image: ghcr.io/rare-freertr/freertr-containerlab:latest
-      binds:
-        - __clabNodeDir__/run:/rtr/run
   links:
     - endpoints: ["rtr1:eth1", "rtr2:eth1"]

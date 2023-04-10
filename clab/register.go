@@ -33,6 +33,7 @@ import (
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
+	rare "github.com/srl-labs/containerlab/nodes/rare"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.
@@ -63,6 +64,7 @@ func (c *CLab) RegisterNodes() {
 	vr_xrv.Register(c.Reg)
 	vr_xrv9k.Register(c.Reg)
 	xrd.Register(c.Reg)
+	rare.Register(c.Reg)
 	c8000.Register(c.Reg)
 	border0.Register(c.Reg)
 }

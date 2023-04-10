@@ -17,7 +17,7 @@ search:
 
     More information [here](http://docs.freertr.org) and [here](http://rare.freertr.org).
 
-RARE/freeRtr: is a container image that uses [`linux`](linux.md) kind to run RARE/freeRtr.
+RARE/freeRtr: is a container image that uses `rare` `kind` to run.
 
 ## Getting RARE image
 
@@ -103,14 +103,16 @@ docker build --no-cache -t freertr-containerlab:latest .
 
 ### File mounts
 
-As previously mentioned it is necessary to create `run` folder for each routers.
+During lab initialisation, each node will have their `run` folder created.
 
 In the lab example above:
 
 ```yaml
 cd freeRtr-containerlab
-mkdir ./clab-rtr000/rtr1/run
-mkdir ./clab-rtr000/rtr1/run 
+# ls clab-rtr000/rtr1/run/
+conf  logs  mrt  ntfw  pcap
+# ls clab-rtr000/rtr2/run/
+conf  logs  mrt  ntfw  pcap
 ```
 
 ```bash
@@ -184,4 +186,4 @@ The following labs feature RARE/freeRtr node:
 
 * [RARE/freeRtr hello world](../../lab-examples/rare-freertr.md)
 
-[^1]: `/run` directory has to be created in the [Lab directory](../conf-artifacts.md#identifying-a-lab-directory) for each RARE/freeRtr node.
+[^1]: `/run` directory is created in the [Lab directory](../conf-artifacts.md#identifying-a-lab-directory) for each RARE/freeRtr node.
