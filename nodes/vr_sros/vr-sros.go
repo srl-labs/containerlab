@@ -20,6 +20,7 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -103,7 +104,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
 
-		err := applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
+		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
 			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
 			s.Cfg.StartupConfig,
 		)
@@ -171,12 +172,32 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
+// isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running"
+func (s *vrSROS) isHealthy(ctx context.Context) bool {
+	ex := exec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
+
+	res, err := s.RunExec(ctx, ex)
+	if err != nil {
+		return false
+	}
+
+	log.Debugf("HEALTHY: %v", res.ReturnCode)
+
+	return res.ReturnCode == 0
+}
+
 // applyPartialConfig applies partial configuration to the SR OS.
-func applyPartialConfig(ctx context.Context, addr, platformName, username, password string, configFile string) error {
+func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, username, password string, configFile string) error {
 	var err error
 	var d *network.Driver
 
 	for loop := true; loop; {
+		if !s.isHealthy(ctx) {
+			time.Sleep(5 * time.Second) // cool-off period
+			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
+			continue
+		}
+
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
