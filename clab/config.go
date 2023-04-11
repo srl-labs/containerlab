@@ -262,7 +262,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 }
 
 // processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
-// It handles remote files and local files. And returns an absolute path to the startup-config file.
+// It handles remote files, local files and embedded configs.
+// Returns an absolute path to the startup-config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// process startup-config
 	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
@@ -270,32 +271,34 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 		return err
 	}
 
-	// if more then 1 newline, then it is an embedded config
-	isEmbeddedConfig := strings.Count(p, "\n") > 1
-	// if it starts with http(s):// it is a downloadable config
+	// embedded config is a config that is defined as a multi-line string in the topology file
+	// it contains at least one newline
+	isEmbeddedConfig := strings.Count(p, "\n") >= 1
+	// downloadable config starts with http(s)://
 	isDownloadableConfig := strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://")
 
 	if isEmbeddedConfig || isDownloadableConfig {
 
-		// if the startup-config is a remote file, download it to the temp directory
+		// both embedded and downloadable configs are require clab tmp dir to be created
 		tmpLoc := c.TopoPaths.ClabTmpDir()
 		utils.CreateDirectory(tmpLoc, 0755)
 
 		switch {
 		case isEmbeddedConfig:
-			// we have an embedded config with multiple newlines
-			// its an embedded config
-			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, "embedded.config")
+			log.Debugf("Node %q startup-config is an embedded config: %q", nodeCfg.ShortName, p)
+			// for embedded config we create a file with the name embedded.partial.cfg
+			// as embedded configs are meant to be partial configs
+			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, "embedded.partial.cfg")
 
-			// write file
 			err = utils.CreateFile(absDestFile, p)
 			if err != nil {
 				return err
 			}
-			// adjust the nodeconfig by pointing startup-config to the locally created file
+
 			p = absDestFile
 
 		case isDownloadableConfig:
+			log.Debugf("Node %q startup-config is a downloadable config %q", nodeCfg.ShortName, p)
 			// get file name from an URL
 			fname := utils.FilenameForURL(p)
 
