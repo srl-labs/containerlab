@@ -181,7 +181,7 @@ func (s *vrSROS) isHealthy(ctx context.Context) bool {
 		return false
 	}
 
-	log.Debugf("HEALTHY: %v", res.ReturnCode)
+	log.Debugf("Node %q health status: %v", s.Cfg.ShortName, res.ReturnCode == 0)
 
 	return res.ReturnCode == 0
 }
