@@ -37,7 +37,6 @@ var border0LoginCmd = &cobra.Command{
 	Short: "Logs in to border0.com service and saves a token to current working directory",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 

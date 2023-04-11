@@ -18,6 +18,7 @@ import (
 	keysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	linux "github.com/srl-labs/containerlab/nodes/linux"
 	ovs "github.com/srl-labs/containerlab/nodes/ovs"
+	rare "github.com/srl-labs/containerlab/nodes/rare"
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
@@ -33,7 +34,6 @@ import (
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
-	rare "github.com/srl-labs/containerlab/nodes/rare"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.

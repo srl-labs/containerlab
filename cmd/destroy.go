@@ -45,7 +45,6 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
 	destroyCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
-
 }
 
 func destroyFn(_ *cobra.Command, _ []string) error {

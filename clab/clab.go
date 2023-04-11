@@ -124,7 +124,6 @@ func WithNodeFilter(nodeFilter []string) ClabOption {
 	return func(c *CLab) error {
 		return filterClabNodes(c, nodeFilter)
 	}
-
 }
 
 func filterClabNodes(c *CLab, nodeFilter []string) error {

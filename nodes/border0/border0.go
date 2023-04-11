@@ -102,7 +102,10 @@ func (b *border0) PostDeploy(ctx context.Context, params *nodes.PostDeployParams
 	utils.CreateFile(b.hostborder0yamlPath, config)
 
 	// bring up the tunnels
-	b0Cmd := exec.NewExecCmdFromSlice([]string{"/bin/sh", "-c", "./border0 connector start --config " + b.containerborder0yamlPath + " 2> /proc/1/fd/2  1> /proc/1/fd/1"})
+	b0Cmd := exec.NewExecCmdFromSlice([]string{
+		"/bin/sh", "-c",
+		"./border0 connector start --config " + b.containerborder0yamlPath + " 2> /proc/1/fd/2  1> /proc/1/fd/1",
+	})
 	err = b.Runtime.ExecNotWait(ctx, b.Cfg.LongName, b0Cmd)
 	if err != nil {
 		return err

@@ -172,7 +172,7 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
-// isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running"
+// isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running".
 func (s *vrSROS) isHealthy(ctx context.Context) bool {
 	ex := exec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
 

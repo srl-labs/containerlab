@@ -135,7 +135,6 @@ func Test_createBorder0Config(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
 			// set the token variable first
 			err := os.Setenv(ENV_NAME_BORDER0_ADMIN_TOKEN, "SomeValueOtherThenNil")
