@@ -23,10 +23,8 @@ const (
 	CSRFileSuffix             = ".csr"
 )
 
-var (
-	// clabTmpDir is the directory where clab stores temporary and/or downloaded files.
-	clabTmpDir = filepath.Join(os.TempDir(), ".clab")
-)
+// clabTmpDir is the directory where clab stores temporary and/or downloaded files.
+var clabTmpDir = filepath.Join(os.TempDir(), ".clab")
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
 // generally all these paths are deduced from two main paths. The topology file path and the lab dir path.

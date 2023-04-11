@@ -566,7 +566,8 @@ func TestGetNodeCertificateConfig(t *testing.T) {
 		t.Logf("%q test item result: %v", name, cert)
 
 		if d := cmp.Diff(item.want["node1"].Certificate, cert); d != "" {
-			t.Fatalf("Certificate config objects don't match.\nGot: %+v\nWant: %+v\nDiff\n%s", cert, item.want["node1"].Certificate, d)
+			t.Fatalf("Certificate config objects don't match.\nGot: %+v\nWant: %+v\nDiff\n%s",
+				cert, item.want["node1"].Certificate, d)
 		}
 	}
 }

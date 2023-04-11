@@ -82,7 +82,6 @@ func (n *vrVEOS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 	}
 
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-
 }
 
 func (n *vrVEOS) SaveConfig(_ context.Context) error {

@@ -47,7 +47,7 @@ var exportTemplate string
 
 var deployFormat string
 
-// subset of nodes to work with
+// subset of nodes to work with.
 var nodeFilter []string
 
 // deployCmd represents the deploy command.
