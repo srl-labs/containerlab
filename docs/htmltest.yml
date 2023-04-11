@@ -15,6 +15,7 @@ IgnoreURLs:
   - https://*github.com/
   - https://twitter.com/*
   - mysocket.io # remove mysocket.io links until we rework to border0.com
+  - https://supportcenter.checkpoint.com/ # started to fail, meh.
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
