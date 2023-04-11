@@ -43,6 +43,9 @@ func init() {
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
+	destroyCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+		"comma separated list of nodes to include")
+
 }
 
 func destroyFn(_ *cobra.Command, _ []string) error {
@@ -97,6 +100,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
 			clab.WithTopoFile(topo, varsFile),
+			clab.WithNodeFilter(nodeFilter),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,

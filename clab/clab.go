@@ -16,12 +16,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/cert/cfssl"
+	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"golang.org/x/exp/slices"
 )
 
 type CLab struct {
@@ -111,6 +113,76 @@ func WithTopoFile(file, varsFile string) ClabOption {
 
 		return c.initMgmtNetwork()
 	}
+}
+
+// WithNodeFilter option sets a filter for nodes to be deployed.
+// A filter is a list of node names to be deployed,
+// names are provided exactly as they are listed in the topology file.
+// Since this is altering the clab.config.Topology.[Nodes,Links] it must only
+// be called after WithTopoFile.
+func WithNodeFilter(nodeFilter []string) ClabOption {
+	return func(c *CLab) error {
+		return filterClabNodes(c, nodeFilter)
+	}
+
+}
+
+func filterClabNodes(c *CLab, nodeFilter []string) error {
+	if len(nodeFilter) == 0 {
+		return nil
+	}
+
+	// ensure that the node filter is a subset of the nodes in the topology
+	for _, n := range nodeFilter {
+		if _, ok := c.Config.Topology.Nodes[n]; !ok {
+			return fmt.Errorf("%w: node %q is not present in the topology", errs.ErrIncorrectInput, n)
+		}
+	}
+
+	log.Infof("Applying node filter: %q", nodeFilter)
+
+	// newNodes := make(map[string]*types.NodeDefinition, len(c.Config.Topology.Nodes))
+	newLinks := make([]*types.LinkConfig, 0, len(c.Config.Topology.Links))
+
+	// filter nodes
+	for name := range c.Config.Topology.Nodes {
+		if exists := slices.Contains(nodeFilter, name); !exists {
+			log.Debugf("Excluding node %s", name)
+			delete(c.Config.Topology.Nodes, name)
+		}
+	}
+
+	// filter links
+	for _, l := range c.Config.Topology.Links {
+		// get the endpoints of the link and extract the node names
+		// to remove the links which have either side in the node filter
+		splitEpAside := strings.Split(l.Endpoints[0], ":")
+		if len(splitEpAside) != 2 {
+			continue
+		}
+
+		epA := splitEpAside[0]
+
+		splitEpBside := strings.Split(l.Endpoints[1], ":")
+		if len(splitEpBside) != 2 {
+			continue
+		}
+
+		epB := splitEpBside[0]
+
+		containsAside := slices.Contains(nodeFilter, epA)
+		containsBside := slices.Contains(nodeFilter, epB)
+
+		// if both endpoints of a link belong to the node filter, keep the link
+		if containsAside && containsBside {
+			log.Debugf("Including link %+v", l)
+			newLinks = append(newLinks, l)
+		}
+	}
+	// replace the original collection of links with the links that have both endpoints in the node filter
+	c.Config.Topology.Links = newLinks
+
+	return nil
 }
 
 // NewContainerLab function defines a new container lab.

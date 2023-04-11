@@ -63,7 +63,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	}
 
 	if topo != "" {
-		opts = append(opts, clab.WithTopoFile(topo, varsFile))
+		opts = append(opts,
+			clab.WithTopoFile(topo, varsFile),
+			clab.WithNodeFilter(nodeFilter),
+		)
 	}
 
 	c, err := clab.NewContainerLab(opts...)

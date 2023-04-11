@@ -77,6 +77,14 @@ Following values are accepted, ordered from most verbose to least: `trace`, `deb
 
 It should be useful to enable more verbose logging when something doesn't work as expected, to better understand what's going on, and to provide more useful output logs when reporting containerlab issues, while making it more terse in production environments.
 
+#### node-filter
+
+The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `deploy` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
+
+When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
+
+Read more about [node filtering](../manual/node-filtering.md) in the documentation.
+
 ### Environment variables
 
 #### CLAB_RUNTIME
