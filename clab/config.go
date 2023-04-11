@@ -270,30 +270,49 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 		return err
 	}
 
-	// if the startup-config is a remote file, download it to the temp directory
-	if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") {
-		tmpLoc := c.TopoPaths.ClabTmpDir()
+	// if more then 1 newline, then it is an embedded config
+	isEmbeddedConfig := strings.Count(p, "\n") > 1
+	// if it starts with http(s):// it is a downloadable config
+	isDownloadableConfig := strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://")
 
+	if isEmbeddedConfig || isDownloadableConfig {
+
+		// if the startup-config is a remote file, download it to the temp directory
+		tmpLoc := c.TopoPaths.ClabTmpDir()
 		utils.CreateDirectory(tmpLoc, 0755)
 
-		// get file name from an URL
-		fname := utils.FilenameForURL(p)
+		switch {
+		case isEmbeddedConfig:
+			// we have an embedded config with multiple newlines
+			// its an embedded config
+			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, "embedded.config")
 
-		// Deduce the absolute destination filename for the downloaded content
-		absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
+			// write file
+			err = utils.CreateFile(absDestFile, p)
+			if err != nil {
+				return err
+			}
+			// adjust the nodeconfig by pointing startup-config to the locally created file
+			p = absDestFile
 
-		log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
-		// download the file to tmp location
+		case isDownloadableConfig:
+			// get file name from an URL
+			fname := utils.FilenameForURL(p)
 
-		err := utils.CopyFileContents(p, absDestFile, 0755)
-		if err != nil {
-			return err
+			// Deduce the absolute destination filename for the downloaded content
+			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
+
+			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
+			// download the file to tmp location
+			err := utils.CopyFileContents(p, absDestFile, 0755)
+			if err != nil {
+				return err
+			}
+
+			// adjust the nodeconfig by pointing startup-config to the local downloaded file
+			p = absDestFile
 		}
-
-		// adjust the nodeconfig by pointing startup-config to the local downloaded file
-		p = absDestFile
 	}
-
 	// resolve the startup config path to an abs path
 	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
