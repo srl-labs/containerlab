@@ -54,11 +54,11 @@ func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 		return nil
 	}
 
-	return createRAREFiles(n)
+	return n.createRAREFiles()
 }
 
-func createRAREFiles(node nodes.Node) error {
-	nodeCfg := node.Config()
+func (n *rare) createRAREFiles() error {
+	nodeCfg := n.Config()
 	// create "run" directory that will be bind mounted to rare node
 	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0777)
 
