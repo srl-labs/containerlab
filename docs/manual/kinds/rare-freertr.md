@@ -34,14 +34,10 @@ RARE/freeRtr node launched with containerlab can be managed via the following in
     ```bash
     docker exec -it <container-name/id> bash
     ```
-    to access RARE/freeRtr CLI
-    ```
-    telnet localhost 2323
-    ```
 === "CLI"
     to connect to RARE/freeRtr CLI directly
     ```telnet
-    telnet <container-name/id@eth0>
+    telnet <container-name/id>
     ```
 
 !!!info
@@ -96,7 +92,7 @@ As an open source software, RARE/freeRtr does not require any license file.
 
 RARE/freeRTr container can be built:
 
-```
+```bash
 git clone https://github.com/rare-freertr/freeRtr-containerlab.git
 cd freeRtr-containerlab
 docker build --no-cache -t freertr-containerlab:latest .
@@ -108,30 +104,13 @@ During lab initialisation, each node will have their `run` folder created.
 
 In the lab example above:
 
-```yaml
-cd freeRtr-containerlab
-# ls clab-rtr000/rtr1/run/
-conf  logs  mrt  ntfw  pcap
-# ls clab-rtr000/rtr2/run/
-conf  logs  mrt  ntfw  pcap
-```
-
 ```bash
-containerlab deploy --topo rtr000.clab.yml
-INFO[0000] Containerlab v0.38.0 started
-INFO[0000] Parsing & checking topology file: rtr000.clab.yml
-INFO[0000] Creating lab directory: /root/development/testclab/freeRtr-containerlab/clab-rtr000
-INFO[0001] Creating docker network: Name="clab", IPv4Subnet="172.20.20.0/24", IPv6Subnet="2001:172:20:20::/64", MTU="1500"
-INFO[0002] Creating container: "rtr2"
-INFO[0006] Creating container: "rtr1"
-INFO[0007] Creating virtual wire: rtr1:eth1 <--> rtr2:eth1
-INFO[0007] Adding containerlab host entries to /etc/hosts file
-+---+------------------+--------------+--------------------------------------------------+-------+---------+----------------+----------------------+
-| # |       Name       | Container ID |                      Image                       | Kind  |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+------------------+--------------+--------------------------------------------------+-------+---------+----------------+----------------------+
-| 1 | clab-rtr000-rtr1 | ff666c777f68 | ghcr.io/rare-freertr/freertr-containerlab:latest | linux | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
-| 2 | clab-rtr000-rtr2 | 873ec955d2b9 | ghcr.io/rare-freertr/freertr-containerlab:latest | linux | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-+---+------------------+--------------+--------------------------------------------------+-------+---------+----------------+----------------------+
+cd freeRtr-containerlab
+$ ls clab-rtr000/rtr1/run/
+conf  logs  mrt  ntfw  pcap
+
+$ ls clab-rtr000/rtr2/run/
+conf  logs  mrt  ntfw  pcap
 ```
 
 ```bash
