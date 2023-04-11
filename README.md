@@ -26,6 +26,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Juniper cRPD](https://containerlab.dev/manual/kinds/crpd/)
 * [Cumulus VX](https://containerlab.dev/manual/kinds/cvx/)
 * [Keysight IXIA-C](https://containerlab.dev/manual/kinds/keysight_ixia-c-one/)
+* [RARE/FreeRtr](https://containerlab.dev/manual/kinds/rare-freertr/)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](https://containerlab.dev/manual/vrnetlab/):
 
@@ -84,7 +85,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
     It is also a perfect companion for your next demo. Deploy the lab fast, with all its configuration stored as a code -> destroy when done. Easily and [securely share lab access](https://containerlab.dev/manual/published-ports) if needed.
 * **Testing and CI**  
     Because of the containerlab's single-binary packaging and code-based lab definition files, it was never that easy to spin up a test bed for CI. Gitlab CI, Github Actions and virtually any CI system will be able to spin up containerlab topologies in a single simple command.
-* **Telemetry validation**
+* **Telemetry validation**  
     Coupling modern telemetry stacks with containerlab labs make a perfect fit for Telemetry use cases validation. Spin up a lab with containerized network functions with a telemetry on the side, and run comprehensive telemetry use cases.
 
 Containerlab documentation is provided at <https://containerlab.dev>.

@@ -28,6 +28,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Juniper cRPD](manual/kinds/crpd.md)
 * [Cumulus VX](manual/kinds/cvx.md)
 * [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
+* [RARE/freeRtr](manual/kinds/rare-freertr.md)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](manual/vrnetlab.md):
 
@@ -84,12 +85,12 @@ This short clip briefly demonstrates containerlab features and explains its purp
 ## Use cases
 
 * **Labs and demos**  
-    Containerlab was meant to be a tool for provisioning networking labs built with containers. It is free, open and ubiquitous. No software apart from Docker is required!  
-    As with any lab environment it allows the users to validate features, topologies, perform interop testing, datapath testing, etc.  
+    Containerlab was meant to be a tool for provisioning networking labs built with containers. It is free, open and ubiquitous. No software apart from Docker is required!
+    As with any lab environment it allows the users to validate features, topologies, perform interop testing, datapath testing, etc.
     It is also a perfect companion for your next demo. Deploy the lab fast, with all its configuration stored as a code -> destroy when done. Easily and [securely share lab access](manual/published-ports.md) if needed.
 * **Testing and CI**  
     Because of the containerlab's single-binary packaging and code-based lab definition files, it was never that easy to spin up a test bed for CI. Gitlab CI, Github Actions and virtually any CI system will be able to spin up containerlab topologies in a single simple command.
-* **Telemetry validation**
+* **Telemetry validation**  
     Coupling modern telemetry stacks with containerlab labs make a perfect fit for Telemetry use cases validation. Spin up a lab with containerized network functions with a telemetry on the side, and run comprehensive telemetry use cases.
 
 ## Join us
