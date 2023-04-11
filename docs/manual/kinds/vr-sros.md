@@ -166,7 +166,15 @@ vr-sros nodes come up with a basic "blank" configuration where only the card/mda
 
 #### User-defined config
 
-It is possible to make SR OS nodes to boot up with a user-defined startup config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the config file that will be mounted to a container and used as a startup config:
+SR OS nodes launched with hellt/vrnetlab come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules. This configuration is applied right after the node is booted.
+
+Since this initial configuration is meant to provide a bare minimum configuration to make the node operational, users will likely want to apply their own configuration to the node to enable some features or to configure some interfaces. This can be done by providing a user-defined configuration file using [`startup-config`](../nodes.md#startup-config) property of the node/kind.
+
+##### Full startup-config
+
+When a user provides a path to a file that has a complete configuration for the node, containerlab will copy that file to the lab directory for that specific node under the `/tftpboot/config.txt` name and mount that dir to the container. This will result in this config to act as a startup-config for the node:
+
+```yaml
 
 ```yaml
 name: sros_lab
@@ -177,7 +185,60 @@ topology:
       startup-config: myconfig.txt
 ```
 
-With such topology file containerlab is instructed to take a file `myconfig.txt` from the current working directory, copy it to the lab directory for that specific node under the `/tftpboot/config.txt` name and mount that dir to the container. This will result in this config to act as a startup config for the node.
+!!!note
+    With the above configuration, the node will boot with the configuration specified in `myconfig.txt`, no other configuration will be applied. You have to provision interfaces, cards, power-shelves, etc. yourself.
+
+##### Partial startup-config
+
+Quite often it is beneficial to have a partial configuration that will be applied on top of the default configuration that containerlab applies. For example, users might want to add some services on top of the default configuration provided by containerlab and do not want to have the full configuration file.
+
+This can be done by providing a partial configuration file that will be applied on top of the default configuration. The partial configuration file must have `.partial` string in its name, for example, `myconfig.partial.txt`.
+
+```yaml
+name: sros_lab
+topology:
+  nodes:
+    sros:
+      kind: vr-sros
+      startup-config: myconfig.partial.txt
+```
+
+The partial config can contain configuration in a MD-CLI syntax that is accepted in the configuration mode of the SR OS. The way partial config is applied is by sending lines from the partial config file to the SR OS via SSH. A few important things to note:
+
+1. Entering the configuration mode is not required, containerlab will do that for you. `edit-config exclusive` mode is used by containerlab.
+2. `commit` command **must not** be included in the partial config file, containerlab will do that for you.
+
+Both `flat` and normal syntax can be used in the partial config file. For example, the following partial config file adds a static route to the node in the regular CLI syntax:
+
+```bash
+    configure {
+       router "Base" {
+           static-routes {
+               route 192.168.200.200/32 route-type unicast {
+                   next-hop "192.168.0.1" {
+                       admin-state enable
+                   }
+               }
+           }
+       }
+    }
+```
+
+###### Remote partial files
+
+It is possible to provide a partial config file that is located on a remote http(s) server. This can be done by providing a URL to the file. The URL must start with `http://` or `https://` and must point to a file that is accessible from the containerlab host.
+
+!!!note
+    The URL **must have** `.partial` in its name:
+
+```yaml
+name: sros_lab
+topology:
+  nodes:
+    sros:
+      kind: vr-sros
+      startup-config: https://gist.com/<somehash>/staticroute.partial.cfg
+```
 
 #### Configuration save
 

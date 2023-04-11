@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -51,7 +52,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 
 	dfi, err := os.Stat(dst)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 	} else {
@@ -90,6 +91,13 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		}
 	}
 	defer in.Close() // skipcq: GO-S2307
+
+	// create directories if needed, since we promise to create the file
+	// if it doesn't exist
+	err = os.MkdirAll(filepath.Dir(dst), 0750)
+	if err != nil {
+		return err
+	}
 
 	out, err := os.Create(dst)
 	if err != nil {

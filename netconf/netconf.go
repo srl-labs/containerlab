@@ -8,11 +8,10 @@ package netconf
 import (
 	"fmt"
 
-	"github.com/scrapli/scrapligo/util"
-
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/transport"
+	"github.com/scrapli/scrapligo/util"
 )
 
 // SaveConfig saves the running config to the startup by means
