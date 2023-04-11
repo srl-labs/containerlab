@@ -240,6 +240,24 @@ topology:
       startup-config: https://gist.com/<somehash>/staticroute.partial.cfg
 ```
 
+###### Embedded partial files
+
+Users can also embed the partial config in the topology file itself, making it a hermetic artifact that can be shared with others. This can be done by using multiline string in YAML:
+
+```yaml
+name: sros_lab
+topology:
+  nodes:
+    sros:
+      kind: vr-sros
+      startup-config: | #(1)!
+        /configure system location "I am an embedded config"
+```
+
+1. It is mandatory to use YAML's multiline string syntax to denote that the string below is a partial config and not a file.
+
+Embedded partial configs will persist on containerlab's host and use the same directory as the [remote startup-config](../nodes.md#remote-startup-config) files.
+
 #### Configuration save
 
 Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for `vr-sros` nodes via Netconf. The configuration will be saved under `config.txt` file and can be found at the node's directory inside the lab parent directory:
