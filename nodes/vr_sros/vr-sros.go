@@ -56,6 +56,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.DefaultNode = *nodes.NewDefaultNode(s)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
+	s.LicenseRequired = true
 
 	s.Cfg = cfg
 	for _, o := range opts {

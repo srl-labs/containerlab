@@ -30,6 +30,8 @@ type DefaultNode struct {
 	Mgmt             *types.MgmtNet
 	Runtime          runtime.ContainerRuntime
 	HostRequirements *types.HostRequirements
+	// Indicates that the node should not start without no license file defined
+	LicenseRequired bool
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
@@ -323,10 +325,18 @@ func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd)
 
 // VerifyLicenseFileExists checks if a license file with a provided path exists.
 func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
+
+	// if a license is required by the kind but not provided
+	if d.LicenseRequired && d.Config().License == "" {
+		return fmt.Errorf("node %s of kind %s requires a license. Provide one via 'license' knob in the topology file", d.Config().ShortName, d.Cfg.Kind)
+	}
+
+	// if license is not required and also not provided, return without error
 	if d.Config().License == "" {
 		return nil
 	}
 
+	// if license is provided check path exists
 	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
 	if !utils.FileExists(rlic) {
 		return fmt.Errorf("license file of node %q not found by the path %s", d.Config().ShortName, rlic)
