@@ -31,7 +31,7 @@ type DefaultNode struct {
 	Runtime          runtime.ContainerRuntime
 	HostRequirements *types.HostRequirements
 	// Indicates that the node should not start without no license file defined
-	LicenseRequired bool
+	LicensePolicy types.LicensePolicyValues
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
@@ -44,6 +44,7 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	dn := &DefaultNode{
 		HostRequirements: types.NewHostRequirements(),
 		OverwriteNode:    n,
+		LicensePolicy:    types.LicensePolicyNon,
 	}
 
 	return dn
@@ -325,17 +326,22 @@ func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd)
 
 // VerifyLicenseFileExists checks if a license file with a provided path exists.
 func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
-
-	// if a license is required by the kind but not provided
-	if d.LicenseRequired && d.Config().License == "" {
-		return fmt.Errorf("node %s of kind %s requires a license. Provide one via 'license' knob in the topology file", d.Config().ShortName, d.Cfg.Kind)
-	}
-
-	// if license is not required and also not provided, return without error
 	if d.Config().License == "" {
-		return nil
+		switch d.LicensePolicy {
+		// if a license is required by the kind but not provided
+		case types.LicensePolicyRequired:
+			return fmt.Errorf("node %s of kind %s requires a license. Provide one via 'license' knob in the topology file", d.Config().ShortName, d.Cfg.Kind)
+		case types.LicensePolicyWarn:
+			// just warn when no license is provided
+			log.Warnf("node %s of kind %s requires a license. Make sure to provide it in some way (e.g. license knob or baked into image)", d.Config().ShortName, d.Cfg.Kind)
+			return nil
+		case types.LicensePolicyNon:
+			// no policy attached, ruturn successfull
+			return nil
+		default:
+			return fmt.Errorf("unknown license policy value %s for node %s kind %s", d.LicensePolicy, d.Config().ShortName, d.Cfg.Kind)
+		}
 	}
-
 	// if license is provided check path exists
 	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
 	if !utils.FileExists(rlic) {
