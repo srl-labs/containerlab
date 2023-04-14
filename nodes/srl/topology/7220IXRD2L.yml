@@ -10,4 +10,4 @@ chassis_configuration:
 slot_configuration:
   1:
     "card_type": 187
-    "mda_type": 200
+    "mda_type": 208
