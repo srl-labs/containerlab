@@ -275,10 +275,9 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// it contains at least one newline
 	isEmbeddedConfig := strings.Count(p, "\n") >= 1
 	// downloadable config starts with http(s)://
-	isDownloadableConfig := strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://")
+	isDownloadableConfig := utils.IsHttpUri(p)
 
 	if isEmbeddedConfig || isDownloadableConfig {
-
 		// both embedded and downloadable configs are require clab tmp dir to be created
 		tmpLoc := c.TopoPaths.ClabTmpDir()
 		utils.CreateDirectory(tmpLoc, 0755)

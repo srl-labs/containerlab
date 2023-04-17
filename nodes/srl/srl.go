@@ -209,11 +209,14 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		agents := s.Cfg.Extras.SRLAgents
 
 		appmgr := filepath.Join(s.Cfg.LabDir, "config", "appmgr")
-
 		utils.CreateDirectory(appmgr, 0777)
 
 		for _, fullpath := range agents {
 			basename := filepath.Base(fullpath)
+			// if it is a url extract filename from url or content-disposition header
+			if utils.IsHttpUri(fullpath) {
+				basename = utils.FilenameForURL(fullpath)
+			}
 			dst := filepath.Join(appmgr, basename)
 			if err := utils.CopyFile(fullpath, dst, 0644); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
