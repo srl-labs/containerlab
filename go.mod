@@ -31,7 +31,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/runtime-spec v1.1.0-rc.1
 	github.com/pkg/errors v0.9.1
-	github.com/scrapli/scrapligo v1.1.7
+	github.com/scrapli/scrapligo v1.1.8
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.7.0
 	github.com/tklauser/numcpus v0.6.0
