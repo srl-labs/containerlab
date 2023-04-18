@@ -4,3 +4,4 @@
 "MD013": false # line-length
 "MD040": false # fenced code blocks should have language selected
 "MD053": false # do not remove mkdocs materials footnotes
+"MD071": false # do not remove unordered list indentation
