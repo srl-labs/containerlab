@@ -77,6 +77,7 @@ nav:
       - Nokia SR Linux and SONiC: lab-examples/srl-sonic.md
       - External bridge capability: lab-examples/ext-bridge.md
       - WAN topology: lab-examples/wan.md
+      - IXP (Internet eXchange Point) lab: lab-examples/ixp-lab.md
       - Nokia SR Linux and Nokia SR OS: lab-examples/vr-sros.md
       - Nokia SR Linux and Juniper vMX: lab-examples/vr-vmx.md
       - Nokia SR Linux and Cisco XRd: lab-examples/srl-xrd.md
@@ -199,6 +200,7 @@ plugins:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
   - typeset
+  - glightbox
 
 # Customization
 extra:
