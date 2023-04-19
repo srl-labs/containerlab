@@ -320,9 +320,12 @@
                             "ixrd3",
                             "ixrd2l",
                             "ixrd3l",
+                            "ixrd4",
                             "ixrd5",
+                            "ixrd5t",
                             "ixrh2",
                             "ixrh3",
+                            "ixrh4",
                             "ixr6",
                             "ixr6e",
                             "ixr10",
@@ -396,7 +399,7 @@
                 }
             }
         },
-        "certificate-config":{
+        "certificate-config": {
             "type": "object",
             "description": "Node's Certificate configuration option",
             "markdownDescription": "Node's [Certificate configuration options](https://containerlab.dev/manual/nodes/#certificate)",
