@@ -31,7 +31,7 @@ type DefaultNode struct {
 	Runtime          runtime.ContainerRuntime
 	HostRequirements *types.HostRequirements
 	// Indicates that the node should not start without no license file defined
-	LicensePolicy types.LicensePolicyValues
+	LicensePolicy types.LicensePolicy
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
@@ -44,7 +44,7 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	dn := &DefaultNode{
 		HostRequirements: types.NewHostRequirements(),
 		OverwriteNode:    n,
-		LicensePolicy:    types.LicensePolicyNon,
+		LicensePolicy:    types.LicensePolicyNone,
 	}
 
 	return dn
@@ -335,8 +335,8 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 			// just warn when no license is provided
 			log.Warnf("node %s of kind %s requires a license. Make sure to provide it in some way (e.g. license knob or baked into image)", d.Config().ShortName, d.Cfg.Kind)
 			return nil
-		case types.LicensePolicyNon:
-			// no policy attached, ruturn successfull
+		case types.LicensePolicyNone:
+			// license is not required
 			return nil
 		default:
 			return fmt.Errorf("unknown license policy value %s for node %s kind %s", d.LicensePolicy, d.Config().ShortName, d.Cfg.Kind)
