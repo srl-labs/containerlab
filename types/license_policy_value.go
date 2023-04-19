@@ -1,6 +1,6 @@
 package types
 
-// LicensePolicyValue is a value of LicensePolicy.
+// LicensePolicy is a value of LicensePolicy.
 type LicensePolicy string
 
 const (
