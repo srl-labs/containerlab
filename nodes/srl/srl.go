@@ -218,14 +218,9 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 			if utils.IsHttpUri(fullpath) {
 				basename = utils.FilenameForURL(fullpath)
 			}
-			// check for .yaml or .yml extension
-			// add if not existent
-			pos := strings.LastIndex(basename, ".")
-			if pos == -1 {
+			// enforce yml extension
+			if ext := filepath.Ext(basename); !(ext == ".yml" || ext == ".yaml") {
 				basename = basename + ".yml"
-			} else if basename[pos+1:] != "yml" && basename[pos+1:] != "yaml" {
-				// if it is not yml or yaml force it yml
-				basename = basename[pos+1:] + "yml"
 			}
 
 			dst := filepath.Join(appmgr, basename)
