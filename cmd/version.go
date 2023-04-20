@@ -13,6 +13,7 @@ import (
 	gover "github.com/hashicorp/go-version"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -55,19 +56,25 @@ var versionCmd = &cobra.Command{
 }
 
 // get LatestVersion fetches latest containerlab release version from Github releases.
-func getLatestVersion(vc chan string) { // skipcq: RVV-A0006
+func getLatestVersion(ctx context.Context, vc chan string) { // skipcq: RVV-A0006
 	// client that doesn't follow redirects
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
-	resp, err := client.Head(fmt.Sprintf("%s/releases/latest", repoUrl))
+
+	req, err := http.NewRequestWithContext(ctx, "HEAD", fmt.Sprintf("%s/releases/latest", repoUrl), nil)
+	if err != nil {
+		log.Debugf("error occurred during latest version fetch: %v", err)
+		return
+	}
+
+	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != 302 {
 		log.Debugf("error occurred during latest version fetch: %v", err)
 		return
 	}
-	defer resp.Body.Close()
 
 	loc := resp.Header.Get("Location")
 	split := strings.Split(loc, "releases/tag/")
@@ -81,6 +88,8 @@ func getLatestVersion(vc chan string) { // skipcq: RVV-A0006
 		log.Debugf("latest version %s is newer than the current one %s\n", vL.String(), vC.String())
 		vc <- vL.String()
 	}
+
+	resp.Body.Close()
 }
 
 // newVerNotification prints logs information about a new version if one was found.
@@ -115,7 +124,7 @@ func docsLinkFromVer(ver string) string {
 
 // getLatestClabVersion returns a chan that returns the version check result
 // uses the CLAB_VERSION_CHECK env variable (default true, if == "disable" will not perform the check).
-func getLatestClabVersion() chan string {
+func getLatestClabVersion(ctx context.Context) chan string {
 	// latest version channel
 	vCh := make(chan string)
 
@@ -126,7 +135,7 @@ func getLatestClabVersion() chan string {
 	if strings.Contains(strings.ToLower(versionCheckStatus), "disable") {
 		close(vCh)
 	} else {
-		go getLatestVersion(vCh)
+		go getLatestVersion(ctx, vCh)
 	}
 
 	return vCh

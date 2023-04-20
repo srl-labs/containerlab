@@ -8,7 +8,9 @@ import (
 	"context"
 	"net"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -85,6 +87,26 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	log.Infof("Containerlab v%s started", version)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// handle CTRL-C signal
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sig
+		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
+		cancel()
+
+		// when interrupted, destroy the interrupted lab deployment with cleanup
+		cleanup = true
+		if err := destroyFn(destroyCmd, []string{}); err != nil {
+			log.Errorf("Failed to destroy lab: %v", err)
+		}
+
+		os.Exit(1) // skipcq: RVV-A0003
+	}()
+
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
 		clab.WithTopoFile(topo, varsFile),
@@ -103,14 +125,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	setFlags(c.Config)
 	log.Debugf("lab Conf: %+v", c.Config)
 
 	// dispatch a version check that will run in background
-	vCh := getLatestClabVersion()
+	vCh := getLatestClabVersion(ctx)
 
 	if reconfigure {
 		if err != nil {
