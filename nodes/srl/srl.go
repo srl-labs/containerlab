@@ -211,12 +211,25 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		appmgr := filepath.Join(s.Cfg.LabDir, "config", "appmgr")
 		utils.CreateDirectory(appmgr, 0777)
 
+		// process extras -> agents configurations
 		for _, fullpath := range agents {
 			basename := filepath.Base(fullpath)
 			// if it is a url extract filename from url or content-disposition header
 			if utils.IsHttpUri(fullpath) {
 				basename = utils.FilenameForURL(fullpath)
 			}
+			// check for .yaml or .yml extension
+			// add if not existent
+			pos := strings.LastIndex(basename, ".")
+			if pos == -1 {
+				basename = basename + ".yml"
+			} else {
+				// if it is not yml or yaml force it yml
+				if basename[pos+1:] != "yml" && basename[pos+1:] != "yaml" {
+					basename = basename[pos+1:] + "yml"
+				}
+			}
+
 			dst := filepath.Join(appmgr, basename)
 			if err := utils.CopyFile(fullpath, dst, 0644); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
