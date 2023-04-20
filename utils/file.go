@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -37,7 +38,7 @@ func FileExists(filename string) bool {
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if isHTTP := (strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://")); !isHTTP {
+	if !IsHttpUri(src) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -69,6 +70,11 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return CopyFileContents(src, dst, mode)
 }
 
+// IsHttpUri check if the url is a downloadable uri
+func IsHttpUri(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
@@ -77,7 +83,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if isHTTP := (strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://")); isHTTP {
+	if IsHttpUri(src) {
 		resp, err := http.Get(src)
 		if err != nil || resp.StatusCode != 200 {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
@@ -203,5 +209,17 @@ func FilenameForURL(rawUrl string) string {
 		return UndefinedFileName
 	}
 
+	// try extracting the filename from "content-disposition" header
+	if IsHttpUri(rawUrl) {
+		resp, err := http.Head(rawUrl)
+		if err != nil {
+			return filepath.Base(u.Path)
+		}
+		if cd := resp.Header.Get("Content-Disposition"); cd != "" {
+			if _, params, err := mime.ParseMediaType(cd); err == nil {
+				return params["filename"]
+			}
+		}
+	}
 	return filepath.Base(u.Path)
 }
