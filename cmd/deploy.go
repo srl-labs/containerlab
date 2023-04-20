@@ -97,7 +97,13 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		<-sig
 		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
 		cancel()
-		destroyFn(destroyCmd, []string{})
+
+		// when interrupted, destroy the interrupted lab deployment with cleanup
+		cleanup = true
+		if err := destroyFn(destroyCmd, []string{}); err != nil {
+			log.Errorf("Failed to destroy lab: %v", err)
+		}
+
 		os.Exit(1) // skipcq: RVV-A0003
 	}()
 
