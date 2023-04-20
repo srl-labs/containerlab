@@ -223,11 +223,9 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 			pos := strings.LastIndex(basename, ".")
 			if pos == -1 {
 				basename = basename + ".yml"
-			} else {
+			} else if basename[pos+1:] != "yml" && basename[pos+1:] != "yaml" {
 				// if it is not yml or yaml force it yml
-				if basename[pos+1:] != "yml" && basename[pos+1:] != "yaml" {
-					basename = basename[pos+1:] + "yml"
-				}
+				basename = basename[pos+1:] + "yml"
 			}
 
 			dst := filepath.Join(appmgr, basename)
