@@ -75,7 +75,6 @@ func getLatestVersion(ctx context.Context, vc chan string) { // skipcq: RVV-A000
 		log.Debugf("error occurred during latest version fetch: %v", err)
 		return
 	}
-	defer resp.Body.Close()
 
 	loc := resp.Header.Get("Location")
 	split := strings.Split(loc, "releases/tag/")
@@ -89,6 +88,8 @@ func getLatestVersion(ctx context.Context, vc chan string) { // skipcq: RVV-A000
 		log.Debugf("latest version %s is newer than the current one %s\n", vL.String(), vC.String())
 		vc <- vL.String()
 	}
+
+	resp.Body.Close()
 }
 
 // newVerNotification prints logs information about a new version if one was found.

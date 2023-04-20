@@ -98,7 +98,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
 		cancel()
 		destroyFn(destroyCmd, []string{})
-		os.Exit(1)
+		os.Exit(1) // skipcq: RVV-A0003
 	}()
 
 	opts := []clab.ClabOption{
