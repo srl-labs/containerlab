@@ -29,7 +29,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/opencontainers/runtime-spec v1.1.0-rc.1
+	github.com/opencontainers/runtime-spec v1.1.0-rc.2
 	github.com/pkg/errors v0.9.1
 	github.com/scrapli/scrapligo v1.1.8
 	github.com/sirupsen/logrus v1.9.0
@@ -265,7 +265,7 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230204201903-c31fa085b70e // indirect
 	gocloud.dev v0.29.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
-	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/net v0.9.0
 	golang.org/x/oauth2 v0.6.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/text v0.9.0
