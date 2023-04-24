@@ -1554,8 +1554,8 @@ github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 h1:2VTzZjLZBgl62/EtslC
 github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542/go.mod h1:Ow0tF8D4Kplbc8s8sSb3V2oUCygFHVp8gC3Dn6U4MNI=
 github.com/hairyhenderson/go-fsimpl v0.0.0-20220529183339-9deae3e35047 h1:nSSfN9G8O8XXDqB3aDEHJ8K+0llYYToNlTcWOe1Pti8=
 github.com/hairyhenderson/go-fsimpl v0.0.0-20220529183339-9deae3e35047/go.mod h1:30RY4Ey+bg+BGKBufZE2IEmxk7hok9U9mjdgZYomwN4=
-github.com/hairyhenderson/gomplate/v3 v3.11.5-0.20230311142256-ea986e7404d1 h1:x8CEQoQlU/BkSWDW5mIv9V/vxviX8cXMSzSSq5qV66o=
-github.com/hairyhenderson/gomplate/v3 v3.11.5-0.20230311142256-ea986e7404d1/go.mod h1:ZE9/H+5uDrIYkfSn1oSjd/JxXoh/IIRPe6KZj3HamTw=
+github.com/hairyhenderson/gomplate/v3 v3.11.5 h1:LSDxCw8tWC/ltOzbZaleUNjGJOIEgnR/SN3GM9eClsA=
+github.com/hairyhenderson/gomplate/v3 v3.11.5/go.mod h1:ZE9/H+5uDrIYkfSn1oSjd/JxXoh/IIRPe6KZj3HamTw=
 github.com/hairyhenderson/toml v0.4.2-0.20210923231440-40456b8e66cf h1:I1sbT4ZbIt9i+hB1zfKw2mE8C12TuGxPiW7YmtLbPa4=
 github.com/hairyhenderson/toml v0.4.2-0.20210923231440-40456b8e66cf/go.mod h1:jDHmWDKZY6MIIYltYYfW4Rs7hQ50oS4qf/6spSiZAxY=
 github.com/hairyhenderson/yaml v0.0.0-20220618171115-2d35fca545ce h1:cVkYhlWAxwuS2/Yp6qPtcl0fGpcWxuZNonywHZ6/I+s=
