@@ -323,7 +323,7 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 	s := c.Config.Settings
 
 	// Set defaults for the CA parameters
-	keylength := 2048
+	keySize := 2048
 	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)).String() // 1 year as default
 	// validityDuration, err := time.ParseDuration(s.CertificateAuthority.Validity)
 	// if err != nil{
@@ -337,8 +337,8 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 			validityDuration = s.CertificateAuthority.ValidityDuration
 		}
 		// if KeyLength is set use the value
-		if s.CertificateAuthority.KeyLength != 0 {
-			keylength = s.CertificateAuthority.KeyLength
+		if s.CertificateAuthority.KeySize != 0 {
+			keySize = s.CertificateAuthority.KeySize
 		}
 		// if external CA cert and and key are set, propagate to topopaths
 		if s.CertificateAuthority.Cert != "" && s.CertificateAuthority.Key != "" {
@@ -354,7 +354,7 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 		CommonName:   c.Config.Name + " lab CA",
 		Expiry:       validityDuration,
 		Organization: "containerlab",
-		KeyLength:    keylength,
+		KeySize:      keySize,
 	}
 
 	// finally laod and generate the CA

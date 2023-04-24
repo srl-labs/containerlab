@@ -5,7 +5,7 @@ var CACSRTemplate string = `{
     "CN": "{{.CommonName}}",
     "key": {
        "algo": "rsa",
-       "size": {{.KeyLength}}
+       "size": {{.KeySize}}
     },
     "names": [{
       "C": "{{.Country}}",
@@ -30,7 +30,7 @@ var NodeCSRTemplate string = `{
     ],
     "key": {
       "algo": "rsa",
-      "size": {{.KeyLength}}
+      "size": {{.KeySize}}
     },
     "names": [{
       "C": "{{.Country}}",

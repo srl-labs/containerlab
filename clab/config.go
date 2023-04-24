@@ -58,7 +58,7 @@ type Settings struct {
 type CertificateAuthority struct {
 	Cert             string `yaml:"cert"`
 	Key              string `yaml:"key"`
-	KeyLength        int    `yaml:"key-length"`
+	KeySize          int    `yaml:"key-size"`
 	ValidityDuration string `yaml:"validity-duration"`
 }
 
