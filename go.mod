@@ -20,7 +20,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
 	github.com/h2non/gock v1.2.0
-	github.com/hairyhenderson/gomplate/v3 v3.11.5-0.20230311142256-ea986e7404d1
+	github.com/hairyhenderson/gomplate/v3 v3.11.5
 	github.com/hashicorp/go-version v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.3.2
@@ -265,7 +265,7 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230204201903-c31fa085b70e // indirect
 	gocloud.dev v0.29.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
-	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/net v0.9.0
 	golang.org/x/oauth2 v0.6.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/text v0.9.0
