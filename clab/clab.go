@@ -202,7 +202,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	c.Reg = nodes.NewNodeRegistry()
 
 	// register all nodes
-	c.RegisterNodes()
+	RegisterNodes(c.Reg)
 
 	for _, opt := range opts {
 		err := opt(c)

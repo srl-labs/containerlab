@@ -20,6 +20,9 @@ import (
 
 const (
 	licDir = "/config/license/safenet"
+
+	generateable      = true
+	generateIfFornamt = "eth%d"
 )
 
 var (
@@ -38,9 +41,12 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(crpd)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type crpd struct {

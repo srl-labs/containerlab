@@ -15,34 +15,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"gopkg.in/yaml.v2"
 )
 
-var interfaceFormat = map[string]string{
-	"srl":      "e1-%d",
-	"ceos":     "eth%d",
-	"crpd":     "eth%d",
-	"sonic-vs": "eth%d",
-	"linux":    "eth%d",
-	"bridge":   "veth%d",
-	"vr-sros":  "eth%d",
-	"vr-vmx":   "eth%d",
-	"vr-vsrx":  "eth%d",
-	"vr-vqfx":  "eth%d",
-	"vr-xrv9k": "eth%d",
-	"vr-veos":  "eth%d",
-	"xrd":      "eth%d",
-	"rare":     "eth%d",
-}
-
-var supportedKinds = []string{
-	"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros",
-	"vr-vmx", "vr-vsrx", "vr-vqfx", "vr-xrv9k", "vr-veos", "xrd", "rare",
-}
-
 const (
-	defaultSRLType     = "ixrd2"
 	defaultNodePrefix  = "node"
 	defaultGroupPrefix = "tier"
 )
@@ -61,6 +39,7 @@ var (
 	groupPrefix string
 	file        string
 	deploy      bool
+	reg         *nodes.NodeRegistry
 )
 
 type nodesDef struct {
@@ -128,6 +107,21 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
+	// init a new NodeRegistry
+	reg = nodes.NewNodeRegistry()
+	// register all nodes
+	clab.RegisterNodes(reg)
+
+	generateNodesAttributes := reg.GetGenerateNodeAttributes()
+	supportedKinds := []string{}
+
+	// prepare list of generateable node kinds
+	for k, v := range generateNodesAttributes {
+		if v.IsGenerateable() {
+			supportedKinds = append(supportedKinds, k)
+		}
+	}
+
 	rootCmd.AddCommand(generateCmd)
 	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
@@ -191,6 +185,9 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			}
 		}
 	}
+
+	generateNodesAttributes := reg.GetGenerateNodeAttributes()
+
 	for i := 0; i < numStages-1; i++ {
 		interfaceOffset := uint(0)
 		if i > 0 {
@@ -216,8 +213,8 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				}
 				config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
 					Endpoints: []string{
-						node1 + ":" + fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset),
-						node2 + ":" + fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1),
+						node1 + ":" + fmt.Sprintf(generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(), k+1+interfaceOffset),
+						node2 + ":" + fmt.Sprintf(generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(), j+1),
 					},
 				})
 			}

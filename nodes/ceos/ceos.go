@@ -26,6 +26,8 @@ import (
 
 const (
 	ifWaitScriptContainerPath = "/mnt/flash/if-wait.sh"
+	generateable              = true
+	generateIfFornamt         = "eth%d"
 )
 
 var (
@@ -50,9 +52,13 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(ceos)
-	}, nil)
+	}, nrea)
 }
 
 type ceos struct {

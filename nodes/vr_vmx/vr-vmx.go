@@ -22,6 +22,9 @@ var (
 )
 
 const (
+	generateable      = true
+	generateIfFornamt = "eth%d"
+
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
 
@@ -30,9 +33,12 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrVMX)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrVMX struct {

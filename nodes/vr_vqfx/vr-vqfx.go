@@ -22,6 +22,9 @@ var (
 )
 
 const (
+	generateable      = true
+	generateIfFornamt = "eth%d"
+
 	scrapliPlatformName = "juniper_junos"
 
 	configDirName   = "config"
@@ -30,9 +33,11 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrVQFX)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrVQFX struct {
