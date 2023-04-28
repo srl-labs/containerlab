@@ -226,7 +226,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	for _, n := range c.Nodes {
 		err = n.UpdateConfigWithRuntimeInfo(ctx)
 		if err != nil {
-			log.Errorf("failed to update node runtime infromation for node %s: %v", n.Config().ShortName, err)
+			log.Errorf("failed to update node runtime information for node %s: %v", n.Config().ShortName, err)
 		}
 	}
 
