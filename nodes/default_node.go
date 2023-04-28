@@ -339,7 +339,8 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 			// license is not required
 			return nil
 		default:
-			return fmt.Errorf("unknown license policy value %s for node %s kind %s", d.LicensePolicy, d.Config().ShortName, d.Cfg.Kind)
+			return fmt.Errorf("unknown license policy value %s for node %s kind %s",
+				d.LicensePolicy, d.Config().ShortName, d.Cfg.Kind)
 		}
 	}
 	// if license is provided check path exists

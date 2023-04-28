@@ -70,7 +70,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return CopyFileContents(src, dst, mode)
 }
 
-// IsHttpUri check if the url is a downloadable uri
+// IsHttpUri check if the url is a downloadable uri.
 func IsHttpUri(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }

@@ -64,7 +64,8 @@ func getLatestVersion(ctx context.Context, vc chan string) { // skipcq: RVV-A000
 		},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "HEAD", fmt.Sprintf("%s/releases/latest", repoUrl), nil)
+	req, err := http.NewRequestWithContext(ctx, "HEAD",
+		fmt.Sprintf("%s/releases/latest", repoUrl), nil)
 	if err != nil {
 		log.Debugf("error occurred during latest version fetch: %v", err)
 		return
