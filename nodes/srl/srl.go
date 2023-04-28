@@ -123,7 +123,8 @@ type srl struct {
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
 
-	// Params provided in Pre-Deploy, that will in SRL be used in Post-Deploy phase
+	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
+	// to generate certificates
 	cert         *cert.Cert
 	topologyName string
 }
@@ -236,8 +237,8 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		)
 	}
 
-	// store the certificate creation related parameters in the node itself for
-	// cert generation including Mgmt IPs as SANs in Post-Deploy phase
+	// store the certificate-related parameters
+	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	s.cert = params.Cert
 	s.topologyName = params.TopologyName
 
@@ -246,11 +247,6 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
-
-	// populate config with mgmt ip addresses
-	if err := s.UpdateConfigWithRuntimeInfo(ctx); err != nil {
-		return err
-	}
 
 	// add the ips as SANs
 	for _, ip := range []string{s.Cfg.MgmtIPv4Address, s.Cfg.MgmtIPv6Address} {
