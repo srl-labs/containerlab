@@ -287,7 +287,8 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 			log.Debugf("Node %q startup-config is an embedded config: %q", nodeCfg.ShortName, p)
 			// for embedded config we create a file with the name embedded.partial.cfg
 			// as embedded configs are meant to be partial configs
-			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, "embedded.partial.cfg")
+			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(
+				nodeCfg.ShortName, "embedded.partial.cfg")
 
 			err = utils.CreateFile(absDestFile, p)
 			if err != nil {
