@@ -36,7 +36,11 @@ const (
 	SRLinuxDefaultType = "ixrd2l" // default srl node type
 
 	readyTimeout = time.Minute * 5 // max wait time for node to boot
-	retryTimer   = time.Second
+
+	generateable     = true
+	generateIfFormat = "e1-%d"
+
+	retryTimer = time.Second
 
 	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory config.
 	// Default config is a config that adds some basic configuration to the node, such as tls certs, gnmi/json-rpc, login-banner.
@@ -52,7 +56,7 @@ var (
 	//go:embed srl_default_config.go.tpl
 	srlConfigCmdsTpl string
 
-	KindNames = []string{"srl", "nokia_srlinux"}
+	kindNames = []string{"srl", "nokia_srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",
@@ -111,9 +115,12 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(srl)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type srl struct {

@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	KindNames          = []string{"arista_veos", "vr-veos", "vr-arista_veos"}
+	kindNames          = []string{"arista_veos", "vr-veos", "vr-arista_veos"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Et|Ethernet)1/(?P<port>\d+)`)
@@ -27,6 +27,9 @@ var (
 )
 
 const (
+	generateable     = true
+	generateIfFormat = "eth%d"
+
 	scrapliPlatformName = "arista_eos"
 
 	configDirName   = "config"
@@ -35,9 +38,12 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrVEOS)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrVEOS struct {

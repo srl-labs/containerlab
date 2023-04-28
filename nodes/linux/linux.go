@@ -19,13 +19,21 @@ import (
 	"github.com/weaveworks/ignite/pkg/operations"
 )
 
+const (
+	generateable      = true
+	generateIfFornamt = "eth%d"
+)
+
 var kindnames = []string{"linux"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(linux)
-	}, nil)
+	}, nrea)
 }
 
 type linux struct {

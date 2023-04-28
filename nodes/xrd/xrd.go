@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	KindNames          = []string{"xrd", "cisco_xrd"}
+	kindNames          = []string{"xrd", "cisco_xrd"}
 	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
 	xrdEnv             = map[string]string{
 		"XR_FIRST_BOOT_CONFIG": "/etc/xrd/first-boot.cfg",
@@ -44,14 +44,20 @@ var (
 )
 
 const (
+	generateable     = true
+	generateIfFormat = "eth%d"
+
 	scrapliPlatformName = "cisco_iosxr"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(xrd)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type xrd struct {
