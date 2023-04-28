@@ -90,6 +90,7 @@ For a topology node named "srl" in a lab named "srl01", the following SANs are s
 - `srl`
 - `clab-srl01-srl`
 - `srl.srl01.io`
+- IPv4/6 addresses of the node
 
 ```yaml
 name: srl01

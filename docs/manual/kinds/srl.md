@@ -283,6 +283,15 @@ In case user-provided certificates/keys need to be used, the `ca.pem`, `<node-na
 
 In case only `ca.pem` and `ca.key` files are provided, the node certificates will be generated using these CA files.
 
+The certificate is generated for the following subjects (assuming node name is `srl`, lab name is `srl` and container runtime assigned the below listed IP addresses):
+
+```
+DNS:srl
+DNS:clab-srl-srl
+DNS:srl.srl.io
+IP Address:172.20.20.3, IP Address:2001:172:20:20:0:0:0:3
+```
+
 Nokia SR Linux nodes support setting of [SANs](../nodes.md#subject-alternative-names-san).
 
 ### License

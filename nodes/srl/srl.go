@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -121,6 +122,11 @@ type srl struct {
 	nodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
+
+	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
+	// to generate certificates
+	cert         *cert.Cert
+	topologyName string
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -195,15 +201,6 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 
-	certificate, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-
-	// set the certificate data
-	s.Config().TLSCert = string(certificate.Cert)
-	s.Config().TLSKey = string(certificate.Key)
-
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if s.Cfg.Extras != nil && len(s.Cfg.Extras.SRLAgents) != 0 {
 		agents := s.Cfg.Extras.SRLAgents
@@ -240,11 +237,34 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		)
 	}
 
+	// store the certificate-related parameters
+	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
+	s.cert = params.Cert
+	s.topologyName = params.TopologyName
+
 	return s.createSRLFiles()
 }
 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
+
+	// add the ips as SANs
+	for _, ip := range []string{s.Cfg.MgmtIPv4Address, s.Cfg.MgmtIPv6Address} {
+		if ip != "" {
+			s.Cfg.SANs = append(s.Cfg.SANs, ip)
+		}
+	}
+
+	// generate the certificate
+	certificate, err := s.LoadOrGenerateCertificate(s.cert, s.topologyName)
+	if err != nil {
+		return err
+	}
+
+	// set the certificate data
+	s.Config().TLSCert = string(certificate.Cert)
+	s.Config().TLSKey = string(certificate.Key)
+
 	// Populate /etc/hosts for service discovery on mgmt interface
 	if err := s.populateHosts(ctx, params.Nodes); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", s.Cfg.ShortName, err)
