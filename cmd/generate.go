@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -83,7 +83,7 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("generated topo: %s", string(b))
 		if file != "" {
-			err = saveTopoFile(file, b)
+			err = utils.CreateFile(file, string(b))
 			if err != nil {
 				return err
 			}
@@ -92,7 +92,7 @@ var generateCmd = &cobra.Command{
 			reconfigure = true
 			if file == "" {
 				file = fmt.Sprintf("%s.clab.yml", name)
-				err = saveTopoFile(file, b)
+				err = utils.CreateFile(file, string(b))
 				if err != nil {
 					return err
 				}
@@ -316,18 +316,4 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 		result[idx] = def
 	}
 	return result, nil
-}
-
-func saveTopoFile(path string, data []byte) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666) // skipcq: GSC-G302
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return f.Close()
 }
