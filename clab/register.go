@@ -30,6 +30,8 @@ import (
 	vr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
 	vr_veos "github.com/srl-labs/containerlab/nodes/vr_veos"
 	vr_vmx "github.com/srl-labs/containerlab/nodes/vr_vmx"
+	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
+	vr_vex "github.com/srl-labs/containerlab/nodes/vr_vex"
 	vr_vqfx "github.com/srl-labs/containerlab/nodes/vr_vqfx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
@@ -60,6 +62,8 @@ func (c *CLab) RegisterNodes() {
 	vr_sros.Register(c.Reg)
 	vr_veos.Register(c.Reg)
 	vr_vmx.Register(c.Reg)
+	vr_vsrx.Register(c.Reg)
+	vr_vex.Register(c.Reg)
 	vr_vqfx.Register(c.Reg)
 	vr_xrv.Register(c.Reg)
 	vr_xrv9k.Register(c.Reg)

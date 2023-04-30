@@ -40,6 +40,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Juniper cRPD**          | [`crpd/juniper_crpd`](crpd.md)                      | supported | container |
 | **Juniper vMX**           | [`vr-vmx/vr-juniper_vmx`](vr-vmx.md)                | supported |    VM     |
 | **Juniper vQFX**          | [`vr-vqfx/vr-juniper_vqfx`](vr-vqfx.md)             | supported |    VM     |
+| **Juniper vSRX**          | [`vr-vsrx/vr-juniper_vsrx`](vr-vsrx.md)             | supported |    VM     |
 | **Cisco XRv9k**           | [`vr-xrv9k/vr-cisco_xrv9k`](vr-xrv9k.md)            | supported |    VM     |
 | **Cisco XRv**             | [`vr-xrv/vr-cisco_xrv`](vr-xrv.md)                  | supported |    VM     |
 | **Cisco Nexus 9000v**     | [`vr-n9kv/vr-cisco_n9kv`](vr-n9kv.md)               | supported |    VM     |

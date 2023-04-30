@@ -33,6 +33,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Nokia virtual SR OS (vSim/VSR)](https://containerlab.dev/manual/kinds/vr-sros/)
 * [Juniper vMX](https://containerlab.dev/manual/kinds/vr-vmx/)
 * [Juniper vQFX](https://containerlab.dev/manual/kinds/vr-vqfx/)
+* [Juniper vSRX](https://containerlab.dev/manual/kinds/vr-vsrx/)
 * [Cisco IOS XRv9k](https://containerlab.dev/manual/kinds/vr-xrv9k/)
 * [Cisco Nexus 9000v](https://containerlab.dev/manual/kinds/vr-n9kv)
 * [Cisco CSR 1000v](https://containerlab.dev/manual/kinds/vr-csr)
