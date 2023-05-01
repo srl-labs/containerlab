@@ -13,7 +13,7 @@ on:
 env:
   GOVER: 1.20.2
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 9.0.13-insiders-4.32.0-hellt
+  MKDOCS_INS_VER: 9.1.4-insiders-4.32.4-hellt
   GORELEASER_VER: v1.11.4
   PODMAN_VER: v4.4.2
 

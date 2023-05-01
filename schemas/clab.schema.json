@@ -53,6 +53,8 @@
                         "vr-juniper_vmx",
                         "vr-vqfx",
                         "vr-juniper_vqfx",
+			"vr-vsrx",
+			"vr-juniper_vsrx",
                         "vr-xrv",
                         "vr-cisco_xrv",
                         "vr-xrv9k",
@@ -564,6 +566,12 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-vmx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-juniper_vsrx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-vsrx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-cisco_xrv": {
