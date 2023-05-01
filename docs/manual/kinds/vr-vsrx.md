@@ -35,15 +35,15 @@ Juniper vSRX node launched with containerlab can be managed via the following in
 * `eth0` - management interface (fxp0) connected to the containerlab management network
 * `eth1+` - second and subsequent data interface
 
-When containerlab launches vr-vsrx node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
+When containerlab launches vr-vsrx node, it will assign IPv4/6 address to the `eth0` interface. These addresses are used to reach the management plane of the router.
 
-Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
+Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
 
 ## Features and options
 
 ### Node configuration
 
-vr-vsrx nodes come up with a basic configuration where only the control plane and line cards are provisioned, as well as the `admin` user with the provided password.
+`vr-vsrx` nodes come up with a basic configuration where only the control plane and line cards are provisioned and the `admin` user with the provided password.
 
 #### Startup configuration
 
@@ -57,9 +57,9 @@ topology:
       startup-config: myconfig.txt
 ```
 
-With this knob containerlab is instructed to take a file `myconfig.txt` from the directory that hosts the topology file, and copy it to the lab directory for that specific node under the `/config/startup-config.cfg` name. Then the directory that hosts the startup-config dir is mounted to the container. This will result in this config being applied at startup by the node.
+With this knob, containerlab is instructed to take a file `myconfig.txt` from the directory that hosts the topology file and copy it to the lab directory for that specific node under the `/config/startup-config.cfg` name. Then the directory that hosts the startup-config dir is mounted to the container. This will result in this config being applied at startup by the node.
 
-Configuration is applied after the node is started, thus it can contain partial configuration snippets that you desire to add on top of the default config that a node boots up with.
+Configuration is applied after the node is started. Thus it can contain partial configuration snippets that you desire to add on top of the default config that a node boots up with.
 
 ## Lab examples
 
