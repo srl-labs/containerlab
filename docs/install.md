@@ -37,14 +37,14 @@ It is possible to install official containerlab releases via public APT/YUM repo
     echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
     sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
-    apt update && apt install containerlab
+    sudo apt update && sudo apt install containerlab
     ```
 === "YUM"
     ```
     yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
     echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
-    yum install containerlab
+    sudo yum install containerlab
     ```
 === "APK"
     Download `.apk` package from [Github releases](https://github.com/srl-labs/containerlab/releases).
