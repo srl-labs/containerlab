@@ -411,7 +411,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 			return err
 		}
 	}
-
+	if err = c.verifyKernelModulesLoaded(); err != nil {
+		return err
+	}
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
@@ -447,6 +449,22 @@ func (c *CLab) verifyLinks() error {
 	}
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
+	}
+	return nil
+}
+
+// verifyKernelModulesLoaded makes sure the listed kernel modules are loaded
+func (c *CLab) verifyKernelModulesLoaded() error {
+	modules := []string{"ip_tables", "ip6_tables"}
+
+	for _, m := range modules {
+		isLoaded, err := utils.IsKernelModuleLoaded(m)
+		if err != nil {
+			return err
+		}
+		if !isLoaded {
+			log.Warnf("kernel module %s is not loaded", m)
+		}
 	}
 	return nil
 }
