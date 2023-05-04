@@ -24,7 +24,7 @@ type nftablesHelper struct {
 	nftConn *nftables.Conn
 }
 
-func NewNftablesHelper() (*nftablesHelper, error) {
+func newNftablesHelper() (*nftablesHelper, error) {
 	// setup an nft connection
 	nftConn, err := nftables.New(nftables.AsLasting())
 	if err != nil {
@@ -38,12 +38,12 @@ func NewNftablesHelper() (*nftablesHelper, error) {
 }
 
 func (nfth *nftablesHelper) GetChains(name string) ([]*nftables.Chain, error) {
+	var result []*nftables.Chain
+
 	chains, err := nfth.nftConn.ListChains()
 	if err != nil {
 		return nil, err
 	}
-
-	result := []*nftables.Chain{}
 
 	for _, c := range chains {
 		if c.Name == name {
@@ -219,7 +219,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	}
 
 	// first check if a rule already exists to not create duplicates
-	nfth, err := NewNftablesHelper()
+	nfth, err := newNftablesHelper()
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,8 @@ func ruleForMgmtBrExists(brName string, rules []*nftables.Rule) bool {
 
 func getRulesForMgmtBr(brName string, rules []*nftables.Rule) []*nftables.Rule {
 	// contains all Matching rules
-	result := []*nftables.Rule{}
+	var result []*nftables.Rule
+
 	// iterate through rules
 	for _, r := range rules {
 		oifNameFound := false
@@ -324,7 +325,7 @@ func (d *DockerRuntime) deleteIPTablesFwdRule() (err error) {
 	}
 
 	// first check if a rule already exists to not create duplicates
-	nfth, err := NewNftablesHelper()
+	nfth, err := newNftablesHelper()
 	if err != nil {
 		return err
 	}
