@@ -11,7 +11,6 @@ func IsKernelModuleLoaded(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -19,5 +18,5 @@ func IsKernelModuleLoaded(name string) (bool, error) {
 			return true, nil
 		}
 	}
-	return false, nil
+	return false, f.Close()
 }
