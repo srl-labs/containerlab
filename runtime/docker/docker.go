@@ -162,20 +162,28 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			if d.mgmt.IPv4Gw != "" {
 				v4gw = d.mgmt.IPv4Gw
 			}
-			ipamConfig = append(ipamConfig, network.IPAMConfig{
+			ipamCfg := network.IPAMConfig{
 				Subnet:  d.mgmt.IPv4Subnet,
 				Gateway: v4gw,
-			})
+			}
+			if d.mgmt.IPv4Range != "" {
+				ipamCfg.IPRange = d.mgmt.IPv4Range
+			}
+			ipamConfig = append(ipamConfig, ipamCfg)
 		}
 
 		if d.mgmt.IPv6Subnet != "" {
 			if d.mgmt.IPv6Gw != "" {
 				v6gw = d.mgmt.IPv6Gw
 			}
-			ipamConfig = append(ipamConfig, network.IPAMConfig{
+			ipamCfg := network.IPAMConfig{
 				Subnet:  d.mgmt.IPv6Subnet,
 				Gateway: v6gw,
-			})
+			}
+			if d.mgmt.IPv6Range != "" {
+				ipamCfg.IPRange = d.mgmt.IPv6Range
+			}
+			ipamConfig = append(ipamConfig, ipamCfg)
 			enableIPv6 = true
 		}
 

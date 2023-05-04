@@ -42,10 +42,12 @@ type MgmtNet struct {
 	Network string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
 	Bridge  string `yaml:"bridge,omitempty" json:"bridge,omitempty"`
 	// linux bridge backing the runtime network
-	IPv4Subnet     string `yaml:"ipv4_subnet,omitempty" json:"ipv4-subnet,omitempty"`
+	IPv4Subnet     string `yaml:"ipv4-subnet,omitempty" json:"ipv4-subnet,omitempty"`
 	IPv4Gw         string `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
-	IPv6Subnet     string `yaml:"ipv6_subnet,omitempty" json:"ipv6-subnet,omitempty"`
+	IPv4Range      string `yaml:"ipv4-range,omitempty" json:"ipv4-range,omitempty"`
+	IPv6Subnet     string `yaml:"ipv6-subnet,omitempty" json:"ipv6-subnet,omitempty"`
 	IPv6Gw         string `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
+	IPv6Range      string `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
 	MTU            string `yaml:"mtu,omitempty" json:"mtu,omitempty"`
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
 }
