@@ -115,10 +115,13 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, dockerTypes.NetworkInspectOptions{})
 		// if the network is succesfully found, set the bridge used by it
 		if err == nil {
-			d.mgmt.Bridge = "br-" + netRes.ID[:12]
+			if name, exists := netRes.Options["com.docker.network.bridge.name"]; exists {
+				d.mgmt.Bridge = name
+			} else {
+				d.mgmt.Bridge = "br-" + netRes.ID[:12]
+			}
 			log.Debugf("detected network name in use: %s, backed by a bridge %s", d.mgmt.Network, d.mgmt.Bridge)
 		}
-
 	}
 }
 
