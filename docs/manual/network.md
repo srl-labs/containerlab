@@ -119,8 +119,8 @@ name: srl02
 
 mgmt:
   network: custom_mgmt                # management network name
-  ipv4_subnet: 172.100.100.0/24       # ipv4 range
-  ipv6_subnet: 2001:172:100:100::/80  # ipv6 range (optional)
+  ipv4-subnet: 172.100.100.0/24       # ipv4 range
+  ipv6-subnet: 2001:172:100:100::/80  # ipv6 range (optional)
 
 topology:
 # the rest of the file is omitted for brevity
@@ -137,8 +137,8 @@ For such cases, users can define the desired IPv4/6 addresses on a per-node basi
 ```yaml
 mgmt:
   network: fixedips
-  ipv4_subnet: 172.100.100.0/24
-  ipv6_subnet: 2001:172:100:100::/80
+  ipv4-subnet: 172.100.100.0/24
+  ipv6-subnet: 2001:172:100:100::/80
 
 topology:
   nodes:
@@ -209,8 +209,21 @@ It is possible to set the desired gateway IP (that is the IP assigned to the bri
 mgmt:
   network: custom-net
   bridge: mybridge
-  ipv4_subnet: 10.20.30.0/24 # ip range for the docker network
+  ipv4-subnet: 10.20.30.0/24 # ip range for the docker network
   ipv4-gw: 10.20.30.100 # set custom gateway ip
+```
+
+#### ip range
+
+The definition of the `ipv4-range/ipv6-range` configuration know will restrict the assignable addresses on the docker-bridge to the provided range under the given subnet.
+
+```yaml
+mgmt:
+  network: custom-net
+  bridge: mybridge
+  ipv4-subnet: 10.20.30.0/24 # ip range for the docker network
+  ipv4-gw: 10.20.30.100 # set custom gateway ip
+  ipv4-range: 10.20.30.128/25
 ```
 
 #### external access

@@ -181,7 +181,7 @@ type GenericFilter struct {
 // For each label=value input label, a filter with the Field matching the label and Match matching the value is created.
 // For each standalone label, a filter with Operator=exists and Field matching the label is created.
 func FilterFromLabelStrings(labels []string) []*GenericFilter {
-	gfl := []*GenericFilter{}
+	var gfl []*GenericFilter
 	var gf *GenericFilter
 	for _, s := range labels {
 		gf = &GenericFilter{
