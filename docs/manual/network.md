@@ -119,14 +119,14 @@ name: srl02
 
 mgmt:
   network: custom_mgmt                # management network name
-  ipv4_subnet: 172.100.100.0/24       # ipv4 range
-  ipv6_subnet: 2001:172:100:100::/80  # ipv6 range (optional)
+  ipv4-subnet: 172.100.100.0/24       # ipv4 range
+  ipv6-subnet: 2001:172:100:100::/80  # ipv6 range (optional)
 
 topology:
 # the rest of the file is omitted for brevity
 ```
 
-With these settings in place, container will get their IP addresses from the specified ranges accordingly.
+With these settings in place, the container will get their IP addresses from the specified ranges accordingly.
 
 #### user-defined addresses
 
@@ -137,8 +137,8 @@ For such cases, users can define the desired IPv4/6 addresses on a per-node basi
 ```yaml
 mgmt:
   network: fixedips
-  ipv4_subnet: 172.100.100.0/24
-  ipv6_subnet: 2001:172:100:100::/80
+  ipv4-subnet: 172.100.100.0/24
+  ipv6-subnet: 2001:172:100:100::/80
 
 topology:
   nodes:
@@ -209,9 +209,25 @@ It is possible to set the desired gateway IP (that is the IP assigned to the bri
 mgmt:
   network: custom-net
   bridge: mybridge
-  ipv4_subnet: 10.20.30.0/24 # ip range for the docker network
+  ipv4-subnet: 10.20.30.0/24 # ip range for the docker network
   ipv4-gw: 10.20.30.100 # set custom gateway ip
 ```
+
+#### IP range
+
+By specifying `ipv4-range/ipv6-range` under the management network, users limit the network range from which IP addresses are allocated for a management subnet.
+
+```yaml
+mgmt:
+  network: custom-net
+  ipv4-subnet: 10.20.30.0/24 #(2)!
+  ipv4-range: 10.20.30.128/25 #(1)!
+```
+
+1. Container runtime will assign IP addresses from the `10.20.30.128/25` subnet, and `10.20.30.0/25` will not be considered.
+2. The subnet must be specified for IP ranges to work. Also note that if the container network already exists and uses a different range, then the IP range setting won't have effect.
+
+With this approach, users can prevent IP address overlap with nodes deployed on the same management network by other orchestration systems.
 
 #### external access
 

@@ -2,8 +2,8 @@ name: clos02
 
 mgmt:
   network: br-clos02
-  ipv4_subnet: 172.100.100.0/24
-  ipv6_subnet: 2001:172:100:100::0/64
+  ipv4-subnet: 172.100.100.0/24
+  ipv6-subnet: 2001:172:100:100::0/64
 
 topology:
   kinds:

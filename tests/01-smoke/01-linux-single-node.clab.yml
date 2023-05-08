@@ -4,6 +4,11 @@
 
 name: single-node
 
+mgmt:
+  network: test
+  ipv4-subnet: 172.20.30.0/24
+  ipv4-range: 172.20.30.8/30
+
 topology:
   nodes:
     l1:
