@@ -454,7 +454,7 @@ func (c *CLab) verifyLinks() error {
 	return nil
 }
 
-// verifyKernelModulesLoaded makes sure the listed kernel modules are loaded
+// verifyKernelModulesLoaded makes sure the listed kernel modules are loaded.
 func (c *CLab) verifyKernelModulesLoaded() error {
 	modules := []string{"ip_tables", "ip6_tables"}
 
