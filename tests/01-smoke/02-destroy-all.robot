@@ -3,12 +3,16 @@ This suite tests:
 - the destroy --all operation
 - the host mode networking for l3 node
 
+
 *** Settings ***
-Library           OperatingSystem
-Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy --all --cleanup
+Library             OperatingSystem
+
+Suite Teardown      Run    sudo containerlab --runtime ${runtime} destroy --all --cleanup
+
 
 *** Variables ***
-${runtime}        docker
+${runtime}      docker
+
 
 *** Test Cases ***
 Deploy first lab
@@ -32,6 +36,12 @@ Verify host mode networking for node l3
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Thank you for using nginx
+
+Verify ipv4-range is set correctly
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo containerlab --runtime ${runtime} inspect -t ${CURDIR}/01-linux-single-node.clab.yml
+    Log    ${output}
+    Should Contain    ${output}    172.20.30.9/24
 
 Destroy all labs
     ${rc}    ${output} =    Run And Return Rc And Output
