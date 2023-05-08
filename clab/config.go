@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pmorjan/kmod"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
@@ -463,7 +464,21 @@ func (c *CLab) verifyKernelModulesLoaded() error {
 			return err
 		}
 		if !isLoaded {
-			log.Warnf("kernel module %s is not loaded", m)
+			log.Debugf("kernel module %q is not loaded. Trying to load", m)
+			// trying to load the kernel modules without actually throwing any more error.
+			// if we succeeed fine, if not we've already indicated modules are missing
+			km, err := kmod.New()
+			if err != nil {
+				log.Warnf("Unable to init kmod for automatic kernel module loading with %q. Hence, skipping", err)
+				return nil
+			}
+			err = km.Load(m, "", 0)
+			if err != nil {
+				log.Warnf("Unable to load kernel module %q automatically %q", m, err)
+				return nil
+			} else {
+				log.Debugf("kernel module %q loaded successfully", m)
+			}
 		}
 	}
 	return nil
