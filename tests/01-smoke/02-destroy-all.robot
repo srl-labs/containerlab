@@ -2,6 +2,7 @@
 This suite tests:
 - the destroy --all operation
 - the host mode networking for l3 node
+- the ipv4-range can be set for a network
 
 
 *** Settings ***
@@ -38,6 +39,7 @@ Verify host mode networking for node l3
     Should Contain    ${output}    Thank you for using nginx
 
 Verify ipv4-range is set correctly
+    Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo containerlab --runtime ${runtime} inspect -t ${CURDIR}/01-linux-single-node.clab.yml
     Log    ${output}
