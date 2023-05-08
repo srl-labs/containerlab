@@ -126,7 +126,7 @@ topology:
 # the rest of the file is omitted for brevity
 ```
 
-With these settings in place, container will get their IP addresses from the specified ranges accordingly.
+With these settings in place, the container will get their IP addresses from the specified ranges accordingly.
 
 #### user-defined addresses
 
@@ -213,9 +213,9 @@ mgmt:
   ipv4-gw: 10.20.30.100 # set custom gateway ip
 ```
 
-#### ip range
+#### IP range
 
-The definition of the `ipv4-range/ipv6-range` configuration know will restrict the assignable addresses on the docker-bridge to the provided range under the given subnet.
+By specifying `ipv4-range/ipv6-range` under the management network, users limit the network range from which IP addresses are allocated for a management subnet.
 
 ```yaml
 mgmt:
@@ -223,8 +223,12 @@ mgmt:
   bridge: mybridge
   ipv4-subnet: 10.20.30.0/24 # ip range for the docker network
   ipv4-gw: 10.20.30.100 # set custom gateway ip
-  ipv4-range: 10.20.30.128/25
+  ipv4-range: 10.20.30.128/25 #(1)!
 ```
+
+1. Container runtime will assign IP addresses from the `10.20.30.128/25` subnet, and `10.20.30.0/25` will not be considered.
+
+With this approach, users can prevent IP address overlap with nodes deployed on the same management network by other orchestration systems.
 
 #### external access
 
