@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// IsKernelModuleLoaded checks if a kernel module is loaded by parsing /proc/modules file.
 func IsKernelModuleLoaded(name string) (bool, error) {
 	f, err := os.Open("/proc/modules")
 	if err != nil {
