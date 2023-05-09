@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pmorjan/kmod"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
@@ -411,7 +412,6 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 			return err
 		}
 	}
-
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
@@ -448,6 +448,44 @@ func (c *CLab) verifyLinks() error {
 	if len(dups) != 0 {
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
+	return nil
+}
+
+// LoadKernelModules loads containerlab-required kernel modules.
+func (c *CLab) LoadKernelModules() error {
+	modules := []string{"ip_tables", "ip6_tables"}
+
+	for _, m := range modules {
+		isLoaded, err := utils.IsKernelModuleLoaded(m)
+		if err != nil {
+			return err
+		}
+
+		if isLoaded {
+			log.Debugf("kernel module %q is already loaded", m)
+
+			continue
+		}
+
+		log.Debugf("kernel module %q is not loaded. Trying to load", m)
+		// trying to load the kernel modules.
+		km, err := kmod.New()
+		if err != nil {
+			log.Warnf("Unable to init module loader: %v. Skipping...", err)
+
+			return nil
+		}
+
+		err = km.Load(m, "", 0)
+		if err != nil {
+			log.Warnf("Unable to load kernel module %q automatically %q", m, err)
+
+			return nil
+		}
+
+		log.Debugf("kernel module %q loaded successfully", m)
+	}
+
 	return nil
 }
 
