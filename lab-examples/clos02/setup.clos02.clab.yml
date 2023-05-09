@@ -14,69 +14,69 @@ topology:
   nodes:
     leaf1:
       kind: srl
-      mgmt_ipv4: 172.100.100.2
-      mgmt_ipv6: 2001:172:100:100::2
+      mgmt-ipv4: 172.100.100.2
+      mgmt-ipv6: 2001:172:100:100::2
     leaf2:
       kind: srl
-      mgmt_ipv4: 172.100.100.3
-      mgmt_ipv6: 2001:172:100:100::3
+      mgmt-ipv4: 172.100.100.3
+      mgmt-ipv6: 2001:172:100:100::3
     leaf3:
       kind: srl
-      mgmt_ipv4: 172.100.100.4
-      mgmt_ipv6: 2001:172:100:100::4
+      mgmt-ipv4: 172.100.100.4
+      mgmt-ipv6: 2001:172:100:100::4
     leaf4:
       kind: srl
-      mgmt_ipv4: 172.100.100.5
-      mgmt_ipv6: 2001:172:100:100::5
+      mgmt-ipv4: 172.100.100.5
+      mgmt-ipv6: 2001:172:100:100::5
 
     spine1:
       kind: srl
       type: ixrd3
-      mgmt_ipv4: 172.100.100.6
-      mgmt_ipv6: 2001:172:100:100::6
+      mgmt-ipv4: 172.100.100.6
+      mgmt-ipv6: 2001:172:100:100::6
     spine2:
       kind: srl
       type: ixrd3
-      mgmt_ipv4: 172.100.100.7
-      mgmt_ipv6: 2001:172:100:100::7
+      mgmt-ipv4: 172.100.100.7
+      mgmt-ipv6: 2001:172:100:100::7
     spine3:
       kind: srl
       type: ixrd3
-      mgmt_ipv4: 172.100.100.8
-      mgmt_ipv6: 2001:172:100:100::8
+      mgmt-ipv4: 172.100.100.8
+      mgmt-ipv6: 2001:172:100:100::8
     spine4:
       kind: srl
       type: ixrd3
-      mgmt_ipv4: 172.100.100.9
-      mgmt_ipv6: 2001:172:100:100::9
+      mgmt-ipv4: 172.100.100.9
+      mgmt-ipv6: 2001:172:100:100::9
 
     superspine1:
       kind: srl
       type: ixrd3
-      mgmt_ipv4: 172.100.100.10
-      mgmt_ipv6: 2001:172:100:100::10
+      mgmt-ipv4: 172.100.100.10
+      mgmt-ipv6: 2001:172:100:100::10
     superspine2:
       kind: srl
       type: ixrd3
-      mgmt_ipv4: 172.100.100.11
-      mgmt_ipv6: 2001:172:100:100::11
+      mgmt-ipv4: 172.100.100.11
+      mgmt-ipv6: 2001:172:100:100::11
 
     client1:
       kind: linux
-      mgmt_ipv4: 172.100.100.12
-      mgmt_ipv6: 2001:172:100:100::12
+      mgmt-ipv4: 172.100.100.12
+      mgmt-ipv6: 2001:172:100:100::12
     client2:
       kind: linux
-      mgmt_ipv4: 172.100.100.13
-      mgmt_ipv6: 2001:172:100:100::13
+      mgmt-ipv4: 172.100.100.13
+      mgmt-ipv6: 2001:172:100:100::13
     client3:
       kind: linux
-      mgmt_ipv4: 172.100.100.14
-      mgmt_ipv6: 2001:172:100:100::14
+      mgmt-ipv4: 172.100.100.14
+      mgmt-ipv6: 2001:172:100:100::14
     client4:
       kind: linux
-      mgmt_ipv4: 172.100.100.15
-      mgmt_ipv6: 2001:172:100:100::15
+      mgmt-ipv4: 172.100.100.15
+      mgmt-ipv6: 2001:172:100:100::15
 
   links:
     - endpoints: ["leaf1:e1-1", "spine1:e1-1"]

@@ -34,9 +34,9 @@ type NodeDefinition struct {
 	// list of port bindings
 	Ports []string `yaml:"ports,omitempty"`
 	// user-defined IPv4 address in the management network
-	MgmtIPv4 string `yaml:"mgmt_ipv4,omitempty"`
+	MgmtIPv4 string `yaml:"mgmt-ipv4,omitempty"`
 	// user-defined IPv6 address in the management network
-	MgmtIPv6 string `yaml:"mgmt_ipv6,omitempty"`
+	MgmtIPv6 string `yaml:"mgmt-ipv6,omitempty"`
 	// list of ports to publish with mysocketctl
 	Publish []string `yaml:"publish,omitempty"`
 	// environment variables

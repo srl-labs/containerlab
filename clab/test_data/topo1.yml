@@ -9,11 +9,11 @@ topology:
       env:
         env1: val1
         env2: val2
-      mgmt_ipv4: 172.100.100.11
+      mgmt-ipv4: 172.100.100.11
     node2:
       kind: srl
       license: node1.lic
       user: custom
-      mgmt_ipv4: 172.100.100.12
+      mgmt-ipv4: 172.100.100.12
       labels:
         node-label: value

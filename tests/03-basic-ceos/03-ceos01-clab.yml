@@ -15,7 +15,7 @@ topology:
       kind: ceos
     n2:
       kind: ceos
-      mgmt_ipv4: 172.20.20.22
+      mgmt-ipv4: 172.20.20.22
 
   links:
     - endpoints: ["n1:eth1", "n2:eth1"]

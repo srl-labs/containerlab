@@ -9,10 +9,10 @@ topology:
       env:
         env1: val1
         env2: val2
-      mgmt_ipv4: 172.100.100.11
+      mgmt-ipv4: 172.100.100.11
     node2:
       kind: linux
-      mgmt_ipv4: 172.100.100.12
+      mgmt-ipv4: 172.100.100.12
       labels:
         node-label: value
       env-files:
