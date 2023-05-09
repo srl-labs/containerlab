@@ -146,6 +146,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if err = c.LoadKernelModules(); err != nil {
+		return err
+	}
+
 	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
 	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 

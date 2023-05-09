@@ -412,9 +412,6 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 			return err
 		}
 	}
-	if err = c.verifyKernelModulesLoaded(); err != nil {
-		return err
-	}
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
@@ -454,8 +451,8 @@ func (c *CLab) verifyLinks() error {
 	return nil
 }
 
-// verifyKernelModulesLoaded makes sure the listed kernel modules are loaded.
-func (c *CLab) verifyKernelModulesLoaded() error {
+// LoadKernelModules loads containerlab-required kernel modules.
+func (c *CLab) LoadKernelModules() error {
 	modules := []string{"ip_tables", "ip6_tables"}
 
 	for _, m := range modules {
@@ -463,24 +460,32 @@ func (c *CLab) verifyKernelModulesLoaded() error {
 		if err != nil {
 			return err
 		}
-		if !isLoaded {
-			log.Debugf("kernel module %q is not loaded. Trying to load", m)
-			// trying to load the kernel modules without actually throwing any more error.
-			// if we succeeed fine, if not we've already indicated modules are missing
-			km, err := kmod.New()
-			if err != nil {
-				log.Warnf("Unable to init kmod for automatic kernel module loading with %q. Hence, skipping", err)
-				return nil
-			}
-			err = km.Load(m, "", 0)
-			if err != nil {
-				log.Warnf("Unable to load kernel module %q automatically %q", m, err)
-				return nil
-			} else {
-				log.Debugf("kernel module %q loaded successfully", m)
-			}
+
+		if isLoaded {
+			log.Debugf("kernel module %q is already loaded", m)
+
+			continue
 		}
+
+		log.Debugf("kernel module %q is not loaded. Trying to load", m)
+		// trying to load the kernel modules.
+		km, err := kmod.New()
+		if err != nil {
+			log.Warnf("Unable to init module loader: %v. Skipping...", err)
+
+			return nil
+		}
+
+		err = km.Load(m, "", 0)
+		if err != nil {
+			log.Warnf("Unable to load kernel module %q automatically %q", m, err)
+
+			return nil
+		}
+
+		log.Debugf("kernel module %q loaded successfully", m)
 	}
+
 	return nil
 }
 
