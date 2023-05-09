@@ -73,10 +73,12 @@ func (k *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 		return err
 	}
 
-	// set the byteConfig as the config to use
-	clusterCreateOptions = append(clusterCreateOptions, cluster.CreateWithV1Alpha4Config(conf))
-	// make the Create call synchronous, but use a timeout of 15 min.
-	clusterCreateOptions = append(clusterCreateOptions, cluster.CreateWithWaitForReady(time.Duration(15)*time.Minute))
+	clusterCreateOptions = append(clusterCreateOptions,
+		// set the byteConfig as the config to use
+		cluster.CreateWithV1Alpha4Config(conf),
+		// make the Create call synchronous, but use a timeout of 15 min.
+		cluster.CreateWithWaitForReady(time.Duration(15)*time.Minute),
+	)
 
 	// create the kind cluster
 	err = kindProvider.Create(k.Cfg.ShortName, clusterCreateOptions...)
