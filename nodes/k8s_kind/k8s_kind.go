@@ -51,7 +51,7 @@ func (d *k8s_kind) PullImage(_ context.Context) error             { return nil }
 // DeleteNetnsSymlink kind takes care of the Netlinks itself
 func (d *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
 
-func (k *k8s_kind) Deploy(_ context.Context) error {
+func (k *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 
 	// create the Provider with the above runtime based options
 	kindProvider, err := k.getProvider()
