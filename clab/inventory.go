@@ -32,7 +32,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
       hosts:
 {{- range $nodes}}
         {{.LongName}}:
-		{{- if (eq (index .Labels "ansible-no-host-var") "") }}
+		{{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
 		{{- end -}}
 {{- end}}
@@ -40,10 +40,12 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 {{- range $name, $nodes := .Groups}}
     {{$name}}:
       hosts:
-      {{- range $nodes}}
+{{- range $nodes}}
         {{.LongName}}:
+		{{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
-      {{- end}}
+	    {{- end -}}
+{{- end}}
 {{- end}}
 `
 
