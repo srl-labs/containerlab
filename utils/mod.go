@@ -14,7 +14,7 @@ func IsKernelModuleLoaded(name string) (bool, error) {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), name) {
+		if strings.HasPrefix(strings.Fields(scanner.Text())[0], name) {
 			return true, nil
 		}
 	}
