@@ -153,6 +153,7 @@ Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses
 !!!note
     1. If user-defined IP addresses are needed, they must be provided for all containers attached to a given network to avoid address collision.
     2. IPv4/6 addresses set on a node level must be from the management network range.
+    3. IPv6 addresses are truncated by Docker[^1], therefore do not use bytes 5 through 8 of the IPv6 network range.
 
 #### MTU
 
@@ -390,3 +391,5 @@ For a lab named `demo` with two nodes named `l1` and `l2` containerlab will crea
 2001:172:20:20::3       clab-demo-l2
 ###### CLAB-demo-END ######
 ```
+
+[^1]: See <https://github.com/srl-labs/containerlab/issues/1302#issuecomment-1533796941> for details and links to the original discussion.
