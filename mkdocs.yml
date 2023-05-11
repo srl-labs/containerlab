@@ -96,6 +96,7 @@ nav:
           - 5-stage Clos topology: lab-examples/templated02.md
       - RARE/freeRtr: lab-examples/rare-freertr.md
   - Release notes:
+      - "0.41": rn/0.41.md
       - "0.40": rn/0.40.md
       - "0.39": rn/0.39.md
       - "0.38": rn/0.38.md
