@@ -1,5 +1,7 @@
 package cert
 
+import "time"
+
 // CACSRInput struct.
 type CACSRInput struct {
 	CommonName       string
@@ -7,7 +9,7 @@ type CACSRInput struct {
 	Locality         string
 	Organization     string
 	OrganizationUnit string
-	Expiry           string
+	Expiry           time.Duration
 }
 
 // NodeCSRInput struct.
@@ -18,5 +20,5 @@ type NodeCSRInput struct {
 	Locality         string
 	Organization     string
 	OrganizationUnit string
-	Expiry           string
+	Expiry           time.Duration
 }

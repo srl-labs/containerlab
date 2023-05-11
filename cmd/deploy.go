@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -171,7 +172,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// define the attributes used to generate the CA Cert
 	caCertInput := &cert.CACSRInput{
 		CommonName:   c.Config.Name + " lab CA",
-		Expiry:       "87600h",
+		Expiry:       time.Until(time.Now().AddDate(1, 0, 0)), // should expire in a year from now
 		Organization: "containerlab",
 	}
 

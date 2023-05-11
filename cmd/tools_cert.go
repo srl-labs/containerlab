@@ -5,13 +5,14 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/cert/cfssl"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -96,7 +97,12 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	ca := cfssl.NewCA(debug)
+	ca := cert.NewCA()
+
+	expDuration, err := time.ParseDuration(expiry)
+	if err != nil {
+		return fmt.Errorf("failed parsing expiry %s", expiry)
+	}
 
 	csrInput := &cert.CACSRInput{
 		CommonName:       commonName,
@@ -104,7 +110,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 		Locality:         locality,
 		Organization:     organization,
 		OrganizationUnit: organizationUnit,
-		Expiry:           expiry,
+		Expiry:           expDuration,
 	}
 
 	caCert, err := ca.GenerateCACert(csrInput)
@@ -137,7 +143,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	ca := cfssl.NewCA(debug)
+	ca := cert.NewCA()
 
 	var caCert *cert.Certificate
 
@@ -158,6 +164,11 @@ func signCert(_ *cobra.Command, _ []string) error {
 	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
 		certHosts, commonName, country, locality, organization, organizationUnit)
 
+	expDuration, err := time.ParseDuration(expiry)
+	if err != nil {
+		return fmt.Errorf("failed parsing expiry %s", expiry)
+	}
+
 	nodeCert, err := ca.GenerateAndSignNodeCert(
 		&cert.NodeCSRInput{
 			Hosts:            certHosts,
@@ -166,7 +177,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 			Locality:         locality,
 			Organization:     organization,
 			OrganizationUnit: organizationUnit,
-			Expiry:           expiry,
+			Expiry:           expDuration,
 		})
 	if err != nil {
 		return err
