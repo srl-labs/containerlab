@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"time"
 
 	"github.com/srl-labs/containerlab/cert"
@@ -105,6 +106,10 @@ func (ca *CA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) 
 
 // GenerateAndSignNodeCert generates and signs a node certificate, key and CSR based on the provided input and signs it with the CA.
 func (ca *CA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
+
+	// parse hosts from input to retrieve dns and ip SANs
+	dns, ip := parseHostsInput(input.Hosts)
+
 	certTemplate := &x509.Certificate{
 		RawSubject:   []byte{},
 		SerialNumber: big.NewInt(1658),
@@ -115,8 +120,8 @@ func (ca *CA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certifica
 			Country:            []string{input.Country},
 			Locality:           []string{input.Locality},
 		},
-		DNSNames: input.Hosts,
-		// IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
+		DNSNames:     dns,
+		IPAddresses:  ip,
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(1, 0, 0), // HARDCODED 1 year
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
@@ -154,4 +159,19 @@ func (ca *CA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certifica
 	}
 
 	return clabCert, nil
+}
+
+func parseHostsInput(hosts []string) ([]string, []net.IP) {
+	var dns []string
+	var ip []net.IP
+
+	for _, host := range hosts {
+		if net.ParseIP(host) != nil {
+			ip = append(ip, net.ParseIP(host))
+		} else {
+			dns = append(dns, host)
+		}
+	}
+
+	return dns, ip
 }
