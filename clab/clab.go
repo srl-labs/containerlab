@@ -217,7 +217,6 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 		// init the Cert storage and CA
 		c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-		//c.Cert.CA = cfssl.NewCA(c.Config.Debug)
 		c.Cert.CA = stdlib.NewCA()
 	}
 	return c, err

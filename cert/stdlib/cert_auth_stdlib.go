@@ -15,17 +15,19 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type StdLibCA struct {
+// CA is a Certificate Authority.
+type CA struct {
 	key  crypto.PrivateKey
 	cert *x509.Certificate
 }
 
 // NewCA initializes a Certificate Authority.
-func NewCA() *StdLibCA {
-	return &StdLibCA{}
+func NewCA() *CA {
+	return &CA{}
 }
 
-func (ca *StdLibCA) SetCACert(cert *cert.Certificate) error {
+// SetCACert sets the CA certificate with the provided certificate and key.
+func (ca *CA) SetCACert(cert *cert.Certificate) error {
 	var err error
 
 	// PEM to DER
@@ -47,8 +49,7 @@ func (ca *StdLibCA) SetCACert(cert *cert.Certificate) error {
 }
 
 // GenerateCACert generates a CA certificate, key and CSR based on the provided input.
-func (ca *StdLibCA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) {
-
+func (ca *CA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) {
 	// prepare the certificate template
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
@@ -103,8 +104,7 @@ func (ca *StdLibCA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, e
 }
 
 // GenerateAndSignNodeCert generates and signs a node certificate, key and CSR based on the provided input and signs it with the CA.
-func (ca *StdLibCA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
-
+func (ca *CA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
 	certTemplate := &x509.Certificate{
 		RawSubject:   []byte{},
 		SerialNumber: big.NewInt(1658),
