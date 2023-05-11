@@ -10,14 +10,14 @@ topology:
       env:
         env1: val1
         env2: val2
-      mgmt_ipv4: 172.100.100.11
+      mgmt-ipv4: 172.100.100.11
       labels:
         ansible-group: spine
     node2:
       kind: srl
       license: node1.lic
       user: custom
-      mgmt_ipv4: 172.100.100.12
+      mgmt-ipv4: 172.100.100.12
       labels:
         node-label: value
         ansible-group: extra_group
@@ -26,7 +26,7 @@ topology:
       kind: srl
       license: node1.lic
       user: custom
-      mgmt_ipv4: 172.100.100.13
+      mgmt-ipv4: 172.100.100.13
       labels:
         node-label: value
         ansible-group: extra_group
@@ -34,6 +34,6 @@ topology:
     node4:
       kind: linux
       image: alpine:3
-      mgmt_ipv4: 172.100.100.14
+      mgmt-ipv4: 172.100.100.14
       labels:
         ansible-no-host-var: true

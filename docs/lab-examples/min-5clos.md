@@ -22,7 +22,7 @@ With this lightweight CLOS topology a user can exhibit the following scenarios:
 ## Configuration setup
 To help you get faster to the provisioning of the services on this mini fabric we added an auto-configuration script to this example.
 
-In order to make a fully deterministic lab setup we added another topology file called [setup.clos02.clab.yml][setup-topofile] where the management interfaces of each network node and clients are statically addressed with [`mgmt_ipv4/6` config option](../manual/nodes.md#mgmt_ipv4). Other than that, the topology files does not have any changes.
+In order to make a fully deterministic lab setup we added another topology file called [setup.clos02.clab.yml][setup-topofile] where the management interfaces of each network node and clients are statically addressed with [`mgmt-ipv4/6` config option](../manual/nodes.md#mgmt-ipv4). Other than that, the topology files does not have any changes.
 
 ### Prerequisites
 The configuration of the fabric elements is carried out with [`gnmic` client](https://gnmic.kmrd.dev/install/), therefore it needs to be installed on the machine where you run the lab.

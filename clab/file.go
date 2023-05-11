@@ -77,7 +77,7 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 	}
 	err = yaml.UnmarshalStrict(yamlFile, c.Config)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w\nConsult with release notes to see if any fields were changed/removed", err)
 	}
 
 	c.Config.Topology.ImportEnvs()

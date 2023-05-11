@@ -144,8 +144,8 @@ topology:
   nodes:
     n1:
       kind: srl
-      mgmt_ipv4: 172.100.100.11       # set ipv4 address on management network
-      mgmt_ipv6: 2001:172:100:100::11 # set ipv6 address on management network
+      mgmt-ipv4: 172.100.100.11       # set ipv4 address on management network
+      mgmt-ipv6: 2001:172:100:100::11 # set ipv6 address on management network
 ```
 
 Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses is omitted, it will be assigned by container runtime in an arbitrary fashion.

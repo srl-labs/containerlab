@@ -312,7 +312,7 @@ This script is then placed somewhere on the disk, for example in the containerla
 ```yaml
   nodes:
     sros1:
-      mgmt_ipv4: [mgmt-ip]
+      mgmt-ipv4: [mgmt-ip]
       kind: vr-sros
       image: [container-image-repo]
       type: sr-1s
