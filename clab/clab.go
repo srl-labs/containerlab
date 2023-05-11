@@ -15,7 +15,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/cert/stdlib"
 	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -217,7 +216,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 		// init the Cert storage and CA
 		c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-		c.Cert.CA = stdlib.NewCA()
+		c.Cert.CA = cert.NewCA()
 	}
 	return c, err
 }

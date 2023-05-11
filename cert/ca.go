@@ -1,4 +1,4 @@
-package stdlib
+package cert
 
 import (
 	"bytes"
@@ -12,7 +12,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/srl-labs/containerlab/cert"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -28,7 +27,7 @@ func NewCA() *CA {
 }
 
 // SetCACert sets the CA certificate with the provided certificate and key.
-func (ca *CA) SetCACert(cert *cert.Certificate) error {
+func (ca *CA) SetCACert(cert *Certificate) error {
 	var err error
 
 	// PEM to DER
@@ -50,7 +49,7 @@ func (ca *CA) SetCACert(cert *cert.Certificate) error {
 }
 
 // GenerateCACert generates a CA certificate, key and CSR based on the provided input.
-func (ca *CA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) {
+func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 	// prepare the certificate template
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
@@ -96,7 +95,7 @@ func (ca *CA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) 
 	})
 
 	// create the clab certificate struct
-	clabCert := &cert.Certificate{
+	clabCert := &Certificate{
 		Cert: caPEM.Bytes(),
 		Key:  caPrivKeyPEM.Bytes(),
 	}
@@ -105,7 +104,7 @@ func (ca *CA) GenerateCACert(input *cert.CACSRInput) (*cert.Certificate, error) 
 }
 
 // GenerateAndSignNodeCert generates and signs a node certificate, key and CSR based on the provided input and signs it with the CA.
-func (ca *CA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certificate, error) {
+func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error) {
 
 	// parse hosts from input to retrieve dns and ip SANs
 	dns, ip := parseHostsInput(input.Hosts)
@@ -153,7 +152,7 @@ func (ca *CA) GenerateAndSignNodeCert(input *cert.NodeCSRInput) (*cert.Certifica
 	})
 
 	// create the clab certificate struct
-	clabCert := &cert.Certificate{
+	clabCert := &Certificate{
 		Cert: certPEM.Bytes(),
 		Key:  certPrivKeyPEM.Bytes(),
 	}

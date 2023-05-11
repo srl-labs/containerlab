@@ -13,7 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/cert/stdlib"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -98,7 +97,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	ca := stdlib.NewCA()
+	ca := cert.NewCA()
 
 	expDuration, err := time.ParseDuration(expiry)
 	if err != nil {
@@ -144,7 +143,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	ca := stdlib.NewCA()
+	ca := cert.NewCA()
 
 	var caCert *cert.Certificate
 
