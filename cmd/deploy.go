@@ -93,22 +93,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// handle CTRL-C signal
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sig
-		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
-		cancel()
-
-		// when interrupted, destroy the interrupted lab deployment with cleanup
-		cleanup = true
-		if err := destroyFn(destroyCmd, []string{}); err != nil {
-			log.Errorf("Failed to destroy lab: %v", err)
-		}
-
-		os.Exit(1) // skipcq: RVV-A0003
-	}()
+	setupCTRLCHandler(cancel)
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
@@ -124,7 +109,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		clab.WithDebug(debug),
 	}
 
-	opts = PrepareExternalCAOptionEnviron(opts)
+	opts = prepareExternalCAOptionEnviron(opts)
 
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
@@ -320,21 +305,22 @@ func deployFn(_ *cobra.Command, _ []string) error {
 }
 
 func certificateAuthoritySetup(c *clab.CLab) error {
+	var err error
 	s := c.Config.Settings
 
 	// Set defaults for the CA parameters
 	keySize := 2048
-	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)).String() // 1 year as default
-	// validityDuration, err := time.ParseDuration(s.CertificateAuthority.Validity)
-	// if err != nil{
-	// 	return err
-	// }
+	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
 
 	// check that Settings.CertificateAuthority exists.
 	if s != nil && s.CertificateAuthority != nil {
 		// if ValidityDuration is set use the value
 		if s.CertificateAuthority.ValidityDuration != "" {
-			validityDuration = s.CertificateAuthority.ValidityDuration
+			// parse string representation of the duration from the topology settings
+			validityDuration, err = time.ParseDuration(s.CertificateAuthority.ValidityDuration)
+			if err != nil {
+				return err
+			}
 		}
 		// if KeyLength is set use the value
 		if s.CertificateAuthority.KeySize != 0 {
@@ -361,7 +347,7 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 	return c.LoadOrGenerateCA(caCertInput)
 }
 
-func PrepareExternalCAOptionEnviron(opts []clab.ClabOption) []clab.ClabOption {
+func prepareExternalCAOptionEnviron(opts []clab.ClabOption) []clab.ClabOption {
 	keyFile := os.Getenv("CLAB_CA_KEY_FILE")
 	certFile := os.Getenv("CLAB_CA_CERT_FILE")
 
@@ -369,6 +355,28 @@ func PrepareExternalCAOptionEnviron(opts []clab.ClabOption) []clab.ClabOption {
 		opts = append(opts, clab.WithExternalCA(certFile, keyFile))
 	}
 	return opts
+}
+
+// setupCTRLCHandler sets-up the handler for CTRL-C
+// The deployment will be stopped and a destroy action is
+// performed.
+func setupCTRLCHandler(cancel context.CancelFunc) {
+	// handle CTRL-C signal
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sig
+		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
+		cancel()
+
+		// when interrupted, destroy the interrupted lab deployment with cleanup
+		cleanup = true
+		if err := destroyFn(destroyCmd, []string{}); err != nil {
+			log.Errorf("Failed to destroy lab: %v", err)
+		}
+
+		os.Exit(1) // skipcq: RVV-A0003
+	}()
 }
 
 func setFlags(conf *clab.Config) {
