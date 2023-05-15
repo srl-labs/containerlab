@@ -7,7 +7,7 @@ require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/containerd/containerd v1.7.0
 	github.com/containernetworking/cni v1.1.2
-	github.com/containernetworking/plugins v1.2.0
+	github.com/containernetworking/plugins v1.3.0
 	github.com/containers/common v0.53.0
 	github.com/containers/podman/v4 v4.5.0
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
@@ -164,7 +164,7 @@ require (
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/go-git/go-git/v5 v5.4.2 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.1-0.20221029134443-4b691ce883d5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -238,7 +238,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rs/zerolog v1.26.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/safchain/ethtool v0.2.0 // indirect
+	github.com/safchain/ethtool v0.3.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
@@ -249,7 +249,7 @@ require (
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
-	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	github.com/zealic/xignore v0.3.3 // indirect
