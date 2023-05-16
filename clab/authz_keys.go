@@ -32,7 +32,7 @@ func (c *CLab) CreateAuthzKeysFile() error {
 		return fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f := utils.ResolvePath(authzKeysFPath, c.TopoPaths.TopologyFileDir())
+	f := utils.ResolvePath(authzKeysFPath, "")
 
 	if utils.FileExists(f) {
 		log.Debugf("%s found, adding the public keys it contains", f)
