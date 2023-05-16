@@ -3,6 +3,8 @@ package types
 import (
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -70,6 +72,39 @@ type NodeDefinition struct {
 	DNS *DNSConfig `yaml:"dns,omitempty"`
 	// Certificate Configuration
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
+}
+
+// UnmarshalJSON introducing a custom unmarshaller to allow for
+// the old field definitions
+func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type Alias NodeDefinition
+	type NDDepricate struct {
+		Alias                 `yaml:",inline"`
+		MgmtIPv4OldUnderscore string `yaml:"mgmt_ipv4,omitempty"`
+		MgmtIPv6OldUnderscore string `yaml:"mgmt_ipv6,omitempty"`
+	}
+	fy := &NDDepricate{}
+
+	fy.Alias = (Alias)(*n)
+	if err := unmarshal(fy); err != nil {
+		return err
+	}
+
+	// map old to new if old defined but new not
+	if len(fy.MgmtIPv4OldUnderscore) > 0 && len(fy.MgmtIPv4) == 0 {
+		log.Warnf("deprication notice. Attribute \"mgmt_ipv4\" will be removed in future change to \"mgmt-ipv4\"")
+		fy.MgmtIPv4 = fy.MgmtIPv4OldUnderscore
+	}
+
+	// map old to new if old defined but new not
+	if len(fy.MgmtIPv6OldUnderscore) > 0 && len(fy.MgmtIPv6) == 0 {
+		log.Warnf("deprication notice. Attribute \"mgmt_ipv6\" will be removed in future change to \"mgmt-ipv6\"")
+		fy.MgmtIPv4 = fy.MgmtIPv6OldUnderscore
+	}
+
+	*n = (NodeDefinition)(fy.Alias)
+
+	return nil
 }
 
 func (n *NodeDefinition) GetKind() string {
