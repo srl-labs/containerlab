@@ -12,6 +12,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
+	"gopkg.in/yaml.v2"
 )
 
 // Link is a struct that contains the information of a link between 2 containers.
@@ -50,6 +51,42 @@ type MgmtNet struct {
 	IPv6Range      string `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
 	MTU            string `yaml:"mtu,omitempty" json:"mtu,omitempty"`
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
+}
+
+// Interface compliance.
+var _ yaml.Unmarshaler = &MgmtNet{}
+
+// UnmarshalYAML is a custom unmarshaller for MgmtNet that allows to map old attributes to new ones.
+func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// define an alias type to avoid recursion during unmarshalling
+	type MgmtNetAlias MgmtNet
+
+	type MgmtNetWithDeprecatedFields struct {
+		MgmtNetAlias         `yaml:",inline"`
+		DeprecatedIPv4Subnet string `yaml:"ipv4_subnet,omitempty" json:"ipv4_subnet,omitempty"`
+		DeprecatedIPv6Subnet string `yaml:"ipv6_subnet,omitempty" json:"ipv6_subnet,omitempty"`
+	}
+	mn := &MgmtNetWithDeprecatedFields{}
+
+	mn.MgmtNetAlias = (MgmtNetAlias)(*m)
+	if err := unmarshal(mn); err != nil {
+		return err
+	}
+
+	// process deprecated fields and use their values for new fields if new fields are not set
+	if len(mn.DeprecatedIPv4Subnet) > 0 && len(mn.IPv4Subnet) == 0 {
+		log.Warnf("Attribute \"ipv4_subnet\" is deprecated and will be removed in the future. Change it to \"ipv4-subnet\"")
+		mn.IPv4Subnet = mn.DeprecatedIPv4Subnet
+	}
+	// map old to new if old defined but new not
+	if len(mn.DeprecatedIPv6Subnet) > 0 && len(mn.IPv6Subnet) == 0 {
+		log.Warnf("Attribute \"ipv6_subnet\" is deprecated and will be removed in the future. Change it to \"ipv6-subnet\"")
+		mn.IPv4Subnet = mn.DeprecatedIPv6Subnet
+	}
+
+	*m = (MgmtNet)(mn.MgmtNetAlias)
+
+	return nil
 }
 
 // NodeConfig is a struct that contains the information of a container element.

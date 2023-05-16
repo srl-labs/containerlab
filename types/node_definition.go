@@ -3,6 +3,9 @@ package types
 import (
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -70,6 +73,43 @@ type NodeDefinition struct {
 	DNS *DNSConfig `yaml:"dns,omitempty"`
 	// Certificate Configuration
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
+}
+
+// Interface compliance.
+var _ yaml.Unmarshaler = &NodeDefinition{}
+
+// UnmarshalYAML is a custom unmarshaller for NodeDefinition type that allows to map old attributes to new ones.
+func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// define an alias type to avoid recursion during unmarshalling
+	type NodeDefinitionAlias NodeDefinition
+
+	type NodeDefinitionWithDeprecatedFields struct {
+		NodeDefinitionAlias `yaml:",inline"`
+		DeprecatedMgmtIPv4  string `yaml:"mgmt_ipv4,omitempty"`
+		DeprecatedMgmtIPv6  string `yaml:"mgmt_ipv6,omitempty"`
+	}
+
+	nd := &NodeDefinitionWithDeprecatedFields{}
+
+	nd.NodeDefinitionAlias = (NodeDefinitionAlias)(*n)
+	if err := unmarshal(nd); err != nil {
+		return err
+	}
+
+	// process deprecated fields and use their values for new fields if new fields are not set
+	if len(nd.DeprecatedMgmtIPv4) > 0 && len(nd.MgmtIPv4) == 0 {
+		log.Warnf("Attribute \"mgmt_ipv4\" is deprecated and will be removed in future. Change it to \"mgmt-ipv4\"")
+		nd.MgmtIPv4 = nd.DeprecatedMgmtIPv4
+	}
+
+	if len(nd.DeprecatedMgmtIPv6) > 0 && len(nd.MgmtIPv6) == 0 {
+		log.Warnf("Attribute \"mgmt_ipv6\" is deprecated and will be removed in future. Change it to \"mgmt-ipv6\"")
+		nd.MgmtIPv4 = nd.DeprecatedMgmtIPv6
+	}
+
+	*n = (NodeDefinition)(nd.NodeDefinitionAlias)
+
+	return nil
 }
 
 func (n *NodeDefinition) GetKind() string {
