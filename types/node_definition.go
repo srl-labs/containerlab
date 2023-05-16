@@ -75,7 +75,7 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 }
 
-// Interface compliance
+// Interface compliance.
 var _ yaml.Unmarshaler = &NodeDefinition{}
 
 // UnmarshalYAML is a custom unmarshaller for NodeDefinition type that allows to map old attributes to new ones.

@@ -53,7 +53,7 @@ type MgmtNet struct {
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
 }
 
-// Interface compliance
+// Interface compliance.
 var _ yaml.Unmarshaler = &MgmtNet{}
 
 // UnmarshalYAML is a custom unmarshaller for MgmtNet that allows to map old attributes to new ones.
