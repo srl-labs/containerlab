@@ -411,6 +411,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					&nodes.PreDeployParams{
 						Cert:         c.Cert,
 						TopologyName: c.Config.Name,
+						TopoPaths:    c.TopoPaths,
 					},
 				)
 				if err != nil {
