@@ -7,11 +7,13 @@ package clab
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 const (
@@ -39,12 +41,16 @@ func (c *CLab) CreateAuthzKeysFile() error {
 		all = append(all, f)
 	}
 
-	if len(all) == 0 {
-		log.Debug("no public keys found")
-		return nil
+	// try extracting keys from ssh agent
+	keys, err := retrieveAgentKeys()
+	if err != nil {
+		log.Debug(err)
+	} else {
+		log.Debugf("extracted %d keys from ssh-agent", len(keys))
+		for _, k := range keys {
+			b.WriteString(k + "\n")
+		}
 	}
-
-	log.Debugf("found public key files %q", all)
 
 	for _, fn := range all {
 		rb, err := os.ReadFile(fn)
@@ -66,4 +72,27 @@ func (c *CLab) CreateAuthzKeysFile() error {
 
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
 	return os.Chmod(clabAuthzKeysFPath, 0644) // skipcq: GSC-G302
+}
+
+// retrieveAgentKeys retrieves SSH Pubkeys from the ssh-agent
+func retrieveAgentKeys() ([]string, error) {
+	socket := os.Getenv("SSH_AUTH_SOCK")
+	if len(socket) == 0 {
+		return nil, fmt.Errorf("SSH_AUTH_SOCK not set skipping pubkey evaluation")
+	}
+	conn, err := net.Dial("unix", socket)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open SSH_AUTH_SOCK: %w", err)
+	}
+
+	agentClient := agent.NewClient(conn)
+	keys, err := agentClient.List()
+	if err != nil {
+		return nil, fmt.Errorf("error listing agent pub keys %w", err)
+	}
+	var pubKeys []string
+	for _, key := range keys {
+		pubKeys = append(pubKeys, key.String())
+	}
+	return pubKeys, nil
 }
