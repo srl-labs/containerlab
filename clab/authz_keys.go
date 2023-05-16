@@ -51,7 +51,6 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	log.Debugf("extracted %d keys from ssh-agent", len(keys))
 	for _, k := range keys {
 		b.WriteString(k + "\n")
-
 	}
 
 	for _, fn := range all {
@@ -72,7 +71,7 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	return os.Chmod(clabAuthzKeysFPath, 0644) // skipcq: GSC-G302
 }
 
-// addKeyToBuffer adds a key to the buffer if the key is not already present
+// addKeyToBuffer adds a key to the buffer if the key is not already present.
 func addKeyToBuffer(b *bytes.Buffer, key string) {
 	// since they key might have a comment as a third field, we need to strip it
 	elems := strings.Fields(key)
@@ -86,7 +85,7 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 	}
 }
 
-// SSHAgentKeys retrieves public keys registered with the ssh-agent
+// SSHAgentKeys retrieves public keys registered with the ssh-agent.
 func SSHAgentKeys() ([]string, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if len(socket) == 0 {
