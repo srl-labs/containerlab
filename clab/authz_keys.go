@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
@@ -41,15 +42,16 @@ func (c *CLab) CreateAuthzKeysFile() error {
 		all = append(all, f)
 	}
 
-	// try extracting keys from ssh agent
-	keys, err := retrieveAgentKeys()
+	// get keys registered with ssh-agent
+	keys, err := SSHAgentKeys()
 	if err != nil {
 		log.Debug(err)
-	} else {
-		log.Debugf("extracted %d keys from ssh-agent", len(keys))
-		for _, k := range keys {
-			b.WriteString(k + "\n")
-		}
+	}
+
+	log.Debugf("extracted %d keys from ssh-agent", len(keys))
+	for _, k := range keys {
+		b.WriteString(k + "\n")
+
 	}
 
 	for _, fn := range all {
@@ -57,12 +59,8 @@ func (c *CLab) CreateAuthzKeysFile() error {
 		if err != nil {
 			return fmt.Errorf("failed reading the file %s: %v", fn, err)
 		}
-		// ensure the key ends with a newline
-		if !bytes.HasSuffix(rb, []byte("\n")) {
-			rb = append(rb, []byte("\n")...)
-		}
 
-		b.Write(rb)
+		addKeyToBuffer(b, string(rb))
 	}
 
 	clabAuthzKeysFPath := c.TopoPaths.AuthorizedKeysFilename()
@@ -74,11 +72,25 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	return os.Chmod(clabAuthzKeysFPath, 0644) // skipcq: GSC-G302
 }
 
-// retrieveAgentKeys retrieves SSH Pubkeys from the ssh-agent
-func retrieveAgentKeys() ([]string, error) {
+// addKeyToBuffer adds a key to the buffer if the key is not already present
+func addKeyToBuffer(b *bytes.Buffer, key string) {
+	// since they key might have a comment as a third field, we need to strip it
+	elems := strings.Fields(key)
+	if len(elems) < 2 {
+		return
+	}
+
+	key = elems[0] + " " + elems[1]
+	if !strings.Contains(b.String(), key) {
+		b.WriteString(key + "\n")
+	}
+}
+
+// SSHAgentKeys retrieves public keys registered with the ssh-agent
+func SSHAgentKeys() ([]string, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if len(socket) == 0 {
-		return nil, fmt.Errorf("SSH_AUTH_SOCK not set skipping pubkey evaluation")
+		return nil, fmt.Errorf("SSH_AUTH_SOCK not set, skipping pubkey fetching")
 	}
 	conn, err := net.Dial("unix", socket)
 	if err != nil {
@@ -88,11 +100,13 @@ func retrieveAgentKeys() ([]string, error) {
 	agentClient := agent.NewClient(conn)
 	keys, err := agentClient.List()
 	if err != nil {
-		return nil, fmt.Errorf("error listing agent pub keys %w", err)
+		return nil, fmt.Errorf("error listing agent's pub keys %w", err)
 	}
+
 	var pubKeys []string
 	for _, key := range keys {
 		pubKeys = append(pubKeys, key.String())
 	}
+
 	return pubKeys, nil
 }
