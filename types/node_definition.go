@@ -74,8 +74,7 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 }
 
-// UnmarshalJSON introducing a custom unmarshaller to allow for
-// the old field definitions
+// UnmarshalYAML introducing a custom unmarshaller to allow for the old field definitions
 func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type Alias NodeDefinition
 	type NDDepricate struct {

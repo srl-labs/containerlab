@@ -52,6 +52,7 @@ type MgmtNet struct {
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
 }
 
+// UnmarshalYAML introducing a custom unmarshaller to allow for the old field definitions
 func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type Alias MgmtNet
 
