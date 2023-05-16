@@ -105,7 +105,6 @@ func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 
 // GenerateAndSignNodeCert generates and signs a node certificate, key and CSR based on the provided input and signs it with the CA.
 func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error) {
-
 	// parse hosts from input to retrieve dns and ip SANs
 	dns, ip := parseHostsInput(input.Hosts)
 
