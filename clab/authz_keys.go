@@ -25,7 +25,7 @@ const (
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	p := utils.ResolvePath(pubKeysGlob, c.TopoPaths.TopologyFileDir())
+	p := utils.ResolvePath(pubKeysGlob, "")
 
 	all, err := filepath.Glob(p)
 	if err != nil {
@@ -47,7 +47,15 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	log.Debugf("found public key files %q", all)
 
 	for _, fn := range all {
-		rb, _ := os.ReadFile(fn)
+		rb, err := os.ReadFile(fn)
+		if err != nil {
+			return fmt.Errorf("failed reading the file %s: %v", fn, err)
+		}
+		// ensure the key ends with a newline
+		if !bytes.HasSuffix(rb, []byte("\n")) {
+			rb = append(rb, []byte("\n")...)
+		}
+
 		b.Write(rb)
 	}
 
