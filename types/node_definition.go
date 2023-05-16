@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -74,34 +75,39 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 }
 
-// UnmarshalYAML introducing a custom unmarshaller to allow for the old field definitions
-func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type Alias NodeDefinition
-	type NDDepricate struct {
-		Alias                 `yaml:",inline"`
-		MgmtIPv4OldUnderscore string `yaml:"mgmt_ipv4,omitempty"`
-		MgmtIPv6OldUnderscore string `yaml:"mgmt_ipv6,omitempty"`
-	}
-	fy := &NDDepricate{}
+// Interface compliance
+var _ yaml.Unmarshaler = &NodeDefinition{}
 
-	fy.Alias = (Alias)(*n)
-	if err := unmarshal(fy); err != nil {
+// UnmarshalYAML is a custom unmarshaller for NodeDefinition type that allows to map old attributes to new ones.
+func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// define an alias type to avoid recursion during unmarshalling
+	type NodeDefinitionAlias NodeDefinition
+
+	type NodeDefinitionWithDeprecatedFields struct {
+		NodeDefinitionAlias `yaml:",inline"`
+		DeprecatedMgmtIPv4  string `yaml:"mgmt_ipv4,omitempty"`
+		DeprecatedMgmtIPv6  string `yaml:"mgmt_ipv6,omitempty"`
+	}
+
+	nd := &NodeDefinitionWithDeprecatedFields{}
+
+	nd.NodeDefinitionAlias = (NodeDefinitionAlias)(*n)
+	if err := unmarshal(nd); err != nil {
 		return err
 	}
 
-	// map old to new if old defined but new not
-	if len(fy.MgmtIPv4OldUnderscore) > 0 && len(fy.MgmtIPv4) == 0 {
-		log.Warnf("deprication notice. Attribute \"mgmt_ipv4\" will be removed in future change to \"mgmt-ipv4\"")
-		fy.MgmtIPv4 = fy.MgmtIPv4OldUnderscore
+	// process deprecated fields and use their values for new fields if new fields are not set
+	if len(nd.DeprecatedMgmtIPv4) > 0 && len(nd.MgmtIPv4) == 0 {
+		log.Warnf("Attribute \"mgmt_ipv4\" is deprecated and will be removed in future. Change it to \"mgmt-ipv4\"")
+		nd.MgmtIPv4 = nd.DeprecatedMgmtIPv4
 	}
 
-	// map old to new if old defined but new not
-	if len(fy.MgmtIPv6OldUnderscore) > 0 && len(fy.MgmtIPv6) == 0 {
-		log.Warnf("deprication notice. Attribute \"mgmt_ipv6\" will be removed in future change to \"mgmt-ipv6\"")
-		fy.MgmtIPv4 = fy.MgmtIPv6OldUnderscore
+	if len(nd.DeprecatedMgmtIPv6) > 0 && len(nd.MgmtIPv6) == 0 {
+		log.Warnf("Attribute \"mgmt_ipv6\" is deprecated and will be removed in future. Change it to \"mgmt-ipv6\"")
+		nd.MgmtIPv4 = nd.DeprecatedMgmtIPv6
 	}
 
-	*n = (NodeDefinition)(fy.Alias)
+	*n = (NodeDefinition)(nd.NodeDefinitionAlias)
 
 	return nil
 }
