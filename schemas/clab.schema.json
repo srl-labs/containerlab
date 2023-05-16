@@ -317,7 +317,7 @@
                     "if": {
                         "properties": {
                             "kind": {
-                                "const": "srl"
+                                "pattern": "(srl|nokia_srlinux)"
                             }
                         },
                         "required": [
@@ -353,7 +353,7 @@
                     "if": {
                         "properties": {
                             "kind": {
-                                "const": "vr-sros"
+                                "pattern": "(vr-sros|vr-nokia_sros)"
                             }
                         },
                         "required": [
