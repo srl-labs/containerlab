@@ -52,6 +52,38 @@ type MgmtNet struct {
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
 }
 
+func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type Alias MgmtNet
+
+	type MNDepricate struct {
+		Alias                   `yaml:",inline"`
+		IPv4SubnetOldUnderscore string `yaml:"ipv4_subnet,omitempty" json:"ipv4_subnet,omitempty"`
+		IPv6SubnetOldUnderscore string `yaml:"ipv6_subnet,omitempty" json:"ipv6_subnet,omitempty"`
+	}
+	fy := &MNDepricate{}
+
+	fy.Alias = (Alias)(*m)
+	if err := unmarshal(fy); err != nil {
+		return err
+	}
+
+	// map old to new if old defined but new not
+	if len(fy.IPv4SubnetOldUnderscore) > 0 && len(fy.IPv4Subnet) == 0 {
+		log.Warnf("deprication notice. Attribute \"ipv4_subnet\" will be removed in future change to \"ipv4-subnet\"")
+		fy.IPv4Subnet = fy.IPv4SubnetOldUnderscore
+	}
+	// map old to new if old defined but new not
+	if len(fy.IPv6SubnetOldUnderscore) > 0 && len(fy.IPv6Subnet) == 0 {
+		log.Warnf("deprication notice. Attribute \"ipv6_subnet\" will be removed in future change to \"ipv6-subnet\"")
+		fy.IPv4Subnet = fy.IPv6SubnetOldUnderscore
+	}
+
+	*m = (MgmtNet)(fy.Alias)
+
+	return nil
+
+}
+
 // NodeConfig is a struct that contains the information of a container element.
 type NodeConfig struct {
 	// name of the Node inside topology YAML
