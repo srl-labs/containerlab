@@ -53,8 +53,8 @@
                         "vr-juniper_vmx",
                         "vr-vqfx",
                         "vr-juniper_vqfx",
-			"vr-vsrx",
-			"vr-juniper_vsrx",
+                        "vr-vsrx",
+                        "vr-juniper_vsrx",
                         "vr-xrv",
                         "vr-cisco_xrv",
                         "vr-xrv9k",
@@ -303,48 +303,96 @@
                     "$ref": "#/definitions/certificate-config"
                 }
             },
-            "if": {
-                "properties": {
-                    "kind": {
-                        "const": "srl"
+            "allOf": [
+                {
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "description": "type of a node",
+                            "markdownDescription": "node [type](https://containerlab.dev/manual/nodes/#type)"
+                        }
                     }
-                }
-            },
-            "then": {
-                "properties": {
-                    "type": {
-                        "type": "string",
-                        "description": "type of a node",
-                        "markdownDescription": "node [type](https://containerlab.dev/manual/nodes/#type)",
-                        "enum": [
-                            "ixrd1",
-                            "ixrd2",
-                            "ixrd3",
-                            "ixrd2l",
-                            "ixrd3l",
-                            "ixrd4",
-                            "ixrd5",
-                            "ixrd5t",
-                            "ixrh2",
-                            "ixrh3",
-                            "ixrh4",
-                            "ixr6",
-                            "ixr6e",
-                            "ixr10",
-                            "ixr10e"
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "(srl|nokia_srlinux)"
+                            }
+                        },
+                        "required": [
+                            "kind"
                         ]
+                    },
+                    "then": {
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "ixrd1",
+                                    "ixrd2",
+                                    "ixrd3",
+                                    "ixrd2l",
+                                    "ixrd3l",
+                                    "ixrd4",
+                                    "ixrd5",
+                                    "ixrd5t",
+                                    "ixrh2",
+                                    "ixrh3",
+                                    "ixrh4",
+                                    "ixr6",
+                                    "ixr6e",
+                                    "ixr10",
+                                    "ixr10e"
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "(vr-sros|vr-nokia_sros)"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "anyOf": [
+                                    {
+                                        "enum": [
+                                            "sr-1",
+                                            "sr-1e",
+                                            "sr-1e-sec",
+                                            "sr-1s",
+                                            "sr-1s-macsec",
+                                            "sr-2s",
+                                            "sr-7s",
+                                            "sr-7s-fp4",
+                                            "sr-14s",
+                                            "sr-a4",
+                                            "ixr-e-small",
+                                            "ixr-e-big",
+                                            "ixr-ec",
+                                            "ixr-r6",
+                                            "ixr-s"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "cp:.+"
+                                    }
+                                ]
+                            }
+                        }
                     }
                 }
-            },
-            "else": {
-                "properties": {
-                    "type": {
-                        "type": "string",
-                        "description": "type of a node",
-                        "markdownDescription": "node [type](https://containerlab.dev/manual/nodes/#type)"
-                    }
-                }
-            },
+            ],
             "additionalProperties": false
         },
         "link-config": {
