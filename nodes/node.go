@@ -49,6 +49,7 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 type PreDeployParams struct {
 	Cert         *cert.Cert
 	TopologyName string
+	TopoPaths    *types.TopoPaths
 }
 
 // DeployParams contains parameters for the Deploy function.
