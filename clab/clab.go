@@ -23,6 +23,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"golang.org/x/exp/slices"
+	"golang.org/x/sync/semaphore"
 )
 
 type CLab struct {
@@ -250,8 +251,7 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint) (*sync.WaitGroup, error) {
-	dm := NewDependencyManager()
+func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, dm DependencyManager) (*sync.WaitGroup, error) {
 
 	for nodeName := range c.Nodes {
 		dm.AddNode(nodeName)
@@ -432,8 +432,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				c.m.Unlock()
 
 				// signal to dependency manager that this node is done
-
 				dm.SignalDone(node.Config().ShortName)
+
 			case <-ctx.Done():
 				return
 			}
@@ -511,60 +511,39 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 }
 
 // CreateLinks creates links using the specified number of workers.
-func (c *CLab) CreateLinks(ctx context.Context, workers uint) {
+func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm DependencyManager) {
 	wg := new(sync.WaitGroup)
-	wg.Add(int(workers))
-	linksChan := make(chan *types.Link)
+	sem := semaphore.NewWeighted(int64(workers))
 
-	log.Debug("creating links...")
-	// wire the links between the nodes based on cabling plan
-	for i := uint(0); i < workers; i++ {
-		go func(i uint) {
+	for _, link := range c.Links {
+		wg.Add(1)
+		go func(li *types.Link) {
 			defer wg.Done()
-			for {
-				select {
-				case link := <-linksChan:
-					if link == nil {
-						log.Debugf("Link worker %d terminating...", i)
-						return
-					}
-					log.Debugf("Link worker %d received link: %+v", i, link)
-					if err := c.CreateVirtualWiring(link); err != nil {
-						log.Error(err)
-					}
-				case <-ctx.Done():
-					return
-				}
+			// wait for endpoint A
+			err := dm.WaitForNode(li.A.Node.ShortName)
+			if err != nil {
+				log.Error(err)
 			}
-		}(i)
-	}
-
-	// create a copy of links map to loop over
-	// so that we can wait till all the nodes are ready before scheduling a link
-	linksCopy := map[int]*types.Link{}
-	for k, v := range c.Links {
-		linksCopy[k] = v
-	}
-	for {
-		if len(linksCopy) == 0 {
-			break
-		}
-		for k, link := range linksCopy {
-			c.m.Lock()
-			if link.A.Node.DeploymentStatus == "created" &&
-				link.B.Node.DeploymentStatus == "created" {
-				linksChan <- link
-				delete(linksCopy, k)
+			// wait for endpoint B
+			err = dm.WaitForNode(li.B.Node.ShortName)
+			if err != nil {
+				log.Error(err)
 			}
-			c.m.Unlock()
-		}
 
-		// prevent clab from throttle CPU when nodes take considerable time to start
-		time.Sleep(500 * time.Millisecond)
+			// acquire Sem
+			err = sem.Acquire(ctx, 1)
+			if err != nil {
+				log.Error(err)
+			}
+			defer sem.Release(1)
+			// create the wiring
+			err = c.CreateVirtualWiring(li)
+			if err != nil {
+				log.Error(err)
+			}
+		}(link)
 	}
 
-	// close channel to terminate the workers
-	close(linksChan)
 	// wait for all workers to finish
 	wg.Wait()
 }

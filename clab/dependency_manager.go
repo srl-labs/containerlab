@@ -24,6 +24,8 @@ type DependencyManager interface {
 	CheckAcyclicity() error
 	// String returns a string representation of dependencies recorded with dependency manager.
 	String() string
+	// WaitForNode allows to wait for completion of the container creation and start
+	WaitForNode(nodeName string) error
 }
 
 type defaultDependencyManager struct {
@@ -34,12 +36,15 @@ type defaultDependencyManager struct {
 	// Names of the nodes that depend on a given node are listed here.
 	// On successful creation of the said node, all the depending nodes (dependers) wait groups will be decremented.
 	nodeDependers map[string][]string
+
+	nodeCreated map[string]*sync.WaitGroup
 }
 
 func NewDependencyManager() DependencyManager {
 	return &defaultDependencyManager{
 		nodeWaitGroup: map[string]*sync.WaitGroup{},
 		nodeDependers: map[string][]string{},
+		nodeCreated:   map[string]*sync.WaitGroup{},
 	}
 }
 
@@ -47,6 +52,9 @@ func NewDependencyManager() DependencyManager {
 func (dm *defaultDependencyManager) AddNode(name string) {
 	dm.nodeWaitGroup[name] = &sync.WaitGroup{}
 	dm.nodeDependers[name] = []string{}
+	dm.nodeCreated[name] = &sync.WaitGroup{}
+	// mark node as not ready
+	dm.nodeCreated[name].Add(1)
 }
 
 // AddDependency adds a dependency between depender and dependee.
@@ -88,6 +96,16 @@ func (dm *defaultDependencyManager) SignalDone(nodeName string) {
 	for _, depender := range dm.nodeDependers[nodeName] {
 		dm.nodeWaitGroup[depender].Done()
 	}
+	dm.nodeCreated[nodeName].Done()
+}
+
+func (dm *defaultDependencyManager) WaitForNode(nodeName string) error {
+	nodeWg, exists := dm.nodeCreated[nodeName]
+	if !exists {
+		return fmt.Errorf("node %q is not known to the dependency manager", nodeName)
+	}
+	nodeWg.Wait()
+	return nil
 }
 
 // CheckAcyclicity checks if dependencies contain cycles.

@@ -217,11 +217,13 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	nodesWg, err := c.CreateNodes(ctx, nodeWorkers)
+	dm := clab.NewDependencyManager()
+
+	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, dm)
 	if err != nil {
 		return err
 	}
-	c.CreateLinks(ctx, linkWorkers)
+	c.CreateLinks(ctx, linkWorkers, dm)
 	if nodesWg != nil {
 		nodesWg.Wait()
 	}

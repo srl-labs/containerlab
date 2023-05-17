@@ -99,6 +99,20 @@ func (mr *MockDependencyManagerMockRecorder) String() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockDependencyManager)(nil).String))
 }
 
+// WaitForNode mocks base method.
+func (m *MockDependencyManager) WaitForNode(nodeName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForNode", nodeName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForNode indicates an expected call of WaitForNode.
+func (mr *MockDependencyManagerMockRecorder) WaitForNode(nodeName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNode", reflect.TypeOf((*MockDependencyManager)(nil).WaitForNode), nodeName)
+}
+
 // WaitForNodeDependencies mocks base method.
 func (m *MockDependencyManager) WaitForNodeDependencies(nodeName string) error {
 	m.ctrl.T.Helper()
