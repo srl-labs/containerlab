@@ -81,7 +81,7 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// map old to new if old defined but new not
 	if len(mn.DeprecatedIPv6Subnet) > 0 && len(mn.IPv6Subnet) == 0 {
 		log.Warnf("Attribute \"ipv6_subnet\" is deprecated and will be removed in the future. Change it to \"ipv6-subnet\"")
-		mn.IPv4Subnet = mn.DeprecatedIPv6Subnet
+		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
 
 	*m = (MgmtNet)(mn.MgmtNetAlias)

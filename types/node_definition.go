@@ -104,7 +104,7 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 	if len(nd.DeprecatedMgmtIPv6) > 0 && len(nd.MgmtIPv6) == 0 {
 		log.Warnf("Attribute \"mgmt_ipv6\" is deprecated and will be removed in future. Change it to \"mgmt-ipv6\"")
-		nd.MgmtIPv4 = nd.DeprecatedMgmtIPv6
+		nd.MgmtIPv6 = nd.DeprecatedMgmtIPv6
 	}
 
 	*n = (NodeDefinition)(nd.NodeDefinitionAlias)

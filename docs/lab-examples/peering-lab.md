@@ -1,4 +1,7 @@
-# Internet eXchange Point (IXP) lab
+---
+comments: true
+---
+# Peering lab
 
 Internet eXchange Points are the glue that connects the Internet. They are the physical locations where ISPs, CDNs and all other ASN holders connect to exchange traffic. While traffic exchange might sound simple, it is a complex process with lots of moving parts:
 
@@ -15,14 +18,14 @@ The guidelines and current best practices are best to be practiced in a lab envi
 
 ## Lab summary
 
-| Summary                   |                                                                                                                                                            |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Lab name**              | IXP Lab                                                                                                                                                    |
-| **Lab components**        | [Nokia SR OS][nokia-sros], [FRRouting (FRR)][frr], [OpenBGPd][openbgpd] and [BIRD][bird] route servers                                                     |
-| **Resource requirements** | :fontawesome-solid-microchip: 2 vCPU <br/>:fontawesome-solid-memory: 6 GB                                                                                  |
-| **Lab**                   | [hellt/sros-frr-ixp-lab][lab]                                                                                                                              |
-| **Version information**   | [`containerlab:0.39.0`][clab-install], `Nokia SR OS:23.3.R1`, [`FRR:8.4.1`][frr-container], [`BIRD:2.0.11`][bird-container], [`openbgpd:7.9`][obgpd-container] |
-| **Authors**               | Roman Dodin [:material-twitter:][rd-twitter] [:material-linkedin:][rd-linkedin]                                                                            |
+| Summary                   |                                                                                                                                                                |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Lab name**              | Peering Lab                                                                                                                                                    |
+| **Lab components**        | [Nokia SR OS][nokia-sros], [FRRouting (FRR)][frr], [OpenBGPd][openbgpd] and [BIRD][bird] route servers                                                         |
+| **Resource requirements** | :fontawesome-solid-microchip: 2 vCPU <br/>:fontawesome-solid-memory: 6 GB                                                                                      |
+| **Lab**                   | [hellt/sros-frr-ixp-lab][lab]                                                                                                                                  |
+| **Version information**   | [`containerlab:0.41.1`][clab-install], `Nokia SR OS:23.3.R1`, [`FRR:8.4.1`][frr-container], [`BIRD:2.0.11`][bird-container], [`openbgpd:7.9`][obgpd-container] |
+| **Authors**               | Roman Dodin [:material-twitter:][rd-twitter] [:material-linkedin:][rd-linkedin]                                                                                |
 
 ## Prerequisites
 
