@@ -93,27 +93,49 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 		return err
 	}
 
-	// create veth pair in the root netns
-	vA.Link, vB.Link, err = createVethIface(ARndmName, BRndmName, l.MTU, aMAC, bMAC)
-	if err != nil {
-		return err
+	if l.A.Node.Kind == "macvlan" || l.A.Node.Kind == "macvtap" || l.B.Node.Kind == "macvlan" || l.B.Node.Kind == "macvtap" {
+		if l.A.Node.Kind == "macvlan" || l.A.Node.Kind == "macvtap" {
+			// make sure the macvlan / macvtap is always the B side
+			tmp := l.A
+			l.A = l.B
+			l.B = tmp
+		}
+
+		link, err := createMacVlanInterface(ARndmName, l.B.EndpointName, l.MTU, aMAC)
+		if err != nil {
+			return err
+		}
+
+		err = toNS(l.A.Node.NSPath, link, l.A.EndpointName)
+		if err != nil {
+			return err
+		}
+
+	} else {
+
+		// create veth pair in the root netns
+		vA.Link, vB.Link, err = createVethIface(ARndmName, BRndmName, l.MTU, aMAC, bMAC)
+		if err != nil {
+			return err
+		}
+
+		// once veth pair is created, disable tx offload for veth pair
+		if err := utils.EthtoolTXOff(ARndmName); err != nil {
+			return err
+		}
+		if err := utils.EthtoolTXOff(BRndmName); err != nil {
+			return err
+		}
+
+		if err = vA.setVethLink(); err != nil {
+			_ = netlink.LinkDel(vA.Link)
+			return err
+		}
+		if err = vB.setVethLink(); err != nil {
+			_ = netlink.LinkDel(vB.Link)
+		}
 	}
 
-	// once veth pair is created, disable tx offload for veth pair
-	if err := utils.EthtoolTXOff(ARndmName); err != nil {
-		return err
-	}
-	if err := utils.EthtoolTXOff(BRndmName); err != nil {
-		return err
-	}
-
-	if err = vA.setVethLink(); err != nil {
-		_ = netlink.LinkDel(vA.Link)
-		return err
-	}
-	if err = vB.setVethLink(); err != nil {
-		_ = netlink.LinkDel(vB.Link)
-	}
 	return err
 }
 
@@ -151,6 +173,38 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 		}
 	}
 	return nil
+}
+
+func createMacVlanInterface(ifName, parentIfName string, mtu int, MAC net.HardwareAddr) (netlink.Link, error) {
+	parentInterface, err := netlink.LinkByName(parentIfName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = netlink.LinkAdd(
+		&netlink.Macvlan{
+			LinkAttrs: netlink.LinkAttrs{
+				Name:        ifName,
+				ParentIndex: parentInterface.Attrs().Index,
+			},
+			Mode: netlink.MACVLAN_MODE_BRIDGE,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var mvInterface netlink.Link
+	if mvInterface, err = netlink.LinkByName(ifName); err != nil {
+		return nil, fmt.Errorf("failed to lookup %q: %v", ifName, err)
+	}
+
+	err = netlink.LinkSetHardwareAddr(mvInterface, MAC)
+	if err != nil {
+		return nil, err
+	}
+
+	return mvInterface, nil
 }
 
 // createVethIface takes two veth endpoint structs and create a veth pair and return
@@ -202,24 +256,28 @@ func (veth *vEthEndpoint) setVethLink() error {
 
 // toNS puts a veth endpoint to a given netns and renames its random name to a desired name.
 func (veth *vEthEndpoint) toNS() error {
+	return toNS(veth.NSName, veth.Link, veth.LinkName)
+}
+
+func toNS(nsPath string, link netlink.Link, expectedName string) error {
 	var vethNS ns.NetNS
 	var err error
-	if vethNS, err = ns.GetNS(veth.NSPath); err != nil {
+	if vethNS, err = ns.GetNS(nsPath); err != nil {
 		return err
 	}
 	// move veth endpoint to namespace
-	if err = netlink.LinkSetNsFd(veth.Link, int(vethNS.Fd())); err != nil {
+	if err = netlink.LinkSetNsFd(link, int(vethNS.Fd())); err != nil {
 		return err
 	}
 	err = vethNS.Do(func(_ ns.NetNS) error {
-		if err = netlink.LinkSetName(veth.Link, veth.LinkName); err != nil {
+		if err = netlink.LinkSetName(link, expectedName); err != nil {
 			return fmt.Errorf(
 				"failed to rename link: %v", err)
 		}
 
-		if err = netlink.LinkSetUp(veth.Link); err != nil {
+		if err = netlink.LinkSetUp(link); err != nil {
 			return fmt.Errorf("failed to set %q up: %v",
-				veth.LinkName, err)
+				expectedName, err)
 		}
 		return nil
 	})
