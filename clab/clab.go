@@ -15,6 +15,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
+	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -251,7 +252,7 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, dm DependencyManager) (*sync.WaitGroup, error) {
+func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, dm dependency_manager.DependencyManager) (*sync.WaitGroup, error) {
 
 	for nodeName := range c.Nodes {
 		dm.AddNode(nodeName)
@@ -293,7 +294,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, dm DependencyMa
 }
 
 // create a set of dependencies, that makes the ignite nodes start one after the other.
-func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm DependencyManager) error {
+func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm dependency_manager.DependencyManager) error {
 	var prevIgniteNode nodes.Node
 	// iterate through the nodes
 	for _, n := range nodeMap {
@@ -317,7 +318,7 @@ func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm DependencyMa
 //	network-mode: container:node_b
 //
 // then node_a depends on node_b, and waits for node_b to be scheduled first.
-func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm DependencyManager) {
+func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm dependency_manager.DependencyManager) {
 	for nodeName, n := range nodeMap {
 		nodeConfig := n.Config()
 		netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
@@ -341,7 +342,7 @@ func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm Dependen
 
 // createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
 // are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
-func createStaticDynamicDependency(n map[string]nodes.Node, dm DependencyManager) error {
+func createStaticDynamicDependency(n map[string]nodes.Node, dm dependency_manager.DependencyManager) error {
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -368,7 +369,7 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm DependencyManager
 }
 
 // createWaitForDependency reflects the dependencies defined in the configuration via the wait-for field.
-func createWaitForDependency(n map[string]nodes.Node, dm DependencyManager) error {
+func createWaitForDependency(n map[string]nodes.Node, dm dependency_manager.DependencyManager) error {
 	for waiterNode, node := range n {
 		// add node's waitFor nodes to the dependency manager
 		for _, waitForNode := range node.Config().WaitFor {
@@ -383,11 +384,11 @@ func createWaitForDependency(n map[string]nodes.Node, dm DependencyManager) erro
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
-	scheduledNodes map[string]nodes.Node, dm DependencyManager,
+	scheduledNodes map[string]nodes.Node, dm dependency_manager.DependencyManager,
 ) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm DependencyManager) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm dependency_manager.DependencyManager) {
 		defer wg.Done()
 		for {
 			select {
@@ -431,8 +432,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				node.Config().DeploymentStatus = "created"
 				c.m.Unlock()
 
-				// signal to dependency manager that this node is done
-				dm.SignalDone(node.Config().ShortName)
+				// signal to dependency manager that this node is done with creation
+				dm.SignalDone(node.Config().ShortName, dependency_manager.NodeStateCreated)
 
 			case <-ctx.Done():
 				return
@@ -457,30 +458,32 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 	// Waitgroup used to protect the channel towards the workers of being closed to early
 	workerFuncChWG := new(sync.WaitGroup)
 
-	for _, n := range scheduledNodes {
-		workerFuncChWG.Add(1)
-		// start a func for all the containers, then will wait for their own waitgroups
-		// to be set to zero by their depending containers, then enqueue to the creation channel
-		go func(node nodes.Node, dm DependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
-			// wait for all the nodes that node depends on
-			err := dm.WaitForNodeDependencies(node.Config().ShortName)
-			if err != nil {
-				log.Error(err)
-			}
-			// wait for possible external dependencies
-			c.WaitForExternalNodeDependencies(ctx, node.Config().ShortName)
-			// when all nodes that this node depends on are created, push it into the channel
-			workerChan <- node
-			// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
-			wfcwg.Done()
-		}(n, dm, concurrentChan, workerFuncChWG) // execute this function straight away
-	}
+	// schedule nodes via a go func to create links in parallel
+	go func() {
+		for _, n := range scheduledNodes {
+			workerFuncChWG.Add(1)
+			// start a func for all the containers, then will wait for their own waitgroups
+			// to be set to zero by their depending containers, then enqueue to the creation channel
+			go func(node nodes.Node, dm dependency_manager.DependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+				// wait for all the nodes that node depends on
+				err := dm.WaitForNodeDependencies(node.Config().ShortName)
+				if err != nil {
+					log.Error(err)
+				}
+				// wait for possible external dependencies
+				c.WaitForExternalNodeDependencies(ctx, node.Config().ShortName)
+				// when all nodes that this node depends on are created, push it into the channel
+				workerChan <- node
+				// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
+				wfcwg.Done()
+			}(n, dm, concurrentChan, workerFuncChWG) // execute this function straight away
+		}
 
-	// Gate to make sure the channel is not closed before all the nodes made it though the channel
-	workerFuncChWG.Wait()
-	// close the channel and thereby terminate the workerFuncs
-	close(concurrentChan)
-
+		// Gate to make sure the channel is not closed before all the nodes made it though the channel
+		workerFuncChWG.Wait()
+		// close the channel and thereby terminate the workerFuncs
+		close(concurrentChan)
+	}()
 	return wg
 }
 
@@ -511,7 +514,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 }
 
 // CreateLinks creates links using the specified number of workers.
-func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm DependencyManager) {
+func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_manager.DependencyManager) {
 	wg := new(sync.WaitGroup)
 	sem := semaphore.NewWeighted(int64(workers))
 
@@ -520,12 +523,7 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm DependencyManag
 		go func(li *types.Link) {
 			defer wg.Done()
 			// wait for endpoint A
-			err := dm.WaitForNode(li.A.Node.ShortName)
-			if err != nil {
-				log.Error(err)
-			}
-			// wait for endpoint B
-			err = dm.WaitForNode(li.B.Node.ShortName)
+			err := dm.WaitForNodes([]string{li.A.Node.ShortName, li.B.Node.ShortName}, dependency_manager.NodeStateCreated)
 			if err != nil {
 				log.Error(err)
 			}

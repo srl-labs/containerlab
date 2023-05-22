@@ -1,0 +1,43 @@
+# topology documentation: http://containerlab.dev/lab-examples/two-srls/
+name: dep_test
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:latest
+    l2:
+      kind: linux
+      image: alpine:latest
+      wait-for: 
+        - l1
+      startup-delay: 10
+    l3:
+      kind: linux
+      image: alpine:latest
+      wait-for: 
+        - l2
+    l4:
+      kind: linux
+      image: alpine:latest
+      wait-for: 
+        - l3
+      startup-delay: 7
+    l5:
+      kind: linux
+      image: alpine:latest
+      wait-for: 
+        - l4
+      startup-delay: 2
+    l6:
+      kind: linux
+      image: alpine:latest
+      wait-for: 
+        - l1
+        - l4
+
+  links:
+    - endpoints: ["l1:eth1", "l2:eth1"]
+    - endpoints: ["l1:eth2", "l3:eth1"]
+    - endpoints: ["l1:eth3", "l4:eth1"]
+    - endpoints: ["l1:eth4", "l5:eth1"]
+    - endpoints: ["l1:eth5", "l6:eth1"]

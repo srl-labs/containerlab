@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -217,7 +218,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	dm := clab.NewDependencyManager()
+	dm := dependency_manager.NewDependencyManager()
 
 	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, dm)
 	if err != nil {
