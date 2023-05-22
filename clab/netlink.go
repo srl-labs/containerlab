@@ -279,7 +279,7 @@ func (veth *vEthEndpoint) setVethLink() error {
 
 // toNS puts a veth endpoint to a given netns and renames its random name to a desired name.
 func (veth *vEthEndpoint) toNS() error {
-	return toNS(veth.NSName, veth.Link, veth.LinkName)
+	return toNS(veth.NSPath, veth.Link, veth.LinkName)
 }
 
 func toNS(nsPath string, link netlink.Link, expectedName string) error {
