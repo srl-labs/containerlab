@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/registry"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -106,7 +106,7 @@ func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error)
 		return "", errors.New("unexpected auth string")
 	}
 
-	authConfig := types.AuthConfig{
+	authConfig := registry.AuthConfig{
 		Username: strings.TrimSpace(decodedAuthSplit[0]),
 		Password: strings.TrimSpace(decodedAuthSplit[1]),
 	}
