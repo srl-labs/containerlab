@@ -522,8 +522,17 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_mana
 		wg.Add(1)
 		go func(li *types.Link) {
 			defer wg.Done()
+
+			var waitNodes []string
+			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
+				// we should not wait for "host"
+				if n.Kind != "host" {
+					waitNodes = append(waitNodes, n.ShortName)
+				}
+			}
+
 			// wait for endpoint A
-			err := dm.WaitForNodes([]string{li.A.Node.ShortName, li.B.Node.ShortName}, dependency_manager.NodeStateCreated)
+			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
 			if err != nil {
 				log.Error(err)
 			}
