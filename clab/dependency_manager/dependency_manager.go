@@ -37,7 +37,7 @@ const (
 
 var RegularNodeStates = []NodeState{NodeStateCreated}
 
-// dependencyNode is the representation of a node in the dependency concept
+// dependencyNode is the representation of a node in the dependency concept.
 type dependencyNode struct {
 	name      string
 	WaitState map[NodeState]*sync.WaitGroup
@@ -45,7 +45,7 @@ type dependencyNode struct {
 	nodeDependers map[string]*dependencyNode
 }
 
-// newDependencyNode constructor to initilaize a dependencyNode with the given name
+// newDependencyNode constructor to initilaize a dependencyNode with the given name.
 func newDependencyNode(name string) *dependencyNode {
 	d := &dependencyNode{
 		name:      name,
@@ -64,23 +64,22 @@ func newDependencyNode(name string) *dependencyNode {
 }
 
 // getStateWG internal function to retrieves the provided node state if it exists
-// otherwiese it is initilaized
+// otherwiese it is initilaized.
 func (d *dependencyNode) getStateWG(n NodeState) *sync.WaitGroup {
 	if _, exists := d.WaitState[n]; !exists {
 		d.WaitState[n] = &sync.WaitGroup{}
 	}
 	return d.WaitState[n]
-
 }
 
-// WaitFor makes the caller wait for the node to reach the provided NodeState
+// WaitFor makes the caller wait for the node to reach the provided NodeState.
 func (d *dependencyNode) WaitFor(n NodeState) error {
 	wg := d.getStateWG(n)
 	wg.Wait()
 	return nil
 }
 
-// Done indicates that the node has reached the given state
+// Done indicates that the node has reached the given state.
 func (d *dependencyNode) Done(n NodeState) error {
 	wg := d.getStateWG(n)
 	wg.Done()
@@ -94,12 +93,12 @@ func (d *dependencyNode) Done(n NodeState) error {
 	return nil
 }
 
-// defaultDependencyManager is the default implementation of the DependencyManager
+// defaultDependencyManager is the default implementation of the DependencyManager.
 type defaultDependencyManager struct {
 	nodes map[string]*dependencyNode
 }
 
-// NewDependencyManager constructor
+// NewDependencyManager constructor.
 func NewDependencyManager() DependencyManager {
 	return &defaultDependencyManager{
 		nodes: map[string]*dependencyNode{},
@@ -136,7 +135,7 @@ func (d *dependencyNode) addDepender(depder *dependencyNode) error {
 	return nil
 }
 
-// addDependee is an internal call used to increase the Dependee WaitGroup
+// addDependee is an internal call used to increase the Dependee WaitGroup.
 func (d *dependencyNode) addDependee() {
 	d.getStateWG(dependency).Add(1)
 }

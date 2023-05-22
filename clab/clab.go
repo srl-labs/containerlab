@@ -252,8 +252,9 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, dm dependency_manager.DependencyManager) (*sync.WaitGroup, error) {
-
+func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
+	dm dependency_manager.DependencyManager,
+) (*sync.WaitGroup, error) {
 	for nodeName := range c.Nodes {
 		dm.AddNode(nodeName)
 	}
@@ -388,7 +389,9 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 ) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
-	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup, dm dependency_manager.DependencyManager) {
+	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup,
+		dm dependency_manager.DependencyManager,
+	) {
 		defer wg.Done()
 		for {
 			select {
@@ -464,7 +467,9 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 			workerFuncChWG.Add(1)
 			// start a func for all the containers, then will wait for their own waitgroups
 			// to be set to zero by their depending containers, then enqueue to the creation channel
-			go func(node nodes.Node, dm dependency_manager.DependencyManager, workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup) {
+			go func(node nodes.Node, dm dependency_manager.DependencyManager,
+				workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup,
+			) {
 				// wait for all the nodes that node depends on
 				err := dm.WaitForNodeDependencies(node.Config().ShortName)
 				if err != nil {
