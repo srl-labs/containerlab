@@ -6,3 +6,5 @@ coverage:
 comment:
   layout: "diff, files"
   behavior: new
+github_checks:
+  annotations: false
