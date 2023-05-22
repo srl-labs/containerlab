@@ -104,9 +104,21 @@ type defaultDependencyManager struct {
 
 // NewDependencyManager constructor.
 func NewDependencyManager() DependencyManager {
-	return &defaultDependencyManager{
+	dm := &defaultDependencyManager{
 		nodes: map[string]*dependencyNode{},
 	}
+
+	// init helper nodes
+	// TODO, we need to rework this stuff
+	for _, n := range []string{"macvlan", "macvtap"} {
+		dm.AddNode(n)
+		// artificially indicate that all the helper nodes have reached all the defined states
+		for _, s := range RegularNodeStates {
+			dm.SignalDone(n, s)
+		}
+	}
+
+	return dm
 }
 
 // AddNode adds a node to the dependency manager.
