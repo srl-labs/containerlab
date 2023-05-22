@@ -101,7 +101,15 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 			l.B = tmp
 		}
 
-		link, err := createMacVlanInterface(ARndmName, l.B.EndpointName, l.MTU, aMAC)
+		var macvType MacIfType
+		switch l.B.Node.Kind {
+		case "macvlan":
+			macvType = MacVLan
+		case "macvtap":
+			macvType = MacVTap
+		}
+
+		link, err := createMacVXInterface(ARndmName, l.B.EndpointName, l.MTU, aMAC, macvType)
 		if err != nil {
 			return err
 		}
@@ -175,21 +183,36 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 	return nil
 }
 
-func createMacVlanInterface(ifName, parentIfName string, mtu int, MAC net.HardwareAddr) (netlink.Link, error) {
+type MacIfType int
+
+const (
+	MacVLan = iota
+	MacVTap
+)
+
+func createMacVXInterface(ifName, parentIfName string, mtu int, MAC net.HardwareAddr, iftype MacIfType) (netlink.Link, error) {
 	parentInterface, err := netlink.LinkByName(parentIfName)
 	if err != nil {
 		return nil, err
 	}
 
-	err = netlink.LinkAdd(
-		&netlink.Macvlan{
-			LinkAttrs: netlink.LinkAttrs{
-				Name:        ifName,
-				ParentIndex: parentInterface.Attrs().Index,
-			},
-			Mode: netlink.MACVLAN_MODE_BRIDGE,
+	mvl := netlink.Macvlan{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:        ifName,
+			ParentIndex: parentInterface.Attrs().Index,
 		},
-	)
+		Mode: netlink.MACVLAN_MODE_BRIDGE,
+	}
+
+	var link netlink.Link
+	switch iftype {
+	case MacVTap:
+		link = &netlink.Macvtap{Macvlan: mvl}
+	case MacVLan:
+		link = &mvl
+	}
+
+	err = netlink.LinkAdd(link)
 	if err != nil {
 		return nil, err
 	}
