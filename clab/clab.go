@@ -524,8 +524,8 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_mana
 
 			var waitNodes []string
 			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
-				// we should not wait for "host"
-				if n.Kind != "host" {
+				// we should not wait for "host" fake node or mgmt-net node
+				if n.Kind != "host" && n.ShortName != "mgmt-net" {
 					waitNodes = append(waitNodes, n.ShortName)
 				}
 			}
