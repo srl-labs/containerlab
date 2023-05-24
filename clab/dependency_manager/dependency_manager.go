@@ -24,7 +24,7 @@ type DependencyManager interface {
 	CheckAcyclicity() error
 	// String returns a string representation of dependencies recorded with dependency manager.
 	String() string
-	// WaitForNode allows to wait for completion of the container creation and start
+	// WaitForNodes blocks until all the nodes in the provided list have reached the provided state.
 	WaitForNodes(nodeNames []string, status NodeState) error
 }
 

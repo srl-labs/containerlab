@@ -530,7 +530,6 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_mana
 				}
 			}
 
-			// wait for endpoint A
 			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
 			if err != nil {
 				log.Error(err)
