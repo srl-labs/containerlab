@@ -380,17 +380,15 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 		}
 	case "macvlan":
 		endpoint.Node = &types.NodeConfig{
-			Kind:             "macvlan",
-			ShortName:        "macvlan",
-			NSPath:           hostNSPath,
-			DeploymentStatus: "created",
+			Kind:      "macvlan",
+			ShortName: "macvlan",
+			NSPath:    hostNSPath,
 		}
 	case "macvtap":
 		endpoint.Node = &types.NodeConfig{
-			Kind:             "macvtap",
-			ShortName:        "macvtap",
-			NSPath:           hostNSPath,
-			DeploymentStatus: "created",
+			Kind:      "macvtap",
+			ShortName: "macvtap",
+			NSPath:    hostNSPath,
 		}
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
