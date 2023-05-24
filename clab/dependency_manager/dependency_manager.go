@@ -45,7 +45,7 @@ type dependencyNode struct {
 	nodeDependers map[string]*dependencyNode
 }
 
-// newDependencyNode constructor to initilaize a dependencyNode with the given name.
+// newDependencyNode initializes a dependencyNode with the given name.
 func newDependencyNode(name string) *dependencyNode {
 	d := &dependencyNode{
 		name:      name,
@@ -55,7 +55,7 @@ func newDependencyNode(name string) *dependencyNode {
 	}
 
 	// node states must be initialized,
-	// becasue the wait groups are not allowed to become negative
+	// because the wait groups are not allowed to become negative
 	for _, s := range RegularNodeStates {
 		d.getStateWG(s).Add(1)
 	}
@@ -63,8 +63,8 @@ func newDependencyNode(name string) *dependencyNode {
 	return d
 }
 
-// getStateWG internal function to retrieves the provided node state if it exists
-// otherwiese it is initilaized.
+// getStateWG retrieves the provided node state if it exists
+// otherwise it is initialized.
 func (d *dependencyNode) getStateWG(n NodeState) *sync.WaitGroup {
 	if _, exists := d.WaitState[n]; !exists {
 		d.WaitState[n] = &sync.WaitGroup{}
@@ -129,9 +129,9 @@ func (dm *defaultDependencyManager) AddDependency(dependee, depender string) err
 
 // addDepender adds a depender to the dependencyNode. This will also call depder.addDependee()
 // to increase the waitgroup count for the depender.
-func (d *dependencyNode) addDepender(depder *dependencyNode) error {
-	d.nodeDependers[depder.name] = depder
-	depder.addDependee()
+func (d *dependencyNode) addDepender(depender *dependencyNode) error {
+	d.nodeDependers[depender.name] = depender
+	depender.addDependee()
 	return nil
 }
 
@@ -152,8 +152,8 @@ func (dm *defaultDependencyManager) WaitForNodeDependencies(nodeName string) err
 	return nil
 }
 
-// SignalDone is called by a node that has finished the indicated NodeState process.
-// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
+// SignalDone is called by a node that has finished the indicated NodeState process and reached the desired state.
+// Internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
 func (dm *defaultDependencyManager) SignalDone(nodeName string, state NodeState) {
 	// first check if the referenced node is known to the dm
 	node, exists := dm.nodes[nodeName]
