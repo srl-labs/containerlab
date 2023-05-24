@@ -402,7 +402,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				}
 				log.Debugf("Worker %d received node: %+v", i, node.Config())
 
-				// Apply any startup delay
+				// Apply startup delay
 				delay := node.Config().StartupDelay
 				if delay > 0 {
 					log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
@@ -428,12 +428,6 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
-
-				// set deployment status of a node to created to indicate that it finished creating
-				// this status is checked during link creation to only schedule link creation if both nodes are ready
-				c.m.Lock()
-				node.Config().DeploymentStatus = "created"
-				c.m.Unlock()
 
 				// signal to dependency manager that this node is done with creation
 				dm.SignalDone(node.Config().ShortName, dependency_manager.NodeStateCreated)

@@ -37,8 +37,9 @@ func (n *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(n)
 	}
-	n.Cfg.DeploymentStatus = "created" // since we do not create bridges with clab, the status is implied here
+
 	n.Cfg.IsRootNamespaceBased = true
+
 	return nil
 }
 
