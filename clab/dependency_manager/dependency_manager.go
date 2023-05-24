@@ -32,7 +32,8 @@ type NodeState int
 
 const (
 	NodeStateCreated NodeState = iota
-	dependency                 = 99
+	// dependency is a special state that is used to indicate that a node depends on other node.
+	dependency = 99
 )
 
 var RegularNodeStates = []NodeState{NodeStateCreated}
@@ -48,7 +49,9 @@ type dependencyNode struct {
 // newDependencyNode initializes a dependencyNode with the given name.
 func newDependencyNode(name string) *dependencyNode {
 	d := &dependencyNode{
-		name:      name,
+		name: name,
+		// WaitState is initialized with a wait group for each node state.
+		// WaitState is used to for a dependee to wait for a depender to reach a certain state.
 		WaitState: map[NodeState]*sync.WaitGroup{},
 
 		nodeDependers: map[string]*dependencyNode{},
@@ -63,8 +66,8 @@ func newDependencyNode(name string) *dependencyNode {
 	return d
 }
 
-// getStateWG retrieves the provided node state if it exists
-// otherwise it is initialized.
+// getStateWG retrieves the provided node state waitgroup if it exists
+// otherwise initializes it.
 func (d *dependencyNode) getStateWG(n NodeState) *sync.WaitGroup {
 	if _, exists := d.WaitState[n]; !exists {
 		d.WaitState[n] = &sync.WaitGroup{}
@@ -80,6 +83,7 @@ func (d *dependencyNode) WaitFor(n NodeState) error {
 }
 
 // Done indicates that the node has reached the given state.
+// The waitgroup associated with this state will be Done as well.
 func (d *dependencyNode) Done(n NodeState) error {
 	wg := d.getStateWG(n)
 	wg.Done()
@@ -127,7 +131,7 @@ func (dm *defaultDependencyManager) AddDependency(dependee, depender string) err
 	return nil
 }
 
-// addDepender adds a depender to the dependencyNode. This will also call depder.addDependee()
+// addDepender adds a depender to the dependencyNode. This will also add the dependee to the depender.
 // to increase the waitgroup count for the depender.
 func (d *dependencyNode) addDepender(depender *dependencyNode) error {
 	d.nodeDependers[depender.name] = depender
