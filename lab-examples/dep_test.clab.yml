@@ -1,0 +1,82 @@
+# topology documentation: http://containerlab.dev/lab-examples/two-srls/
+name: dep_test
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:latest
+      cmd: sleep infinity
+    l2:
+      kind: linux
+      image: alpine:latest
+      wait-for: 
+        - l1
+      cmd: sleep infinity
+    srl1:
+      kind: srl
+      image: ghcr.io/nokia/srlinux
+    srl2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
+
+    # l3:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l2
+    # l3.1:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l2
+    # l3.2:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l2
+    # l3.3:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l2
+    # l3.4:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l2
+    # l4:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l3
+    #   startup-delay: 7
+    # l5:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l4
+    #   startup-delay: 2
+    # l6:
+    #   kind: linux
+    #   image: alpine:latest
+    #   wait-for: 
+    #     - l1
+    #     - l4
+
+  links:
+    - endpoints: ["l1:eth1", "l2:eth1"]
+    - endpoints: ["l1:eth1", "host:fool1"]
+    - endpoints: ["l2:eth2", "macvlan:enp4s0f0"]
+    - endpoints: ["l2:eth3", "macvtap:enp4s0f0"]
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+
+    # - endpoints: ["l1:eth2", "l3:eth1"]
+    # - endpoints: ["l1:eth3", "l4:eth1"]
+    # - endpoints: ["l1:eth4", "l5:eth1"]
+    # - endpoints: ["l1:eth5", "l6:eth1"]
+    # - endpoints: ["l1:eth6", "l3.1:eth1"]
+    # - endpoints: ["l1:eth7", "l3.2:eth1"]
+    # - endpoints: ["l1:eth8", "l3.3:eth1"]
+    # - endpoints: ["l1:eth9", "l3.4:eth1"]
+    # - endpoints: ["l1:eth10", "host:l1-01-03-eth3"]
