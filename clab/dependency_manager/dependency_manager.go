@@ -1,4 +1,4 @@
-package clab
+package dependency_manager
 
 import (
 	"fmt"
@@ -17,86 +17,178 @@ type DependencyManager interface {
 	// WaitForNodeDependencies is called by a node that is meant to be created.
 	// This call will bock until all the nodes that this node depends on are created.
 	WaitForNodeDependencies(nodeName string) error
-	// SignalDone is called by a node that has finished the creation process.
+	// SignalDone is called by a node that has finished all tasks for the provided State.
 	// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-	SignalDone(nodeName string)
+	SignalDone(nodeName string, state NodeState)
 	// CheckAcyclicity checks if dependencies contain cycles.
 	CheckAcyclicity() error
 	// String returns a string representation of dependencies recorded with dependency manager.
 	String() string
+	// WaitForNodes blocks until all the nodes in the provided list have reached the provided state.
+	WaitForNodes(nodeNames []string, status NodeState) error
 }
 
+type NodeState int
+
+const (
+	NodeStateCreated NodeState = iota
+	// dependency is a special state that is used to indicate that a node depends on other node.
+	dependency = 99
+)
+
+var RegularNodeStates = []NodeState{NodeStateCreated}
+
+// dependencyNode is the representation of a node in the dependency concept.
+type dependencyNode struct {
+	name      string
+	WaitState map[NodeState]*sync.WaitGroup
+
+	nodeDependers map[string]*dependencyNode
+}
+
+// newDependencyNode initializes a dependencyNode with the given name.
+func newDependencyNode(name string) *dependencyNode {
+	d := &dependencyNode{
+		name: name,
+		// WaitState is initialized with a wait group for each node state.
+		// WaitState is used to for a dependee to wait for a depender to reach a certain state.
+		WaitState: map[NodeState]*sync.WaitGroup{},
+
+		nodeDependers: map[string]*dependencyNode{},
+	}
+
+	// node states must be initialized,
+	// because the wait groups are not allowed to become negative
+	for _, s := range RegularNodeStates {
+		d.getStateWG(s).Add(1)
+	}
+
+	return d
+}
+
+// getStateWG retrieves the provided node state waitgroup if it exists
+// otherwise initializes it.
+func (d *dependencyNode) getStateWG(n NodeState) *sync.WaitGroup {
+	if _, exists := d.WaitState[n]; !exists {
+		d.WaitState[n] = &sync.WaitGroup{}
+	}
+	return d.WaitState[n]
+}
+
+// WaitFor makes the caller wait for the node to reach the provided NodeState.
+func (d *dependencyNode) WaitFor(n NodeState) error {
+	wg := d.getStateWG(n)
+	wg.Wait()
+	return nil
+}
+
+// Done indicates that the node has reached the given state.
+// The waitgroup associated with this state will be Done as well.
+func (d *dependencyNode) Done(n NodeState) error {
+	wg := d.getStateWG(n)
+	wg.Done()
+
+	// special handling of dependencies
+	if n == NodeStateCreated {
+		for _, d := range d.nodeDependers {
+			d.Done(dependency)
+		}
+	}
+	return nil
+}
+
+// defaultDependencyManager is the default implementation of the DependencyManager.
 type defaultDependencyManager struct {
-	// map of wait group per node.
-	// The scheduling of the nodes creation is dependent on their respective wait group.
-	// Other nodes, that the specific node relies on will increment this wait group.
-	nodeWaitGroup map[string]*sync.WaitGroup
-	// Names of the nodes that depend on a given node are listed here.
-	// On successful creation of the said node, all the depending nodes (dependers) wait groups will be decremented.
-	nodeDependers map[string][]string
+	nodes map[string]*dependencyNode
 }
 
+// NewDependencyManager constructor.
 func NewDependencyManager() DependencyManager {
 	return &defaultDependencyManager{
-		nodeWaitGroup: map[string]*sync.WaitGroup{},
-		nodeDependers: map[string][]string{},
+		nodes: map[string]*dependencyNode{},
 	}
 }
 
 // AddNode adds a node to the dependency manager.
 func (dm *defaultDependencyManager) AddNode(name string) {
-	dm.nodeWaitGroup[name] = &sync.WaitGroup{}
-	dm.nodeDependers[name] = []string{}
+	dm.nodes[name] = newDependencyNode(name)
 }
 
 // AddDependency adds a dependency between depender and dependee.
 // The depender will effectively wait for the dependee to finish.
 func (dm *defaultDependencyManager) AddDependency(dependee, depender string) error {
 	// first check if the referenced nodes are known to the dm
-	if _, exists := dm.nodeWaitGroup[depender]; !exists {
+	depder, exists := dm.nodes[depender]
+	if !exists {
 		return fmt.Errorf("node %q is not known to the dependency manager", depender)
 	}
-	if _, exists := dm.nodeDependers[dependee]; !exists {
+	depdee, exists := dm.nodes[dependee]
+	if !exists {
 		return fmt.Errorf("node %q is not known to the dependency manager", dependee)
 	}
-	// increase the WaitGroup by one for the depender
-	dm.nodeWaitGroup[depender].Add(1)
-	// add a depender node name for a given dependee
-	dm.nodeDependers[dependee] = append(dm.nodeDependers[dependee], depender)
+
+	depdee.addDepender(depder)
 	return nil
+}
+
+// addDepender adds a depender to the dependencyNode. This will also add the dependee to the depender.
+// to increase the waitgroup count for the depender.
+func (d *dependencyNode) addDepender(depender *dependencyNode) error {
+	d.nodeDependers[depender.name] = depender
+	depender.addDependee()
+	return nil
+}
+
+// addDependee is an internal call used to increase the Dependee WaitGroup.
+func (d *dependencyNode) addDependee() {
+	d.getStateWG(dependency).Add(1)
 }
 
 // WaitForNodeDependencies is called by a node that is meant to be created.
 // This call will bock until all the nodes that this node depends on are created.
 func (dm *defaultDependencyManager) WaitForNodeDependencies(nodeName string) error {
 	// first check if the referenced node is known to the dm
-	if _, exists := dm.nodeWaitGroup[nodeName]; !exists {
+	node, exists := dm.nodes[nodeName]
+	if !exists {
 		return fmt.Errorf("node %q is not known to the dependency manager", nodeName)
 	}
-	dm.nodeWaitGroup[nodeName].Wait()
+	node.WaitFor(dependency)
 	return nil
 }
 
-// SignalDone is called by a node that has finished the creation process.
-// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *defaultDependencyManager) SignalDone(nodeName string) {
+// SignalDone is called by a node that has finished the indicated NodeState process and reached the desired state.
+// Internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
+func (dm *defaultDependencyManager) SignalDone(nodeName string, state NodeState) {
 	// first check if the referenced node is known to the dm
-	if _, exists := dm.nodeDependers[nodeName]; !exists {
+	node, exists := dm.nodes[nodeName]
+	if !exists {
 		log.Errorf("tried to Signal Done for node %q but node is unknown to the DependencyManager", nodeName)
 		return
 	}
-	for _, depender := range dm.nodeDependers[nodeName] {
-		dm.nodeWaitGroup[depender].Done()
-	}
+	node.Done(state)
 }
 
-// CheckAcyclicity checks if dependencies contain cycles.
-func (dm *defaultDependencyManager) CheckAcyclicity() error {
-	log.Debugf("Dependencies:\n%s", dm.String())
-	if !isAcyclic(dm.nodeDependers, 1) {
-		return fmt.Errorf("cyclic dependencies found!\n%s", dm.String())
+func (dm *defaultDependencyManager) checkNodesExist(nodeNames []string) error {
+	missing := []string{}
+	for _, nodeName := range nodeNames {
+		if _, exists := dm.nodes[nodeName]; !exists {
+			missing = append(missing, nodeName)
+		}
 	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return fmt.Errorf("dependency manager has no notion of the following nodes %s", strings.Join(missing, ", "))
+}
 
+func (dm *defaultDependencyManager) WaitForNodes(nodeNames []string, state NodeState) error {
+	err := dm.checkNodesExist(nodeNames)
+	if err != nil {
+		return err
+	}
+	for _, nodename := range nodeNames {
+		dm.nodes[nodename].WaitFor(state)
+	}
 	return nil
 }
 
@@ -110,14 +202,14 @@ func (dm *defaultDependencyManager) String() string {
 	dependencies := map[string][]string{}
 
 	// prepare dependencies table
-	for name := range dm.nodeWaitGroup {
+	for name := range dm.nodes {
 		dependencies[name] = []string{}
 	}
 
 	// build the dependency datastruct
-	for dependee, dependers := range dm.nodeDependers {
-		for _, depender := range dependers {
-			dependencies[depender] = append(dependencies[depender], dependee)
+	for nodeName, node := range dm.nodes {
+		for _, depender := range node.nodeDependers {
+			dependencies[nodeName] = append(dependencies[nodeName], depender.name)
 		}
 	}
 
@@ -127,6 +219,26 @@ func (dm *defaultDependencyManager) String() string {
 		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(deps, ", ")))
 	}
 	return strings.Join(result, "\n")
+}
+
+// CheckAcyclicity checks if dependencies contain cycles.
+func (dm *defaultDependencyManager) CheckAcyclicity() error {
+	log.Debugf("Dependencies:\n%s", dm.String())
+
+	nodeDependers := map[string][]string{}
+
+	for _, n := range dm.nodes {
+		nodeDependers[n.name] = []string{}
+		for _, dep := range n.nodeDependers {
+			nodeDependers[n.name] = append(nodeDependers[n.name], dep.name)
+		}
+	}
+
+	if !isAcyclic(nodeDependers, 1) {
+		return fmt.Errorf("cyclic dependencies found!\n%s", dm.String())
+	}
+
+	return nil
 }
 
 // isAcyclic checks the provided dependencies map for cycles.

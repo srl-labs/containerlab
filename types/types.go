@@ -172,8 +172,6 @@ type NodeConfig struct {
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
 
-	// status that is set by containerlab to indicate deployment stage
-	DeploymentStatus string `json:"deployment-status,omitempty"`
 	// Extra node parameters
 	Extras               *Extras    `json:"extras,omitempty"`
 	WaitFor              []string   `json:"wait-for,omitempty"`
