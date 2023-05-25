@@ -24,7 +24,7 @@ The guidelines and current best practices are best to be practiced in a lab envi
 | **Lab components**        | [Nokia SR OS][nokia-sros], [FRRouting (FRR)][frr], [OpenBGPd][openbgpd] and [BIRD][bird] route servers                                                         |
 | **Resource requirements** | :fontawesome-solid-microchip: 2 vCPU <br/>:fontawesome-solid-memory: 6 GB                                                                                      |
 | **Lab**                   | [hellt/sros-frr-ixp-lab][lab]                                                                                                                                  |
-| **Version information**   | [`containerlab:0.41.1`][clab-install], `Nokia SR OS:23.3.R1`, [`FRR:8.4.1`][frr-container], [`BIRD:2.0.11`][bird-container], [`openbgpd:7.9`][obgpd-container] |
+| **Version information**   | [`containerlab:0.41.1`][clab-install], `Nokia SR OS:23.3.R1`, [`FRR:8.4.1`][frr-container], [`BIRD:2.13`][bird-container], [`openbgpd:7.9`][obgpd-container] |
 | **Authors**               | Roman Dodin [:material-twitter:][rd-twitter] [:material-linkedin:][rd-linkedin]                                                                                |
 
 ## Prerequisites
@@ -97,16 +97,16 @@ rs1: # OpenBGPd route server
 
 rs2: # BIRD route server
   kind: linux
-  image: ghcr.io/srl-labs/bird:2.0.11
+  image: ghcr.io/srl-labs/bird:2.13
   binds:
-    - configs/bird.conf:/usr/local/etc/bird.conf
+    - configs/bird.conf:/etc/bird.conf
   exec:
     - "ip address add dev eth1 192.168.0.4/24"
 ```
 
 OpenBGPd server uses an [official container image][obgpd-container] and mounts the OpenBGPd configuration file into the container.
 
-BIRD doesn't have an official container image, so we [created](https://github.com/hellt/sros-frr-ixp-lab/blob/euro-ix/bird.Dockerfile) a BIRD v2.0.11 container image published at [ghcr.io/srl-labs/bird][bird-container][^1] and also mount the BIRD configuration file into the container.
+BIRD doesn't have an official container image, so we [created](https://github.com/srl-labs/bird-container) a BIRD v2.13 container image published at [ghcr.io/srl-labs/bird][bird-container][^1] and also mount the BIRD configuration file into the container.
 
 ### Peering LAN and links
 
@@ -185,7 +185,7 @@ Upon successful deployment, containerlab presents the lab summary table that con
 | 1 | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
 | 2 | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
 | 3 | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 4 | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.0.11  | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 4 | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 ```
 
@@ -203,7 +203,7 @@ $ containerlab inspect --all
 | 1 | ixp.clab.yml | ixp      | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
 | 2 |              |          | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
 | 3 |              |          | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 4 |              |          | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.0.11  | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 4 |              |          | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 ```
 
@@ -373,7 +373,7 @@ The following resources were used to create this lab:
 [bird]: https://bird.network.cz/
 [lab]: https://github.com/hellt/sros-frr-ixp-lab
 [clab-install]: ../install.md
-[bird-container]: https://hub.docker.com/r/hellt/bird
+[bird-container]: https://github.com/srl-labs/bird-container/pkgs/container/bird
 [obgpd-container]: https://quay.io/openbgpd/openbgpd:7.9
 [rd-twitter]: https://twitter.com/ntdvps
 [rd-linkedin]: https://www.linkedin.com/in/romandodin/
