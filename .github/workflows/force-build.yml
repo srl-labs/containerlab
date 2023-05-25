@@ -7,10 +7,10 @@ on:
 
 # make sure those env vars are aligned with the ones in ci-cd.yml workflow
 env:
-  GOVER: 1.18.4
+  GOVER: 1.20.2
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 8.4.3-insiders-4.22.1
-  GORELEASER_VER: v0.180.3
+  MKDOCS_INS_VER: 9.1.4-insiders-4.32.4-hellt
+  GORELEASER_VER: v1.11.4
 
 jobs:
   get-tag:
@@ -41,12 +41,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GOVER }}
-
-      - name: Install upx
-        run: |
-          sudo apt update && sudo apt install -y libucl1
-          curl -L http://archive.ubuntu.com/ubuntu/pool/universe/u/upx-ucl/upx-ucl_3.96-2_amd64.deb -o /tmp/upx.deb
-          sudo dpkg -i /tmp/upx.deb
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
