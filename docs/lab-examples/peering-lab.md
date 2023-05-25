@@ -18,14 +18,14 @@ The guidelines and current best practices are best to be practiced in a lab envi
 
 ## Lab summary
 
-| Summary                   |                                                                                                                                                                |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Lab name**              | Peering Lab                                                                                                                                                    |
-| **Lab components**        | [Nokia SR OS][nokia-sros], [FRRouting (FRR)][frr], [OpenBGPd][openbgpd] and [BIRD][bird] route servers                                                         |
-| **Resource requirements** | :fontawesome-solid-microchip: 2 vCPU <br/>:fontawesome-solid-memory: 6 GB                                                                                      |
-| **Lab**                   | [hellt/sros-frr-ixp-lab][lab]                                                                                                                                  |
+| Summary                   |                                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Lab name**              | Peering Lab                                                                                                                                                  |
+| **Lab components**        | [Nokia SR OS][nokia-sros], [FRRouting (FRR)][frr], [OpenBGPd][openbgpd] and [BIRD][bird] route servers                                                       |
+| **Resource requirements** | :fontawesome-solid-microchip: 2 vCPU <br/>:fontawesome-solid-memory: 6 GB                                                                                    |
+| **Lab**                   | [hellt/sros-frr-ixp-lab][lab]                                                                                                                                |
 | **Version information**   | [`containerlab:0.41.1`][clab-install], `Nokia SR OS:23.3.R1`, [`FRR:8.4.1`][frr-container], [`BIRD:2.13`][bird-container], [`openbgpd:7.9`][obgpd-container] |
-| **Authors**               | Roman Dodin [:material-twitter:][rd-twitter] [:material-linkedin:][rd-linkedin]                                                                                |
+| **Authors**               | Roman Dodin [:material-twitter:][rd-twitter] [:material-linkedin:][rd-linkedin]                                                                              |
 
 ## Prerequisites
 
