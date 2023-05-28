@@ -86,7 +86,9 @@
                         "rare",
                         "cisco_xrd",
                         "c8000",
-                        "cisco_c8000"
+                        "cisco_c8000",
+                        "cvx",
+                        "cumulus_cvx"
                     ]
                 },
                 "license": {
@@ -692,6 +694,12 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "c8000": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cvx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cumulus_cvx": {
                             "$ref": "#/definitions/node-config"
                         }
                     }
