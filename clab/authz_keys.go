@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	pubKeysGlobPart = "~/.ssh/*.pub"
+	pubKeysGlob = "~/.ssh/*.pub"
 	// authorized keys file path on a clab host that is used to create the clabAuthzKeys file.
-	authzKeysFPathPart = "~/.ssh/authorized_keys"
+	authzKeysFPath = "~/.ssh/authorized_keys"
 )
 
 // CreateAuthzKeysFile creats the authorized_keys file in the lab directory
@@ -28,14 +28,14 @@ const (
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	p := utils.ResolvePath(pubKeysGlobPart, "")
+	p := utils.ResolvePath(pubKeysGlob, "")
 
 	all, err := filepath.Glob(p)
 	if err != nil {
 		return fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f := utils.ResolvePath(authzKeysFPathPart, "")
+	f := utils.ResolvePath(authzKeysFPath, "")
 
 	if utils.FileExists(f) {
 		log.Debugf("%s found, adding the public keys it contains", f)
