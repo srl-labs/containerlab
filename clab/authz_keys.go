@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -18,9 +19,9 @@ import (
 )
 
 const (
-	pubKeysGlob = "~/.ssh/*.pub"
+	pubKeysGlobPart = ".ssh/*.pub"
 	// authorized keys file path on a clab host that is used to create the clabAuthzKeys file.
-	authzKeysFPath = "~/.ssh/authorized_keys"
+	authzKeysFPathPart = ".ssh/authorized_keys"
 )
 
 // CreateAuthzKeysFile creats the authorized_keys file in the lab directory
@@ -28,14 +29,25 @@ const (
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	p := utils.ResolvePath(pubKeysGlob, "")
+	userId, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		userId = "0" // default to root
+	}
+
+	// lookup user to figure out Home Directory
+	u, err := user.LookupId(userId)
+	if err != nil {
+		return err
+	}
+
+	p := utils.ResolvePath(filepath.Join(u.HomeDir, pubKeysGlobPart), "")
 
 	all, err := filepath.Glob(p)
 	if err != nil {
 		return fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f := utils.ResolvePath(authzKeysFPath, "")
+	f := utils.ResolvePath(filepath.Join(u.HomeDir, authzKeysFPathPart), "")
 
 	if utils.FileExists(f) {
 		log.Debugf("%s found, adding the public keys it contains", f)
@@ -50,7 +62,7 @@ func (c *CLab) CreateAuthzKeysFile() error {
 
 	log.Debugf("extracted %d keys from ssh-agent", len(keys))
 	for _, k := range keys {
-		b.WriteString(k + "\n")
+		addKeyToBuffer(b, k)
 	}
 
 	for _, fn := range all {
@@ -79,8 +91,7 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 		return
 	}
 
-	key = elems[0] + " " + elems[1]
-	if !strings.Contains(b.String(), key) {
+	if !strings.Contains(b.String(), elems[1]) {
 		b.WriteString(key + "\n")
 	}
 }
