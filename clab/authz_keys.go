@@ -50,7 +50,7 @@ func (c *CLab) CreateAuthzKeysFile() error {
 
 	log.Debugf("extracted %d keys from ssh-agent", len(keys))
 	for _, k := range keys {
-		b.WriteString(k + "\n")
+		addKeyToBuffer(b, k)
 	}
 
 	for _, fn := range all {
@@ -79,8 +79,7 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 		return
 	}
 
-	key = elems[0] + " " + elems[1]
-	if !strings.Contains(b.String(), key) {
+	if !strings.Contains(b.String(), elems[1]) {
 		b.WriteString(key + "\n")
 	}
 }
