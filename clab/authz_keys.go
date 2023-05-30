@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -19,9 +18,9 @@ import (
 )
 
 const (
-	pubKeysGlobPart = ".ssh/*.pub"
+	pubKeysGlobPart = "~/.ssh/*.pub"
 	// authorized keys file path on a clab host that is used to create the clabAuthzKeys file.
-	authzKeysFPathPart = ".ssh/authorized_keys"
+	authzKeysFPathPart = "~/.ssh/authorized_keys"
 )
 
 // CreateAuthzKeysFile creats the authorized_keys file in the lab directory
@@ -29,25 +28,14 @@ const (
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	userId, isSet := os.LookupEnv("SUDO_UID")
-	if !isSet {
-		userId = "0" // default to root
-	}
-
-	// lookup user to figure out Home Directory
-	u, err := user.LookupId(userId)
-	if err != nil {
-		return err
-	}
-
-	p := utils.ResolvePath(filepath.Join(u.HomeDir, pubKeysGlobPart), "")
+	p := utils.ResolvePath(pubKeysGlobPart, "")
 
 	all, err := filepath.Glob(p)
 	if err != nil {
 		return fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f := utils.ResolvePath(filepath.Join(u.HomeDir, authzKeysFPathPart), "")
+	f := utils.ResolvePath(authzKeysFPathPart, "")
 
 	if utils.FileExists(f) {
 		log.Debugf("%s found, adding the public keys it contains", f)

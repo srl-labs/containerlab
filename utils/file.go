@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -170,9 +171,18 @@ func ReadFileContent(file string) ([]byte, error) {
 
 // ExpandHome expands `~` char in the path to home path of a current user in provided path p.
 func ExpandHome(p string) string {
-	userPath, _ := os.UserHomeDir()
+	userId, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		userId = "0" // default to root
+	}
 
-	p = strings.Replace(p, "~", userPath, 1)
+	// lookup user to figure out Home Directory
+	u, err := user.LookupId(userId)
+	if err != nil {
+		return p // no idea what else to return other then the string we where called with
+	}
+
+	p = strings.Replace(p, "~", u.HomeDir, 1)
 
 	return p
 }
