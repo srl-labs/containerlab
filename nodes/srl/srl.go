@@ -109,6 +109,12 @@ var (
 	srlCfgTpl, _ = template.New("srl-tls-profile").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 			Parse(srlConfigCmdsTpl)
+
+	SRLRequiredKernelVersion = &utils.KernelVersion{
+		Major:    4,
+		Minor:    10,
+		Revision: 0,
+	}
 )
 
 // Register registers the node in the NodeRegistry.
@@ -364,6 +370,32 @@ func (s *srl) Ready(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+// kernelVersionCheck logs a warning if the kernel has a too low version number
+// that srl starting from 23.3 required kernel > 4.10.0
+func (s *srl) kernelVersionCheck() error {
+	// retrieve running kernel version
+	kv, err := utils.GetKernelVersion()
+	if err != nil {
+		return err
+	}
+
+	// do the comparison
+	if !kv.IsGreaterEqual(SRLRequiredKernelVersion) {
+		log.Infof("SRL nodes from 23.3 onwards require a kernel version greater then %s. Your system is %s", SRLRequiredKernelVersion.StringMMR(), kv.StringMMR())
+	}
+	return nil
+}
+
+func (s *srl) CheckDeploymentConditions(ctx context.Context) error {
+	// perform the srl specific kernel version check
+	err := s.kernelVersionCheck()
+	if err != nil {
+		return err
+	}
+
+	return s.DefaultNode.CheckDeploymentConditions(ctx)
 }
 
 func (s *srl) createSRLFiles() error {
