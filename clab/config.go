@@ -226,10 +226,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 	nodeCfg.SuppressStartupConfig = c.Config.Topology.GetNodeSuppressStartupConfig(nodeCfg.ShortName)
 
-	// initialize license field
-	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
-	// resolve the lic path to an abs path
-	nodeCfg.License = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+	// process startup-config
+	err = c.processNodeLicense(nodeCfg)
+	if err != nil {
+		return nil, err
+	}
 
 	// initialize bind mounts
 	binds, err := c.Config.Topology.GetNodeBinds(nodeName)
@@ -257,8 +258,13 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 // It handles remote files, local files and embedded configs.
 // Returns an absolute path to the startup-config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
+	var err error
 	// process startup-config
 	p := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+
+	if p == "" {
+		return nil
+	}
 
 	// embedded config is a config that is defined as a multi-line string in the topology file
 	// it contains at least one newline
@@ -301,8 +307,36 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 			p = absDestFile
 		}
 	}
+
+	p, err = utils.ProcessDownloadableAndEmbeddedFile(nodeCfg.ShortName, p, "embedded.partial.cfg", c.TopoPaths)
+	if err != nil {
+		return err
+	}
+
 	// resolve the startup config path to an abs path
 	nodeCfg.StartupConfig = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+
+	return nil
+}
+
+// processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
+// It handles remote files, local files and embedded configs.
+// Returns an absolute path to the startup-config file.
+func (c *CLab) processNodeLicense(nodeCfg *types.NodeConfig) error {
+	var err error
+	// process startup-config
+	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	if p == "" {
+		return nil
+	}
+
+	p, err = utils.ProcessDownloadableAndEmbeddedFile(nodeCfg.ShortName, p, "embedded.lic", c.TopoPaths)
+	if err != nil {
+		return err
+	}
+
+	// resolve the startup config path to an abs path
+	nodeCfg.License = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	return nil
 }
