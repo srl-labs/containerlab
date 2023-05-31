@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"math"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -33,6 +34,7 @@ import (
 	"github.com/jlaffaye/ftp"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 var (
@@ -218,8 +220,9 @@ func processScpUri(src string) (io.ReadCloser, error) {
 	if u.User == nil {
 		return nil, fmt.Errorf("no username provided for scp connection")
 	}
+
 	// try loading ssh agent keys
-	clientConfig, _ := auth.SshAgent(u.User.Username(), ssh.InsecureIgnoreHostKey())
+	clientConfig, _ := auth.SshAgent(u.User.Username(), KnownHostsLogWarningCallBack) // skipcq: GSC-G106
 
 	// if CLAB_SSH_KEY is set we use the key referenced here
 	keyPath := os.Getenv("CLAB_SSH_KEY")
@@ -691,4 +694,25 @@ func ProcessDownloadableAndEmbeddedFile(nodename string, fileRef string, filenam
 		return result, nil
 	}
 	return fileRef, nil
+}
+
+// KnownHostsLogWarningCallBack is a KnownHostsCallback implementation that relies on the
+// implementation of the crypto package of golang. However, it will not error out if the
+// Hostkey is unknown, but issue a warning in the logs, if the host is unknown.
+func KnownHostsLogWarningCallBack(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	// rely on the knownhosts implementation of the crypto package
+	// cretae an instance of it
+	khFile := ResolvePath("~/.ssh/known_hosts", "")
+	origKHCB, err := knownhosts.New(khFile)
+	if err != nil {
+		return err
+	}
+
+	// delegate the call
+	err = origKHCB(hostname, remote, key)
+	if err != nil {
+		// But if an error crops up, make it a warning and continue
+		log.Warnf("error while performing host key validation based on %q for hostname %q (%v). continuing anyways", khFile, hostname, err)
+	}
+	return nil
 }
