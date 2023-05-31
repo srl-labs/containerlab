@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"math"
 	"mime"
 	"net"
@@ -231,7 +230,7 @@ func processScpUri(src string) (io.ReadCloser, error) {
 		if !FileExists(keyPath) {
 			return nil, fmt.Errorf("keyfile %q does not exist", keyPath)
 		}
-		privateKey, err := ioutil.ReadFile(keyPath)
+		privateKey, err := os.ReadFile(keyPath)
 		if err != nil {
 			return nil, err
 		}
@@ -333,7 +332,7 @@ func processFtpUri(src string) (io.ReadCloser, error) {
 	defer r.Close()
 
 	// read the data
-	buf, err := ioutil.ReadAll(r)
+	buf, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
