@@ -148,7 +148,7 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 
 	switch {
 	case path == "-" || path == "stdin":
-		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
+		file, err = c.readFromStdin()
 		if err != nil {
 			return "", err
 		}
@@ -215,8 +215,10 @@ func FindTopoFileByPath(path string) (string, error) {
 // readFromStdin reads the topology file from stdin
 // creates a temp file with topology contents
 // and returns a path to the temp file.
-func readFromStdin(tempDir string) (string, error) {
-	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
+func (c *CLab) readFromStdin() (string, error) {
+	utils.CreateDirectory(c.TopoPaths.ClabTmpDir(), 0755)
+
+	tmpFile, err := os.CreateTemp(c.TopoPaths.ClabTmpDir(), "topo-*.clab.yml")
 	if err != nil {
 		return "", err
 	}
