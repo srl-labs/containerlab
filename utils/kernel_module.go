@@ -51,7 +51,7 @@ type KernelVersion struct {
 
 func parseKernelVersion(v []byte) (*KernelVersion, error) {
 
-	re := regexp.MustCompile(`(?P<Major>\d+)\.(?P<Minor>\d+)\.(?P<Revision>\d+)(?P<Remainder>\S+)`)
+	re := regexp.MustCompile(`(?P<Major>\d+)\.(?P<Minor>\d+)\.(?P<Revision>\d+)(?P<Remainder>.+)`)
 
 	matches := re.FindSubmatch(v)
 
