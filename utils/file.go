@@ -178,7 +178,8 @@ func ExpandHome(p string) string {
 
 	userId, isSet := os.LookupEnv("SUDO_UID")
 	if !isSet {
-		return curUserHomeDir
+		p = strings.Replace(p, "~", curUserHomeDir, 1)
+		return p
 	}
 
 	// lookup user to figure out Home Directory
