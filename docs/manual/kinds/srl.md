@@ -65,7 +65,7 @@ There are many ways to manage SR Linux nodes, ranging from classic CLI managemen
     }
     EOF
     ```
-=== "SSH"
+=== "SNMP"
     SR Linux nodes come up with SNMP server enabled and running on port 161. The default SNMP community is `public`.
 
     ```shell
