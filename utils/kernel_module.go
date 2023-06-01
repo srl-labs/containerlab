@@ -7,7 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // IsKernelModuleLoaded checks if a kernel module is loaded by parsing /proc/modules file.
@@ -26,68 +27,53 @@ func IsKernelModuleLoaded(name string) (bool, error) {
 	return false, f.Close()
 }
 
+const kernelOSReleasePath = "/proc/sys/kernel/osrelease"
+
 func GetKernelVersion() (*KernelVersion, error) {
-	var uts syscall.Utsname
-	syscall.Uname(&uts)
-	return ParseKernelVersion(charsToString(uts.Release[:]))
-
-}
-
-func charsToString(chars []int8) string {
-	var sb strings.Builder
-	for _, c := range chars {
-		if c == '\x00' {
-			break
-		}
-		sb.WriteByte(byte(c))
+	ver, err := os.ReadFile(kernelOSReleasePath)
+	if err != nil {
+		return nil, err
 	}
-	return strings.TrimSpace(sb.String())
+
+	log.Debugf("kernel version: %s", string(ver))
+
+	return ParseKernelVersion(ver)
 }
 
+// KernelVersion holds the parsed OS kernel version.
 type KernelVersion struct {
-	Major    int
-	Minor    int
-	Revision int
-	Remains  string
+	Major     int
+	Minor     int
+	Revision  int
+	Remainder string // the rest of the version string, e.g. "-amd64"
 }
 
-func ParseKernelVersion(v string) (*KernelVersion, error) {
-	var err error
-	r := regexp.MustCompile(`(\d+)\.(\d+)\.(\d+)(.*)`)
+func ParseKernelVersion(v []byte) (*KernelVersion, error) {
 
-	split := r.FindStringSubmatch(v)
+	re := regexp.MustCompile(`(?P<Major>\d+)\.(?P<Minor>\d+)\.(?P<Revision>\d+)(?P<Remainder>\S+)`)
 
-	if len(split) > 5 && len(split) < 4 {
-		return nil, fmt.Errorf("unable to parse %q as kernel version", v)
+	matches := re.FindSubmatch(v)
+
+	if len(matches) > 0 {
+		kv := &KernelVersion{}
+
+		kv.Major, _ = strconv.Atoi(string(matches[re.SubexpIndex("Major")]))
+		kv.Minor, _ = strconv.Atoi(string(matches[re.SubexpIndex("Minor")]))
+		kv.Revision, _ = strconv.Atoi(string(matches[re.SubexpIndex("Revision")]))
+		kv.Remainder = string(matches[re.SubexpIndex("Remainder")])
+
+		return kv, nil
 	}
 
-	// remove the full string which is store in position [0]
-	split = split[1:]
-
-	versionParts := make([]int, 3)
-	for i, v := range split[:2] {
-		versionParts[i], err = strconv.Atoi(v)
-		if err != nil {
-			return nil, err
-		}
-	}
-	result := &KernelVersion{
-		Major:    versionParts[0],
-		Minor:    versionParts[1],
-		Revision: versionParts[2],
-	}
-	if len(split) == 4 {
-		result.Remains = split[3]
-	}
-	return result, nil
+	return nil, fmt.Errorf("failed to parse kernel version")
 }
 
-// StringMMR returns the Kernel version in <Major>.<Minor>.<Revision>
-func (kv *KernelVersion) StringMMR() string {
+// String returns the Kernel version as string.
+func (kv *KernelVersion) String() string {
 	return fmt.Sprintf("%d.%d.%d", kv.Major, kv.Minor, kv.Revision)
 }
 
-func (kv *KernelVersion) IsGreaterEqual(cmpKv *KernelVersion) bool {
+func (kv *KernelVersion) GreaterOrEqual(cmpKv *KernelVersion) bool {
 	if kv.Major < cmpKv.Major {
 		return false
 	}

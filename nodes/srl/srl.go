@@ -372,9 +372,8 @@ func (s *srl) Ready(ctx context.Context) error {
 	}
 }
 
-// kernelVersionCheck logs a warning if the kernel has a too low version number
-// that srl starting from 23.3 required kernel > 4.10.0
-func (s *srl) kernelVersionCheck() error {
+// checkKernelVersion emits a warning if the present kernel version is lower than the required one.
+func (s *srl) checkKernelVersion() error {
 	// retrieve running kernel version
 	kv, err := utils.GetKernelVersion()
 	if err != nil {
@@ -382,15 +381,15 @@ func (s *srl) kernelVersionCheck() error {
 	}
 
 	// do the comparison
-	if !kv.IsGreaterEqual(SRLRequiredKernelVersion) {
-		log.Infof("SRL nodes from 23.3 onwards require a kernel version greater then %s. Your system is %s", SRLRequiredKernelVersion.StringMMR(), kv.StringMMR())
+	if !kv.GreaterOrEqual(SRLRequiredKernelVersion) {
+		log.Infof("Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s", SRLRequiredKernelVersion, kv)
 	}
 	return nil
 }
 
 func (s *srl) CheckDeploymentConditions(ctx context.Context) error {
 	// perform the srl specific kernel version check
-	err := s.kernelVersionCheck()
+	err := s.checkKernelVersion()
 	if err != nil {
 		return err
 	}
