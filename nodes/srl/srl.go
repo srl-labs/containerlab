@@ -50,6 +50,9 @@ set / system gnmi-server trace-options [ request response common ]
 set / system gnmi-server unix-socket admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
+set / system snmp community public
+set / system snmp network-instance mgmt
+set / system snmp network-instance mgmt admin-state enable
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 {{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
