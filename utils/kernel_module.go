@@ -29,6 +29,7 @@ func IsKernelModuleLoaded(name string) (bool, error) {
 
 const kernelOSReleasePath = "/proc/sys/kernel/osrelease"
 
+// GetKernelVersion returns the parsed OS kernel version.
 func GetKernelVersion() (*KernelVersion, error) {
 	ver, err := os.ReadFile(kernelOSReleasePath)
 	if err != nil {
@@ -37,7 +38,7 @@ func GetKernelVersion() (*KernelVersion, error) {
 
 	log.Debugf("kernel version: %s", string(ver))
 
-	return ParseKernelVersion(ver)
+	return parseKernelVersion(ver)
 }
 
 // KernelVersion holds the parsed OS kernel version.
@@ -48,7 +49,7 @@ type KernelVersion struct {
 	Remainder string // the rest of the version string, e.g. "-amd64"
 }
 
-func ParseKernelVersion(v []byte) (*KernelVersion, error) {
+func parseKernelVersion(v []byte) (*KernelVersion, error) {
 
 	re := regexp.MustCompile(`(?P<Major>\d+)\.(?P<Minor>\d+)\.(?P<Revision>\d+)(?P<Remainder>\S+)`)
 

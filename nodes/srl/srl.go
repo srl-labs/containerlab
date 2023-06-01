@@ -110,7 +110,7 @@ var (
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 			Parse(srlConfigCmdsTpl)
 
-	SRLRequiredKernelVersion = &utils.KernelVersion{
+	requiredKernelVersion = &utils.KernelVersion{
 		Major:    4,
 		Minor:    10,
 		Revision: 0,
@@ -381,8 +381,8 @@ func (s *srl) checkKernelVersion() error {
 	}
 
 	// do the comparison
-	if !kv.GreaterOrEqual(SRLRequiredKernelVersion) {
-		log.Infof("Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s", SRLRequiredKernelVersion, kv)
+	if !kv.GreaterOrEqual(requiredKernelVersion) {
+		log.Infof("Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s", requiredKernelVersion, kv)
 	}
 	return nil
 }
