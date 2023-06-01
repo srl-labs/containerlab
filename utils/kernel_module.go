@@ -50,8 +50,8 @@ type KernelVersion struct {
 }
 
 func parseKernelVersion(v []byte) (*KernelVersion, error) {
-
-	re := regexp.MustCompile(`(?P<Major>\d+)\.(?P<Minor>\d+)\.(?P<Revision>\d+)(?P<Remainder>.+)`)
+	// https: //regex101.com/r/cWqad0/1
+	re := regexp.MustCompile(`(?P<Major>\d+)\.(?P<Minor>\d+)\.(?P<Revision>\d+)(?P<Remainder>.*)`)
 
 	matches := re.FindSubmatch(v)
 
@@ -74,6 +74,7 @@ func (kv *KernelVersion) String() string {
 	return fmt.Sprintf("%d.%d.%d", kv.Major, kv.Minor, kv.Revision)
 }
 
+// GreaterOrEqual returns true if the Kernel version is greater or equal to the compared Kernel version.
 func (kv *KernelVersion) GreaterOrEqual(cmpKv *KernelVersion) bool {
 	if kv.Major < cmpKv.Major {
 		return false
@@ -86,5 +87,6 @@ func (kv *KernelVersion) GreaterOrEqual(cmpKv *KernelVersion) bool {
 	if kv.Revision < cmpKv.Revision {
 		return false
 	}
+
 	return true
 }
