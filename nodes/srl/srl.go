@@ -109,6 +109,12 @@ var (
 	srlCfgTpl, _ = template.New("srl-tls-profile").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 			Parse(srlConfigCmdsTpl)
+
+	requiredKernelVersion = &utils.KernelVersion{
+		Major:    4,
+		Minor:    10,
+		Revision: 0,
+	}
 )
 
 // Register registers the node in the NodeRegistry.
@@ -364,6 +370,31 @@ func (s *srl) Ready(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+// checkKernelVersion emits a warning if the present kernel version is lower than the required one.
+func (s *srl) checkKernelVersion() error {
+	// retrieve running kernel version
+	kv, err := utils.GetKernelVersion()
+	if err != nil {
+		return err
+	}
+
+	// do the comparison
+	if !kv.GreaterOrEqual(requiredKernelVersion) {
+		log.Infof("Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s", requiredKernelVersion, kv)
+	}
+	return nil
+}
+
+func (s *srl) CheckDeploymentConditions(ctx context.Context) error {
+	// perform the srl specific kernel version check
+	err := s.checkKernelVersion()
+	if err != nil {
+		return err
+	}
+
+	return s.DefaultNode.CheckDeploymentConditions(ctx)
 }
 
 func (s *srl) createSRLFiles() error {
