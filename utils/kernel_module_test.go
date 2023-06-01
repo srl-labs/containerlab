@@ -53,7 +53,7 @@ func TestParseKernelVersion(t *testing.T) {
 		expectErr bool
 		expected  *KernelVersion
 	}{
-		{[]byte("123.45.6789 example"), false, &KernelVersion{Major: 123, Minor: 45, Revision: 6789, Remainder: "example"}},
+		{[]byte("123.45.6789 example"), false, &KernelVersion{Major: 123, Minor: 45, Revision: 6789, Remainder: " example"}},
 		{[]byte("1.2.3-abc"), false, &KernelVersion{Major: 1, Minor: 2, Revision: 3, Remainder: "-abc"}},
 		{[]byte("invalid"), true, nil},
 		{[]byte(""), true, nil},
