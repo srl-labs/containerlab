@@ -220,8 +220,10 @@ func processScpUri(src string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("no username provided for scp connection")
 	}
 
+	knownHostsPath := ResolvePath("~/.ssh/known_hosts", "")
+
 	// try loading ssh agent keys
-	clientConfig, _ := auth.SshAgent(u.User.Username(), KnownHostsLogWarningCallBack) // skipcq: GSC-G106
+	clientConfig, _ := auth.SshAgent(u.User.Username(), getCustomHostKeyCallback(knownHostsPath, "/tmp/foobar")) // skipcq: GSC-G106
 
 	// if CLAB_SSH_KEY is set we use the key referenced here
 	keyPath := os.Getenv("CLAB_SSH_KEY")
@@ -695,23 +697,41 @@ func ProcessDownloadableAndEmbeddedFile(nodename string, fileRef string, filenam
 	return fileRef, nil
 }
 
-// KnownHostsLogWarningCallBack is a KnownHostsCallback implementation that relies on the
-// implementation of the crypto package of golang. However, it will not error out if the
-// Hostkey is unknown, but issue a warning in the logs, if the host is unknown.
-func KnownHostsLogWarningCallBack(hostname string, remote net.Addr, key ssh.PublicKey) error {
-	// rely on the knownhosts implementation of the crypto package
-	// cretae an instance of it
-	khFile := ResolvePath("~/.ssh/known_hosts", "")
-	origKHCB, err := knownhosts.New(khFile)
-	if err != nil {
-		return err
+// getCustomHostKeyCallback returns a custom ssh.HostKeyCallback.
+// it will never block the connection, but issue a log.Warn if the
+// host_key cannot be found (due to absense of the entry or
+// the file being missing)
+func getCustomHostKeyCallback(knownHostsFiles ...string) ssh.HostKeyCallback {
+	var usefiles []string
+	// check
+	for _, file := range knownHostsFiles {
+		if !FileExists(file) {
+			log.Debugf("known_hosts file %s does not exist.", file)
+			continue
+		}
+		usefiles = append(usefiles, file)
 	}
 
-	// delegate the call
-	err = origKHCB(hostname, remote, key)
+	// load the known_hosts file retrieving an ssh.HostKeyCallback
+	knownHostsFileCallback, err := knownhosts.New(usefiles...)
 	if err != nil {
-		// But if an error crops up, make it a warning and continue
-		log.Warnf("error while performing host key validation based on %q for hostname %q (%v). continuing anyways", khFile, hostname, err)
+		log.Debugf("error loading known_hosts files %q", strings.Join(knownHostsFiles, ", "))
+		// this is an always failing knownHosts checker.
+		// it will make sure that the log message of the custom function further down
+		// is consistently logged. Meaning if file can't be loaded or entry does not exist.
+		knownHostsFileCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			return fmt.Errorf("error loading known_hosts files %v", err)
+		}
 	}
-	return nil
+
+	// defien the custom ssh.HostKeyCallback function.
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		// delegate the call
+		err = knownHostsFileCallback(hostname, remote, key)
+		if err != nil {
+			// But if an error crops up, make it a warning and continue
+			log.Warnf("error performing host key validation based on %q for hostname %q (%v). continuing anyways", strings.Join(knownHostsFiles, ", "), hostname, err)
+		}
+		return nil
+	}
 }
