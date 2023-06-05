@@ -35,7 +35,7 @@ require (
 	github.com/scrapli/scrapligo v1.1.8
 	github.com/sirupsen/logrus v1.9.2
 	github.com/spf13/cobra v1.7.0
-	github.com/tklauser/numcpus v0.6.0
+	github.com/tklauser/numcpus v0.6.1
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.9.0
