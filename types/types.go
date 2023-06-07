@@ -162,6 +162,8 @@ type NodeConfig struct {
 	TLSAnchor            string `json:"tls-anchor,omitempty"`
 	// TLS Certificate configuration
 	Certificate *CertificateConfig
+	// Healthcheck Config
+	Healthcheck *HealthcheckConfig
 	NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
 	// list of ports to publish with mysocketctl
 	Publish []string `json:"publish,omitempty"`
@@ -383,4 +385,24 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 
 	// default to IfNotPresent
 	return PullPolicyIfNotPresent
+}
+
+type HealthcheckConfig struct {
+	Test        []string `yaml:"test,omitempty"`
+	Interval    int      `yaml:"interval,omitempty"`
+	Timeout     int      `yaml:"timeout,omitempty"`
+	Retries     int      `yaml:"retries,omitempty"`
+	StartPeriod int      `yaml:"start-period,omitempty"`
+}
+
+func (h *HealthcheckConfig) GetIntervalDuration() time.Duration {
+	return time.Duration(h.Interval) * time.Second
+}
+
+func (h *HealthcheckConfig) GetTimeoutDuration() time.Duration {
+	return time.Duration(h.Timeout) * time.Second
+}
+
+func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
+	return time.Duration(h.StartPeriod) * time.Second
 }

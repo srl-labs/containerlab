@@ -74,6 +74,8 @@ type NodeDefinition struct {
 	DNS *DNSConfig `yaml:"dns,omitempty"`
 	// Certificate Configuration
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
+	// Healthchecks
+	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
 }
 
 // Interface compliance.
@@ -378,6 +380,13 @@ func (n *NodeDefinition) GetCertificateConfig() *CertificateConfig {
 		return nil
 	}
 	return n.Certificate
+}
+
+func (n *NodeDefinition) GetHealthcheckConfig() *HealthcheckConfig {
+	if n == nil {
+		return nil
+	}
+	return n.HealthCheck
 }
 
 // ImportEnvs imports all environment variales defined in the shell
