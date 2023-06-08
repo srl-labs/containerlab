@@ -228,7 +228,7 @@ func (ec *ExecCollection) Log() {
 	for k, execResults := range ec.execEntries {
 		for _, er := range execResults {
 			switch {
-			case er.GetReturnCode() != 0 || er.GetStdErrString() != "":
+			case er.GetReturnCode() != 0:
 				log.Errorf("Failed to execute command %q on the node %q. rc=%d,\nstdout:\n%s\nstderr:\n%s",
 					er.GetCmdString(), k, er.GetReturnCode(), er.GetStdOutString(), er.GetStdErrString())
 			default:
