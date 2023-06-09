@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
@@ -13,28 +14,28 @@ import (
 )
 
 type Link interface {
-	//Deploy() error
+	Deploy() error
 	GetType() (LinkType, error)
 }
 
-type MacVLanLink struct {
-	macVXType `yaml:",inline"`
+type RawMacVLanLink struct {
+	rawMacVXType `yaml:",inline"`
 }
 
 type RawLinkTypeAlias RawLinkType
 
-type MacVTapLink struct {
-	macVXType `yaml:",inline"`
+type RawMacVTapLink struct {
+	rawMacVXType `yaml:",inline"`
 }
 
-type HostLink struct {
+type RawHostLink struct {
 	RawLinkTypeAlias `yaml:",inline"`
 	HostInterface    string `yaml:"host-interface"`
 	Node             string `yaml:"node"`
 	NodeInterface    string `yaml:"node-interface"`
 }
 
-type macVXType struct {
+type rawMacVXType struct {
 	RawLinkTypeAlias `yaml:",inline"`
 	HostInterface    string `yaml:"host-interface"`
 	Node             string `yaml:"node"`
@@ -43,7 +44,15 @@ type macVXType struct {
 	LinkStatus
 }
 
-func (m *macVXType) Deploy(iftype LinkType) error {
+func (m *RawMacVLanLink) Deploy() error {
+	return m.rawMacVXType.Deploy(LinkTypeMacVLan)
+}
+
+func (m *RawMacVTapLink) Deploy() error {
+	return m.rawMacVXType.Deploy(LinkTypeMacVTap)
+}
+
+func (m *rawMacVXType) Deploy(iftype LinkType) error {
 	parentInterface, err := netlink.LinkByName(m.HostInterface)
 	if err != nil {
 		return err
@@ -87,6 +96,69 @@ type VEthLink struct {
 	RawLinkTypeAlias `yaml:",inline"`
 	Mtu              int         `yaml:"mtu,omitempty"`
 	Endpoints        []*Endpoint `yaml:"endpoints"`
+	netlinkLinks     []netlink.Link
+}
+
+func (m *VEthLink) Deploy() error {
+
+	linkA, linkB, err := createVethIface(m.Endpoints[0].Iface, m.Endpoints[1].Iface, m.Mtu, net.HardwareAddr{}, net.HardwareAddr{})
+	if err != nil {
+		return err
+	}
+	m.netlinkLinks = append(m.netlinkLinks, linkA, linkB)
+
+	return nil
+}
+
+// createVethIface takes two veth endpoint structs and create a veth pair and return
+// veth interface links.
+func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAddr) (linkA, linkB netlink.Link, err error) {
+	linkA = &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:         ifName,
+			HardwareAddr: aMAC,
+			Flags:        net.FlagUp,
+			MTU:          mtu,
+		},
+		PeerName:         peerName,
+		PeerHardwareAddr: bMAC,
+	}
+
+	if err := netlink.LinkAdd(linkA); err != nil {
+		return nil, nil, err
+	}
+
+	if linkB, err = netlink.LinkByName(peerName); err != nil {
+		err = fmt.Errorf("failed to lookup %q: %v", peerName, err)
+	}
+
+	return
+}
+
+// toNS puts a veth endpoint to a given netns and renames its random name to a desired name.
+func toNS(nlLink netlink.Link, e *Endpoint) error {
+	var vethNS ns.NetNS
+	var err error
+	if vethNS, err = ns.GetNS(e.Node.); err != nil {
+		return err
+	}
+	// move veth endpoint to namespace
+	if err = netlink.LinkSetNsFd(veth.Link, int(vethNS.Fd())); err != nil {
+		return err
+	}
+	err = vethNS.Do(func(_ ns.NetNS) error {
+		if err = netlink.LinkSetName(veth.Link, veth.LinkName); err != nil {
+			return fmt.Errorf(
+				"failed to rename link: %v", err)
+		}
+
+		if err = netlink.LinkSetUp(veth.Link); err != nil {
+			return fmt.Errorf("failed to set %q up: %v",
+				veth.LinkName, err)
+		}
+		return nil
+	})
+	return err
 }
 
 type Endpoint struct {
@@ -205,21 +277,21 @@ func (r *RawLinkType) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 		r.Instance = l
 	case "host":
-		var l HostLink
+		var l HRawHostLink		
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
 		r.Instance = l
 	case "macvlan":
-		var l MacVLanLink
+		var l MRawMacVLanLink		
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
 		r.Instance = l
 	case "macvtap":
-		var l MacVTapLink
+		var l MRawMacVTapLink		
 		err := unmarshal(&l)
 		if err != nil {
 			return err
@@ -242,7 +314,7 @@ func (r *RawLinkType) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func deprecateLinkConversion(lc types.LinkConfig) (Link, error) {
+func deprecateLinkConversion(lc types.LinkConfig, ) (Link, error) {
 	// check two endpoints defined
 	if len(lc.Endpoints) != 2 {
 		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(lc.Endpoints))
@@ -306,10 +378,10 @@ func mgmtNetFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*MgmtNetLin
 	return result, nil
 }
 
-func macVXTypeFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*macVXType, error) {
+func macVXTypeFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*mrawMacVXType error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
-	result := &macVXType{
+	result := &mrawMacVXType
 		RawLinkTypeAlias: RawLinkTypeAlias{Type: string(LinkTypeMgmtNet), Labels: lc.Labels, Vars: lc.Vars, Instance: nil},
 		HostInterface:    hostIf,
 		Node:             node,
@@ -318,22 +390,22 @@ func macVXTypeFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*macVXTyp
 	return result, nil
 }
 
-func macVlanFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*MacVLanLink, error) {
+func macVlanFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*MRawMacVLanLink error) {
 	macvx, err := macVXTypeFromLinkConfig(lc, specialEPIndex)
 	if err != nil {
 		return nil, err
 	}
 
-	return &MacVLanLink{macVXType: *macvx}, nil
+	return &MRawMacVLanLinkmrawMacVXType *macvx}, nil
 }
 
-func macVTapFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*MacVTapLink, error) {
+func macVTapFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (*MRawMacVTapLink error) {
 	macvx, err := macVXTypeFromLinkConfig(lc, specialEPIndex)
 	if err != nil {
 		return nil, err
 	}
 
-	return &MacVTapLink{macVXType: *macvx}, nil
+	return &MRawMacVTapLinkmrawMacVXType *macvx}, nil
 }
 
 func extractHostNodeInterfaceData(lc types.LinkConfig, specialEPIndex int) (host string, hostIf string, node string, nodeIf string) {
@@ -354,7 +426,7 @@ func extractHostNodeInterfaceData(lc types.LinkConfig, specialEPIndex int) (host
 func hostFromLinkConfig(lc types.LinkConfig, specialEPIndex int) (Link, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
-	result := &HostLink{
+	result := &HRawHostLink
 		RawLinkTypeAlias: RawLinkTypeAlias{
 			Type:     string(LinkTypeHost),
 			Labels:   lc.Labels,
