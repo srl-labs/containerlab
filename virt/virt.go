@@ -61,7 +61,11 @@ func VerifyVirtSupport() bool {
 	if err := scanner.Err(); err != nil {
 		return false
 	}
-	_ = f.Sync()
+
+	err = f.Sync()
+	if err != nil {
+		return false
+	}
 
 	return false
 }
