@@ -24,10 +24,10 @@ func VerifyVirtSupport() bool {
 
 	f, err := os.Open("/proc/2/status")
 	if err != nil {
-		log.Debug("proc/2/status file was not found. This means we run in a container and no virt checks are possible")
+		log.Debug("/proc/2/status file was not found. This means we run in a container and no virt checks are possible")
 		return true
 	}
-	f.Close()
+	defer f.Close() //skipcq: GO-S2307
 
 	// read first line of a /proc/2/status file to check if it contains kthreadd
 	// if it doesn't, we are in a container
@@ -35,7 +35,7 @@ func VerifyVirtSupport() bool {
 
 	scanner.Scan()
 	if !strings.Contains(scanner.Text(), "kthreadd") {
-		log.Debug("proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
+		log.Debug("/proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
 		return true
 	}
 
@@ -44,7 +44,7 @@ func VerifyVirtSupport() bool {
 		log.Debugf("Error checking VirtSupport: %v", err)
 		return false
 	}
-	f.Close()
+	defer f.Close() //skipcq: GO-S2307
 
 	scanner = bufio.NewScanner(f)
 
@@ -59,6 +59,11 @@ func VerifyVirtSupport() bool {
 	}
 
 	if err := scanner.Err(); err != nil {
+		return false
+	}
+
+	err = f.Sync()
+	if err != nil {
 		return false
 	}
 
