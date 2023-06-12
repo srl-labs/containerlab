@@ -29,7 +29,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/opencontainers/runtime-spec v1.1.0-rc.2
+	github.com/opencontainers/runtime-spec v1.1.0-rc.3
 	github.com/pkg/errors v0.9.1
 	github.com/pmorjan/kmod v1.1.0
 	github.com/scrapli/scrapligo v1.1.8
