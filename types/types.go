@@ -278,18 +278,20 @@ type ContainerDetails struct {
 
 // GenericPort contains port mapping information
 type GenericPort struct {
-	HostIP        string `json:"host-ip,omitempty"`
-	HostPort      int    `json:"host-port,omitempty"`
+	HostIP        string `json:"host_ip,omitempty"`
+	HostPort      int    `json:"host_port,omitempty"`
 	ContainerPort int    `json:"port,omitempty"`
 	Protocol      string `json:"protocol,omitempty"`
 }
 
 func (p *GenericPort) String() string {
-	result := ""
-	if p.HostIP != "" {
-		result += fmt.Sprintf("%s:", p.HostIP)
+	var result string
+	if strings.Contains(p.HostIP, ":") {
+		result = fmt.Sprintf("[%s]", p.HostIP)
+	} else {
+		result = p.HostIP
 	}
-	result += fmt.Sprintf("%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
+	result += fmt.Sprintf(":%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
 	return result
 }
 
