@@ -263,16 +263,34 @@ type Extras struct {
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
 type ContainerDetails struct {
-	LabName     string `json:"lab_name,omitempty"`
-	LabPath     string `json:"labPath,omitempty"`
-	Name        string `json:"name,omitempty"`
-	ContainerID string `json:"container_id,omitempty"`
-	Image       string `json:"image,omitempty"`
-	Kind        string `json:"kind,omitempty"`
-	Group       string `json:"group,omitempty"`
-	State       string `json:"state,omitempty"`
-	IPv4Address string `json:"ipv4_address,omitempty"`
-	IPv6Address string `json:"ipv6_address,omitempty"`
+	LabName     string         `json:"lab_name,omitempty"`
+	LabPath     string         `json:"labPath,omitempty"`
+	Name        string         `json:"name,omitempty"`
+	ContainerID string         `json:"container_id,omitempty"`
+	Image       string         `json:"image,omitempty"`
+	Kind        string         `json:"kind,omitempty"`
+	Group       string         `json:"group,omitempty"`
+	State       string         `json:"state,omitempty"`
+	IPv4Address string         `json:"ipv4_address,omitempty"`
+	IPv6Address string         `json:"ipv6_address,omitempty"`
+	Ports       []*GenericPort `json:"ports,omitempty"`
+}
+
+// GenericPort contains port mapping information
+type GenericPort struct {
+	HostIP        string `json:"host-ip,omitempty"`
+	HostPort      int    `json:"host-port,omitempty"`
+	ContainerPort int    `json:"port,omitempty"`
+	Protocol      string `json:"protocol,omitempty"`
+}
+
+func (p *GenericPort) String() string {
+	result := ""
+	if p.HostIP != "" {
+		result += fmt.Sprintf("%s:", p.HostIP)
+	}
+	result += fmt.Sprintf("%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
+	return result
 }
 
 type LabData struct {
