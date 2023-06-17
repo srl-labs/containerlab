@@ -295,7 +295,11 @@ func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 		return err
 	}
 
-	return s.addOverlayCLIConfig(ctx)
+	if err := s.addOverlayCLIConfig(ctx); err != nil {
+		return err
+	}
+
+	return s.generateCheckpoint(ctx)
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
@@ -556,6 +560,26 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	}
 
 	cmd, _ = exec.NewExecCmdFromString(`bash -c "sr_cli -ed --post 'commit save' < tmp/clab-config"`)
+	execResult, err := s.RunExec(ctx, cmd)
+	if err != nil {
+		return err
+	}
+
+	if len(execResult.GetStdErrString()) != 0 {
+		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return nil
+}
+
+func (s *srl) generateCheckpoint(ctx context.Context) error {
+	cmd, err := exec.NewExecCmdFromString(`bash -c 'sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
+	if err != nil {
+		return err
+	}
+
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
