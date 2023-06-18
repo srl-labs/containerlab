@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/mermaid"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -47,8 +48,8 @@ type noListFs struct {
 
 var g *gographviz.Graph
 
-// GenerateGraph generates a graph of the lab topology.
-func (c *CLab) GenerateGraph(_ string) error {
+// GenerateDotGraph generates a graph of the lab topology.
+func (c *CLab) GenerateDotGraph() error {
 	log.Info("Generating lab graph...")
 	g = gographviz.NewGraph()
 	if err := g.SetName(c.TopoPaths.TopologyFilenameWithoutExt()); err != nil {
@@ -207,6 +208,37 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []runtime.Gene
 			g.Nodes = append(g.Nodes, buildGraphNode(node))
 		}
 	}
+}
+
+func (c *CLab) GenerateMermaidGraph(direction string) error {
+	fc := mermaid.NewFlowChart()
+
+	fc.SetTitle(c.Config.Name)
+
+	if err := fc.SetDirection(direction); err != nil {
+		return err
+	}
+
+	// Process the links inbetween Nodes
+	for _, link := range c.Links {
+		fc.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName)
+	}
+
+	// create graph directory
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
+	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0755)
+
+	// create graph filename
+	fname := c.TopoPaths.GraphFilename(".mermaid")
+
+	// Generate graph
+	var w strings.Builder
+	fc.Generate(&w)
+	utils.CreateFile(fname, w.String())
+
+	log.Infof("Created %s", fname)
+
+	return nil
 }
 
 func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error {

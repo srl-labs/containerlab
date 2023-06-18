@@ -270,7 +270,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// generate graph of the lab topology
 	if graph {
-		if err = c.GenerateGraph(topo); err != nil {
+		if err = c.GenerateDotGraph(); err != nil {
 			log.Error(err)
 		}
 	}
