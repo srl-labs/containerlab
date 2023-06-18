@@ -66,6 +66,11 @@ When `graph` command is called without the `--srv` flag, containerlab will gener
 
 The dot file can be used to view the graphical representation of the topology either by rendering the dot file into a PNG file or using [online dot viewer](https://dreampuf.github.io/GraphvizOnline/).
 
+
+#### Mermaid
+
+When `graph` command is called with the `--mermaid` flag, containerlab will generate a graph description file in [Mermaid graph format](https://mermaid.js.org/syntax/flowchart.html). This is useful for embedding generated graph text to Markdown. Some Markdown renderer like GitHub or Notion supports rendering the Mermaid graph in the code block. When you are not satisfying the rendering result, you can import the generated text into [draw.io](https://draw.io) and edit it.
+
 ### Online vs offline graphing
 
 When HTML graph option is used, containerlab will try to build the topology graph by inspecting the running containers which are part of the lab. This essentially means, that the lab must be running. Although this method provides some additional details (like IP addresses), it is not always convenient to run a lab to see its graph.
@@ -105,6 +110,14 @@ With this flag, it is possible to link to local files (JS, CSS, fonts, etc.) fro
 #### dot
 
 With `--dot` flag provided containerlab will generate the `dot` file instead of serving the topology with embedded HTTP server.
+
+#### mermaid
+
+With `--mermaid` flag provided containerlab will generate the `mermaid` file instead of serving the topology with embedded HTTP server.
+
+#### mermaid-direction
+
+With `--mermaid-direction` flag provided with `--mermaid` flag, containerlab adjusts [direction](https://mermaid.js.org/syntax/flowchart.html#direction) of the generated graph. Accepted values are TB, TD, BT, RL, and LR.
 
 #### node-filter
 
