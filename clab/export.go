@@ -19,8 +19,8 @@ import (
 )
 
 // GenerateExports generates various export files and writes it to a lab location.
-func (c *CLab) GenerateExports(f io.Writer, p string) error {
-	err := c.exportTopologyDataWithTemplate(f, p)
+func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error {
+	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
 		log.Warningf("Cannot parse export template %s: %v", p, err)
 		// a minimal topology data file that just provides the name of a lab that failed to generate a proper export data
@@ -38,11 +38,22 @@ type TopologyExport struct {
 	Name        string                       `json:"name"`
 	Type        string                       `json:"type"`
 	Clab        *CLab                        `json:"clab,omitempty"`
-	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
+	NodeConfigs map[string]*TopologyDataNode `json:"nodeconfigs,omitempty"`
+}
+
+type TopologyDataNode struct {
+	*types.NodeConfig `json:",inline"`
+	FinalPortBindings []*types.GenericPort `json:"port-bindings,omitempty"`
+}
+
+func NewTopologyDataNode(nc *types.NodeConfig) *TopologyDataNode {
+	return &TopologyDataNode{
+		NodeConfig: nc,
+	}
 }
 
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
-func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
+func (c *CLab) exportTopologyDataWithTemplate(ctx context.Context, w io.Writer, p string) error {
 	n := filepath.Base(p)
 	t, err := template.New(n).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
@@ -65,11 +76,16 @@ func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
 		Name:        c.Config.Name,
 		Type:        "clab",
 		Clab:        c,
-		NodeConfigs: make(map[string]*types.NodeConfig),
+		NodeConfigs: make(map[string]*TopologyDataNode),
 	}
 
 	for _, n := range c.Nodes {
-		e.NodeConfigs[n.Config().ShortName] = n.Config()
+		e.NodeConfigs[n.Config().ShortName] = NewTopologyDataNode(n.Config())
+		gc, err := n.GetContainers(ctx)
+		if err != nil {
+			return err
+		}
+		e.NodeConfigs[n.Config().ShortName].FinalPortBindings = gc[0].Ports
 	}
 
 	err = t.Execute(w, e)

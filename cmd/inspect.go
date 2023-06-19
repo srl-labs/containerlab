@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
@@ -134,21 +133,16 @@ func toTableData(det []types.ContainerDetails) [][]string {
 	for i := range det {
 		d := &det[i]
 
-		portStrings := make([]string, len(d.Ports))
-		for i, p := range d.Ports {
-			portStrings[i] = p.String()
-		}
-
 		if all {
 			tabData = append(tabData, []string{
 				fmt.Sprintf("%d", i+1), d.LabPath,
-				d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address, strings.Join(portStrings, "\n"),
+				d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address,
 			})
 			continue
 		}
 		tabData = append(tabData, []string{
 			fmt.Sprintf("%d", i+1), d.Name, d.ContainerID,
-			d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address, strings.Join(portStrings, "\n"),
+			d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address,
 		})
 	}
 	return tabData
@@ -171,7 +165,6 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			State:       cont.State,
 			IPv4Address: cont.GetContainerIPv4(),
 			IPv6Address: cont.GetContainerIPv6(),
-			Ports:       cont.Ports,
 		}
 		cdet.ContainerID = cont.ShortID
 
@@ -220,7 +213,6 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			"State",
 			"IPv4 Address",
 			"IPv6 Address",
-			"Ports",
 		}
 		if all {
 			table.SetHeader(append([]string{"#", "Topo Path"}, header...))
