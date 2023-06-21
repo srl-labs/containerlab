@@ -50,6 +50,9 @@ set / system gnmi-server trace-options [ request response common ]
 set / system gnmi-server unix-socket admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
+set / system snmp community public
+set / system snmp network-instance mgmt
+set / system snmp network-instance mgmt admin-state enable
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 {{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
@@ -109,6 +112,12 @@ var (
 	srlCfgTpl, _ = template.New("srl-tls-profile").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 			Parse(srlConfigCmdsTpl)
+
+	requiredKernelVersion = &utils.KernelVersion{
+		Major:    4,
+		Minor:    10,
+		Revision: 0,
+	}
 )
 
 // Register registers the node in the NodeRegistry.
@@ -286,7 +295,11 @@ func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 		return err
 	}
 
-	return s.addOverlayCLIConfig(ctx)
+	if err := s.addOverlayCLIConfig(ctx); err != nil {
+		return err
+	}
+
+	return s.generateCheckpoint(ctx)
 }
 
 func (s *srl) SaveConfig(ctx context.Context) error {
@@ -364,6 +377,31 @@ func (s *srl) Ready(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+// checkKernelVersion emits a warning if the present kernel version is lower than the required one.
+func (s *srl) checkKernelVersion() error {
+	// retrieve running kernel version
+	kv, err := utils.GetKernelVersion()
+	if err != nil {
+		return err
+	}
+
+	// do the comparison
+	if !kv.GreaterOrEqual(requiredKernelVersion) {
+		log.Infof("Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s", requiredKernelVersion, kv)
+	}
+	return nil
+}
+
+func (s *srl) CheckDeploymentConditions(ctx context.Context) error {
+	// perform the srl specific kernel version check
+	err := s.checkKernelVersion()
+	if err != nil {
+		return err
+	}
+
+	return s.DefaultNode.CheckDeploymentConditions(ctx)
 }
 
 func (s *srl) createSRLFiles() error {
@@ -522,6 +560,26 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 	}
 
 	cmd, _ = exec.NewExecCmdFromString(`bash -c "sr_cli -ed --post 'commit save' < tmp/clab-config"`)
+	execResult, err := s.RunExec(ctx, cmd)
+	if err != nil {
+		return err
+	}
+
+	if len(execResult.GetStdErrString()) != 0 {
+		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return nil
+}
+
+func (s *srl) generateCheckpoint(ctx context.Context) error {
+	cmd, err := exec.NewExecCmdFromString(`bash -c 'sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
+	if err != nil {
+		return err
+	}
+
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package clab
+package dependency_manager
 
 import (
 	"testing"

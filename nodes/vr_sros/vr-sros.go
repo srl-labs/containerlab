@@ -192,6 +192,16 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, use
 	var err error
 	var d *network.Driver
 
+	configContent, err := utils.ReadFileContent(configFile)
+	if err != nil {
+		return err
+	}
+
+	// check file contains content, otherwise exit early
+	if len(strings.TrimSpace(string(configContent))) == 0 {
+		return nil
+	}
+
 	for loop := true; loop; {
 		if !s.isHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
