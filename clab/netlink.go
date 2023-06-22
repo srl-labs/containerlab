@@ -6,11 +6,9 @@ package clab
 
 import (
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/google/uuid"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -151,31 +149,6 @@ type vEthEndpoint struct {
 // 	return nil
 // }
 
-// createVethIface takes two veth endpoint structs and create a veth pair and return
-// veth interface links.
-func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAddr) (linkA, linkB netlink.Link, err error) {
-	linkA = &netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:         ifName,
-			HardwareAddr: aMAC,
-			Flags:        net.FlagUp,
-			MTU:          mtu,
-		},
-		PeerName:         peerName,
-		PeerHardwareAddr: bMAC,
-	}
-
-	if err := netlink.LinkAdd(linkA); err != nil {
-		return nil, nil, err
-	}
-
-	if linkB, err = netlink.LinkByName(peerName); err != nil {
-		err = fmt.Errorf("failed to lookup %q: %v", peerName, err)
-	}
-
-	return
-}
-
 // setVethLink sets the veth link endpoints to the relevant namespaces and/or connects one end to the bridge.
 func (veth *vEthEndpoint) setVethLink() error {
 	// if veth is destined to connect to a linux bridge in the host netns
@@ -187,7 +160,7 @@ func (veth *vEthEndpoint) setVethLink() error {
 	}
 	// host endpoints have a special NSPath value
 	// the host portion of veth doesn't need to be additionally processed
-	if veth.NSPath == hostNSPath {
+	if veth.NSPath == "__host" {
 		if err := netlink.LinkSetUp(veth.Link); err != nil {
 			return fmt.Errorf("failed to set %q up: %v",
 				veth.LinkName, err)
@@ -248,11 +221,6 @@ func (veth *vEthEndpoint) toBridge() error {
 		return nil
 	})
 	return err
-}
-
-func genIfName() string {
-	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
-	return string(s[:8])
 }
 
 // GetLinksByNamePrefix returns a list of links whose name matches a prefix.

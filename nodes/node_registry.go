@@ -73,6 +73,10 @@ type NodeRegistryEntry struct {
 	credentials   *Credentials
 }
 
+func (e *NodeRegistryEntry) GetNodeKindNames() []string {
+	return e.nodeKindNames
+}
+
 // Credentials returns entry's credentials.
 func (e *NodeRegistryEntry) Credentials() *Credentials {
 	if e == nil {

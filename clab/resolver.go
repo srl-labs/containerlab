@@ -37,3 +37,7 @@ func NewDefaultLinkNode(n nodes.Node) *DefaultLinkNode {
 func (dn *DefaultLinkNode) GetNamespacePath() string {
 	return dn.node.Config().NSPath
 }
+
+func (dn *DefaultLinkNode) GetNodeName() string {
+	return dn.node.Config().ShortName
+}

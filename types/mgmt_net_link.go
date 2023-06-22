@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -13,7 +14,7 @@ type RawMgmtNetLink struct {
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (m *RawMgmtNetLink) UnRaw(res NodeResolver) (Link, error) {
+func (m *RawMgmtNetLink) Resolve(res NodeResolver) (Link, error) {
 	n, err := res.ResolveNode(m.Endpoint.Node)
 	if err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ type MgmtNetLink struct {
 	ContainerEndpoint *Endpoint
 }
 
-func (m *MgmtNetLink) Deploy() error {
+func (m *MgmtNetLink) Deploy(ctx context.Context) error {
 	// TODO
 	return fmt.Errorf("not yet implemented")
 }
@@ -63,9 +64,13 @@ func (m *MgmtNetLink) GetType() (LinkType, error) {
 	return LinkTypeMgmtNet, nil
 }
 
-func (m *MgmtNetLink) Remove() error {
+func (m *MgmtNetLink) Remove(_ context.Context) error {
 	// TODO
 	log.Warn("not implemented yet")
 	return nil
 
+}
+
+func (m *MgmtNetLink) GetEndpoints() []*Endpoint {
+	return []*Endpoint{m.ContainerEndpoint}
 }

@@ -102,3 +102,7 @@ func (m *macVXType) Remove(lt LinkType) error {
 	log.Warn("not implemented yet")
 	return nil
 }
+
+func (m *macVXType) GetEndpoints() []*Endpoint {
+	return []*Endpoint{m.ContainerEndpoint}
+}

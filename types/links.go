@@ -1,9 +1,13 @@
 package types
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/dependency_manager"
+	"golang.org/x/sync/semaphore"
 	"gopkg.in/yaml.v2"
 )
 
@@ -135,13 +139,14 @@ func deprecateLinkConversion(lc LinkConfig) (RawLink, error) {
 }
 
 type Link interface {
-	Deploy() error
-	Remove() error
+	Deploy(context.Context) error
+	Remove(context.Context) error
 	GetType() (LinkType, error)
+	GetEndpoints() []*Endpoint
 }
 
 type RawLink interface {
-	UnRaw(r NodeResolver) (Link, error)
+	Resolve(r NodeResolver) (Link, error)
 }
 
 type LinkGenericAttrs struct {
@@ -176,4 +181,40 @@ type LinkStatus struct {
 
 func (l *LinkStatus) GetState() LinkState {
 	return l.state
+}
+
+type DependencyManagerLink struct {
+	Link
+	dm  dependency_manager.DependencyManager
+	sem *semaphore.Weighted
+}
+
+func NewDependencyManagerLink(l Link, dm dependency_manager.DependencyManager, sem *semaphore.Weighted) *DependencyManagerLink {
+	return &DependencyManagerLink{
+		Link: l,
+		dm:   dm,
+		sem:  sem,
+	}
+}
+
+func (d *DependencyManagerLink) Deploy(ctx context.Context) error {
+
+	waitNodes := []string{}
+	for _, e := range d.Link.GetEndpoints() {
+		waitNodes = append(waitNodes, e.Node.GetNodeName())
+	}
+
+	err := d.dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
+	if err != nil {
+		log.Error(err)
+	}
+
+	// acquire Sem
+	err = d.sem.Acquire(ctx, 1)
+	if err != nil {
+		log.Error(err)
+	}
+	defer d.sem.Release(1)
+
+	return d.Link.Deploy(ctx)
 }

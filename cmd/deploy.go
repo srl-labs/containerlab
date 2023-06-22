@@ -86,7 +86,7 @@ func init() {
 // deployFn function runs deploy sub command.
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
-
+	log.SetReportCaller(true)
 	log.Infof("Containerlab v%s started", version)
 
 	ctx, cancel := context.WithCancel(context.Background())

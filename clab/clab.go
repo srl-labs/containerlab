@@ -24,6 +24,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"golang.org/x/exp/slices"
+	"golang.org/x/sync/semaphore"
 )
 
 type CLab struct {
@@ -513,43 +514,27 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 
 // CreateLinks creates links using the specified number of workers.
 func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_manager.DependencyManager) {
-	// wg := new(sync.WaitGroup)
-	// sem := semaphore.NewWeighted(int64(workers))
+	wg := new(sync.WaitGroup)
+	sem := semaphore.NewWeighted(int64(workers))
 
-	// for _, link := range c.Links {
-	// 	wg.Add(1)
-	// 	go func(li *types.Link) {
-	// 		defer wg.Done()
+	for _, link := range c.Links {
 
-	// 		var waitNodes []string
-	// 		for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
-	// 			// we should not wait for "host" fake node or mgmt-net node
-	// 			if n.Kind != "host" && n.ShortName != "mgmt-net" {
-	// 				waitNodes = append(waitNodes, n.ShortName)
-	// 			}
-	// 		}
+		dmLink := types.NewDependencyManagerLink(link, dm, sem)
+		wg.Add(1)
 
-	// 		err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
-	// 		if err != nil {
-	// 			log.Error(err)
-	// 		}
+		go func(li types.Link) {
+			defer wg.Done()
 
-	// 		// acquire Sem
-	// 		err = sem.Acquire(ctx, 1)
-	// 		if err != nil {
-	// 			log.Error(err)
-	// 		}
-	// 		defer sem.Release(1)
-	// 		// create the wiring
-	// 		err = c.CreateVirtualWiring(li)
-	// 		if err != nil {
-	// 			log.Error(err)
-	// 		}
-	// 	}(link)
-	// }
+			// create the wiring
+			err := li.Deploy(ctx)
+			if err != nil {
+				log.Error(err)
+			}
+		}(dmLink)
+	}
 
-	// // wait for all workers to finish
-	// wg.Wait()
+	// wait for all workers to finish
+	wg.Wait()
 }
 
 func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {

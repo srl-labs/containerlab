@@ -270,16 +270,18 @@ func Test_filterClabNodes(t *testing.T) {
 								Kind: "linux",
 							},
 						},
-						Links: []types.RawLink{
-							&types.RawVEthLink{
-								Endpoints: []*types.EndpointRaw{
-									{
-										Node:  "node1",
-										Iface: "eth1",
-									},
-									{
-										Node:  "node2",
-										Iface: "eth1",
+						Links: []*types.RawLinkType{
+							{
+								Instance: &types.RawVEthLink{
+									Endpoints: []*types.EndpointRaw{
+										{
+											Node:  "node1",
+											Iface: "eth1",
+										},
+										{
+											Node:  "node2",
+											Iface: "eth1",
+										},
 									},
 								},
 							},
@@ -305,16 +307,18 @@ func Test_filterClabNodes(t *testing.T) {
 							},
 						},
 
-						Links: []types.RawLink{
-							&types.RawVEthLink{
-								Endpoints: []*types.EndpointRaw{
-									{
-										Node:  "node1",
-										Iface: "eth1",
-									},
-									{
-										Node:  "node2",
-										Iface: "eth1",
+						Links: []*types.RawLinkType{
+							{
+								Instance: &types.RawVEthLink{
+									Endpoints: []*types.EndpointRaw{
+										{
+											Node:  "node1",
+											Iface: "eth1",
+										},
+										{
+											Node:  "node2",
+											Iface: "eth1",
+										},
 									},
 								},
 							},
@@ -342,28 +346,32 @@ func Test_filterClabNodes(t *testing.T) {
 								Kind: "linux",
 							},
 						},
-						Links: []types.RawLink{
-							&types.RawVEthLink{
-								Endpoints: []*types.EndpointRaw{
-									{
-										Node:  "node1",
-										Iface: "eth1",
-									},
-									{
-										Node:  "node2",
-										Iface: "eth1",
+						Links: []*types.RawLinkType{
+							{
+								Instance: &types.RawVEthLink{
+									Endpoints: []*types.EndpointRaw{
+										{
+											Node:  "node1",
+											Iface: "eth1",
+										},
+										{
+											Node:  "node2",
+											Iface: "eth1",
+										},
 									},
 								},
 							},
-							&types.RawVEthLink{
-								Endpoints: []*types.EndpointRaw{
-									{
-										Node:  "node2",
-										Iface: "eth2",
-									},
-									{
-										Node:  "node3",
-										Iface: "eth3",
+							{
+								Instance: &types.RawVEthLink{
+									Endpoints: []*types.EndpointRaw{
+										{
+											Node:  "node2",
+											Iface: "eth2",
+										},
+										{
+											Node:  "node3",
+											Iface: "eth3",
+										},
 									},
 								},
 							},
@@ -391,28 +399,32 @@ func Test_filterClabNodes(t *testing.T) {
 								Kind: "linux",
 							},
 						},
-						Links: []types.RawLink{
-							&types.RawVEthLink{
-								Endpoints: []*types.EndpointRaw{
-									{
-										Node:  "node1",
-										Iface: "eth1",
-									},
-									{
-										Node:  "node2",
-										Iface: "eth1",
+						Links: []*types.RawLinkType{
+							{
+								Instance: &types.RawVEthLink{
+									Endpoints: []*types.EndpointRaw{
+										{
+											Node:  "node1",
+											Iface: "eth1",
+										},
+										{
+											Node:  "node2",
+											Iface: "eth1",
+										},
 									},
 								},
 							},
-							&types.RawVEthLink{
-								Endpoints: []*types.EndpointRaw{
-									{
-										Node:  "node1",
-										Iface: "eth2",
-									},
-									{
-										Node:  "node2",
-										Iface: "eth2",
+							{
+								Instance: &types.RawVEthLink{
+									Endpoints: []*types.EndpointRaw{
+										{
+											Node:  "node1",
+											Iface: "eth2",
+										},
+										{
+											Node:  "node2",
+											Iface: "eth2",
+										},
 									},
 								},
 							},

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"context"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -11,7 +13,7 @@ type RawHostLink struct {
 	NodeInterface    string `yaml:"node-interface"`
 }
 
-func (h *RawHostLink) UnRaw(res NodeResolver) (Link, error) {
+func (h *RawHostLink) Resolve(res NodeResolver) (Link, error) {
 
 	node, err := res.ResolveNode(h.Node)
 	if err != nil {
@@ -52,7 +54,7 @@ type HostLink struct {
 	LinkGenericAttrs
 }
 
-func (m *HostLink) Deploy() error {
+func (m *HostLink) Deploy(ctx context.Context) error {
 	log.Warn("TODO")
 	// TODO
 	return nil
@@ -62,8 +64,12 @@ func (m *HostLink) GetType() (LinkType, error) {
 	return LinkTypeHost, nil
 }
 
-func (m *HostLink) Remove() error {
+func (m *HostLink) Remove(_ context.Context) error {
 	// TODO
 	log.Warn("not implemented yet")
 	return nil
+}
+
+func (m *HostLink) GetEndpoints() []*Endpoint {
+	return []*Endpoint{m.ContainerEndpoint}
 }
