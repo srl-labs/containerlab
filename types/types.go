@@ -5,7 +5,6 @@
 package types
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -14,29 +13,6 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
-
-// Link is a struct that contains the information of a link between 2 containers.
-type Link struct {
-	A      *Endpoint
-	B      *Endpoint
-	MTU    int
-	Labels map[string]string
-	Vars   map[string]interface{}
-}
-
-func (link *Link) String() string {
-	return fmt.Sprintf("link [%s:%s, %s:%s]", link.A.Node.ShortName,
-		link.A.EndpointName, link.B.Node.ShortName, link.B.EndpointName)
-}
-
-// Endpoint is a struct that contains information of a link endpoint.
-type Endpoint struct {
-	Node *NodeConfig
-	// e1-x, eth, etc
-	EndpointName string
-	// mac address
-	MAC string
-}
 
 // MgmtNet struct defines the management network options.
 type MgmtNet struct {

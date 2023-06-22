@@ -1,4 +1,4 @@
-package links
+package types
 
 type LinkConfig struct {
 	Endpoints []string               `yaml:"endpoints"`

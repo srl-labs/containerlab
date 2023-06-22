@@ -1,10 +1,10 @@
-package links
+package types
 
 type RawMacVLanLink struct {
 	rawMacVXType `yaml:",inline"`
 }
 
-func (r *RawMacVLanLink) UnRaw(res Resolver) (Link, error) {
+func (r *RawMacVLanLink) UnRaw(res NodeResolver) (Link, error) {
 	mvxt, err := r.rawMacVXType.UnRaw(res)
 	if err != nil {
 		return nil, err

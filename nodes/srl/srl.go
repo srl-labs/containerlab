@@ -587,8 +587,8 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 func (s *srl) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
 	for _, e := range s.Config().Endpoints {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
+		if !ifRe.MatchString(e.Iface) {
+			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.Iface)
 		}
 	}
 

@@ -268,12 +268,12 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// generate graph of the lab topology
-	if graph {
-		if err = c.GenerateGraph(topo); err != nil {
-			log.Error(err)
-		}
-	}
+	// // generate graph of the lab topology
+	// if graph {
+	// 	if err = c.GenerateGraph(topo); err != nil {
+	// 		log.Error(err)
+	// 	}
+	// }
 
 	log.Info("Adding containerlab host entries to /etc/hosts file")
 	err = clab.AppendHostsFileEntries(containers, c.Config.Name)

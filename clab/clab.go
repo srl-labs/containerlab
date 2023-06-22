@@ -24,7 +24,6 @@ import (
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"golang.org/x/exp/slices"
-	"golang.org/x/sync/semaphore"
 )
 
 type CLab struct {
@@ -32,7 +31,7 @@ type CLab struct {
 	TopoPaths     *types.TopoPaths
 	m             *sync.RWMutex
 	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
-	Links         map[int]*types.Link                 `json:"links,omitempty"`
+	Links         map[int]types.Link                  `json:"links,omitempty"`
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	// reg is a registry of node kinds
@@ -142,7 +141,7 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 	log.Infof("Applying node filter: %q", nodeFilter)
 
 	// newNodes := make(map[string]*types.NodeDefinition, len(c.Config.Topology.Nodes))
-	newLinks := make([]*types.LinkConfig, 0, len(c.Config.Topology.Links))
+	// newLinks := make([]*types.LinkConfig, 0, len(c.Config.Topology.Links))
 
 	// filter nodes
 	for name := range c.Config.Topology.Nodes {
@@ -152,35 +151,35 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 		}
 	}
 
-	// filter links
-	for _, l := range c.Config.Topology.Links {
-		// get the endpoints of the link and extract the node names
-		// to remove the links which have either side in the node filter
-		splitEpAside := strings.Split(l.Endpoints[0], ":")
-		if len(splitEpAside) != 2 {
-			continue
-		}
+	// // filter links
+	// for _, l := range c.Config.Topology.Links {
+	// 	// get the endpoints of the link and extract the node names
+	// 	// to remove the links which have either side in the node filter
+	// 	splitEpAside := strings.Split(l.Endpoints[0], ":")
+	// 	if len(splitEpAside) != 2 {
+	// 		continue
+	// 	}
 
-		epA := splitEpAside[0]
+	// 	epA := splitEpAside[0]
 
-		splitEpBside := strings.Split(l.Endpoints[1], ":")
-		if len(splitEpBside) != 2 {
-			continue
-		}
+	// 	splitEpBside := strings.Split(l.Endpoints[1], ":")
+	// 	if len(splitEpBside) != 2 {
+	// 		continue
+	// 	}
 
-		epB := splitEpBside[0]
+	// 	epB := splitEpBside[0]
 
-		containsAside := slices.Contains(nodeFilter, epA)
-		containsBside := slices.Contains(nodeFilter, epB)
+	// 	containsAside := slices.Contains(nodeFilter, epA)
+	// 	containsBside := slices.Contains(nodeFilter, epB)
 
-		// if both endpoints of a link belong to the node filter, keep the link
-		if containsAside && containsBside {
-			log.Debugf("Including link %+v", l)
-			newLinks = append(newLinks, l)
-		}
-	}
-	// replace the original collection of links with the links that have both endpoints in the node filter
-	c.Config.Topology.Links = newLinks
+	// 	// if both endpoints of a link belong to the node filter, keep the link
+	// 	if containsAside && containsBside {
+	// 		log.Debugf("Including link %+v", l)
+	// 		newLinks = append(newLinks, l)
+	// 	}
+	// }
+	// // replace the original collection of links with the links that have both endpoints in the node filter
+	// c.Config.Topology.Links = newLinks
 
 	return nil
 }
@@ -194,7 +193,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		},
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]nodes.Node),
-		Links:    make(map[int]*types.Link),
+		Links:    make(map[int]types.Link),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
 		Cert:     &cert.Cert{},
 	}
@@ -514,43 +513,43 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 
 // CreateLinks creates links using the specified number of workers.
 func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_manager.DependencyManager) {
-	wg := new(sync.WaitGroup)
-	sem := semaphore.NewWeighted(int64(workers))
+	// wg := new(sync.WaitGroup)
+	// sem := semaphore.NewWeighted(int64(workers))
 
-	for _, link := range c.Links {
-		wg.Add(1)
-		go func(li *types.Link) {
-			defer wg.Done()
+	// for _, link := range c.Links {
+	// 	wg.Add(1)
+	// 	go func(li *types.Link) {
+	// 		defer wg.Done()
 
-			var waitNodes []string
-			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
-				// we should not wait for "host" fake node or mgmt-net node
-				if n.Kind != "host" && n.ShortName != "mgmt-net" {
-					waitNodes = append(waitNodes, n.ShortName)
-				}
-			}
+	// 		var waitNodes []string
+	// 		for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
+	// 			// we should not wait for "host" fake node or mgmt-net node
+	// 			if n.Kind != "host" && n.ShortName != "mgmt-net" {
+	// 				waitNodes = append(waitNodes, n.ShortName)
+	// 			}
+	// 		}
 
-			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
-			if err != nil {
-				log.Error(err)
-			}
+	// 		err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
+	// 		if err != nil {
+	// 			log.Error(err)
+	// 		}
 
-			// acquire Sem
-			err = sem.Acquire(ctx, 1)
-			if err != nil {
-				log.Error(err)
-			}
-			defer sem.Release(1)
-			// create the wiring
-			err = c.CreateVirtualWiring(li)
-			if err != nil {
-				log.Error(err)
-			}
-		}(link)
-	}
+	// 		// acquire Sem
+	// 		err = sem.Acquire(ctx, 1)
+	// 		if err != nil {
+	// 			log.Error(err)
+	// 		}
+	// 		defer sem.Release(1)
+	// 		// create the wiring
+	// 		err = c.CreateVirtualWiring(li)
+	// 		if err != nil {
+	// 			log.Error(err)
+	// 		}
+	// 	}(link)
+	// }
 
-	// wait for all workers to finish
-	wg.Wait()
+	// // wait for all workers to finish
+	// wg.Wait()
 }
 
 func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
@@ -653,11 +652,11 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 // in host networking namespace or attached to linux bridge.
 // See https://github.com/srl-labs/containerlab/issues/842 for the reference.
 func (c *CLab) VethCleanup(_ context.Context) error {
-	for _, link := range c.Links {
-		err := c.RemoveHostOrBridgeVeth(link)
-		if err != nil {
-			log.Infof("Error during veth cleanup: %v", err)
-		}
-	}
+	// for _, link := range c.Links {
+	// 	err := c.RemoveHostOrBridgeVeth(link)
+	// 	if err != nil {
+	// 		log.Infof("Error during veth cleanup: %v", err)
+	// 	}
+	// }
 	return nil
 }

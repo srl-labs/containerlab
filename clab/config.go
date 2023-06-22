@@ -18,7 +18,6 @@ import (
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -67,7 +66,7 @@ func (c *CLab) parseTopology() error {
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
-	c.Links = make(map[int]*types.Link)
+	c.Links = make(map[int]types.Link)
 
 	// initialize the Node information from the topology map
 	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
@@ -124,9 +123,17 @@ func (c *CLab) parseTopology() error {
 			return err
 		}
 	}
+
+	nRes := NewDefaultNodeResolver(c)
+
 	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
-		c.Links[i] = c.NewLink(l)
+		inst := l.Instance
+		rl := inst.(types.RawLink)
+		c.Links[i], err = rl.UnRaw(nRes)
+		if err != nil {
+			return err
+		}
 	}
 
 	// set any containerlab defaults after we've parsed the input
@@ -323,82 +330,82 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	return nil
 }
 
-// NewLink initializes a new link object.
-func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
-	if len(l.Endpoints) != 2 {
-		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
-	}
+// // NewLink initializes a new link object.
+// func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
+// 	if len(l.Endpoints) != 2 {
+// 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
+// 	}
 
-	mtu := l.MTU
+// 	mtu := l.MTU
 
-	if mtu == 0 {
-		mtu = DefaultVethLinkMTU
-	}
+// 	if mtu == 0 {
+// 		mtu = DefaultVethLinkMTU
+// 	}
 
-	return &types.Link{
-		A:      c.NewEndpoint(l.Endpoints[0]),
-		B:      c.NewEndpoint(l.Endpoints[1]),
-		MTU:    mtu,
-		Labels: l.Labels,
-		Vars:   l.Vars,
-	}
-}
+// 	return &types.Link{
+// 		A:      c.NewEndpoint(l.Endpoints[0]),
+// 		B:      c.NewEndpoint(l.Endpoints[1]),
+// 		MTU:    mtu,
+// 		Labels: l.Labels,
+// 		Vars:   l.Vars,
+// 	}
+// }
 
-// NewEndpoint initializes a new endpoint object.
-func (c *CLab) NewEndpoint(e string) *types.Endpoint {
-	// initialize a new endpoint
-	endpoint := new(types.Endpoint)
+// // NewEndpoint initializes a new endpoint object.
+// func (c *CLab) NewEndpoint(e string) *types.Endpoint {
+// 	// initialize a new endpoint
+// 	endpoint := new(types.Endpoint)
 
-	// split the string to get node name and endpoint name
-	split := strings.Split(e, ":")
-	if len(split) != 2 {
-		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904, RVV-A0003
-	}
-	nName := split[0] // node name
+// 	// split the string to get node name and endpoint name
+// 	split := strings.Split(e, ":")
+// 	if len(split) != 2 {
+// 		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904, RVV-A0003
+// 	}
+// 	nName := split[0] // node name
 
-	// initialize the endpoint name based on the split function
-	endpoint.EndpointName = split[1] // endpoint name
-	if len(endpoint.EndpointName) > 15 {
-		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters",
-			endpoint.EndpointName) // skipcq: RVV-A0003
-	}
-	// generate unique MAC
-	endpoint.MAC = utils.GenMac(ClabOUI)
+// 	// initialize the endpoint name based on the split function
+// 	endpoint.EndpointName = split[1] // endpoint name
+// 	if len(endpoint.EndpointName) > 15 {
+// 		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters",
+// 			endpoint.EndpointName) // skipcq: RVV-A0003
+// 	}
+// 	// generate unique MAC
+// 	endpoint.MAC = utils.GenMac(ClabOUI)
 
-	// search the node pointer for a node name referenced in endpoint section
-	switch nName {
-	// "host" is a special reference to host namespace
-	// for which we create an special Node with kind "host"
-	case "host":
-		endpoint.Node = &types.NodeConfig{
-			Kind:      "host",
-			ShortName: "host",
-			NSPath:    hostNSPath,
-		}
-	// mgmt-net is a special reference to a bridge of the docker network
-	// that is used as the management network
-	case "mgmt-net":
-		endpoint.Node = &types.NodeConfig{
-			Kind:      "bridge",
-			ShortName: "mgmt-net",
-		}
-	default:
-		c.m.Lock()
-		if n, ok := c.Nodes[nName]; ok {
-			endpoint.Node = n.Config()
-			n.Config().Endpoints = append(n.Config().Endpoints, *endpoint)
-		}
-		c.m.Unlock()
-	}
+// 	// search the node pointer for a node name referenced in endpoint section
+// 	switch nName {
+// 	// "host" is a special reference to host namespace
+// 	// for which we create an special Node with kind "host"
+// 	case "host":
+// 		endpoint.Node = &types.NodeConfig{
+// 			Kind:      "host",
+// 			ShortName: "host",
+// 			NSPath:    hostNSPath,
+// 		}
+// 	// mgmt-net is a special reference to a bridge of the docker network
+// 	// that is used as the management network
+// 	case "mgmt-net":
+// 		endpoint.Node = &types.NodeConfig{
+// 			Kind:      "bridge",
+// 			ShortName: "mgmt-net",
+// 		}
+// 	default:
+// 		c.m.Lock()
+// 		if n, ok := c.Nodes[nName]; ok {
+// 			endpoint.Node = n.Config()
+// 			n.Config().Endpoints = append(n.Config().Endpoints, *endpoint)
+// 		}
+// 		c.m.Unlock()
+// 	}
 
-	// stop the deployment if the matching node element was not found
-	// "host" node name is an exception, it may exist without a matching node
-	if endpoint.Node == nil {
-		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904, RVV-A0003
-	}
+// 	// stop the deployment if the matching node element was not found
+// 	// "host" node name is an exception, it may exist without a matching node
+// 	if endpoint.Node == nil {
+// 		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904, RVV-A0003
+// 	}
 
-	return endpoint
-}
+// 	return endpoint
+// }
 
 // CheckTopologyDefinition runs topology checks and returns any errors found.
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
@@ -429,23 +436,23 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 }
 
 func (c *CLab) verifyLinks() error {
-	endpoints := map[string]struct{}{}
-	// dups accumulates duplicate links
-	dups := []string{}
-	for _, lc := range c.Config.Topology.Links {
-		for _, e := range lc.Endpoints {
-			if err := checkEndpoint(e); err != nil {
-				return err
-			}
-			if _, ok := endpoints[e]; ok {
-				dups = append(dups, e)
-			}
-			endpoints[e] = struct{}{}
-		}
-	}
-	if len(dups) != 0 {
-		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
-	}
+	// endpoints := map[string]struct{}{}
+	// // dups accumulates duplicate links
+	// dups := []string{}
+	// for _, lc := range c.Config.Topology.Links {
+	// 	for _, e := range lc.Endpoints {
+	// 		if err := checkEndpoint(e); err != nil {
+	// 			return err
+	// 		}
+	// 		if _, ok := endpoints[e]; ok {
+	// 			dups = append(dups, e)
+	// 		}
+	// 		endpoints[e] = struct{}{}
+	// 	}
+	// }
+	// if len(dups) != 0 {
+	// 	return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
+	// }
 	return nil
 }
 
@@ -554,38 +561,38 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 // do not exist already in the root namespace
 // and ensure that nodes that are configured with host networking mode do not have any interfaces defined.
 func (c *CLab) verifyHostIfaces() error {
-	for _, l := range c.Links {
-		for _, ep := range []*types.Endpoint{l.A, l.B} {
-			if ep.Node.ShortName == "host" {
-				if nl, _ := netlink.LinkByName(ep.EndpointName); nl != nil {
-					return fmt.Errorf("host interface %s referenced in topology already exists", ep.EndpointName)
-				}
-			}
-			if ep.Node.NetworkMode == "host" {
-				return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
-					ep.Node.ShortName, ep.Node.ShortName)
-			}
-		}
-	}
+	// for _, l := range c.Links {
+	// 	for _, ep := range []*types.Endpoint{l.A, l.B} {
+	// 		if ep.Node.ShortName == "host" {
+	// 			if nl, _ := netlink.LinkByName(ep.EndpointName); nl != nil {
+	// 				return fmt.Errorf("host interface %s referenced in topology already exists", ep.EndpointName)
+	// 			}
+	// 		}
+	// 		if ep.Node.NetworkMode == "host" {
+	// 			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+	// 				ep.Node.ShortName, ep.Node.ShortName)
+	// 		}
+	// 	}
+	// }
 	return nil
 }
 
 // verifyRootNetnsInterfaceUniqueness ensures that interafaces that appear in the root ns (bridge, ovs-bridge and host)
 // are uniquely defined in the topology file.
 func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
-	rootNsIfaces := map[string]struct{}{}
-	for _, l := range c.Links {
-		endpoints := [2]*types.Endpoint{l.A, l.B}
-		for _, e := range endpoints {
-			if e.Node.IsRootNamespaceBased {
-				if _, ok := rootNsIfaces[e.EndpointName]; ok {
-					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
-					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
-				}
-				rootNsIfaces[e.EndpointName] = struct{}{}
-			}
-		}
-	}
+	// rootNsIfaces := map[string]struct{}{}
+	// for _, l := range c.Links {
+	// 	endpoints := [2]*types.Endpoint{l.A, l.B}
+	// 	for _, e := range endpoints {
+	// 		if e.Node.IsRootNamespaceBased {
+	// 			if _, ok := rootNsIfaces[e.EndpointName]; ok {
+	// 				return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
+	// 				Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
+	// 			}
+	// 			rootNsIfaces[e.EndpointName] = struct{}{}
+	// 		}
+	// 	}
+	// }
 	return nil
 }
 

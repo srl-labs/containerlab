@@ -1,4 +1,4 @@
-package links
+package types
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type rawMacVXType struct {
 }
 
 // convert the rawMacVXType to macVXType
-func (r *rawMacVXType) UnRaw(res Resolver) (*macVXType, error) {
+func (r *rawMacVXType) UnRaw(res NodeResolver) (*macVXType, error) {
 	node, err := res.ResolveNode(r.Node)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (m *macVXType) Deploy(iftype LinkType) error {
 		return fmt.Errorf("failed to lookup %q: %v", m.ContainerEndpoint.GetRandName(), err)
 	}
 
-	err = toNS(mvInterface, m.ContainerEndpoint.Node.Config().NSPath, m.ContainerEndpoint.Iface)
+	err = toNS(mvInterface, m.ContainerEndpoint.Node.GetNamespacePath(), m.ContainerEndpoint.Iface)
 	if err != nil {
 		return err
 	}

@@ -132,8 +132,8 @@ func (n *xrd) genInterfacesEnv() {
 
 	for _, ep := range n.Config().Endpoints {
 		// ifName is a linux interface name with dashes swapped for slashes to be used in the config
-		ifName := strings.ReplaceAll(ep.EndpointName, "-", "/")
-		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", ep.EndpointName, ifName)
+		ifName := strings.ReplaceAll(ep.Iface, "-", "/")
+		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", ep.Iface, ifName)
 	}
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
@@ -145,8 +145,8 @@ func (n *xrd) genInterfacesEnv() {
 func (n *xrd) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`^Gi0-0-0-\d+$`)
 	for _, e := range n.Config().Endpoints {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number", e.EndpointName)
+		if !ifRe.MatchString(e.Iface) {
+			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number", e.Iface)
 		}
 	}
 

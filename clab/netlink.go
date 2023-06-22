@@ -11,8 +11,6 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -26,132 +24,132 @@ type vEthEndpoint struct {
 	OvsBridge string // ovs-bridge name a veth is destined to be connected to
 }
 
-// CreateVirtualWiring creates the virtual topology between the containers.
-func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
-	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
+// // CreateVirtualWiring creates the virtual topology between the containers.
+// func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
+// 	log.Infof("Creating virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName, l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
-	// connect containers (or container and a bridge) using veth pair
-	// based on the link configuration contained within *Link struct
-	// veth side A
-	vA := vEthEndpoint{
-		LinkName: l.A.EndpointName,
-		NSName:   l.A.Node.LongName,
-		NSPath:   l.A.Node.NSPath,
-	}
-	// veth side B
-	vB := vEthEndpoint{
-		LinkName: l.B.EndpointName,
-		NSName:   l.B.Node.LongName,
-		NSPath:   l.B.Node.NSPath,
-	}
+// 	// connect containers (or container and a bridge) using veth pair
+// 	// based on the link configuration contained within *Link struct
+// 	// veth side A
+// 	vA := vEthEndpoint{
+// 		LinkName: l.A.EndpointName,
+// 		NSName:   l.A.Node.LongName,
+// 		NSPath:   l.A.Node.NSPath,
+// 	}
+// 	// veth side B
+// 	vB := vEthEndpoint{
+// 		LinkName: l.B.EndpointName,
+// 		NSName:   l.B.Node.LongName,
+// 		NSPath:   l.B.Node.NSPath,
+// 	}
 
-	// get random names for veth sides as they will be created in root netns first
-	ARndmName := fmt.Sprintf("clab-%s", genIfName())
-	BRndmName := fmt.Sprintf("clab-%s", genIfName())
+// 	// get random names for veth sides as they will be created in root netns first
+// 	ARndmName := fmt.Sprintf("clab-%s", genIfName())
+// 	BRndmName := fmt.Sprintf("clab-%s", genIfName())
 
-	// set bridge name for endpoint that should be connect to linux bridge
-	switch {
-	case l.A.Node.Kind == "bridge":
+// 	// set bridge name for endpoint that should be connect to linux bridge
+// 	switch {
+// 	case l.A.Node.Kind == "bridge":
 
-		// mgmt-net is a reserved node name that means
-		// connect this endpoint to docker management bridged network
-		if l.A.Node.ShortName != "mgmt-net" {
-			vA.Bridge = l.A.Node.ShortName
-		} else {
-			vA.Bridge = c.Config.Mgmt.Bridge
-		}
-		// veth endpoint destined to connect to the bridge in the host netns
-		// will not have a random name
-		ARndmName = l.A.EndpointName
-	case l.B.Node.Kind == "bridge":
-		if l.B.Node.ShortName != "mgmt-net" {
-			vB.Bridge = l.B.Node.ShortName
-		} else {
-			vB.Bridge = c.Config.Mgmt.Bridge
-		}
-		BRndmName = l.B.EndpointName
-	case l.A.Node.Kind == "ovs-bridge":
-		vA.OvsBridge = l.A.Node.ShortName
-		ARndmName = l.A.EndpointName
-	case l.B.Node.Kind == "ovs-bridge":
-		vB.OvsBridge = l.B.Node.ShortName
-		BRndmName = l.B.EndpointName
-	// for host connections random names shouldn't be used
-	case l.A.Node.Kind == "host":
-		ARndmName = l.A.EndpointName
-	case l.B.Node.Kind == "host":
-		BRndmName = l.B.EndpointName
-	}
+// 		// mgmt-net is a reserved node name that means
+// 		// connect this endpoint to docker management bridged network
+// 		if l.A.Node.ShortName != "mgmt-net" {
+// 			vA.Bridge = l.A.Node.ShortName
+// 		} else {
+// 			vA.Bridge = c.Config.Mgmt.Bridge
+// 		}
+// 		// veth endpoint destined to connect to the bridge in the host netns
+// 		// will not have a random name
+// 		ARndmName = l.A.EndpointName
+// 	case l.B.Node.Kind == "bridge":
+// 		if l.B.Node.ShortName != "mgmt-net" {
+// 			vB.Bridge = l.B.Node.ShortName
+// 		} else {
+// 			vB.Bridge = c.Config.Mgmt.Bridge
+// 		}
+// 		BRndmName = l.B.EndpointName
+// 	case l.A.Node.Kind == "ovs-bridge":
+// 		vA.OvsBridge = l.A.Node.ShortName
+// 		ARndmName = l.A.EndpointName
+// 	case l.B.Node.Kind == "ovs-bridge":
+// 		vB.OvsBridge = l.B.Node.ShortName
+// 		BRndmName = l.B.EndpointName
+// 	// for host connections random names shouldn't be used
+// 	case l.A.Node.Kind == "host":
+// 		ARndmName = l.A.EndpointName
+// 	case l.B.Node.Kind == "host":
+// 		BRndmName = l.B.EndpointName
+// 	}
 
-	// Generate MAC addresses
-	aMAC, err := net.ParseMAC(l.A.MAC)
-	if err != nil {
-		return err
-	}
-	bMAC, err := net.ParseMAC(l.B.MAC)
-	if err != nil {
-		return err
-	}
+// 	// Generate MAC addresses
+// 	aMAC, err := net.ParseMAC(l.A.MAC)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	bMAC, err := net.ParseMAC(l.B.MAC)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// create veth pair in the root netns
-	vA.Link, vB.Link, err = createVethIface(ARndmName, BRndmName, l.MTU, aMAC, bMAC)
-	if err != nil {
-		return err
-	}
+// 	// create veth pair in the root netns
+// 	vA.Link, vB.Link, err = createVethIface(ARndmName, BRndmName, l.MTU, aMAC, bMAC)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// once veth pair is created, disable tx offload for veth pair
-	if err := utils.EthtoolTXOff(ARndmName); err != nil {
-		return err
-	}
-	if err := utils.EthtoolTXOff(BRndmName); err != nil {
-		return err
-	}
+// 	// once veth pair is created, disable tx offload for veth pair
+// 	if err := utils.EthtoolTXOff(ARndmName); err != nil {
+// 		return err
+// 	}
+// 	if err := utils.EthtoolTXOff(BRndmName); err != nil {
+// 		return err
+// 	}
 
-	if err = vA.setVethLink(); err != nil {
-		_ = netlink.LinkDel(vA.Link)
-		return err
-	}
-	if err = vB.setVethLink(); err != nil {
-		_ = netlink.LinkDel(vB.Link)
-	}
-	return err
-}
+// 	if err = vA.setVethLink(); err != nil {
+// 		_ = netlink.LinkDel(vA.Link)
+// 		return err
+// 	}
+// 	if err = vB.setVethLink(); err != nil {
+// 		_ = netlink.LinkDel(vB.Link)
+// 	}
+// 	return err
+// }
 
-// RemoveHostOrBridgeVeth tries to remove veths connected to the host network namespace or a linux bridge
-// and does nothing in case they are not found.
-func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
-	switch {
-	case l.A.Node.Kind == "host" || l.A.Node.Kind == "bridge":
-		link, err := netlink.LinkByName(l.A.EndpointName)
-		if err != nil {
-			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
-			break
-		}
+// // RemoveHostOrBridgeVeth tries to remove veths connected to the host network namespace or a linux bridge
+// // and does nothing in case they are not found.
+// func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
+// 	switch {
+// 	case l.A.Node.Kind == "host" || l.A.Node.Kind == "bridge":
+// 		link, err := netlink.LinkByName(l.A.EndpointName)
+// 		if err != nil {
+// 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
+// 			break
+// 		}
 
-		log.Debugf("Cleaning up virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName,
-			l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
+// 		log.Debugf("Cleaning up virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName,
+// 			l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
-		err = netlink.LinkDel(link)
-		if err != nil {
-			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
-		}
-	case l.B.Node.Kind == "host" || l.B.Node.Kind == "bridge":
-		link, err := netlink.LinkByName(l.B.EndpointName)
-		if err != nil {
-			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
-			break
-		}
+// 		err = netlink.LinkDel(link)
+// 		if err != nil {
+// 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
+// 		}
+// 	case l.B.Node.Kind == "host" || l.B.Node.Kind == "bridge":
+// 		link, err := netlink.LinkByName(l.B.EndpointName)
+// 		if err != nil {
+// 			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
+// 			break
+// 		}
 
-		log.Debugf("Cleaning up virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName,
-			l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
+// 		log.Debugf("Cleaning up virtual wire: %s:%s <--> %s:%s", l.A.Node.ShortName,
+// 			l.A.EndpointName, l.B.Node.ShortName, l.B.EndpointName)
 
-		err = netlink.LinkDel(link)
-		if err != nil {
-			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
-		}
-	}
-	return nil
-}
+// 		err = netlink.LinkDel(link)
+// 		if err != nil {
+// 			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
+// 		}
+// 	}
+// 	return nil
+// }
 
 // createVethIface takes two veth endpoint structs and create a veth pair and return
 // veth interface links.

@@ -1,4 +1,4 @@
-package links
+package types
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -11,7 +11,7 @@ type RawHostLink struct {
 	NodeInterface    string `yaml:"node-interface"`
 }
 
-func (h *RawHostLink) UnRaw(res Resolver) (Link, error) {
+func (h *RawHostLink) UnRaw(res NodeResolver) (Link, error) {
 
 	node, err := res.ResolveNode(h.Node)
 	if err != nil {

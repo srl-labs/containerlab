@@ -1,4 +1,4 @@
-package links
+package types
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ type RawMgmtNetLink struct {
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (m *RawMgmtNetLink) UnRaw(res Resolver) (Link, error) {
+func (m *RawMgmtNetLink) UnRaw(res NodeResolver) (Link, error) {
 	n, err := res.ResolveNode(m.Endpoint.Node)
 	if err != nil {
 		return nil, err
@@ -36,13 +36,14 @@ func (m *RawMgmtNetLink) UnRaw(res Resolver) (Link, error) {
 func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*RawMgmtNetLink, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
-	e :=&
-
 	result := &RawMgmtNetLink{
 		RawLinkTypeAlias: RawLinkTypeAlias{Type: string(LinkTypeMgmtNet), Labels: lc.Labels, Vars: lc.Vars, Instance: nil},
 		HostInterface:    hostIf,
-		Node:             node,
-		NodeInterface:    nodeIf,
+		Endpoint: &EndpointRaw{
+			Node:  node,
+			Iface: nodeIf,
+			Mac:   "",
+		},
 	}
 	return result, nil
 }

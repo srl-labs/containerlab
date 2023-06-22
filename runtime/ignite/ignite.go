@@ -212,8 +212,8 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 	var extraIntfs []string
 	var udevRules []string
 	for _, ep := range node.Endpoints {
-		extraIntfs = append(extraIntfs, ep.EndpointName)
-		udevRules = append(udevRules, fmt.Sprintf(udevRuleTemplate, ep.MAC, ep.EndpointName))
+		extraIntfs = append(extraIntfs, ep.Iface)
+		udevRules = append(udevRules, fmt.Sprintf(udevRuleTemplate, ep.MacAddress.String(), ep.Iface))
 	}
 
 	udevFile, err := os.CreateTemp("/tmp", fmt.Sprintf("%s-udev", vm.Name))

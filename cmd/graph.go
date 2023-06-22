@@ -5,18 +5,9 @@
 package cmd
 
 import (
-	"context"
 	_ "embed"
-	"encoding/json"
-	"html/template"
-	"sort"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 )
 
 const (
@@ -41,84 +32,86 @@ var graphCmd = &cobra.Command{
 }
 
 func graphFn(_ *cobra.Command, _ []string) error {
-	var err error
+	// var err error
 
-	opts := []clab.ClabOption{
-		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile),
-		clab.WithNodeFilter(nodeFilter),
-		clab.WithRuntime(rt,
-			&runtime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: graceful,
-			},
-		),
-		clab.WithDebug(debug),
-	}
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return err
-	}
+	// opts := []clab.ClabOption{
+	// 	clab.WithTimeout(timeout),
+	// 	clab.WithTopoFile(topo, varsFile),
+	// 	clab.WithNodeFilter(nodeFilter),
+	// 	clab.WithRuntime(rt,
+	// 		&runtime.RuntimeConfig{
+	// 			Debug:            debug,
+	// 			Timeout:          timeout,
+	// 			GracefulShutdown: graceful,
+	// 		},
+	// 	),
+	// 	clab.WithDebug(debug),
+	// }
+	// c, err := clab.NewContainerLab(opts...)
+	// if err != nil {
+	// 	return err
+	// }
 
-	if dot {
-		return c.GenerateGraph(topo)
-	}
+	// if dot {
+	// 	return c.GenerateGraph(topo)
+	// }
 
-	gtopo := clab.GraphTopo{
-		Nodes: make([]types.ContainerDetails, 0, len(c.Nodes)),
-		Links: make([]clab.Link, 0, len(c.Links)),
-	}
+	// gtopo := clab.GraphTopo{
+	// 	Nodes: make([]types.ContainerDetails, 0, len(c.Nodes)),
+	// 	Links: make([]clab.Link, 0, len(c.Links)),
+	// }
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
 
-	var containers []runtime.GenericContainer
-	// if offline mode is not enforced, list containers matching lab name
-	if !offline {
-		labels := []*types.GenericFilter{{
-			FilterType: "label", Match: c.Config.Name,
-			Field: labels.Containerlab, Operator: "=",
-		}}
-		containers, err = c.ListContainers(ctx, labels)
-		if err != nil {
-			return err
-		}
+	// var containers []runtime.GenericContainer
+	// // if offline mode is not enforced, list containers matching lab name
+	// if !offline {
+	// 	labels := []*types.GenericFilter{{
+	// 		FilterType: "label", Match: c.Config.Name,
+	// 		Field: labels.Containerlab, Operator: "=",
+	// 	}}
+	// 	containers, err = c.ListContainers(ctx, labels)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		log.Debugf("found %d containers", len(containers))
-	}
+	// 	log.Debugf("found %d containers", len(containers))
+	// }
 
-	switch {
-	case len(containers) == 0:
-		c.BuildGraphFromTopo(&gtopo)
-	case len(containers) > 0:
-		c.BuildGraphFromDeployedLab(&gtopo, containers)
-	}
+	// switch {
+	// case len(containers) == 0:
+	// 	c.BuildGraphFromTopo(&gtopo)
+	// case len(containers) > 0:
+	// 	c.BuildGraphFromDeployedLab(&gtopo, containers)
+	// }
 
-	sort.Slice(gtopo.Nodes, func(i, j int) bool {
-		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
-	})
-	for _, l := range c.Links {
-		gtopo.Links = append(gtopo.Links, clab.Link{
-			Source:         l.A.Node.ShortName,
-			SourceEndpoint: l.A.EndpointName,
-			Target:         l.B.Node.ShortName,
-			TargetEndpoint: l.B.EndpointName,
-		})
-	}
+	// sort.Slice(gtopo.Nodes, func(i, j int) bool {
+	// 	return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
+	// })
+	// for _, l := range c.Links {
+	// 	gtopo.Links = append(gtopo.Links, clab.Link{
+	// 		Source:         l.A.Node.ShortName,
+	// 		SourceEndpoint: l.A.EndpointName,
+	// 		Target:         l.B.Node.ShortName,
+	// 		TargetEndpoint: l.B.EndpointName,
+	// 	})
+	// }
 
-	b, err := json.Marshal(gtopo)
-	if err != nil {
-		return err
-	}
+	// b, err := json.Marshal(gtopo)
+	// if err != nil {
+	// 	return err
+	// }
 
-	log.Debugf("generating graph using data: %s", string(b))
-	topoD := clab.TopoData{
-		Name: c.Config.Name,
-		Data: template.JS(string(b)), // skipcq: GSC-G203
-	}
+	// log.Debugf("generating graph using data: %s", string(b))
+	// topoD := clab.TopoData{
+	// 	Name: c.Config.Name,
+	// 	Data: template.JS(string(b)), // skipcq: GSC-G203
+	// }
 
-	return c.ServeTopoGraph(tmpl, staticDir, srv, topoD)
+	// return c.ServeTopoGraph(tmpl, staticDir, srv, topoD)
+
+	return nil
 }
 
 func init() {

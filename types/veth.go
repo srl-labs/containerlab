@@ -1,4 +1,4 @@
-package links
+package types
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ type RawVEthLink struct {
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
-func (r *RawVEthLink) UnRaw(res Resolver) (Link, error) {
+func (r *RawVEthLink) UnRaw(res NodeResolver) (Link, error) {
 	result := &VEthLink{
 		Endpoints: make([]*Endpoint, len(r.Endpoints)),
 		LinkGenericAttrs: LinkGenericAttrs{
@@ -92,7 +92,7 @@ func (m *VEthLink) Deploy() error {
 	// push interfaces to namespaces and rename to final interface names
 	links := []netlink.Link{linkA, linkB}
 	for idx, endpoint := range m.Endpoints {
-		err := toNS(links[idx], endpoint.Node.Config().NSPath, endpoint.Iface)
+		err := toNS(links[idx], endpoint.Node.GetNamespacePath(), endpoint.Iface)
 		if err != nil {
 			return err
 		}

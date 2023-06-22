@@ -139,8 +139,8 @@ func (s *vrSROS) CheckInterfaceName() error {
 	// https://regex101.com/r/bx6kzM/1
 	ifRe := regexp.MustCompile(`eth([1-9]|[12][0-9]|3[0-2])$`)
 	for _, e := range s.Config().Endpoints {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is from 1 to 32", e.EndpointName)
+		if !ifRe.MatchString(e.Iface) {
+			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is from 1 to 32", e.Iface)
 		}
 	}
 

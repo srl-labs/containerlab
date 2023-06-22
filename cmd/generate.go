@@ -192,10 +192,10 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 		}
 	}
 	for i := 0; i < numStages-1; i++ {
-		interfaceOffset := uint(0)
-		if i > 0 {
-			interfaceOffset = nodes[i-1].numNodes
-		}
+		//interfaceOffset := uint(0)
+		// if i > 0 {
+		// 	interfaceOffset = nodes[i-1].numNodes
+		// }
 		for j := uint(0); j < nodes[i].numNodes; j++ {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
@@ -214,12 +214,12 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 						Type:  nodes[i+1].typ,
 					}
 				}
-				config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
-					Endpoints: []string{
-						node1 + ":" + fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset),
-						node2 + ":" + fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1),
-					},
-				})
+				// config.Topology.Links = append(config.Topology.Links, &types.LinkConfig{
+				// 	Endpoints: []string{
+				// 		node1 + ":" + fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset),
+				// 		node2 + ":" + fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1),
+				// 	},
+				// })
 			}
 		}
 	}

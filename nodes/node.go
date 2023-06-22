@@ -112,8 +112,8 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 func GenericVMInterfaceCheck(nodeName string, eps []types.Endpoint) error {
 	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
 	for _, e := range eps {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >0", nodeName, e.EndpointName)
+		if !ifRe.MatchString(e.Iface) {
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >0", nodeName, e.Iface)
 		}
 	}
 

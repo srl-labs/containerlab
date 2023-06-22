@@ -1,11 +1,15 @@
-package links
+package types
 
 import (
 	"fmt"
-	"github.com/srl-labs/containerlab/nodes"
-	"gopkg.in/yaml.v2"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
+
+type NodeResolver interface {
+	ResolveNode(nodeName string) (LinkNode, error)
+}
 
 type RawLinkType struct {
 	Type     string                 `yaml:"type"`
@@ -56,35 +60,35 @@ func (r *RawLinkType) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		r.Instance = l
+		r.Instance = &l
 	case "mgmt-net":
 		var l RawMgmtNetLink
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.Instance = l
+		r.Instance = &l
 	case "host":
 		var l RawHostLink
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.Instance = l
+		r.Instance = &l
 	case "macvlan":
 		var l RawMacVLanLink
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.Instance = l
+		r.Instance = &l
 	case "macvtap":
 		var l RawMacVTapLink
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.Instance = l
+		r.Instance = &l
 	default:
 		// try to parse the depricate format
 		var l LinkConfig
@@ -136,12 +140,8 @@ type Link interface {
 	GetType() (LinkType, error)
 }
 
-type Resolver interface {
-	ResolveNode(nodeName string) (nodes.Node, error)
-}
-
 type RawLink interface {
-	UnRaw(r Resolver) (Link, error)
+	UnRaw(r NodeResolver) (Link, error)
 }
 
 type LinkGenericAttrs struct {

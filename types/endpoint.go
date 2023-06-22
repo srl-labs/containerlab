@@ -1,10 +1,12 @@
-package links
+package types
 
 import (
 	"net"
-
-	"github.com/srl-labs/containerlab/nodes"
 )
+
+type LinkNode interface {
+	GetNamespacePath() string
+}
 
 type EndpointRaw struct {
 	Node  string `yaml:"node"`
@@ -12,7 +14,7 @@ type EndpointRaw struct {
 	Mac   string `yaml:"mac"`
 }
 
-func (e *EndpointRaw) UnRaw(res Resolver) (*Endpoint, error) {
+func (e *EndpointRaw) UnRaw(res NodeResolver) (*Endpoint, error) {
 	n, err := res.ResolveNode(e.Node)
 	if err != nil {
 		return nil, err
@@ -22,13 +24,13 @@ func (e *EndpointRaw) UnRaw(res Resolver) (*Endpoint, error) {
 }
 
 type Endpoint struct {
-	Node       nodes.Node
+	Node       LinkNode
 	Iface      string
 	MacAddress net.HardwareAddr
 	randName   string
 }
 
-func NewEndpoint(n nodes.Node, Iface string, MacAddress net.HardwareAddr) *Endpoint {
+func NewEndpoint(n LinkNode, Iface string, MacAddress net.HardwareAddr) *Endpoint {
 	return &Endpoint{
 		Node:       n,
 		Iface:      Iface,
