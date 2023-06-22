@@ -2,32 +2,41 @@ package links
 
 import (
 	"fmt"
+	"net"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/nodes"
 )
 
 type RawMgmtNetLink struct {
 	RawLinkTypeAlias `yaml:",inline"`
-	HostInterface    string `yaml:"host-interface"`
-	Node             string `yaml:"node"`
-	NodeInterface    string `yaml:"node-interface"`
+	HostInterface    string       `yaml:"host-interface"`
+	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
 func (m *RawMgmtNetLink) UnRaw(res Resolver) (Link, error) {
+	n, err := res.ResolveNode(m.Endpoint.Node)
+	if err != nil {
+		return nil, err
+	}
+	mac, err := net.ParseMAC(m.Endpoint.Mac)
+	if err != nil {
+		return nil, err
+	}
+	e := NewEndpoint(n, m.Endpoint.Iface, mac)
 	return &MgmtNetLink{
 		LinkGenericAttrs: LinkGenericAttrs{
 			Labels: m.Labels,
 			Vars:   m.Vars,
 		},
-		HostInterface: "",
-		Node:          nil,
-		NodeInterface: "",
+		HostInterface:     m.HostInterface,
+		ContainerEndpoint: e,
 	}, nil
 }
 
 func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*RawMgmtNetLink, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
+
+	e :=&
 
 	result := &RawMgmtNetLink{
 		RawLinkTypeAlias: RawLinkTypeAlias{Type: string(LinkTypeMgmtNet), Labels: lc.Labels, Vars: lc.Vars, Instance: nil},
@@ -40,9 +49,8 @@ func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*RawMgmtNetLink, 
 
 type MgmtNetLink struct {
 	LinkGenericAttrs
-	HostInterface string
-	Node          nodes.Node
-	NodeInterface string
+	HostInterface     string
+	ContainerEndpoint *Endpoint
 }
 
 func (m *MgmtNetLink) Deploy() error {

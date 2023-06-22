@@ -9,6 +9,7 @@ import (
 type EndpointRaw struct {
 	Node  string `yaml:"node"`
 	Iface string `yaml:"interface"`
+	Mac   string `yaml:"mac"`
 }
 
 func (e *EndpointRaw) UnRaw(res Resolver) (*Endpoint, error) {
