@@ -129,7 +129,9 @@ type NodeConfig struct {
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
-	PortBindings nat.PortMap `json:"-"`
+	PortBindings nat.PortMap `json:"portbindings,omitempty"`
+	// ResultingPortBindings is a list of port bindings that are actually applied to the container
+	ResultingPortBindings []*GenericPort `json:"port-bindings,omitempty"`
 	// PortSet define the ports that should be exposed on a container
 	PortSet nat.PortSet `json:"portset,omitempty"`
 	// NetworkMode defines container networking mode.

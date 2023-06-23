@@ -26,7 +26,7 @@
       "mac-address": "{{$c.MacAddress}}",
       "labels": {{ToJSONPretty $c.Labels "      " "  "}},
       "port-bindings": [ 
-        {{- range $pidx, $p := $c.FinalPortBindings}}{{- if gt $pidx 0}},{{end}}
+        {{- range $pidx, $p := $c.ResultingPortBindings}}{{- if gt $pidx 0}},{{end}}
         {
           "host-ip": "{{$p.HostIP}}",
           "host-port": {{$p.HostPort}},

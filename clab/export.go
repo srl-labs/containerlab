@@ -38,18 +38,7 @@ type TopologyExport struct {
 	Name        string                       `json:"name"`
 	Type        string                       `json:"type"`
 	Clab        *CLab                        `json:"clab,omitempty"`
-	NodeConfigs map[string]*TopologyDataNode `json:"nodeconfigs,omitempty"`
-}
-
-type TopologyDataNode struct {
-	*types.NodeConfig `json:",inline"`
-	FinalPortBindings []*types.GenericPort `json:"port-bindings,omitempty"`
-}
-
-func NewTopologyDataNode(nc *types.NodeConfig) *TopologyDataNode {
-	return &TopologyDataNode{
-		NodeConfig: nc,
-	}
+	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
 }
 
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
@@ -76,16 +65,16 @@ func (c *CLab) exportTopologyDataWithTemplate(ctx context.Context, w io.Writer, 
 		Name:        c.Config.Name,
 		Type:        "clab",
 		Clab:        c,
-		NodeConfigs: make(map[string]*TopologyDataNode),
+		NodeConfigs: make(map[string]*types.NodeConfig),
 	}
 
 	for _, n := range c.Nodes {
-		e.NodeConfigs[n.Config().ShortName] = NewTopologyDataNode(n.Config())
+		e.NodeConfigs[n.Config().ShortName] = n.Config()
 		gc, err := n.GetContainers(ctx)
 		if err != nil {
 			return err
 		}
-		e.NodeConfigs[n.Config().ShortName].FinalPortBindings = gc[0].Ports
+		e.NodeConfigs[n.Config().ShortName].ResultingPortBindings = gc[0].Ports
 	}
 
 	err = t.Execute(w, e)
