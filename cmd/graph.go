@@ -25,11 +25,13 @@ const (
 )
 
 var (
-	srv       string
-	tmpl      string
-	offline   bool
-	dot       bool
-	staticDir string
+	srv              string
+	tmpl             string
+	offline          bool
+	dot              bool
+	mermaid          bool
+	mermaidDirection string
+	staticDir        string
 )
 
 // graphCmd represents the graph command.
@@ -62,7 +64,11 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	}
 
 	if dot {
-		return c.GenerateGraph(topo)
+		return c.GenerateDotGraph()
+	}
+
+	if mermaid {
+		return c.GenerateMermaidGraph(mermaidDirection)
 	}
 
 	gtopo := clab.GraphTopo{
@@ -127,7 +133,10 @@ func init() {
 		"HTTP server address serving the topology view")
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false,
 		"use only information from topo file when building graph")
-	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file instead of launching the web server")
+	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file")
+	graphCmd.Flags().BoolVarP(&mermaid, "mermaid", "", false, "print mermaid flowchart to stdout")
+	graphCmd.MarkFlagsMutuallyExclusive("dot", "mermaid")
+	graphCmd.Flags().StringVarP(&mermaidDirection, "mermaid-direction", "", "TD", "specify direction of mermaid dirgram")
 	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultGraphTemplatePath,
 		"Go html template used to generate the graph")
 	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath,
