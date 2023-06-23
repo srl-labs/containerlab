@@ -219,7 +219,7 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 		return err
 	}
 
-	// Process the links inbetween Nodes
+	// Process the links between Nodes
 	for _, link := range c.Links {
 		fc.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName)
 	}
@@ -236,7 +236,7 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	fc.Generate(&w)
 	utils.CreateFile(fname, w.String())
 
-	log.Infof("Created %s", fname)
+	log.Infof("Created mermaid diagram file: %s", fname)
 
 	return nil
 }
