@@ -306,12 +306,12 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 			Labels:          v.Labels,
 			Pid:             v.Pid,
 			NetworkSettings: netSettings,
-			Ports:           []*types.GenericPort{},
+			Ports:           []*types.GenericPortBinding{},
 		}
 
 		// convert the exposed ports the GenericPorts and add them to the GenericContainer
 		for _, p := range cList[i].Ports {
-			genericList[i].Ports = append(genericList[i].Ports, netTypesPortMappingToGenericPort(p)...)
+			genericList[i].Ports = append(genericList[i].Ports, netTypesPortMappingToGenericPortBinding(p)...)
 		}
 
 		genericList[i].SetRuntime(r)
@@ -320,12 +320,12 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 	return genericList, nil
 }
 
-func netTypesPortMappingToGenericPort(pm netTypes.PortMapping) []*types.GenericPort {
+func netTypesPortMappingToGenericPortBinding(pm netTypes.PortMapping) []*types.GenericPortBinding {
 	// convert netTypes.PortMapping to types.GenericPort
 	// resolving the ranges into single port entries
-	result := make([]*types.GenericPort, pm.Range)
+	result := make([]*types.GenericPortBinding, pm.Range)
 	for offset := uint16(0); offset < pm.Range; offset++ {
-		result[offset] = &types.GenericPort{
+		result[offset] = &types.GenericPortBinding{
 			HostIP:        pm.HostIP,
 			HostPort:      int(pm.HostPort),
 			ContainerPort: int(pm.ContainerPort),
