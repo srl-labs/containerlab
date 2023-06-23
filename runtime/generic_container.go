@@ -22,7 +22,7 @@ type GenericContainer struct {
 	NetworkSettings GenericMgmtIPs
 	Mounts          []ContainerMount
 	runtime         ContainerRuntime
-	Ports           []*types.GenericPort
+	Ports           []*types.GenericPortBinding
 }
 
 type ContainerMount struct {

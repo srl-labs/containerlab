@@ -663,7 +663,7 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			NetworkSettings: runtime.GenericMgmtIPs{},
 		}
 
-		ctr.Ports = make([]*types.GenericPort, len(i.Ports))
+		ctr.Ports = make([]*types.GenericPortBinding, len(i.Ports))
 		for x, p := range i.Ports {
 			ctr.Ports[x] = genericPortFromDockerPort(p)
 		}
@@ -724,8 +724,8 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	return result, nil
 }
 
-func genericPortFromDockerPort(p dockerTypes.Port) *types.GenericPort {
-	return &types.GenericPort{
+func genericPortFromDockerPort(p dockerTypes.Port) *types.GenericPortBinding {
+	return &types.GenericPortBinding{
 		HostIP:        p.IP,
 		HostPort:      int(p.PublicPort),
 		ContainerPort: int(p.PrivatePort),
