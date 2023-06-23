@@ -70,11 +70,6 @@ func (c *CLab) exportTopologyDataWithTemplate(ctx context.Context, w io.Writer, 
 
 	for _, n := range c.Nodes {
 		e.NodeConfigs[n.Config().ShortName] = n.Config()
-		gc, err := n.GetContainers(ctx)
-		if err != nil {
-			return err
-		}
-		e.NodeConfigs[n.Config().ShortName].ResultingPortBindings = gc[0].Ports
 	}
 
 	err = t.Execute(w, e)
