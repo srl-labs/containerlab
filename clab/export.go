@@ -19,8 +19,8 @@ import (
 )
 
 // GenerateExports generates various export files and writes it to a lab location.
-func (c *CLab) GenerateExports(f io.Writer, p string) error {
-	err := c.exportTopologyDataWithTemplate(f, p)
+func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error {
+	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
 		log.Warningf("Cannot parse export template %s: %v", p, err)
 		// a minimal topology data file that just provides the name of a lab that failed to generate a proper export data
@@ -42,7 +42,7 @@ type TopologyExport struct {
 }
 
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
-func (c *CLab) exportTopologyDataWithTemplate(w io.Writer, p string) error {
+func (c *CLab) exportTopologyDataWithTemplate(ctx context.Context, w io.Writer, p string) error {
 	n := filepath.Base(p)
 	t, err := template.New(n).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).

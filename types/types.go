@@ -130,6 +130,8 @@ type NodeConfig struct {
 	Binds []string `json:"binds,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
 	PortBindings nat.PortMap `json:"portbindings,omitempty"`
+	// ResultingPortBindings is a list of port bindings that are actually applied to the container
+	ResultingPortBindings []*GenericPortBinding `json:"port-bindings,omitempty"`
 	// PortSet define the ports that should be exposed on a container
 	PortSet nat.PortSet `json:"portset,omitempty"`
 	// NetworkMode defines container networking mode.
@@ -263,16 +265,36 @@ type Extras struct {
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
 type ContainerDetails struct {
-	LabName     string `json:"lab_name,omitempty"`
-	LabPath     string `json:"labPath,omitempty"`
-	Name        string `json:"name,omitempty"`
-	ContainerID string `json:"container_id,omitempty"`
-	Image       string `json:"image,omitempty"`
-	Kind        string `json:"kind,omitempty"`
-	Group       string `json:"group,omitempty"`
-	State       string `json:"state,omitempty"`
-	IPv4Address string `json:"ipv4_address,omitempty"`
-	IPv6Address string `json:"ipv6_address,omitempty"`
+	LabName     string                `json:"lab_name,omitempty"`
+	LabPath     string                `json:"labPath,omitempty"`
+	Name        string                `json:"name,omitempty"`
+	ContainerID string                `json:"container_id,omitempty"`
+	Image       string                `json:"image,omitempty"`
+	Kind        string                `json:"kind,omitempty"`
+	Group       string                `json:"group,omitempty"`
+	State       string                `json:"state,omitempty"`
+	IPv4Address string                `json:"ipv4_address,omitempty"`
+	IPv6Address string                `json:"ipv6_address,omitempty"`
+	Ports       []*GenericPortBinding `json:"ports,omitempty"`
+}
+
+// GenericPortBinding represents a port binding.
+type GenericPortBinding struct {
+	HostIP        string `json:"host_ip,omitempty"`
+	HostPort      int    `json:"host_port,omitempty"`
+	ContainerPort int    `json:"port,omitempty"`
+	Protocol      string `json:"protocol,omitempty"`
+}
+
+func (p *GenericPortBinding) String() string {
+	var result string
+	if strings.Contains(p.HostIP, ":") {
+		result = fmt.Sprintf("[%s]", p.HostIP)
+	} else {
+		result = p.HostIP
+	}
+	result += fmt.Sprintf(":%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
+	return result
 }
 
 type LabData struct {

@@ -662,6 +662,12 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 			Labels:          i.Labels,
 			NetworkSettings: runtime.GenericMgmtIPs{},
 		}
+
+		ctr.Ports = make([]*types.GenericPortBinding, len(i.Ports))
+		for x, p := range i.Ports {
+			ctr.Ports[x] = genericPortFromDockerPort(p)
+		}
+
 		ctr.SetRuntime(d)
 
 		bridgeName := d.mgmt.Network
@@ -716,6 +722,15 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 	}
 
 	return result, nil
+}
+
+func genericPortFromDockerPort(p dockerTypes.Port) *types.GenericPortBinding {
+	return &types.GenericPortBinding{
+		HostIP:        p.IP,
+		HostPort:      int(p.PublicPort),
+		ContainerPort: int(p.PrivatePort),
+		Protocol:      p.Type,
+	}
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.

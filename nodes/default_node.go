@@ -163,8 +163,6 @@ func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 		return fmt.Errorf("no container runtime information retrieved")
 	}
 
-	// TODO: rdodin: evaluate the necessity of this function, since runtime data may be updated by the runtime
-	// when we do listing of containers and produce the GenericContainer
 	// network settings of a first container only
 	netSettings := cnts[0].NetworkSettings
 
@@ -176,6 +174,8 @@ func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 	d.Cfg.MgmtIPv6Gateway = netSettings.IPv6Gw
 
 	d.Cfg.ContainerID = cnts[0].ID
+
+	d.Cfg.ResultingPortBindings = cnts[0].Ports
 
 	return nil
 }

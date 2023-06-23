@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/types"
 )
 
 // GenericContainer stores generic container data.
@@ -21,6 +22,7 @@ type GenericContainer struct {
 	NetworkSettings GenericMgmtIPs
 	Mounts          []ContainerMount
 	runtime         ContainerRuntime
+	Ports           []*types.GenericPortBinding
 }
 
 type ContainerMount struct {

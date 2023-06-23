@@ -24,7 +24,16 @@
       "mgmt-ipv6-address": "{{$c.MgmtIPv6Address}}",
       "mgmt-ipv6-prefix-length": {{$c.MgmtIPv6PrefixLength}},
       "mac-address": "{{$c.MacAddress}}",
-      "labels": {{ToJSONPretty $c.Labels "      " "  "}}
+      "labels": {{ToJSONPretty $c.Labels "      " "  "}},
+      "port-bindings": [ 
+        {{- range $pidx, $p := $c.ResultingPortBindings}}{{- if gt $pidx 0}},{{end}}
+        {
+          "host-ip": "{{$p.HostIP}}",
+          "host-port": {{$p.HostPort}},
+          "port": {{$p.ContainerPort}},
+          "protocol": "{{$p.Protocol}}"
+        }{{- end }}
+      ]
     }{{$i = add $i 1}}{{end}}
   },
   "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
