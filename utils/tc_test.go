@@ -1,28 +1,34 @@
 package utils
 
-import "testing"
+import (
+	"testing"
+)
 
-func Test_pidFromNSPath(t *testing.T) {
+func TestSetDelay(t *testing.T) {
 	type args struct {
-		ns string
+		nsPath string
+		iface  string
+		delay  int64
 	}
 	tests := []struct {
-		name string
-		args args
-		want int
+		name    string
+		args    args
+		wantErr bool
 	}{
 		{
-			name: "Test One",
+			name: "one",
 			args: args{
-				ns: "/proc/6845/ns/net",
+				iface:  "eth1",
+				delay:  500,
+				nsPath: "/proc/220224/ns/net",
 			},
-			want: 6845,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := pidFromNSPath(tt.args.ns); got != tt.want {
-				t.Errorf("pidFromNSPath() = %v, want %v", got, tt.want)
+			if err := SetDelay(tt.args.nsPath, tt.args.iface, tt.args.delay); (err != nil) != tt.wantErr {
+				t.Errorf("SetDelay() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
