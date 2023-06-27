@@ -134,9 +134,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	vCh := getLatestClabVersion(ctx)
 
 	if reconfigure {
-		if err != nil {
-			return err
-		}
 		_ = destroyLab(ctx, c)
 		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
