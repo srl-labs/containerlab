@@ -490,7 +490,7 @@ func TestGetNodeUser(t *testing.T) {
 func TestGetNodeBinds(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
-		binds := item.input.GetNodeBinds("node1")
+		binds, _ := item.input.GetNodeBinds("node1")
 		t.Logf("%q test item result: %v", name, binds)
 		if !cmp.Equal(item.want["node1"].Binds, binds) {
 			t.Errorf("item %q failed", name)
