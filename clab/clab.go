@@ -142,7 +142,7 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 	log.Infof("Applying node filter: %q", nodeFilter)
 
 	// newNodes := make(map[string]*types.NodeDefinition, len(c.Config.Topology.Nodes))
-	newLinks := make([]*types.LinkConfig, 0, len(c.Config.Topology.Links))
+	newLinks := make([]*types.LinkConfig, 0, len(c.Config.Topology.RawLinks))
 
 	// filter nodes
 	for name := range c.Config.Topology.Nodes {
@@ -153,17 +153,17 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 	}
 
 	// filter links
-	for _, l := range c.Config.Topology.Links {
+	for _, l := range c.Config.Topology.RawLinks {
 		// get the endpoints of the link and extract the node names
 		// to remove the links which have either side in the node filter
-		splitEpAside := strings.Split(l.Endpoints[0], ":")
+		splitEpAside := strings.Split(l.Instance.Endpoints[0], ":")
 		if len(splitEpAside) != 2 {
 			continue
 		}
 
 		epA := splitEpAside[0]
 
-		splitEpBside := strings.Split(l.Endpoints[1], ":")
+		splitEpBside := strings.Split(l.Instance.Endpoints[1], ":")
 		if len(splitEpBside) != 2 {
 			continue
 		}
@@ -176,7 +176,7 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 		// if both endpoints of a link belong to the node filter, keep the link
 		if containsAside && containsBside {
 			log.Debugf("Including link %+v", l)
-			newLinks = append(newLinks, l)
+			newLinks = append(newLinks, l.Instance)
 		}
 	}
 	// replace the original collection of links with the links that have both endpoints in the node filter

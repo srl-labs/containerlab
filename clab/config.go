@@ -124,9 +124,9 @@ func (c *CLab) parseTopology() error {
 			return err
 		}
 	}
-	for i, l := range c.Config.Topology.Links {
+	for i, l := range c.Config.Topology.RawLinks {
 		// i represents the endpoint integer and l provide the link struct
-		c.Links[i] = c.NewLink(l)
+		c.Links[i] = c.NewLink(l.Instance)
 	}
 
 	// set any containerlab defaults after we've parsed the input
