@@ -41,6 +41,7 @@ nav:
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
       - Node filtering: manual/node-filtering.md
+      - Link impairment: manual/netem.md
       - Publish ports: manual/published-ports.md
       - Multi-node labs: manual/multi-node.md
       - Certificate management: manual/cert.md

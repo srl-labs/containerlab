@@ -67,6 +67,10 @@ serve-insiders:
 serve-insiders-dirty:
 	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER) serve -a 0.0.0.0:8000 --dirtyreload
 
+# alias to servce-insiders-dirty
+.PHONY: serve-docs
+serve-docs: serve-insiders-dirty
+
 .PHONY: htmltest
 htmltest:
 	docker run --rm -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict

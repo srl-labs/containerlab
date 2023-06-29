@@ -39,3 +39,4 @@ tests/out
 # ignore clab backup topo files in test directories
 clab/test_data/*.bak
 tests/**/*.bak
+**/*.clab.yml.bak
