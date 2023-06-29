@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"golang.org/x/exp/slices"
 )
 
 func boolptr(b bool) *bool {
@@ -489,14 +490,15 @@ func TestGetNodeUser(t *testing.T) {
 
 func TestGetNodeBinds(t *testing.T) {
 	for name, item := range topologyTestSet {
-		t.Logf("%q test item", name)
 		binds, _ := item.input.GetNodeBinds("node1")
 		t.Logf("%q test item result: %v", name, binds)
-		if !cmp.Equal(item.want["node1"].Binds, binds) {
-			t.Errorf("item %q failed", name)
-			t.Errorf("item %q exp %q", name, item.want["node1"].Binds)
-			t.Errorf("item %q got %q", name, binds)
-			t.Fail()
+
+		// sort the slices so we can compare them
+		slices.Sort(binds)
+		slices.Sort(item.want["node1"].Binds)
+
+		if d := cmp.Diff(binds, item.want["node1"].Binds); d != "" {
+			t.Fatalf("Binds resolve failed.\nGot: %q\nWant: %q\nDiff\n%s", binds, item.want["node1"].Binds, d)
 		}
 	}
 }

@@ -67,37 +67,41 @@ func (t *Topology) GetNodeKind(name string) string {
 }
 
 func (t *Topology) GetNodeBinds(name string) ([]string, error) {
-	if ndef, ok := t.Nodes[name]; ok {
-		// return merge product of bind slices
-		binds := map[string]*Bind{}
-
-		// group the default, kind and node binds
-		bindSources := [][]string{t.GetDefaults().GetBinds(), t.GetKind(t.GetNodeKind(name)).GetBinds(), ndef.GetBinds()}
-
-		// add the binds from less to more specific to the binds map, indexed by the destination
-		// thereby more specific binds will overwrite less specific once
-		for _, bs := range bindSources {
-			for _, bind := range bs {
-				// parse the bind into a Bind struct
-				b, err := NewBind(bind)
-				if err != nil {
-					return nil, err
-				}
-				// add to the map
-				binds[b.Dst()] = b
-			}
-		}
-
-		// finally build the result array with all the entries from binds map
-		result := make([]string, len(binds))
-		idx := 0
-		for _, b := range binds {
-			result[idx] = b.String()
-			idx++
-		}
-		return result, nil
+	if _, ok := t.Nodes[name]; !ok {
+		return nil, nil
 	}
-	return nil, nil
+
+	binds := map[string]*Bind{}
+
+	// group the default, kind and node binds
+	bindSources := [][]string{t.GetDefaults().GetBinds(), t.GetKind(t.GetNodeKind(name)).GetBinds(), t.Nodes[name].GetBinds()}
+
+	// add the binds from less to more specific levels, indexed by the destination path.
+	// thereby more specific binds will overwrite less specific one
+	for _, bs := range bindSources {
+		for _, bind := range bs {
+			b, err := NewBind(bind)
+			if err != nil {
+				return nil, err
+			}
+
+			binds[b.Dst()] = b
+		}
+	}
+
+	// in order to return nil instead of empty array when no binds are defined
+	if len(binds) == 0 {
+		return nil, nil
+	}
+
+	// build the result array with all the entries from binds map
+	result := make([]string, 0, len(binds))
+
+	for _, b := range binds {
+		result = append(result, b.String())
+	}
+
+	return result, nil
 }
 
 func (t *Topology) GetNodePorts(name string) (nat.PortSet, nat.PortMap, error) {
