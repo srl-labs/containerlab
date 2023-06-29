@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -178,6 +179,7 @@ func ExpandHome(p string) string {
 
 	userId, isSet := os.LookupEnv("SUDO_UID")
 	if !isSet {
+		log.Debugf("SUDO_UID env var is not set, using current user home dir: %v", curUserHomeDir)
 		p = strings.Replace(p, "~", curUserHomeDir, 1)
 		return p
 	}
@@ -185,12 +187,46 @@ func ExpandHome(p string) string {
 	// lookup user to figure out Home Directory
 	u, err := user.LookupId(userId)
 	if err != nil {
-		return curUserHomeDir
+		log.Debugf("error while looking up user by id using os/user.LookupId %v: %v", userId, err)
+		// user.LookupId fails when ActiveDirectory is used, so we try to use getent command
+		homedir := lookupUserHomeDirViaGetent(userId)
+		if homedir != "" {
+			log.Debugf("user home dir %v found using getent command", homedir)
+			p = strings.Replace(p, "~", homedir, 1)
+			return p
+		}
+		// fallback to current user home dir if getent command fails
+		p = strings.Replace(p, "~", curUserHomeDir, 1)
+		return p
 	}
 
 	p = strings.Replace(p, "~", u.HomeDir, 1)
 
+	log.Debugf("user home dir %v found using os/user.LookupId", u.HomeDir)
+
 	return p
+}
+
+// lookupUserHomeDirViaGetent looks up user's homedir by using `getent passwd` command.
+// It is used as a fallback when os/user.LookupId fails, which seems to
+// happen when ActiveDirectory is used.
+func lookupUserHomeDirViaGetent(userId string) string {
+	cmd := exec.Command("getent", "passwd", userId)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Debugf("error while looking up user by id using getent command %v: %v", userId, err)
+		return ""
+	}
+
+	// output format is `username:x:uid:gid:comment:home:shell`
+	// we need to extract home dir
+	parts := strings.Split(string(out), ":")
+	if len(parts) < 6 {
+		log.Debugf("error while looking up user by id using getent command %v: unexpected output format", userId)
+		return ""
+	}
+
+	return parts[5]
 }
 
 // ResolvePath resolves a string path by expanding `~` to home dir
