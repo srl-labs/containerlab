@@ -161,10 +161,13 @@ var topologyTestSet = map[string]struct {
 	"node_kind_default": {
 		input: &Topology{
 			Defaults: &NodeDefinition{
-				Kind:  "srl",
-				User:  "user1",
-				CPU:   1,
-				Binds: []string{"x:z"},
+				Kind: "srl",
+				User: "user1",
+				CPU:  1,
+				Binds: []string{
+					"x:z",
+					"m:n", // overriden by node
+				},
 			},
 			Kinds: map[string]*NodeDefinition{
 				"srl": {
@@ -205,7 +208,10 @@ var topologyTestSet = map[string]struct {
 			},
 			Nodes: map[string]*NodeDefinition{
 				"node1": {
-					Binds: []string{"e:f"},
+					Binds: []string{
+						"e:f",
+						"newm:n",
+					},
 				},
 			},
 		},
@@ -229,6 +235,7 @@ var topologyTestSet = map[string]struct {
 					"a:b",
 					"c:d",
 					"x:z",
+					"newm:n",
 				},
 				Ports: []string{
 					"80:8080",
@@ -489,9 +496,8 @@ func TestGetNodeUser(t *testing.T) {
 }
 
 func TestGetNodeBinds(t *testing.T) {
-	for name, item := range topologyTestSet {
+	for _, item := range topologyTestSet {
 		binds, _ := item.input.GetNodeBinds("node1")
-		t.Logf("%q test item result: %v", name, binds)
 
 		// sort the slices so we can compare them
 		slices.Sort(binds)
