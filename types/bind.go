@@ -48,5 +48,10 @@ func (b *Bind) Mode() string {
 
 // String returns the bind mount as a string.
 func (b *Bind) String() string {
-	return fmt.Sprintf("%s:%s:%s", b.src, b.dst, b.mode)
+	s := fmt.Sprintf("%s:%s", b.src, b.dst)
+	if b.mode != "" {
+		s += fmt.Sprintf(":%s", b.mode)
+	}
+
+	return s
 }
