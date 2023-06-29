@@ -192,7 +192,8 @@ func ExpandHome(p string) string {
 		homedir := lookupUserHomeDirViaGetent(userId)
 		if homedir != "" {
 			log.Debugf("user home dir %v found using getent command", homedir)
-			return homedir
+			p = strings.Replace(p, "~", homedir, 1)
+			return p
 		}
 		// fallback to current user home dir if getent command fails
 		p = strings.Replace(p, "~", curUserHomeDir, 1)
