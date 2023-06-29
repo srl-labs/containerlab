@@ -4,9 +4,8 @@ import "fmt"
 
 type RawHostLink struct {
 	LinkCommonParams `yaml:",inline"`
-	HostInterface    string `yaml:"host-interface"`
-	Node             string `yaml:"node"`
-	NodeInterface    string `yaml:"node-interface"`
+	HostInterface    string       `yaml:"host-interface"`
+	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
 func (r *RawHostLink) ToLinkConfig() *LinkConfig {
@@ -17,7 +16,7 @@ func (r *RawHostLink) ToLinkConfig() *LinkConfig {
 		Endpoints: make([]string, 2),
 	}
 
-	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Node, r.NodeInterface)
+	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Endpoint.Node, r.Endpoint.Iface)
 	lc.Endpoints[1] = fmt.Sprintf("%s:%s", "host", r.HostInterface)
 
 	return lc

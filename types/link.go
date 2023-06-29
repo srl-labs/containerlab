@@ -29,7 +29,7 @@ const (
 	LinkTypeMacVTap LinkDefinitionType = "macvtap"
 	LinkTypeHost    LinkDefinitionType = "host"
 
-	LinkTypeDeprecate LinkDefinitionType = "DEPRECATE"
+	LinkTypeDeprecate LinkDefinitionType = "deprecate"
 )
 
 type RawLinkTypeAlias RawLinkType
@@ -44,6 +44,8 @@ func ParseLinkType(s string) (LinkDefinitionType, error) {
 		return LinkTypeVEth, nil
 	case string(LinkTypeMgmtNet):
 		return LinkTypeMgmtNet, nil
+	case string(LinkTypeHost):
+		return LinkTypeHost, nil
 	case string(LinkTypeDeprecate):
 		return LinkTypeDeprecate, nil
 	default:
@@ -115,7 +117,7 @@ func (r *RawLinkType) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		r.Type = "DEPRECATE"
+		r.Type = string(LinkTypeDeprecate)
 		r.Instance, err = deprecateLinkConversion(&l)
 		if err != nil {
 			return err

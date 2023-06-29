@@ -14,7 +14,7 @@ func (r *RawMacVTapLink) ToLinkConfig() *LinkConfig {
 		Endpoints: make([]string, 2),
 	}
 
-	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Node, r.NodeInterface)
+	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Endpoint.Node, r.Endpoint.Iface)
 	lc.Endpoints[1] = fmt.Sprintf("%s:%s", "macvtap", r.HostInterface)
 
 	return lc

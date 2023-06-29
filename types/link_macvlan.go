@@ -14,7 +14,7 @@ func (r *RawMacVLanLink) ToLinkConfig() *LinkConfig {
 		Endpoints: make([]string, 2),
 	}
 
-	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Node, r.NodeInterface)
+	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Endpoint.Node, r.Endpoint.Iface)
 	lc.Endpoints[1] = fmt.Sprintf("%s:%s", "macvlan", r.HostInterface)
 
 	return lc
