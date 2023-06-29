@@ -66,7 +66,7 @@ func (r *RawLinkType) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// This section we don't want strict, so if error is not nil but the error type is
 	// yaml.TypeError, we will continue
 	var e *yaml.TypeError
-	if err != nil && errors.As(err, &e) {
+	if err != nil && !errors.As(err, &e) {
 		return err
 	}
 
