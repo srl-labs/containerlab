@@ -257,6 +257,8 @@ topology:
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
+When a bind with the same destination is defined on multiple levels, the lowest level takes precedence. This allows to override the binds defined on the higher levels.
+
 ### ports
 
 To bind the ports between the lab host and the containers the users can populate the `ports` object inside the node:
