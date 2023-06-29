@@ -323,39 +323,3 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 	// default to IfNotPresent
 	return PullPolicyIfNotPresent
 }
-
-type Bind struct {
-	src   string
-	dst   string
-	rwmod string
-}
-
-func NewBind(bind string) (*Bind, error) {
-	result := &Bind{}
-	split := strings.Split(bind, ":")
-	if len(split) < 2 || len(split) > 3 {
-		return nil, fmt.Errorf("unable to parse bind %q", bind)
-	}
-	result.src = split[0]
-	result.dst = split[1]
-	if len(split) == 3 {
-		result.rwmod = split[2]
-	}
-	return result, nil
-}
-
-func (b *Bind) GetSrc() string {
-	return b.src
-}
-
-func (b *Bind) GetDst() string {
-	return b.dst
-}
-
-func (b *Bind) GetRWMode() string {
-	return b.rwmod
-}
-
-func (b *Bind) String() string {
-	return fmt.Sprintf("%s:%s:%s", b.src, b.dst, b.rwmod)
-}

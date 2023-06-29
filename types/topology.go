@@ -84,7 +84,7 @@ func (t *Topology) GetNodeBinds(name string) ([]string, error) {
 					return nil, err
 				}
 				// add to the map
-				binds[b.GetDst()] = b
+				binds[b.Dst()] = b
 			}
 		}
 
