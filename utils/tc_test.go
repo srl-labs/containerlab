@@ -50,6 +50,30 @@ func TestSetDelayJitterLoss(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "loss > 100",
+			args: args{
+				link: &netlink.Dummy{
+					LinkAttrs: netlink.LinkAttrs{
+						Name: "dummy",
+					},
+				},
+				loss: 101.0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "loss < 0",
+			args: args{
+				link: &netlink.Dummy{
+					LinkAttrs: netlink.LinkAttrs{
+						Name: "dummy",
+					},
+				},
+				loss: -1.0,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
