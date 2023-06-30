@@ -971,7 +971,7 @@ func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) runt
 func (d *DockerRuntime) getContainerPid(ctx context.Context, cID string) (int, error) {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
-		return 0, fmt.Errorf("container %q cannot be found")
+		return 0, fmt.Errorf("container %q cannot be found", cID)
 	}
 	return inspect.State.Pid, nil
 }
