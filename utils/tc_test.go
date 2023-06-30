@@ -1,44 +1,62 @@
 package utils
 
-// import (
-// 	"testing"
-// 	"time"
-// )
+import (
+	"testing"
+	"time"
 
-// func TestSetDelay(t *testing.T) {
-// 	type args struct {
-// 		pid int
-// 		iface  string
-// 		delay  int // in ms
-// 		jitter int // in ms
-// 		loss   uint
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name: "one",
-// 			args: args{
-// 				iface:  "eth1",
-// 				delay:  100,
-// 				jitter: 50,
-// 				loss:   5,
-// 				pid: 302801,
-// 			},
-// 			wantErr: false,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
+	"github.com/vishvananda/netlink"
+)
 
-// 			latency := time.Millisecond * time.Duration(tt.args.delay)
-// 			jitter := time.Millisecond * time.Duration(tt.args.jitter)
+func TestSetDelayJitterLoss(t *testing.T) {
+	type args struct {
+		nsFd   int
+		link   netlink.Link
+		delay  time.Duration
+		jitter time.Duration
+		loss   uint
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "no link given",
+			args: args{
+				link: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "parameters uninitialized", // will only raise log warning
+			args: args{
+				link: &netlink.Dummy{
+					LinkAttrs: netlink.LinkAttrs{
+						Name: "dummy",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "jitter without delay set",
+			args: args{
+				link: &netlink.Dummy{
+					LinkAttrs: netlink.LinkAttrs{
+						Name: "dummy",
+					},
+				},
+				jitter: time.Millisecond * 2,
+			},
+			wantErr: true,
+		},
+	}
 
-// 			if err := SetDelayJitterLoss(tt.args.pid, tt.args.iface, &latency, &jitter, &tt.args.loss); (err != nil) != tt.wantErr {
-// 				t.Errorf("SetDelay() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := SetDelayJitterLoss(tt.args.nsFd, tt.args.link, tt.args.delay, tt.args.jitter, tt.args.loss); (err != nil) != tt.wantErr {
+				t.Errorf("SetDelayJitterLoss() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
