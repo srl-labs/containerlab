@@ -69,6 +69,8 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 			return err
 		}
 
+		c.globalRuntime = name
+
 		r := rInit()
 		log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
 		err = r.Init(
