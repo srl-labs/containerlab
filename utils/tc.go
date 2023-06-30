@@ -8,7 +8,6 @@ import (
 
 	"github.com/florianl/go-tc"
 	"github.com/florianl/go-tc/core"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -33,7 +32,7 @@ func SetDelayJitterLoss(nodeName string, nsFd int, link netlink.Link, delay, jit
 	}
 	// if delay and loss are nil, we have nothing to do
 	if delay == 0 && loss == 0 && rate == 0 {
-		logrus.Warn("non of the netem parameters (delay, jitter, loss, rate) was set")
+		log.Warn("non of the netem parameters (delay, jitter, loss, rate) was set")
 		return nil
 	}
 
