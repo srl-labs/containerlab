@@ -3,41 +3,39 @@ package utils
 import (
 	"fmt"
 	"math"
-	"regexp"
-	"strconv"
-	"syscall"
 	"time"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/florianl/go-tc"
 	"github.com/florianl/go-tc/core"
+	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
 
-func SetDelayJitterLoss(pid int, link netlink.Link, delay, jitter *time.Duration, loss *uint) error {
+func SetDelayJitterLoss(nsFd int, link netlink.Link, delay, jitter time.Duration, loss uint) error {
 
-	// check input is valid
-	if loss != nil && *loss > 100 {
+	if link == nil {
+		return fmt.Errorf("no link provided")
+	}
+
+	// // check input is valid
+	// loss betwenn 0 and 100
+	if loss != 0 && loss > 100 {
 		return fmt.Errorf("loss must be >= 0 and <= 100")
 	}
-	if jitter != nil && delay == nil {
+	// jitter must not be set without delay
+	if jitter != 0 && delay == 0 {
 		return fmt.Errorf("cannot set jitter without delay")
 	}
-
-	if delay == nil && loss != nil {
-		return fmt.Errorf("no parameters given")
-	}
-
-	// get the filedescriptor for the pid
-	pidfd, err := pidfdOpen(pid, 0)
-	if err != nil {
-		return err
+	// if delay and loss are nil, we have nothing to do
+	if delay == 0 && loss == 0 {
+		logrus.Warn("non of the netem parameters (delay, jitter, loss) was set")
+		return nil
 	}
 
 	// open tc session
 	tcnl, err := tc.Open(&tc.Config{
-		NetNS: int(pidfd),
+		NetNS: nsFd,
 	})
 	if err != nil {
 		return err
@@ -58,18 +56,18 @@ func SetDelayJitterLoss(pid int, link netlink.Link, delay, jitter *time.Duration
 	}
 
 	// if loss is set, propagate to qdisc
-	if loss != nil {
+	if loss != 0 {
 		qdisc.Attribute.Netem.Qopt = tc.NetemQopt{
-			Loss: uint32(math.Round(math.MaxUint32 * (float64(*loss) / float64(100)))),
+			Loss: uint32(math.Round(math.MaxUint32 * (float64(loss) / float64(100)))),
 		}
 	}
 	// if latency is set propagate to qdisc
-	if delay != nil {
-		lat64 := (*delay * time.Millisecond).Milliseconds()
+	if delay != 0 {
+		lat64 := (delay * time.Millisecond).Milliseconds()
 		qdisc.Attribute.Netem.Latency64 = &lat64
 		// if jitter is set propagate to qdisc
-		if jitter != nil {
-			jit64 := (*jitter * time.Millisecond).Milliseconds()
+		if jitter != 0 {
+			jit64 := (jitter * time.Millisecond).Milliseconds()
 			qdisc.Attribute.Netem.Jitter64 = &jit64
 		}
 	}
@@ -81,44 +79,4 @@ func SetDelayJitterLoss(pid int, link netlink.Link, delay, jitter *time.Duration
 	}
 
 	return nil
-}
-
-// PidFromNSPath extratcts the pid from the NSPath string
-func PidFromNSPath(ns string) (int, error) {
-	re := regexp.MustCompile(`.*/(?P<pid>\d+)/ns/net$`)
-	matches := re.FindStringSubmatch(ns)
-	if len(matches) == 0 {
-		return -1, fmt.Errorf("unable to extract pid from provided NSPath %q", ns)
-	}
-	return strconv.Atoi(matches[1])
-
-}
-
-func GetNamespaceInterface(nsPath string, iface string) (netlink.Link, error) {
-	netNamespace, err := ns.GetNS(nsPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var link netlink.Link
-	err = netNamespace.Do(func(_ ns.NetNS) error {
-		link, err = netlink.LinkByName(iface)
-		if err != nil {
-			return fmt.Errorf("failed to resolve link: %v", err)
-		}
-		return nil
-	})
-
-	return link, nil
-}
-
-type pidFD int // file descriptor that refers to a process
-const syscallPidfdOpen = 434
-
-func pidfdOpen(pid int, flags uint) (pidFD, error) {
-	fd, _, errno := syscall.Syscall(syscallPidfdOpen, uintptr(pid), uintptr(flags), 0)
-	if errno != 0 {
-		return 0, errno
-	}
-	return pidFD(fd), nil
 }

@@ -6,9 +6,9 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
@@ -20,8 +20,8 @@ import (
 var (
 	NetemNode      string
 	NetemInterface string
-	NetemDelay     int
-	NetemJitter    int
+	NetemDelay     string
+	NetemJitter    string
 	NetemLoss      uint
 )
 
@@ -30,9 +30,11 @@ func init() {
 	netemCmd.AddCommand(netemSetCmd)
 	netemSetCmd.Flags().StringVarP(&NetemNode, "node", "", "", "node to apply qdisc to")
 	netemSetCmd.Flags().StringVarP(&NetemInterface, "interface", "", "", "interface to apply qdsic to")
-	netemSetCmd.Flags().IntVarP(&NetemDelay, "delay", "", 0, "link receive delay")
-	netemSetCmd.Flags().IntVarP(&NetemJitter, "jitter", "", 0, "link receive jitter")
+	netemSetCmd.Flags().StringVarP(&NetemDelay, "delay", "", "0ms", "link receive delay")
+	netemSetCmd.Flags().StringVarP(&NetemJitter, "jitter", "", "0ms", "link receive jitter")
 	netemSetCmd.Flags().UintVarP(&NetemLoss, "loss", "", 0, "link receive loss")
+	netemSetCmd.MarkFlagRequired("node")
+	netemSetCmd.MarkFlagRequired("interface")
 }
 
 var netemCmd = &cobra.Command{
@@ -45,24 +47,33 @@ var netemSetCmd = &cobra.Command{
 	Short: "set operation",
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		if NetemNode == "" {
-			return fmt.Errorf("define a node to work on via --node")
+		// Parse Delay and Jitter to become Durations
+		delayDur, err := time.ParseDuration(NetemDelay)
+		if err != nil {
+			return err
+		}
+		jitterDur, err := time.ParseDuration(NetemJitter)
+		if err != nil {
+			return err
 		}
 
-		var err error
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithRuntime(rt,
+		// Get the runtime initializer.
+		_, rinit, err := clab.GetRuntimeInitializer(rt)
+		if err != nil {
+			return err
+		}
+
+		// init the runtime
+		rt := rinit()
+
+		// init runtime with timeout
+		err = rt.Init(
+			runtime.WithConfig(
 				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
+					Timeout: timeout,
 				},
 			),
-			clab.WithDebug(debug),
-			clab.WithTopoFile(topo, varsFile),
-		}
-		c, err := clab.NewContainerLab(opts...)
+		)
 		if err != nil {
 			return err
 		}
@@ -70,20 +81,14 @@ var netemSetCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		cnts, err := c.Nodes[NetemNode].GetContainers(ctx)
+		// retrieve the containers NSPath
+		nodeNsPath, err := rt.GetNSPath(ctx, NetemNode)
 		if err != nil {
 			return err
 		}
-		if len(cnts) > 1 {
-			return fmt.Errorf("retrieved found more then one container for %q unable to apply netem qdisc", NetemNode)
-		}
-		cnt := cnts[0]
-
-		delay := time.Duration(NetemDelay) * time.Millisecond
-		jitter := time.Duration(NetemJitter) * time.Millisecond
 
 		// get namespace handle
-		nshandle, err := netns.GetFromPid(cnt.Pid)
+		nshandle, err := netns.GetFromPath(nodeNsPath)
 		if err != nil {
 			return err
 		}
@@ -99,10 +104,13 @@ var netemSetCmd = &cobra.Command{
 		}
 
 		// finally set the netem parameters
-		err = utils.SetDelayJitterLoss(cnt.Pid, nlLink, &delay, &jitter, &NetemLoss)
+		nsFd := int(nshandle)
+		err = utils.SetDelayJitterLoss(nsFd, nlLink, delayDur, jitterDur, NetemLoss)
 		if err != nil {
 			return err
 		}
+
+		log.Infof("Success: Node %q Interface %q - Delay: %s, Jitter: %s, Loss: %d%%", NetemNode, NetemInterface, delayDur.String(), jitterDur.String(), NetemLoss)
 
 		return nil
 	},

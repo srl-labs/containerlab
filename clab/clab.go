@@ -64,36 +64,43 @@ func WithDebug(debug bool) ClabOption {
 
 func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 	return func(c *CLab) error {
-		// define runtime name.
-		// order of preference: cli flag -> env var -> default value of docker
-		envN := os.Getenv("CLAB_RUNTIME")
-		log.Debugf("env runtime var value is %v", envN)
-		switch {
-		case name != "":
-		case envN != "":
-			name = envN
-		default:
-			name = docker.RuntimeName
+		name, rInit, err := GetRuntimeInitializer(name)
+		if err != nil {
+			return err
 		}
-		c.globalRuntime = name
 
-		if rInit, ok := runtime.ContainerRuntimes[name]; ok {
-			r := rInit()
-			log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
-			err := r.Init(
-				runtime.WithConfig(rtconfig),
-				runtime.WithMgmtNet(c.Config.Mgmt),
-			)
-			if err != nil {
-				return fmt.Errorf("failed to init the container runtime: %v", err)
-			}
-
-			c.Runtimes[name] = r
-			log.Debugf("initialized a runtime with params %+v", r)
-			return nil
+		r := rInit()
+		log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
+		err = r.Init(
+			runtime.WithConfig(rtconfig),
+			runtime.WithMgmtNet(c.Config.Mgmt),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to init the container runtime: %v", err)
 		}
-		return fmt.Errorf("unknown container runtime %q", name)
+
+		c.Runtimes[name] = r
+		log.Debugf("initialized a runtime with params %+v", r)
+		return nil
 	}
+}
+
+func GetRuntimeInitializer(name string) (string, runtime.Initializer, error) {
+	// define runtime name.
+	// order of preference: cli flag -> env var -> default value of docker
+	envN := os.Getenv("CLAB_RUNTIME")
+	log.Debugf("env runtime var value is %v", envN)
+	switch {
+	case name != "":
+	case envN != "":
+		name = envN
+	default:
+		name = docker.RuntimeName
+	}
+	if rInit, ok := runtime.ContainerRuntimes[name]; ok {
+		return name, rInit, nil
+	}
+	return name, nil, fmt.Errorf("unknown container runtime %q", name)
 }
 
 func WithKeepMgmtNet() ClabOption {
