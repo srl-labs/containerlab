@@ -9,11 +9,13 @@ import (
 
 func TestSetDelayJitterLoss(t *testing.T) {
 	type args struct {
-		nsFd   int
-		link   netlink.Link
-		delay  time.Duration
-		jitter time.Duration
-		loss   float64
+		nodeName string
+		nsFd     int
+		link     netlink.Link
+		delay    time.Duration
+		jitter   time.Duration
+		loss     float64
+		rate     uint64
 	}
 	tests := []struct {
 		name    string
@@ -78,7 +80,7 @@ func TestSetDelayJitterLoss(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := SetDelayJitterLoss(tt.args.nsFd, tt.args.link, tt.args.delay, tt.args.jitter, tt.args.loss); (err != nil) != tt.wantErr {
+			if err := SetDelayJitterLoss(tt.args.nodeName, tt.args.nsFd, tt.args.link, tt.args.delay, tt.args.jitter, tt.args.loss, tt.args.rate); (err != nil) != tt.wantErr {
 				t.Errorf("SetDelayJitterLoss() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

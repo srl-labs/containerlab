@@ -23,6 +23,7 @@ var (
 	NetemDelay     string
 	NetemJitter    string
 	NetemLoss      float64
+	NetemRate      uint64
 )
 
 func init() {
@@ -32,7 +33,8 @@ func init() {
 	netemSetCmd.Flags().StringVarP(&NetemInterface, "interface", "", "", "interface to apply qdsic to")
 	netemSetCmd.Flags().StringVarP(&NetemDelay, "delay", "", "0ms", "link receive delay")
 	netemSetCmd.Flags().StringVarP(&NetemJitter, "jitter", "", "0ms", "link receive jitter")
-	netemSetCmd.Flags().Float64VarP(&NetemLoss, "loss", "", 0, "link receive loss")
+	netemSetCmd.Flags().Float64VarP(&NetemLoss, "loss", "", 0, "link receive loss (0 >= rate => 100)")
+	netemSetCmd.Flags().Uint64VarP(&NetemRate, "rate", "", 0, "link receive rate in kbit")
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
 }
@@ -105,13 +107,11 @@ var netemSetCmd = &cobra.Command{
 
 		// finally set the netem parameters
 		nsFd := int(nshandle)
-		err = utils.SetDelayJitterLoss(nsFd, nlLink, delayDur, jitterDur, NetemLoss)
+		err = utils.SetDelayJitterLoss(NetemNode, nsFd, nlLink, delayDur, jitterDur, NetemLoss, NetemRate)
 		if err != nil {
 			return err
 		}
-
-		log.Infof("Success: Node %q Interface %q - Delay: %s, Jitter: %s, Loss: %.3f%%", NetemNode, NetemInterface, delayDur.String(), jitterDur.String(), NetemLoss)
-
+		log.Info("Successfull")
 		return nil
 	},
 }
