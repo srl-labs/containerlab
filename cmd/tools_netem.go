@@ -22,7 +22,7 @@ var (
 	NetemInterface string
 	NetemDelay     string
 	NetemJitter    string
-	NetemLoss      uint
+	NetemLoss      float64
 )
 
 func init() {
@@ -32,7 +32,7 @@ func init() {
 	netemSetCmd.Flags().StringVarP(&NetemInterface, "interface", "", "", "interface to apply qdsic to")
 	netemSetCmd.Flags().StringVarP(&NetemDelay, "delay", "", "0ms", "link receive delay")
 	netemSetCmd.Flags().StringVarP(&NetemJitter, "jitter", "", "0ms", "link receive jitter")
-	netemSetCmd.Flags().UintVarP(&NetemLoss, "loss", "", 0, "link receive loss")
+	netemSetCmd.Flags().Float64VarP(&NetemLoss, "loss", "", 0, "link receive loss")
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
 }
@@ -110,7 +110,7 @@ var netemSetCmd = &cobra.Command{
 			return err
 		}
 
-		log.Infof("Success: Node %q Interface %q - Delay: %s, Jitter: %s, Loss: %d%%", NetemNode, NetemInterface, delayDur.String(), jitterDur.String(), NetemLoss)
+		log.Infof("Success: Node %q Interface %q - Delay: %s, Jitter: %s, Loss: %.3f%%", NetemNode, NetemInterface, delayDur.String(), jitterDur.String(), NetemLoss)
 
 		return nil
 	},

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func SetDelayJitterLoss(nsFd int, link netlink.Link, delay, jitter time.Duration, loss uint) error {
+func SetDelayJitterLoss(nsFd int, link netlink.Link, delay, jitter time.Duration, loss float64) error {
 
 	if link == nil {
 		return fmt.Errorf("no link provided")
@@ -58,7 +58,7 @@ func SetDelayJitterLoss(nsFd int, link netlink.Link, delay, jitter time.Duration
 	// if loss is set, propagate to qdisc
 	if loss != 0 {
 		qdisc.Attribute.Netem.Qopt = tc.NetemQopt{
-			Loss: uint32(math.Round(math.MaxUint32 * (float64(loss) / float64(100)))),
+			Loss: uint32(math.Round(math.MaxUint32 * (loss / float64(100)))),
 		}
 	}
 	// if latency is set propagate to qdisc

@@ -13,7 +13,7 @@ func TestSetDelayJitterLoss(t *testing.T) {
 		link   netlink.Link
 		delay  time.Duration
 		jitter time.Duration
-		loss   uint
+		loss   float64
 	}
 	tests := []struct {
 		name    string
