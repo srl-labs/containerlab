@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/florianl/go-tc"
@@ -14,22 +15,27 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func SetDelay(nsPath string, iface string, delay int64) error {
-	link, err := GetNamespaceInterface(nsPath, iface)
-	if err != nil {
-		return err
+func SetDelayJitterLoss(pid int, link netlink.Link, delay, jitter *time.Duration, loss *uint) error {
+
+	// check input is valid
+	if loss != nil && *loss > 100 {
+		return fmt.Errorf("loss must be >= 0 and <= 100")
+	}
+	if jitter != nil && delay == nil {
+		return fmt.Errorf("cannot set jitter without delay")
 	}
 
-	pid, err := PidFromNSPath(nsPath)
-	if err != nil {
-		return err
+	if delay == nil && loss != nil {
+		return fmt.Errorf("no parameters given")
 	}
 
+	// get the filedescriptor for the pid
 	pidfd, err := pidfdOpen(pid, 0)
 	if err != nil {
 		return err
 	}
 
+	// open tc session
 	tcnl, err := tc.Open(&tc.Config{
 		NetNS: int(pidfd),
 	})
@@ -46,67 +52,29 @@ func SetDelay(nsPath string, iface string, delay int64) error {
 			Info:    0,
 		},
 		Attribute: tc.Attribute{
-			Kind: "netem",
-			Netem: &tc.Netem{
-				Latency64: &delay,
-			},
+			Kind:  "netem",
+			Netem: &tc.Netem{},
 		},
 	}
 
-	err = tcnl.Qdisc().Replace(&qdisc)
-	if err != nil {
-		return err
+	// if loss is set, propagate to qdisc
+	if loss != nil {
+		qdisc.Attribute.Netem.Qopt = tc.NetemQopt{
+			Loss: uint32(math.Round(math.MaxUint32 * (float64(*loss) / float64(100)))),
+		}
+	}
+	// if latency is set propagate to qdisc
+	if delay != nil {
+		lat64 := (*delay * time.Millisecond).Milliseconds()
+		qdisc.Attribute.Netem.Latency64 = &lat64
+		// if jitter is set propagate to qdisc
+		if jitter != nil {
+			jit64 := (*jitter * time.Millisecond).Milliseconds()
+			qdisc.Attribute.Netem.Jitter64 = &jit64
+		}
 	}
 
-	return nil
-}
-
-func SetJitter(nsPath string, iface string, jitter int64) error {
-	link, err := GetNamespaceInterface(nsPath, iface)
-	if err != nil {
-		return err
-	}
-
-	pid, err := PidFromNSPath(nsPath)
-	if err != nil {
-		return err
-	}
-
-	pidfd, err := pidfdOpen(pid, 0)
-	if err != nil {
-		return err
-	}
-
-	tcnl, err := tc.Open(&tc.Config{
-		NetNS: int(pidfd),
-	})
-	if err != nil {
-		return err
-	}
-
-	lat := int64(640000000)
-	jit := int64(320000000)
-
-	qdisc := tc.Object{
-		Msg: tc.Msg{
-			Family:  unix.AF_UNSPEC,
-			Ifindex: uint32(link.Attrs().Index),
-			Handle:  core.BuildHandle(0xFFFF, 0x0000),
-			Parent:  0xFFFFFFF1,
-			Info:    0,
-		},
-		Attribute: tc.Attribute{
-			Kind: "netem",
-			Netem: &tc.Netem{
-				Latency64: &lat,
-				Jitter64:  &jit,
-				Qopt: tc.NetemQopt{
-					Loss: uint32(math.Round(math.MaxUint32 * 0.5)),
-				},
-			},
-		},
-	}
-
+	// replace the tc qdisc
 	err = tcnl.Qdisc().Replace(&qdisc)
 	if err != nil {
 		return err
