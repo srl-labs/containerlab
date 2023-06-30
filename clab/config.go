@@ -244,7 +244,10 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg.License = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	// initialize bind mounts
-	binds := c.Config.Topology.GetNodeBinds(nodeName)
+	binds, err := c.Config.Topology.GetNodeBinds(nodeName)
+	if err != nil {
+		return nil, err
+	}
 	err = c.resolveBindPaths(binds, nodeCfg.LabDir)
 	if err != nil {
 		return nil, err

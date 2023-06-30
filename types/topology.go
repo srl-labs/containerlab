@@ -66,16 +66,42 @@ func (t *Topology) GetNodeKind(name string) string {
 	return ""
 }
 
-func (t *Topology) GetNodeBinds(name string) []string {
-	if ndef, ok := t.Nodes[name]; ok {
-		// return merge product of bind slices
-		return utils.MergeStringSlices(
-			ndef.GetBinds(),
-			t.GetKind(t.GetNodeKind(name)).GetBinds(),
-			t.GetDefaults().GetBinds(),
-		)
+func (t *Topology) GetNodeBinds(name string) ([]string, error) {
+	if _, ok := t.Nodes[name]; !ok {
+		return nil, nil
 	}
-	return nil
+
+	binds := map[string]*Bind{}
+
+	// group the default, kind and node binds
+	bindSources := [][]string{t.GetDefaults().GetBinds(), t.GetKind(t.GetNodeKind(name)).GetBinds(), t.Nodes[name].GetBinds()}
+
+	// add the binds from less to more specific levels, indexed by the destination path.
+	// thereby more specific binds will overwrite less specific one
+	for _, bs := range bindSources {
+		for _, bind := range bs {
+			b, err := NewBind(bind)
+			if err != nil {
+				return nil, err
+			}
+
+			binds[b.Dst()] = b
+		}
+	}
+
+	// in order to return nil instead of empty array when no binds are defined
+	if len(binds) == 0 {
+		return nil, nil
+	}
+
+	// build the result array with all the entries from binds map
+	result := make([]string, 0, len(binds))
+
+	for _, b := range binds {
+		result = append(result, b.String())
+	}
+
+	return result, nil
 }
 
 func (t *Topology) GetNodePorts(name string) (nat.PortSet, nat.PortMap, error) {

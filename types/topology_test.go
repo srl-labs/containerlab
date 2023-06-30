@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"golang.org/x/exp/slices"
 )
 
 func boolptr(b bool) *bool {
@@ -160,10 +161,13 @@ var topologyTestSet = map[string]struct {
 	"node_kind_default": {
 		input: &Topology{
 			Defaults: &NodeDefinition{
-				Kind:  "srl",
-				User:  "user1",
-				CPU:   1,
-				Binds: []string{"x:z"},
+				Kind: "srl",
+				User: "user1",
+				CPU:  1,
+				Binds: []string{
+					"x:z",
+					"m:n", // overriden by node
+				},
 			},
 			Kinds: map[string]*NodeDefinition{
 				"srl": {
@@ -204,7 +208,10 @@ var topologyTestSet = map[string]struct {
 			},
 			Nodes: map[string]*NodeDefinition{
 				"node1": {
-					Binds: []string{"e:f"},
+					Binds: []string{
+						"e:f",
+						"newm:n",
+					},
 				},
 			},
 		},
@@ -228,6 +235,7 @@ var topologyTestSet = map[string]struct {
 					"a:b",
 					"c:d",
 					"x:z",
+					"newm:n",
 				},
 				Ports: []string{
 					"80:8080",
@@ -488,15 +496,15 @@ func TestGetNodeUser(t *testing.T) {
 }
 
 func TestGetNodeBinds(t *testing.T) {
-	for name, item := range topologyTestSet {
-		t.Logf("%q test item", name)
-		binds := item.input.GetNodeBinds("node1")
-		t.Logf("%q test item result: %v", name, binds)
-		if !cmp.Equal(item.want["node1"].Binds, binds) {
-			t.Errorf("item %q failed", name)
-			t.Errorf("item %q exp %q", name, item.want["node1"].Binds)
-			t.Errorf("item %q got %q", name, binds)
-			t.Fail()
+	for _, item := range topologyTestSet {
+		binds, _ := item.input.GetNodeBinds("node1")
+
+		// sort the slices so we can compare them
+		slices.Sort(binds)
+		slices.Sort(item.want["node1"].Binds)
+
+		if d := cmp.Diff(binds, item.want["node1"].Binds); d != "" {
+			t.Fatalf("Binds resolve failed.\nGot: %q\nWant: %q\nDiff\n%s", binds, item.want["node1"].Binds, d)
 		}
 	}
 }
