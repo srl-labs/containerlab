@@ -644,14 +644,17 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (s *srl) CheckInterfaceName() error {
+	// allow eX-X-X and eth0 interface names
 	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|eth0`)
-	NodeNwMode := strings.ToLower(s.Cfg.NetworkMode)
+	nm := strings.ToLower(s.Cfg.NetworkMode)
+
 	for _, e := range s.Config().Endpoints {
 		if !ifRe.MatchString(e.EndpointName) {
 			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
 		}
-		if e.EndpointName == "eth0" && NodeNwMode != "none" {
-			return fmt.Errorf("eth0 is meant to be the mgmt interface injected by the container runtime. To manually inject eth0 set the 'network-mode' for the node to 'none', which allows you also assigning eth0")
+
+		if e.EndpointName == "eth0" && nm != "none" {
+			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", s.Cfg.ShortName)
 		}
 	}
 
