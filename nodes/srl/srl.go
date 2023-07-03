@@ -644,7 +644,7 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (s *srl) CheckInterfaceName() error {
-	// allow eX-X-X and eth0 interface names
+	// allow eX-X-X and mgmt0 interface names
 	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|mgmt0`)
 	nm := strings.ToLower(s.Cfg.NetworkMode)
 
