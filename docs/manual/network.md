@@ -375,6 +375,32 @@ This is best illustrated with the following diagram:
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:14,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
+### Manual control over the management network
+
+By default containerlab creates a docker network named `clab` and attaches all the nodes to this network. This network is used as a management network for the nodes and is managed by the container runtime such as docker or podman.
+
+Container runtime is responsible for creating the `eth0` interface inside the container and attaching it to the `clab` network. This interface is used by the container to communicate with the management network. For that reason the links users create in the topology's `links` section typically do not include the `eth0` interface.
+
+However, there might be cases when users want to take control over `eth0` interface management. For example, they might want to connect `eth0` to a different network or even another container's interface. To achieve that, users can instruct container runtime to not manage the `eth0` interface and leave it to the user, using [`network-mode: none`](nodes.md#network-mode) setting.
+
+Consider the following example, where node1's management interface `eth0` is provided in the `links` section and connects to node2's `eth1` interface:
+
+```yaml
+name: e0
+
+topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+      network-mode: none
+    node2:
+      kind: linux
+      image: alpine:3
+  links:
+    - endpoints: ["node1:eth0", "node2:eth1"]
+```
+
 ## DNS
 
 When containerlab finishes the nodes deployment, it also creates static DNS entries inside the `/etc/hosts` file so that users can access the nodes using their DNS names.

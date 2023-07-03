@@ -255,7 +255,7 @@
                     "type": "string",
                     "description": "node network mode (can only be set host, defaults to bridge)",
                     "markdownDescription": "node [network mode](https://containerlab.dev/manual/nodes/#network-mode) (can only be set host, defaults to bridge)",
-                    "pattern": "^(host)|(container:\\S+)$"
+                    "pattern": "^(host)|(container:\\S+)|(none)$"
                 },
                 "cpu": {
                     "type": "integer",
