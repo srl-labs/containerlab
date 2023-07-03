@@ -590,15 +590,6 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 	return nil
 }
 
-// checkEndpoint runs checks on the endpoint syntax.
-func checkEndpoint(e string) error {
-	split := strings.Split(e, ":")
-	if len(split) != 2 {
-		return fmt.Errorf("malformed endpoint definition: %s", e)
-	}
-	return nil
-}
-
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
 // it allows host path to have `~` and relative path to an absolute path
 // the list of binds will be changed in place.
