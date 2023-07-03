@@ -57,6 +57,7 @@ set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 {{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
 {{- range $ep := .Endpoints }}
+{{- if eq $ep.EndpointName "mgmt0" }}{{- continue }}{{- end}}
 {{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
   {{- if eq (len $parts) 3 }}
@@ -643,10 +644,17 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (s *srl) CheckInterfaceName() error {
-	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+	// allow eX-X-X and mgmt0 interface names
+	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|mgmt0`)
+	nm := strings.ToLower(s.Cfg.NetworkMode)
+
 	for _, e := range s.Config().Endpoints {
 		if !ifRe.MatchString(e.EndpointName) {
 			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
+		}
+
+		if e.EndpointName == "mgmt0" && nm != "none" {
+			return fmt.Errorf("mgmt0 interface name is not allowed for %s node when network mode is not set to none", s.Cfg.ShortName)
 		}
 	}
 

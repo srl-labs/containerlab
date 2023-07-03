@@ -598,9 +598,6 @@ func checkEndpoint(e string) error {
 	if len(split) != 2 {
 		return fmt.Errorf("malformed endpoint definition: %s", e)
 	}
-	if split[1] == "eth0" {
-		return fmt.Errorf("eth0 interface can't be used in the endpoint definition as it is added by docker automatically: '%s'", e)
-	}
 	return nil
 }
 

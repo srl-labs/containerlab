@@ -354,10 +354,10 @@ topology:
     entrypoint: entrypoint.sh
   kinds:
     srl:
-      cmd: entrypoint.sh
+      entrypoint: entrypoint.sh
   nodes:
     node1:
-      cmd: entrypoint.sh
+      entrypoint: entrypoint.sh
 ```
 
 ### cmd
