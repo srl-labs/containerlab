@@ -454,6 +454,11 @@ func (c *CLab) verifyLinks() error {
 		for _, e := range []*types.Endpoint{l.A, l.B} {
 			e_string := e.String()
 			if _, ok := endpoints[e_string]; ok {
+				// macvlan and macvtap interfaces can appear multiple times
+				if strings.Contains(e_string, "macvlan") || strings.Contains(e_string, "macvtap") {
+					continue
+				}
+
 				dups = append(dups, e_string)
 			}
 			endpoints[e_string] = struct{}{}
