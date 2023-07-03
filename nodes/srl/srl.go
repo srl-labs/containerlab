@@ -57,6 +57,7 @@ set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 {{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
 {{- range $ep := .Endpoints }}
+{{- if eq $ep.EndpointName "eth0" }}{{- continue }}{{- end}}
 {{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
   {{- if eq (len $parts) 3 }}
@@ -643,10 +644,14 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (s *srl) CheckInterfaceName() error {
-	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?`)
+	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|eth0`)
+	NodeNwMode := strings.ToLower(s.Cfg.NetworkMode)
 	for _, e := range s.Config().Endpoints {
 		if !ifRe.MatchString(e.EndpointName) {
 			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
+		}
+		if e.EndpointName == "eth0" && NodeNwMode != "none" {
+			return fmt.Errorf("eth0 is meant to be the mgmt interface injected by the container runtime. To manually inject eth0 set the 'network-mode' for the node to 'none', which allows you also assigning eth0")
 		}
 	}
 
