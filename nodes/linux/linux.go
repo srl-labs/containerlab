@@ -6,6 +6,8 @@ package linux
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -87,7 +89,13 @@ func (n *linux) GetImages(_ context.Context) map[string]string {
 	return images
 }
 
-// CheckInterfaceName is a noop for linux containers as they can have any names.
+// CheckInterfaceName on linux we just need to change that if eth0 is supposed to be set, the Network mode is set to "none"
 func (n *linux) CheckInterfaceName() error {
+	NodeNwMode := strings.ToLower(n.Cfg.NetworkMode)
+	for _, e := range n.Config().Endpoints {
+		if e.EndpointName == "eth0" && NodeNwMode != "none" {
+			return fmt.Errorf("eth0 is meant to be the mgmt interface injected by the container runtime. To manually inject eth0 set the 'network-mode' for the node to 'none', which allows you also assigning eth0")
+		}
+	}
 	return nil
 }
