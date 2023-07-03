@@ -38,6 +38,10 @@ type Endpoint struct {
 	MAC string
 }
 
+func (e *Endpoint) String() string {
+	return fmt.Sprintf("%s:%s", e.Node.ShortName, e.EndpointName)
+}
+
 // MgmtNet struct defines the management network options.
 type MgmtNet struct {
 	Network string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name

@@ -14,7 +14,7 @@ type LinkCommonParams struct {
 	Vars   map[string]interface{} `yaml:"vars,omitempty"`
 }
 
-type RawLinkType struct {
+type LinkDefinition struct {
 	Type string `yaml:"type"`
 	// Instance interface{}
 	Instance *LinkConfig
@@ -32,7 +32,7 @@ const (
 	LinkTypeDeprecate LinkDefinitionType = "deprecate"
 )
 
-type RawLinkTypeAlias RawLinkType
+type LinkDefinitionAlias LinkDefinition
 
 func ParseLinkType(s string) (LinkDefinitionType, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
@@ -53,14 +53,14 @@ func ParseLinkType(s string) (LinkDefinitionType, error) {
 	}
 }
 
-func (rlt *RawLinkTypeAlias) GetType() (LinkDefinitionType, error) {
+func (rlt *LinkDefinitionAlias) GetType() (LinkDefinitionType, error) {
 	return ParseLinkType(rlt.Type)
 }
 
-var _ yaml.Unmarshaler = &RawLinkType{}
+var _ yaml.Unmarshaler = &LinkDefinition{}
 
-func (r *RawLinkType) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rtAlias RawLinkTypeAlias
+func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rtAlias LinkDefinitionAlias
 
 	err := unmarshal(&rtAlias)
 	// Strict unmarshalling, as we do with containerlab will cause the

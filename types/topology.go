@@ -7,20 +7,20 @@ import (
 
 // Topology represents a lab topology.
 type Topology struct {
-	Defaults *NodeDefinition            `yaml:"defaults,omitempty"`
-	Kinds    map[string]*NodeDefinition `yaml:"kinds,omitempty"`
-	Nodes    map[string]*NodeDefinition `yaml:"nodes,omitempty"`
-	RawLinks []*RawLinkType             `yaml:"links,omitempty"`
-	Links    []*LinkConfig              `yaml:"-"`
+	Defaults       *NodeDefinition            `yaml:"defaults,omitempty"`
+	Kinds          map[string]*NodeDefinition `yaml:"kinds,omitempty"`
+	Nodes          map[string]*NodeDefinition `yaml:"nodes,omitempty"`
+	LinkDefinition []*LinkDefinition          `yaml:"links,omitempty"`
+	//LinkConfigs    []*LinkConfig              `yaml:"-"`
 }
 
 func NewTopology() *Topology {
 	return &Topology{
-		Defaults: new(NodeDefinition),
-		Kinds:    make(map[string]*NodeDefinition),
-		Nodes:    make(map[string]*NodeDefinition),
-		RawLinks: make([]*RawLinkType, 0),
-		Links:    make([]*LinkConfig, 0),
+		Defaults:       new(NodeDefinition),
+		Kinds:          make(map[string]*NodeDefinition),
+		Nodes:          make(map[string]*NodeDefinition),
+		LinkDefinition: make([]*LinkDefinition, 0),
+		//LinkConfigs:    make([]*LinkConfig, 0),
 	}
 }
 

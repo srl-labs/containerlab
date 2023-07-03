@@ -260,6 +260,22 @@ func Test_filterClabNodes(t *testing.T) {
 		},
 		"two nodes, one link between them, one filter node": {
 			c: &CLab{
+				Links: map[int]*types.Link{
+					0: {
+						A: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node1",
+							},
+							EndpointName: "eth1",
+						},
+						B: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node2",
+							},
+							EndpointName: "eth2",
+						},
+					},
+				},
 				Config: &Config{
 					Topology: &types.Topology{
 						Nodes: map[string]*types.NodeDefinition{
@@ -270,14 +286,8 @@ func Test_filterClabNodes(t *testing.T) {
 								Kind: "linux",
 							},
 						},
-						Links: []*types.LinkConfig{
-							{
-								Endpoints: []string{"node1:eth1", "node2:eth2"},
-							},
-						},
 					},
-				},
-			},
+				}},
 			nodesFilter: []string{"node1"},
 			wantNodes:   []string{"node1"},
 			wantLinks:   [][]string{},
@@ -285,6 +295,22 @@ func Test_filterClabNodes(t *testing.T) {
 		},
 		"two nodes, one link between them, no filter": {
 			c: &CLab{
+				Links: map[int]*types.Link{
+					0: {
+						A: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node1",
+							},
+							EndpointName: "eth1",
+						},
+						B: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node2",
+							},
+							EndpointName: "eth1",
+						},
+					},
+				},
 				Config: &Config{
 					Topology: &types.Topology{
 						Nodes: map[string]*types.NodeDefinition{
@@ -293,11 +319,6 @@ func Test_filterClabNodes(t *testing.T) {
 							},
 							"node2": {
 								Kind: "linux",
-							},
-						},
-						Links: []*types.LinkConfig{
-							{
-								Endpoints: []string{"node1:eth1", "node2:eth1"},
 							},
 						},
 					},
@@ -310,6 +331,36 @@ func Test_filterClabNodes(t *testing.T) {
 		},
 		"three nodes, two links, two nodes in the filter": {
 			c: &CLab{
+				Links: map[int]*types.Link{
+					0: {
+						A: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node1",
+							},
+							EndpointName: "eth1",
+						},
+						B: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node2",
+							},
+							EndpointName: "eth1",
+						},
+					},
+					1: {
+						A: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node2",
+							},
+							EndpointName: "eth2",
+						},
+						B: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node3",
+							},
+							EndpointName: "eth2",
+						},
+					},
+				},
 				Config: &Config{
 					Topology: &types.Topology{
 						Nodes: map[string]*types.NodeDefinition{
@@ -321,14 +372,6 @@ func Test_filterClabNodes(t *testing.T) {
 							},
 							"node3": {
 								Kind: "linux",
-							},
-						},
-						Links: []*types.LinkConfig{
-							{
-								Endpoints: []string{"node1:eth1", "node2:eth1"},
-							},
-							{
-								Endpoints: []string{"node2:eth2", "node3:eth2"},
 							},
 						},
 					},
@@ -341,6 +384,36 @@ func Test_filterClabNodes(t *testing.T) {
 		},
 		"three nodes, two links, one nodes in the filter": {
 			c: &CLab{
+				Links: map[int]*types.Link{
+					0: {
+						A: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node1",
+							},
+							EndpointName: "eth1",
+						},
+						B: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node2",
+							},
+							EndpointName: "eth1",
+						},
+					},
+					1: {
+						A: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node2",
+							},
+							EndpointName: "eth2",
+						},
+						B: &types.Endpoint{
+							Node: &types.NodeConfig{
+								ShortName: "node3",
+							},
+							EndpointName: "eth2",
+						},
+					},
+				},
 				Config: &Config{
 					Topology: &types.Topology{
 						Nodes: map[string]*types.NodeDefinition{
@@ -352,14 +425,6 @@ func Test_filterClabNodes(t *testing.T) {
 							},
 							"node3": {
 								Kind: "linux",
-							},
-						},
-						Links: []*types.LinkConfig{
-							{
-								Endpoints: []string{"node1:eth1", "node2:eth1"},
-							},
-							{
-								Endpoints: []string{"node2:eth2", "node3:eth2"},
 							},
 						},
 					},
@@ -395,6 +460,7 @@ func Test_filterClabNodes(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			err := filterClabNodes(tt.c, tt.nodesFilter)
 			if (err != nil) != tt.wantErr {
 				t.Log("hey", tt.c.Config.Topology.Nodes)
@@ -413,9 +479,9 @@ func Test_filterClabNodes(t *testing.T) {
 			// sort the nodes to make the test deterministic
 			slices.Sort(filteredNodes)
 
-			filteredLinks := make([][]string, 0, len(tt.c.Config.Topology.Links))
-			for _, l := range tt.c.Config.Topology.Links {
-				filteredLinks = append(filteredLinks, l.Endpoints)
+			filteredLinks := make([][]string, 0, len(tt.c.Links))
+			for _, l := range tt.c.Links {
+				filteredLinks = append(filteredLinks, []string{l.A.String(), l.B.String()})
 			}
 
 			if cmp.Diff(filteredNodes, tt.wantNodes) != "" {

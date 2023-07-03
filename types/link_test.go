@@ -94,7 +94,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    RawLinkType
+		want    LinkDefinition
 		wantErr bool
 	}{
 		{
@@ -107,7 +107,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                 `),
 			},
 			wantErr: false,
-			want: RawLinkType{
+			want: LinkDefinition{
 				Type: string(LinkTypeDeprecate),
 				Instance: &LinkConfig{
 					Endpoints: []string{
@@ -129,7 +129,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                 `),
 			},
 			wantErr: false,
-			want: RawLinkType{
+			want: LinkDefinition{
 				Type: string(LinkTypeMgmtNet),
 				Instance: &LinkConfig{
 					Endpoints: []string{
@@ -151,7 +151,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                 `),
 			},
 			wantErr: false,
-			want: RawLinkType{
+			want: LinkDefinition{
 				Type: string(LinkTypeHost),
 				Instance: &LinkConfig{
 					Endpoints: []string{
@@ -173,7 +173,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                 `),
 			},
 			wantErr: false,
-			want: RawLinkType{
+			want: LinkDefinition{
 				Type: string(LinkTypeMacVLan),
 				Instance: &LinkConfig{
 					Endpoints: []string{
@@ -195,7 +195,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                 `),
 			},
 			wantErr: false,
-			want: RawLinkType{
+			want: LinkDefinition{
 				Type: string(LinkTypeMacVTap),
 				Instance: &LinkConfig{
 					Endpoints: []string{
@@ -231,7 +231,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var rl RawLinkType
+			var rl LinkDefinition
 			err := yaml.Unmarshal(tt.args.yaml, &rl)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RawLinkType Unmarshal() error = %v, wantErr %v", err, tt.wantErr)

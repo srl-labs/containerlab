@@ -124,7 +124,7 @@ func (c *CLab) parseTopology() error {
 			return err
 		}
 	}
-	for i, l := range c.Config.Topology.RawLinks {
+	for i, l := range c.Config.Topology.LinkDefinition {
 		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(l.Instance)
 	}
@@ -435,15 +435,13 @@ func (c *CLab) verifyLinks() error {
 	endpoints := map[string]struct{}{}
 	// dups accumulates duplicate links
 	dups := []string{}
-	for _, lc := range c.Config.Topology.Links {
-		for _, e := range lc.Endpoints {
-			if err := checkEndpoint(e); err != nil {
-				return err
+	for _, lc := range c.Links {
+		for _, e := range []*types.Endpoint{lc.A, lc.B} {
+			e_string := e.String()
+			if _, ok := endpoints[e_string]; ok {
+				dups = append(dups, e_string)
 			}
-			if _, ok := endpoints[e]; ok {
-				dups = append(dups, e)
-			}
-			endpoints[e] = struct{}{}
+			endpoints[e_string] = struct{}{}
 		}
 	}
 	if len(dups) != 0 {

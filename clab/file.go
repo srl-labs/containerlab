@@ -80,12 +80,6 @@ func (c *CLab) GetTopology(topo, varsFile string) error {
 		return fmt.Errorf("%w\nConsult with release notes to see if any fields were changed/removed", err)
 	}
 
-	// move RawLink Instance to Link
-	c.Config.Topology.Links = make([]*types.LinkConfig, len(c.Config.Topology.RawLinks))
-	for idx, l := range c.Config.Topology.RawLinks {
-		c.Config.Topology.Links[idx] = l.Instance
-	}
-
 	c.Config.Topology.ImportEnvs()
 
 	return nil
