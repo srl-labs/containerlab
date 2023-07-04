@@ -59,6 +59,10 @@ func (rlt *LinkDefinitionAlias) GetType() (LinkDefinitionType, error) {
 
 var _ yaml.Unmarshaler = &LinkDefinition{}
 
+func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
+	return r.Instance, nil
+}
+
 func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rtAlias LinkDefinitionAlias
 
