@@ -95,11 +95,18 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return err
 	}
 
-	r.Type = rtAlias.Type
+	var lt LinkDefinitionType
 
-	lt, err := ParseLinkType(rtAlias.Type)
-	if err != nil {
-		return err
+	if rtAlias.Type == "" {
+		lt = LinkTypeDeprecate
+		r.Type = string(LinkTypeDeprecate)
+	} else {
+		r.Type = rtAlias.Type
+
+		lt, err = ParseLinkType(rtAlias.Type)
+		if err != nil {
+			return err
+		}
 	}
 
 	switch lt {
@@ -142,15 +149,15 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		// try to parse the depricate format
 		var l LinkConfig
 		err := unmarshal(&l)
-		if err != nil && !errors.As(err, &e) {
+		if err != nil {
 			return err
 		}
 		r.Type = string(LinkTypeDeprecate)
 		lc, err := deprecateLinkConversion(&l)
-		r.LinkConfig = *lc
 		if err != nil {
 			return err
 		}
+		r.LinkConfig = *lc
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
 	}
