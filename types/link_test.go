@@ -109,7 +109,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeDeprecate),
-				Instance: &LinkConfig{
+				LinkConfig: LinkConfig{
 					Endpoints: []string{
 						"srl1:e1-5",
 						"srl2:e1-5",
@@ -131,7 +131,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeMgmtNet),
-				Instance: &LinkConfig{
+				LinkConfig: LinkConfig{
 					Endpoints: []string{
 						"srl1:e1-5",
 						"mgmt-net:srl1_e1-5",
@@ -153,7 +153,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeHost),
-				Instance: &LinkConfig{
+				LinkConfig: LinkConfig{
 					Endpoints: []string{
 						"srl1:e1-5",
 						"host:srl1_e1-5",
@@ -175,7 +175,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeMacVLan),
-				Instance: &LinkConfig{
+				LinkConfig: LinkConfig{
 					Endpoints: []string{
 						"srl1:e1-5",
 						"macvlan:srl1_e1-5",
@@ -197,7 +197,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeMacVTap),
-				Instance: &LinkConfig{
+				LinkConfig: LinkConfig{
 					Endpoints: []string{
 						"srl1:e1-5",
 						"macvtap:srl1_e1-5",

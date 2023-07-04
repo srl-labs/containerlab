@@ -7,6 +7,17 @@ type RawVEthLink struct {
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
+func (r *RawVEthLink) MarshalYAML() (interface{}, error) {
+	x := struct {
+		Type        string `yaml:"type"`
+		RawVEthLink `yaml:",inline"`
+	}{
+		Type:        string(LinkTypeVEth),
+		RawVEthLink: *r,
+	}
+	return x, nil
+}
+
 func (r *RawVEthLink) ToLinkConfig() *LinkConfig {
 	lc := &LinkConfig{
 		Vars:      r.Vars,
@@ -20,27 +31,24 @@ func (r *RawVEthLink) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
-// func vEthFromLinkConfig(lc *LinkConfig) (*RawVEthLink, error) {
-// 	nodeA, nodeAIf, nodeB, nodeBIf := extractHostNodeInterfaceData(lc, 0)
+func vEthFromLinkConfig(lc *LinkConfig) (*RawVEthLink, error) {
+	nodeA, nodeAIf, nodeB, nodeBIf := extractHostNodeInterfaceData(lc, 0)
 
-// 	result := &RawVEthLink{
-// 		RawLinkType: RawLinkType{
-// 			Type:     string(LinkTypeVEth),
-// 			Labels:   lc.Labels,
-// 			Vars:     lc.Vars,
-// 			Instance: nil,
-// 		},
-// 		Mtu: lc.MTU,
-// 		Endpoints: []*EndpointRaw{
-// 			{
-// 				Node:  nodeA,
-// 				Iface: nodeAIf,
-// 			},
-// 			{
-// 				Node:  nodeB,
-// 				Iface: nodeBIf,
-// 			},
-// 		},
-// 	}
-// 	return result, nil
-// }
+	result := &RawVEthLink{
+		LinkCommonParams: LinkCommonParams{
+			Labels: lc.Labels,
+			Vars:   lc.Vars,
+		},
+		Endpoints: []*EndpointRaw{
+			{
+				Node:  nodeA,
+				Iface: nodeAIf,
+			},
+			{
+				Node:  nodeB,
+				Iface: nodeBIf,
+			},
+		},
+	}
+	return result, nil
+}

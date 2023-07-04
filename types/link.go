@@ -17,7 +17,7 @@ type LinkCommonParams struct {
 type LinkDefinition struct {
 	Type string `yaml:"type"`
 	// Instance interface{}
-	Instance *LinkConfig
+	LinkConfig
 }
 
 type LinkDefinitionType string
@@ -29,6 +29,7 @@ const (
 	LinkTypeMacVTap LinkDefinitionType = "macvtap"
 	LinkTypeHost    LinkDefinitionType = "host"
 
+	// legacy link definifion
 	LinkTypeDeprecate LinkDefinitionType = "deprecate"
 )
 
@@ -59,8 +60,26 @@ func (rlt *LinkDefinitionAlias) GetType() (LinkDefinitionType, error) {
 
 var _ yaml.Unmarshaler = &LinkDefinition{}
 
+// MarshalYAML used when writing topology files via the generate command.
+// for now this falls back to convertig the LinkConfig into a
+// RawVEthLink. Such that the generated LinkConfigs adhere to the new LinkDefinition
+// format instead of the depricated one.
 func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
-	return r.Instance, nil
+
+	rawVEth, err := vEthFromLinkConfig(&r.LinkConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	x := struct {
+		RawVEthLink `yaml:",inline"`
+		Type        string `yaml:"type"`
+	}{
+		RawVEthLink: *rawVEth,
+		Type:        string(LinkTypeVEth),
+	}
+
+	return x, nil
 }
 
 func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -78,54 +97,62 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 	r.Type = rtAlias.Type
 
-	switch strings.ToLower(rtAlias.Type) {
-	case "veth":
+	lt, err := ParseLinkType(rtAlias.Type)
+	if err != nil {
+		return err
+	}
+
+	switch lt {
+	case LinkTypeVEth:
 		var l RawVEthLink
 		err := unmarshal(&l)
-		if err != nil {
+		if err != nil && !errors.As(err, &e) {
 			return err
 		}
-		r.Instance = l.ToLinkConfig()
-	case "mgmt-net":
+		r.LinkConfig = *l.ToLinkConfig()
+	case LinkTypeMgmtNet:
 		var l RawMgmtNetLink
 		err := unmarshal(&l)
-		if err != nil {
+		if err != nil && !errors.As(err, &e) {
 			return err
 		}
-		r.Instance = l.ToLinkConfig()
-	case "host":
+		r.LinkConfig = *l.ToLinkConfig()
+	case LinkTypeHost:
 		var l RawHostLink
 		err := unmarshal(&l)
-		if err != nil {
+		if err != nil && !errors.As(err, &e) {
 			return err
 		}
-		r.Instance = l.ToLinkConfig()
-	case "macvlan":
+		r.LinkConfig = *l.ToLinkConfig()
+	case LinkTypeMacVLan:
 		var l RawMacVLanLink
 		err := unmarshal(&l)
-		if err != nil {
+		if err != nil && !errors.As(err, &e) {
 			return err
 		}
-		r.Instance = l.ToLinkConfig()
-	case "macvtap":
+		r.LinkConfig = *l.ToLinkConfig()
+	case LinkTypeMacVTap:
 		var l RawMacVTapLink
 		err := unmarshal(&l)
-		if err != nil {
+		if err != nil && !errors.As(err, &e) {
 			return err
 		}
-		r.Instance = l.ToLinkConfig()
-	default:
+		r.LinkConfig = *l.ToLinkConfig()
+	case LinkTypeDeprecate:
 		// try to parse the depricate format
 		var l LinkConfig
 		err := unmarshal(&l)
-		if err != nil {
+		if err != nil && !errors.As(err, &e) {
 			return err
 		}
 		r.Type = string(LinkTypeDeprecate)
-		r.Instance, err = deprecateLinkConversion(&l)
+		lc, err := deprecateLinkConversion(&l)
+		r.LinkConfig = *lc
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("unknown link type %q", lt)
 	}
 
 	return nil
