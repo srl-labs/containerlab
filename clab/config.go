@@ -124,7 +124,7 @@ func (c *CLab) parseTopology() error {
 			return err
 		}
 	}
-	for i, l := range c.Config.Topology.LinkDefinition {
+	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
 		c.Links[i] = c.NewLink(&l.LinkConfig)
 	}

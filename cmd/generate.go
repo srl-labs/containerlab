@@ -214,7 +214,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 						Type:  nodes[i+1].typ,
 					}
 				}
-				config.Topology.LinkDefinition = append(config.Topology.LinkDefinition,
+				config.Topology.Links = append(config.Topology.Links,
 					&types.LinkDefinition{
 						Type: string(types.LinkTypeVEth),
 						LinkConfig: types.LinkConfig{
