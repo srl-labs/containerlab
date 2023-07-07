@@ -287,7 +287,8 @@ func Test_filterClabNodes(t *testing.T) {
 							},
 						},
 					},
-				}},
+				},
+			},
 			nodesFilter: []string{"node1"},
 			wantNodes:   []string{"node1"},
 			wantLinks:   [][]string{},
@@ -460,7 +461,6 @@ func Test_filterClabNodes(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-
 			err := filterClabNodes(tt.c, tt.nodesFilter)
 			if (err != nil) != tt.wantErr {
 				t.Log("hey", tt.c.Config.Topology.Nodes)

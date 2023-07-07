@@ -29,7 +29,7 @@ const (
 	LinkTypeMacVTap LinkDefinitionType = "macvtap"
 	LinkTypeHost    LinkDefinitionType = "host"
 
-	// legacy link definifion
+	// legacy link definifion.
 	LinkTypeDeprecate LinkDefinitionType = "deprecate"
 )
 
@@ -65,7 +65,6 @@ var _ yaml.Unmarshaler = &LinkDefinition{}
 // RawVEthLink. Such that the generated LinkConfigs adhere to the new LinkDefinition
 // format instead of the depricated one.
 func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
-
 	rawVEth, err := vEthFromLinkConfig(&r.LinkConfig)
 	if err != nil {
 		return nil, err
