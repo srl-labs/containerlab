@@ -15,7 +15,7 @@ gomplate -f topology_config.gotmpl -d templated01.clab_vars.yaml >vars.yaml
 # build targets string
 targets=$(docker ps -f label=clab-node-kind=srl -f label=containerlab=templated01 --format {{.Names}} | paste -s -d, -)
 # base gnmic command
-gnmic_cmd="gnmic --log -a ${targets} --skip-verify -u admin -p admin"
+gnmic_cmd="gnmic --log -a ${targets} --skip-verify -u admin -p NokiaSrl1!"
 
 curl -sLO https://raw.githubusercontent.com/karimra/gnmic/main/examples/set-request-templates/Nokia/SRL/1.interfaces/interfaces_template.gotmpl
 curl -sLO https://raw.githubusercontent.com/karimra/gnmic/main/examples/set-request-templates/Nokia/SRL/1.interfaces/subinterfaces_template.gotmpl
