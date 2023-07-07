@@ -78,9 +78,14 @@ func (kv *KernelVersion) String() string {
 func (kv *KernelVersion) GreaterOrEqual(cmpKv *KernelVersion) bool {
 	if kv.Major < cmpKv.Major {
 		return false
+	} else if kv.Major > cmpKv.Major {
+		return true
 	}
+
 	if kv.Minor < cmpKv.Minor {
 		return false
+	} else if kv.Minor > cmpKv.Minor {
+		return true
 	}
 	// this must be >= because we're implementing GreaterEqual
 	// and this is the last position

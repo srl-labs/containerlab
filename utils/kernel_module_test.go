@@ -82,6 +82,8 @@ func TestKernelVersionGreaterOrEqual(t *testing.T) {
 		{&KernelVersion{Major: 1, Minor: 2, Revision: 3}, &KernelVersion{Major: 1, Minor: 2, Revision: 2}, true},
 		{&KernelVersion{Major: 1, Minor: 2, Revision: 3}, &KernelVersion{Major: 1, Minor: 3, Revision: 3}, false},
 		{&KernelVersion{Major: 2, Minor: 3, Revision: 4}, &KernelVersion{Major: 1, Minor: 2, Revision: 3}, true},
+		{&KernelVersion{Major: 2, Minor: 1, Revision: 1}, &KernelVersion{Major: 1, Minor: 2, Revision: 3}, true},
+		{&KernelVersion{Major: 2, Minor: 3, Revision: 1}, &KernelVersion{Major: 2, Minor: 2, Revision: 3}, true},
 		{&KernelVersion{Major: 2, Minor: 3, Revision: 4}, &KernelVersion{Major: 3, Minor: 4, Revision: 5}, false},
 		{&KernelVersion{Major: 2, Minor: 3, Revision: 4}, &KernelVersion{Major: 2, Minor: 3, Revision: 5}, false},
 	}
