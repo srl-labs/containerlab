@@ -423,3 +423,30 @@ sudo ip6tables -P INPUT ACCEPT
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
 [^4]: for example, Ubuntu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).
 [^5]: interface name can also be `et` instead of `eth`.
+
+### Scale
+
+From version 4.28.0F, the ceos-lab image supports up to 50 nodes per host. On previous releases and/or with higher scale there might be issues cores inside the ceos-lab nodes and erros like `Error: Too many open files`.
+
+Example solution for 60 ceos-lab nodes:
+
+1. On the host run:
+
+```
+sudo sh -c 'echo "fs.inotify.max_user_instances = 75000" > /etc/sysctl.d/99-zceoslab.conf'
+sudo sysctl --load /etc/sysctl.d/99-zceoslab.conf
+```
+where 75000 is `60 (# of nodes) * 1250`.
+
+2. Bind newly created file into the ceos-lab containers:
+
+```
+...
+topology:
+  kinds:
+    ceos:
+      ...
+      binds:
+        - /etc/sysctl.d/99-zceoslab.conf:/etc/sysctl.d/99-zceoslab.conf:ro
+...
+```
