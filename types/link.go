@@ -82,8 +82,9 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	// we don't care about the embedded LinkConfig, as we only need to unmarshal
 	// the type field.
 	var a struct {
-		Type       string `yaml:"type"`
-		LinkConfig `yaml:",inline"`
+		Type string `yaml:"type"`
+		// Throwaway endpoints field, as we don't care about it.
+		Endpoints any `yaml:"endpoints"`
 	}
 	err := unmarshal(&a)
 	if err != nil {
@@ -106,49 +107,69 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 	switch lt {
 	case LinkTypeVEth:
-		var l RawVEthLink
+		var l struct {
+			// the Type field is injected artificially
+			// to allow strict yaml parsing to work.
+			Type        string `yaml:"type"`
+			RawVEthLink `yaml:",inline"`
+		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.ToLinkConfig()
+		r.LinkConfig = *l.RawVEthLink.ToLinkConfig()
 	case LinkTypeMgmtNet:
-		var l RawMgmtNetLink
+		var l struct {
+			Type           string `yaml:"type"`
+			RawMgmtNetLink `yaml:",inline"`
+		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.ToLinkConfig()
+		r.LinkConfig = *l.RawMgmtNetLink.ToLinkConfig()
 	case LinkTypeHost:
-		var l RawHostLink
+		var l struct {
+			Type        string `yaml:"type"`
+			RawHostLink `yaml:",inline"`
+		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.ToLinkConfig()
+		r.LinkConfig = *l.RawHostLink.ToLinkConfig()
 	case LinkTypeMacVLan:
-		var l RawMacVLanLink
+		var l struct {
+			Type           string `yaml:"type"`
+			RawMacVLanLink `yaml:",inline"`
+		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.ToLinkConfig()
+		r.LinkConfig = *l.RawMacVLanLink.ToLinkConfig()
 	case LinkTypeMacVTap:
-		var l RawMacVTapLink
+		var l struct {
+			Type           string `yaml:"type"`
+			RawMacVTapLink `yaml:",inline"`
+		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.ToLinkConfig()
+		r.LinkConfig = *l.RawMacVTapLink.ToLinkConfig()
 	case LinkTypeLegacy:
 		// try to parse the depricate format
-		var l LinkConfig
+		var l struct {
+			Type       string `yaml:"type"`
+			LinkConfig `yaml:",inline"`
+		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
 		r.Type = string(LinkTypeLegacy)
-		lc, err := deprecateLinkConversion(&l)
+		lc, err := deprecateLinkConversion(&l.LinkConfig)
 		if err != nil {
 			return err
 		}
