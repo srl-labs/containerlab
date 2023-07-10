@@ -60,9 +60,9 @@ func TestParseLinkType(t *testing.T) {
 		{
 			name: "link type deprecate",
 			args: args{
-				s: string(LinkTypeDeprecate),
+				s: string(LinkTypeLegacy),
 			},
-			want:    LinkTypeDeprecate,
+			want:    LinkTypeLegacy,
 			wantErr: false,
 		},
 		{
@@ -108,7 +108,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			},
 			wantErr: false,
 			want: LinkDefinition{
-				Type: string(LinkTypeDeprecate),
+				Type: string(LinkTypeLegacy),
 				LinkConfig: LinkConfig{
 					Endpoints: []string{
 						"srl1:e1-5",

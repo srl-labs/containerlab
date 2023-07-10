@@ -14,12 +14,14 @@ type LinkCommonParams struct {
 	Vars   map[string]interface{} `yaml:"vars,omitempty"`
 }
 
+// LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
 	Type string `yaml:"type"`
 	// Instance interface{}
 	LinkConfig
 }
 
+// LinkDefinitionType represents the type of a link definition.
 type LinkDefinitionType string
 
 const (
@@ -29,8 +31,9 @@ const (
 	LinkTypeMacVTap LinkDefinitionType = "macvtap"
 	LinkTypeHost    LinkDefinitionType = "host"
 
-	// legacy link definifion.
-	LinkTypeDeprecate LinkDefinitionType = "deprecate"
+	// LinkTypeLegacy is a link definition where link types
+	// are encoded in the endpoint definition as string.
+	LinkTypeLegacy LinkDefinitionType = "legacy"
 )
 
 type LinkDefinitionAlias LinkDefinition
@@ -47,8 +50,8 @@ func ParseLinkType(s string) (LinkDefinitionType, error) {
 		return LinkTypeMgmtNet, nil
 	case string(LinkTypeHost):
 		return LinkTypeHost, nil
-	case string(LinkTypeDeprecate):
-		return LinkTypeDeprecate, nil
+	case string(LinkTypeLegacy):
+		return LinkTypeLegacy, nil
 	default:
 		return "", fmt.Errorf("unable to parse %q as LinkType", s)
 	}
@@ -97,8 +100,8 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	var lt LinkDefinitionType
 
 	if rtAlias.Type == "" {
-		lt = LinkTypeDeprecate
-		r.Type = string(LinkTypeDeprecate)
+		lt = LinkTypeLegacy
+		r.Type = string(LinkTypeLegacy)
 	} else {
 		r.Type = rtAlias.Type
 
@@ -144,14 +147,14 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 			return err
 		}
 		r.LinkConfig = *l.ToLinkConfig()
-	case LinkTypeDeprecate:
+	case LinkTypeLegacy:
 		// try to parse the depricate format
 		var l LinkConfig
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.Type = string(LinkTypeDeprecate)
+		r.Type = string(LinkTypeLegacy)
 		lc, err := deprecateLinkConversion(&l)
 		if err != nil {
 			return err
