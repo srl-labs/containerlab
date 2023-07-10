@@ -23,7 +23,7 @@ require (
 	github.com/hairyhenderson/gomplate/v3 v3.11.5
 	github.com/hashicorp/go-version v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/jsimonetti/rtnetlink v1.3.3
+	github.com/jsimonetti/rtnetlink v1.3.4
 	github.com/kellerza/template v0.0.6
 	github.com/klauspost/cpuid v1.3.1
 	github.com/mackerelio/go-osstat v0.2.4
