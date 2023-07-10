@@ -1,7 +1,6 @@
 package types
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -36,8 +35,6 @@ const (
 	LinkTypeLegacy LinkDefinitionType = "legacy"
 )
 
-type LinkDefinitionAlias LinkDefinition
-
 func ParseLinkType(s string) (LinkDefinitionType, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
 	case string(LinkTypeMacVLan):
@@ -55,10 +52,6 @@ func ParseLinkType(s string) (LinkDefinitionType, error) {
 	default:
 		return "", fmt.Errorf("unable to parse %q as LinkType", s)
 	}
-}
-
-func (rlt *LinkDefinitionAlias) GetType() (LinkDefinitionType, error) {
-	return ParseLinkType(rlt.Type)
 }
 
 var _ yaml.Unmarshaler = &LinkDefinition{}
@@ -85,27 +78,27 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 }
 
 func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rtAlias LinkDefinitionAlias
-
-	err := unmarshal(&rtAlias)
-	// Strict unmarshalling, as we do with containerlab will cause the
-	// Links sections to fail. The unmarshal call will throw a yaml.TypeError
-	// This section we don't want strict, so if error is not nil but the error type is
-	// yaml.TypeError, we will continue
-	var e *yaml.TypeError
-	if err != nil && !errors.As(err, &e) {
+	// alias struct to avoid recursion and pass strict yaml unmarshalling
+	// we don't care about the embedded LinkConfig, as we only need to unmarshal
+	// the type field.
+	var a struct {
+		Type       string `yaml:"type"`
+		LinkConfig `yaml:",inline"`
+	}
+	err := unmarshal(&a)
+	if err != nil {
 		return err
 	}
 
 	var lt LinkDefinitionType
 
-	if rtAlias.Type == "" {
+	if a.Type == "" {
 		lt = LinkTypeLegacy
 		r.Type = string(LinkTypeLegacy)
 	} else {
-		r.Type = rtAlias.Type
+		r.Type = a.Type
 
-		lt, err = ParseLinkType(rtAlias.Type)
+		lt, err = ParseLinkType(a.Type)
 		if err != nil {
 			return err
 		}
@@ -115,35 +108,35 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	case LinkTypeVEth:
 		var l RawVEthLink
 		err := unmarshal(&l)
-		if err != nil && !errors.As(err, &e) {
+		if err != nil {
 			return err
 		}
 		r.LinkConfig = *l.ToLinkConfig()
 	case LinkTypeMgmtNet:
 		var l RawMgmtNetLink
 		err := unmarshal(&l)
-		if err != nil && !errors.As(err, &e) {
+		if err != nil {
 			return err
 		}
 		r.LinkConfig = *l.ToLinkConfig()
 	case LinkTypeHost:
 		var l RawHostLink
 		err := unmarshal(&l)
-		if err != nil && !errors.As(err, &e) {
+		if err != nil {
 			return err
 		}
 		r.LinkConfig = *l.ToLinkConfig()
 	case LinkTypeMacVLan:
 		var l RawMacVLanLink
 		err := unmarshal(&l)
-		if err != nil && !errors.As(err, &e) {
+		if err != nil {
 			return err
 		}
 		r.LinkConfig = *l.ToLinkConfig()
 	case LinkTypeMacVTap:
 		var l RawMacVTapLink
 		err := unmarshal(&l)
-		if err != nil && !errors.As(err, &e) {
+		if err != nil {
 			return err
 		}
 		r.LinkConfig = *l.ToLinkConfig()
