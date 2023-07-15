@@ -15,13 +15,21 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	generateable      = true
+	generateIfFornamt = "eth%d"
+)
+
 var kindnames = []string{"sonic-vs"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(sonic)
-	}, nil)
+	}, nrea)
 }
 
 type sonic struct {

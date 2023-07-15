@@ -64,7 +64,7 @@ func PrepareVars(c *clab.CLab) map[string]*NodeConfig {
 			vars[vkRole] = nodeCfg.Kind
 		}
 
-		creds := c.Reg.Kind(nodeCfg.Kind).Credentials().Slice()
+		creds := c.Reg.Kind(nodeCfg.Kind).GetCredentials().Slice()
 
 		res[name] = &NodeConfig{
 			TargetNode:  nodeCfg,

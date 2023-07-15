@@ -32,6 +32,9 @@ import (
 const (
 	srlDefaultType = "ixrd2"
 
+	generateable      = true
+	generateIfFornamt = "e1-%d"
+
 	readyTimeout = time.Minute * 2 // max wait time for node to boot
 	retryTimer   = time.Second
 	// additional config that clab adds on top of the factory config.
@@ -123,9 +126,13 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(srl)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type srl struct {

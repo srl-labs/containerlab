@@ -16,11 +16,19 @@ import (
 
 var kindnames = []string{"rare"}
 
+const (
+	generateable      = true
+	generateIfFornamt = "eth%d"
+)
+
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(rare)
-	}, nil)
+	}, nrea)
 }
 
 type rare struct {

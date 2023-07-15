@@ -33,14 +33,20 @@ var (
 )
 
 const (
+	generateable      = true
+	generateIfFornamt = "eth%d"
+
 	scrapliPlatformName = "cisco_iosxr"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(xrd)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type xrd struct {
