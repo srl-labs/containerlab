@@ -448,6 +448,7 @@ func (c *CLab) verifyLinks() error {
 		}
 	}
 	if len(dups) != 0 {
+		sort.Strings(dups) // sort for deterministic error message
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
 	return nil
