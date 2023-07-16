@@ -126,7 +126,7 @@ func (c *CLab) parseTopology() error {
 	}
 	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
-		c.Links[i] = c.NewLink(&l.LinkConfig)
+		c.Links[i] = c.NewLink(l)
 	}
 
 	// set any containerlab defaults after we've parsed the input
@@ -326,8 +326,8 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	return nil
 }
 
-// NewLink initializes a new link object.
-func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
+// NewLink initializes a new link object from the link definition provided via topology file.
+func (c *CLab) NewLink(l *types.LinkDefinition) *types.Link {
 	if len(l.Endpoints) != 2 {
 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
 	}
