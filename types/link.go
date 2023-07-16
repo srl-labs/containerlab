@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
 	Mtu    int                    `yaml:"mtu,omitempty"`
 	Labels map[string]string      `yaml:"labels,omitempty"`
@@ -16,7 +17,6 @@ type LinkCommonParams struct {
 // LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
 	Type string `yaml:"type"`
-	// Instance interface{}
 	LinkConfig
 }
 
@@ -30,9 +30,10 @@ const (
 	LinkTypeMacVTap LinkDefinitionType = "macvtap"
 	LinkTypeHost    LinkDefinitionType = "host"
 
-	// LinkTypeLegacy is a link definition where link types
-	// are encoded in the endpoint definition as string.
-	LinkTypeLegacy LinkDefinitionType = "legacy"
+	// LinkTypeBrief is a link definition where link types
+	// are encoded in the endpoint definition as string and allow users
+	// to quickly type out link endpoints in a yaml file.
+	LinkTypeBrief LinkDefinitionType = "brief"
 )
 
 func ParseLinkType(s string) (LinkDefinitionType, error) {
@@ -47,8 +48,8 @@ func ParseLinkType(s string) (LinkDefinitionType, error) {
 		return LinkTypeMgmtNet, nil
 	case string(LinkTypeHost):
 		return LinkTypeHost, nil
-	case string(LinkTypeLegacy):
-		return LinkTypeLegacy, nil
+	case string(LinkTypeBrief):
+		return LinkTypeBrief, nil
 	default:
 		return "", fmt.Errorf("unable to parse %q as LinkType", s)
 	}
@@ -93,9 +94,10 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 	var lt LinkDefinitionType
 
+	// if no type is specified, we assume that brief notation of a link definition is used.
 	if a.Type == "" {
-		lt = LinkTypeLegacy
-		r.Type = string(LinkTypeLegacy)
+		lt = LinkTypeBrief
+		r.Type = string(LinkTypeBrief)
 	} else {
 		r.Type = a.Type
 
@@ -158,21 +160,25 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 			return err
 		}
 		r.LinkConfig = *l.RawMacVTapLink.ToLinkConfig()
-	case LinkTypeLegacy:
-		// try to parse the depricate format
+	case LinkTypeBrief:
+		// brief link's endpoint format
 		var l struct {
 			Type       string `yaml:"type"`
 			LinkConfig `yaml:",inline"`
 		}
+
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.Type = string(LinkTypeLegacy)
-		lc, err := deprecateLinkConversion(&l.LinkConfig)
+
+		r.Type = string(LinkTypeBrief)
+
+		lc, err := briefLinkConversion(&l.LinkConfig)
 		if err != nil {
 			return err
 		}
+
 		r.LinkConfig = *lc
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
@@ -181,7 +187,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	return nil
 }
 
-func deprecateLinkConversion(lc *LinkConfig) (*LinkConfig, error) {
+func briefLinkConversion(lc *LinkConfig) (*LinkConfig, error) {
 	// check two endpoints defined
 	if len(lc.Endpoints) != 2 {
 		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(lc.Endpoints))
