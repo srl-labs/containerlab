@@ -404,6 +404,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 }
 
 // CheckTopologyDefinition runs topology checks and returns any errors found.
+// This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	var err error
 
@@ -431,12 +432,14 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	return nil
 }
 
+// verifyLinks checks if all the endpoints in the links section of the topology file
+// appear only once.
 func (c *CLab) verifyLinks() error {
 	endpoints := map[string]struct{}{}
 	// dups accumulates duplicate links
 	dups := []string{}
-	for _, lc := range c.Links {
-		for _, e := range []*types.Endpoint{lc.A, lc.B} {
+	for _, l := range c.Links {
+		for _, e := range []*types.Endpoint{l.A, l.B} {
 			e_string := e.String()
 			if _, ok := endpoints[e_string]; ok {
 				dups = append(dups, e_string)

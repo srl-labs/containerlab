@@ -38,6 +38,7 @@ type Endpoint struct {
 	MAC string
 }
 
+// String returns a string representation of the endpoint.
 func (e *Endpoint) String() string {
 	return fmt.Sprintf("%s:%s", e.Node.ShortName, e.EndpointName)
 }
