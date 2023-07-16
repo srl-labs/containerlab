@@ -36,7 +36,8 @@ const (
 	LinkTypeBrief LinkDefinitionType = "brief"
 )
 
-func ParseLinkType(s string) (LinkDefinitionType, error) {
+// parseLinkType parses a string representation of a link type into a LinkDefinitionType.
+func parseLinkType(s string) (LinkDefinitionType, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
 	case string(LinkTypeMacVLan):
 		return LinkTypeMacVLan, nil
@@ -55,12 +56,13 @@ func ParseLinkType(s string) (LinkDefinitionType, error) {
 	}
 }
 
-var _ yaml.Unmarshaler = &LinkDefinition{}
+var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
+var _ yaml.Marshaler = (*LinkDefinition)(nil)
 
-// MarshalYAML used when writing topology files via the generate command.
-// for now this falls back to convertig the LinkConfig into a
-// RawVEthLink. Such that the generated LinkConfigs adhere to the new LinkDefinition
-// format instead of the depricated one.
+// MarshalYAML serializes LinkDefinition (e.g when used with generate command).
+// As of now it falls back to converting the LinkConfig into a
+// RawVEthLink, such that the generated LinkConfigs adhere to the new LinkDefinition
+// format instead of the brief one.
 func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 	rawVEth, err := vEthFromLinkConfig(&r.LinkConfig)
 	if err != nil {
@@ -78,6 +80,8 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 	return x, nil
 }
 
+// UnmarshalYAML deserializes links passed via topology file into LinkDefinition struct.
+// It supports both the brief and specific link type notations.
 func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// alias struct to avoid recursion and pass strict yaml unmarshalling
 	// we don't care about the embedded LinkConfig, as we only need to unmarshal
@@ -101,7 +105,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	} else {
 		r.Type = a.Type
 
-		lt, err = ParseLinkType(a.Type)
+		lt, err = parseLinkType(a.Type)
 		if err != nil {
 			return err
 		}
@@ -196,7 +200,7 @@ func briefLinkConversion(lc *LinkConfig) (*LinkConfig, error) {
 		parts := strings.SplitN(v, ":", 2)
 		node := parts[0]
 
-		lt, err := ParseLinkType(node)
+		lt, err := parseLinkType(node)
 		if err != nil {
 			// if the link type parsing from the node name did fail
 			// we continue, since the node name is not like veth or macvlan or the like
