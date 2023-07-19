@@ -2,23 +2,25 @@ package types
 
 import "fmt"
 
-type RawVEthLink struct {
+// LinkVEthRaw is the raw (string) representation of a veth link as defined in the topology file.
+type LinkVEthRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
-func (r *RawVEthLink) MarshalYAML() (interface{}, error) {
+func (r *LinkVEthRaw) MarshalYAML() (interface{}, error) {
 	x := struct {
 		Type        string `yaml:"type"`
-		RawVEthLink `yaml:",inline"`
+		LinkVEthRaw `yaml:",inline"`
 	}{
 		Type:        string(LinkTypeVEth),
-		RawVEthLink: *r,
+		LinkVEthRaw: *r,
 	}
 	return x, nil
 }
 
-func (r *RawVEthLink) ToLinkConfig() *LinkConfig {
+// ToLinkConfig converts the raw link into a LinkConfig.
+func (r *LinkVEthRaw) ToLinkConfig() *LinkConfig {
 	lc := &LinkConfig{
 		Vars:      r.Vars,
 		Labels:    r.Labels,

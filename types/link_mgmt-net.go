@@ -2,13 +2,13 @@ package types
 
 import "fmt"
 
-type RawMgmtNetLink struct {
+type LinkMgmtNetRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (r *RawMgmtNetLink) ToLinkConfig() *LinkConfig {
+func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkConfig {
 	lc := &LinkConfig{
 		Vars:      r.Vars,
 		Labels:    r.Labels,
@@ -21,18 +21,3 @@ func (r *RawMgmtNetLink) ToLinkConfig() *LinkConfig {
 
 	return lc
 }
-
-// func mgmtNetFromLinkConfig(lc *LinkConfig, specialEPIndex int) (*RawMgmtNetLink, error) {
-// 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
-
-// 	result := &RawMgmtNetLink{
-// 		RawLinkType:   RawLinkType{Type: string(LinkTypeMgmtNet), Labels: lc.Labels, Vars: lc.Vars, Instance: nil},
-// 		HostInterface: hostIf,
-// 		Endpoint: &EndpointRaw{
-// 			Node:  node,
-// 			Iface: nodeIf,
-// 			Mac:   "",
-// 		},
-// 	}
-// 	return result, nil
-// }

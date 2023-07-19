@@ -2,13 +2,15 @@ package types
 
 import "fmt"
 
-type RawHostLink struct {
+// LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
+type LinkHostRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (r *RawHostLink) ToLinkConfig() *LinkConfig {
+// ToLinkConfig converts the raw link into a LinkConfig.
+func (r *LinkHostRaw) ToLinkConfig() *LinkConfig {
 	lc := &LinkConfig{
 		Vars:      r.Vars,
 		Labels:    r.Labels,
@@ -21,20 +23,3 @@ func (r *RawHostLink) ToLinkConfig() *LinkConfig {
 
 	return lc
 }
-
-// func hostFromLinkConfig(lc *LinkConfig, specialEPIndex int) (*RawHostLink, error) {
-// 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
-
-// 	result := &RawHostLink{
-// 		RawLinkType: RawLinkType{
-// 			Type:     string(LinkTypeHost),
-// 			Labels:   lc.Labels,
-// 			Vars:     lc.Vars,
-// 			Instance: nil,
-// 		},
-// 		HostInterface: hostIf,
-// 		Node:          node,
-// 		NodeInterface: nodeIf,
-// 	}
-// 	return result, nil
-// }

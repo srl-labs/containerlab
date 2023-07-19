@@ -95,53 +95,53 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 			// the Type field is injected artificially
 			// to allow strict yaml parsing to work.
 			Type        string `yaml:"type"`
-			RawVEthLink `yaml:",inline"`
+			LinkVEthRaw `yaml:",inline"`
 		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.RawVEthLink.ToLinkConfig()
+		r.LinkConfig = *l.LinkVEthRaw.ToLinkConfig()
 	case LinkTypeMgmtNet:
 		var l struct {
 			Type           string `yaml:"type"`
-			RawMgmtNetLink `yaml:",inline"`
+			LinkMgmtNetRaw `yaml:",inline"`
 		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.RawMgmtNetLink.ToLinkConfig()
+		r.LinkConfig = *l.LinkMgmtNetRaw.ToLinkConfig()
 	case LinkTypeHost:
 		var l struct {
 			Type        string `yaml:"type"`
-			RawHostLink `yaml:",inline"`
+			LinkHostRaw `yaml:",inline"`
 		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.RawHostLink.ToLinkConfig()
+		r.LinkConfig = *l.LinkHostRaw.ToLinkConfig()
 	case LinkTypeMacVLan:
 		var l struct {
 			Type           string `yaml:"type"`
-			RawMacVLanLink `yaml:",inline"`
+			LinkMACVLANRaw `yaml:",inline"`
 		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.RawMacVLanLink.ToLinkConfig()
+		r.LinkConfig = *l.LinkMACVLANRaw.ToLinkConfig()
 	case LinkTypeMacVTap:
 		var l struct {
 			Type           string `yaml:"type"`
-			RawMacVTapLink `yaml:",inline"`
+			LinkMACVTAPRaw `yaml:",inline"`
 		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.RawMacVTapLink.ToLinkConfig()
+		r.LinkConfig = *l.LinkMACVTAPRaw.ToLinkConfig()
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {

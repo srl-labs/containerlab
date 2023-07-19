@@ -2,11 +2,15 @@ package types
 
 import "fmt"
 
-type RawMacVLanLink struct {
-	rawMacVXType `yaml:",inline"`
+// LinkMACVLANRaw is the raw (string) representation of a macvlan link as defined in the topology file.
+type LinkMACVLANRaw struct {
+	LinkCommonParams `yaml:",inline"`
+	HostInterface    string       `yaml:"host-interface"`
+	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (r *RawMacVLanLink) ToLinkConfig() *LinkConfig {
+// ToLinkConfig converts the raw link into a LinkConfig.
+func (r *LinkMACVLANRaw) ToLinkConfig() *LinkConfig {
 	lc := &LinkConfig{
 		Vars:      r.Vars,
 		Labels:    r.Labels,
