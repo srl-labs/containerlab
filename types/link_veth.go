@@ -30,25 +30,3 @@ func (r *RawVEthLink) ToLinkConfig() *LinkConfig {
 	}
 	return lc
 }
-
-func vEthFromLinkConfig(lc *LinkConfig) (*RawVEthLink, error) {
-	nodeA, nodeAIf, nodeB, nodeBIf := extractHostNodeInterfaceData(lc, 0)
-
-	result := &RawVEthLink{
-		LinkCommonParams: LinkCommonParams{
-			Labels: lc.Labels,
-			Vars:   lc.Vars,
-		},
-		Endpoints: []*EndpointRaw{
-			{
-				Node:  nodeA,
-				Iface: nodeAIf,
-			},
-			{
-				Node:  nodeB,
-				Iface: nodeBIf,
-			},
-		},
-	}
-	return result, nil
-}

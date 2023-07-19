@@ -16,8 +16,8 @@ type LinkCommonParams struct {
 
 // LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
-	Type string `yaml:"type"`
-	LinkConfig
+	Type       string `yaml:"type,omitempty"`
+	LinkConfig `yaml:",inline"`
 }
 
 // LinkDefinitionType represents the type of a link definition.
@@ -57,28 +57,6 @@ func parseLinkType(s string) (LinkDefinitionType, error) {
 }
 
 var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
-var _ yaml.Marshaler = (*LinkDefinition)(nil)
-
-// MarshalYAML serializes LinkDefinition (e.g when used with generate command).
-// As of now it falls back to converting the LinkConfig into a
-// RawVEthLink, such that the generated LinkConfigs adhere to the new LinkDefinition
-// format instead of the brief one.
-func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
-	rawVEth, err := vEthFromLinkConfig(&r.LinkConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	x := struct {
-		RawVEthLink `yaml:",inline"`
-		Type        string `yaml:"type"`
-	}{
-		RawVEthLink: *rawVEth,
-		Type:        string(LinkTypeVEth),
-	}
-
-	return x, nil
-}
 
 // UnmarshalYAML deserializes links passed via topology file into LinkDefinition struct.
 // It supports both the brief and specific link type notations.

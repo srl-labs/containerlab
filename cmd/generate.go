@@ -216,7 +216,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				}
 				config.Topology.Links = append(config.Topology.Links,
 					&types.LinkDefinition{
-						Type: string(types.LinkTypeVEth),
+						// Type: string(types.LinkTypeBrief),
 						LinkConfig: types.LinkConfig{
 							Endpoints: []string{
 								node1 + ":" + fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset),
