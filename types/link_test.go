@@ -205,28 +205,6 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "macvtap link legacy format",
-			args: args{
-				yaml: []byte(`
-                    endpoints: 
-                        - "srl1:e1-5"
-                        - "macvtap:e1-5"
-                `),
-			},
-			wantErr: true,
-		},
-		{
-			name: "macvlan link legacy format",
-			args: args{
-				yaml: []byte(`
-                    endpoints: 
-                        - "srl1:e1-5"
-                        - "macvlan:e1-5"
-                `),
-			},
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {

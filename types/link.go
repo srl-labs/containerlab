@@ -178,45 +178,10 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 		r.Type = string(LinkTypeBrief)
 
-		lc, err := briefLinkConversion(&l.LinkConfig)
-		if err != nil {
-			return err
-		}
-
-		r.LinkConfig = *lc
+		r.LinkConfig = l.LinkConfig
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
 	}
 
 	return nil
-}
-
-func briefLinkConversion(lc *LinkConfig) (*LinkConfig, error) {
-	// check two endpoints defined
-	if len(lc.Endpoints) != 2 {
-		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(lc.Endpoints))
-	}
-	for _, v := range lc.Endpoints {
-		parts := strings.SplitN(v, ":", 2)
-		node := parts[0]
-
-		lt, err := parseLinkType(node)
-		if err != nil {
-			// if the link type parsing from the node name did fail
-			// we continue, since the node name is not like veth or macvlan or the like
-			continue
-		}
-
-		// if the node name is equal to a LinkType, we check the Type and only allow the depricated format
-		// for old types. New once we force to use the new link format.
-		switch lt {
-		case LinkTypeMgmtNet:
-			continue
-		case LinkTypeHost:
-			continue
-		case LinkTypeMacVLan, LinkTypeMacVTap:
-			return nil, fmt.Errorf("Link type %q needs to be defined in new link format", string(lt))
-		}
-	}
-	return lc, nil
 }
