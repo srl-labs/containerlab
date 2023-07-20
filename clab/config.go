@@ -326,8 +326,8 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	return nil
 }
 
-// NewLink initializes a new link object.
-func (c *CLab) NewLink(l *types.LinkConfig) *types.Link {
+// NewLink initializes a new link object from the link definition provided via topology file.
+func (c *CLab) NewLink(l *types.LinkDefinition) *types.Link {
 	if len(l.Endpoints) != 2 {
 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
 	}
@@ -404,6 +404,7 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 }
 
 // CheckTopologyDefinition runs topology checks and returns any errors found.
+// This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	var err error
 
@@ -431,22 +432,23 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	return nil
 }
 
+// verifyLinks checks if all the endpoints in the links section of the topology file
+// appear only once.
 func (c *CLab) verifyLinks() error {
 	endpoints := map[string]struct{}{}
 	// dups accumulates duplicate links
 	dups := []string{}
-	for _, lc := range c.Config.Topology.Links {
-		for _, e := range lc.Endpoints {
-			if err := checkEndpoint(e); err != nil {
-				return err
+	for _, l := range c.Links {
+		for _, e := range []*types.Endpoint{l.A, l.B} {
+			e_string := e.String()
+			if _, ok := endpoints[e_string]; ok {
+				dups = append(dups, e_string)
 			}
-			if _, ok := endpoints[e]; ok {
-				dups = append(dups, e)
-			}
-			endpoints[e] = struct{}{}
+			endpoints[e_string] = struct{}{}
 		}
 	}
 	if len(dups) != 0 {
+		sort.Strings(dups) // sort for deterministic error message
 		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
 	}
 	return nil
@@ -588,15 +590,6 @@ func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
 				rootNsIfaces[e.EndpointName] = struct{}{}
 			}
 		}
-	}
-	return nil
-}
-
-// checkEndpoint runs checks on the endpoint syntax.
-func checkEndpoint(e string) error {
-	split := strings.Split(e, ":")
-	if len(split) != 2 {
-		return fmt.Errorf("malformed endpoint definition: %s", e)
 	}
 	return nil
 }

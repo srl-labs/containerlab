@@ -10,7 +10,7 @@ type Topology struct {
 	Defaults *NodeDefinition            `yaml:"defaults,omitempty"`
 	Kinds    map[string]*NodeDefinition `yaml:"kinds,omitempty"`
 	Nodes    map[string]*NodeDefinition `yaml:"nodes,omitempty"`
-	Links    []*LinkConfig              `yaml:"links,omitempty"`
+	Links    []*LinkDefinition          `yaml:"links,omitempty"`
 }
 
 func NewTopology() *Topology {
@@ -18,7 +18,7 @@ func NewTopology() *Topology {
 		Defaults: new(NodeDefinition),
 		Kinds:    make(map[string]*NodeDefinition),
 		Nodes:    make(map[string]*NodeDefinition),
-		Links:    make([]*LinkConfig, 0),
+		Links:    make([]*LinkDefinition, 0),
 	}
 }
 
