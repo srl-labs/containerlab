@@ -32,3 +32,25 @@ func (r *LinkVEthRaw) ToLinkConfig() *LinkConfig {
 	}
 	return lc
 }
+
+func (r *LinkVEthRaw) Resolve() (LinkInterf, error) {
+	// TODO: needs implementation
+	return nil, nil
+}
+
+func vEthFromLinkConfig(lc LinkConfig) (*LinkVEthRaw, error) {
+	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, 0)
+
+	result := &LinkVEthRaw{
+		LinkCommonParams: LinkCommonParams{
+			Mtu:    lc.MTU,
+			Labels: lc.Labels,
+			Vars:   lc.Vars,
+		},
+		Endpoints: []*EndpointRaw{
+			NewEndpointRaw(host, hostIf, ""),
+			NewEndpointRaw(node, nodeIf, ""),
+		},
+	}
+	return result, nil
+}

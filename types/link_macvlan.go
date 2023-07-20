@@ -23,3 +23,24 @@ func (r *LinkMACVLANRaw) ToLinkConfig() *LinkConfig {
 
 	return lc
 }
+
+func macVlanFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMACVLANRaw, error) {
+	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
+
+	result := &LinkMACVLANRaw{
+		LinkCommonParams: LinkCommonParams{
+			Mtu:    lc.MTU,
+			Labels: lc.Labels,
+			Vars:   lc.Vars,
+		},
+		HostInterface: hostIf,
+		Endpoint:      NewEndpointRaw(node, nodeIf, ""),
+	}
+
+	return result, nil
+}
+
+func (r *LinkMACVLANRaw) Resolve() (LinkInterf, error) {
+	// TODO: needs implementation
+	return nil, nil
+}

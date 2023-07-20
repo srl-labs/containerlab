@@ -16,8 +16,8 @@ type LinkCommonParams struct {
 
 // LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
-	Type       string `yaml:"type,omitempty"`
-	LinkConfig `yaml:",inline"`
+	Type string  `yaml:"type,omitempty"`
+	Link RawLink `yaml:",inline"`
 }
 
 // LinkDefinitionType represents the type of a link definition.
@@ -98,7 +98,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.LinkVEthRaw.ToLinkConfig()
+		r.Link = &l.LinkVEthRaw
 	case LinkTypeMgmtNet:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -108,7 +108,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.LinkMgmtNetRaw.ToLinkConfig()
+		r.Link = &l.LinkMgmtNetRaw
 	case LinkTypeHost:
 		var l struct {
 			Type        string `yaml:"type"`
@@ -118,7 +118,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.LinkHostRaw.ToLinkConfig()
+		r.Link = &l.LinkHostRaw
 	case LinkTypeMacVLan:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -128,7 +128,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.LinkConfig = *l.LinkMACVLANRaw.ToLinkConfig()
+		r.Link = &l.LinkMACVLANRaw
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
@@ -143,10 +143,62 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 		r.Type = string(LinkTypeBrief)
 
-		r.LinkConfig = l.LinkConfig
+		r.Link, err = briefLinkConversion(l.LinkConfig)
+		if err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
 	}
 
 	return nil
+}
+
+func briefLinkConversion(lc LinkConfig) (RawLink, error) {
+	// check two endpoints defined
+	if len(lc.Endpoints) != 2 {
+		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(lc.Endpoints))
+	}
+	for x, v := range lc.Endpoints {
+		parts := strings.SplitN(v, ":", 2)
+		node := parts[0]
+
+		lt, err := parseLinkType(node)
+		if err == nil {
+			continue
+		}
+
+		switch lt {
+		case LinkTypeMacVLan:
+			return macVlanFromLinkConfig(lc, x)
+		case LinkTypeMgmtNet:
+			return mgmtNetFromLinkConfig(lc, x)
+		case LinkTypeHost:
+			return hostFromLinkConfig(lc, x)
+		}
+	}
+	return vEthFromLinkConfig(lc)
+}
+
+type RawLink interface {
+	Resolve() (LinkInterf, error)
+}
+
+type LinkInterf interface {
+	Deploy()
+}
+
+func extractHostNodeInterfaceData(lc LinkConfig, specialEPIndex int) (host, hostIf, node, nodeIf string) {
+	// the index of the node is the specialEndpointIndex +1  modulo 2
+	nodeindex := (specialEPIndex + 1) % 2
+
+	hostData := strings.SplitN(lc.Endpoints[specialEPIndex], ":", 2)
+	nodeData := strings.SplitN(lc.Endpoints[nodeindex], ":", 2)
+
+	host = hostData[0]
+	hostIf = hostData[1]
+	node = nodeData[0]
+	nodeIf = nodeData[1]
+
+	return host, hostIf, node, nodeIf
 }

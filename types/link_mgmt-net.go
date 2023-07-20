@@ -21,3 +21,23 @@ func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkConfig {
 
 	return lc
 }
+
+func (r *LinkMgmtNetRaw) Resolve() (LinkInterf, error) {
+	// TODO: needs implementation
+	return nil, nil
+}
+
+func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMgmtNetRaw, error) {
+	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
+
+	result := &LinkMgmtNetRaw{
+		LinkCommonParams: LinkCommonParams{
+			Mtu:    lc.MTU,
+			Labels: lc.Labels,
+			Vars:   lc.Vars,
+		},
+		HostInterface: hostIf,
+		Endpoint:      NewEndpointRaw(node, nodeIf, ""),
+	}
+	return result, nil
+}

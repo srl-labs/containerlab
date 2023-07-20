@@ -23,3 +23,34 @@ func (r *LinkHostRaw) ToLinkConfig() *LinkConfig {
 
 	return lc
 }
+
+func hostFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
+	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
+
+	result := &LinkHostRaw{
+		LinkCommonParams: LinkCommonParams{
+			Mtu:    lc.MTU,
+			Labels: lc.Labels,
+			Vars:   lc.Vars,
+		},
+		HostInterface: hostIf,
+		Endpoint:      NewEndpointRaw(node, nodeIf, ""),
+	}
+	return result, nil
+}
+
+func (r *LinkHostRaw) Resolve() (LinkInterf, error) {
+	// TODO: needs implementation
+	return nil, nil
+}
+
+type LinkHost struct {
+	LinkCommonParams `yaml:",inline"`
+	HostInterface    string `yaml:"host-interface"`
+	Endpoint         *Endpt `yaml:"endpoint"`
+}
+
+func (l *LinkHost) Deploy() error {
+	// TODO: implementation required
+	return nil
+}
