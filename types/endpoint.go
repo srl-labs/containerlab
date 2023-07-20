@@ -1,6 +1,9 @@
 package types
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 type EndpointRaw struct {
 	Node  string `yaml:"node"`
@@ -16,9 +19,29 @@ func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
 	}
 }
 
-func (e *EndpointRaw) ToEndpt() (*Endpt, error) {
-	// TODO: need implementation
-	return nil, nil
+func (e *EndpointRaw) Resolve(nodes map[string]LinkNode) (*Endpt, error) {
+	// check if the referenced node does exist
+	node, exists := nodes[e.Node]
+	if !exists {
+		return nil, fmt.Errorf("unable to find node %s", e.Node)
+	}
+
+	// create the result struct
+	result := &Endpt{
+		Node:  node,
+		Iface: e.Iface,
+	}
+
+	// if MAC is present, set it
+	if e.Mac != "" {
+		m, err := net.ParseMAC(e.Mac)
+		if err != nil {
+			return nil, err
+		}
+		result.Mac = m
+	}
+
+	return result, nil
 }
 
 type Endpt struct {

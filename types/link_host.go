@@ -3,6 +3,8 @@ package types
 import (
 	"context"
 	"fmt"
+
+	"github.com/vishvananda/netlink"
 )
 
 // LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
@@ -42,9 +44,19 @@ func hostFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
 	return result, nil
 }
 
-func (r *LinkHostRaw) Resolve() (LinkInterf, error) {
-	// TODO: needs implementation
-	return nil, nil
+func (r *LinkHostRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
+	link := &LinkHost{
+		LinkCommonParams: r.LinkCommonParams,
+		HostInterface:    r.HostInterface,
+	}
+	// resolve and populate the endpoint
+	ep, err := r.Endpoint.Resolve(nodes)
+	if err != nil {
+		return nil, err
+	}
+	// set the end point in the link
+	link.Endpoint = ep
+	return link, nil
 }
 
 type LinkHost struct {
@@ -54,7 +66,41 @@ type LinkHost struct {
 }
 
 func (l *LinkHost) Deploy(ctx context.Context) error {
-	// TODO: implementation required
+	// build the netlink.Veth struct for the link provisioning
+	link := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name: l.Endpoint.GetRandName(),
+			MTU:  l.Mtu,
+			// Mac address is set later on
+		},
+		PeerName: l.HostInterface,
+		// PeerMac address is set later on
+	}
+
+	// add the link
+	err := netlink.LinkAdd(link)
+	if err != nil {
+		return err
+	}
+
+	// add link to node, rename, set mac and Up
+	err = l.Endpoint.Node.AddLink(ctx, link, SetNameMACAndUpInterface(link, l.Endpoint))
+	if err != nil {
+		return err
+	}
+
+	// get the link on the host side
+	hostLink, err := netlink.LinkByName(l.HostInterface)
+	if err != nil {
+		return err
+	}
+
+	// set the host side link to up
+	err = netlink.LinkSetUp(hostLink)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

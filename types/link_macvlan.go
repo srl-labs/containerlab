@@ -7,8 +7,8 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// LinkMACVLANRaw is the raw (string) representation of a macvlan link as defined in the topology file.
-type LinkMACVLANRaw struct {
+// LinkMacVlanRaw is the raw (string) representation of a macvlan link as defined in the topology file.
+type LinkMacVlanRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
@@ -16,7 +16,7 @@ type LinkMACVLANRaw struct {
 }
 
 // ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkMACVLANRaw) ToLinkConfig() *LinkConfig {
+func (r *LinkMacVlanRaw) ToLinkConfig() *LinkConfig {
 	lc := &LinkConfig{
 		Vars:      r.Vars,
 		Labels:    r.Labels,
@@ -30,10 +30,10 @@ func (r *LinkMACVLANRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
-func macVlanFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMACVLANRaw, error) {
+func macVlanFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMacVlanRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
-	result := &LinkMACVLANRaw{
+	result := &LinkMacVlanRaw{
 		LinkCommonParams: LinkCommonParams{
 			Mtu:    lc.MTU,
 			Labels: lc.Labels,
@@ -46,8 +46,28 @@ func macVlanFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMACVLANRaw, 
 	return result, nil
 }
 
-func (r *LinkMACVLANRaw) Resolve() (LinkInterf, error) {
-	return nil, nil
+func (r *LinkMacVlanRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
+
+	link := &LinkMacVlan{
+		LinkCommonParams: r.LinkCommonParams,
+		HostInterface:    r.HostInterface,
+	}
+	// parse the MacVlanMode
+	mode, err := MacVlanModeParse(r.Mode)
+	if err != nil {
+		return nil, err
+	}
+	// set the mode in the link struct
+	link.Mode = mode
+	// resolve the endpoint
+	ep, err := r.Endpoint.Resolve(nodes)
+	if err != nil {
+		return nil, err
+	}
+	// set the indpoint in the link struct
+	link.NodeEndpoint = ep
+
+	return link, nil
 }
 
 type LinkMacVlan struct {
@@ -66,6 +86,24 @@ const (
 	MacVlanModePrivate  = "private"
 	MacVlanModeSource   = "source"
 )
+
+func MacVlanModeParse(s string) (MacVlanMode, error) {
+	switch s {
+	case MacVlanModeBridge:
+		return MacVlanModeBridge, nil
+	case MacVlanModeVepa:
+		return MacVlanModeVepa, nil
+	case MacVlanModePassthru:
+		return MacVlanModePassthru, nil
+	case MacVlanModePrivate:
+		return MacVlanModePrivate, nil
+	case MacVlanModeSource:
+		return MacVlanModeSource, nil
+	case "":
+		return MacVlanModeBridge, nil
+	}
+	return "", fmt.Errorf("unknown MacVlanMode %q", s)
+}
 
 func (l *LinkMacVlan) GetType() LinkType {
 	return LinkTypeMacVLan

@@ -12,6 +12,7 @@ type LinkMgmtNetRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
+	MgmtBridge       string       `yaml:"bridge"`
 }
 
 func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkConfig {
@@ -28,12 +29,25 @@ func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
-func (r *LinkMgmtNetRaw) Resolve() (LinkInterf, error) {
-	// TODO: needs implementation
-	return nil, nil
+func (r *LinkMgmtNetRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
+	// create the LinkMgmtNet struct
+	link := &LinkMgmtNet{
+		LinkCommonParams: r.LinkCommonParams,
+		HostInterface:    r.HostInterface,
+		MgmtBridge:       r.MgmtBridge,
+	}
+
+	// resolve and populate the endpoint
+	ep, err := r.Endpoint.Resolve(nodes)
+	if err != nil {
+		return nil, err
+	}
+	// set the end point in the link
+	link.ContainerEndpoint = ep
+	return link, nil
 }
 
-func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMgmtNetRaw, error) {
+func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
 	result := &LinkMgmtNetRaw{

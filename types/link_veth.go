@@ -38,9 +38,26 @@ func (r *LinkVEthRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
-func (r *LinkVEthRaw) Resolve() (LinkInterf, error) {
-	// TODO: needs implementation
-	return nil, nil
+func (r *LinkVEthRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
+
+	// create LinkVEth struct
+	l := &LinkVEth{
+		LinkCommonParams: r.LinkCommonParams,
+		Endpoints:        make([]*Endpt, 0, 2),
+	}
+
+	// resolve endpoints
+	for idx, ep := range r.Endpoints {
+		// resolve endpoint
+		ept, err := ep.Resolve(nodes)
+		if err != nil {
+			return nil, err
+		}
+		// set resolved endpoint in link endpoints
+		l.Endpoints[idx] = ept
+	}
+
+	return l, nil
 }
 
 func vEthFromLinkConfig(lc LinkConfig) (*LinkVEthRaw, error) {
@@ -60,26 +77,27 @@ func vEthFromLinkConfig(lc LinkConfig) (*LinkVEthRaw, error) {
 	return result, nil
 }
 
-type VEthLink struct {
+type LinkVEth struct {
 	LinkCommonParams
 	Endpoints []*Endpt
 }
 
-func (*VEthLink) GetType() LinkType {
+func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
-func (l *VEthLink) Deploy(ctx context.Context) error {
+func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// build the netlink.Veth struct for the link provisioning
 	linkA := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:         l.Endpoints[0].GetRandName(),
-			MTU:          l.Mtu,
-			HardwareAddr: l.Endpoints[0].Mac,
+			Name: l.Endpoints[0].GetRandName(),
+			MTU:  l.Mtu,
+			// Mac address is set later on
 		},
-		PeerName:         l.Endpoints[1].GetRandName(),
-		PeerHardwareAddr: l.Endpoints[1].Mac,
+		PeerName: l.Endpoints[1].GetRandName(),
+		// PeerMac address is set later on
 	}
+
 	// add the link
 	err := netlink.LinkAdd(linkA)
 	if err != nil {

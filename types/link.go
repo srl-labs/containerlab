@@ -126,13 +126,13 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	case LinkTypeMacVLan:
 		var l struct {
 			Type           string `yaml:"type"`
-			LinkMACVLANRaw `yaml:",inline"`
+			LinkMacVlanRaw `yaml:",inline"`
 		}
 		err := unmarshal(&l)
 		if err != nil {
 			return err
 		}
-		r.Link = &l.LinkMACVLANRaw
+		r.Link = &l.LinkMacVlanRaw
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
@@ -185,7 +185,7 @@ func briefLinkConversion(lc LinkConfig) (RawLink, error) {
 }
 
 type RawLink interface {
-	Resolve() (LinkInterf, error)
+	Resolve(map[string]LinkNode) (LinkInterf, error)
 }
 
 type LinkInterf interface {
