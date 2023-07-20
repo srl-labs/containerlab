@@ -8,12 +8,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/bridge"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/vishvananda/netlink"
 )
 
 var kindnames = []string{"ovs-bridge"}
@@ -74,4 +77,8 @@ func (n *ovs) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, e
 	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
 	return nil, cExec.ErrRunExecNotSupported
+}
+
+func (n *ovs) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	return bridge.BridgeAddLink(ctx, link, n.Cfg.ShortName, f)
 }

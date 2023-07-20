@@ -1,9 +1,13 @@
 package types
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/google/uuid"
+	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
 
@@ -20,23 +24,23 @@ type LinkDefinition struct {
 	Link RawLink `yaml:",inline"`
 }
 
-// LinkDefinitionType represents the type of a link definition.
-type LinkDefinitionType string
+// LinkType represents the type of a link definition.
+type LinkType string
 
 const (
-	LinkTypeVEth    LinkDefinitionType = "veth"
-	LinkTypeMgmtNet LinkDefinitionType = "mgmt-net"
-	LinkTypeMacVLan LinkDefinitionType = "macvlan"
-	LinkTypeHost    LinkDefinitionType = "host"
+	LinkTypeVEth    LinkType = "veth"
+	LinkTypeMgmtNet LinkType = "mgmt-net"
+	LinkTypeMacVLan LinkType = "macvlan"
+	LinkTypeHost    LinkType = "host"
 
 	// LinkTypeBrief is a link definition where link types
 	// are encoded in the endpoint definition as string and allow users
 	// to quickly type out link endpoints in a yaml file.
-	LinkTypeBrief LinkDefinitionType = "brief"
+	LinkTypeBrief LinkType = "brief"
 )
 
 // parseLinkType parses a string representation of a link type into a LinkDefinitionType.
-func parseLinkType(s string) (LinkDefinitionType, error) {
+func parseLinkType(s string) (LinkType, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
 	case string(LinkTypeMacVLan):
 		return LinkTypeMacVLan, nil
@@ -71,7 +75,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return err
 	}
 
-	var lt LinkDefinitionType
+	var lt LinkType
 
 	// if no type is specified, we assume that brief notation of a link definition is used.
 	if a.Type == "" {
@@ -185,7 +189,8 @@ type RawLink interface {
 }
 
 type LinkInterf interface {
-	Deploy()
+	Deploy(context.Context) error
+	GetType() LinkType
 }
 
 func extractHostNodeInterfaceData(lc LinkConfig, specialEPIndex int) (host, hostIf, node, nodeIf string) {
@@ -201,4 +206,48 @@ func extractHostNodeInterfaceData(lc LinkConfig, specialEPIndex int) (host, host
 	nodeIf = nodeData[1]
 
 	return host, hostIf, node, nodeIf
+}
+
+func genRandomIfName() string {
+	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
+	return "clab-" + string(s[:8])
+}
+
+type LinkNode interface {
+	// AddLink will take the given link and add it to the LinkNode
+	// in case of a regular container, it will push the link into the
+	// network namespace and then run the function f within the namespace
+	// this is to rename the link, set mtu, set the interface up, e.g. see types.SetNameMACAndUpInterface()
+	//
+	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
+	// the master of the interface and bring the interface up.
+	AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+}
+
+// SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
+// and return a function that can run in the netns.Do() call for execution in a network namespace
+func SetNameMACAndUpInterface(l netlink.Link, endpt *Endpt) func(ns.NetNS) error {
+	return func(_ ns.NetNS) error {
+		// rename the given link
+		err := netlink.LinkSetName(l, endpt.Iface)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to rename link: %v", err)
+		}
+
+		// lets set the MAC address if provided
+		if len(endpt.Mac) == 6 {
+			err = netlink.LinkSetHardwareAddr(l, endpt.Mac)
+			if err != nil {
+				return err
+			}
+		}
+
+		// bring the given link up
+		if err = netlink.LinkSetUp(l); err != nil {
+			return fmt.Errorf("failed to set %q up: %v",
+				endpt.Iface, err)
+		}
+		return nil
+	}
 }

@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -87,6 +89,9 @@ type Node interface {
 	UpdateConfigWithRuntimeInfo(context.Context) error
 	// RunExec execute a single command for a given node.
 	RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error)
+	// Adds the given link to the Node. After adding the Link to the node,
+	// the given function f is called within the Nodes namespace.
+	AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 }
 
 type NodeOption func(Node)

@@ -14,7 +14,7 @@ func TestParseLinkType(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    LinkDefinitionType
+		want    LinkType
 		wantErr bool
 	}{
 		{

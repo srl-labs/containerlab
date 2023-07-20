@@ -1,6 +1,9 @@
 package types
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
 type LinkHostRaw struct {
@@ -50,7 +53,11 @@ type LinkHost struct {
 	Endpoint         *Endpt `yaml:"endpoint"`
 }
 
-func (l *LinkHost) Deploy() error {
+func (l *LinkHost) Deploy(ctx context.Context) error {
 	// TODO: implementation required
 	return nil
+}
+
+func (l *LinkHost) GetType() LinkType {
+	return LinkTypeHost
 }

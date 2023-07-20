@@ -16,12 +16,22 @@ func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
 	}
 }
 
-type Endpt struct {
-	Iface string
-	Mac   net.HardwareAddr
-}
-
 func (e *EndpointRaw) ToEndpt() (*Endpt, error) {
 	// TODO: need implementation
 	return nil, nil
+}
+
+type Endpt struct {
+	Node     LinkNode
+	Iface    string
+	Mac      net.HardwareAddr
+	randName string
+}
+
+func (e *Endpt) GetRandName() string {
+	// generate random interface name on the fly if not already generated
+	if e.randName == "" {
+		e.randName = genRandomIfName()
+	}
+	return e.randName
 }

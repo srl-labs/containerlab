@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
@@ -21,6 +22,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
@@ -393,4 +395,18 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	}
 
 	return nodeCert, nil
+}
+
+func (d *DefaultNode) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	// retrieve the namespace handle
+	ns, err := ns.GetNS(d.Cfg.NSPath)
+	if err != nil {
+		return err
+	}
+	// move veth endpoint to namespace
+	if err = netlink.LinkSetNsFd(link, int(ns.Fd())); err != nil {
+		return err
+	}
+	// execute the given function
+	return ns.Do(f)
 }

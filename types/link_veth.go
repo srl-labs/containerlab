@@ -1,6 +1,11 @@
 package types
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+
+	"github.com/vishvananda/netlink"
+)
 
 // LinkVEthRaw is the raw (string) representation of a veth link as defined in the topology file.
 type LinkVEthRaw struct {
@@ -53,4 +58,48 @@ func vEthFromLinkConfig(lc LinkConfig) (*LinkVEthRaw, error) {
 		},
 	}
 	return result, nil
+}
+
+type VEthLink struct {
+	LinkCommonParams
+	Endpoints []*Endpt
+}
+
+func (*VEthLink) GetType() LinkType {
+	return LinkTypeVEth
+}
+
+func (l *VEthLink) Deploy(ctx context.Context) error {
+	// build the netlink.Veth struct for the link provisioning
+	linkA := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:         l.Endpoints[0].GetRandName(),
+			MTU:          l.Mtu,
+			HardwareAddr: l.Endpoints[0].Mac,
+		},
+		PeerName:         l.Endpoints[1].GetRandName(),
+		PeerHardwareAddr: l.Endpoints[1].Mac,
+	}
+	// add the link
+	err := netlink.LinkAdd(linkA)
+	if err != nil {
+		return err
+	}
+
+	// retrieve the netlink.Link for the B / Peer side of the link
+	linkB, err := netlink.LinkByName(l.Endpoints[1].GetRandName())
+	if err != nil {
+		return err
+	}
+
+	// for both ends of the link
+	for idx, link := range []netlink.Link{linkA, linkB} {
+		// add link to node, rename, set mac and Up
+		err = l.Endpoints[idx].Node.AddLink(ctx, link, SetNameMACAndUpInterface(link, l.Endpoints[idx]))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -11,12 +11,14 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 var kindnames = []string{"bridge"}
@@ -119,4 +121,31 @@ func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
 
 	return nil, cExec.ErrRunExecNotSupported
+}
+
+func (b *bridge) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	return BridgeAddLink(ctx, link, b.Cfg.ShortName, f)
+}
+
+func BridgeAddLink(ctx context.Context, link netlink.Link, bridgeName string, f func(ns.NetNS) error) error {
+	// retrieve the namespace handle
+	ns, err := ns.GetCurrentNS()
+	if err != nil {
+		return err
+	}
+
+	// get the bridge as netlink.Link
+	br, err := netlink.LinkByName(bridgeName)
+	if err != nil {
+		return err
+	}
+
+	// assign the bridge to the link as master
+	err = netlink.LinkSetMaster(link, br)
+	if err != nil {
+		return err
+	}
+
+	// execute the given function
+	return ns.Do(f)
 }
