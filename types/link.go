@@ -158,6 +158,56 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	return nil
 }
 
+// MarshalYAML serializes LinkDefinition (e.g when used with generate command).
+// As of now it falls back to converting the LinkConfig into a
+// RawVEthLink, such that the generated LinkConfigs adhere to the new LinkDefinition
+// format instead of the brief one.
+func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
+
+	switch r.Link.GetType() {
+	case LinkTypeHost:
+		x := struct {
+			LinkHostRaw `yaml:",inline"`
+			Type        string `yaml:"type"`
+		}{
+			LinkHostRaw: *r.Link.(*LinkHostRaw),
+			Type:        string(LinkTypeVEth),
+		}
+		return x, nil
+	case LinkTypeVEth:
+		x := struct {
+			// the Type field is injected artificially
+			// to allow strict yaml parsing to work.
+			Type        string `yaml:"type"`
+			LinkVEthRaw `yaml:",inline"`
+		}{
+			LinkVEthRaw: *r.Link.(*LinkVEthRaw),
+			Type:        string(LinkTypeVEth),
+		}
+		return x, nil
+	case LinkTypeMgmtNet:
+		x := struct {
+			Type           string `yaml:"type"`
+			LinkMgmtNetRaw `yaml:",inline"`
+		}{
+			LinkMgmtNetRaw: *r.Link.(*LinkMgmtNetRaw),
+			Type:           string(LinkTypeMgmtNet),
+		}
+		return x, nil
+	case LinkTypeMacVLan:
+		x := struct {
+			Type           string `yaml:"type"`
+			LinkMacVlanRaw `yaml:",inline"`
+		}{
+			LinkMacVlanRaw: *r.Link.(*LinkMacVlanRaw),
+			Type:           string(LinkTypeMacVLan),
+		}
+		return x, nil
+	}
+
+	return nil, fmt.Errorf("unable to marshall")
+}
+
 func briefLinkConversion(lc LinkConfig) (RawLink, error) {
 	// check two endpoints defined
 	if len(lc.Endpoints) != 2 {
@@ -189,6 +239,7 @@ type RawLink interface {
 	// ToLinkConfig TODO: This is meant to be a temporary conversion helper
 	// should be removed in final iteration
 	ToLinkConfig() *LinkConfig
+	GetType() LinkType
 }
 
 type LinkInterf interface {

@@ -127,7 +127,7 @@ func (b *bridge) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS
 	return BridgeAddLink(ctx, link, b.Cfg.ShortName, f)
 }
 
-func BridgeAddLink(ctx context.Context, link netlink.Link, bridgeName string, f func(ns.NetNS) error) error {
+func BridgeAddLink(_ context.Context, link netlink.Link, bridgeName string, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	ns, err := ns.GetCurrentNS()
 	if err != nil {

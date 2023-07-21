@@ -397,7 +397,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
-func (d *DefaultNode) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (d *DefaultNode) AddLink(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	ns, err := ns.GetNS(d.Cfg.NSPath)
 	if err != nil {

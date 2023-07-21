@@ -30,6 +30,10 @@ func (r *LinkMacVlanRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
+func (r *LinkMacVlanRaw) GetType() LinkType {
+	return LinkTypeMacVLan
+}
+
 func macVlanFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMacVlanRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 

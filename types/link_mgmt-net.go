@@ -47,6 +47,10 @@ func (r *LinkMgmtNetRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) 
 	return link, nil
 }
 
+func (r *LinkMgmtNetRaw) GetType() LinkType {
+	return LinkTypeMgmtNet
+}
+
 func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
@@ -70,7 +74,7 @@ type LinkMgmtNet struct {
 }
 
 func (*LinkMgmtNet) GetType() LinkType {
-	return LinkTypeVEth
+	return LinkTypeMgmtNet
 }
 
 func (l *LinkMgmtNet) Deploy(ctx context.Context) error {

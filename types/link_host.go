@@ -29,7 +29,7 @@ func (r *LinkHostRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
-func hostFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
+func hostFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkHostRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
 	result := &LinkHostRaw{
@@ -42,6 +42,10 @@ func hostFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
 		Endpoint:      NewEndpointRaw(node, nodeIf, ""),
 	}
 	return result, nil
+}
+
+func (r *LinkHostRaw) GetType() LinkType {
+	return LinkTypeHost
 }
 
 func (r *LinkHostRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {

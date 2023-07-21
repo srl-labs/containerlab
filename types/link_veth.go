@@ -38,6 +38,10 @@ func (r *LinkVEthRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
+func (r *LinkVEthRaw) GetType() LinkType {
+	return LinkTypeVEth
+}
+
 func (r *LinkVEthRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
 
 	// create LinkVEth struct
