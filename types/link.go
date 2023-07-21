@@ -186,6 +186,9 @@ func briefLinkConversion(lc LinkConfig) (RawLink, error) {
 
 type RawLink interface {
 	Resolve(map[string]LinkNode) (LinkInterf, error)
+	// ToLinkConfig TODO: This is meant to be a temporary conversion helper
+	// should be removed in final iteration
+	ToLinkConfig() *LinkConfig
 }
 
 type LinkInterf interface {

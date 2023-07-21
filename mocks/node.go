@@ -8,11 +8,13 @@ import (
 	context "context"
 	reflect "reflect"
 
+	ns "github.com/containernetworking/plugins/pkg/ns"
 	gomock "github.com/golang/mock/gomock"
 	exec "github.com/srl-labs/containerlab/clab/exec"
 	nodes "github.com/srl-labs/containerlab/nodes"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	types "github.com/srl-labs/containerlab/types"
+	netlink "github.com/vishvananda/netlink"
 )
 
 // MockNode is a mock of Node interface.
@@ -36,6 +38,20 @@ func NewMockNode(ctrl *gomock.Controller) *MockNode {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 	return m.recorder
+}
+
+// AddLink mocks base method.
+func (m *MockNode) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddLink", ctx, link, f)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddLink indicates an expected call of AddLink.
+func (mr *MockNodeMockRecorder) AddLink(ctx, link, f interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLink", reflect.TypeOf((*MockNode)(nil).AddLink), ctx, link, f)
 }
 
 // CheckDeploymentConditions mocks base method.

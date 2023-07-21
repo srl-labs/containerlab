@@ -101,10 +101,10 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeBrief),
-				LinkConfig: LinkConfig{
-					Endpoints: []string{
-						"srl1:e1-5",
-						"srl2:e1-5",
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						NewEndpointRaw("srl1", "e1-5", ""),
+						NewEndpointRaw("srl2", "e1-5", ""),
 					},
 				},
 			},
@@ -123,11 +123,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeMgmtNet),
-				LinkConfig: LinkConfig{
-					Endpoints: []string{
-						"srl1:e1-5",
-						"mgmt-net:srl1_e1-5",
-					},
+				Link: &LinkMgmtNetRaw{
+					HostInterface: "srl1_e1-5",
+					Endpoint:      NewEndpointRaw("srl1", "e1-5", ""),
 				},
 			},
 		},
@@ -145,11 +143,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeHost),
-				LinkConfig: LinkConfig{
-					Endpoints: []string{
-						"srl1:e1-5",
-						"host:srl1_e1-5",
-					},
+				Link: &LinkHostRaw{
+					HostInterface: "srl1_e1-5",
+					Endpoint:      NewEndpointRaw("srl1", "e1-5", ""),
 				},
 			},
 		},
@@ -167,11 +163,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: false,
 			want: LinkDefinition{
 				Type: string(LinkTypeMacVLan),
-				LinkConfig: LinkConfig{
-					Endpoints: []string{
-						"srl1:e1-5",
-						"macvlan:srl1_e1-5",
-					},
+				Link: &LinkMacVlanRaw{
+					HostInterface: "srl1_e1-5",
+					Endpoint:      NewEndpointRaw("srl1", "e1-5", ""),
 				},
 			},
 		},

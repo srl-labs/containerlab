@@ -327,7 +327,12 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 }
 
 // NewLink initializes a new link object from the link definition provided via topology file.
-func (c *CLab) NewLink(l *types.LinkDefinition) *types.Link {
+func (c *CLab) NewLink(ld *types.LinkDefinition) *types.Link {
+
+	// TODO: temporarely we still rely on LinkConfig here
+	// further iteration must change this
+	l := ld.Link.ToLinkConfig()
+
 	if len(l.Endpoints) != 2 {
 		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
 	}
