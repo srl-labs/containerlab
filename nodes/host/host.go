@@ -13,7 +13,6 @@ import (
 
 	osexec "os/exec"
 
-	"github.com/srl-labs/containerlab/clab/exec"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
@@ -123,7 +122,7 @@ func (n *host) RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult
 	}
 
 	// create result struct
-	execResult := exec.NewExecResult(e)
+	execResult := cExec.NewExecResult(e)
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(cmd.ProcessState.ExitCode())
 	execResult.SetStdOut(outBuf.Bytes())
