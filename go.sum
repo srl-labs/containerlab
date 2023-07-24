@@ -885,8 +885,8 @@ github.com/containernetworking/plugins v0.9.1/go.mod h1:xP/idU2ldlzN6m4p5LmGiwRD
 github.com/containernetworking/plugins v1.0.1/go.mod h1:QHCfGpaTwYTbbH+nZXKVTxNBDZcxSOplJT5ico8/FLE=
 github.com/containernetworking/plugins v1.3.0 h1:QVNXMT6XloyMUoO2wUOqWTC1hWFV62Q6mVDp5H1HnjM=
 github.com/containernetworking/plugins v1.3.0/go.mod h1:Pc2wcedTQQCVuROOOaLBPPxrEXqqXBFt3cZ+/yVg6l0=
-github.com/containers/buildah v1.30.0 h1:mdp2COGKFFEZNEGP8VZ5ITuUFVNPFoH+iK2sSesNfTA=
-github.com/containers/buildah v1.30.0/go.mod h1:lyMLZIevpAa6zSzjRl7z4lFJMCMQLFjfo56YIefaB/U=
+github.com/containers/buildah v1.31.0 h1:NgVtEyTsR7e/XLTSJElbInnGPjdDGNHqLKADPHzaUGg=
+github.com/containers/buildah v1.31.0/go.mod h1:tcgXcGhqw3kw49RapUS7tskEhxKLG4eVFJKA/QzgwNU=
 github.com/containers/common v0.55.2 h1:Cd+vmkUPDrPvL2v4Te1Wew6SIZdn4/XiyiBRT9IbcGg=
 github.com/containers/common v0.55.2/go.mod h1:ZKPllYOZ2xj2rgWRdnHHVvWg6ru4BT28En8mO8DMMPk=
 github.com/containers/image v3.0.2+incompatible h1:B1lqAE8MUPCrsBLE86J0gnXleeRq8zJnQryhiiGQNyE=
@@ -901,8 +901,8 @@ github.com/containers/ocicrypt v1.1.1/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B
 github.com/containers/ocicrypt v1.1.2/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B0oB3dj3jFxY=
 github.com/containers/ocicrypt v1.1.7 h1:thhNr4fu2ltyGz8aMx8u48Ae0Pnbip3ePP9/mzkZ/3U=
 github.com/containers/ocicrypt v1.1.7/go.mod h1:7CAhjcj2H8AYp5YvEie7oVSK2AhBY8NscCYRawuDNtw=
-github.com/containers/podman/v4 v4.5.1 h1:V74tyJrK0mGC3el/lR8ylYFhZT3w1r0d5YqONj9D01I=
-github.com/containers/podman/v4 v4.5.1/go.mod h1:BoNmT1QNzMtDMUCiJ1j1ZoDx6OOn5BATBih6sfg7pJs=
+github.com/containers/podman/v4 v4.6.0 h1:cTUAyJCESLZT6cYya23QX1qUNgArkBaFtQNNfc8L4CQ=
+github.com/containers/podman/v4 v4.6.0/go.mod h1:knbXdkdSRLB15gOR8vET/c4betB95i5Kz06rVHwPzuE=
 github.com/containers/psgo v1.8.0 h1:2loGekmGAxM9ir5OsXWEfGwFxorMPYnc6gEDsGFQvhY=
 github.com/containers/psgo v1.8.0/go.mod h1:T8ZxnX3Ur4RvnhxFJ7t8xJ1F48RhiZB4rSrOaR/qGHc=
 github.com/containers/storage v1.43.0/go.mod h1:uZ147thiIFGdVTjMmIw19knttQnUCl3y9zjreHrg11s=
@@ -1315,8 +1315,8 @@ github.com/godbus/dbus v0.0.0-20190422162347-ade71ed3457e/go.mod h1:bBOAhwG1umN6
 github.com/godbus/dbus/v5 v5.0.3/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/godbus/dbus/v5 v5.0.6/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-github.com/godbus/dbus/v5 v5.1.1-0.20221029134443-4b691ce883d5 h1:boOtwyhKoC3Aadiw5zbhU54YyCkm9EpZCSN6mOx0KLc=
-github.com/godbus/dbus/v5 v5.1.1-0.20221029134443-4b691ce883d5/go.mod h1:fXoNnqaUvdKqjJmMGeiBgmRphUg+kO0MT4AhPOP6+Qg=
+github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466 h1:sQspH8M4niEijh3PFscJRLDnkL547IeP7kpPe3uUhEg=
+github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466/go.mod h1:ZiQxhyQ+bbbfxUKVvjfO498oPYvtYhZzycal3G/NHmU=
 github.com/gofrs/flock v0.0.0-20190320160742-5135e617513b/go.mod h1:F1TvTiK9OcQqauNUHlbJvyl9Qa1QvF/gOUDKA14jxHU=
 github.com/gofrs/flock v0.7.1/go.mod h1:F1TvTiK9OcQqauNUHlbJvyl9Qa1QvF/gOUDKA14jxHU=
 github.com/gofrs/uuid v3.3.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
