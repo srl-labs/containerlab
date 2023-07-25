@@ -93,23 +93,17 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 		return err
 	}
 
-	if l.A.Node.Kind == "macvlan" || l.A.Node.Kind == "macvtap" || l.B.Node.Kind == "macvlan" || l.B.Node.Kind == "macvtap" {
-		if l.A.Node.Kind == "macvlan" || l.A.Node.Kind == "macvtap" {
-			// make sure the macvlan / macvtap is always the B side
+	// if one of the endpoints is a macvlan interface
+	// we need to create a macvlan interface in the root netns
+	if l.A.Node.Kind == "macvlan" || l.B.Node.Kind == "macvlan" {
+		// make sure the macvlan is always the B side
+		if l.A.Node.Kind == "macvlan" {
 			tmp := l.A
 			l.A = l.B
 			l.B = tmp
 		}
 
-		var macvType MacIfType
-		switch l.B.Node.Kind {
-		case "macvlan":
-			macvType = MacVLan
-		case "macvtap":
-			macvType = MacVTap
-		}
-
-		link, err := createMacVXInterface(ARndmName, l.B.EndpointName, l.MTU, aMAC, macvType)
+		link, err := createMACVLANInterface(ARndmName, l.B.EndpointName, l.MTU, aMAC)
 		if err != nil {
 			return err
 		}
@@ -185,12 +179,8 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 
 type MacIfType int
 
-const (
-	MacVLan = iota
-	MacVTap
-)
-
-func createMacVXInterface(ifName, parentIfName string, mtu int, MAC net.HardwareAddr, iftype MacIfType) (netlink.Link, error) {
+// createMACVLANInterface creates a macvlan interface in the root netns.
+func createMACVLANInterface(ifName, parentIfName string, mtu int, MAC net.HardwareAddr) (netlink.Link, error) {
 	parentInterface, err := netlink.LinkByName(parentIfName)
 	if err != nil {
 		return nil, err
@@ -204,30 +194,22 @@ func createMacVXInterface(ifName, parentIfName string, mtu int, MAC net.Hardware
 		Mode: netlink.MACVLAN_MODE_BRIDGE,
 	}
 
-	var link netlink.Link
-	switch iftype {
-	case MacVTap:
-		link = &netlink.Macvtap{Macvlan: mvl}
-	case MacVLan:
-		link = &mvl
-	}
-
-	err = netlink.LinkAdd(link)
+	err = netlink.LinkAdd(&mvl)
 	if err != nil {
 		return nil, err
 	}
 
-	var mvInterface netlink.Link
-	if mvInterface, err = netlink.LinkByName(ifName); err != nil {
+	var mvlan netlink.Link
+	if mvlan, err = netlink.LinkByName(ifName); err != nil {
 		return nil, fmt.Errorf("failed to lookup %q: %v", ifName, err)
 	}
 
-	err = netlink.LinkSetHardwareAddr(mvInterface, MAC)
+	err = netlink.LinkSetHardwareAddr(mvlan, MAC)
 	if err != nil {
 		return nil, err
 	}
 
-	return mvInterface, nil
+	return mvlan, nil
 }
 
 // createVethIface takes two veth endpoint structs and create a veth pair and return

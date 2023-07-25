@@ -384,12 +384,6 @@ func (c *CLab) NewEndpoint(e string) *types.Endpoint {
 			ShortName: "macvlan",
 			NSPath:    hostNSPath,
 		}
-	case "macvtap":
-		endpoint.Node = &types.NodeConfig{
-			Kind:      "macvtap",
-			ShortName: "macvtap",
-			NSPath:    hostNSPath,
-		}
 	// mgmt-net is a special reference to a bridge of the docker network
 	// that is used as the management network
 	case "mgmt-net":
@@ -454,8 +448,8 @@ func (c *CLab) verifyLinks() error {
 		for _, e := range []*types.Endpoint{l.A, l.B} {
 			e_string := e.String()
 			if _, ok := endpoints[e_string]; ok {
-				// macvlan and macvtap interfaces can appear multiple times
-				if strings.Contains(e_string, "macvlan") || strings.Contains(e_string, "macvtap") {
+				// macvlan interface can appear multiple times
+				if strings.Contains(e_string, "macvlan") {
 					continue
 				}
 
