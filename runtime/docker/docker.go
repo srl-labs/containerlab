@@ -256,7 +256,33 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
 	var v4, v6 string
 	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
-		return err
+		log.Warn(
+			"failed gleaning v4 and/or v6 addresses from bridge via netlink," +
+				" falling back to docker network inspect data",
+		)
+
+		for _, ipamEntry := range netResource.IPAM.Config {
+			addr := ipamEntry.Gateway
+
+			// this is terribly janky, *but* we know docker will be only putting valid v4/v6
+			// addresses in here and we only care about differentiating between the two flavors
+			if strings.Count(addr, ".") == 3 {
+				v4 = addr
+			} else if netResource.EnableIPv6 {
+				v6 = addr
+			}
+
+			if v4 != "" && v6 != "" {
+				break
+			}
+		}
+
+		if v4 == "" && v6 == "" {
+			// didn't get address in any way -- the case of needing to inspect the docker ipam
+			// config should be less common (for dind use case basically), so we can just return
+			// the main error form checking via ip link
+			return err
+		}
 	}
 
 	d.mgmt.IPv4Gw = v4
