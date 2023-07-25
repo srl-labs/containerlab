@@ -177,8 +177,6 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 	return nil
 }
 
-type MacIfType int
-
 // createMACVLANInterface creates a macvlan interface in the root netns.
 func createMACVLANInterface(ifName, parentIfName string, mtu int, MAC net.HardwareAddr) (netlink.Link, error) {
 	parentInterface, err := netlink.LinkByName(parentIfName)
