@@ -184,7 +184,7 @@ func createMACVLANInterface(ifName, parentIfName string, mtu int, MAC net.Hardwa
 		return nil, err
 	}
 
-	mvl := netlink.Macvlan{
+	mvl := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:         ifName,
 			ParentIndex:  parentInterface.Attrs().Index,
@@ -193,12 +193,12 @@ func createMACVLANInterface(ifName, parentIfName string, mtu int, MAC net.Hardwa
 		Mode: netlink.MACVLAN_MODE_BRIDGE,
 	}
 
-	err = netlink.LinkAdd(&mvl)
+	err = netlink.LinkAdd(mvl)
 	if err != nil {
 		return nil, err
 	}
 
-	return &mvl, nil
+	return mvl, nil
 }
 
 // createVethIface takes two veth endpoint structs and create a veth pair and return

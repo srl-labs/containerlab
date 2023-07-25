@@ -430,6 +430,23 @@ listening on enp0s3, link-type EN10MB (Ethernet), snapshot length 262144 bytes
 22:35:02.431017 fa:16:3e:af:03:05 > aa:c1:ab:72:b3:fe, ethertype IPv4 (0x0800), length 98: 10.0.0.1 > 10.0.0.111: ICMP echo reply, id 24, seq 4, length 64
 ```
 
+???note "macvlan and SR Linux"
+    For SR Linux nodes to make use of macvlan interfaces users should explicitly bring them up. This can be done in the topology definition file by adding the [exec](../manual/nodes.md#exec) section to the node definition:
+
+    ```yaml
+    name: srl
+    topology:
+      nodes:
+        srl:
+          kind: nokia_srlinux
+          image: ghcr.io/nokia/srlinux:23.3.2
+          exec:
+            - ip l set dev e1-1 up
+
+      links:
+        - endpoints: ["srl:e1-1", "macvlan:enp0s3"]
+    ```
+
 ## Manual control over the management network
 
 By default containerlab creates a docker network named `clab` and attaches all the nodes to this network. This network is used as a management network for the nodes and is managed by the container runtime such as docker or podman.
