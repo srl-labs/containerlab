@@ -14,13 +14,10 @@ builds:
       - -s -w -X github.com/srl-labs/containerlab/cmd.version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
       - arm64
-    # removing upx compression due to https://github.com/srl-labs/containerlab/issues/1264
-    # hooks:
-    #   post:
-    #     - upx "{{ .Path }}"
 dockers:
   - goos: linux
     goarch: amd64
@@ -30,8 +27,11 @@ dockers:
       - 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}'
     dockerfile: goreleaser.dockerfile
 archives:
-  - replacements:
-      linux: Linux
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- .Arch }}
     files:
       - lab-examples/**/*
       - templates/**/*
