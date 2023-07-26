@@ -1,5 +1,5 @@
-//go:build linux && podman && darwin
-// +build linux,podman,darwin
+//go:build podman
+// +build podman
 
 package all
 
