@@ -36,6 +36,7 @@ nav:
           - RARE/freeRtr: manual/kinds/rare-freertr.md
           - Openvswitch bridge: manual/kinds/ovs-bridge.md
           - External container: manual/kinds/ext-container.md
+          - Host: manual/kinds/host.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
