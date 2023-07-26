@@ -53,6 +53,7 @@ func (*host) WithMgmtNet(*types.MgmtNet)                            {}
 // UpdateConfigWithRuntimeInfo is a noop for hosts.
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
+// getOSRelease returns the OS release of the host by inspecting /etc/*-release.
 func getOSRelease() string {
 	image := "N/A"
 
@@ -64,7 +65,8 @@ func getOSRelease() string {
 	if err != nil {
 		return image
 	}
-
+	// DISTRIB_DESCRIPTION exists in lsb-release, but not os-release.
+	// the lsb-release is coming first in the glob, so it works.
 	re := regexp.MustCompile(`DISTRIB_DESCRIPTION="(.*)"`)
 
 	regexres := re.FindSubmatch(dat)
