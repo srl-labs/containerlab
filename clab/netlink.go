@@ -12,6 +12,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes/srl"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -111,6 +112,13 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 		err = toNS(l.A.Node.NSPath, link, l.A.EndpointName)
 		if err != nil {
 			return err
+		}
+
+		// Dirty workaround to bring up macvlan links attached to SRL nodes
+		for _, kn := range srl.SRLKindnames {
+			if l.A.Node.Kind == kn {
+				l.A.Node.Exec = append([]string{fmt.Sprintf("ip l set dev %s up", l.A.EndpointName)}, l.A.Node.Exec...)
+			}
 		}
 
 	} else {
