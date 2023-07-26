@@ -114,8 +114,8 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 			return err
 		}
 
-		// Dirty workaround to bring up macvlan links attached to SRL nodes
-		for _, kn := range srl.SRLKindnames {
+		// SR Linux brings down non-veth interfaces, so we have to force them up after SR Linux is started.
+		for _, kn := range srl.KindNames {
 			if l.A.Node.Kind == kn {
 				l.A.Node.Exec = append([]string{fmt.Sprintf("ip l set dev %s up", l.A.EndpointName)}, l.A.Node.Exec...)
 			}
