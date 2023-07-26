@@ -27,7 +27,6 @@ const (
 	LinkTypeVEth    LinkDefinitionType = "veth"
 	LinkTypeMgmtNet LinkDefinitionType = "mgmt-net"
 	LinkTypeMacVLan LinkDefinitionType = "macvlan"
-	LinkTypeMacVTap LinkDefinitionType = "macvtap"
 	LinkTypeHost    LinkDefinitionType = "host"
 
 	// LinkTypeBrief is a link definition where link types
@@ -41,8 +40,6 @@ func parseLinkType(s string) (LinkDefinitionType, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
 	case string(LinkTypeMacVLan):
 		return LinkTypeMacVLan, nil
-	case string(LinkTypeMacVTap):
-		return LinkTypeMacVTap, nil
 	case string(LinkTypeVEth):
 		return LinkTypeVEth, nil
 	case string(LinkTypeMgmtNet):
@@ -132,16 +129,6 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 			return err
 		}
 		r.LinkConfig = *l.LinkMACVLANRaw.ToLinkConfig()
-	case LinkTypeMacVTap:
-		var l struct {
-			Type           string `yaml:"type"`
-			LinkMACVTAPRaw `yaml:",inline"`
-		}
-		err := unmarshal(&l)
-		if err != nil {
-			return err
-		}
-		r.LinkConfig = *l.LinkMACVTAPRaw.ToLinkConfig()
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {

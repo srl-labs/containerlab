@@ -70,7 +70,7 @@ commit save`
 )
 
 var (
-	kindnames = []string{"srl", "nokia_srlinux"}
+	KindNames = []string{"srl", "nokia_srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",
@@ -123,7 +123,7 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(srl)
 	}, defaultCredentials)
 }

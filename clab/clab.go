@@ -501,10 +501,12 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_mana
 
 			var waitNodes []string
 			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
-				// we should not wait for "host" fake node or mgmt-net node
-				if n.Kind != "host" && n.ShortName != "mgmt-net" {
-					waitNodes = append(waitNodes, n.ShortName)
+				// we should not wait for "host", "mgmt-net" and "macvlan" fake nodes
+				// as they are never managed by dependency manager (never really get created)
+				if n.Kind == "host" || n.ShortName == "mgmt-net" || n.Kind == "macvlan" {
+					continue
 				}
+				waitNodes = append(waitNodes, n.ShortName)
 			}
 
 			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)

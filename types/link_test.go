@@ -42,14 +42,6 @@ func TestParseLinkType(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "link type macvtap",
-			args: args{
-				s: string(LinkTypeMacVTap),
-			},
-			want:    LinkTypeMacVTap,
-			wantErr: false,
-		},
-		{
 			name: "link type mgmt-net",
 			args: args{
 				s: string(LinkTypeMgmtNet),
@@ -179,28 +171,6 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					Endpoints: []string{
 						"srl1:e1-5",
 						"macvlan:srl1_e1-5",
-					},
-				},
-			},
-		},
-		{
-			name: "macvtap link",
-			args: args{
-				yaml: []byte(`
-                    type:              macvtap
-                    host-interface:    srl1_e1-5
-                    endpoint: 
-                        node:          srl1
-                        interface:     e1-5
-                `),
-			},
-			wantErr: false,
-			want: LinkDefinition{
-				Type: string(LinkTypeMacVTap),
-				LinkConfig: LinkConfig{
-					Endpoints: []string{
-						"srl1:e1-5",
-						"macvtap:srl1_e1-5",
 					},
 				},
 			},
