@@ -91,7 +91,11 @@ type Node interface {
 	RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error)
 	// Adds the given link to the Node. After adding the Link to the node,
 	// the given function f is called within the Nodes namespace.
-	AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	AddEndpoint(e types.Endpt) error
+	GetLinkEndpointType() types.LinkEndpointType
+	GetShortName() string
+	SetupNetworking(ctx context.Context) error
 }
 
 type NodeOption func(Node)

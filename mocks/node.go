@@ -40,18 +40,32 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 	return m.recorder
 }
 
-// AddLink mocks base method.
-func (m *MockNode) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+// AddEndpoint mocks base method.
+func (m *MockNode) AddEndpoint(e types.Endpt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddLink", ctx, link, f)
+	ret := m.ctrl.Call(m, "AddEndpoint", e)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// AddLink indicates an expected call of AddLink.
-func (mr *MockNodeMockRecorder) AddLink(ctx, link, f interface{}) *gomock.Call {
+// AddEndpoint indicates an expected call of AddEndpoint.
+func (mr *MockNodeMockRecorder) AddEndpoint(e interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLink", reflect.TypeOf((*MockNode)(nil).AddLink), ctx, link, f)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
+}
+
+// AddNetlinkLinkToContainer mocks base method.
+func (m *MockNode) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddNetlinkLinkToContainer", ctx, link, f)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddNetlinkLinkToContainer indicates an expected call of AddNetlinkLinkToContainer.
+func (mr *MockNodeMockRecorder) AddNetlinkLinkToContainer(ctx, link, f interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNetlinkLinkToContainer", reflect.TypeOf((*MockNode)(nil).AddNetlinkLinkToContainer), ctx, link, f)
 }
 
 // CheckDeploymentConditions mocks base method.
@@ -181,6 +195,20 @@ func (mr *MockNodeMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages), arg0)
 }
 
+// GetLinkEndpointType mocks base method.
+func (m *MockNode) GetLinkEndpointType() types.LinkEndpointType {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLinkEndpointType")
+	ret0, _ := ret[0].(types.LinkEndpointType)
+	return ret0
+}
+
+// GetLinkEndpointType indicates an expected call of GetLinkEndpointType.
+func (mr *MockNodeMockRecorder) GetLinkEndpointType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinkEndpointType", reflect.TypeOf((*MockNode)(nil).GetLinkEndpointType))
+}
+
 // GetRuntime mocks base method.
 func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 	m.ctrl.T.Helper()
@@ -193,6 +221,20 @@ func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 func (mr *MockNodeMockRecorder) GetRuntime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockNode)(nil).GetRuntime))
+}
+
+// GetShortName mocks base method.
+func (m *MockNode) GetShortName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShortName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetShortName indicates an expected call of GetShortName.
+func (mr *MockNodeMockRecorder) GetShortName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortName", reflect.TypeOf((*MockNode)(nil).GetShortName))
 }
 
 // Init mocks base method.
@@ -269,6 +311,20 @@ func (m *MockNode) SaveConfig(arg0 context.Context) error {
 func (mr *MockNodeMockRecorder) SaveConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockNode)(nil).SaveConfig), arg0)
+}
+
+// SetupNetworking mocks base method.
+func (m *MockNode) SetupNetworking(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetupNetworking", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetupNetworking indicates an expected call of SetupNetworking.
+func (mr *MockNodeMockRecorder) SetupNetworking(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupNetworking", reflect.TypeOf((*MockNode)(nil).SetupNetworking), ctx)
 }
 
 // UpdateConfigWithRuntimeInfo mocks base method.

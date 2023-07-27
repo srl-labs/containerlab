@@ -79,6 +79,10 @@ func (n *ovs) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, e
 	return nil, cExec.ErrRunExecNotSupported
 }
 
-func (n *ovs) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (n *ovs) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	return bridge.BridgeAddLink(ctx, link, n.Cfg.ShortName, f)
+}
+
+func (m *ovs) GetLinkEndpointType() types.LinkEndpointType {
+	return types.LinkEndpointTypeBridge
 }

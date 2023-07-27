@@ -37,6 +37,7 @@ type DefaultNode struct {
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
+	NWEndpoints   []types.Endpt
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -397,16 +398,39 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
-func (d *DefaultNode) AddLink(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (d *DefaultNode) AddNetlinkLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
-	ns, err := ns.GetNS(d.Cfg.NSPath)
+	netns, err := ns.GetNS(d.Cfg.NSPath)
 	if err != nil {
 		return err
 	}
 	// move veth endpoint to namespace
-	if err = netlink.LinkSetNsFd(link, int(ns.Fd())); err != nil {
+	if err = netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
 		return err
 	}
 	// execute the given function
-	return ns.Do(f)
+	return netns.Do(f)
+}
+
+func (d *DefaultNode) AddEndpoint(e types.Endpt) error {
+	d.NWEndpoints = append(d.NWEndpoints, e)
+	return nil
+}
+
+func (d *DefaultNode) GetLinkEndpointType() types.LinkEndpointType {
+	return types.LinkEndpointTypeRegular
+}
+
+func (d *DefaultNode) GetShortName() string {
+	return d.Cfg.ShortName
+}
+
+func (d *DefaultNode) SetupNetworking(ctx context.Context) error {
+	for _, ep := range d.NWEndpoints {
+		err := ep.Deploy(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -191,7 +191,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// determine the number of node and link worker
-	nodeWorkers, linkWorkers, err := countWorkers(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
+	nodeWorkers, _, err := countWorkers(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	c.CreateLinks(ctx, linkWorkers, dm)
+	//c.CreateLinks(ctx, linkWorkers, dm)
 	if nodesWg != nil {
 		nodesWg.Wait()
 	}

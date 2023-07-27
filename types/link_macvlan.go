@@ -50,12 +50,20 @@ func macVlanFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMacVlanRaw, 
 	return result, nil
 }
 
-func (r *LinkMacVlanRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
+func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
+
+	hostLinkNode := GetFakeHostLinkNode()
+	ep := &EndptGeneric{
+		Iface: r.HostInterface,
+		Node:  hostLinkNode,
+		// Link is being set after the link in created further down
+	}
 
 	link := &LinkMacVlan{
 		LinkCommonParams: r.LinkCommonParams,
-		HostInterface:    r.HostInterface,
+		HostEndpoint:     ep,
 	}
+	ep.Link = link
 	// parse the MacVlanMode
 	mode, err := MacVlanModeParse(r.Mode)
 	if err != nil {
@@ -64,21 +72,18 @@ func (r *LinkMacVlanRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) 
 	// set the mode in the link struct
 	link.Mode = mode
 	// resolve the endpoint
-	ep, err := r.Endpoint.Resolve(nodes)
+	link.NodeEndpoint, err = r.Endpoint.Resolve(params.Nodes, link)
 	if err != nil {
 		return nil, err
 	}
-	// set the indpoint in the link struct
-	link.NodeEndpoint = ep
-
 	return link, nil
 }
 
 type LinkMacVlan struct {
 	LinkCommonParams
-	HostInterface string
-	NodeEndpoint  *Endpt
-	Mode          MacVlanMode
+	HostEndpoint Endpt
+	NodeEndpoint Endpt
+	Mode         MacVlanMode
 }
 
 type MacVlanMode string
@@ -115,7 +120,7 @@ func (l *LinkMacVlan) GetType() LinkType {
 
 func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	// lookup the parent host interface
-	parentInterface, err := netlink.LinkByName(l.HostInterface)
+	parentInterface, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return err
 	}
@@ -138,7 +143,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	// build Netlink Macvlan struct
 	link := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:        l.NodeEndpoint.GetRandName(),
+			Name:        l.NodeEndpoint.GetRandIfaceName(),
 			ParentIndex: parentInterface.Attrs().Index,
 			MTU:         l.Mtu,
 		},
@@ -151,12 +156,24 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the Link by name
-	mvInterface, err := netlink.LinkByName(l.NodeEndpoint.GetRandName())
+	mvInterface, err := netlink.LinkByName(l.NodeEndpoint.GetRandIfaceName())
 	if err != nil {
-		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandName(), err)
+		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandIfaceName(), err)
 	}
 
 	// add the link to the Node Namespace
-	err = l.NodeEndpoint.Node.AddLink(ctx, mvInterface, SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
+	err = l.NodeEndpoint.GetNode().AddNetlinkLinkToContainer(ctx, mvInterface, SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
 	return err
+}
+
+func (l *LinkMacVlan) Remove(ctx context.Context) error {
+	// TODO
+	return nil
+}
+
+func (l *LinkMacVlan) GetEndpoints() []Endpt {
+	return []Endpt{
+		l.NodeEndpoint,
+		l.HostEndpoint,
+	}
 }

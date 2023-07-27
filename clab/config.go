@@ -18,7 +18,6 @@ import (
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -67,7 +66,7 @@ func (c *CLab) parseTopology() error {
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
-	c.Links = make(map[int]*types.Link)
+	c.Links = make(map[int]types.LinkInterf)
 
 	// initialize the Node information from the topology map
 	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
@@ -124,9 +123,26 @@ func (c *CLab) parseTopology() error {
 			return err
 		}
 	}
+
+	// create a types.LinkNode from the nodes.Node
+	// altough the nodes.Node interface is a Superset of the types.LinkNode
+	// we need to convert the map, since the whole map seems to not be dynamically typeconvertable
+	resolveNodes := make(map[string]types.LinkNode, len(c.Nodes))
+	for k, v := range c.Nodes {
+		resolveNodes[k] = v
+	}
+
+	resolveParams := &types.ResolveParams{
+		Nodes:      resolveNodes,
+		MgmtBridge: c.Config.Mgmt.Bridge,
+	}
+
 	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
-		c.Links[i] = c.NewLink(l)
+		c.Links[i], err = l.Link.Resolve(resolveParams)
+		if err != nil {
+			return err
+		}
 	}
 
 	// set any containerlab defaults after we've parsed the input
@@ -446,27 +462,22 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
 func (c *CLab) verifyLinks() error {
-	endpoints := map[string]struct{}{}
-	// dups accumulates duplicate links
-	dups := []string{}
-	for _, l := range c.Links {
-		for _, e := range []*types.Endpoint{l.A, l.B} {
-			e_string := e.String()
-			if _, ok := endpoints[e_string]; ok {
-				// macvlan interface can appear multiple times
-				if strings.Contains(e_string, "macvlan") {
-					continue
-				}
-
-				dups = append(dups, e_string)
-			}
-			endpoints[e_string] = struct{}{}
-		}
-	}
-	if len(dups) != 0 {
-		sort.Strings(dups) // sort for deterministic error message
-		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
-	}
+	// endpoints := map[string]struct{}{}
+	// // dups accumulates duplicate links
+	// dups := []string{}
+	// for _, l := range c.Links {
+	// 	for _, e := range []*types.Endpoint{l.A, l.B} {
+	// 		e_string := e.String()
+	// 		if _, ok := endpoints[e_string]; ok {
+	// 			dups = append(dups, e_string)
+	// 		}
+	// 		endpoints[e_string] = struct{}{}
+	// 	}
+	// }
+	// if len(dups) != 0 {
+	// 	sort.Strings(dups) // sort for deterministic error message
+	// 	return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
+	// }
 	return nil
 }
 
@@ -575,38 +586,38 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 // do not exist already in the root namespace
 // and ensure that nodes that are configured with host networking mode do not have any interfaces defined.
 func (c *CLab) verifyHostIfaces() error {
-	for _, l := range c.Links {
-		for _, ep := range []*types.Endpoint{l.A, l.B} {
-			if ep.Node.ShortName == "host" {
-				if nl, _ := netlink.LinkByName(ep.EndpointName); nl != nil {
-					return fmt.Errorf("host interface %s referenced in topology already exists", ep.EndpointName)
-				}
-			}
-			if ep.Node.NetworkMode == "host" {
-				return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
-					ep.Node.ShortName, ep.Node.ShortName)
-			}
-		}
-	}
+	// for _, l := range c.Links {
+	// 	for _, ep := range []*types.Endpoint{l.A, l.B} {
+	// 		if ep.Node.ShortName == "host" {
+	// 			if nl, _ := netlink.LinkByName(ep.EndpointName); nl != nil {
+	// 				return fmt.Errorf("host interface %s referenced in topology already exists", ep.EndpointName)
+	// 			}
+	// 		}
+	// 		if ep.Node.NetworkMode == "host" {
+	// 			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
+	// 				ep.Node.ShortName, ep.Node.ShortName)
+	// 		}
+	// 	}
+	// }
 	return nil
 }
 
 // verifyRootNetnsInterfaceUniqueness ensures that interafaces that appear in the root ns (bridge, ovs-bridge and host)
 // are uniquely defined in the topology file.
 func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
-	rootNsIfaces := map[string]struct{}{}
-	for _, l := range c.Links {
-		endpoints := [2]*types.Endpoint{l.A, l.B}
-		for _, e := range endpoints {
-			if e.Node.IsRootNamespaceBased {
-				if _, ok := rootNsIfaces[e.EndpointName]; ok {
-					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
-					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
-				}
-				rootNsIfaces[e.EndpointName] = struct{}{}
-			}
-		}
-	}
+	// rootNsIfaces := map[string]struct{}{}
+	// for _, l := range c.Links {
+	// 	endpoints := [2]*types.Endpoint{l.A, l.B}
+	// 	for _, e := range endpoints {
+	// 		if e.Node.IsRootNamespaceBased {
+	// 			if _, ok := rootNsIfaces[e.EndpointName]; ok {
+	// 				return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
+	// 				Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
+	// 			}
+	// 			rootNsIfaces[e.EndpointName] = struct{}{}
+	// 		}
+	// 	}
+	// }
 	return nil
 }
 

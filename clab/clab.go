@@ -24,7 +24,6 @@ import (
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"golang.org/x/exp/slices"
-	"golang.org/x/sync/semaphore"
 )
 
 type CLab struct {
@@ -32,7 +31,7 @@ type CLab struct {
 	TopoPaths     *types.TopoPaths
 	m             *sync.RWMutex
 	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
-	Links         map[int]*types.Link                 `json:"links,omitempty"`
+	Links         map[int]types.LinkInterf            `json:"links,omitempty"`
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	// reg is a registry of node kinds
@@ -160,16 +159,6 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 		}
 	}
 
-	// filter links
-	for id, l := range c.Links {
-		for _, nodeName := range []string{l.A.Node.ShortName, l.B.Node.ShortName} {
-			// if both endpoints of a link belong to the node filter, keep the link
-			if !slices.Contains(nodeFilter, nodeName) {
-				delete(c.Links, id)
-				break
-			}
-		}
-	}
 	return nil
 }
 
@@ -182,7 +171,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		},
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]nodes.Node),
-		Links:    make(map[int]*types.Link),
+		Links:    make(map[int]types.LinkInterf),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
 		Cert:     &cert.Cert{},
 	}
@@ -417,6 +406,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					continue
 				}
 
+				err = node.SetupNetworking(ctx)
+				if err != nil {
+					log.Errorf("failed setting up networking for node %q: %v", node.Config().ShortName, err)
+					continue
+				}
+
 				// signal to dependency manager that this node is done with creation
 				dm.SignalDone(node.Config().ShortName, dependency_manager.NodeStateCreated)
 
@@ -500,48 +495,46 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntime], contName, nodeName)
 }
 
-// CreateLinks creates links using the specified number of workers.
-func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_manager.DependencyManager) {
-	wg := new(sync.WaitGroup)
-	sem := semaphore.NewWeighted(int64(workers))
+// // CreateLinks creates links using the specified number of workers.
+// func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_manager.DependencyManager) {
+// 	wg := new(sync.WaitGroup)
+// 	sem := semaphore.NewWeighted(int64(workers))
 
-	for _, link := range c.Links {
-		wg.Add(1)
-		go func(li *types.Link) {
-			defer wg.Done()
+// 	for _, link := range c.Links {
+// 		wg.Add(1)
+// 		go func(li *types.Link) {
+// 			defer wg.Done()
 
-			var waitNodes []string
-			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
-				// we should not wait for "host", "mgmt-net" and "macvlan" fake nodes
-				// as they are never managed by dependency manager (never really get created)
-				if n.Kind == "host" || n.ShortName == "mgmt-net" || n.Kind == "macvlan" {
-					continue
-				}
-				waitNodes = append(waitNodes, n.ShortName)
-			}
+// 			var waitNodes []string
+// 			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
+// 				// we should not wait for "host" fake node or mgmt-net node
+// 				if n.Kind != "host" && n.ShortName != "mgmt-net" {
+// 					waitNodes = append(waitNodes, n.ShortName)
+// 				}
+// 			}
 
-			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
-			if err != nil {
-				log.Error(err)
-			}
+// 			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
+// 			if err != nil {
+// 				log.Error(err)
+// 			}
 
-			// acquire Sem
-			err = sem.Acquire(ctx, 1)
-			if err != nil {
-				log.Error(err)
-			}
-			defer sem.Release(1)
-			// create the wiring
-			err = c.CreateVirtualWiring(li)
-			if err != nil {
-				log.Error(err)
-			}
-		}(link)
-	}
+// 			// acquire Sem
+// 			err = sem.Acquire(ctx, 1)
+// 			if err != nil {
+// 				log.Error(err)
+// 			}
+// 			defer sem.Release(1)
+// 			// create the wiring
+// 			err = c.CreateVirtualWiring(li)
+// 			if err != nil {
+// 				log.Error(err)
+// 			}
+// 		}(link)
+// 	}
 
-	// wait for all workers to finish
-	wg.Wait()
-}
+// 	// wait for all workers to finish
+// 	wg.Wait()
+// }
 
 func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
 	wg := new(sync.WaitGroup)
@@ -642,11 +635,13 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 // VethCleanup iterates over links found in clab topology to initiate removal of dangling veths
 // in host networking namespace or attached to linux bridge.
 // See https://github.com/srl-labs/containerlab/issues/842 for the reference.
-func (c *CLab) VethCleanup(_ context.Context) error {
+func (c *CLab) VethCleanup(ctx context.Context) error {
+	// remove all the links
 	for _, link := range c.Links {
-		err := c.RemoveHostOrBridgeVeth(link)
+		err := link.Remove(ctx)
 		if err != nil {
-			log.Infof("Error during veth cleanup: %v", err)
+			// if error log and continue
+			log.Error(err)
 		}
 	}
 	return nil

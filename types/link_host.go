@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
 )
 
@@ -48,13 +49,13 @@ func (r *LinkHostRaw) GetType() LinkType {
 	return LinkTypeHost
 }
 
-func (r *LinkHostRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
+func (r *LinkHostRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 	link := &LinkHost{
 		LinkCommonParams: r.LinkCommonParams,
 		HostInterface:    r.HostInterface,
 	}
 	// resolve and populate the endpoint
-	ep, err := r.Endpoint.Resolve(nodes)
+	ep, err := r.Endpoint.Resolve(params.Nodes, link)
 	if err != nil {
 		return nil, err
 	}
@@ -65,15 +66,15 @@ func (r *LinkHostRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
 
 type LinkHost struct {
 	LinkCommonParams `yaml:",inline"`
-	HostInterface    string `yaml:"host-interface"`
-	Endpoint         *Endpt `yaml:"endpoint"`
+	HostInterface    string        `yaml:"host-interface"`
+	Endpoint         *EndptGeneric `yaml:"endpoint"`
 }
 
 func (l *LinkHost) Deploy(ctx context.Context) error {
 	// build the netlink.Veth struct for the link provisioning
 	link := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: l.Endpoint.GetRandName(),
+			Name: l.Endpoint.GetRandIfaceName(),
 			MTU:  l.Mtu,
 			// Mac address is set later on
 		},
@@ -88,7 +89,7 @@ func (l *LinkHost) Deploy(ctx context.Context) error {
 	}
 
 	// add link to node, rename, set mac and Up
-	err = l.Endpoint.Node.AddLink(ctx, link, SetNameMACAndUpInterface(link, l.Endpoint))
+	err = l.Endpoint.GetNode().AddNetlinkLinkToContainer(ctx, link, SetNameMACAndUpInterface(link, l.Endpoint))
 	if err != nil {
 		return err
 	}
@@ -110,4 +111,54 @@ func (l *LinkHost) Deploy(ctx context.Context) error {
 
 func (l *LinkHost) GetType() LinkType {
 	return LinkTypeHost
+}
+
+func (l *LinkHost) Remove(ctx context.Context) error {
+	// TODO
+	return nil
+}
+
+func (l *LinkHost) GetEndpoints() []Endpt {
+	return []Endpt{
+		l.Endpoint,
+		&EndptGeneric{
+			state: EndptDeployStateDeployed,
+			Node:  GetFakeHostLinkNode(),
+			Iface: l.HostInterface,
+			Link:  l,
+		}}
+}
+
+type GenericLinkNode struct {
+	shortname string
+	endpoints []Endpt
+	nspath    string
+}
+
+func (g *GenericLinkNode) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	if g.nspath != "" {
+		return nil
+	}
+
+	// retrieve the namespace handle
+	netns, err := ns.GetNS(g.nspath)
+	if err != nil {
+		return err
+	}
+	// move veth endpoint to namespace
+	if err = netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
+		return err
+	}
+	// execute the given function
+	return netns.Do(f)
+}
+func (g *GenericLinkNode) AddEndpoint(e Endpt) error {
+	g.endpoints = append(g.endpoints, e)
+	return nil
+}
+func (g *GenericLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeRegular
+}
+func (g *GenericLinkNode) GetShortName() string {
+	return g.shortname
 }

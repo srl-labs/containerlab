@@ -123,7 +123,7 @@ func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult
 	return nil, cExec.ErrRunExecNotSupported
 }
 
-func (b *bridge) AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *bridge) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	return BridgeAddLink(ctx, link, b.Cfg.ShortName, f)
 }
 
@@ -148,4 +148,8 @@ func BridgeAddLink(_ context.Context, link netlink.Link, bridgeName string, f fu
 
 	// execute the given function
 	return ns.Do(f)
+}
+
+func (b *bridge) GetLinkEndpointType() types.LinkEndpointType {
+	return types.LinkEndpointTypeBridge
 }

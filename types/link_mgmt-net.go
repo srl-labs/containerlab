@@ -12,7 +12,6 @@ type LinkMgmtNetRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
-	MgmtBridge       string       `yaml:"bridge"`
 }
 
 func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkConfig {
@@ -29,16 +28,24 @@ func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
-func (r *LinkMgmtNetRaw) Resolve(nodes map[string]LinkNode) (LinkInterf, error) {
+func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
+
 	// create the LinkMgmtNet struct
 	link := &LinkMgmtNet{
 		LinkCommonParams: r.LinkCommonParams,
-		HostInterface:    r.HostInterface,
-		MgmtBridge:       r.MgmtBridge,
 	}
 
+	bridgeEp := &EndptGeneric{
+		Node:  GetFakeMgmtBrLinkNode(),
+		state: EndptDeployStateDeployed,
+		Iface: r.HostInterface,
+		Link:  link,
+	}
+
+	link.BridgeEndpoint = bridgeEp
+
 	// resolve and populate the endpoint
-	ep, err := r.Endpoint.Resolve(nodes)
+	ep, err := r.Endpoint.Resolve(params.Nodes, link)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +58,7 @@ func (r *LinkMgmtNetRaw) GetType() LinkType {
 	return LinkTypeMgmtNet
 }
 
-func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
+func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMgmtNetRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
 	result := &LinkMgmtNetRaw{
@@ -68,9 +75,8 @@ func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (RawLink, error) {
 
 type LinkMgmtNet struct {
 	LinkCommonParams
-	HostInterface     string
-	MgmtBridge        string
-	ContainerEndpoint *Endpt
+	BridgeEndpoint    Endpt
+	ContainerEndpoint Endpt
 }
 
 func (*LinkMgmtNet) GetType() LinkType {
@@ -80,10 +86,10 @@ func (*LinkMgmtNet) GetType() LinkType {
 func (l *LinkMgmtNet) Deploy(ctx context.Context) error {
 	linkA := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: l.ContainerEndpoint.GetRandName(),
+			Name: l.ContainerEndpoint.GetRandIfaceName(),
 			MTU:  l.Mtu,
 		},
-		PeerName: l.HostInterface,
+		PeerName: l.BridgeEndpoint.GetIfaceName(),
 	}
 	err := netlink.LinkAdd(linkA)
 	if err != nil {
@@ -91,31 +97,43 @@ func (l *LinkMgmtNet) Deploy(ctx context.Context) error {
 	}
 
 	// add link to node, rename, set mac and Up
-	err = l.ContainerEndpoint.Node.AddLink(ctx, linkA, SetNameMACAndUpInterface(linkA, l.ContainerEndpoint))
+	err = l.ContainerEndpoint.GetNode().AddNetlinkLinkToContainer(ctx, linkA, SetNameMACAndUpInterface(linkA, l.ContainerEndpoint))
 	if err != nil {
 		return err
 	}
 
 	// get host side interface
-	linkB, err := netlink.LinkByName(l.HostInterface)
+	linkB, err := netlink.LinkByName(l.BridgeEndpoint.GetIfaceName())
 	if err != nil {
-		return fmt.Errorf("failed to lookup %q: %v", l.HostInterface, err)
+		return fmt.Errorf("failed to lookup %q: %v", l.BridgeEndpoint.GetIfaceName(), err)
 	}
 
 	// retrieve the bridge
-	br, err := utils.BridgeByName(l.MgmtBridge)
+	br, err := utils.BridgeByName(l.BridgeEndpoint.GetNode().GetShortName())
 	if err != nil {
 		return err
 	}
 
 	// connect host veth end to the bridge
 	if err := netlink.LinkSetMaster(linkB, br); err != nil {
-		return fmt.Errorf("failed to connect %q to bridge %v: %v", l.HostInterface, l.MgmtBridge, err)
+		return fmt.Errorf("failed to connect %q to bridge %v: %v", l.BridgeEndpoint.GetIfaceName(), l.BridgeEndpoint.GetNode().GetShortName(), err)
 	}
 
 	// set the host side interface, attached to the bridge, to up
 	if err = netlink.LinkSetUp(linkB); err != nil {
-		return fmt.Errorf("failed to set %q up: %v", l.HostInterface, err)
+		return fmt.Errorf("failed to set %q up: %v", l.BridgeEndpoint.GetIfaceName(), err)
 	}
 	return nil
+}
+
+func (l *LinkMgmtNet) Remove(ctx context.Context) error {
+	// TODO
+	return nil
+}
+
+func (l *LinkMgmtNet) GetEndpoints() []Endpt {
+	return []Endpt{
+		l.ContainerEndpoint,
+		l.BridgeEndpoint,
+	}
 }

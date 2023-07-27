@@ -7,6 +7,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
@@ -235,7 +236,7 @@ func briefLinkConversion(lc LinkConfig) (RawLink, error) {
 }
 
 type RawLink interface {
-	Resolve(map[string]LinkNode) (LinkInterf, error)
+	Resolve(params *ResolveParams) (LinkInterf, error)
 	// ToLinkConfig TODO: This is meant to be a temporary conversion helper
 	// should be removed in final iteration
 	ToLinkConfig() *LinkConfig
@@ -244,7 +245,9 @@ type RawLink interface {
 
 type LinkInterf interface {
 	Deploy(context.Context) error
+	Remove(context.Context) error
 	GetType() LinkType
+	GetEndpoints() []Endpt
 }
 
 func extractHostNodeInterfaceData(lc LinkConfig, specialEPIndex int) (host, hostIf, node, nodeIf string) {
@@ -275,23 +278,35 @@ type LinkNode interface {
 	//
 	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
 	// the master of the interface and bring the interface up.
-	AddLink(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	// AddLink adds the Link to the node
+	AddEndpoint(e Endpt) error
+	GetLinkEndpointType() LinkEndpointType
+	GetShortName() string
 }
+
+type LinkEndpointType string
+
+const (
+	LinkEndpointTypeRegular = "regular"
+	LinkEndpointTypeBridge  = "bridge"
+	LinkEndpointTypeHost    = "host"
+)
 
 // SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
 // and return a function that can run in the netns.Do() call for execution in a network namespace
-func SetNameMACAndUpInterface(l netlink.Link, endpt *Endpt) func(ns.NetNS) error {
+func SetNameMACAndUpInterface(l netlink.Link, endpt Endpt) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the given link
-		err := netlink.LinkSetName(l, endpt.Iface)
+		err := netlink.LinkSetName(l, endpt.GetIfaceName())
 		if err != nil {
 			return fmt.Errorf(
 				"failed to rename link: %v", err)
 		}
 
 		// lets set the MAC address if provided
-		if len(endpt.Mac) == 6 {
-			err = netlink.LinkSetHardwareAddr(l, endpt.Mac)
+		if len(endpt.GetMac()) == 6 {
+			err = netlink.LinkSetHardwareAddr(l, endpt.GetMac())
 			if err != nil {
 				return err
 			}
@@ -300,8 +315,51 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt *Endpt) func(ns.NetNS) error
 		// bring the given link up
 		if err = netlink.LinkSetUp(l); err != nil {
 			return fmt.Errorf("failed to set %q up: %v",
-				endpt.Iface, err)
+				endpt.GetIfaceName(), err)
 		}
 		return nil
 	}
+}
+
+type ResolveParams struct {
+	Nodes map[string]LinkNode
+	// the mgmt-net network interface creation will need to
+	// kown what the mgmt bridge is
+	MgmtBridge string
+}
+
+var _fakeHostLinkNode *GenericLinkNode
+
+func GetFakeHostLinkNode() *GenericLinkNode {
+	if _fakeHostLinkNode == nil {
+		_fakeHostLinkNode := &GenericLinkNode{
+			shortname: "Host",
+			endpoints: []Endpt{},
+		}
+		currns, err := ns.GetCurrentNS()
+
+		_fakeHostLinkNode.nspath = currns.Path()
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	return _fakeHostLinkNode
+}
+
+var _fakeMgmtBrLinkMgmtBr *GenericLinkNode
+
+func GetFakeMgmtBrLinkNode() *GenericLinkNode {
+	if _fakeMgmtBrLinkMgmtBr == nil {
+		_fakeMgmtBrLinkMgmtBr := &GenericLinkNode{
+			shortname: "MgmtBridge",
+			endpoints: []Endpt{},
+		}
+		currns, err := ns.GetCurrentNS()
+
+		_fakeMgmtBrLinkMgmtBr.nspath = currns.Path()
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	return _fakeMgmtBrLinkMgmtBr
 }
