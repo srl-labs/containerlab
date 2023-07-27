@@ -306,11 +306,34 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 			Labels:          v.Labels,
 			Pid:             v.Pid,
 			NetworkSettings: netSettings,
+			Ports:           []*types.GenericPortBinding{},
 		}
+
+		// convert the exposed ports the GenericPorts and add them to the GenericContainer
+		for _, p := range cList[i].Ports {
+			genericList[i].Ports = append(genericList[i].Ports, netTypesPortMappingToGenericPortBinding(p)...)
+		}
+
 		genericList[i].SetRuntime(r)
 	}
 	log.Debugf("Method produceGenericContainerList returns %+v", genericList)
 	return genericList, nil
+}
+
+func netTypesPortMappingToGenericPortBinding(pm netTypes.PortMapping) []*types.GenericPortBinding {
+	// convert netTypes.PortMapping to types.GenericPort
+	// resolving the ranges into single port entries
+	result := make([]*types.GenericPortBinding, pm.Range)
+	for offset := uint16(0); offset < pm.Range; offset++ {
+		result[offset] = &types.GenericPortBinding{
+			HostIP:        pm.HostIP,
+			HostPort:      int(pm.HostPort),
+			ContainerPort: int(pm.ContainerPort),
+			Protocol:      pm.Protocol,
+		}
+	}
+
+	return result
 }
 
 func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (runtime.GenericMgmtIPs, error) {

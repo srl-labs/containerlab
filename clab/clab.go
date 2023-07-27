@@ -141,9 +141,6 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 
 	log.Infof("Applying node filter: %q", nodeFilter)
 
-	// newNodes := make(map[string]*types.NodeDefinition, len(c.Config.Topology.Nodes))
-	newLinks := make([]*types.LinkConfig, 0, len(c.Config.Topology.Links))
-
 	// filter nodes
 	for name := range c.Config.Topology.Nodes {
 		if exists := slices.Contains(nodeFilter, name); !exists {
@@ -153,35 +150,15 @@ func filterClabNodes(c *CLab, nodeFilter []string) error {
 	}
 
 	// filter links
-	for _, l := range c.Config.Topology.Links {
-		// get the endpoints of the link and extract the node names
-		// to remove the links which have either side in the node filter
-		splitEpAside := strings.Split(l.Endpoints[0], ":")
-		if len(splitEpAside) != 2 {
-			continue
-		}
-
-		epA := splitEpAside[0]
-
-		splitEpBside := strings.Split(l.Endpoints[1], ":")
-		if len(splitEpBside) != 2 {
-			continue
-		}
-
-		epB := splitEpBside[0]
-
-		containsAside := slices.Contains(nodeFilter, epA)
-		containsBside := slices.Contains(nodeFilter, epB)
-
-		// if both endpoints of a link belong to the node filter, keep the link
-		if containsAside && containsBside {
-			log.Debugf("Including link %+v", l)
-			newLinks = append(newLinks, l)
+	for id, l := range c.Links {
+		for _, nodeName := range []string{l.A.Node.ShortName, l.B.Node.ShortName} {
+			// if both endpoints of a link belong to the node filter, keep the link
+			if !slices.Contains(nodeFilter, nodeName) {
+				delete(c.Links, id)
+				break
+			}
 		}
 	}
-	// replace the original collection of links with the links that have both endpoints in the node filter
-	c.Config.Topology.Links = newLinks
-
 	return nil
 }
 
@@ -524,10 +501,12 @@ func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_mana
 
 			var waitNodes []string
 			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
-				// we should not wait for "host" fake node or mgmt-net node
-				if n.Kind != "host" && n.ShortName != "mgmt-net" {
-					waitNodes = append(waitNodes, n.ShortName)
+				// we should not wait for "host", "mgmt-net" and "macvlan" fake nodes
+				// as they are never managed by dependency manager (never really get created)
+				if n.Kind == "host" || n.ShortName == "mgmt-net" || n.Kind == "macvlan" {
+					continue
 				}
+				waitNodes = append(waitNodes, n.ShortName)
 			}
 
 			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)

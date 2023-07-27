@@ -6,6 +6,8 @@ package linux
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
@@ -87,7 +89,14 @@ func (n *linux) GetImages(_ context.Context) map[string]string {
 	return images
 }
 
-// CheckInterfaceName is a noop for linux containers as they can have any names.
+// CheckInterfaceName allows any interface name for linux nodes, but checks
+// if eth0 is only used with network-mode=none.
 func (n *linux) CheckInterfaceName() error {
+	nm := strings.ToLower(n.Cfg.NetworkMode)
+	for _, e := range n.Config().Endpoints {
+		if e.EndpointName == "eth0" && nm != "none" {
+			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+		}
+	}
 	return nil
 }

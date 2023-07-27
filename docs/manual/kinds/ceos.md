@@ -309,7 +309,7 @@ In addition to cli commands such as `write memory` user can take advantage of th
 
 ## Container configuration
 
-To start an Arista cEOS node containerlab uses the configuration instructions described in Arista Forums[^1]. The exact parameters are outlined below.
+To start an Arista cEOS node containerlab uses the following configuration:
 
 === "Startup command"
     `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
@@ -418,8 +418,35 @@ sudo iptables -P INPUT ACCEPT
 sudo ip6tables -P INPUT ACCEPT
 ```
 
-[^1]: https://eos.arista.com/ceos-lab-topo/
 [^2]: feel free to omit the IP addressing for Management interface, as it will be configured by containerlab when ceos node boots.
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
 [^4]: for example, Ubuntu 21.04 comes with cgroup v2 [by default](https://askubuntu.com/a/1369957).
 [^5]: interface name can also be `et` instead of `eth`.
+
+### Scale
+
+From version 4.28.0F, the ceos-lab image supports up to 50 nodes per host. On previous releases and/or with higher scale there might be issues cores inside the ceos-lab nodes and erros like `Error: Too many open files`.
+
+Example solution for 60 ceos-lab nodes:
+
+1. On the host run:
+
+```
+sudo sh -c 'echo "fs.inotify.max_user_instances = 75000" > /etc/sysctl.d/99-zceoslab.conf'
+sudo sysctl --load /etc/sysctl.d/99-zceoslab.conf
+```
+
+where 75000 is `60 (# of nodes) * 1250`.
+
+2. Bind newly created file into the ceos-lab containers:
+
+```
+...
+topology:
+  kinds:
+    ceos:
+      ...
+      binds:
+        - /etc/sysctl.d/99-zceoslab.conf:/etc/sysctl.d/99-zceoslab.conf:ro
+...
+```

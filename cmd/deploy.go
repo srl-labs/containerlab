@@ -242,7 +242,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if err := c.GenerateExports(topoDataF, exportTemplate); err != nil {
+	if err := c.GenerateExports(ctx, topoDataF, exportTemplate); err != nil {
 		return err
 	}
 
@@ -270,7 +270,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// generate graph of the lab topology
 	if graph {
-		if err = c.GenerateGraph(topo); err != nil {
+		if err = c.GenerateDotGraph(); err != nil {
 			log.Error(err)
 		}
 	}

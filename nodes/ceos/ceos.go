@@ -46,13 +46,15 @@ var (
 	cfgTemplate string
 
 	saveCmd = "Cli -p 15 -c wr"
+
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
 		return new(ceos)
-	}, nil)
+	}, defaultCredentials)
 }
 
 type ceos struct {
