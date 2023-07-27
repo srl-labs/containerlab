@@ -224,7 +224,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	//c.CreateLinks(ctx, linkWorkers, dm)
+	// c.CreateLinks(ctx, linkWorkers, dm)
 	if nodesWg != nil {
 		nodesWg.Wait()
 	}
