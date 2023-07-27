@@ -52,14 +52,14 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 	}
 
 	// resolve endpoints
-	for idx, ep := range r.Endpoints {
+	for _, ep := range r.Endpoints {
 		// resolve endpoint
 		ept, err := ep.Resolve(params.Nodes, l)
 		if err != nil {
 			return nil, err
 		}
 		// set resolved endpoint in link endpoints
-		l.Endpoints[idx] = ept
+		l.Endpoints = append(l.Endpoints, ept)
 	}
 
 	return l, nil
