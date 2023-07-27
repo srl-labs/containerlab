@@ -113,7 +113,7 @@ func (l *LinkHost) GetType() LinkType {
 	return LinkTypeHost
 }
 
-func (l *LinkHost) Remove(ctx context.Context) error {
+func (l *LinkHost) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }
@@ -135,7 +135,7 @@ type GenericLinkNode struct {
 	nspath    string
 }
 
-func (g *GenericLinkNode) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (g *GenericLinkNode) AddNetlinkLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	if g.nspath != "" {
 		return nil
 	}

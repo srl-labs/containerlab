@@ -166,7 +166,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (l *LinkMacVlan) Remove(ctx context.Context) error {
+func (l *LinkMacVlan) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }

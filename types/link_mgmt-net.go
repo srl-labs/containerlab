@@ -126,7 +126,7 @@ func (l *LinkMgmtNet) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (l *LinkMgmtNet) Remove(ctx context.Context) error {
+func (l *LinkMgmtNet) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }

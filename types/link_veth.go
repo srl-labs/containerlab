@@ -159,7 +159,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (l *LinkVEth) Remove(ctx context.Context) error {
+func (l *LinkVEth) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }
