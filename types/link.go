@@ -219,7 +219,7 @@ func briefLinkConversion(lc LinkConfig) (RawLink, error) {
 		node := parts[0]
 
 		lt, err := parseLinkType(node)
-		if err == nil {
+		if err != nil {
 			continue
 		}
 
@@ -332,8 +332,8 @@ var _fakeHostLinkNode *GenericLinkNode
 
 func GetFakeHostLinkNode() *GenericLinkNode {
 	if _fakeHostLinkNode == nil {
-		_fakeHostLinkNode := &GenericLinkNode{
-			shortname: "Host",
+		_fakeHostLinkNode = &GenericLinkNode{
+			shortname: "host",
 			endpoints: []Endpt{},
 		}
 		currns, err := ns.GetCurrentNS()
@@ -350,8 +350,8 @@ var _fakeMgmtBrLinkMgmtBr *GenericLinkNode
 
 func GetFakeMgmtBrLinkNode() *GenericLinkNode {
 	if _fakeMgmtBrLinkMgmtBr == nil {
-		_fakeMgmtBrLinkMgmtBr := &GenericLinkNode{
-			shortname: "MgmtBridge",
+		_fakeMgmtBrLinkMgmtBr = &GenericLinkNode{
+			shortname: "mgmt-net",
 			endpoints: []Endpt{},
 		}
 		currns, err := ns.GetCurrentNS()

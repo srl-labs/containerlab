@@ -34,6 +34,12 @@ func (e *EndpointRaw) Resolve(nodes map[string]LinkNode, l LinkInterf) (*EndptGe
 		Link:  l,
 	}
 
+	// also add the endpoint to the node
+	err := node.AddEndpoint(result)
+	if err != nil {
+		return nil, err
+	}
+
 	// if MAC is present, set it
 	if e.Mac != "" {
 		m, err := net.ParseMAC(e.Mac)

@@ -132,6 +132,12 @@ func (c *CLab) parseTopology() error {
 		resolveNodes[k] = v
 	}
 
+	// add the virtual host and mgmt-bridge nodes to the resolve nodes
+	specialNodes := []types.LinkNode{types.GetFakeHostLinkNode(), types.GetFakeMgmtBrLinkNode()}
+	for _, n := range specialNodes {
+		resolveNodes[n.GetShortName()] = n
+	}
+
 	resolveParams := &types.ResolveParams{
 		Nodes:      resolveNodes,
 		MgmtBridge: c.Config.Mgmt.Bridge,
