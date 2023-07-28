@@ -24,6 +24,7 @@ nav:
           - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - Cisco 8000: manual/kinds/c8000.md
           - Cumulus VX: manual/kinds/cvx.md
+          - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC: manual/kinds/sonic-vs.md
           - Dell FTOS10v: manual/kinds/vr-ftosv.md
           - MikroTik RouterOS: manual/kinds/vr-ros.md
