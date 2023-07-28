@@ -73,6 +73,8 @@
                         "vr-cisco_n9kv",
                         "vr-ftosv",
                         "vr-dell_ftosv",
+			"vr-aoscx",
+			"vr-aruba_aoscx",
                         "linux",
                         "bridge",
                         "ovs-bridge",
@@ -634,6 +636,12 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-vsrx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+			"vr-aruba_aoscx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-aoscx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-cisco_xrv": {
