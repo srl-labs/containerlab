@@ -62,9 +62,10 @@ func WithDebug(debug bool) ClabOption {
 	}
 }
 
+// WithRuntime option sets a container runtime to be used by containerlab.
 func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 	return func(c *CLab) error {
-		name, rInit, err := GetRuntimeInitializer(name)
+		name, rInit, err := RuntimeInitializer(name)
 		if err != nil {
 			return err
 		}
@@ -87,7 +88,8 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 	}
 }
 
-func GetRuntimeInitializer(name string) (string, runtime.Initializer, error) {
+// RuntimeInitializer returns a runtime initializer function for a provided runtime name.
+func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
 	// define runtime name.
 	// order of preference: cli flag -> env var -> default value of docker
 	envN := os.Getenv("CLAB_RUNTIME")

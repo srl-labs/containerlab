@@ -60,7 +60,7 @@ var netemSetCmd = &cobra.Command{
 		}
 
 		// Get the runtime initializer.
-		_, rinit, err := clab.GetRuntimeInitializer(rt)
+		_, rinit, err := clab.RuntimeInitializer(rt)
 		if err != nil {
 			return err
 		}
