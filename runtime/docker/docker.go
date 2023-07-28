@@ -700,7 +700,7 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 		bridgeName := d.mgmt.Network
 
 		var err error
-		ctr.Pid, err = d.getContainerPid(ctx, i.ID)
+		ctr.Pid, err = d.containerPid(ctx, i.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -967,8 +967,8 @@ func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) runt
 	return runtime.NotFound
 }
 
-// GetContainerStatus retrieves the ContainerStatus of the named container.
-func (d *DockerRuntime) getContainerPid(ctx context.Context, cID string) (int, error) {
+// containerPid returns the pid of a container by its ID using inspect.
+func (d *DockerRuntime) containerPid(ctx context.Context, cID string) (int, error) {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
 		return 0, fmt.Errorf("container %q cannot be found", cID)
