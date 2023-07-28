@@ -76,7 +76,6 @@ func getOSRelease() string {
 
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
 func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
-
 	image := getOSRelease()
 
 	return []runtime.GenericContainer{
@@ -92,17 +91,17 @@ func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error
 			Status: "running",
 			NetworkSettings: runtime.GenericMgmtIPs{
 				IPv4addr: "",
-				//IPv4pLen: 0,
+				// IPv4pLen: 0,
 				IPv4Gw:   "",
 				IPv6addr: "",
-				//IPv6pLen: 0,
+				// IPv6pLen: 0,
 				IPv6Gw: "",
 			},
 		},
 	}, nil
 }
 
-// RunExec runs commands on the container host
+// RunExec runs commands on the container host.
 func (*host) RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	// retireve the command with its arguments
 	command := e.GetCmd()

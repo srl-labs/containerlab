@@ -311,7 +311,8 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 
 		// convert the exposed ports the GenericPorts and add them to the GenericContainer
 		for _, p := range cList[i].Ports {
-			genericList[i].Ports = append(genericList[i].Ports, netTypesPortMappingToGenericPortBinding(p)...)
+			genericList[i].Ports = append(genericList[i].Ports,
+				netTypesPortMappingToGenericPortBinding(p)...)
 		}
 
 		genericList[i].SetRuntime(r)

@@ -74,7 +74,10 @@ func (t *Topology) GetNodeBinds(name string) ([]string, error) {
 	binds := map[string]*Bind{}
 
 	// group the default, kind and node binds
-	bindSources := [][]string{t.GetDefaults().GetBinds(), t.GetKind(t.GetNodeKind(name)).GetBinds(), t.Nodes[name].GetBinds()}
+	bindSources := [][]string{
+		t.GetDefaults().GetBinds(),
+		t.GetKind(t.GetNodeKind(name)).GetBinds(), t.Nodes[name].GetBinds(),
+	}
 
 	// add the binds from less to more specific levels, indexed by the destination path.
 	// thereby more specific binds will overwrite less specific one
