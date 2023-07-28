@@ -44,6 +44,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Palo Alto PAN](manual/kinds/vr-pan.md)
 * [IPInfusion OcNOS](manual/kinds/ipinfusion-ocnos.md)
 * [Check Point Cloudguard](manual/kinds/checkpoint_cloudguard.md)
+* [Aruba AOS-CX](manual/kinds/vr-aoscx.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span all the needed variants of nodes:
 
