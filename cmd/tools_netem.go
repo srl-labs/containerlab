@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -14,7 +15,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -100,7 +100,7 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 	}
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		link, err := netlink.LinkByName(NetemInterface)
+		link, err := net.InterfaceByName(NetemInterface)
 		if err != nil {
 			return err
 		}

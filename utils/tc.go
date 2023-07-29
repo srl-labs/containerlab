@@ -2,19 +2,18 @@ package utils
 
 import (
 	"fmt"
-	"math"
+	"net"
 	"strings"
 	"time"
 
 	"github.com/florianl/go-tc"
 	"github.com/florianl/go-tc/core"
-	layhernetlink "github.com/mdlayher/netlink"
+	"github.com/mdlayher/netlink"
 	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
 
-func SetDelayJitterLoss(nodeName string, nsFd int, link netlink.Link, delay, jitter time.Duration, loss float64, rate uint64 /*in kbit*/) error {
+func SetDelayJitterLoss(nodeName string, nsFd int, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64 /*in kbit*/) error {
 
 	if link == nil {
 		return fmt.Errorf("no link provided")
@@ -51,19 +50,17 @@ func SetDelayJitterLoss(nodeName string, nsFd int, link netlink.Link, delay, jit
 		}
 	}()
 
-	err = tcnl.SetOption(layhernetlink.ExtendedAcknowledge, true)
+	err = tcnl.SetOption(netlink.ExtendedAcknowledge, true)
 	if err != nil {
 		return fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)
 	}
 
-	log.Warn(link.Attrs().Index)
-
 	qdisc := tc.Object{
 		Msg: tc.Msg{
 			Family:  unix.AF_UNSPEC,
-			Ifindex: uint32(link.Attrs().Index),
-			Handle:  core.BuildHandle(0xFFFF, 0x0000),
-			Parent:  0xFFFFFFF1,
+			Ifindex: uint32(link.Index),
+			Handle:  core.BuildHandle(0x1, 0x0),
+			Parent:  tc.HandleRoot,
 			Info:    0,
 		},
 		Attribute: tc.Attribute{
@@ -73,32 +70,32 @@ func SetDelayJitterLoss(nodeName string, nsFd int, link netlink.Link, delay, jit
 	}
 
 	// if loss is set, propagate to qdisc
-	if loss != 0 {
-		adjustments = append(adjustments, toEntry("loss", fmt.Sprintf("%.3f%%", loss)))
-		qdisc.Attribute.Netem.Qopt = tc.NetemQopt{
-			Loss: uint32(math.Round(math.MaxUint32 * (loss / float64(100)))),
-		}
-	}
+	// if loss != 0 {
+	// 	adjustments = append(adjustments, toEntry("loss", fmt.Sprintf("%.3f%%", loss)))
+	// 	qdisc.Attribute.Netem.Qopt = tc.NetemQopt{
+	// 		Loss: uint32(math.Round(math.MaxUint32 * (loss / float64(100)))),
+	// 	}
+	// }
 	// if latency is set propagate to qdisc
 	if delay != 0 {
 		adjustments = append(adjustments, toEntry("delay", delay.String()))
-		delay64 := (delay * time.Millisecond).Milliseconds()
+		delay64 := delay.Milliseconds()
 		qdisc.Attribute.Netem.Latency64 = &delay64
 		// if jitter is set propagate to qdisc
-		if jitter != 0 {
-			adjustments = append(adjustments, toEntry("jitter", jitter.String()))
-			jit64 := (jitter * time.Millisecond).Milliseconds()
-			qdisc.Attribute.Netem.Jitter64 = &jit64
-		}
+		// if jitter != 0 {
+		// 	adjustments = append(adjustments, toEntry("jitter", jitter.String()))
+		// 	jit64 := (jitter * time.Millisecond).Milliseconds()
+		// 	qdisc.Attribute.Netem.Jitter64 = &jit64
+		// }
 	}
 	// is rate is set propagate to qdisc
-	if rate != 0 {
-		adjustments = append(adjustments, toEntry("rate", fmt.Sprintf("%d kbit/s", rate)))
-		byteRate := rate / 8
-		qdisc.Attribute.Netem.Rate64 = &byteRate
-	}
+	// if rate != 0 {
+	// 	adjustments = append(adjustments, toEntry("rate", fmt.Sprintf("%d kbit/s", rate)))
+	// 	byteRate := rate / 8
+	// 	qdisc.Attribute.Netem.Rate64 = &byteRate
+	// }
 
-	log.Infof("Adjusting qdisc for Node: %q, Interface: %q - Settings: [ %s ]", nodeName, link.Attrs().Name, strings.Join(adjustments, ", "))
+	log.Infof("Adjusting qdisc for Node: %q, Interface: %q - Settings: [ %s ]", nodeName, link.Name, strings.Join(adjustments, ", "))
 	// replace the tc qdisc
 	err = tcnl.Qdisc().Replace(&qdisc)
 	if err != nil {
