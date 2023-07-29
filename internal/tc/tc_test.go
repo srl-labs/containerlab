@@ -1,17 +1,16 @@
-package utils
+package tc
 
 import (
+	"net"
 	"testing"
 	"time"
-
-	"github.com/vishvananda/netlink"
 )
 
 func TestSetDelayJitterLoss(t *testing.T) {
 	type args struct {
 		nodeName string
 		nsFd     int
-		link     netlink.Link
+		link     *net.Interface
 		delay    time.Duration
 		jitter   time.Duration
 		loss     float64
@@ -32,10 +31,8 @@ func TestSetDelayJitterLoss(t *testing.T) {
 		{
 			name: "parameters uninitialized", // will only raise log warning
 			args: args{
-				link: &netlink.Dummy{
-					LinkAttrs: netlink.LinkAttrs{
-						Name: "dummy",
-					},
+				link: &net.Interface{
+					Name: "dummy",
 				},
 			},
 			wantErr: false,
@@ -43,10 +40,8 @@ func TestSetDelayJitterLoss(t *testing.T) {
 		{
 			name: "jitter without delay set",
 			args: args{
-				link: &netlink.Dummy{
-					LinkAttrs: netlink.LinkAttrs{
-						Name: "dummy",
-					},
+				link: &net.Interface{
+					Name: "dummy",
 				},
 				jitter: time.Millisecond * 2,
 			},
@@ -55,10 +50,8 @@ func TestSetDelayJitterLoss(t *testing.T) {
 		{
 			name: "loss > 100",
 			args: args{
-				link: &netlink.Dummy{
-					LinkAttrs: netlink.LinkAttrs{
-						Name: "dummy",
-					},
+				link: &net.Interface{
+					Name: "dummy",
 				},
 				loss: 101.0,
 			},
@@ -67,10 +60,8 @@ func TestSetDelayJitterLoss(t *testing.T) {
 		{
 			name: "loss < 0",
 			args: args{
-				link: &netlink.Dummy{
-					LinkAttrs: netlink.LinkAttrs{
-						Name: "dummy",
-					},
+				link: &net.Interface{
+					Name: "dummy",
 				},
 				loss: -1.0,
 			},

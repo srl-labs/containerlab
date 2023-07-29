@@ -13,8 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -105,7 +105,7 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		err = utils.SetDelayJitterLoss(NetemNode, int(nodeNs.Fd()), link, delayDur, jitterDur, NetemLoss, NetemRate)
+		err = tc.SetDelayJitterLoss(NetemNode, int(nodeNs.Fd()), link, delayDur, jitterDur, NetemLoss, NetemRate)
 		if err != nil {
 			return err
 		}

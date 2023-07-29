@@ -1,4 +1,4 @@
-package utils
+package tc
 
 import (
 	"fmt"
@@ -79,8 +79,18 @@ func SetDelayJitterLoss(nodeName string, nsFd int, link *net.Interface, delay, j
 	// if latency is set propagate to qdisc
 	if delay != 0 {
 		adjustments = append(adjustments, toEntry("delay", delay.String()))
-		delay64 := delay.Milliseconds()
-		qdisc.Attribute.Netem.Latency64 = &delay64
+
+		tcTime, err := core.Duration2TcTime(delay)
+		if err != nil {
+			return err
+		}
+
+		ticks := core.Time2Tick(tcTime)
+
+		qdisc.Attribute.Netem.Qopt = tc.NetemQopt{
+			Latency: ticks,
+			Limit:   10000, // max number of packets netem can hold during delay
+		}
 		// if jitter is set propagate to qdisc
 		// if jitter != 0 {
 		// 	adjustments = append(adjustments, toEntry("jitter", jitter.String()))
@@ -101,6 +111,19 @@ func SetDelayJitterLoss(nodeName string, nsFd int, link *net.Interface, delay, j
 	if err != nil {
 		return err
 	}
+
+	// qdiscs, err := tcnl.Qdisc().Get()
+	// if err != nil {
+	// 	log.Warnf("could not get all qdiscs: %v\n", err)
+	// }
+
+	// for _, qdisc := range qdiscs {
+	// 	iface, err := net.InterfaceByIndex(int(qdisc.Ifindex))
+	// 	if err != nil {
+	// 		log.Warnf("could not get interface from id %d: %v", qdisc.Ifindex, err)
+	// 	}
+	// 	log.Warnf("%20s\t%+v\n", iface.Name, spew.Sdump())
+	// }
 
 	return nil
 }
