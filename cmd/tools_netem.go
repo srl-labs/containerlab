@@ -30,8 +30,8 @@ func init() {
 	toolsCmd.AddCommand(netemCmd)
 
 	netemCmd.AddCommand(netemSetCmd)
-	netemSetCmd.Flags().StringVarP(&NetemNode, "node", "", "", "node to apply impairment to")
-	netemSetCmd.Flags().StringVarP(&NetemInterface, "interface", "", "", "interface to apply impairment to")
+	netemSetCmd.Flags().StringVarP(&NetemNode, "node", "n", "", "node to apply impairment to")
+	netemSetCmd.Flags().StringVarP(&NetemInterface, "interface", "i", "", "interface to apply impairment to")
 	netemSetCmd.Flags().StringVarP(&NetemDelay, "delay", "", "0ms", "link receive delay")
 	netemSetCmd.Flags().StringVarP(&NetemJitter, "jitter", "", "0ms", "link receive jitter")
 	netemSetCmd.Flags().Float64VarP(&NetemLoss, "loss", "", 0, "link receive loss (0 >= rate => 100)")
