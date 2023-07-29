@@ -8,13 +8,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
 )
 
 var (
@@ -93,30 +93,27 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// get namespace handle
-	nshandle, err := netns.GetFromPath(nodeNsPath)
-	if err != nil {
-		return err
-	}
-	// get netlink handle for the namespace
-	nlHandle, err := netlink.NewHandleAt(nshandle)
-	if err != nil {
-		return err
-	}
-	// get the link by name from the namespace
-	nlLink, err := nlHandle.LinkByName(NetemInterface)
-	if err != nil {
+	var nodeNs ns.NetNS
+
+	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
 		return err
 	}
 
-	// finally set the netem parameters
-	nsFd := int(nshandle)
-	err = utils.SetDelayJitterLoss(NetemNode, nsFd, nlLink, delayDur, jitterDur, NetemLoss, NetemRate)
-	if err != nil {
-		return err
-	}
+	err = nodeNs.Do(func(_ ns.NetNS) error {
+		link, err := netlink.LinkByName(NetemInterface)
+		if err != nil {
+			return err
+		}
 
-	log.Info("Successful")
+		err = utils.SetDelayJitterLoss(NetemNode, int(nodeNs.Fd()), link, delayDur, jitterDur, NetemLoss, NetemRate)
+		if err != nil {
+			return err
+		}
 
-	return nil
+		log.Info("Successful")
+
+		return nil
+	})
+	return err
+
 }

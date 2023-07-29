@@ -8,6 +8,7 @@ import (
 
 	"github.com/florianl/go-tc"
 	"github.com/florianl/go-tc/core"
+	layhernetlink "github.com/mdlayher/netlink"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -43,6 +44,19 @@ func SetDelayJitterLoss(nodeName string, nsFd int, link netlink.Link, delay, jit
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		if err := tcnl.Close(); err != nil {
+			log.Errorf("could not close rtnetlink socket: %v\n", err)
+		}
+	}()
+
+	err = tcnl.SetOption(layhernetlink.ExtendedAcknowledge, true)
+	if err != nil {
+		return fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)
+	}
+
+	log.Warn(link.Attrs().Index)
 
 	qdisc := tc.Object{
 		Msg: tc.Msg{
