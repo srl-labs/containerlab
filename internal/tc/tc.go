@@ -13,7 +13,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func SetDelayJitterLoss(nodeName string, nsFd int, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64 /*in kbit*/) error {
+// SetImpairments sets the impairments on the given interface of a node.
+func SetImpairments(nodeName string, nsFd int, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64) error {
 
 	if link == nil {
 		return fmt.Errorf("no link provided")

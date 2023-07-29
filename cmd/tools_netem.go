@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/internal/tc"
@@ -18,24 +17,24 @@ import (
 )
 
 var (
-	NetemNode      string
-	NetemInterface string
-	NetemDelay     string
-	NetemJitter    string
-	NetemLoss      float64
-	NetemRate      uint64
+	netemNode      string
+	netemInterface string
+	netemDelay     time.Duration
+	netemJitter    time.Duration
+	netemLoss      float64
+	netemRate      uint64
 )
 
 func init() {
 	toolsCmd.AddCommand(netemCmd)
 
 	netemCmd.AddCommand(netemSetCmd)
-	netemSetCmd.Flags().StringVarP(&NetemNode, "node", "n", "", "node to apply impairment to")
-	netemSetCmd.Flags().StringVarP(&NetemInterface, "interface", "i", "", "interface to apply impairment to")
-	netemSetCmd.Flags().StringVarP(&NetemDelay, "delay", "", "0ms", "link receive delay")
-	netemSetCmd.Flags().StringVarP(&NetemJitter, "jitter", "", "0ms", "link receive jitter")
-	netemSetCmd.Flags().Float64VarP(&NetemLoss, "loss", "", 0, "link receive loss (0 >= rate => 100)")
-	netemSetCmd.Flags().Uint64VarP(&NetemRate, "rate", "", 0, "link receive rate in kbit")
+	netemSetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
+	netemSetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to apply impairment to")
+	netemSetCmd.Flags().DurationVarP(&netemDelay, "delay", "", 0*time.Second, "time to delay outgoing packets (e.g. 100ms, 2s)")
+	netemSetCmd.Flags().DurationVarP(&netemJitter, "jitter", "", 0*time.Second, "delay variation, aka jitter (e.g. 50ms)")
+	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss-percent", "", 0, "random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
+	netemSetCmd.Flags().Uint64VarP(&netemRate, "rate", "", 0, "link rate limit in kbit")
 
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
@@ -48,21 +47,14 @@ var netemCmd = &cobra.Command{
 
 var netemSetCmd = &cobra.Command{
 	Use:   "set",
-	Short: "set operation",
-	RunE:  netemSetFn,
+	Short: "set link impairments",
+	Long: `The netem queue discipline provides Network Emulation
+functionality for testing protocols by emulating the properties
+of real-world networks.`,
+	RunE: netemSetFn,
 }
 
 func netemSetFn(cmd *cobra.Command, args []string) error {
-	// Parse Delay and Jitter to become Durations
-	delayDur, err := time.ParseDuration(NetemDelay)
-	if err != nil {
-		return err
-	}
-	jitterDur, err := time.ParseDuration(NetemJitter)
-	if err != nil {
-		return err
-	}
-
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(rt)
 	if err != nil {
@@ -88,7 +80,7 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	// retrieve the containers NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, NetemNode)
+	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
 	if err != nil {
 		return err
 	}
@@ -100,20 +92,18 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 	}
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		link, err := net.InterfaceByName(NetemInterface)
+		link, err := net.InterfaceByName(netemInterface)
 		if err != nil {
 			return err
 		}
 
-		err = tc.SetDelayJitterLoss(NetemNode, int(nodeNs.Fd()), link, delayDur, jitterDur, NetemLoss, NetemRate)
+		err = tc.SetImpairments(netemNode, int(nodeNs.Fd()), link, netemDelay, netemJitter, netemLoss, netemRate)
 		if err != nil {
 			return err
 		}
-
-		log.Info("Successful")
 
 		return nil
 	})
-	return err
 
+	return err
 }
