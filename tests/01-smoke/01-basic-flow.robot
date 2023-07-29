@@ -183,16 +183,22 @@ Verify l1 environment has MYVAR variable set
 Verify Hosts entries exist
     [Documentation]    Verification that the expected /etc/hosts entries are created. We are also checking for the HEADER and FOOTER values here, which also contain the lab name.
     # log host entries for tshooting
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep "${lab-name}"
+
     Log    ${output}
+
     # not get number of lines related to the current lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep "${lab-name}" | wc -l
+
     Log    ${output}
+
     Should Be Equal As Integers    ${rc}    0
-    IF    '${runtime}' == 'podman'    Should Contain    ${output}    6
-    IF    '${runtime}' == 'docker'    Should Contain    ${output}    6
+
+    IF    '${runtime}' == 'podman'    Should Contain    ${output}    6    END
+    IF    '${runtime}' == 'docker'    Should Contain    ${output}    6    END
 
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
