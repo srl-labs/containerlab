@@ -8,9 +8,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/containernetworking/plugins/pkg/ns"
+	gotc "github.com/florianl/go-tc"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -61,11 +65,6 @@ of real-world networks.`,
 }
 
 func netemSetFn(cmd *cobra.Command, args []string) error {
-	// stop early if no impairment is set
-	if netemDelay == 0 && netemLoss == 0 && netemRate == 0 {
-		log.Fatal("none of the impairment parameters is set")
-	}
-
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(rt)
 	if err != nil {
@@ -102,16 +101,29 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	tcnl, err := tc.NewTC(int(nodeNs.Fd()))
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := tcnl.Close(); err != nil {
+			log.Errorf("could not close rtnetlink socket: %v\n", err)
+		}
+	}()
+
 	err = nodeNs.Do(func(_ ns.NetNS) error {
 		link, err := net.InterfaceByName(netemInterface)
 		if err != nil {
 			return err
 		}
 
-		err = tc.SetImpairments(netemNode, int(nodeNs.Fd()), link, netemDelay, netemJitter, netemLoss, netemRate)
+		qdisc, err := tc.SetImpairments(tcnl, netemNode, link, netemDelay, netemJitter, netemLoss, netemRate)
 		if err != nil {
 			return err
 		}
+
+		printImpairments(netemInterface, qdisc)
 
 		return nil
 	})
@@ -129,4 +141,35 @@ func validateInput(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func printImpairments(ifName string, qdisc *gotc.Object) {
+	columns := []table.Column{
+		{Title: "Name", Width: 10},
+		{Title: "Delay", Width: 6},
+		{Title: "Jitter", Width: 7},
+		{Title: "Packet Loss", Width: 14},
+	}
+
+	delay := time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond
+	jitter := time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond
+	loss := strconv.Itoa(int(qdisc.Netem.Qopt.Loss))
+
+	rows := []table.Row{
+		{ifName, delay.String(), jitter.String(), loss + "%"},
+	}
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithHeight(1), // table is always only 1 row in size
+	)
+
+	s := table.Styles{
+		Header: lipgloss.NewStyle().Bold(true).Padding(0, 1),
+		Cell:   lipgloss.NewStyle().Padding(0, 1),
+	}
+	t.SetStyles(s)
+
+	fmt.Println(t.View())
 }
