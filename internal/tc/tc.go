@@ -15,7 +15,6 @@ import (
 
 // SetImpairments sets the impairments on the given interface of a node.
 func SetImpairments(nodeName string, nsFd int, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64) error {
-
 	adjustments := []string{}
 
 	// open tc session
@@ -87,7 +86,8 @@ func SetImpairments(nodeName string, nsFd int, link *net.Interface, delay, jitte
 	// 	qdisc.Attribute.Netem.Rate64 = &byteRate
 	// }
 
-	log.Infof("Adjusting qdisc for Node: %q, Interface: %q - Settings: [ %s ]", nodeName, link.Name, strings.Join(adjustments, ", "))
+	log.Infof("Adjusting qdisc for Node: %q, Interface: %q - Settings: [ %s ]", nodeName,
+		link.Name, strings.Join(adjustments, ", "))
 	// replace the tc qdisc
 	err = tcnl.Qdisc().Replace(&qdisc)
 	if err != nil {

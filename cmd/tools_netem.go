@@ -33,9 +33,12 @@ func init() {
 	netemCmd.AddCommand(netemSetCmd)
 	netemSetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
 	netemSetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to apply impairment to")
-	netemSetCmd.Flags().DurationVarP(&netemDelay, "delay", "", 0*time.Second, "time to delay outgoing packets (e.g. 100ms, 2s)")
-	netemSetCmd.Flags().DurationVarP(&netemJitter, "jitter", "", 0*time.Second, "delay variation, aka jitter (e.g. 50ms)")
-	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss-percent", "", 0, "random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
+	netemSetCmd.Flags().DurationVarP(&netemDelay, "delay", "", 0*time.Second,
+		"time to delay outgoing packets (e.g. 100ms, 2s)")
+	netemSetCmd.Flags().DurationVarP(&netemJitter, "jitter", "", 0*time.Second,
+		"delay variation, aka jitter (e.g. 50ms)")
+	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss-percent", "", 0,
+		"random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
 	netemSetCmd.Flags().Uint64VarP(&netemRate, "rate", "", 0, "link rate limit in kbit")
 
 	netemSetCmd.MarkFlagRequired("node")
@@ -58,7 +61,6 @@ of real-world networks.`,
 }
 
 func netemSetFn(cmd *cobra.Command, args []string) error {
-
 	// stop early if no impairment is set
 	if netemDelay == 0 && netemLoss == 0 && netemRate == 0 {
 		log.Fatal("none of the impairment parameters is set")
