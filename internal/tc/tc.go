@@ -16,26 +16,7 @@ import (
 // SetImpairments sets the impairments on the given interface of a node.
 func SetImpairments(nodeName string, nsFd int, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64) error {
 
-	if link == nil {
-		return fmt.Errorf("no link provided")
-	}
-
 	adjustments := []string{}
-
-	// // check input is valid
-	// loss betwenn 0 and 100
-	if loss != 0 && loss > 100 {
-		return fmt.Errorf("loss must be >= 0 and <= 100")
-	}
-	// jitter must not be set without delay
-	if jitter != 0 && delay == 0 {
-		return fmt.Errorf("cannot set jitter without delay")
-	}
-	// if delay and loss are nil, we have nothing to do
-	if delay == 0 && loss == 0 && rate == 0 {
-		log.Warn("non of the netem parameters (delay, jitter, loss, rate) was set")
-		return nil
-	}
 
 	// open tc session
 	tcnl, err := tc.Open(&tc.Config{

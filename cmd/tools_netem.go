@@ -6,10 +6,12 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/internal/tc"
@@ -51,10 +53,17 @@ var netemSetCmd = &cobra.Command{
 	Long: `The netem queue discipline provides Network Emulation
 functionality for testing protocols by emulating the properties
 of real-world networks.`,
-	RunE: netemSetFn,
+	PreRunE: validateInput,
+	RunE:    netemSetFn,
 }
 
 func netemSetFn(cmd *cobra.Command, args []string) error {
+
+	// stop early if no impairment is set
+	if netemDelay == 0 && netemLoss == 0 && netemRate == 0 {
+		log.Fatal("none of the impairment parameters is set")
+	}
+
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(rt)
 	if err != nil {
@@ -106,4 +115,16 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 	})
 
 	return err
+}
+
+func validateInput(cmd *cobra.Command, args []string) error {
+	if netemLoss < 0 || netemLoss > 100 {
+		return fmt.Errorf("packet loss must be in the range between 0 and 100")
+	}
+
+	if netemJitter != 0 && netemDelay == 0 {
+		return fmt.Errorf("jitter cannot be set without setting delay")
+	}
+
+	return nil
 }
