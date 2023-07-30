@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"strconv"
 	"time"
@@ -153,7 +154,7 @@ func printImpairments(ifName string, qdisc *gotc.Object) {
 
 	delay := time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond
 	jitter := time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond
-	loss := strconv.Itoa(int(qdisc.Netem.Qopt.Loss))
+	loss := strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64)
 
 	rows := []table.Row{
 		{ifName, delay.String(), jitter.String(), loss + "%"},

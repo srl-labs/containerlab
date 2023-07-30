@@ -2,6 +2,7 @@ package tc
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -54,13 +55,7 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 		return nil, err
 	}
 
-	// if loss is set, propagate to qdisc
-	// if loss != 0 {
-	// 	adjustments = append(adjustments, toEntry("loss", fmt.Sprintf("%.3f%%", loss)))
-	// 	qdisc.Attribute.Netem.Qopt = tc.NetemQopt{
-	// 		Loss: uint32(math.Round(math.MaxUint32 * (loss / float64(100)))),
-	// 	}
-	// }
+	setLoss(&qdisc, loss)
 
 	// is rate is set propagate to qdisc
 	// if rate != 0 {
@@ -80,7 +75,7 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 	// get qdisc of an interface after we set it
 	qdiscs, err := tcnl.Qdisc().Get()
 	if err != nil {
-		return nil, fmt.Errorf("could not get all qdiscs: %v\n", err)
+		return nil, fmt.Errorf("could not get all qdiscs: %v", err)
 	}
 
 	for _, qdisc := range qdiscs {
@@ -116,6 +111,6 @@ func setDelay(qdisc *tc.Object, delay, jitter time.Duration) error {
 	return err
 }
 
-// func PrintImpairments(nodeName string, nsFd int, link *net.Interface) error {
-
-// }
+func setLoss(qdisc *tc.Object, loss float64) {
+	qdisc.Attribute.Netem.Qopt.Loss = uint32(math.Round(math.MaxUint32 * (loss / float64(100))))
+}
