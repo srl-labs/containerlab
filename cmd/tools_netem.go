@@ -205,7 +205,7 @@ func qdiscToTableData(qdisc gotc.Object) []string {
 		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
 
-	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64)
+	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
 
 	return []string{
