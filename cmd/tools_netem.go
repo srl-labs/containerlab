@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/containernetworking/plugins/pkg/ns"
 	gotc "github.com/florianl/go-tc"
+	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -145,34 +145,28 @@ func validateInput(cmd *cobra.Command, args []string) error {
 }
 
 func printImpairments(ifName string, qdisc *gotc.Object) {
-	columns := []table.Column{
-		{Title: "Name", Width: 10},
-		{Title: "Delay", Width: 6},
-		{Title: "Jitter", Width: 7},
-		{Title: "Packet Loss", Width: 14},
-		{Title: "Rate (kbit)", Width: 14},
+	table := tablewriter.NewWriter(os.Stdout)
+	header := []string{
+		"Interface",
+		"Delay",
+		"Jitter",
+		"Packet Loss",
+		"Rate (kbit)",
 	}
+
+	table.SetHeader(header)
+	table.SetAutoFormatHeaders(false)
+	table.SetAutoWrapText(false)
 
 	delay := time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond
 	jitter := time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond
 	loss := strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64)
 	rate := strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
 
-	rows := []table.Row{
+	rows := [][]string{
 		{ifName, delay.String(), jitter.String(), loss + "%", rate},
 	}
 
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(rows),
-		table.WithHeight(1), // table is always only 1 row in size
-	)
-
-	s := table.Styles{
-		Header: lipgloss.NewStyle().Bold(true).Padding(0, 1),
-		Cell:   lipgloss.NewStyle().Padding(0, 1),
-	}
-	t.SetStyles(s)
-
-	fmt.Println(t.View())
+	table.AppendBulk(rows)
+	table.Render()
 }
