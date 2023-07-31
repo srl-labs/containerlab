@@ -57,16 +57,8 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 
 	setLoss(&qdisc, loss)
 
-	// is rate is set propagate to qdisc
-	// if rate != 0 {
-	// 	adjustments = append(adjustments, toEntry("rate", fmt.Sprintf("%d kbit/s", rate)))
-	// 	byteRate := rate / 8
-	// 	qdisc.Attribute.Netem.Rate64 = &byteRate
-	// }
+	setRate(&qdisc, rate)
 
-	// log.Infof("Adjusting qdisc for Node: %q, Interface: %q - Settings: [ %s ]", nodeName,
-	// 	link.Name, strings.Join(impairments, ", "))
-	// replace the tc qdisc
 	err = tcnl.Qdisc().Replace(&qdisc)
 	if err != nil {
 		return nil, err
@@ -111,6 +103,17 @@ func setDelay(qdisc *tc.Object, delay, jitter time.Duration) error {
 	return err
 }
 
+// setLoss sets the loss to the qdisc.
 func setLoss(qdisc *tc.Object, loss float64) {
 	qdisc.Attribute.Netem.Qopt.Loss = uint32(math.Round(math.MaxUint32 * (loss / float64(100))))
+}
+
+// setRate sets the rate to the qdisc.
+// The rate is provided in kbit.
+func setRate(qdisc *tc.Object, rate uint64) {
+	// convert to bytes
+	byteRate := rate * 1000 / 8
+	qdisc.Attribute.Netem.Rate = &tc.NetemRate{
+		Rate: uint32(byteRate),
+	}
 }

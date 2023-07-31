@@ -150,14 +150,16 @@ func printImpairments(ifName string, qdisc *gotc.Object) {
 		{Title: "Delay", Width: 6},
 		{Title: "Jitter", Width: 7},
 		{Title: "Packet Loss", Width: 14},
+		{Title: "Rate (kbit)", Width: 14},
 	}
 
 	delay := time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond
 	jitter := time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond
 	loss := strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64)
+	rate := strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
 
 	rows := []table.Row{
-		{ifName, delay.String(), jitter.String(), loss + "%"},
+		{ifName, delay.String(), jitter.String(), loss + "%", rate},
 	}
 
 	t := table.New(
