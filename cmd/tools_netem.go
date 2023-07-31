@@ -42,7 +42,7 @@ func init() {
 		"time to delay outgoing packets (e.g. 100ms, 2s)")
 	netemSetCmd.Flags().DurationVarP(&netemJitter, "jitter", "", 0*time.Second,
 		"delay variation, aka jitter (e.g. 50ms)")
-	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss-percent", "", 0,
+	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss", "", 0,
 		"random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
 	netemSetCmd.Flags().Uint64VarP(&netemRate, "rate", "", 0, "link rate limit in kbit")
 
