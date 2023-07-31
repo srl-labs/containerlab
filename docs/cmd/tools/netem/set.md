@@ -8,6 +8,8 @@ With the `containerlab tools netem set` command users can set link impairments o
 
 Note, that setting link impairments with `netem set` command is implemented in a way that all impairments are applied to the interface at once. This means that if an interface had a packet loss of 10% and you execute `netem set` command with a delay of 100ms, the packet loss will be reset to 0% and the delay will be set to 100ms.
 
+Once the impairments are set, they act for as long as the underlying node/container is running. To clear the impairments, set them to the [default values](#clear-any-existing-impairments).
+
 ## Usage
 
 ```bash
@@ -64,6 +66,11 @@ containerlab tools netem set -n clab-netem-r1 -i eth1 --loss 10
 
 ```bash
 containerlab tools netem set -n clab-netem-r1 -i eth1
++-----------+-------+--------+-------------+-------------+
+| Interface | Delay | Jitter | Packet Loss | Rate (kbit) |
++-----------+-------+--------+-------------+-------------+
+| eth1      | 0s    | 0s     | 0.00%       |           0 |
++-----------+-------+--------+-------------+-------------+
 ```
 
 The above command will use default values for all supported link impairments, which is `0s` for delay and jitter, `0` for loss and `0` for rate.

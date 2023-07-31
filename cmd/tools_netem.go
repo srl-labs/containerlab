@@ -48,6 +48,9 @@ func init() {
 
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
+
+	netemCmd.AddCommand(netemShowCmd)
+	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
 }
 
 var netemCmd = &cobra.Command{
@@ -65,7 +68,13 @@ of real-world networks.`,
 	RunE:    netemSetFn,
 }
 
-func netemSetFn(cmd *cobra.Command, args []string) error {
+var netemShowCmd = &cobra.Command{
+	Use:   "show",
+	Short: "show link impairments for a node",
+	RunE:  netemShowFn,
+}
+
+func netemSetFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(rt)
 	if err != nil {
@@ -124,7 +133,7 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		printImpairments(netemInterface, qdisc)
+		printImpairments([]gotc.Object{*qdisc})
 
 		return nil
 	})
@@ -132,7 +141,7 @@ func netemSetFn(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-func validateInput(cmd *cobra.Command, args []string) error {
+func validateInput(_ *cobra.Command, _ []string) error {
 	if netemLoss < 0 || netemLoss > 100 {
 		return fmt.Errorf("packet loss must be in the range between 0 and 100")
 	}
@@ -144,7 +153,7 @@ func validateInput(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printImpairments(ifName string, qdisc *gotc.Object) {
+func printImpairments(qdiscs []gotc.Object) {
 	table := tablewriter.NewWriter(os.Stdout)
 	header := []string{
 		"Interface",
@@ -158,15 +167,114 @@ func printImpairments(ifName string, qdisc *gotc.Object) {
 	table.SetAutoFormatHeaders(false)
 	table.SetAutoWrapText(false)
 
-	delay := time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond
-	jitter := time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond
-	loss := strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64)
-	rate := strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
+	rows := [][]string{}
 
-	rows := [][]string{
-		{ifName, delay.String(), jitter.String(), loss + "%", rate},
+	for _, qdisc := range qdiscs {
+		rows = append(rows, qdiscToTableData(qdisc))
 	}
 
 	table.AppendBulk(rows)
 	table.Render()
+}
+
+func qdiscToTableData(qdisc gotc.Object) []string {
+	iface, err := net.InterfaceByIndex(int(qdisc.Ifindex))
+	if err != nil {
+		log.Errorf("could not get interface by index: %v", err)
+	}
+
+	var delay, jitter, loss, rate string
+
+	// return N/A values when netem is not set
+	// which is the case when qdisc is not set for an interface
+	if qdisc.Netem == nil {
+		return []string{
+			iface.Name,
+			"N/A", // delay
+			"N/A", // jitter
+			"N/A", // loss
+			"N/A", // rate
+		}
+	}
+
+	if qdisc.Netem.Latency64 != nil {
+		delay = (time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond).String()
+	}
+
+	if qdisc.Netem.Jitter64 != nil {
+		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
+	}
+
+	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64)
+	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
+
+	return []string{
+		iface.Name,
+		delay,
+		jitter,
+		loss,
+		rate,
+	}
+}
+
+func netemShowFn(_ *cobra.Command, _ []string) error {
+	// Get the runtime initializer.
+	_, rinit, err := clab.RuntimeInitializer(rt)
+	if err != nil {
+		return err
+	}
+
+	// init the runtime
+	rt := rinit()
+
+	// init runtime with timeout
+	err = rt.Init(
+		runtime.WithConfig(
+			&runtime.RuntimeConfig{
+				Timeout: timeout,
+			},
+		),
+	)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// retrieve the containers NSPath
+	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
+	if err != nil {
+		return err
+	}
+
+	var nodeNs ns.NetNS
+
+	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
+		return err
+	}
+
+	tcnl, err := tc.NewTC(int(nodeNs.Fd()))
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := tcnl.Close(); err != nil {
+			log.Errorf("could not close rtnetlink socket: %v\n", err)
+		}
+	}()
+
+	err = nodeNs.Do(func(_ ns.NetNS) error {
+		qdiscs, err := tc.Impairments(tcnl)
+		if err != nil {
+			return err
+		}
+
+		printImpairments(qdiscs)
+
+		return nil
+	})
+
+	return err
 }

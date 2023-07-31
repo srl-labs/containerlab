@@ -117,3 +117,13 @@ func setRate(qdisc *tc.Object, rate uint64) {
 		Rate: uint32(byteRate),
 	}
 }
+
+// Impairments returns all link impairments of a node.
+func Impairments(tcnl *tc.Tc) ([]tc.Object, error) {
+	qdiscs, err := tcnl.Qdisc().Get()
+	if err != nil {
+		return nil, fmt.Errorf("could not get all qdiscs: %v", err)
+	}
+
+	return qdiscs, nil
+}
