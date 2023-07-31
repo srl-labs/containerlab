@@ -488,6 +488,7 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	if err != nil {
 		return "", err
 	}
+
 	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
 }
 
@@ -623,7 +624,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		nr = append(nr, bridgenet...)
 	}
 
-	return d.produceGenericContainerList(ctrs, nr)
+	return d.produceGenericContainerList(ctx, ctrs, nr)
 }
 
 func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*runtime.GenericContainer, error) {
@@ -663,7 +664,7 @@ func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters
 }
 
 // Transform docker-specific to generic container format.
-func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerTypes.Container,
+func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputContainers []dockerTypes.Container,
 	inputNetworkResources []dockerTypes.NetworkResource,
 ) ([]runtime.GenericContainer, error) {
 	var result []runtime.GenericContainer
@@ -697,6 +698,12 @@ func (d *DockerRuntime) produceGenericContainerList(inputContainers []dockerType
 		ctr.SetRuntime(d)
 
 		bridgeName := d.mgmt.Network
+
+		var err error
+		ctr.Pid, err = d.containerPid(ctx, i.ID)
+		if err != nil {
+			return nil, err
+		}
 
 		// if bridgeName is empty, try to find a network created by clab that the container is connected to
 		if bridgeName == "" && inputNetworkResources != nil {
@@ -958,4 +965,13 @@ func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) runt
 		return runtime.Stopped
 	}
 	return runtime.NotFound
+}
+
+// containerPid returns the pid of a container by its ID using inspect.
+func (d *DockerRuntime) containerPid(ctx context.Context, cID string) (int, error) {
+	inspect, err := d.Client.ContainerInspect(ctx, cID)
+	if err != nil {
+		return 0, fmt.Errorf("container %q cannot be found", cID)
+	}
+	return inspect.State.Pid, nil
 }

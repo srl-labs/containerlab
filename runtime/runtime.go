@@ -44,7 +44,7 @@ type ContainerRuntime interface {
 	UnpauseContainer(context.Context, string) error
 	// List all containers matching labels
 	ListContainers(context.Context, []*types.GenericFilter) ([]GenericContainer, error)
-	// Get a netns path using the pid of a container
+	// Get a netns path using the name of a container
 	GetNSPath(context.Context, string) (string, error)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
 	Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd) (*exec.ExecResult, error)

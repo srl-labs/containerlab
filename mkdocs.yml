@@ -67,6 +67,9 @@ nav:
               - ca:
                   - create: cmd/tools/cert/ca/create.md
               - sign: cmd/tools/cert/sign.md
+          - netem:
+              - set: cmd/tools/netem/set.md
+              - show: cmd/tools/netem/show.md
       - completions: cmd/completion.md
   - Lab examples:
       - About: lab-examples/lab-examples.md

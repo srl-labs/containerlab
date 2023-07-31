@@ -1,20 +1,23 @@
 *** Settings ***
-Library           OperatingSystem
-Library           String
-Library           Process
-Suite Setup       Setup
-Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
+Library             OperatingSystem
+Library             String
+Library             Process
+
+Suite Setup         Setup
+Suite Teardown      Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
+
 
 *** Variables ***
-${lab-file}       01-linux-nodes.clab.yml
-${lab-name}       2-linux-nodes
-${runtime}        docker
+${lab-file}                 01-linux-nodes.clab.yml
+${lab-name}                 2-linux-nodes
+${runtime}                  docker
 # runtime command to execute tasks in a container
 # defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
-${runtime-cli-exec-cmd}    sudo docker exec
-${bind-orig-path}    /tmp/clab-01-test.txt
-${n2-ipv4}        172.20.20.100/24
-${n2-ipv6}        2001:172:20:20::100/64
+${runtime-cli-exec-cmd}     sudo docker exec
+${bind-orig-path}           /tmp/clab-01-test.txt
+${n2-ipv4}                  172.20.20.100/24
+${n2-ipv6}                  2001:172:20:20::100/64
+
 
 *** Test Cases ***
 Verify number of Hosts entries before deploy
@@ -47,9 +50,15 @@ Exec command with no filtering
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
-    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
-    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l2\\". stdout:\\nl2
-    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l3\\". stdout:\\nl3
+    Should Contain
+    ...    ${output}
+    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
+    Should Contain
+    ...    ${output}
+    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l2\\". stdout:\\nl2
+    Should Contain
+    ...    ${output}
+    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l3\\". stdout:\\nl3
 
 Exec command with filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
@@ -59,7 +68,9 @@ Exec command with filtering
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
-    Should Contain    ${output}    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
+    Should Contain
+    ...    ${output}
+    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
     Should Not Contain    ${output}    stdout:\\nl2
     Should Not Contain    ${output}    stdout:\\nl3
 
@@ -67,7 +78,8 @@ Exec command with json output and filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters and json output, the command is executed ONLY on selected nodes of the lab and the actual JSON is populated to stdout.
     Skip If    '${runtime}' == 'containerd'
     ${output} =    Process.Run Process
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'    shell=True
+    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
+    ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
     Should Be Equal As Integers    ${output.rc}    0
@@ -76,7 +88,7 @@ Exec command with json output and filtering
 
 Inspect ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} inspect -n ${lab-name}
+    ...    sudo containerlab --runtime ${runtime} inspect --name ${lab-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -171,16 +183,26 @@ Verify l1 environment has MYVAR variable set
 Verify Hosts entries exist
     [Documentation]    Verification that the expected /etc/hosts entries are created. We are also checking for the HEADER and FOOTER values here, which also contain the lab name.
     # log host entries for tshooting
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep "${lab-name}"
+
     Log    ${output}
+
     # not get number of lines related to the current lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep "${lab-name}" | wc -l
+
     Log    ${output}
+
     Should Be Equal As Integers    ${rc}    0
-    Run Keyword If    '${runtime}' == 'podman'    Should Contain    ${output}    6
-    Run Keyword If    '${runtime}' == 'docker'    Should Contain    ${output}    6
+
+    IF    '${runtime}' == 'podman'
+        Should Contain    ${output}    6
+    END
+    IF    '${runtime}' == 'docker'
+        Should Contain    ${output}    6
+    END
 
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
@@ -259,6 +281,7 @@ Verify iptables allow rule are gone
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${MgmtBr}
+
 
 *** Keywords ***
 Setup

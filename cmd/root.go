@@ -55,7 +55,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&varsFile, "vars", "", "",
 		"path to the topology template variables file")
 	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
-	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", "", "lab name")
+	rootCmd.PersistentFlags().StringVarP(&name, "name", "", "", "lab name")
 	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second,
 		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
