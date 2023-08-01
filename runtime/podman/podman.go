@@ -180,11 +180,13 @@ func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConf
 }
 
 // StartContainer starts a previously created container by ID or its name and executes post-start actions method.
-func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *types.NodeConfig) (interface{}, error) {
+func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, node runtime.Node) (interface{}, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
+	cfg := node.Config()
+
 	err = containers.Start(ctx, cID, &containers.StartOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error while starting a container %q: %w", cfg.LongName, err)

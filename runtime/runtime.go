@@ -35,7 +35,7 @@ type ContainerRuntime interface {
 	CreateContainer(context.Context, *types.NodeConfig) (string, error)
 	// Start pre-created container by its name. Returns an extra interface that can be used to receive signals
 	// about the container life-cycle after it was created, e.g. for post-deploy tasks
-	StartContainer(context.Context, string, *types.NodeConfig) (interface{}, error)
+	StartContainer(context.Context, string, Node) (interface{}, error)
 	// Stop running container by its name
 	StopContainer(context.Context, string) error
 	// Pause a container identified by its name
@@ -145,4 +145,9 @@ TIMEOUT_LOOP:
 		}
 	}
 	return resultErr
+}
+
+type Node interface {
+	Config() *types.NodeConfig
+	GetEndpoints() []types.Endpt
 }

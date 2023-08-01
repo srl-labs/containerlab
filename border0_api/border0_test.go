@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/h2non/gock"
-	"github.com/srl-labs/containerlab/mocks"
+	"github.com/srl-labs/containerlab/mocks/mocknodes"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -211,7 +211,7 @@ func Test_createBorder0Config(t *testing.T) {
 // getNodeMap return a map of nodes for testing purpose.
 func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	// instantiate Mock Node 1
-	mockNode1 := mocks.NewMockNode(mockCtrl)
+	mockNode1 := mocknodes.NewMockNode(mockCtrl)
 	mockNode1.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:     "alpine:3",
@@ -221,7 +221,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 2
-	mockNode2 := mocks.NewMockNode(mockCtrl)
+	mockNode2 := mocknodes.NewMockNode(mockCtrl)
 	mockNode2.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:     "alpine:3",
@@ -236,7 +236,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 3
-	mockNode3 := mocks.NewMockNode(mockCtrl)
+	mockNode3 := mocknodes.NewMockNode(mockCtrl)
 	mockNode3.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:       "alpine:3",
@@ -248,7 +248,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 4
-	mockNode4 := mocks.NewMockNode(mockCtrl)
+	mockNode4 := mocknodes.NewMockNode(mockCtrl)
 	mockNode4.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:           "alpine:3",
@@ -259,7 +259,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 5
-	mockNode5 := mocks.NewMockNode(mockCtrl)
+	mockNode5 := mocknodes.NewMockNode(mockCtrl)
 	mockNode5.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:           "alpine:3",

@@ -153,27 +153,29 @@ func (*IgniteRuntime) PullImage(_ context.Context, imageName string, pullPolicy 
 	return nil
 }
 
-func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
+func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runtime.Node) (interface{}, error) {
 	vm := c.baseVM.DeepCopy()
 
+	nodecfg := node.Config()
+
 	// updating the node RAM if it's set
-	if node.Memory != "" {
-		ram, err := meta.NewSizeFromString(node.Memory)
+	if nodecfg.Memory != "" {
+		ram, err := meta.NewSizeFromString(nodecfg.Memory)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse %q as memory value: %s", node.Memory, err)
+			return nil, fmt.Errorf("failed to parse %q as memory value: %s", nodecfg.Memory, err)
 		}
 		vm.Spec.Memory = ram
 	}
 
-	ociRef, err := meta.NewOCIImageRef(node.Sandbox)
+	ociRef, err := meta.NewOCIImageRef(nodecfg.Sandbox)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Sandbox, err)
+		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", nodecfg.Sandbox, err)
 	}
 	vm.Spec.Sandbox.OCI = ociRef
 
-	ociRef, err = meta.NewOCIImageRef(node.Kernel)
+	ociRef, err = meta.NewOCIImageRef(nodecfg.Kernel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Kernel, err)
+		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", nodecfg.Kernel, err)
 	}
 	c.baseVM.Spec.Kernel.OCI = ociRef
 	k, err := operations.FindOrImportKernel(providers.Client, ociRef)
@@ -182,9 +184,9 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 	}
 	vm.SetKernel(k)
 
-	ociRef, err = meta.NewOCIImageRef(node.Image)
+	ociRef, err = meta.NewOCIImageRef(nodecfg.Image)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", node.Image, err)
+		return nil, fmt.Errorf("failed to parse OCI image ref %q: %s", nodecfg.Image, err)
 	}
 	img, err := operations.FindOrImportImage(providers.Client, ociRef)
 	if err != nil {
@@ -192,12 +194,12 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 	}
 	vm.SetImage(img)
 
-	vm.Name = node.LongName
-	vm.Labels = node.Labels
+	vm.Name = nodecfg.LongName
+	vm.Labels = nodecfg.Labels
 	metadata.SetNameAndUID(vm, providers.Client)
 
 	copyFiles := []api.FileMapping{}
-	for _, bind := range node.Binds {
+	for _, bind := range nodecfg.Binds {
 		parts := strings.Split(bind, ":")
 		if len(parts) < 2 {
 			continue
@@ -211,9 +213,9 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 	// Create udev rules to rename interfaces
 	var extraIntfs []string
 	var udevRules []string
-	for _, ep := range node.Endpoints {
-		extraIntfs = append(extraIntfs, ep.EndpointName)
-		udevRules = append(udevRules, fmt.Sprintf(udevRuleTemplate, ep.MAC, ep.EndpointName))
+	for _, ep := range node.GetEndpoints() {
+		extraIntfs = append(extraIntfs, ep.GetIfaceName())
+		udevRules = append(udevRules, fmt.Sprintf(udevRuleTemplate, ep.GetMac(), ep.GetIfaceName()))
 	}
 
 	udevFile, err := os.CreateTemp("/tmp", fmt.Sprintf("%s-udev", vm.Name))
@@ -262,12 +264,12 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node *type
 		return nil, err
 	}
 
-	node.NSPath, err = c.GetNSPath(ctx, vm.PrefixedID())
+	nodecfg.NSPath, err = c.GetNSPath(ctx, vm.PrefixedID())
 	if err != nil {
 		return nil, err
 	}
 
-	return vmChans, utils.LinkContainerNS(node.NSPath, node.LongName)
+	return vmChans, utils.LinkContainerNS(nodecfg.NSPath, nodecfg.LongName)
 }
 
 func (*IgniteRuntime) CreateContainer(_ context.Context, node *types.NodeConfig) (string, error) {

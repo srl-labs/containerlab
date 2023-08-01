@@ -79,7 +79,7 @@ func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	if err != nil {
 		return err
 	}
-	intf, err := c.Runtime.StartContainer(ctx, cID, c.Cfg)
+	intf, err := c.Runtime.StartContainer(ctx, cID, c)
 	if err != nil {
 		return err
 	}

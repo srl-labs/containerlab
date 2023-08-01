@@ -123,7 +123,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	if err != nil {
 		return err
 	}
-	_, err = d.Runtime.StartContainer(ctx, cID, d.Cfg)
+	_, err = d.Runtime.StartContainer(ctx, cID, d)
 	return err
 }
 

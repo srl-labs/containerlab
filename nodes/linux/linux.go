@@ -53,7 +53,7 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	if err != nil {
 		return err
 	}
-	intf, err := n.Runtime.StartContainer(ctx, cID, n.Cfg)
+	intf, err := n.Runtime.StartContainer(ctx, cID, n)
 
 	if vmChans, ok := intf.(*operations.VMChannels); ok {
 		n.vmChans = vmChans
