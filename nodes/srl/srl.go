@@ -36,11 +36,11 @@ const (
 	retryTimer   = time.Second
 	// additional config that clab adds on top of the factory config.
 	srlConfigCmdsTpl = `set / system tls server-profile clab-profile
-set / system tls server-profile clab-profile key "{{ .TLSKey }}"
-set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
-{{- if .TLSAnchor }}
+set / system tls server-profile clab-profile key "{{trim .Cfg.TLSKey }}"
+set / system tls server-profile clab-profile certificate "{{trim .Cfg.TLSCert }}"
+{{- if .Cfg.TLSAnchor }}
 set / system tls server-profile clab-profile authenticate-client true
-set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
+set / system tls server-profile clab-profile trust-anchor "{{ .Cfg.TLSAnchor }}"
 {{- else }}
 set / system tls server-profile clab-profile authenticate-client false
 {{- end }}
@@ -56,15 +56,16 @@ set / system snmp network-instance mgmt admin-state enable
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 {{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
-{{- range $ep := .Endpoints }}
-{{- if eq $ep.EndpointName "mgmt0" }}{{- continue }}{{- end}}
-{{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
+
+{{- range $ep := .NWEndpoints }}
+{{- $parts := ($ep.GetIfaceName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
   {{- if eq (len $parts) 3 }}
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num-channels 4 channel-speed 25G
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
   {{- end }}
 {{ end -}}
+
 set / system banner login-banner "{{ .Banner }}"
 commit save`
 )
@@ -501,20 +502,17 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 
 	// struct that holds data used in templating of the default config snippet
 	tplData := struct {
-		*types.NodeConfig
+		*srl
 		Banner string
 	}{
-		s.Cfg,
+		s,
 		b,
 	}
 
-	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning
-	// during the template execution
-	tplData.TLSKey = strings.TrimSpace(tplData.TLSKey)
-	tplData.TLSCert = strings.TrimSpace(tplData.TLSCert)
-
 	buf := new(bytes.Buffer)
-	err = srlCfgTpl.Execute(buf, tplData)
+	err = srlCfgTpl.Funcs(template.FuncMap{
+		"trim": strings.TrimSpace,
+	}).Execute(buf, tplData)
 	if err != nil {
 		return err
 	}
