@@ -93,8 +93,8 @@ func (n *linux) GetImages(_ context.Context) map[string]string {
 // if eth0 is only used with network-mode=none.
 func (n *linux) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
-	for _, e := range n.Config().Endpoints {
-		if e.EndpointName == "eth0" && nm != "none" {
+	for _, e := range n.NWEndpoints {
+		if e.GetIfaceName() == "eth0" && nm != "none" {
 			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
 		}
 	}

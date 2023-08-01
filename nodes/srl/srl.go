@@ -648,12 +648,12 @@ func (s *srl) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|mgmt0`)
 	nm := strings.ToLower(s.Cfg.NetworkMode)
 
-	for _, e := range s.Config().Endpoints {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
+	for _, e := range s.NWEndpoints {
+		if !ifRe.MatchString(e.GetIfaceName()) {
+			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.GetIfaceName())
 		}
 
-		if e.EndpointName == "mgmt0" && nm != "none" {
+		if e.GetIfaceName() == "mgmt0" && nm != "none" {
 			return fmt.Errorf("mgmt0 interface name is not allowed for %s node when network mode is not set to none", s.Cfg.ShortName)
 		}
 	}
