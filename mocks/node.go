@@ -181,6 +181,20 @@ func (mr *MockNodeMockRecorder) GetContainers(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockNode)(nil).GetContainers), ctx)
 }
 
+// GetEndpoints mocks base method.
+func (m *MockNode) GetEndpoints() []types.Endpt {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEndpoints")
+	ret0, _ := ret[0].([]types.Endpt)
+	return ret0
+}
+
+// GetEndpoints indicates an expected call of GetEndpoints.
+func (mr *MockNodeMockRecorder) GetEndpoints() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEndpoints", reflect.TypeOf((*MockNode)(nil).GetEndpoints))
+}
+
 // GetImages mocks base method.
 func (m *MockNode) GetImages(arg0 context.Context) map[string]string {
 	m.ctrl.T.Helper()

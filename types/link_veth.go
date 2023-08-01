@@ -93,6 +93,10 @@ func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
+func (l *LinkVEth) Verify() {
+
+}
+
 func (l *LinkVEth) Deploy(ctx context.Context) error {
 	l.m.Lock()
 	defer l.m.Unlock()

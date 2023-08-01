@@ -417,6 +417,10 @@ func (d *DefaultNode) AddEndpoint(e types.Endpt) error {
 	return nil
 }
 
+func (d *DefaultNode) GetEndpoints() []types.Endpt {
+	return d.NWEndpoints
+}
+
 func (d *DefaultNode) GetLinkEndpointType() types.LinkEndpointType {
 	return types.LinkEndpointTypeRegular
 }
