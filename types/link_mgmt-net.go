@@ -33,6 +33,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 	// create the LinkMgmtNet struct
 	link := &LinkMgmtNet{
 		LinkCommonParams: r.LinkCommonParams,
+		BridgeName:       params.MgmtBridgeName,
 	}
 
 	bridgeEp := &EndptGeneric{
@@ -76,6 +77,7 @@ func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMgmtNetRaw, 
 type LinkMgmtNet struct {
 	LinkCommonParams
 	BridgeEndpoint    Endpt
+	BridgeName        string
 	ContainerEndpoint Endpt
 }
 
@@ -109,7 +111,7 @@ func (l *LinkMgmtNet) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the bridge
-	br, err := utils.BridgeByName(l.BridgeEndpoint.GetNode().GetShortName())
+	br, err := utils.BridgeByName(l.BridgeName)
 	if err != nil {
 		return err
 	}

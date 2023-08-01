@@ -322,10 +322,8 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpt) func(ns.NetNS) error 
 }
 
 type ResolveParams struct {
-	Nodes map[string]LinkNode
-	// the mgmt-net network interface creation will need to
-	// kown what the mgmt bridge is
-	MgmtBridge string
+	Nodes          map[string]LinkNode
+	MgmtBridgeName string
 }
 
 var _fakeHostLinkNode *GenericLinkNode
