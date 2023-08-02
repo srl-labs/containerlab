@@ -77,6 +77,10 @@ func (e *EndptGeneric) GetMac() net.HardwareAddr {
 	return e.Mac
 }
 
+func (e *EndptGeneric) GetLink() LinkInterf {
+	return e.Link
+}
+
 func (e *EndptGeneric) GetNode() LinkNode {
 	return e.Node
 }
@@ -105,6 +109,7 @@ type Endpt interface {
 	GetMac() net.HardwareAddr
 	Deploy(ctx context.Context) error
 	String() string
+	GetLink() LinkInterf
 }
 
 // type EndptBridge struct {

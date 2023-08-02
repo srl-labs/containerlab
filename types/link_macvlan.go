@@ -118,6 +118,14 @@ func (l *LinkMacVlan) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
+func (l *LinkMacVlan) GetParentInterfaceMtu() (int, error) {
+	hostLink, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
+	if err != nil {
+		return 0, err
+	}
+	return hostLink.Attrs().MTU, nil
+}
+
 func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	// lookup the parent host interface
 	parentInterface, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())

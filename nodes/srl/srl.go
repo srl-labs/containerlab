@@ -36,11 +36,11 @@ const (
 	retryTimer   = time.Second
 	// additional config that clab adds on top of the factory config.
 	srlConfigCmdsTpl = `set / system tls server-profile clab-profile
-set / system tls server-profile clab-profile key "{{trim .Cfg.TLSKey }}"
-set / system tls server-profile clab-profile certificate "{{trim .Cfg.TLSCert }}"
-{{- if .Cfg.TLSAnchor }}
+set / system tls server-profile clab-profile key "{{ .TLSKey }}"
+set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
+{{- if .TLSAnchor }}
 set / system tls server-profile clab-profile authenticate-client true
-set / system tls server-profile clab-profile trust-anchor "{{ .Cfg.TLSAnchor }}"
+set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
 {{- else }}
 set / system tls server-profile clab-profile authenticate-client false
 {{- end }}
@@ -56,16 +56,16 @@ set / system snmp network-instance mgmt admin-state enable
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 {{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
-
-{{- range $ep := .NWEndpoints }}
-{{- $parts := ($ep.GetIfaceName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
-set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
-  {{- if eq (len $parts) 3 }}
-set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num-channels 4 channel-speed 25G
-set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
+{{- range $epName, $ep := .IFaces }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
+  {{- if ne $ep.Mtu 0 }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
+  {{- end }}
+  {{- if ne $ep.BreakoutNo  "" }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
   {{- end }}
 {{ end -}}
-
 set / system banner login-banner "{{ .Banner }}"
 commit save`
 )
@@ -493,6 +493,23 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	return f.Close()
 }
 
+// srlTemplateData top level data struct
+type srlTemplateData struct {
+	TLSKey    string
+	TLSCert   string
+	TLSAnchor string
+	Banner    string
+	IFaces    map[string]tplIFace
+}
+
+// tplIFace template interface struct
+type tplIFace struct {
+	Slot       string
+	Port       string
+	BreakoutNo string
+	Mtu        int
+}
+
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
 func (s *srl) addDefaultConfig(ctx context.Context) error {
 	b, err := s.banner(ctx)
@@ -501,18 +518,50 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	}
 
 	// struct that holds data used in templating of the default config snippet
-	tplData := struct {
-		*srl
-		Banner string
-	}{
-		s,
-		b,
+	tplData := srlTemplateData{
+		TLSKey:    s.Cfg.TLSKey,
+		TLSCert:   s.Cfg.TLSCert,
+		TLSAnchor: s.Cfg.TLSAnchor,
+		Banner:    b,
+		IFaces:    map[string]tplIFace{},
+	}
+
+	// prepare the endpoints
+	for _, e := range s.NWEndpoints {
+		ifName := e.GetIfaceName()
+		// split the interface identifier into their parts
+		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
+
+		// create a template interface struct
+		iface := tplIFace{
+			Slot: ifNameParts[0],
+			Port: ifNameParts[1],
+		}
+		// if it is a breakout port add the breakout identifier
+		if len(ifNameParts) == 3 {
+			iface.BreakoutNo = ifNameParts[2]
+		}
+
+		// for MACVlan interfaces we need to figure out the parent interface MTU
+		// and specifically define it in the config
+		//
+		// via the endpoint we acquire the link, and check if the link is of type LinkMacVlan
+		// if so cast it and get the partent Interface MTU and finally set that for the interface
+		switch link := e.GetLink().(type) {
+		case *types.LinkMacVlan:
+			mtu, err := link.GetParentInterfaceMtu()
+			if err != nil {
+				return err
+			}
+			iface.Mtu = mtu
+		}
+
+		// add the template interface definition to the template data
+		tplData.IFaces[ifName] = iface
 	}
 
 	buf := new(bytes.Buffer)
-	err = srlCfgTpl.Funcs(template.FuncMap{
-		"trim": strings.TrimSpace,
-	}).Execute(buf, tplData)
+	err = srlCfgTpl.Execute(buf, tplData)
 	if err != nil {
 		return err
 	}
