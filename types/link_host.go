@@ -65,9 +65,9 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 }
 
 type LinkHost struct {
-	LinkCommonParams `yaml:",inline"`
-	HostInterface    string        `yaml:"host-interface"`
-	Endpoint         *EndptGeneric `yaml:"endpoint"`
+	LinkCommonParams
+	HostInterface string
+	Endpoint      Endpt
 }
 
 func (l *LinkHost) Deploy(ctx context.Context) error {
@@ -156,9 +156,7 @@ func (g *GenericLinkNode) AddEndpoint(e Endpt) error {
 	g.endpoints = append(g.endpoints, e)
 	return nil
 }
-func (g *GenericLinkNode) GetLinkEndpointType() LinkEndpointType {
-	return LinkEndpointTypeRegular
-}
+
 func (g *GenericLinkNode) GetShortName() string {
 	return g.shortname
 }

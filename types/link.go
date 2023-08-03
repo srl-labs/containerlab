@@ -323,38 +323,58 @@ type ResolveParams struct {
 	MgmtBridgeName string
 }
 
-var _fakeHostLinkNode *GenericLinkNode
+var _fakeHostLinkNodeInstance LinkNode
 
-func GetFakeHostLinkNode() *GenericLinkNode {
-	if _fakeHostLinkNode == nil {
-		_fakeHostLinkNode = &GenericLinkNode{
-			shortname: "host",
-			endpoints: []Endpt{},
-		}
-		currns, err := ns.GetCurrentNS()
-
-		_fakeHostLinkNode.nspath = currns.Path()
-		if err != nil {
-			log.Error(err)
-		}
-	}
-	return _fakeHostLinkNode
+type fakeHostLinkNode struct {
+	GenericLinkNode
 }
 
-var _fakeMgmtBrLinkMgmtBr *GenericLinkNode
+func (*fakeHostLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeHost
+}
 
-func GetFakeMgmtBrLinkNode() *GenericLinkNode {
-	if _fakeMgmtBrLinkMgmtBr == nil {
-		_fakeMgmtBrLinkMgmtBr = &GenericLinkNode{
-			shortname: "mgmt-net",
-			endpoints: []Endpt{},
-		}
+func GetFakeHostLinkNode() LinkNode {
+	if _fakeHostLinkNodeInstance == nil {
 		currns, err := ns.GetCurrentNS()
-
-		_fakeMgmtBrLinkMgmtBr.nspath = currns.Path()
 		if err != nil {
 			log.Error(err)
 		}
+		nspath := currns.Path()
+
+		_fakeHostLinkNodeInstance = &fakeHostLinkNode{
+			GenericLinkNode: GenericLinkNode{shortname: "host",
+				endpoints: []Endpt{},
+				nspath:    nspath,
+			},
+		}
 	}
-	return _fakeMgmtBrLinkMgmtBr
+	return _fakeHostLinkNodeInstance
+}
+
+var _fakeMgmtBrLinkMgmtBrInstance LinkNode
+
+type fakeMgmtBridgeLinkNode struct {
+	GenericLinkNode
+}
+
+func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeBridge
+}
+
+func GetFakeMgmtBrLinkNode() LinkNode {
+	if _fakeMgmtBrLinkMgmtBrInstance == nil {
+		currns, err := ns.GetCurrentNS()
+		if err != nil {
+			log.Error(err)
+		}
+		nspath := currns.Path()
+		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
+			GenericLinkNode: GenericLinkNode{
+				shortname: "mgmt-net",
+				endpoints: []Endpt{},
+				nspath:    nspath,
+			},
+		}
+	}
+	return _fakeMgmtBrLinkMgmtBrInstance
 }

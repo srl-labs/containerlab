@@ -20,7 +20,7 @@ func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
 	}
 }
 
-func (e *EndpointRaw) Resolve(nodes map[string]LinkNode, l LinkInterf) (*EndptGeneric, error) {
+func (e *EndpointRaw) Resolve(nodes map[string]LinkNode, l LinkInterf) (Endpt, error) {
 	// check if the referenced node does exist
 	node, exists := nodes[e.Node]
 	if !exists {
@@ -28,16 +28,10 @@ func (e *EndpointRaw) Resolve(nodes map[string]LinkNode, l LinkInterf) (*EndptGe
 	}
 
 	// create the result struct
-	result := &EndptGeneric{
+	genericEndpt := &EndptGeneric{
 		Node:  node,
 		Iface: e.Iface,
 		Link:  l,
-	}
-
-	// also add the endpoint to the node
-	err := node.AddEndpoint(result)
-	if err != nil {
-		return nil, err
 	}
 
 	// if MAC is present, set it
@@ -46,10 +40,31 @@ func (e *EndpointRaw) Resolve(nodes map[string]LinkNode, l LinkInterf) (*EndptGe
 		if err != nil {
 			return nil, err
 		}
-		result.Mac = m
+		genericEndpt.Mac = m
 	}
 
-	return result, nil
+	var finalEndpt Endpt = genericEndpt
+
+	switch node.GetLinkEndpointType() {
+	case LinkEndpointTypeBridge:
+		finalEndpt = &EndptBridge{
+			EndptGeneric: *genericEndpt,
+		}
+	case LinkEndpointTypeHost:
+		finalEndpt = &EndptHost{
+			EndptGeneric: *genericEndpt,
+		}
+	case LinkEndpointTypeRegular:
+		// NOOP - use EndpointGeneric
+	}
+
+	// also add the endpoint to the node
+	err := node.AddEndpoint(finalEndpt)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalEndpt, nil
 }
 
 type EndptGeneric struct {
@@ -73,6 +88,10 @@ func (e *EndptGeneric) GetIfaceName() string {
 	return e.Iface
 }
 
+func (e *EndptGeneric) GetState() EndptDeployState {
+	return e.state
+}
+
 func (e *EndptGeneric) GetMac() net.HardwareAddr {
 	return e.Mac
 }
@@ -83,6 +102,19 @@ func (e *EndptGeneric) GetLink() LinkInterf {
 
 func (e *EndptGeneric) GetNode() LinkNode {
 	return e.Node
+}
+
+func (e *EndptGeneric) Verify(epts []Endpt) error {
+	for _, ept := range epts {
+		if e.IsSameNodeInterface(ept) {
+			return fmt.Errorf("duplicate endpoint %s:%s", e.GetNode().GetShortName(), e.Iface)
+		}
+	}
+	return nil
+}
+
+func (e *EndptGeneric) IsSameNodeInterface(ept Endpt) bool {
+	return e.Node == ept.GetNode() && e.Iface == ept.GetIfaceName()
 }
 
 func (e *EndptGeneric) Deploy(ctx context.Context) error {
@@ -110,31 +142,51 @@ type Endpt interface {
 	Deploy(ctx context.Context) error
 	String() string
 	GetLink() LinkInterf
+	Verify([]Endpt) error
+	IsSameNodeInterface(ept Endpt) bool
+	GetState() EndptDeployState
 }
 
-// type EndptBridge struct {
-// 	EndptGeneric
-// }
+type EndptBridge struct {
+	EndptGeneric
+}
 
-// func (*EndptBridge) Deploy(ctx context.Context) error {
-// 	// NOOP
-// 	return nil
-// }
+func (e *EndptBridge) Verify(epts []Endpt) error {
+	// TODO:
+	// check bridge exists
+	return nil
+}
 
-// type EndptHost struct {
-// 	EndptGeneric
-// }
+type EndptHost struct {
+	EndptGeneric
+}
 
-// func (*EndptHost) Deploy(ctx context.Context) error {
-// 	// NOOP
-// 	return nil
-// }
+func (e *EndptHost) Verify(epts []Endpt) error {
+	// TODO:
+	// check
+	return nil
+}
 
-// type EndptMacVlan struct {
-// 	EndptGeneric
-// }
+type EndptMacVlan struct {
+	EndptGeneric
+}
 
-// func (*EndptMacVlan) Deploy(ctx context.Context) error {
-// 	// NOOP
-// 	return nil
-// }
+type EndptVeth struct {
+	EndptGeneric
+}
+
+func (e *EndptVeth) Verify(epts []Endpt) error {
+	for _, ept := range epts {
+		if e == ept {
+			// epts contains all endpoints, hence also the
+			// one we're checking here. So if ept is pointer equal to e,
+			// we continue with next ept
+			continue
+		}
+
+		if e.IsSameNodeInterface(ept) {
+			return fmt.Errorf("duplicate endpoint %s:%s", e.GetNode().GetShortName(), e.Iface)
+		}
+	}
+	return nil
+}

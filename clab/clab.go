@@ -30,8 +30,9 @@ type CLab struct {
 	Config        *Config `json:"config,omitempty"`
 	TopoPaths     *types.TopoPaths
 	m             *sync.RWMutex
-	Nodes         map[string]nodes.Node               `json:"nodes,omitempty"`
-	Links         map[int]types.LinkInterf            `json:"links,omitempty"`
+	Nodes         map[string]nodes.Node    `json:"nodes,omitempty"`
+	Links         map[int]types.LinkInterf `json:"links,omitempty"`
+	Endpoints     []types.Endpt
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	// reg is a registry of node kinds

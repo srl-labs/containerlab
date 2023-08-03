@@ -55,7 +55,7 @@ set / system snmp network-instance mgmt
 set / system snmp network-instance mgmt admin-state enable
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
-{{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
+{{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
 {{- range $epName, $ep := .IFaces }}
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
   {{- if ne $ep.Mtu 0 }}
@@ -65,7 +65,7 @@ set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
   {{- end }}
-{{ end -}}
+{{- end }}
 set / system banner login-banner "{{ .Banner }}"
 commit save`
 )

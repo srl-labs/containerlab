@@ -148,10 +148,16 @@ func (c *CLab) parseTopology() error {
 
 	for i, l := range c.Config.Topology.Links {
 		// i represents the endpoint integer and l provide the link struct
-		c.Links[i], err = l.Link.Resolve(resolveParams)
+		l, err := l.Link.Resolve(resolveParams)
 		if err != nil {
 			return err
 		}
+		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
+		c.Links[i] = l
+	}
+
+	for _, e := range c.Endpoints {
+		e.Verify(c.Endpoints)
 	}
 
 	// set any containerlab defaults after we've parsed the input
