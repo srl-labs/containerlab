@@ -20,9 +20,9 @@ func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
 	}
 }
 
-func (e *EndpointRaw) Resolve(nodes map[string]LinkNode, l LinkInterf) (Endpt, error) {
+func (e *EndpointRaw) Resolve(params *ResolveParams, l LinkInterf) (Endpt, error) {
 	// check if the referenced node does exist
-	node, exists := nodes[e.Node]
+	node, exists := params.Nodes[e.Node]
 	if !exists {
 		return nil, fmt.Errorf("unable to find node %s", e.Node)
 	}
@@ -48,14 +48,15 @@ func (e *EndpointRaw) Resolve(nodes map[string]LinkNode, l LinkInterf) (Endpt, e
 	switch node.GetLinkEndpointType() {
 	case LinkEndpointTypeBridge:
 		finalEndpt = &EndptBridge{
-			EndptGeneric: *genericEndpt,
+			EndptGeneric:    *genericEndpt,
+			masterInterface: node.GetShortName(),
 		}
 	case LinkEndpointTypeHost:
 		finalEndpt = &EndptHost{
 			EndptGeneric: *genericEndpt,
 		}
 	case LinkEndpointTypeRegular:
-		// NOOP - use EndpointGeneric
+		// NOOP - use EndpointGeneric as is
 	}
 
 	// also add the endpoint to the node
@@ -149,6 +150,7 @@ type Endpt interface {
 
 type EndptBridge struct {
 	EndptGeneric
+	masterInterface string
 }
 
 func (e *EndptBridge) Verify(epts []Endpt) error {

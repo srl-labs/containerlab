@@ -72,7 +72,7 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 	// set the mode in the link struct
 	link.Mode = mode
 	// resolve the endpoint
-	link.NodeEndpoint, err = r.Endpoint.Resolve(params.Nodes, link)
+	link.NodeEndpoint, err = r.Endpoint.Resolve(params, link)
 	if err != nil {
 		return nil, err
 	}

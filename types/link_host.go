@@ -55,7 +55,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 		HostInterface:    r.HostInterface,
 	}
 	// resolve and populate the endpoint
-	ep, err := r.Endpoint.Resolve(params.Nodes, link)
+	ep, err := r.Endpoint.Resolve(params, link)
 	if err != nil {
 		return nil, err
 	}

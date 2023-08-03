@@ -54,7 +54,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 	// resolve endpoints
 	for _, ep := range r.Endpoints {
 		// resolve endpoint
-		ept, err := ep.Resolve(params.Nodes, l)
+		ept, err := ep.Resolve(params, l)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +144,11 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
+			// rename link to the defined name
+			err = netlink.LinkSetName(link, l.Endpoints[idx].GetIfaceName())
+			if err != nil {
+				return err
+			}
 			// set the retrieved bridge as the master for the actual link
 			err = netlink.LinkSetMaster(link, bridge)
 			if err != nil {
