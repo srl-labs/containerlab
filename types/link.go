@@ -318,6 +318,26 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpt) func(ns.NetNS) error 
 	}
 }
 
+// SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
+// and return a function that can run in the netns.Do() call for execution in a network namespace
+func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpt, master string) func(ns.NetNS) error {
+	baseFunc := SetNameMACAndUpInterface(l, endpt)
+
+	return func(n ns.NetNS) error {
+		// retrieve the bridg link
+		bridge, err := netlink.LinkByName(master)
+		if err != nil {
+			return err
+		}
+		// set the retrieved bridge as the master for the actual link
+		err = netlink.LinkSetMaster(l, bridge)
+		if err != nil {
+			return err
+		}
+		return baseFunc(n)
+	}
+}
+
 type ResolveParams struct {
 	Nodes          map[string]LinkNode
 	MgmtBridgeName string
@@ -361,7 +381,7 @@ func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func GetFakeMgmtBrLinkNode() LinkNode {
+func GetFakeMgmtBrLinkNode(mgmtBridgeName string) LinkNode {
 	if _fakeMgmtBrLinkMgmtBrInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
@@ -370,7 +390,7 @@ func GetFakeMgmtBrLinkNode() LinkNode {
 		nspath := currns.Path()
 		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
-				shortname: "mgmt-net",
+				shortname: mgmtBridgeName,
 				endpoints: []Endpt{},
 				nspath:    nspath,
 			},

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
 )
 
@@ -102,7 +103,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	defer l.m.Unlock()
 
 	for _, ep := range l.Endpoints {
-		if ep.GetState() != EndptDeployStateReady {
+		if ep.GetState() < EndptDeployStateReady {
 			return nil
 		}
 	}
@@ -132,38 +133,28 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 
 	// for both ends of the link
 	for idx, link := range []netlink.Link{linkA, linkB} {
-
+		var adjustmentFunc func(ns.NetNS) error
+		// if the endpoint is a bridge we also need to set the master of the interface to the bridge
 		switch l.Endpoints[idx].GetNode().GetLinkEndpointType() {
 		case LinkEndpointTypeBridge:
-			// if the node is a bridge kind (linux bridge or ovs-bridge)
 			// retrieve bridge name via node name
 			bridgeName := l.Endpoints[idx].GetNode().GetShortName()
-
-			// retrieve the bridg link
-			bridge, err := netlink.LinkByName(bridgeName)
-			if err != nil {
-				return err
-			}
-			// rename link to the defined name
-			err = netlink.LinkSetName(link, l.Endpoints[idx].GetIfaceName())
-			if err != nil {
-				return err
-			}
-			// set the retrieved bridge as the master for the actual link
-			err = netlink.LinkSetMaster(link, bridge)
-			if err != nil {
-				return err
-			}
+			// set the adjustmentFunc to the function that, besides the name, mac and up state
+			// also sets the Master of the interface to the bridge
+			adjustmentFunc = SetNameMACMasterAndUpInterface(link, l.Endpoints[idx], bridgeName)
 		default:
-			// if the node is a regular namespace node
-			// add link to node, rename, set mac and Up
-			err = l.Endpoints[idx].GetNode().AddNetlinkLinkToContainer(ctx, link, SetNameMACAndUpInterface(link, l.Endpoints[idx]))
-			if err != nil {
-				return err
-			}
+			// use the simple function that renames the link in the container, sets the MAC
+			// as well as its state to up
+			adjustmentFunc = SetNameMACAndUpInterface(link, l.Endpoints[idx])
+		}
+
+		// if the node is a regular namespace node
+		// add link to node, rename, set mac and Up
+		err = l.Endpoints[idx].GetNode().AddNetlinkLinkToContainer(ctx, link, adjustmentFunc)
+		if err != nil {
+			return err
 		}
 	}
-
 	return nil
 }
 
@@ -173,8 +164,5 @@ func (l *LinkVEth) Remove(_ context.Context) error {
 }
 
 func (l *LinkVEth) GetEndpoints() []Endpt {
-	result := make([]Endpt, 0, len(l.Endpoints))
-	copy(l.Endpoints, result)
-	return result
-
+	return l.Endpoints
 }

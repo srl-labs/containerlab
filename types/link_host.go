@@ -136,9 +136,6 @@ type GenericLinkNode struct {
 }
 
 func (g *GenericLinkNode) AddNetlinkLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	if g.nspath != "" {
-		return nil
-	}
 
 	// retrieve the namespace handle
 	netns, err := ns.GetNS(g.nspath)
