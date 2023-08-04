@@ -106,10 +106,10 @@ func (e *ExecResult) String() string {
 	s.WriteString(fmt.Sprintf("Cmd: %s\nReturnCode: %d", e.GetCmdString(), e.ReturnCode))
 
 	if e.Stdout != "" {
-		s.WriteString(fmt.Sprintf("\nStdout: %s", e.Stdout))
+		s.WriteString(fmt.Sprintf("\nStdout: %q", e.Stdout))
 	}
 	if e.Stderr != "" {
-		s.WriteString(fmt.Sprintf("\nStderr: %s", e.Stderr))
+		s.WriteString(fmt.Sprintf("\nStderr: %q", e.Stderr))
 	}
 
 	return s.String()
