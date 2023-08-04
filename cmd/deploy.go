@@ -111,8 +111,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile),
-		clab.WithNodeFilter(nodeFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,
@@ -120,9 +118,21 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithTopoFile(topo, varsFile),
+		clab.WithNodeFilter(nodeFilter),
 		clab.WithDebug(debug),
 	}
 	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return err
+	}
+
+	// create management network or use existing one
+	if err = c.CreateNetwork(ctx); err != nil {
+		return err
+	}
+
+	err = c.ResolveLinks()
 	if err != nil {
 		return err
 	}
@@ -182,11 +192,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	if err := c.CreateAuthzKeysFile(); err != nil {
-		return err
-	}
-
-	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
 		return err
 	}
 

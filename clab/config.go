@@ -125,38 +125,6 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	// create a types.LinkNode from the nodes.Node
-	// altough the nodes.Node interface is a Superset of the types.LinkNode
-	// we need to convert the map, since the whole map seems to not be dynamically typeconvertable
-	resolveNodes := make(map[string]types.LinkNode, len(c.Nodes))
-	for k, v := range c.Nodes {
-		resolveNodes[k] = v
-	}
-
-	// add the virtual host and mgmt-bridge nodes to the resolve nodes
-	specialNodes := map[string]types.LinkNode{
-		"host":     types.GetFakeHostLinkNode(),
-		"mgmt-net": types.GetFakeMgmtBrLinkNode(c.Config.Mgmt.Bridge),
-	}
-	for _, n := range specialNodes {
-		resolveNodes[n.GetShortName()] = n
-	}
-
-	resolveParams := &types.ResolveParams{
-		Nodes:          resolveNodes,
-		MgmtBridgeName: c.Config.Mgmt.Bridge,
-	}
-
-	for i, l := range c.Config.Topology.Links {
-		// i represents the endpoint integer and l provide the link struct
-		l, err := l.Link.Resolve(resolveParams)
-		if err != nil {
-			return err
-		}
-		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
-		c.Links[i] = l
-	}
-
 	// set any containerlab defaults after we've parsed the input
 	c.setDefaults()
 

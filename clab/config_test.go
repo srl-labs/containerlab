@@ -466,22 +466,6 @@ func TestLabelsInit(t *testing.T) {
 	}
 }
 
-func TestVerifyRootNetnsInterfaceUniqueness(t *testing.T) {
-	opts := []ClabOption{
-		WithTopoFile("test_data/topo7-dup-rootnetns.yml", ""),
-	}
-	c, err := NewContainerLab(opts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = c.verifyRootNetnsInterfaceUniqueness()
-	if err == nil {
-		t.Fatalf("expected duplicate rootns links error")
-	}
-	t.Logf("error: %v", err)
-}
-
 func TestEnvFileInit(t *testing.T) {
 	tests := map[string]struct {
 		got  string

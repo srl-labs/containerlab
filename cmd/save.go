@@ -29,8 +29,6 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		}
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo, varsFile),
-			clab.WithNodeFilter(nodeFilter),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,
@@ -38,6 +36,8 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 					GracefulShutdown: graceful,
 				},
 			),
+			clab.WithTopoFile(topo, varsFile),
+			clab.WithNodeFilter(nodeFilter),
 			clab.WithDebug(debug),
 		}
 		c, err := clab.NewContainerLab(opts...)

@@ -496,47 +496,6 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntime], contName, nodeName)
 }
 
-// // CreateLinks creates links using the specified number of workers.
-// func (c *CLab) CreateLinks(ctx context.Context, workers uint, dm dependency_manager.DependencyManager) {
-// 	wg := new(sync.WaitGroup)
-// 	sem := semaphore.NewWeighted(int64(workers))
-
-// 	for _, link := range c.Links {
-// 		wg.Add(1)
-// 		go func(li *types.Link) {
-// 			defer wg.Done()
-
-// 			var waitNodes []string
-// 			for _, n := range []*types.NodeConfig{li.A.Node, li.B.Node} {
-// 				// we should not wait for "host" fake node or mgmt-net node
-// 				if n.Kind != "host" && n.ShortName != "mgmt-net" {
-// 					waitNodes = append(waitNodes, n.ShortName)
-// 				}
-// 			}
-
-// 			err := dm.WaitForNodes(waitNodes, dependency_manager.NodeStateCreated)
-// 			if err != nil {
-// 				log.Error(err)
-// 			}
-
-// 			// acquire Sem
-// 			err = sem.Acquire(ctx, 1)
-// 			if err != nil {
-// 				log.Error(err)
-// 			}
-// 			defer sem.Release(1)
-// 			// create the wiring
-// 			err = c.CreateVirtualWiring(li)
-// 			if err != nil {
-// 				log.Error(err)
-// 			}
-// 		}(link)
-// 	}
-
-// 	// wait for all workers to finish
-// 	wg.Wait()
-// }
-
 func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
 	wg := new(sync.WaitGroup)
 
@@ -644,6 +603,41 @@ func (c *CLab) VethCleanup(ctx context.Context) error {
 			// if error log and continue
 			log.Error(err)
 		}
+	}
+	return nil
+}
+
+func (c *CLab) ResolveLinks() error {
+	// create a types.LinkNode from the nodes.Node
+	// altough the nodes.Node interface is a Superset of the types.LinkNode
+	// we need to convert the map, since the whole map seems to not be dynamically typeconvertable
+	resolveNodes := make(map[string]types.LinkNode, len(c.Nodes))
+	for k, v := range c.Nodes {
+		resolveNodes[k] = v
+	}
+
+	// add the virtual host and mgmt-bridge nodes to the resolve nodes
+	specialNodes := map[string]types.LinkNode{
+		"host":     types.GetFakeHostLinkNode(),
+		"mgmt-net": types.GetFakeMgmtBrLinkNode(c.Config.Mgmt.Bridge),
+	}
+	for _, n := range specialNodes {
+		resolveNodes[n.GetShortName()] = n
+	}
+
+	resolveParams := &types.ResolveParams{
+		Nodes:          resolveNodes,
+		MgmtBridgeName: c.Config.Mgmt.Bridge,
+	}
+
+	for i, l := range c.Config.Topology.Links {
+		// i represents the endpoint integer and l provide the link struct
+		l, err := l.Link.Resolve(resolveParams)
+		if err != nil {
+			return err
+		}
+		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
+		c.Links[i] = l
 	}
 	return nil
 }
