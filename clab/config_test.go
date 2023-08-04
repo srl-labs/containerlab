@@ -334,7 +334,7 @@ func TestVerifyLinks(t *testing.T) {
 	}{
 		"two_duplicated_links": {
 			got:  "test_data/topo6.yml",
-			want: "endpoints [\"lin1:eth1\" \"lin2:eth2\"] appeared more than once in the links section of the topology file",
+			want: "duplicate endpoint lin1:eth1\nduplicate endpoint lin1:eth1\nduplicate endpoint lin2:eth2\nduplicate endpoint lin2:eth2",
 		},
 		"no_duplicated_links": {
 			got:  "test_data/topo1.yml",
@@ -354,7 +354,10 @@ func TestVerifyLinks(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
+			err = c.ResolveLinks()
+			if err != nil {
+				t.Fatal(err)
+			}
 			err = c.verifyLinks()
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
