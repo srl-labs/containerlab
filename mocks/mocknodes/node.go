@@ -152,6 +152,20 @@ func (mr *MockNodeMockRecorder) Deploy(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0, arg1)
 }
 
+// ExecFunction mocks base method.
+func (m *MockNode) ExecFunction(arg0 func(ns.NetNS) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecFunction", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExecFunction indicates an expected call of ExecFunction.
+func (mr *MockNodeMockRecorder) ExecFunction(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecFunction", reflect.TypeOf((*MockNode)(nil).ExecFunction), arg0)
+}
+
 // GenerateConfig mocks base method.
 func (m *MockNode) GenerateConfig(dst, templ string) error {
 	m.ctrl.T.Helper()

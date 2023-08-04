@@ -412,6 +412,31 @@ func (d *DefaultNode) AddNetlinkLinkToContainer(_ context.Context, link netlink.
 	return netns.Do(f)
 }
 
+// ExecFunction executes the given function in the nodes network namespace
+func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
+	nspath := d.Cfg.NSPath
+
+	if d.Cfg.IsRootNamespaceBased {
+		nshandle, err := ns.GetCurrentNS()
+		if err != nil {
+			return err
+		}
+		nspath = nshandle.Path()
+	}
+
+	if nspath == "" {
+		return fmt.Errorf("nspath is not set for node %q", d.GetShortName())
+	}
+
+	// retrieve the namespace handle
+	netns, err := ns.GetNS(nspath)
+	if err != nil {
+		return err
+	}
+	// execute the given function
+	return netns.Do(f)
+}
+
 func (d *DefaultNode) AddEndpoint(e types.Endpt) error {
 	d.NWEndpoints = append(d.NWEndpoints, e)
 	return nil

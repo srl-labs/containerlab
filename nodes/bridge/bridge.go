@@ -47,7 +47,6 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-
 	s.Cfg.IsRootNamespaceBased = true
 	return nil
 }

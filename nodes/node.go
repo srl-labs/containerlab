@@ -97,6 +97,8 @@ type Node interface {
 	GetLinkEndpointType() types.LinkEndpointType
 	GetShortName() string
 	SetupNetworking(ctx context.Context) error
+	// ExecFunction executes the given function within the nodes network namespace
+	ExecFunction(func(ns.NetNS) error) error
 }
 
 type NodeOption func(Node)

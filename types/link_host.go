@@ -121,12 +121,15 @@ func (l *LinkHost) Remove(_ context.Context) error {
 func (l *LinkHost) GetEndpoints() []Endpt {
 	return []Endpt{
 		l.Endpoint,
-		&EndptGeneric{
-			state: EndptDeployStateDeployed,
-			Node:  GetFakeHostLinkNode(),
-			Iface: l.HostInterface,
-			Link:  l,
-		}}
+		&EndptHost{
+			EndptGeneric: EndptGeneric{
+				state: EndptDeployStateDeployed,
+				Node:  GetFakeHostLinkNode(),
+				Iface: l.HostInterface,
+				Link:  l,
+			},
+		},
+	}
 }
 
 type GenericLinkNode struct {
@@ -136,7 +139,6 @@ type GenericLinkNode struct {
 }
 
 func (g *GenericLinkNode) AddNetlinkLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-
 	// retrieve the namespace handle
 	netns, err := ns.GetNS(g.nspath)
 	if err != nil {
@@ -149,6 +151,17 @@ func (g *GenericLinkNode) AddNetlinkLinkToContainer(_ context.Context, link netl
 	// execute the given function
 	return netns.Do(f)
 }
+
+func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
+	// retrieve the namespace handle
+	netns, err := ns.GetNS(g.nspath)
+	if err != nil {
+		return err
+	}
+	// execute the given function
+	return netns.Do(f)
+}
+
 func (g *GenericLinkNode) AddEndpoint(e Endpt) error {
 	g.endpoints = append(g.endpoints, e)
 	return nil
@@ -156,4 +169,8 @@ func (g *GenericLinkNode) AddEndpoint(e Endpt) error {
 
 func (g *GenericLinkNode) GetShortName() string {
 	return g.shortname
+}
+
+func (g *GenericLinkNode) GetEndpoints() []Endpt {
+	return g.endpoints
 }

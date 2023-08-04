@@ -6,6 +6,7 @@ package clab
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -156,8 +157,15 @@ func (c *CLab) parseTopology() error {
 		c.Links[i] = l
 	}
 
+	verificationErrors := []error{}
 	for _, e := range c.Endpoints {
-		e.Verify(c.Endpoints)
+		err = e.Verify(c.Endpoints)
+		if err != nil {
+			verificationErrors = append(verificationErrors, err)
+		}
+	}
+	if len(verificationErrors) > 0 {
+		return errors.Join(verificationErrors...)
 	}
 
 	// set any containerlab defaults after we've parsed the input
