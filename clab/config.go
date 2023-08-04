@@ -157,17 +157,6 @@ func (c *CLab) parseTopology() error {
 		c.Links[i] = l
 	}
 
-	verificationErrors := []error{}
-	for _, e := range c.Endpoints {
-		err = e.Verify(c.Endpoints)
-		if err != nil {
-			verificationErrors = append(verificationErrors, err)
-		}
-	}
-	if len(verificationErrors) > 0 {
-		return errors.Join(verificationErrors...)
-	}
-
 	// set any containerlab defaults after we've parsed the input
 	c.setDefaults()
 
@@ -368,26 +357,19 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	var err error
-
+	if err = c.verifyLinks(); err != nil {
+		return err
+	}
 	for _, node := range c.Nodes {
 		err := node.CheckDeploymentConditions(ctx)
 		if err != nil {
 			return err
 		}
 	}
-	if err = c.verifyLinks(); err != nil {
-		return err
-	}
 	if err = c.verifyDuplicateAddresses(); err != nil {
 		return err
 	}
-	if err = c.verifyRootNetnsInterfaceUniqueness(); err != nil {
-		return err
-	}
 	if err = c.VerifyContainersUniqueness(ctx); err != nil {
-		return err
-	}
-	if err = c.verifyHostIfaces(); err != nil {
 		return err
 	}
 	return nil
@@ -396,22 +378,17 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
 func (c *CLab) verifyLinks() error {
-	// endpoints := map[string]struct{}{}
-	// // dups accumulates duplicate links
-	// dups := []string{}
-	// for _, l := range c.Links {
-	// 	for _, e := range []*types.Endpoint{l.A, l.B} {
-	// 		e_string := e.String()
-	// 		if _, ok := endpoints[e_string]; ok {
-	// 			dups = append(dups, e_string)
-	// 		}
-	// 		endpoints[e_string] = struct{}{}
-	// 	}
-	// }
-	// if len(dups) != 0 {
-	// 	sort.Strings(dups) // sort for deterministic error message
-	// 	return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
-	// }
+	var err error
+	verificationErrors := []error{}
+	for _, e := range c.Endpoints {
+		err = e.Verify(c.Endpoints)
+		if err != nil {
+			verificationErrors = append(verificationErrors, err)
+		}
+	}
+	if len(verificationErrors) > 0 {
+		return errors.Join(verificationErrors...)
+	}
 	return nil
 }
 
@@ -513,45 +490,6 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 		}
 	}
 
-	return nil
-}
-
-// verifyHostIfaces ensures that host interfaces referenced in the topology
-// do not exist already in the root namespace
-// and ensure that nodes that are configured with host networking mode do not have any interfaces defined.
-func (c *CLab) verifyHostIfaces() error {
-	// for _, l := range c.Links {
-	// 	for _, ep := range []*types.Endpoint{l.A, l.B} {
-	// 		if ep.Node.ShortName == "host" {
-	// 			if nl, _ := netlink.LinkByName(ep.EndpointName); nl != nil {
-	// 				return fmt.Errorf("host interface %s referenced in topology already exists", ep.EndpointName)
-	// 			}
-	// 		}
-	// 		if ep.Node.NetworkMode == "host" {
-	// 			return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
-	// 				ep.Node.ShortName, ep.Node.ShortName)
-	// 		}
-	// 	}
-	// }
-	return nil
-}
-
-// verifyRootNetnsInterfaceUniqueness ensures that interafaces that appear in the root ns (bridge, ovs-bridge and host)
-// are uniquely defined in the topology file.
-func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
-	// rootNsIfaces := map[string]struct{}{}
-	// for _, l := range c.Links {
-	// 	endpoints := [2]*types.Endpoint{l.A, l.B}
-	// 	for _, e := range endpoints {
-	// 		if e.Node.IsRootNamespaceBased {
-	// 			if _, ok := rootNsIfaces[e.EndpointName]; ok {
-	// 				return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
-	// 				Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
-	// 			}
-	// 			rootNsIfaces[e.EndpointName] = struct{}{}
-	// 		}
-	// 	}
-	// }
 	return nil
 }
 
