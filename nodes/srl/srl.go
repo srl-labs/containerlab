@@ -547,8 +547,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		//
 		// via the endpoint we acquire the link, and check if the link is of type LinkMacVlan
 		// if so cast it and get the partent Interface MTU and finally set that for the interface
-		switch link := e.GetLink().(type) {
-		case *types.LinkMacVlan:
+		if link, ok := e.GetLink().(*types.LinkMacVlan); ok {
 			mtu, err := link.GetParentInterfaceMtu()
 			if err != nil {
 				return err
