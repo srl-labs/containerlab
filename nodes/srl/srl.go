@@ -106,7 +106,7 @@ var (
 	topologies embed.FS
 
 	saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`
-	mgmtServerRdyCmd = `sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
+	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
@@ -393,7 +393,7 @@ func (s *srl) Ready(ctx context.Context) error {
 }
 
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
-func (s *srl) checkKernelVersion() error {
+func (*srl) checkKernelVersion() error {
 	// retrieve running kernel version
 	kv, err := utils.GetKernelVersion()
 	if err != nil {
