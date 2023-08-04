@@ -120,6 +120,13 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
+		// create management network or use existing one
+		// we call this to populate the nc.cfg.mgmt.bridge variable
+		// which is needed for the removal of the iptables rules
+		if err = nc.CreateNetwork(ctx); err != nil {
+			return err
+		}
+
 		err = nc.ResolveLinks()
 		if err != nil {
 			return err
