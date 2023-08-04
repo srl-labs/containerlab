@@ -106,7 +106,7 @@ var (
 	topologies embed.FS
 
 	saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`
-	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
+	mgmtServerRdyCmd = `sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
@@ -335,10 +335,20 @@ func (s *srl) Ready(ctx context.Context) error {
 			// two commands are checked, first if the mgmt_server is running
 			cmd, _ := exec.NewExecCmdFromString(mgmtServerRdyCmd)
 			execResult, err := s.RunExec(ctx, cmd)
-			if err != nil || execResult.GetReturnCode() != 0 {
-				log.Debugf("error during mgmt_server status check: %s, exit code: %d, stderr: %s, stdout: %s",
-					err, execResult.GetReturnCode(), execResult.GetStdErrString(), execResult.GetStdOutString())
+			if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
+				logMsg := "mgmt_server status check failed"
+
+				if err != nil {
+					logMsg += fmt.Sprintf(" error: %v", err)
+				}
+
+				if execResult.GetReturnCode() != 0 {
+					logMsg += fmt.Sprintf(", output: \n%s", execResult)
+				}
+
+				log.Debug(logMsg)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 

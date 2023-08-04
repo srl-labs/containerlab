@@ -101,7 +101,18 @@ func (e *ExecCmd) GetCmdString() string {
 }
 
 func (e *ExecResult) String() string {
-	return fmt.Sprintf("Cmd: %s\nReturnCode: %d\nStdOut:\n%s\nStdErr:\n%s\n", e.GetCmdString(), e.ReturnCode, e.Stdout, e.Stderr)
+	var s strings.Builder
+
+	s.WriteString(fmt.Sprintf("Cmd: %s\nReturnCode: %d", e.GetCmdString(), e.ReturnCode))
+
+	if e.Stdout != "" {
+		s.WriteString(fmt.Sprintf("\nStdout: %s", e.Stdout))
+	}
+	if e.Stderr != "" {
+		s.WriteString(fmt.Sprintf("\nStderr: %s", e.Stderr))
+	}
+
+	return s.String()
 }
 
 // Dump dumps execution result as a string in one of the provided formats.
