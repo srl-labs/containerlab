@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -151,17 +152,21 @@ type EndptBridge struct {
 }
 
 func (e *EndptBridge) Verify(epts []Endpt) error {
+	errs := []error{}
 	err := CheckPerNodeInterfaceUniqueness(e)
 	if err != nil {
-		return err
+		errs = append(errs, err)
 	}
 	err = CheckBridgeExists(e.GetNode(), e.masterInterface)
 	if err != nil {
-		return err
+		errs = append(errs, err)
 	}
 	err = CheckEndpointDoesNotExistYet(e)
 	if err != nil {
-		return err
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 	return nil
 }
@@ -171,13 +176,17 @@ type EndptHost struct {
 }
 
 func (e *EndptHost) Verify(epts []Endpt) error {
+	errs := []error{}
 	err := CheckPerNodeInterfaceUniqueness(e)
 	if err != nil {
-		return err
+		errs = append(errs, err)
 	}
 	err = CheckEndpointDoesNotExistYet(e)
 	if err != nil {
-		return err
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 	return nil
 }
