@@ -11,10 +11,10 @@ type LinkBrief struct {
 	LinkCommonParams `yaml:",inline"`
 }
 
-// Resolve resolves the brief link into a concrete RawLink implementation.
+// ToRawLink resolves the brief link into a concrete RawLink implementation.
 // LinkBrief is only used to have a short version of a link definition in the topology file,
-// with Resolve we convert it into one of the supported link types.
-func (l *LinkBrief) Resolve() (RawLink, error) {
+// with ToRawLink we convert it into one of the supported link types.
+func (l *LinkBrief) ToRawLink() (RawLink, error) {
 	// check two endpoints defined
 	if len(l.Endpoints) != 2 {
 		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(l.Endpoints))

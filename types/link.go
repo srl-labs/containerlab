@@ -149,7 +149,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 		ld.Type = string(LinkTypeBrief)
 
-		ld.Link, err = l.LinkBrief.Resolve()
+		ld.Link, err = l.LinkBrief.ToRawLink()
 		if err != nil {
 			return err
 		}
