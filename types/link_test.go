@@ -162,10 +162,10 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			args: args{
 				yaml: []byte(`
                     type:              veth
+                    mtu:               1400
                     endpoints:
                       - node:          srl1
                         interface:     e1-1
-                        mtu:           1400
                       - node:          srl2
                         interface:     e1-2
                 `),
@@ -177,6 +177,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					Endpoints: []*EndpointRaw{
 						NewEndpointRaw("srl1", "e1-1", ""),
 						NewEndpointRaw("srl2", "e1-2", ""),
+					},
+					LinkCommonParams: LinkCommonParams{
+						MTU: 1400,
 					},
 				},
 			},
