@@ -24,6 +24,7 @@ import (
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -546,8 +547,8 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		// and specifically define it in the config
 		//
 		// via the endpoint we acquire the link, and check if the link is of type LinkMacVlan
-		// if so cast it and get the partent Interface MTU and finally set that for the interface
-		if link, ok := e.GetLink().(*types.LinkMacVlan); ok {
+		// if so cast it and get the parent Interface MTU and finally set that for the interface
+		if link, ok := e.GetLink().(*links.LinkMacVlan); ok {
 			mtu, err := link.GetParentInterfaceMtu()
 			if err != nil {
 				return err

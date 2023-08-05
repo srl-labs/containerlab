@@ -15,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/types"
 	"gopkg.in/yaml.v2"
 )
@@ -215,11 +216,11 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 					}
 				}
 				config.Topology.Links = append(config.Topology.Links,
-					&types.LinkDefinition{
-						Link: &types.LinkVEthRaw{
-							Endpoints: []*types.EndpointRaw{
-								types.NewEndpointRaw(node1, fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset), ""),
-								types.NewEndpointRaw(node2, fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1), ""),
+					&links.LinkDefinition{
+						Link: &links.LinkVEthRaw{
+							Endpoints: []*links.EndpointRaw{
+								links.NewEndpointRaw(node1, fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset), ""),
+								links.NewEndpointRaw(node2, fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1), ""),
 							},
 						},
 					})

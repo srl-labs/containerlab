@@ -17,6 +17,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	errs "github.com/srl-labs/containerlab/errors"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
@@ -31,8 +32,8 @@ type CLab struct {
 	TopoPaths     *types.TopoPaths
 	m             *sync.RWMutex
 	Nodes         map[string]nodes.Node    `json:"nodes,omitempty"`
-	Links         map[int]types.LinkInterf `json:"links,omitempty"`
-	Endpoints     []types.Endpt
+	Links         map[int]links.LinkInterf `json:"links,omitempty"`
+	Endpoints     []links.Endpt
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	// reg is a registry of node kinds
@@ -172,7 +173,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		},
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]nodes.Node),
-		Links:    make(map[int]types.LinkInterf),
+		Links:    make(map[int]links.LinkInterf),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
 		Cert:     &cert.Cert{},
 	}
@@ -611,21 +612,21 @@ func (c *CLab) ResolveLinks() error {
 	// create a types.LinkNode from the nodes.Node
 	// altough the nodes.Node interface is a Superset of the types.LinkNode
 	// we need to convert the map, since the whole map seems to not be dynamically typeconvertable
-	resolveNodes := make(map[string]types.LinkNode, len(c.Nodes))
+	resolveNodes := make(map[string]links.LinkNode, len(c.Nodes))
 	for k, v := range c.Nodes {
 		resolveNodes[k] = v
 	}
 
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
-	specialNodes := map[string]types.LinkNode{
-		"host":     types.GetFakeHostLinkNode(),
-		"mgmt-net": types.GetFakeMgmtBrLinkNode(c.Config.Mgmt.Bridge),
+	specialNodes := map[string]links.LinkNode{
+		"host":     links.GetFakeHostLinkNode(),
+		"mgmt-net": links.GetFakeMgmtBrLinkNode(c.Config.Mgmt.Bridge),
 	}
 	for _, n := range specialNodes {
 		resolveNodes[n.GetShortName()] = n
 	}
 
-	resolveParams := &types.ResolveParams{
+	resolveParams := &links.ResolveParams{
 		Nodes:          resolveNodes,
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
 	}

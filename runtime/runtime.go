@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -149,5 +150,5 @@ TIMEOUT_LOOP:
 
 type Node interface {
 	Config() *types.NodeConfig
-	GetEndpoints() []types.Endpt
+	GetEndpoints() []links.Endpt
 }

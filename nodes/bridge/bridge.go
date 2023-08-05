@@ -14,6 +14,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -149,6 +150,6 @@ func BridgeAddLink(_ context.Context, link netlink.Link, bridgeName string, f fu
 	return ns.Do(f)
 }
 
-func (b *bridge) GetLinkEndpointType() types.LinkEndpointType {
-	return types.LinkEndpointTypeBridge
+func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {
+	return links.LinkEndpointTypeBridge
 }

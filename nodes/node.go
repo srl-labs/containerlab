@@ -13,6 +13,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
@@ -92,9 +93,9 @@ type Node interface {
 	// Adds the given link to the Node. After adding the Link to the node,
 	// the given function f is called within the Nodes namespace.
 	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddEndpoint(e types.Endpt) error
-	GetEndpoints() []types.Endpt
-	GetLinkEndpointType() types.LinkEndpointType
+	AddEndpoint(e links.Endpt) error
+	GetEndpoints() []links.Endpt
+	GetLinkEndpointType() links.LinkEndpointType
 	GetShortName() string
 	SetupNetworking(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
@@ -121,7 +122,7 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 
 // GenericVMInterfaceCheck checks interface names for generic VM-based nodes.
 // These nodes could only have interfaces named ethX, where X is >0.
-func GenericVMInterfaceCheck(nodeName string, eps []types.Endpt) error {
+func GenericVMInterfaceCheck(nodeName string, eps []links.Endpt) error {
 	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
 	for _, e := range eps {
 		if !ifRe.MatchString(e.GetIfaceName()) {

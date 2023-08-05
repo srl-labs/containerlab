@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	exec "github.com/srl-labs/containerlab/clab/exec"
+	links "github.com/srl-labs/containerlab/links"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	types "github.com/srl-labs/containerlab/types"
 )
@@ -387,10 +388,10 @@ func (mr *MockNodeMockRecorder) Config() *gomock.Call {
 }
 
 // GetEndpoints mocks base method.
-func (m *MockNode) GetEndpoints() []types.Endpt {
+func (m *MockNode) GetEndpoints() []links.Endpt {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEndpoints")
-	ret0, _ := ret[0].([]types.Endpt)
+	ret0, _ := ret[0].([]links.Endpt)
 	return ret0
 }
 

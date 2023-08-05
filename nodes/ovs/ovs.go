@@ -12,6 +12,7 @@ import (
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/bridge"
 	"github.com/srl-labs/containerlab/runtime"
@@ -83,6 +84,6 @@ func (n *ovs) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, 
 	return bridge.BridgeAddLink(ctx, link, n.Cfg.ShortName, f)
 }
 
-func (m *ovs) GetLinkEndpointType() types.LinkEndpointType {
-	return types.LinkEndpointTypeBridge
+func (m *ovs) GetLinkEndpointType() links.LinkEndpointType {
+	return links.LinkEndpointTypeBridge
 }

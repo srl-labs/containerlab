@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -37,7 +38,7 @@ type DefaultNode struct {
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
-	NWEndpoints   []types.Endpt
+	NWEndpoints   []links.Endpt
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -437,17 +438,17 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 	return netns.Do(f)
 }
 
-func (d *DefaultNode) AddEndpoint(e types.Endpt) error {
+func (d *DefaultNode) AddEndpoint(e links.Endpt) error {
 	d.NWEndpoints = append(d.NWEndpoints, e)
 	return nil
 }
 
-func (d *DefaultNode) GetEndpoints() []types.Endpt {
+func (d *DefaultNode) GetEndpoints() []links.Endpt {
 	return d.NWEndpoints
 }
 
-func (d *DefaultNode) GetLinkEndpointType() types.LinkEndpointType {
-	return types.LinkEndpointTypeRegular
+func (d *DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
+	return links.LinkEndpointTypeRegular
 }
 
 func (d *DefaultNode) GetShortName() string {

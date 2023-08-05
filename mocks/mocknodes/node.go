@@ -11,6 +11,7 @@ import (
 	ns "github.com/containernetworking/plugins/pkg/ns"
 	gomock "github.com/golang/mock/gomock"
 	exec "github.com/srl-labs/containerlab/clab/exec"
+	links "github.com/srl-labs/containerlab/links"
 	nodes "github.com/srl-labs/containerlab/nodes"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	types "github.com/srl-labs/containerlab/types"
@@ -41,7 +42,7 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 }
 
 // AddEndpoint mocks base method.
-func (m *MockNode) AddEndpoint(e types.Endpt) error {
+func (m *MockNode) AddEndpoint(e links.Endpt) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddEndpoint", e)
 	ret0, _ := ret[0].(error)
@@ -196,10 +197,10 @@ func (mr *MockNodeMockRecorder) GetContainers(ctx interface{}) *gomock.Call {
 }
 
 // GetEndpoints mocks base method.
-func (m *MockNode) GetEndpoints() []types.Endpt {
+func (m *MockNode) GetEndpoints() []links.Endpt {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEndpoints")
-	ret0, _ := ret[0].([]types.Endpt)
+	ret0, _ := ret[0].([]links.Endpt)
 	return ret0
 }
 
@@ -224,10 +225,10 @@ func (mr *MockNodeMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 }
 
 // GetLinkEndpointType mocks base method.
-func (m *MockNode) GetLinkEndpointType() types.LinkEndpointType {
+func (m *MockNode) GetLinkEndpointType() links.LinkEndpointType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLinkEndpointType")
-	ret0, _ := ret[0].(types.LinkEndpointType)
+	ret0, _ := ret[0].(links.LinkEndpointType)
 	return ret0
 }
 
