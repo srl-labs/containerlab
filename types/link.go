@@ -149,7 +149,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 		ld.Type = string(LinkTypeBrief)
 
-		ld.Link, err = briefLinkConversion(l.LinkBrief)
+		ld.Link, err = l.LinkBrief.Resolve()
 		if err != nil {
 			return err
 		}
@@ -210,32 +210,6 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 	return nil, fmt.Errorf("unable to marshall")
 }
 
-func briefLinkConversion(lc LinkBrief) (RawLink, error) {
-	// check two endpoints defined
-	if len(lc.Endpoints) != 2 {
-		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(lc.Endpoints))
-	}
-	for x, v := range lc.Endpoints {
-		parts := strings.SplitN(v, ":", 2)
-		node := parts[0]
-
-		lt, err := parseLinkType(node)
-		if err != nil {
-			continue
-		}
-
-		switch lt {
-		case LinkTypeMacVLan:
-			return macVlanFromLinkConfig(lc, x)
-		case LinkTypeMgmtNet:
-			return mgmtNetFromLinkConfig(lc, x)
-		case LinkTypeHost:
-			return hostFromLinkConfig(lc, x)
-		}
-	}
-	return vEthFromLinkConfig(lc)
-}
-
 type RawLink interface {
 	Resolve(params *ResolveParams) (LinkInterf, error)
 	GetType() LinkType
@@ -248,12 +222,12 @@ type LinkInterf interface {
 	GetEndpoints() []Endpt
 }
 
-func extractHostNodeInterfaceData(lc LinkBrief, specialEPIndex int) (host, hostIf, node, nodeIf string) {
+func extractHostNodeInterfaceData(lb *LinkBrief, specialEPIndex int) (host, hostIf, node, nodeIf string) {
 	// the index of the node is the specialEndpointIndex +1  modulo 2
 	nodeindex := (specialEPIndex + 1) % 2
 
-	hostData := strings.SplitN(lc.Endpoints[specialEPIndex], ":", 2)
-	nodeData := strings.SplitN(lc.Endpoints[nodeindex], ":", 2)
+	hostData := strings.SplitN(lb.Endpoints[specialEPIndex], ":", 2)
+	nodeData := strings.SplitN(lb.Endpoints[nodeindex], ":", 2)
 
 	host = hostData[0]
 	hostIf = hostData[1]

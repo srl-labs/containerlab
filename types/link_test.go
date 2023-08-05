@@ -90,7 +90,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "legacy link",
+			name: "brief link with veth endpoints",
 			args: args{
 				yaml: []byte(`
                     endpoints: 
@@ -105,6 +105,77 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					Endpoints: []*EndpointRaw{
 						NewEndpointRaw("srl1", "e1-5", ""),
 						NewEndpointRaw("srl2", "e1-5", ""),
+					},
+				},
+			},
+		},
+		{
+			name: "brief link with macvlan endpoint",
+			args: args{
+				yaml: []byte(`
+                    endpoints: ["srl1:e1-1", "macvlan:eth0"]`,
+				),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkMacVlanRaw{
+					HostInterface: "eth0",
+					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
+				},
+			},
+		},
+		{
+			name: "brief link with mgmt-net endpoint",
+			args: args{
+				yaml: []byte(`
+                    endpoints: ["srl1:e1-1", "mgmt-net:srl1-e1-1"]`,
+				),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkMgmtNetRaw{
+					HostInterface: "srl1-e1-1",
+					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
+				},
+			},
+		},
+		{
+			name: "brief link with host endpoint",
+			args: args{
+				yaml: []byte(`
+                    endpoints: ["srl1:e1-1", "host:srl1-e1-1"]`,
+				),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkHostRaw{
+					HostInterface: "srl1-e1-1",
+					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
+				},
+			},
+		},
+		{
+			name: "veth link",
+			args: args{
+				yaml: []byte(`
+                    type:              veth
+                    endpoints:
+                      - node:          srl1
+                        interface:     e1-1
+                      - node:          srl2
+                        interface:     e1-2
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeVEth),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						NewEndpointRaw("srl1", "e1-1", ""),
+						NewEndpointRaw("srl2", "e1-2", ""),
 					},
 				},
 			},

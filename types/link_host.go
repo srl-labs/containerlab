@@ -32,14 +32,14 @@ func (r *LinkHostRaw) ToLinkConfig() *LinkBrief {
 	return lc
 }
 
-func hostFromLinkConfig(lc LinkBrief, specialEPIndex int) (*LinkHostRaw, error) {
-	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
+func hostLinkFromBrief(lb *LinkBrief, specialEPIndex int) (*LinkHostRaw, error) {
+	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
 	result := &LinkHostRaw{
 		LinkCommonParams: LinkCommonParams{
-			MTU:    lc.MTU,
-			Labels: lc.Labels,
-			Vars:   lc.Vars,
+			MTU:    lb.MTU,
+			Labels: lb.Labels,
+			Vars:   lb.Vars,
 		},
 		HostInterface: hostIf,
 		Endpoint:      NewEndpointRaw(node, nodeIf, ""),

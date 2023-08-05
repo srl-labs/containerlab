@@ -66,14 +66,14 @@ func (r *LinkMgmtNetRaw) GetType() LinkType {
 	return LinkTypeMgmtNet
 }
 
-func mgmtNetFromLinkConfig(lc LinkBrief, specialEPIndex int) (*LinkMgmtNetRaw, error) {
-	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
+func mgmtNetLinkFromBrief(lb *LinkBrief, specialEPIndex int) (*LinkMgmtNetRaw, error) {
+	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
 	result := &LinkMgmtNetRaw{
 		LinkCommonParams: LinkCommonParams{
-			MTU:    lc.MTU,
-			Labels: lc.Labels,
-			Vars:   lc.Vars,
+			MTU:    lb.MTU,
+			Labels: lb.Labels,
+			Vars:   lb.Vars,
 		},
 		HostInterface: hostIf,
 		Endpoint:      NewEndpointRaw(node, nodeIf, ""),

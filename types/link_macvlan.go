@@ -36,14 +36,14 @@ func (r *LinkMacVlanRaw) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
-func macVlanFromLinkConfig(lc LinkBrief, specialEPIndex int) (*LinkMacVlanRaw, error) {
-	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
+func macVlanLinkFromBrief(lb *LinkBrief, specialEPIndex int) (*LinkMacVlanRaw, error) {
+	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
 	result := &LinkMacVlanRaw{
 		LinkCommonParams: LinkCommonParams{
-			MTU:    lc.MTU,
-			Labels: lc.Labels,
-			Vars:   lc.Vars,
+			MTU:    lb.MTU,
+			Labels: lb.Labels,
+			Vars:   lb.Vars,
 		},
 		HostInterface: hostIf,
 		Endpoint:      NewEndpointRaw(node, nodeIf, ""),

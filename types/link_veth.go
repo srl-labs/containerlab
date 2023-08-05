@@ -69,14 +69,14 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 	return l, nil
 }
 
-func vEthFromLinkConfig(lc LinkBrief) (*LinkVEthRaw, error) {
-	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, 0)
+func vEthFromLinkConfig(lb *LinkBrief) (*LinkVEthRaw, error) {
+	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, 0)
 
 	result := &LinkVEthRaw{
 		LinkCommonParams: LinkCommonParams{
-			MTU:    lc.MTU,
-			Labels: lc.Labels,
-			Vars:   lc.Vars,
+			MTU:    lb.MTU,
+			Labels: lb.Labels,
+			Vars:   lb.Vars,
 		},
 		Endpoints: []*EndpointRaw{
 			NewEndpointRaw(host, hostIf, ""),
