@@ -62,7 +62,7 @@ var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
 
 // UnmarshalYAML deserializes links passed via topology file into LinkDefinition struct.
 // It supports both the brief and specific link type notations.
-func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// alias struct to avoid recursion and pass strict yaml unmarshalling
 	// we don't care about the embedded LinkConfig, as we only need to unmarshal
 	// the type field.
@@ -82,9 +82,9 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	// if no type is specified, we assume that brief notation of a link definition is used.
 	if a.Type == "" {
 		lt = LinkTypeBrief
-		r.Type = string(LinkTypeBrief)
+		ld.Type = string(LinkTypeBrief)
 	} else {
-		r.Type = a.Type
+		ld.Type = a.Type
 
 		lt, err = parseLinkType(a.Type)
 		if err != nil {
@@ -104,7 +104,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.Link = &l.LinkVEthRaw
+		ld.Link = &l.LinkVEthRaw
 	case LinkTypeMgmtNet:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -114,7 +114,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.Link = &l.LinkMgmtNetRaw
+		ld.Link = &l.LinkMgmtNetRaw
 	case LinkTypeHost:
 		var l struct {
 			Type        string `yaml:"type"`
@@ -124,7 +124,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.Link = &l.LinkHostRaw
+		ld.Link = &l.LinkHostRaw
 	case LinkTypeMacVLan:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -134,7 +134,7 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		if err != nil {
 			return err
 		}
-		r.Link = &l.LinkMacVlanRaw
+		ld.Link = &l.LinkMacVlanRaw
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
@@ -147,9 +147,9 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 			return err
 		}
 
-		r.Type = string(LinkTypeBrief)
+		ld.Type = string(LinkTypeBrief)
 
-		r.Link, err = briefLinkConversion(l.LinkConfig)
+		ld.Link, err = briefLinkConversion(l.LinkConfig)
 		if err != nil {
 			return err
 		}
