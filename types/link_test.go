@@ -165,6 +165,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                       - node:          srl1
                         interface:     e1-1
+                        mtu:           1400
                       - node:          srl2
                         interface:     e1-2
                 `),
