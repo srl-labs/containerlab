@@ -27,13 +27,16 @@ func (r *LinkVEthRaw) MarshalYAML() (interface{}, error) {
 }
 
 // ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkVEthRaw) ToLinkConfig() *LinkConfig {
-	lc := &LinkConfig{
-		Vars:      r.Vars,
-		Labels:    r.Labels,
-		MTU:       r.Mtu,
+func (r *LinkVEthRaw) ToLinkConfig() *LinkBrief {
+	lc := &LinkBrief{
 		Endpoints: []string{},
+		LinkCommonParams: LinkCommonParams{
+			MTU:    r.MTU,
+			Labels: r.Labels,
+			Vars:   r.Vars,
+		},
 	}
+
 	for _, e := range r.Endpoints {
 		lc.Endpoints = append(lc.Endpoints, fmt.Sprintf("%s:%s", e.Node, e.Iface))
 	}
@@ -66,12 +69,12 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
 	return l, nil
 }
 
-func vEthFromLinkConfig(lc LinkConfig) (*LinkVEthRaw, error) {
+func vEthFromLinkConfig(lc LinkBrief) (*LinkVEthRaw, error) {
 	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, 0)
 
 	result := &LinkVEthRaw{
 		LinkCommonParams: LinkCommonParams{
-			Mtu:    lc.MTU,
+			MTU:    lc.MTU,
 			Labels: lc.Labels,
 			Vars:   lc.Vars,
 		},
@@ -112,7 +115,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	linkA := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: l.Endpoints[0].GetRandIfaceName(),
-			MTU:  l.Mtu,
+			MTU:  l.MTU,
 			// Mac address is set later on
 		},
 		PeerName: l.Endpoints[1].GetRandIfaceName(),

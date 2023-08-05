@@ -14,7 +14,7 @@ import (
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
-	Mtu    int                    `yaml:"mtu,omitempty"`
+	MTU    int                    `yaml:"mtu,omitempty"`
 	Labels map[string]string      `yaml:"labels,omitempty"`
 	Vars   map[string]interface{} `yaml:"vars,omitempty"`
 }
@@ -138,8 +138,8 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
-			Type       string `yaml:"type"`
-			LinkConfig `yaml:",inline"`
+			Type      string `yaml:"type"`
+			LinkBrief `yaml:",inline"`
 		}
 
 		err := unmarshal(&l)
@@ -149,7 +149,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 		ld.Type = string(LinkTypeBrief)
 
-		ld.Link, err = briefLinkConversion(l.LinkConfig)
+		ld.Link, err = briefLinkConversion(l.LinkBrief)
 		if err != nil {
 			return err
 		}
@@ -210,7 +210,7 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 	return nil, fmt.Errorf("unable to marshall")
 }
 
-func briefLinkConversion(lc LinkConfig) (RawLink, error) {
+func briefLinkConversion(lc LinkBrief) (RawLink, error) {
 	// check two endpoints defined
 	if len(lc.Endpoints) != 2 {
 		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(lc.Endpoints))
@@ -248,7 +248,7 @@ type LinkInterf interface {
 	GetEndpoints() []Endpt
 }
 
-func extractHostNodeInterfaceData(lc LinkConfig, specialEPIndex int) (host, hostIf, node, nodeIf string) {
+func extractHostNodeInterfaceData(lc LinkBrief, specialEPIndex int) (host, hostIf, node, nodeIf string) {
 	// the index of the node is the specialEndpointIndex +1  modulo 2
 	nodeindex := (specialEPIndex + 1) % 2
 

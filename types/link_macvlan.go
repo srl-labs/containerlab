@@ -16,12 +16,14 @@ type LinkMacVlanRaw struct {
 }
 
 // ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkMacVlanRaw) ToLinkConfig() *LinkConfig {
-	lc := &LinkConfig{
-		Vars:      r.Vars,
-		Labels:    r.Labels,
-		MTU:       r.Mtu,
+func (r *LinkMacVlanRaw) ToLinkConfig() *LinkBrief {
+	lc := &LinkBrief{
 		Endpoints: make([]string, 2),
+		LinkCommonParams: LinkCommonParams{
+			MTU:    r.MTU,
+			Labels: r.Labels,
+			Vars:   r.Vars,
+		},
 	}
 
 	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Endpoint.Node, r.Endpoint.Iface)
@@ -34,12 +36,12 @@ func (r *LinkMacVlanRaw) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
-func macVlanFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMacVlanRaw, error) {
+func macVlanFromLinkConfig(lc LinkBrief, specialEPIndex int) (*LinkMacVlanRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
 	result := &LinkMacVlanRaw{
 		LinkCommonParams: LinkCommonParams{
-			Mtu:    lc.MTU,
+			MTU:    lc.MTU,
 			Labels: lc.Labels,
 			Vars:   lc.Vars,
 		},
@@ -155,7 +157,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 		LinkAttrs: netlink.LinkAttrs{
 			Name:        l.NodeEndpoint.GetRandIfaceName(),
 			ParentIndex: parentInterface.Attrs().Index,
-			MTU:         l.Mtu,
+			MTU:         l.MTU,
 		},
 		Mode: mode,
 	}

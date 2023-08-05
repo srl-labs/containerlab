@@ -16,12 +16,14 @@ type LinkHostRaw struct {
 }
 
 // ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkHostRaw) ToLinkConfig() *LinkConfig {
-	lc := &LinkConfig{
-		Vars:      r.Vars,
-		Labels:    r.Labels,
-		MTU:       r.Mtu,
+func (r *LinkHostRaw) ToLinkConfig() *LinkBrief {
+	lc := &LinkBrief{
 		Endpoints: make([]string, 2),
+		LinkCommonParams: LinkCommonParams{
+			MTU:    r.MTU,
+			Labels: r.Labels,
+			Vars:   r.Vars,
+		},
 	}
 
 	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Endpoint.Node, r.Endpoint.Iface)
@@ -30,12 +32,12 @@ func (r *LinkHostRaw) ToLinkConfig() *LinkConfig {
 	return lc
 }
 
-func hostFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkHostRaw, error) {
+func hostFromLinkConfig(lc LinkBrief, specialEPIndex int) (*LinkHostRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
 	result := &LinkHostRaw{
 		LinkCommonParams: LinkCommonParams{
-			Mtu:    lc.MTU,
+			MTU:    lc.MTU,
 			Labels: lc.Labels,
 			Vars:   lc.Vars,
 		},
@@ -75,7 +77,7 @@ func (l *LinkHost) Deploy(ctx context.Context) error {
 	link := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: l.Endpoint.GetRandIfaceName(),
-			MTU:  l.Mtu,
+			MTU:  l.MTU,
 			// Mac address is set later on
 		},
 		PeerName: l.HostInterface,

@@ -10,12 +10,14 @@ type LinkMgmtNetRaw struct {
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkConfig {
-	lc := &LinkConfig{
-		Vars:      r.Vars,
-		Labels:    r.Labels,
-		MTU:       r.Mtu,
+func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkBrief {
+	lc := &LinkBrief{
 		Endpoints: make([]string, 2),
+		LinkCommonParams: LinkCommonParams{
+			MTU:    r.MTU,
+			Labels: r.Labels,
+			Vars:   r.Vars,
+		},
 	}
 
 	lc.Endpoints[0] = fmt.Sprintf("%s:%s", r.Endpoint.Node, r.Endpoint.Iface)
@@ -64,12 +66,12 @@ func (r *LinkMgmtNetRaw) GetType() LinkType {
 	return LinkTypeMgmtNet
 }
 
-func mgmtNetFromLinkConfig(lc LinkConfig, specialEPIndex int) (*LinkMgmtNetRaw, error) {
+func mgmtNetFromLinkConfig(lc LinkBrief, specialEPIndex int) (*LinkMgmtNetRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lc, specialEPIndex)
 
 	result := &LinkMgmtNetRaw{
 		LinkCommonParams: LinkCommonParams{
-			Mtu:    lc.MTU,
+			MTU:    lc.MTU,
 			Labels: lc.Labels,
 			Vars:   lc.Vars,
 		},
