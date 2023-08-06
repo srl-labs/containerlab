@@ -27,66 +27,68 @@ func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
 	}
 }
 
-func (e *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) {
+// Resolve resolves the EndpointRaw into an Endpoint interface that is implemented
+// by a concrete endpoint struct such as EndpointBridge, EndpointHost, EndpointVeth.
+func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) {
 	// check if the referenced node does exist
-	node, exists := params.Nodes[e.Node]
+	node, exists := params.Nodes[er.Node]
 	if !exists {
-		return nil, fmt.Errorf("unable to find node %s", e.Node)
+		return nil, fmt.Errorf("unable to find node %s", er.Node)
 	}
 
 	// create the result struct
-	genericEndpt := &EndptGeneric{
-		Node:  node,
-		Iface: e.Iface,
-		Link:  l,
+	genericEndpoint := &EndpointGeneric{
+		Node:      node,
+		IfaceName: er.Iface,
+		Link:      l,
 	}
 
 	// if MAC is present, set it
-	if e.Mac != "" {
-		m, err := net.ParseMAC(e.Mac)
+	if er.Mac != "" {
+		m, err := net.ParseMAC(er.Mac)
 		if err != nil {
 			return nil, err
 		}
-		genericEndpt.Mac = m
+		genericEndpoint.Mac = m
 	}
 
-	var finalEndpt Endpoint
+	var e Endpoint
 
 	switch node.GetLinkEndpointType() {
 	case LinkEndpointTypeBridge:
-		finalEndpt = &EndptBridge{
-			EndptGeneric:    *genericEndpt,
+		e = &EndpointBridge{
+			EndpointGeneric: *genericEndpoint,
 			masterInterface: node.GetShortName(),
 		}
 	case LinkEndpointTypeHost:
-		finalEndpt = &EndptHost{
-			EndptGeneric: *genericEndpt,
+		e = &EndpointHost{
+			EndpointGeneric: *genericEndpoint,
 		}
-	case LinkEndpointTypeRegular:
-		finalEndpt = &EndptVeth{
-			EndptGeneric: *genericEndpt,
+	case LinkEndpointTypeVeth:
+		e = &EndpointVeth{
+			EndpointGeneric: *genericEndpoint,
 		}
 	}
 
 	// also add the endpoint to the node
-	err := node.AddEndpoint(finalEndpt)
+	err := node.AddEndpoint(e)
 	if err != nil {
 		return nil, err
 	}
 
-	return finalEndpt, nil
+	return e, nil
 }
 
-type EndptGeneric struct {
-	Node     LinkNode
-	Iface    string
-	Link     Link
-	Mac      net.HardwareAddr
-	randName string
-	state    EndptDeployState
+type EndpointGeneric struct {
+	Node      LinkNode
+	IfaceName string
+	Link      Link
+	Mac       net.HardwareAddr
+	randName  string
+	state     EndptDeployState
 }
 
-func (e *EndptGeneric) GetRandIfaceName() string {
+func (e *EndpointGeneric) GetRandIfaceName() string {
 	// generate random interface name on the fly if not already generated
 	if e.randName == "" {
 		e.randName = genRandomIfName()
@@ -94,37 +96,37 @@ func (e *EndptGeneric) GetRandIfaceName() string {
 	return e.randName
 }
 
-func (e *EndptGeneric) GetIfaceName() string {
-	return e.Iface
+func (e *EndpointGeneric) GetIfaceName() string {
+	return e.IfaceName
 }
 
-func (e *EndptGeneric) GetState() EndptDeployState {
+func (e *EndpointGeneric) GetState() EndptDeployState {
 	return e.state
 }
 
-func (e *EndptGeneric) GetMac() net.HardwareAddr {
+func (e *EndpointGeneric) GetMac() net.HardwareAddr {
 	return e.Mac
 }
 
-func (e *EndptGeneric) GetLink() Link {
+func (e *EndpointGeneric) GetLink() Link {
 	return e.Link
 }
 
-func (e *EndptGeneric) GetNode() LinkNode {
+func (e *EndpointGeneric) GetNode() LinkNode {
 	return e.Node
 }
 
-func (e *EndptGeneric) IsSameNodeInterface(ept Endpoint) bool {
-	return e.Node == ept.GetNode() && e.Iface == ept.GetIfaceName()
+func (e *EndpointGeneric) IsSameNodeInterface(ept Endpoint) bool {
+	return e.Node == ept.GetNode() && e.IfaceName == ept.GetIfaceName()
 }
 
-func (e *EndptGeneric) Deploy(ctx context.Context) error {
+func (e *EndpointGeneric) Deploy(ctx context.Context) error {
 	e.state = EndptDeployStateReady
 	return e.Link.Deploy(ctx)
 }
 
-func (e *EndptGeneric) String() string {
-	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.Iface)
+func (e *EndpointGeneric) String() string {
+	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.IfaceName)
 }
 
 type EndptDeployState int8
@@ -156,12 +158,12 @@ type Endpoint interface {
 	GetState() EndptDeployState
 }
 
-type EndptBridge struct {
-	EndptGeneric
+type EndpointBridge struct {
+	EndpointGeneric
 	masterInterface string
 }
 
-func (e *EndptBridge) Verify(_ []Endpoint) error {
+func (e *EndpointBridge) Verify(_ []Endpoint) error {
 	errs := []error{}
 	err := CheckPerNodeInterfaceUniqueness(e)
 	if err != nil {
@@ -181,11 +183,11 @@ func (e *EndptBridge) Verify(_ []Endpoint) error {
 	return nil
 }
 
-type EndptHost struct {
-	EndptGeneric
+type EndpointHost struct {
+	EndpointGeneric
 }
 
-func (e *EndptHost) Verify(_ []Endpoint) error {
+func (e *EndpointHost) Verify(_ []Endpoint) error {
 	errs := []error{}
 	err := CheckPerNodeInterfaceUniqueness(e)
 	if err != nil {
@@ -202,7 +204,7 @@ func (e *EndptHost) Verify(_ []Endpoint) error {
 }
 
 type EndptMacVlan struct {
-	EndptGeneric
+	EndpointGeneric
 }
 
 // Verify verifies the veth based deployment pre-conditions
@@ -210,12 +212,12 @@ func (e *EndptMacVlan) Verify(_ []Endpoint) error {
 	return CheckEndptExists(e)
 }
 
-type EndptVeth struct {
-	EndptGeneric
+type EndpointVeth struct {
+	EndpointGeneric
 }
 
 // Verify verifies the veth based deployment pre-conditions
-func (e *EndptVeth) Verify(_ []Endpoint) error {
+func (e *EndpointVeth) Verify(_ []Endpoint) error {
 	return CheckPerNodeInterfaceUniqueness(e)
 }
 

@@ -268,9 +268,9 @@ type LinkNode interface {
 type LinkEndpointType string
 
 const (
-	LinkEndpointTypeRegular = "regular"
-	LinkEndpointTypeBridge  = "bridge"
-	LinkEndpointTypeHost    = "host"
+	LinkEndpointTypeVeth   = "regular"
+	LinkEndpointTypeBridge = "bridge"
+	LinkEndpointTypeHost   = "host"
 )
 
 // SetNameMACAndUpInterface is a helper function that will bind interface name and Mac

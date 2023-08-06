@@ -48,7 +48,6 @@ func (r *LinkVEthRaw) GetType() LinkType {
 }
 
 func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
-
 	// create LinkVEth struct
 	l := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,

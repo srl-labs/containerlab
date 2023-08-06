@@ -123,12 +123,12 @@ func (l *LinkHost) Remove(_ context.Context) error {
 func (l *LinkHost) GetEndpoints() []Endpoint {
 	return []Endpoint{
 		l.Endpoint,
-		&EndptHost{
-			EndptGeneric: EndptGeneric{
-				state: EndptDeployStateDeployed,
-				Node:  GetFakeHostLinkNode(),
-				Iface: l.HostInterface,
-				Link:  l,
+		&EndpointHost{
+			EndpointGeneric: EndpointGeneric{
+				state:     EndptDeployStateDeployed,
+				Node:      GetFakeHostLinkNode(),
+				IfaceName: l.HostInterface,
+				Link:      l,
 			},
 		},
 	}

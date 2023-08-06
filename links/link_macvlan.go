@@ -56,9 +56,9 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	hostLinkNode := GetFakeHostLinkNode()
 	ep := &EndptMacVlan{
-		EndptGeneric: EndptGeneric{
-			Iface: r.HostInterface,
-			Node:  hostLinkNode,
+		EndpointGeneric: EndpointGeneric{
+			IfaceName: r.HostInterface,
+			Node:      hostLinkNode,
 			// Link is being set after the link in created further down
 		},
 	}

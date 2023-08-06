@@ -448,7 +448,7 @@ func (d *DefaultNode) GetEndpoints() []links.Endpoint {
 }
 
 func (d *DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
-	return links.LinkEndpointTypeRegular
+	return links.LinkEndpointTypeVeth
 }
 
 func (d *DefaultNode) GetShortName() string {

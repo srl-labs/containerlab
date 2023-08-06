@@ -35,12 +35,12 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	fakeMgmtBridgeNode := GetFakeMgmtBrLinkNode(params.MgmtBridgeName)
 
-	bridgeEp := &EndptBridge{
-		EndptGeneric: EndptGeneric{
-			Node:  fakeMgmtBridgeNode,
-			state: EndptDeployStateDeployed,
-			Iface: r.HostInterface,
-			Link:  link,
+	bridgeEp := &EndpointBridge{
+		EndpointGeneric: EndpointGeneric{
+			Node:      fakeMgmtBridgeNode,
+			state:     EndptDeployStateDeployed,
+			IfaceName: r.HostInterface,
+			Link:      link,
 		},
 		masterInterface: params.MgmtBridgeName,
 	}
