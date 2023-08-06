@@ -26,7 +26,7 @@ func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkBrief {
 	return lc
 }
 
-func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
+func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// create the LinkMgmtNet struct
 	link := &LinkVEth{

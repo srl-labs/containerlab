@@ -47,7 +47,7 @@ func (r *LinkVEthRaw) GetType() LinkType {
 	return LinkTypeVEth
 }
 
-func (r *LinkVEthRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
+func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// create LinkVEth struct
 	l := &LinkVEth{

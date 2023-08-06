@@ -51,7 +51,7 @@ func (r *LinkHostRaw) GetType() LinkType {
 	return LinkTypeHost
 }
 
-func (r *LinkHostRaw) Resolve(params *ResolveParams) (LinkInterf, error) {
+func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	link := &LinkHost{
 		LinkCommonParams: r.LinkCommonParams,
 		HostInterface:    r.HostInterface,

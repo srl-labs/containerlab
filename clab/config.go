@@ -68,7 +68,7 @@ func (c *CLab) parseTopology() error {
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
-	c.Links = make(map[int]links.LinkInterf)
+	c.Links = make(map[int]links.Link)
 
 	// initialize the Node information from the topology map
 	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))

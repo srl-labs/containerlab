@@ -24,7 +24,7 @@ func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
 	}
 }
 
-func (e *EndpointRaw) Resolve(params *ResolveParams, l LinkInterf) (Endpt, error) {
+func (e *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpt, error) {
 	// check if the referenced node does exist
 	node, exists := params.Nodes[e.Node]
 	if !exists {
@@ -77,7 +77,7 @@ func (e *EndpointRaw) Resolve(params *ResolveParams, l LinkInterf) (Endpt, error
 type EndptGeneric struct {
 	Node     LinkNode
 	Iface    string
-	Link     LinkInterf
+	Link     Link
 	Mac      net.HardwareAddr
 	randName string
 	state    EndptDeployState
@@ -103,7 +103,7 @@ func (e *EndptGeneric) GetMac() net.HardwareAddr {
 	return e.Mac
 }
 
-func (e *EndptGeneric) GetLink() LinkInterf {
+func (e *EndptGeneric) GetLink() Link {
 	return e.Link
 }
 
@@ -140,7 +140,7 @@ type Endpt interface {
 	Deploy(ctx context.Context) error
 	String() string
 	// GetLink retrieve the link that the endpoint is assiged to
-	GetLink() LinkInterf
+	GetLink() Link
 	// Verify is used to verify the endpoint with all its
 	// dependencies. The Endpt slice contains all the Endpoints
 	// of the topology

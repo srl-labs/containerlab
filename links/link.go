@@ -210,12 +210,18 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 	return nil, fmt.Errorf("unable to marshall")
 }
 
+// RawLink is an interface that all raw link types must implement.
+// Raw link types define the links as they are defined in the topology file
+// and solely a product of unmarshalling.
+// Raw links are later "resolved" to concrete link types (e.g LinkVeth).
 type RawLink interface {
-	Resolve(params *ResolveParams) (LinkInterf, error)
+	Resolve(params *ResolveParams) (Link, error)
 	GetType() LinkType
 }
 
-type LinkInterf interface {
+// Link is an interface that all concrete link types must implement.
+// Concrete link types are resolved from raw links and become part of CLab.Links.
+type Link interface {
 	Deploy(context.Context) error
 	Remove(context.Context) error
 	GetType() LinkType

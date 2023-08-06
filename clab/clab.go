@@ -31,8 +31,8 @@ type CLab struct {
 	Config        *Config `json:"config,omitempty"`
 	TopoPaths     *types.TopoPaths
 	m             *sync.RWMutex
-	Nodes         map[string]nodes.Node    `json:"nodes,omitempty"`
-	Links         map[int]links.LinkInterf `json:"links,omitempty"`
+	Nodes         map[string]nodes.Node `json:"nodes,omitempty"`
+	Links         map[int]links.Link    `json:"links,omitempty"`
 	Endpoints     []links.Endpt
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
@@ -173,7 +173,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		},
 		m:        new(sync.RWMutex),
 		Nodes:    make(map[string]nodes.Node),
-		Links:    make(map[int]links.LinkInterf),
+		Links:    make(map[int]links.Link),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
 		Cert:     &cert.Cert{},
 	}
@@ -608,10 +608,12 @@ func (c *CLab) VethCleanup(ctx context.Context) error {
 	return nil
 }
 
+// ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
 func (c *CLab) ResolveLinks() error {
-	// create a types.LinkNode from the nodes.Node
-	// altough the nodes.Node interface is a Superset of the types.LinkNode
-	// we need to convert the map, since the whole map seems to not be dynamically typeconvertable
+	// resolveNodes is a map of all nodes in the topology
+	// that is artificially created to combat circular dependencies.
+	// If no circ deps were in place we could've used c.Nodes map instead.
+	// The map is used to resolve links between the nodes by passing it in the ResolveParams struct.
 	resolveNodes := make(map[string]links.LinkNode, len(c.Nodes))
 	for k, v := range c.Nodes {
 		resolveNodes[k] = v
