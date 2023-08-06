@@ -222,9 +222,13 @@ type RawLink interface {
 // Link is an interface that all concrete link types must implement.
 // Concrete link types are resolved from raw links and become part of CLab.Links.
 type Link interface {
+	// Deploy deploys the link.
 	Deploy(context.Context) error
+	// Remove removes the link.
 	Remove(context.Context) error
+	// GetType returns the type of the link.
 	GetType() LinkType
+	// GetEndpoints returns the endpoints of the link.
 	GetEndpoints() []Endpoint
 }
 

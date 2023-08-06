@@ -638,8 +638,10 @@ func (c *CLab) ResolveLinks() error {
 		if err != nil {
 			return err
 		}
+
 		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
 		c.Links[i] = l
 	}
+
 	return nil
 }
