@@ -634,7 +634,6 @@ func (c *CLab) ResolveLinks() error {
 	}
 
 	for i, l := range c.Config.Topology.Links {
-		// i represents the endpoint integer and l provide the link struct
 		l, err := l.Link.Resolve(resolveParams)
 		if err != nil {
 			return err

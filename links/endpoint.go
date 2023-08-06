@@ -15,7 +15,7 @@ import (
 type EndpointRaw struct {
 	Node  string `yaml:"node"`
 	Iface string `yaml:"interface"`
-	Mac   string `yaml:"mac,omitempty"`
+	MAC   string `yaml:"mac,omitempty"`
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
@@ -23,12 +23,15 @@ func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
 	return &EndpointRaw{
 		Node:  node,
 		Iface: nodeIf,
-		Mac:   Mac,
+		MAC:   Mac,
 	}
 }
 
 // Resolve resolves the EndpointRaw into an Endpoint interface that is implemented
 // by a concrete endpoint struct such as EndpointBridge, EndpointHost, EndpointVeth.
+// The type of an endpoint is determined by the node it belongs to.
+// Resolving a raw endpoint adds an associated Link and Node to the endpoint.
+// It also adds the endpoint to the node.
 func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) {
 	// check if the referenced node does exist
 	node, exists := params.Nodes[er.Node]
@@ -36,7 +39,6 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		return nil, fmt.Errorf("unable to find node %s", er.Node)
 	}
 
-	// create the result struct
 	genericEndpoint := &EndpointGeneric{
 		Node:      node,
 		IfaceName: er.Iface,
@@ -44,12 +46,12 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	}
 
 	// if MAC is present, set it
-	if er.Mac != "" {
-		m, err := net.ParseMAC(er.Mac)
+	if er.MAC != "" {
+		m, err := net.ParseMAC(er.MAC)
 		if err != nil {
 			return nil, err
 		}
-		genericEndpoint.Mac = m
+		genericEndpoint.MAC = m
 	}
 
 	var e Endpoint
@@ -79,13 +81,15 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	return e, nil
 }
 
+// EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
 type EndpointGeneric struct {
 	Node      LinkNodeResolver
 	IfaceName string
-	Link      Link
-	Mac       net.HardwareAddr
-	randName  string
-	state     EndptDeployState
+	// Link is the link this endpoint belongs to.
+	Link     Link
+	MAC      net.HardwareAddr
+	randName string
+	state    EndpointDeployState
 }
 
 func (e *EndpointGeneric) GetRandIfaceName() string {
@@ -100,12 +104,12 @@ func (e *EndpointGeneric) GetIfaceName() string {
 	return e.IfaceName
 }
 
-func (e *EndpointGeneric) GetState() EndptDeployState {
+func (e *EndpointGeneric) GetState() EndpointDeployState {
 	return e.state
 }
 
 func (e *EndpointGeneric) GetMac() net.HardwareAddr {
-	return e.Mac
+	return e.MAC
 }
 
 func (e *EndpointGeneric) GetLink() Link {
@@ -121,7 +125,7 @@ func (e *EndpointGeneric) IsSameNodeInterface(ept Endpoint) bool {
 }
 
 func (e *EndpointGeneric) Deploy(ctx context.Context) error {
-	e.state = EndptDeployStateReady
+	e.state = EndpointDeployStateReady
 	return e.Link.Deploy(ctx)
 }
 
@@ -129,12 +133,12 @@ func (e *EndpointGeneric) String() string {
 	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.IfaceName)
 }
 
-type EndptDeployState int8
+type EndpointDeployState uint8
 
 const (
-	EndptDeployStateNotReady = iota
-	EndptDeployStateReady
-	EndptDeployStateDeployed
+	EndpointDeployStateNotReady = iota
+	EndpointDeployStateReady
+	EndpointDeployStateDeployed
 )
 
 // Endpoint is the interface that all endpoint types implement.
@@ -155,7 +159,7 @@ type Endpoint interface {
 	// IsSameNodeInterface is the equal check for two endpoints that
 	// does take the node and the Interfacename into account
 	IsSameNodeInterface(ept Endpoint) bool
-	GetState() EndptDeployState
+	GetState() EndpointDeployState
 }
 
 type EndpointBridge struct {

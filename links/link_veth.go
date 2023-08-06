@@ -47,6 +47,9 @@ func (r *LinkVEthRaw) GetType() LinkType {
 	return LinkTypeVEth
 }
 
+// Resolve resolves the raw veth link definition into a Link interface that is implemented
+// by a concrete LinkVEth struct.
+// Resolving a veth link resolves its endpoints.
 func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	// create LinkVEth struct
 	l := &LinkVEth{
@@ -54,15 +57,14 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 		Endpoints:        make([]Endpoint, 0, 2),
 	}
 
-	// resolve endpoints
-	for _, ep := range r.Endpoints {
-		// resolve endpoint
-		ept, err := ep.Resolve(params, l)
+	// resolve raw endpoints (epr) to endpoints (ep)
+	for _, epr := range r.Endpoints {
+		ep, err := epr.Resolve(params, l)
 		if err != nil {
 			return nil, err
 		}
-		// set resolved endpoint in link endpoints
-		l.Endpoints = append(l.Endpoints, ept)
+
+		l.Endpoints = append(l.Endpoints, ep)
 	}
 
 	return l, nil
@@ -105,7 +107,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	defer l.m.Unlock()
 
 	for _, ep := range l.Endpoints {
-		if ep.GetState() < EndptDeployStateReady {
+		if ep.GetState() < EndpointDeployStateReady {
 			return nil
 		}
 	}
