@@ -388,10 +388,10 @@ func (mr *MockNodeMockRecorder) Config() *gomock.Call {
 }
 
 // GetEndpoints mocks base method.
-func (m *MockNode) GetEndpoints() []links.Endpt {
+func (m *MockNode) GetEndpoints() []links.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEndpoints")
-	ret0, _ := ret[0].([]links.Endpt)
+	ret0, _ := ret[0].([]links.Endpoint)
 	return ret0
 }
 

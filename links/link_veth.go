@@ -52,7 +52,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	// create LinkVEth struct
 	l := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
-		Endpoints:        make([]Endpt, 0, 2),
+		Endpoints:        make([]Endpoint, 0, 2),
 	}
 
 	// resolve endpoints
@@ -90,7 +90,7 @@ type LinkVEth struct {
 	// m mutex is used when deployign the link.
 	m sync.Mutex `yaml:"-"`
 	LinkCommonParams
-	Endpoints []Endpt
+	Endpoints []Endpoint
 }
 
 func (*LinkVEth) GetType() LinkType {
@@ -166,6 +166,6 @@ func (l *LinkVEth) Remove(_ context.Context) error {
 	return nil
 }
 
-func (l *LinkVEth) GetEndpoints() []Endpt {
+func (l *LinkVEth) GetEndpoints() []Endpoint {
 	return l.Endpoints
 }

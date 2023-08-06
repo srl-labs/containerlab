@@ -42,7 +42,7 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 }
 
 // AddEndpoint mocks base method.
-func (m *MockNode) AddEndpoint(e links.Endpt) error {
+func (m *MockNode) AddEndpoint(e links.Endpoint) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddEndpoint", e)
 	ret0, _ := ret[0].(error)
@@ -197,10 +197,10 @@ func (mr *MockNodeMockRecorder) GetContainers(ctx interface{}) *gomock.Call {
 }
 
 // GetEndpoints mocks base method.
-func (m *MockNode) GetEndpoints() []links.Endpt {
+func (m *MockNode) GetEndpoints() []links.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEndpoints")
-	ret0, _ := ret[0].([]links.Endpt)
+	ret0, _ := ret[0].([]links.Endpoint)
 	return ret0
 }
 

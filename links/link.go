@@ -225,7 +225,7 @@ type Link interface {
 	Deploy(context.Context) error
 	Remove(context.Context) error
 	GetType() LinkType
-	GetEndpoints() []Endpt
+	GetEndpoints() []Endpoint
 }
 
 func extractHostNodeInterfaceData(lb *LinkBrief, specialEPIndex int) (host, hostIf, node, nodeIf string) {
@@ -258,10 +258,10 @@ type LinkNode interface {
 	// the master of the interface and bring the interface up.
 	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 	// AddLink adds the Link to the node
-	AddEndpoint(e Endpt) error
+	AddEndpoint(e Endpoint) error
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
-	GetEndpoints() []Endpt
+	GetEndpoints() []Endpoint
 	ExecFunction(func(ns.NetNS) error) error
 }
 
@@ -275,7 +275,7 @@ const (
 
 // SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
 // and return a function that can run in the netns.Do() call for execution in a network namespace
-func SetNameMACAndUpInterface(l netlink.Link, endpt Endpt) func(ns.NetNS) error {
+func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the given link
 		err := netlink.LinkSetName(l, endpt.GetIfaceName())
@@ -303,7 +303,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpt) func(ns.NetNS) error 
 
 // SetNameMACMasterAndUpInterface is a helper function that will bind interface name and Mac
 // and return a function that can run in the netns.Do() call for execution in a network namespace
-func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpt, master string) func(ns.NetNS) error {
+func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpoint, master string) func(ns.NetNS) error {
 	baseFunc := SetNameMACAndUpInterface(l, endpt)
 
 	return func(n ns.NetNS) error {
@@ -346,7 +346,7 @@ func GetFakeHostLinkNode() LinkNode {
 
 		_fakeHostLinkNodeInstance = &fakeHostLinkNode{
 			GenericLinkNode: GenericLinkNode{shortname: "host",
-				endpoints: []Endpt{},
+				endpoints: []Endpoint{},
 				nspath:    nspath,
 			},
 		}
@@ -374,7 +374,7 @@ func GetFakeMgmtBrLinkNode(mgmtBridgeName string) LinkNode {
 		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
 				shortname: mgmtBridgeName,
-				endpoints: []Endpt{},
+				endpoints: []Endpoint{},
 				nspath:    nspath,
 			},
 		}

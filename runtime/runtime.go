@@ -150,5 +150,5 @@ TIMEOUT_LOOP:
 
 type Node interface {
 	Config() *types.NodeConfig
-	GetEndpoints() []links.Endpt
+	GetEndpoints() []links.Endpoint
 }

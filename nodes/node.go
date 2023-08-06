@@ -93,8 +93,8 @@ type Node interface {
 	// Adds the given link to the Node. After adding the Link to the node,
 	// the given function f is called within the Nodes namespace.
 	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddEndpoint(e links.Endpt) error
-	GetEndpoints() []links.Endpt
+	AddEndpoint(e links.Endpoint) error
+	GetEndpoints() []links.Endpoint
 	GetLinkEndpointType() links.LinkEndpointType
 	GetShortName() string
 	SetupNetworking(ctx context.Context) error
@@ -122,7 +122,7 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 
 // GenericVMInterfaceCheck checks interface names for generic VM-based nodes.
 // These nodes could only have interfaces named ethX, where X is >0.
-func GenericVMInterfaceCheck(nodeName string, eps []links.Endpt) error {
+func GenericVMInterfaceCheck(nodeName string, eps []links.Endpoint) error {
 	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
 	for _, e := range eps {
 		if !ifRe.MatchString(e.GetIfaceName()) {

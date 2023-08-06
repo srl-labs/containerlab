@@ -33,7 +33,7 @@ type CLab struct {
 	m             *sync.RWMutex
 	Nodes         map[string]nodes.Node `json:"nodes,omitempty"`
 	Links         map[int]links.Link    `json:"links,omitempty"`
-	Endpoints     []links.Endpt
+	Endpoints     []links.Endpoint
 	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	globalRuntime string
 	// reg is a registry of node kinds

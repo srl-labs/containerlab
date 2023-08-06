@@ -57,7 +57,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 
-	link.Endpoints = []Endpt{bridgeEp, contEp}
+	link.Endpoints = []Endpoint{bridgeEp, contEp}
 
 	return link, nil
 }

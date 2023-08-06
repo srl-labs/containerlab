@@ -69,7 +69,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 type LinkHost struct {
 	LinkCommonParams
 	HostInterface string
-	Endpoint      Endpt
+	Endpoint      Endpoint
 }
 
 func (l *LinkHost) Deploy(ctx context.Context) error {
@@ -120,8 +120,8 @@ func (l *LinkHost) Remove(_ context.Context) error {
 	return nil
 }
 
-func (l *LinkHost) GetEndpoints() []Endpt {
-	return []Endpt{
+func (l *LinkHost) GetEndpoints() []Endpoint {
+	return []Endpoint{
 		l.Endpoint,
 		&EndptHost{
 			EndptGeneric: EndptGeneric{
@@ -136,7 +136,7 @@ func (l *LinkHost) GetEndpoints() []Endpt {
 
 type GenericLinkNode struct {
 	shortname string
-	endpoints []Endpt
+	endpoints []Endpoint
 	nspath    string
 }
 
@@ -164,7 +164,7 @@ func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
 	return netns.Do(f)
 }
 
-func (g *GenericLinkNode) AddEndpoint(e Endpt) error {
+func (g *GenericLinkNode) AddEndpoint(e Endpoint) error {
 	g.endpoints = append(g.endpoints, e)
 	return nil
 }
@@ -173,6 +173,6 @@ func (g *GenericLinkNode) GetShortName() string {
 	return g.shortname
 }
 
-func (g *GenericLinkNode) GetEndpoints() []Endpt {
+func (g *GenericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
 }

@@ -85,8 +85,8 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
 type LinkMacVlan struct {
 	LinkCommonParams
-	HostEndpoint Endpt
-	NodeEndpoint Endpt
+	HostEndpoint Endpoint
+	NodeEndpoint Endpoint
 	Mode         MacVlanMode
 }
 
@@ -183,8 +183,8 @@ func (l *LinkMacVlan) Remove(_ context.Context) error {
 	return nil
 }
 
-func (l *LinkMacVlan) GetEndpoints() []Endpt {
-	return []Endpt{
+func (l *LinkMacVlan) GetEndpoints() []Endpoint {
+	return []Endpoint{
 		l.NodeEndpoint,
 		l.HostEndpoint,
 	}

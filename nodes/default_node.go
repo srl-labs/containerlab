@@ -38,7 +38,7 @@ type DefaultNode struct {
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
-	NWEndpoints   []links.Endpt
+	NWEndpoints   []links.Endpoint
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -438,12 +438,12 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 	return netns.Do(f)
 }
 
-func (d *DefaultNode) AddEndpoint(e links.Endpt) error {
+func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
 	d.NWEndpoints = append(d.NWEndpoints, e)
 	return nil
 }
 
-func (d *DefaultNode) GetEndpoints() []links.Endpt {
+func (d *DefaultNode) GetEndpoints() []links.Endpoint {
 	return d.NWEndpoints
 }
 
