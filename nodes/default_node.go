@@ -38,7 +38,8 @@ type DefaultNode struct {
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
-	NWEndpoints   []links.Endpoint
+	// List of link endpoints that are connected to the node.
+	Endpoints []links.Endpoint
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -439,14 +440,16 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 }
 
 func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
-	d.NWEndpoints = append(d.NWEndpoints, e)
+	d.Endpoints = append(d.Endpoints, e)
 	return nil
 }
 
 func (d *DefaultNode) GetEndpoints() []links.Endpoint {
-	return d.NWEndpoints
+	return d.Endpoints
 }
 
+// GetLinkEndpointType returns a veth link endpoint type for default nodes.
+// The LinkEndpointTypeVeth indicates a veth endpoint which doesn't require special handling.
 func (d *DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
 	return links.LinkEndpointTypeVeth
 }
@@ -456,7 +459,7 @@ func (d *DefaultNode) GetShortName() string {
 }
 
 func (d *DefaultNode) SetupNetworking(ctx context.Context) error {
-	for _, ep := range d.NWEndpoints {
+	for _, ep := range d.Endpoints {
 		err := ep.Deploy(ctx)
 		if err != nil {
 			return err

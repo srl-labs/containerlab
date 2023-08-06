@@ -130,7 +130,7 @@ func (n *xrd) genInterfacesEnv() {
 	// here we take the number of links users set in the topology to get the right # of links
 	var interfaceEnvVar string
 
-	for _, ep := range n.NWEndpoints {
+	for _, ep := range n.Endpoints {
 		// ifName is a linux interface name with dashes swapped for slashes to be used in the config
 		ifName := strings.ReplaceAll(ep.GetIfaceName(), "-", "/")
 		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", n.GetShortName(), ifName)
@@ -144,7 +144,7 @@ func (n *xrd) genInterfacesEnv() {
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *xrd) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`^Gi0-0-0-\d+$`)
-	for _, e := range n.NWEndpoints {
+	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number", e.GetIfaceName())
 		}

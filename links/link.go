@@ -259,7 +259,7 @@ type LinkNodeResolver interface {
 	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
 	// the master of the interface and bring the interface up.
 	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	// AddLink adds the Link to the node
+	// AddEndpoint adds the Endpoint to the node
 	AddEndpoint(e Endpoint) error
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
@@ -270,7 +270,7 @@ type LinkNodeResolver interface {
 type LinkEndpointType string
 
 const (
-	LinkEndpointTypeVeth   = "regular"
+	LinkEndpointTypeVeth   = "veth"
 	LinkEndpointTypeBridge = "bridge"
 	LinkEndpointTypeHost   = "host"
 )

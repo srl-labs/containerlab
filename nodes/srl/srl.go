@@ -528,7 +528,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	}
 
 	// prepare the endpoints
-	for _, e := range s.NWEndpoints {
+	for _, e := range s.Endpoints {
 		ifName := e.GetIfaceName()
 		// split the interface identifier into their parts
 		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
@@ -695,7 +695,7 @@ func (s *srl) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|mgmt0`)
 	nm := strings.ToLower(s.Cfg.NetworkMode)
 
-	for _, e := range s.NWEndpoints {
+	for _, e := range s.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.GetIfaceName())
 		}
