@@ -252,9 +252,10 @@ func genRandomIfName() string {
 	return "clab-" + string(s[:8])
 }
 
-// LinkNodeResolver interface is an interface that is satisfied by all nodes.
-// It is used to pass nodes to the link resolver without causing a circular dependency.
-type LinkNodeResolver interface {
+// Node interface is an interface that is satisfied by all nodes.
+// It is used a subset of the nodes.Node interface and is used to pass nodes.Nodes
+// to the link resolver without causing a circular dependency.
+type Node interface {
 	// AddLink will take the given link and add it to the LinkNode
 	// in case of a regular container, it will push the link into the
 	// network namespace and then run the function f within the namespace
@@ -331,11 +332,11 @@ func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpoint, master strin
 // to resolve it to a concrete link type.
 // Parameters include all nodes of a topology and the name of the management bridge.
 type ResolveParams struct {
-	Nodes          map[string]LinkNodeResolver
+	Nodes          map[string]Node
 	MgmtBridgeName string
 }
 
-var _fakeHostLinkNodeInstance LinkNodeResolver
+var _fakeHostLinkNodeInstance Node
 
 type fakeHostLinkNode struct {
 	GenericLinkNode
@@ -345,7 +346,7 @@ func (*fakeHostLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeHost
 }
 
-func GetFakeHostLinkNode() LinkNodeResolver {
+func GetFakeHostLinkNode() Node {
 	if _fakeHostLinkNodeInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
@@ -363,7 +364,7 @@ func GetFakeHostLinkNode() LinkNodeResolver {
 	return _fakeHostLinkNodeInstance
 }
 
-var _fakeMgmtBrLinkMgmtBrInstance LinkNodeResolver
+var _fakeMgmtBrLinkMgmtBrInstance Node
 
 type fakeMgmtBridgeLinkNode struct {
 	GenericLinkNode
@@ -373,7 +374,7 @@ func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func GetFakeMgmtBrLinkNode(mgmtBridgeName string) LinkNodeResolver {
+func GetFakeMgmtBrLinkNode(mgmtBridgeName string) Node {
 	if _fakeMgmtBrLinkMgmtBrInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {

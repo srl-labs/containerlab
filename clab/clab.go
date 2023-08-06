@@ -614,13 +614,13 @@ func (c *CLab) ResolveLinks() error {
 	// that is artificially created to combat circular dependencies.
 	// If no circ deps were in place we could've used c.Nodes map instead.
 	// The map is used to resolve links between the nodes by passing it in the ResolveParams struct.
-	resolveNodes := make(map[string]links.LinkNodeResolver, len(c.Nodes))
+	resolveNodes := make(map[string]links.Node, len(c.Nodes))
 	for k, v := range c.Nodes {
 		resolveNodes[k] = v
 	}
 
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
-	specialNodes := map[string]links.LinkNodeResolver{
+	specialNodes := map[string]links.Node{
 		"host":     links.GetFakeHostLinkNode(),
 		"mgmt-net": links.GetFakeMgmtBrLinkNode(c.Config.Mgmt.Bridge),
 	}
