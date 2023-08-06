@@ -248,7 +248,9 @@ func genRandomIfName() string {
 	return "clab-" + string(s[:8])
 }
 
-type LinkNode interface {
+// LinkNodeResolver interface is an interface that is satisfied by all nodes.
+// It is used to pass nodes to the link resolver without causing a circular dependency.
+type LinkNodeResolver interface {
 	// AddLink will take the given link and add it to the LinkNode
 	// in case of a regular container, it will push the link into the
 	// network namespace and then run the function f within the namespace
@@ -321,12 +323,15 @@ func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpoint, master strin
 	}
 }
 
+// ResolveParams is a struct that is passed to the Resolve() function of a raw link
+// to resolve it to a concrete link type.
+// Parameters include all nodes of a topology and the name of the management bridge.
 type ResolveParams struct {
-	Nodes          map[string]LinkNode
+	Nodes          map[string]LinkNodeResolver
 	MgmtBridgeName string
 }
 
-var _fakeHostLinkNodeInstance LinkNode
+var _fakeHostLinkNodeInstance LinkNodeResolver
 
 type fakeHostLinkNode struct {
 	GenericLinkNode
@@ -336,7 +341,7 @@ func (*fakeHostLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeHost
 }
 
-func GetFakeHostLinkNode() LinkNode {
+func GetFakeHostLinkNode() LinkNodeResolver {
 	if _fakeHostLinkNodeInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
@@ -354,7 +359,7 @@ func GetFakeHostLinkNode() LinkNode {
 	return _fakeHostLinkNodeInstance
 }
 
-var _fakeMgmtBrLinkMgmtBrInstance LinkNode
+var _fakeMgmtBrLinkMgmtBrInstance LinkNodeResolver
 
 type fakeMgmtBridgeLinkNode struct {
 	GenericLinkNode
@@ -364,7 +369,7 @@ func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func GetFakeMgmtBrLinkNode(mgmtBridgeName string) LinkNode {
+func GetFakeMgmtBrLinkNode(mgmtBridgeName string) LinkNodeResolver {
 	if _fakeMgmtBrLinkMgmtBrInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {

@@ -80,7 +80,7 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 }
 
 type EndpointGeneric struct {
-	Node      LinkNode
+	Node      LinkNodeResolver
 	IfaceName string
 	Link      Link
 	Mac       net.HardwareAddr
@@ -112,7 +112,7 @@ func (e *EndpointGeneric) GetLink() Link {
 	return e.Link
 }
 
-func (e *EndpointGeneric) GetNode() LinkNode {
+func (e *EndpointGeneric) GetNode() LinkNodeResolver {
 	return e.Node
 }
 
@@ -140,7 +140,7 @@ const (
 // Endpoint is the interface that all endpoint types implement.
 // Endpoints like bridge, host, veth and macvlan are the types implementing this interface.
 type Endpoint interface {
-	GetNode() LinkNode
+	GetNode() LinkNodeResolver
 	GetIfaceName() string
 	GetRandIfaceName() string
 	GetMac() net.HardwareAddr
@@ -250,7 +250,7 @@ func CheckEndptExists(e Endpoint) error {
 
 // CheckBridgeExists verifies that the given bridge is present in the
 // netnwork namespace referenced via the provided nspath handle
-func CheckBridgeExists(n LinkNode, brName string) error {
+func CheckBridgeExists(n LinkNodeResolver, brName string) error {
 	return n.ExecFunction(func(_ ns.NetNS) error {
 		br, err := netlink.LinkByName(brName)
 		_, notfound := err.(netlink.LinkNotFoundError)
