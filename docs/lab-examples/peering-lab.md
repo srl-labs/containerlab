@@ -14,7 +14,7 @@ Internet eXchange Points are the glue that connects the Internet. They are the p
 
 Each of these topics is a whole body of knowledge on its own and various Internet exchange consortiums have published best practices and guidelines to help IXP operators and their members to configure their networks properly.
 
-The guidelines and current best practices are best to be practiced in a lab environment. And with this thought in mind we present containerlab users with this hands-on lab simulating an IXP with Route Servers and two peering memebers.
+The guidelines and current best practices are best to be reinforced in a lab environment. And with this thought in mind, we present containerlab users with this hands-on lab simulating an IXP with Route Servers and peering members.
 
 ## Lab summary
 
@@ -29,7 +29,7 @@ The guidelines and current best practices are best to be practiced in a lab envi
 
 ## Prerequisites
 
-Since containerlab uses containers as the nodes of a lab, Docker engine has to be [installed](../install.md#pre-requisites) on the host system first.
+Since containerlab uses containers as the nodes of a lab, the Docker engine has to be [installed](../install.md#pre-requisites) on the host system first.
 
 ## Lab topology
 
@@ -150,6 +150,9 @@ The basic configuration that is captured in the startup configuration files cont
 ### SR OS
 
 Nokia SR OS startup configuration file is provided in the form of a CLI-styled configuration blob that is captured in the [sros-partial.cfg][sros-partial-cfg]. The statements in this config file are applied when the node is started and ready to accept CLI commands.
+
+!!!tip
+    Throughout this lab we will introduce and explain different BGP features and provide the relevant configuration snippets. As it takes time to put in writing all the features, ref links, and stories around them, we created a configuration cheat sheet that contains a condensed version of the BGP peering configuration snippets for SR OS. The cheat sheet is available at [sajusal/sros-peering](https://github.com/sajusal/sros-peering/blob/main/README.md) repository and should help you to get started with the lab in a self-exploration mode.
 
 ### FRR
 
