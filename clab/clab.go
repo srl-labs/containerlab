@@ -644,8 +644,9 @@ func (c *CLab) ResolveLinks() error {
 
 		// add the link to the nodes connected with it
 		for _, ep := range l.GetEndpoints() {
-			n := c.Nodes[ep.GetNode().GetShortName()]
-			n.AddLink(l)
+			if n, ok := c.Nodes[ep.GetNode().GetShortName()]; ok {
+				n.AddLink(l)
+			}
 		}
 	}
 
