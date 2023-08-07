@@ -410,7 +410,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 
 				err = node.DeployLinks(ctx)
 				if err != nil {
-					log.Errorf("failed setting up networking for node %q: %v", node.Config().ShortName, err)
+					log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
 
