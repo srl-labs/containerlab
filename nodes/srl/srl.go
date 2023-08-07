@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -271,23 +270,6 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 	s.topologyName = params.TopologyName
 
 	return s.createSRLFiles()
-}
-
-// getRunningVersion retrieves the software version from a running SRL instance
-func (s *srl) getRunningVersion(ctx context.Context) (string, error) {
-	execResult, err := s.RunExec(ctx, exec.NewExecCmdFromSlice([]string{"sr_cli", "show", "version", "|", "as", "json"}))
-	if err != nil {
-		return "", err
-	}
-
-	result := map[string]any{}
-
-	err = json.Unmarshal([]byte(execResult.Stdout), &result)
-	if err != nil {
-		return "", err
-	}
-	version := result["basic system info"].(map[string]interface{})["Software Version"].(string)
-	return version, nil
 }
 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
