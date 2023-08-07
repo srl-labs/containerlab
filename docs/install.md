@@ -148,7 +148,8 @@ Once installed, issue `sudo service docker start` to start the docker service in
 Running containerlab on Mac OS is possible[^4] by means of a separate docker image with containerlab inside.
 
 !!!warning
-    ARM-based Macs (M1/2) are not supported, and no binaries are generated for this platform. This is mainly due to the lack of network images built for arm64 architecture as of now.
+    ARM-based Macs (M1/2) are not supported, and no binaries are generated for this platform. This is mainly due to the lack of network images built for arm64 architecture as of now.  
+    Nevertheless, it is technically possible to run Containerlab on ARM-based MacBook. Check [How to start Containerlab on ARM-based MacBook](#how-to-start-containerlab-on-arm-based-macbook) for details.
 
 To use this container use the following command:
 
@@ -247,6 +248,86 @@ When the container is started, you will have a bash shell opened with the direct
     +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
     ```
 
+### How to start Containerlab on ARM-based MacBook
+
+> While techically possible this solution requires further testing once arm64 network images are available.
+
+The easiest option to run Containerlab on M1/M2 laptop is to build container locally. We'll provide an example of custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
+
+Create `.devcontainer` directory in the root of the Containerlab repository with the following content:
+
+```text
+.devcontainer
+|- devcontainer.json
+|- Dockerfile
+```
+
+`Dockerfile`:
+
+```Dockerfile
+# The devcontainer will be based on Python 3.9
+# The base container already has entrypoint, vscode user account, etc. out of the box
+FROM mcr.microsoft.com/devcontainers/python:0-3.9-bullseye
+
+# containelab version will be set in devcontainer.json
+ARG _CLAB_VERSION
+
+# install some basic tools inside the container
+# adjust this list based on your demands
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    sshpass \
+    curl \
+    iputils-ping \
+    htop \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -Rf /usr/share/doc && rm -Rf /usr/share/man \
+    && apt-get clean
+
+# install preferred version of the containerlab
+RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
+    && pip3 install --user yamllint
+```
+
+`devcontainer.json`:
+
+```json
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "clab-for-arm",
+	"build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "_CLAB_VERSION": "0.43.0"
+        }
+    },
+    "features": {
+        // the Containerlab will run as docker-in-docker
+        // it is also possible to use docker-outside-docker feature
+        "ghcr.io/devcontainers/features/docker-in-docker:2.2.0": {
+            "version": "latest"
+        }
+    },
+    // add any required extensions that must be pre-installed in devcontainer
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // various tools
+                "tuxtina.json2yaml",
+                "vscode-icons-team.vscode-icons",
+                "mutantdino.resourcemonitor"
+            ]
+        }
+    }
+}
+```
+
+Once the devcontiner is defined as described above:
+
+- Open the devcontainer in VSCode
+- Import the required images for your cLab inside the container (if you are using Docker-in-Docker option)
+- Start you Containerlab
 
 
 ### Upgrade
