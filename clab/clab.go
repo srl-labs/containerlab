@@ -377,6 +377,11 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 ) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
+	pubKeys, err := RetrieveSSHPubKeys()
+	if err != nil {
+		log.Error(err)
+	}
+
 	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup,
 		dm dependency_manager.DependencyManager,
 	) {
@@ -404,6 +409,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 						Cert:         c.Cert,
 						TopologyName: c.Config.Name,
 						TopoPaths:    c.TopoPaths,
+						SSHPubKeys:   pubKeys,
 					},
 				)
 				if err != nil {

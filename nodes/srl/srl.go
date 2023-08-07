@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -21,6 +22,8 @@ import (
 	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/mod/semver"
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -65,6 +68,9 @@ set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
   {{- end }}
 {{ end -}}
+{{- range $key := .SSHPubKeys }}
+set / system aaa authentication linuxadmin-user ssh-key {{ $key }}
+{{- end }}
 set / system banner login-banner "{{ .Banner }}"
 commit save`
 )
@@ -135,8 +141,10 @@ type srl struct {
 
 	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
 	// to generate certificates
-	cert         *cert.Cert
-	topologyName string
+	cert           *cert.Cert
+	topologyName   string
+	sshPubKeys     []string
+	runningVersion string
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -247,12 +255,39 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		)
 	}
 
+	// store provided pubkeys
+	s.sshPubKeys = make([]string, 0, len(params.SSHPubKeys))
+	for _, k := range params.SSHPubKeys {
+		// marshall the publickey in authorizedKeys format
+		// convert it to a string
+		// and trim spaces (cause there will be a trailing newline)
+		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(k.PublicKey)))
+		s.sshPubKeys = append(s.sshPubKeys, x)
+	}
+
 	// store the certificate-related parameters
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	s.cert = params.Cert
 	s.topologyName = params.TopologyName
 
 	return s.createSRLFiles()
+}
+
+// getRunningVersion retrieves the software version from a running SRL instance
+func (s *srl) getRunningVersion(ctx context.Context) (string, error) {
+	execResult, err := s.RunExec(ctx, exec.NewExecCmdFromSlice([]string{"sr_cli", "show", "version", "|", "as", "json"}))
+	if err != nil {
+		return "", err
+	}
+
+	result := map[string]any{}
+
+	err = json.Unmarshal([]byte(execResult.Stdout), &result)
+	if err != nil {
+		return "", err
+	}
+	version := result["basic system info"].(map[string]interface{})["Software Version"].(string)
+	return version, nil
 }
 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
@@ -514,10 +549,18 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	// struct that holds data used in templating of the default config snippet
 	tplData := struct {
 		*types.NodeConfig
-		Banner string
+		Banner     string
+		SSHPubKeys []string
 	}{
 		s.Cfg,
 		b,
+		[]string{},
+	}
+
+	// srl v23.7.x and above add the ssh authkey for linuxadmin
+	// to the template
+	if semver.Compare(s.runningVersion, "v23.7") >= 0 {
+		tplData.SSHPubKeys = s.sshPubKeys
 	}
 
 	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning

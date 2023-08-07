@@ -11,7 +11,7 @@ type SrlVersion struct {
 	commit string
 }
 
-func (*srl) parseVersionString(s string) *SrlVersion {
+func (n *srl) parseVersionString(s string) *SrlVersion {
 	re, _ := regexp.Compile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
@@ -20,6 +20,6 @@ func (*srl) parseVersionString(s string) *SrlVersion {
 		// return all zeroes if failed to parse
 		return &SrlVersion{"0", "0", "0", "0", "0"}
 	}
-
+	n.runningVersion = v[0]
 	return &SrlVersion{v[1], v[2], v[3], v[4], v[5]}
 }

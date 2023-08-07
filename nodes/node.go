@@ -50,6 +50,7 @@ type PreDeployParams struct {
 	Cert         *cert.Cert
 	TopologyName string
 	TopoPaths    *types.TopoPaths
+	SSHPubKeys   []*types.SSHPubKey
 }
 
 // DeployParams contains parameters for the Deploy function.

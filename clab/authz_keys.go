@@ -13,7 +13,9 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
@@ -28,38 +30,15 @@ const (
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	p := utils.ResolvePath(pubKeysGlob, "")
-
-	all, err := filepath.Glob(p)
-	if err != nil {
-		return fmt.Errorf("failed globbing the path %s", p)
-	}
-
-	f := utils.ResolvePath(authzKeysFPath, "")
-
-	if utils.FileExists(f) {
-		log.Debugf("%s found, adding the public keys it contains", f)
-		all = append(all, f)
-	}
-
 	// get keys registered with ssh-agent
-	keys, err := SSHAgentKeys()
+	keys, err := RetrieveSSHPubKeys()
 	if err != nil {
 		log.Debug(err)
 	}
 
-	log.Debugf("extracted %d keys from ssh-agent", len(keys))
 	for _, k := range keys {
-		addKeyToBuffer(b, k)
-	}
-
-	for _, fn := range all {
-		rb, err := os.ReadFile(fn)
-		if err != nil {
-			return fmt.Errorf("failed reading the file %s: %v", fn, err)
-		}
-
-		addKeyToBuffer(b, string(rb))
+		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(k.PublicKey)))
+		addKeyToBuffer(b, x)
 	}
 
 	clabAuthzKeysFPath := c.TopoPaths.AuthorizedKeysFilename()
@@ -71,21 +50,68 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	return os.Chmod(clabAuthzKeysFPath, 0644) // skipcq: GSC-G302
 }
 
-// addKeyToBuffer adds a key to the buffer if the key is not already present.
-func addKeyToBuffer(b *bytes.Buffer, key string) {
-	// since they key might have a comment as a third field, we need to strip it
-	elems := strings.Fields(key)
-	if len(elems) < 2 {
-		return
+// RetrieveSSHAuthorizedKeys retrieves public keys present in the pubKeysGlob
+// wildcard path.
+func RetrieveSSHAuthorizedKeys() ([]*types.SSHPubKey, error) {
+	keys := []*types.SSHPubKey{}
+	p := utils.ResolvePath(pubKeysGlob, "")
+
+	all, err := filepath.Glob(p)
+	if err != nil {
+		return nil, fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	if !strings.Contains(b.String(), elems[1]) {
+	f := utils.ResolvePath(authzKeysFPath, "")
+
+	if utils.FileExists(f) {
+		log.Debugf("%s found, adding the public keys it contains", f)
+		all = append(all, f)
+	}
+
+	// iterate through all the *.pub files an parse them as ssh.PublicKey
+	for _, fn := range all {
+		rb, err := os.ReadFile(fn)
+		if err != nil {
+			return nil, fmt.Errorf("failed reading the file %s: %v", fn, err)
+		}
+
+		pubKey, comment, _, _, err := ssh.ParseAuthorizedKey(rb)
+		if err != nil {
+			return nil, err
+		}
+
+		keys = append(keys, types.NewSSHPublicKey(pubKey, comment))
+	}
+	return keys, nil
+}
+
+// RetrieveSSHPubKeys retrieves the PubKeys from the different sources
+// SSHAgent as well as all home dir based /.ssh/*.pub files.
+func RetrieveSSHPubKeys() ([]*types.SSHPubKey, error) {
+	keys, err := RetrieveSSHAuthorizedKeys()
+	if err != nil {
+		return nil, err
+	}
+
+	agentKeys, err := RetrieveSSHAgentKeys()
+	if err != nil {
+		return nil, err
+	}
+
+	keys = append(keys, agentKeys...)
+
+	return keys, nil
+}
+
+// addKeyToBuffer adds a key to the buffer if the key is not already present.
+func addKeyToBuffer(b *bytes.Buffer, key string) {
+	if !strings.Contains(b.String(), key) {
 		b.WriteString(key + "\n")
 	}
 }
 
-// SSHAgentKeys retrieves public keys registered with the ssh-agent.
-func SSHAgentKeys() ([]string, error) {
+// RetrieveSSHAgentKeys retrieves public keys registered with the ssh-agent.
+func RetrieveSSHAgentKeys() ([]*types.SSHPubKey, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if len(socket) == 0 {
 		return nil, fmt.Errorf("SSH_AUTH_SOCK not set, skipping pubkey fetching")
@@ -101,9 +127,15 @@ func SSHAgentKeys() ([]string, error) {
 		return nil, fmt.Errorf("error listing agent's pub keys %w", err)
 	}
 
-	var pubKeys []string
+	log.Debugf("extracted %d keys from ssh-agent", len(keys))
+
+	var pubKeys []*types.SSHPubKey
 	for _, key := range keys {
-		pubKeys = append(pubKeys, key.String())
+		pkey, err := ssh.ParsePublicKey(key.Blob)
+		if err != nil {
+			return nil, err
+		}
+		pubKeys = append(pubKeys, types.NewSSHPublicKey(pkey, key.Comment))
 	}
 
 	return pubKeys, nil
