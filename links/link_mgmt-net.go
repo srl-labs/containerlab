@@ -33,7 +33,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		LinkCommonParams: r.LinkCommonParams,
 	}
 
-	fakeMgmtBridgeNode := GetFakeMgmtBrLinkNode(params.MgmtBridgeName)
+	fakeMgmtBridgeNode := GetFakeMgmtBrLinkNode()
 
 	bridgeEp := &EndpointBridge{
 		EndpointGeneric: EndpointGeneric{
@@ -42,7 +42,6 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 			IfaceName: r.HostInterface,
 			Link:      link,
 		},
-		masterInterface: params.MgmtBridgeName,
 	}
 
 	// add endpoint to fake mgmt bridge node

@@ -622,7 +622,7 @@ func (c *CLab) ResolveLinks() error {
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
 	specialNodes := map[string]links.Node{
 		"host":     links.GetFakeHostLinkNode(),
-		"mgmt-net": links.GetFakeMgmtBrLinkNode(c.Config.Mgmt.Bridge),
+		"mgmt-net": links.GetFakeMgmtBrLinkNode(),
 	}
 	for _, n := range specialNodes {
 		resolveNodes[n.GetShortName()] = n

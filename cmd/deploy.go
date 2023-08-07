@@ -19,6 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
@@ -111,6 +112,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
+		clab.WithTopoFile(topo, varsFile),
+		clab.WithNodeFilter(nodeFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,
@@ -118,8 +121,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
-		clab.WithTopoFile(topo, varsFile),
-		clab.WithNodeFilter(nodeFilter),
 		clab.WithDebug(debug),
 	}
 	c, err := clab.NewContainerLab(opts...)
@@ -152,6 +153,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return err
 		}
+	}
+
+	err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
+	if err != nil {
+		return err
 	}
 
 	if err = c.CheckTopologyDefinition(ctx); err != nil {

@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 )
@@ -29,6 +30,8 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		}
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo, varsFile),
+			clab.WithNodeFilter(nodeFilter),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,
@@ -36,11 +39,14 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 					GracefulShutdown: graceful,
 				},
 			),
-			clab.WithTopoFile(topo, varsFile),
-			clab.WithNodeFilter(nodeFilter),
 			clab.WithDebug(debug),
 		}
 		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
+
+		err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}

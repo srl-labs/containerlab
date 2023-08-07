@@ -336,7 +336,7 @@ type ResolveParams struct {
 	MgmtBridgeName string
 }
 
-var _fakeHostLinkNodeInstance Node
+var _fakeHostLinkNodeInstance *fakeHostLinkNode
 
 type fakeHostLinkNode struct {
 	GenericLinkNode
@@ -364,7 +364,7 @@ func GetFakeHostLinkNode() Node {
 	return _fakeHostLinkNodeInstance
 }
 
-var _fakeMgmtBrLinkMgmtBrInstance Node
+var _fakeMgmtBrLinkMgmtBrInstance *fakeMgmtBridgeLinkNode
 
 type fakeMgmtBridgeLinkNode struct {
 	GenericLinkNode
@@ -374,7 +374,7 @@ func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func GetFakeMgmtBrLinkNode(mgmtBridgeName string) Node {
+func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
 	if _fakeMgmtBrLinkMgmtBrInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
@@ -383,11 +383,20 @@ func GetFakeMgmtBrLinkNode(mgmtBridgeName string) Node {
 		nspath := currns.Path()
 		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
-				shortname: mgmtBridgeName,
+				shortname: "TBD",
 				endpoints: []Endpoint{},
 				nspath:    nspath,
 			},
 		}
 	}
 	return _fakeMgmtBrLinkMgmtBrInstance
+}
+
+func GetFakeMgmtBrLinkNode() Node {
+	return getFakeMgmtBrLinkNode()
+}
+
+func SetMgmtNetUnderlayingBridge(bridge string) error {
+	getFakeMgmtBrLinkNode().GenericLinkNode.shortname = bridge
+	return nil
 }
