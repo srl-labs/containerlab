@@ -128,11 +128,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
-		return err
-	}
-
 	err = c.ResolveLinks()
 	if err != nil {
 		return err
@@ -153,6 +148,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return err
 		}
+	}
+
+	// create management network or use existing one
+	if err = c.CreateNetwork(ctx); err != nil {
+		return err
 	}
 
 	err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)

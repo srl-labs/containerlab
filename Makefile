@@ -24,7 +24,7 @@ build-with-cover:
 
 build-debug:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -gcflags=all="-N -l" main.go
+	go build -o $(BINARY) -gcflags=all="-N -l" -race main.go
 
 
 build-with-podman:
