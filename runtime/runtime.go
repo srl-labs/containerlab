@@ -148,6 +148,8 @@ TIMEOUT_LOOP:
 	return resultErr
 }
 
+// Node is an interface that represents a node in the lab
+// and is implemented by containerlab nodes.
 type Node interface {
 	Config() *types.NodeConfig
 	GetEndpoints() []links.Endpoint
