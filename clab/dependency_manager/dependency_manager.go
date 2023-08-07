@@ -40,10 +40,10 @@ var RegularNodeStates = []NodeState{NodeStateCreated}
 
 // dependencyNode is the representation of a node in the dependency concept.
 type dependencyNode struct {
-	name      string
-	WaitState map[NodeState]*sync.WaitGroup
-
+	name          string
+	WaitState     map[NodeState]*sync.WaitGroup
 	nodeDependers map[string]*dependencyNode
+	m             sync.Mutex
 }
 
 // newDependencyNode initializes a dependencyNode with the given name.
@@ -52,8 +52,7 @@ func newDependencyNode(name string) *dependencyNode {
 		name: name,
 		// WaitState is initialized with a wait group for each node state.
 		// WaitState is used to for a dependee to wait for a depender to reach a certain state.
-		WaitState: map[NodeState]*sync.WaitGroup{},
-
+		WaitState:     map[NodeState]*sync.WaitGroup{},
 		nodeDependers: map[string]*dependencyNode{},
 	}
 
@@ -69,6 +68,9 @@ func newDependencyNode(name string) *dependencyNode {
 // getStateWG retrieves the provided node state waitgroup if it exists
 // otherwise initializes it.
 func (d *dependencyNode) getStateWG(n NodeState) *sync.WaitGroup {
+	d.m.Lock()
+	defer d.m.Unlock()
+
 	if _, exists := d.WaitState[n]; !exists {
 		d.WaitState[n] = &sync.WaitGroup{}
 	}
