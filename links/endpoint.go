@@ -149,12 +149,10 @@ type Endpoint interface {
 	GetMac() net.HardwareAddr
 	Deploy(ctx context.Context) error
 	String() string
-	// GetLink retrieve the link that the endpoint is assiged to
+	// GetLink retrieves the link that the endpoint is assigned to
 	GetLink() Link
-	// Verify is used to verify the endpoint with all its
-	// dependencies. The Endpt slice contains all the Endpoints
-	// of the topology
-	Verify([]Endpoint) error
+	// Verify verifies that the endpoint is valid and can be deployed
+	Verify() error
 	// IsSameNodeInterface is the equal check for two endpoints that
 	// does take the node and the Interfacename into account
 	IsSameNodeInterface(ept Endpoint) bool
@@ -165,7 +163,7 @@ type EndpointBridge struct {
 	EndpointGeneric
 }
 
-func (e *EndpointBridge) Verify(_ []Endpoint) error {
+func (e *EndpointBridge) Verify() error {
 	errs := []error{}
 	err := CheckPerNodeInterfaceUniqueness(e)
 	if err != nil {
@@ -189,7 +187,7 @@ type EndpointHost struct {
 	EndpointGeneric
 }
 
-func (e *EndpointHost) Verify(_ []Endpoint) error {
+func (e *EndpointHost) Verify() error {
 	errs := []error{}
 	err := CheckPerNodeInterfaceUniqueness(e)
 	if err != nil {
@@ -210,7 +208,7 @@ type EndptMacVlan struct {
 }
 
 // Verify verifies the veth based deployment pre-conditions
-func (e *EndptMacVlan) Verify(_ []Endpoint) error {
+func (e *EndptMacVlan) Verify() error {
 	return CheckEndptExists(e)
 }
 
@@ -219,7 +217,7 @@ type EndpointVeth struct {
 }
 
 // Verify verifies the veth based deployment pre-conditions
-func (e *EndpointVeth) Verify(_ []Endpoint) error {
+func (e *EndpointVeth) Verify() error {
 	return CheckPerNodeInterfaceUniqueness(e)
 }
 
