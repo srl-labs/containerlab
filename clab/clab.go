@@ -28,19 +28,19 @@ import (
 )
 
 type CLab struct {
-	Config        *Config `json:"config,omitempty"`
-	TopoPaths     *types.TopoPaths
-	m             *sync.RWMutex
-	Nodes         map[string]nodes.Node `json:"nodes,omitempty"`
-	Links         map[int]links.Link    `json:"links,omitempty"`
-	Endpoints     []links.Endpoint
-	Runtimes      map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
-	globalRuntime string
+	Config    *Config `json:"config,omitempty"`
+	TopoPaths *types.TopoPaths
+	Nodes     map[string]nodes.Node `json:"nodes,omitempty"`
+	Links     map[int]links.Link    `json:"links,omitempty"`
+	Endpoints []links.Endpoint
+	Runtimes  map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	// reg is a registry of node kinds
 	Reg  *nodes.NodeRegistry
 	Cert *cert.Cert
 
-	timeout time.Duration
+	m             *sync.RWMutex
+	timeout       time.Duration
+	globalRuntime string
 }
 
 type ClabOption func(c *CLab) error
