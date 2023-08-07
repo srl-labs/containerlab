@@ -334,7 +334,7 @@ func TestVerifyLinks(t *testing.T) {
 	}{
 		"two_duplicated_links": {
 			got:  "test_data/topo6.yml",
-			want: "duplicate endpoint lin1:eth1\nduplicate endpoint lin1:eth1\nduplicate endpoint lin2:eth2\nduplicate endpoint lin2:eth2",
+			want: "duplicate endpoint lin1:eth1\nduplicate endpoint lin1:eth1\nduplicate endpoint lin2:eth2\nduplicate endpoint lin2:eth2\nduplicate endpoint lin1:eth4\nduplicate endpoint lin1:eth4",
 		},
 		"no_duplicated_links": {
 			got:  "test_data/topo1.yml",

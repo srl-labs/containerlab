@@ -234,7 +234,7 @@ func CheckEndpointUniqueness(e Endpoint) error {
 		}
 		// if `e` has the same node and interface name as `ept` then we have a duplicate
 		if e.HasSameNodeAndInterface(ept) {
-			return fmt.Errorf("duplicate endpoint %s", e.String())
+			return fmt.Errorf("duplicate endpoint %s", e)
 		}
 	}
 
