@@ -60,7 +60,6 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	case LinkEndpointTypeBridge:
 		e = &EndpointBridge{
 			EndpointGeneric: *genericEndpoint,
-			masterInterface: node.GetShortName(),
 		}
 	case LinkEndpointTypeHost:
 		e = &EndpointHost{
@@ -164,7 +163,6 @@ type Endpoint interface {
 
 type EndpointBridge struct {
 	EndpointGeneric
-	masterInterface string
 }
 
 func (e *EndpointBridge) Verify(_ []Endpoint) error {
@@ -173,7 +171,7 @@ func (e *EndpointBridge) Verify(_ []Endpoint) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
-	err = CheckBridgeExists(e.GetNode(), e.masterInterface)
+	err = CheckBridgeExists(e.GetNode())
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -254,17 +252,17 @@ func CheckEndptExists(e Endpoint) error {
 
 // CheckBridgeExists verifies that the given bridge is present in the
 // netnwork namespace referenced via the provided nspath handle
-func CheckBridgeExists(n Node, brName string) error {
+func CheckBridgeExists(n Node) error {
 	return n.ExecFunction(func(_ ns.NetNS) error {
-		br, err := netlink.LinkByName(brName)
+		br, err := netlink.LinkByName(n.GetShortName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 		switch {
 		case notfound:
-			return fmt.Errorf("bridge %q referenced in topology but does not exist", brName)
+			return fmt.Errorf("bridge %q referenced in topology but does not exist", n.GetShortName())
 		case err != nil:
 			return err
 		case br.Type() != "bridge":
-			return fmt.Errorf("interface %s found. expected type \"bridge\", actual is %q", brName, br.Type())
+			return fmt.Errorf("interface %s found. expected type \"bridge\", actual is %q", n.GetShortName(), br.Type())
 		}
 		return nil
 	})

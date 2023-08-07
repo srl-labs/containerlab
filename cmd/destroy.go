@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
@@ -98,6 +99,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	for topo := range topos {
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
+			clab.WithTopoFile(topo, varsFile),
+			clab.WithNodeFilter(nodeFilter),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
 					Debug:            debug,
@@ -105,8 +108,6 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 					GracefulShutdown: graceful,
 				},
 			),
-			clab.WithTopoFile(topo, varsFile),
-			clab.WithNodeFilter(nodeFilter),
 			clab.WithDebug(debug),
 		}
 
@@ -116,6 +117,11 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
 		nc, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return err
+		}
+
+		err = links.SetMgmtNetUnderlayingBridge(nc.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}
