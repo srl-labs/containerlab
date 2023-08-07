@@ -107,8 +107,8 @@ var (
 	//go:embed topology/*
 	topologies embed.FS
 
-	saveCmd          = `sr_cli -d "tools system configuration save"`
-	mgmtServerRdyCmd = `sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
+	saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`
+	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
@@ -337,8 +337,20 @@ func (s *srl) Ready(ctx context.Context) error {
 			// two commands are checked, first if the mgmt_server is running
 			cmd, _ := exec.NewExecCmdFromString(mgmtServerRdyCmd)
 			execResult, err := s.RunExec(ctx, cmd)
-			if err != nil {
+			if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
+				logMsg := "mgmt_server status check failed"
+
+				if err != nil {
+					logMsg += fmt.Sprintf(" error: %v", err)
+				}
+
+				if execResult.GetReturnCode() != 0 {
+					logMsg += fmt.Sprintf(", output: \n%s", execResult)
+				}
+
+				log.Debug(logMsg)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -383,7 +395,7 @@ func (s *srl) Ready(ctx context.Context) error {
 }
 
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
-func (s *srl) checkKernelVersion() error {
+func (*srl) checkKernelVersion() error {
 	// retrieve running kernel version
 	kv, err := utils.GetKernelVersion()
 	if err != nil {
@@ -577,7 +589,7 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	cmd, err := exec.NewExecCmdFromString(`bash -c "sr_cli -ed < /tmp/clab-config"`)
+	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed < /tmp/clab-config"`)
 	if err != nil {
 		return err
 	}
@@ -607,7 +619,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return err
 	}
 
-	cmd, _ = exec.NewExecCmdFromString(`bash -c "sr_cli -ed --post 'commit save' < tmp/clab-config"`)
+	cmd, _ = exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed --post 'commit save' < tmp/clab-config"`)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -623,7 +635,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 }
 
 func (s *srl) generateCheckpoint(ctx context.Context) error {
-	cmd, err := exec.NewExecCmdFromString(`bash -c 'sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
+	cmd, err := exec.NewExecCmdFromString(`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
 	if err != nil {
 		return err
 	}
