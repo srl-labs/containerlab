@@ -133,7 +133,7 @@ func (n *xrd) genInterfacesEnv() {
 	for _, ep := range n.Endpoints {
 		// ifName is a linux interface name with dashes swapped for slashes to be used in the config
 		ifName := strings.ReplaceAll(ep.GetIfaceName(), "-", "/")
-		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", n.GetShortName(), ifName)
+		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", ep.GetIfaceName(), ifName)
 	}
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
