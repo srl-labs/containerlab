@@ -3,6 +3,7 @@ Library           OperatingSystem
 Library           SSHLibrary
 Suite Teardown    Run Keyword    Cleanup
 Resource          ../common.robot
+Resource          ../ssh.robot
 
 *** Variables ***
 ${lab-name}       03-01-two-ceos
@@ -17,7 +18,7 @@ ${runtime}        docker
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab deploy -t ${CURDIR}/${lab-file-name}
+    ...    sudo ${CLAB_BIN} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -49,20 +50,20 @@ Ensure IPv6 default route is in the config file
 
 Ensure MGMT VRF is present
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    MGMT
 
 Ensure n1 is reachable over ssh
-    Common.Login via SSH with username and password
+    Login via SSH with username and password
     ...    address=${n1-mgmt-ip}
     ...    username=admin
     ...    password=admin
     ...    try_for=120
 
 Ensure n2 is reachable over ssh
-    Common.Login via SSH with username and password
+    Login via SSH with username and password
     ...    address=${n2-mgmt-ip}
     ...    username=admin
     ...    password=admin
@@ -70,5 +71,5 @@ Ensure n2 is reachable over ssh
 
 *** Keywords ***
 Cleanup
-    Run    sudo containerlab destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    sudo ${CLAB_BIN} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}

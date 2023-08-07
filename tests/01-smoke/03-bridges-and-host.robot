@@ -7,6 +7,8 @@ This test suite verifies
 *** Settings ***
 Library           OperatingSystem
 Library           Process
+Resource          ../common.robot
+
 Suite Setup       Setup
 Suite Teardown    Cleanup
 
@@ -29,7 +31,7 @@ Create linux bridge
 
 Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -53,7 +55,7 @@ Verify management network is using user-specified bridge
     # show management interface info and cut the information about the ifindex of the remote veth
     # note that exec returns the info in the stderr stream, thus we use stderr to parse the ifindex
     ${rc}    ${iface} =    OperatingSystem.Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd "ip l show eth0" 2>&1 | perl -lne '/.*[0-9]+: .*\\@if(.*:) .*/ && print $1'
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd "ip l show eth0" 2>&1 | perl -lne '/.*[0-9]+: .*\\@if(.*:) .*/ && print $1'
     Log    ${iface}
     Should Be Equal As Integers    ${rc}    0
     ${rc}    ${res} =    OperatingSystem.Run And Return Rc And Output
@@ -70,7 +72,7 @@ Setup
     Run    sudo ctr -n clab image rm docker.io/library/alpine:3
 
 Cleanup
-    ${rc}    ${output} =    Run And Return Rc And Output    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ${rc}    ${output} =    Run And Return Rc And Output    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
     Run    sudo ip l del ${bridge-name}
     Run    sudo ip l del ${host-link-name}

@@ -2,7 +2,7 @@
 Library           OperatingSystem
 Library           Process
 Resource          ../common.robot
-Suite Setup    Setup
+Suite Setup       Setup
 Suite Teardown    Run Keyword    Cleanup
 
 *** Variables ***
@@ -19,34 +19,34 @@ Deploy ${lab-name} lab
     Skip If    '${runtime}' == 'containerd'
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E containerlab --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Verify links in node ext1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext1 --cmd "ip link show dev eth1"
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext1 --cmd "ip link show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify ip and thereby exec on ext1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext1 --cmd "ip address show dev eth1"
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext1 --cmd "ip address show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.0.1/24
 
 Verify links in node ext2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext2 --cmd "ip link show dev eth1"
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext2 --cmd "ip link show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify ip and thereby exec on ext2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext2 --cmd "ip address show dev eth1"
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext2 --cmd "ip address show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.0.2/24
@@ -65,6 +65,6 @@ Setup
     Skip If    '${runtime}' != 'docker'
 
 Cleanup
-    Run    sudo containerlab --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    ${runtime} rm -f ext1
     Run    ${runtime} rm -f ext2
