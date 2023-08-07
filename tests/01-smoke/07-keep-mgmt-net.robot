@@ -6,7 +6,8 @@ This test suite verifies
 *** Settings ***
 Library           OperatingSystem
 Library           String
-Suite Teardown    Run    sudo containerlab --runtime ${runtime} destroy -t ${topo} --cleanup
+Resource          ../common.robot
+Suite Teardown    Run    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
 
 *** Variables ***
 ${lab-name}       7-keep-mgmt-net
@@ -17,13 +18,13 @@ ${mgmt-bridge}    01-07-net
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} deploy -t ${topo}
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Destroy ${lab-name} lab keep mgmt net
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} destroy -t ${topo} --keep-mgmt-net
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --keep-mgmt-net
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -36,13 +37,13 @@ Check ${lab-name} mgmt network remains
 Deploy ${lab-name} lab again
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} deploy -t ${topo}
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Destroy ${lab-name} lab dont keep mgmt net
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo containerlab --runtime ${runtime} destroy -t ${topo} --cleanup
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
