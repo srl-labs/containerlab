@@ -119,7 +119,9 @@ func (e *EndpointGeneric) GetNode() Node {
 	return e.Node
 }
 
-func (e *EndpointGeneric) IsSameNodeInterface(ept Endpoint) bool {
+// HasSameNodeAndInterface returns true if the given endpoint has the same node and interface name
+// as the `ept` endpoint.
+func (e *EndpointGeneric) HasSameNodeAndInterface(ept Endpoint) bool {
 	return e.Node == ept.GetNode() && e.IfaceName == ept.GetIfaceName()
 }
 
@@ -153,9 +155,9 @@ type Endpoint interface {
 	GetLink() Link
 	// Verify verifies that the endpoint is valid and can be deployed
 	Verify() error
-	// IsSameNodeInterface is the equal check for two endpoints that
-	// does take the node and the Interfacename into account
-	IsSameNodeInterface(ept Endpoint) bool
+	// HasSameNodeAndInterface returns true if an endpoint that implements this interface
+	// has the same node and interface name as the given endpoint.
+	HasSameNodeAndInterface(ept Endpoint) bool
 	GetState() EndpointDeployState
 }
 
@@ -165,7 +167,7 @@ type EndpointBridge struct {
 
 func (e *EndpointBridge) Verify() error {
 	errs := []error{}
-	err := CheckPerNodeInterfaceUniqueness(e)
+	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -189,7 +191,7 @@ type EndpointHost struct {
 
 func (e *EndpointHost) Verify() error {
 	errs := []error{}
-	err := CheckPerNodeInterfaceUniqueness(e)
+	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -218,23 +220,24 @@ type EndpointVeth struct {
 
 // Verify verifies the veth based deployment pre-conditions
 func (e *EndpointVeth) Verify() error {
-	return CheckPerNodeInterfaceUniqueness(e)
+	return CheckEndpointUniqueness(e)
 }
 
-// CheckPerNodeInterfaceUniqueness takes a specific Endpt and a slice of Endpts as input and verifies, that for the node referenced in the given Endpt,
-func CheckPerNodeInterfaceUniqueness(e Endpoint) error {
+// CheckEndpointUniqueness checks that the given endpoint appears only once for the node
+// it is assigned to.
+func CheckEndpointUniqueness(e Endpoint) error {
 	for _, ept := range e.GetNode().GetEndpoints() {
 		if e == ept {
-			// epts contains all endpoints, hence also the
-			// one we're checking here. So if ept is pointer equal to e,
-			// we continue with next ept
+			// since node contains all endpoints including the one we are checking
+			// we skip it
 			continue
 		}
-		// check if the two Endpts are equal
-		if e.IsSameNodeInterface(ept) {
+		// if `e` has the same node and interface name as `ept` then we have a duplicate
+		if e.HasSameNodeAndInterface(ept) {
 			return fmt.Errorf("duplicate endpoint %s", e.String())
 		}
 	}
+
 	return nil
 }
 
