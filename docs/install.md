@@ -148,8 +148,7 @@ Once installed, issue `sudo service docker start` to start the docker service in
 Running containerlab on Mac OS is possible[^4] by means of a separate docker image with containerlab inside.
 
 !!!warning
-    ARM-based Macs (M1/2) are not supported, and no binaries are generated for this platform. This is mainly due to the lack of network images built for arm64 architecture as of now.  
-    Nevertheless, it is technically possible to run Containerlab on ARM-based MacBook. Check [How to start Containerlab on ARM-based MacBook](#how-to-start-containerlab-on-arm-based-macbook) for details.
+    ARM-based Macs (M1/2) are not supported, and no binaries are generated for this platform. This is mainly due to the lack of network images built for arm64 architecture as of now. Nevertheless, it is technically possible to run Containerlab on ARM-based MacBook. Check [How to start Containerlab on ARM-based MacBook](#how-to-start-containerlab-on-arm-based-macbook) for details.
 
 To use this container use the following command:
 
