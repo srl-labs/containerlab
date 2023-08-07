@@ -171,7 +171,7 @@ func (dm *defaultDependencyManager) SignalDone(nodeName string, state NodeState)
 }
 
 func (dm *defaultDependencyManager) checkNodesExist(nodeNames []string) error {
-	missing := []string{}
+	var missing []string
 	for _, nodeName := range nodeNames {
 		if _, exists := dm.nodes[nodeName]; !exists {
 			missing = append(missing, nodeName)
@@ -215,7 +215,7 @@ func (dm *defaultDependencyManager) String() string {
 		}
 	}
 
-	result := []string{}
+	var result []string
 	// print dependencies
 	for nodename, deps := range dependencies {
 		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(deps, ", ")))
@@ -254,14 +254,14 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	}
 
 	// debug output
-	d := []string{}
+	var d []string
 	for dependee, dependers := range nodeDependers {
 		d = append(d, fmt.Sprintf("%s <- [ %s ]", dependee, strings.Join(dependers, ", ")))
 	}
 	log.Debugf("- cycle check round %d - \n%s", i, strings.Join(d, "\n"))
 
 	remainingNodeDependers := map[string][]string{}
-	leafNodes := []string{}
+	var leafNodes []string
 	// mark a node as a remaining dependency if other nodes still depend on it,
 	// otherwise add it to the leaf list for it to be removed in the next round of recursive check
 	for dependee, dependers := range nodeDependers {
@@ -281,7 +281,7 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	// these will no longer be there, they suffice the satisfy the acyclicity property
 	for dependee, dependers := range remainingNodeDependers {
 		// new array that keeps track of remaining dependencies
-		newRemainingNodeDependers := []string{}
+		var newRemainingNodeDependers []string
 		// iterate over deleted nodes
 		for _, dep := range dependers {
 			keep := true
