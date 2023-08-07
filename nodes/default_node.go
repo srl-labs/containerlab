@@ -38,6 +38,8 @@ type DefaultNode struct {
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
+	// List of links that reference the node.
+	Links []links.Link
 	// List of link endpoints that are connected to the node.
 	Endpoints []links.Endpoint
 }
@@ -439,9 +441,12 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 	return netns.Do(f)
 }
 
-func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
+func (d *DefaultNode) AddLink(l links.Link) {
+	d.Links = append(d.Links, l)
+}
+
+func (d *DefaultNode) AddEndpoint(e links.Endpoint) {
 	d.Endpoints = append(d.Endpoints, e)
-	return nil
 }
 
 func (d *DefaultNode) GetEndpoints() []links.Endpoint {
@@ -458,13 +463,14 @@ func (d *DefaultNode) GetShortName() string {
 	return d.Cfg.ShortName
 }
 
-// DeployLinks deploys links for a node by calling Deploy on each endpoint of a node.
+// DeployLinks deploys links associated with the node.
 func (d *DefaultNode) DeployLinks(ctx context.Context) error {
-	for _, ep := range d.Endpoints {
-		err := ep.Deploy(ctx)
+	for _, l := range d.Links {
+		err := l.Deploy(ctx)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

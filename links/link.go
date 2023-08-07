@@ -12,6 +12,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type LinkDeploymentState uint8
+
+const (
+	LinkDeploymentStateNotReady = iota
+	LinkDeploymentStateReady
+	LinkDeploymentStateDeployed
+)
+
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
 	MTU    int                    `yaml:"mtu,omitempty"`
@@ -264,8 +272,9 @@ type Node interface {
 	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
 	// the master of the interface and bring the interface up.
 	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	AddLink(l Link)
 	// AddEndpoint adds the Endpoint to the node
-	AddEndpoint(e Endpoint) error
+	AddEndpoint(e Endpoint)
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
 	GetEndpoints() []Endpoint

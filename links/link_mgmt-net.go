@@ -37,18 +37,15 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	bridgeEp := &EndpointBridge{
 		EndpointGeneric: EndpointGeneric{
-			Node:      fakeMgmtBridgeNode,
-			state:     EndpointDeployStateDeployed,
+			Node: fakeMgmtBridgeNode,
+			// state:     EndpointDeployStateDeployed,
 			IfaceName: r.HostInterface,
 			Link:      link,
 		},
 	}
 
 	// add endpoint to fake mgmt bridge node
-	err := fakeMgmtBridgeNode.AddEndpoint(bridgeEp)
-	if err != nil {
-		return nil, err
-	}
+	fakeMgmtBridgeNode.AddEndpoint(bridgeEp)
 
 	// resolve and populate the endpoint
 	contEp, err := r.Endpoint.Resolve(params, link)

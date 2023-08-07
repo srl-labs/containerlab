@@ -67,10 +67,7 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	}
 
 	// also add the endpoint to the node
-	err := node.AddEndpoint(e)
-	if err != nil {
-		return nil, err
-	}
+	node.AddEndpoint(e)
 
 	return e, nil
 }

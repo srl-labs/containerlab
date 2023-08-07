@@ -125,7 +125,7 @@ func (l *LinkHost) GetEndpoints() []Endpoint {
 		l.Endpoint,
 		&EndpointHost{
 			EndpointGeneric: EndpointGeneric{
-				state:     EndpointDeployStateDeployed,
+				// state:     EndpointDeployStateDeployed,
 				Node:      GetFakeHostLinkNode(),
 				IfaceName: l.HostInterface,
 				Link:      l,
@@ -164,9 +164,12 @@ func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
 	return netns.Do(f)
 }
 
-func (g *GenericLinkNode) AddEndpoint(e Endpoint) error {
+func (g *GenericLinkNode) AddLink(l Link) {
+
+}
+
+func (g *GenericLinkNode) AddEndpoint(e Endpoint) {
 	g.endpoints = append(g.endpoints, e)
-	return nil
 }
 
 func (g *GenericLinkNode) GetShortName() string {

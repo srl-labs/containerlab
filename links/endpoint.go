@@ -1,7 +1,6 @@
 package links
 
 import (
-	"context"
 	"fmt"
 	"net"
 
@@ -16,7 +15,6 @@ type Endpoint interface {
 	GetIfaceName() string
 	GetRandIfaceName() string
 	GetMac() net.HardwareAddr
-	Deploy(ctx context.Context) error
 	String() string
 	// GetLink retrieves the link that the endpoint is assigned to
 	GetLink() Link
@@ -25,7 +23,7 @@ type Endpoint interface {
 	// HasSameNodeAndInterface returns true if an endpoint that implements this interface
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
-	GetState() EndpointDeployState
+	// GetState() EndpointDeployState
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -36,7 +34,7 @@ type EndpointGeneric struct {
 	Link     Link
 	MAC      net.HardwareAddr
 	randName string
-	state    EndpointDeployState
+	// state    EndpointDeployState
 }
 
 func (e *EndpointGeneric) GetRandIfaceName() string {
@@ -51,9 +49,9 @@ func (e *EndpointGeneric) GetIfaceName() string {
 	return e.IfaceName
 }
 
-func (e *EndpointGeneric) GetState() EndpointDeployState {
-	return e.state
-}
+// func (e *EndpointGeneric) GetState() EndpointDeployState {
+// 	return e.state
+// }
 
 func (e *EndpointGeneric) GetMac() net.HardwareAddr {
 	return e.MAC
@@ -73,22 +71,13 @@ func (e *EndpointGeneric) HasSameNodeAndInterface(ept Endpoint) bool {
 	return e.Node == ept.GetNode() && e.IfaceName == ept.GetIfaceName()
 }
 
-func (e *EndpointGeneric) Deploy(ctx context.Context) error {
-	e.state = EndpointDeployStateReady
-	return e.Link.Deploy(ctx)
-}
+// func (e *EndpointGeneric) Deploy(ctx context.Context) error {
+// 	return e.Link.Deploy(ctx)
+// }
 
 func (e *EndpointGeneric) String() string {
 	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.IfaceName)
 }
-
-type EndpointDeployState uint8
-
-const (
-	EndpointDeployStateNotReady = iota
-	EndpointDeployStateReady
-	EndpointDeployStateDeployed
-)
 
 // CheckEndpointUniqueness checks that the given endpoint appears only once for the node
 // it is assigned to.

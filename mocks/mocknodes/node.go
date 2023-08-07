@@ -42,17 +42,27 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 }
 
 // AddEndpoint mocks base method.
-func (m *MockNode) AddEndpoint(e links.Endpoint) error {
+func (m *MockNode) AddEndpoint(e links.Endpoint) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddEndpoint", e)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "AddEndpoint", e)
 }
 
 // AddEndpoint indicates an expected call of AddEndpoint.
 func (mr *MockNodeMockRecorder) AddEndpoint(e interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
+}
+
+// AddLink mocks base method.
+func (m *MockNode) AddLink(l links.Link) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddLink", l)
+}
+
+// AddLink indicates an expected call of AddLink.
+func (mr *MockNodeMockRecorder) AddLink(l interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLink", reflect.TypeOf((*MockNode)(nil).AddLink), l)
 }
 
 // AddNetlinkLinkToContainer mocks base method.

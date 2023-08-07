@@ -92,6 +92,8 @@ type LinkVEth struct {
 	m sync.Mutex `yaml:"-"`
 	LinkCommonParams
 	Endpoints []Endpoint
+
+	deploymentState LinkDeploymentState
 }
 
 func (*LinkVEth) GetType() LinkType {
@@ -106,10 +108,10 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	l.m.Lock()
 	defer l.m.Unlock()
 
-	for _, ep := range l.Endpoints {
-		if ep.GetState() < EndpointDeployStateReady {
-			return nil
-		}
+	// since each node calls deploy on its links, we need to make sure that we only deploy
+	// the link once, even if multiple nodes call deploy on the same link.
+	if l.deploymentState == LinkDeploymentStateReady {
+		return nil
 	}
 
 	// build the netlink.Veth struct for the link provisioning
@@ -159,6 +161,9 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 			return err
 		}
 	}
+
+	l.deploymentState = LinkDeploymentStateReady
+
 	return nil
 }
 

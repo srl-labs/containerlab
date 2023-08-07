@@ -93,7 +93,8 @@ type Node interface {
 	// Adds the given link to the Node. After adding the Link to the node,
 	// the given function f is called within the Nodes namespace.
 	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddEndpoint(e links.Endpoint) error
+	AddLink(l links.Link)
+	AddEndpoint(e links.Endpoint)
 	GetEndpoints() []links.Endpoint
 	GetLinkEndpointType() links.LinkEndpointType
 	GetShortName() string
