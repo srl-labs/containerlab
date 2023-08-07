@@ -55,7 +55,7 @@ func macVlanLinkFromBrief(lb *LinkBrief, specialEPIndex int) (*LinkMacVlanRaw, e
 func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	hostLinkNode := GetFakeHostLinkNode()
-	ep := &EndptMacVlan{
+	ep := &EndpointMacVlan{
 		EndpointGeneric: EndpointGeneric{
 			IfaceName: r.HostInterface,
 			Node:      hostLinkNode,
