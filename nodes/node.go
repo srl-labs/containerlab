@@ -97,7 +97,8 @@ type Node interface {
 	GetEndpoints() []links.Endpoint
 	GetLinkEndpointType() links.LinkEndpointType
 	GetShortName() string
-	SetupNetworking(ctx context.Context) error
+	// DeployLinks deploys the links for the node.
+	DeployLinks(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(func(ns.NetNS) error) error
 }

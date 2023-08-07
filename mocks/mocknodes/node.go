@@ -153,6 +153,20 @@ func (mr *MockNodeMockRecorder) Deploy(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0, arg1)
 }
 
+// DeployLinks mocks base method.
+func (m *MockNode) DeployLinks(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployLinks", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployLinks indicates an expected call of DeployLinks.
+func (mr *MockNodeMockRecorder) DeployLinks(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployLinks", reflect.TypeOf((*MockNode)(nil).DeployLinks), ctx)
+}
+
 // ExecFunction mocks base method.
 func (m *MockNode) ExecFunction(arg0 func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()
@@ -340,20 +354,6 @@ func (m *MockNode) SaveConfig(arg0 context.Context) error {
 func (mr *MockNodeMockRecorder) SaveConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockNode)(nil).SaveConfig), arg0)
-}
-
-// SetupNetworking mocks base method.
-func (m *MockNode) SetupNetworking(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetupNetworking", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetupNetworking indicates an expected call of SetupNetworking.
-func (mr *MockNodeMockRecorder) SetupNetworking(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupNetworking", reflect.TypeOf((*MockNode)(nil).SetupNetworking), ctx)
 }
 
 // UpdateConfigWithRuntimeInfo mocks base method.

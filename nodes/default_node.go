@@ -458,7 +458,8 @@ func (d *DefaultNode) GetShortName() string {
 	return d.Cfg.ShortName
 }
 
-func (d *DefaultNode) SetupNetworking(ctx context.Context) error {
+// DeployLinks deploys links for a node by calling Deploy on each endpoint of a node.
+func (d *DefaultNode) DeployLinks(ctx context.Context) error {
 	for _, ep := range d.Endpoints {
 		err := ep.Deploy(ctx)
 		if err != nil {
