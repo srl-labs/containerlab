@@ -6,6 +6,7 @@ package clab
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -24,18 +25,12 @@ const (
 	authzKeysFPath = "~/.ssh/authorized_keys"
 )
 
-// CreateAuthzKeysFile creats the authorized_keys file in the lab directory
-// if any files ~/.ssh/*.pub found.
+// CreateAuthzKeysFile creates the authorized_keys file in the lab directory
+// using the public ssh keys retrieved from agent and local files.
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	// get keys registered with ssh-agent
-	keys, err := RetrieveSSHPubKeys()
-	if err != nil {
-		log.Debug(err)
-	}
-
-	for _, k := range keys {
+	for _, k := range c.SSHPubKeys {
 		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(*k)))
 		addKeyToBuffer(b, x)
 	}
@@ -87,17 +82,21 @@ func RetrieveSSHPubKeysFromFiles() ([]*ssh.PublicKey, error) {
 
 // RetrieveSSHPubKeys retrieves the PubKeys from the different sources
 // SSHAgent as well as all home dir based /.ssh/*.pub files.
-func RetrieveSSHPubKeys() ([]*ssh.PublicKey, error) {
+func (c *CLab) RetrieveSSHPubKeys() ([]*ssh.PublicKey, error) {
 	keys := make([]*ssh.PublicKey, 0)
 
+	var errs error
+
+	// any errors encountered during the retrieval of the keys are not fatal
+	// we accumulate them and log.
 	fkeys, err := RetrieveSSHPubKeysFromFiles()
 	if err != nil {
-		return nil, err
+		errs = errors.Join(err)
 	}
 
 	agentKeys, err := RetrieveSSHAgentKeys()
 	if err != nil {
-		return nil, err
+		errs = errors.Join(err)
 	}
 
 	keysM := map[string]*ssh.PublicKey{}
@@ -109,7 +108,7 @@ func RetrieveSSHPubKeys() ([]*ssh.PublicKey, error) {
 		keys = append(keys, k)
 	}
 
-	return keys, nil
+	return keys, errs
 }
 
 // addKeyToBuffer adds a key to the buffer if the key is not already present.

@@ -181,6 +181,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	c.SSHPubKeys, err = c.RetrieveSSHPubKeys()
+	if err != nil {
+		log.Warn(err)
+	}
+
 	if err := c.CreateAuthzKeysFile(); err != nil {
 		return err
 	}

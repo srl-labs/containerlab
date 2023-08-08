@@ -281,11 +281,6 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 		return nil, err
 	}
 
-	c.SSHPubKeys, err = RetrieveSSHPubKeys()
-	if err != nil {
-		log.Error(err)
-	}
-
 	// start scheduling
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
 
