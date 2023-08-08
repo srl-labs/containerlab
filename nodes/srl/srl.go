@@ -260,7 +260,7 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		// marshall the publickey in authorizedKeys format
 		// convert it to a string
 		// and trim spaces (cause there will be a trailing newline)
-		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(k.PublicKey)))
+		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(*k)))
 		s.sshPubKeys = append(s.sshPubKeys, x)
 	}
 

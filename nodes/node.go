@@ -14,6 +14,7 @@ import (
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -50,7 +51,7 @@ type PreDeployParams struct {
 	Cert         *cert.Cert
 	TopologyName string
 	TopoPaths    *types.TopoPaths
-	SSHPubKeys   []*types.SSHPubKey
+	SSHPubKeys   []*ssh.PublicKey
 }
 
 // DeployParams contains parameters for the Deploy function.

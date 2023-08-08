@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -37,7 +36,7 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	}
 
 	for _, k := range keys {
-		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(k.PublicKey)))
+		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(*k)))
 		addKeyToBuffer(b, x)
 	}
 
@@ -52,8 +51,8 @@ func (c *CLab) CreateAuthzKeysFile() error {
 
 // RetrieveSSHPubKeysFromFiles retrieves public keys from the ~/.ssh/*.authorized_keys
 // and ~/.ssh/*.pub files.
-func RetrieveSSHPubKeysFromFiles() ([]*types.SSHPubKey, error) {
-	keys := []*types.SSHPubKey{}
+func RetrieveSSHPubKeysFromFiles() ([]*ssh.PublicKey, error) {
+	var keys []*ssh.PublicKey
 	p := utils.ResolvePath(pubKeysGlob, "")
 
 	all, err := filepath.Glob(p)
@@ -75,20 +74,23 @@ func RetrieveSSHPubKeysFromFiles() ([]*types.SSHPubKey, error) {
 			return nil, fmt.Errorf("failed reading the file %s: %v", fn, err)
 		}
 
-		pubKey, comment, _, _, err := ssh.ParseAuthorizedKey(rb)
+		pubKey, _, _, _, err := ssh.ParseAuthorizedKey(rb)
 		if err != nil {
 			return nil, err
 		}
 
-		keys = append(keys, types.NewSSHPublicKey(pubKey, comment))
+		keys = append(keys, &pubKey)
 	}
+
 	return keys, nil
 }
 
 // RetrieveSSHPubKeys retrieves the PubKeys from the different sources
 // SSHAgent as well as all home dir based /.ssh/*.pub files.
-func RetrieveSSHPubKeys() ([]*types.SSHPubKey, error) {
-	keys, err := RetrieveSSHPubKeysFromFiles()
+func RetrieveSSHPubKeys() ([]*ssh.PublicKey, error) {
+	keys := make([]*ssh.PublicKey, 0)
+
+	fkeys, err := RetrieveSSHPubKeysFromFiles()
 	if err != nil {
 		return nil, err
 	}
@@ -98,38 +100,16 @@ func RetrieveSSHPubKeys() ([]*types.SSHPubKey, error) {
 		return nil, err
 	}
 
-	keys = append(keys, agentKeys...)
-
-	return dedupKeys(keys), nil
-}
-
-func dedupKeys(keys []*types.SSHPubKey) []*types.SSHPubKey {
-	if len(keys) <= 1 {
-		return keys
+	keysM := map[string]*ssh.PublicKey{}
+	for _, k := range append(fkeys, agentKeys...) {
+		keysM[string(ssh.MarshalAuthorizedKey(*k))] = k
 	}
-	result := make([]*types.SSHPubKey, 0, len(keys))
 
-	// iterate through keys
-	for idx, key := range keys {
-		dupFound := false
-		// keys to compare are the once greater then the index of the actual key
-		// all others have already been compared via previous outer loop runs
-		for i := idx + 1; i < len(keys); i++ {
-			if key.Equals(keys[i]) {
-				// if key is a duplicate one, indicate via dupFound and break
-				// the result is, that the last instance of an x times duplicate key
-				// will be added, since in the remaining list of keys no duplicate
-				// will be found any more
-				dupFound = true
-				break
-			}
-		}
-		// if no dup was found, add it to the result list
-		if !dupFound {
-			result = append(result, key)
-		}
+	for _, k := range keysM {
+		keys = append(keys, k)
 	}
-	return result
+
+	return keys, nil
 }
 
 // addKeyToBuffer adds a key to the buffer if the key is not already present.
@@ -140,7 +120,7 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 }
 
 // RetrieveSSHAgentKeys retrieves public keys registered with the ssh-agent.
-func RetrieveSSHAgentKeys() ([]*types.SSHPubKey, error) {
+func RetrieveSSHAgentKeys() ([]*ssh.PublicKey, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if len(socket) == 0 {
 		return nil, fmt.Errorf("SSH_AUTH_SOCK not set, skipping pubkey fetching")
@@ -158,13 +138,14 @@ func RetrieveSSHAgentKeys() ([]*types.SSHPubKey, error) {
 
 	log.Debugf("extracted %d keys from ssh-agent", len(keys))
 
-	var pubKeys []*types.SSHPubKey
+	var pubKeys []*ssh.PublicKey
+
 	for _, key := range keys {
 		pkey, err := ssh.ParsePublicKey(key.Blob)
 		if err != nil {
 			return nil, err
 		}
-		pubKeys = append(pubKeys, types.NewSSHPublicKey(pkey, key.Comment))
+		pubKeys = append(pubKeys, &pkey)
 	}
 
 	return pubKeys, nil
