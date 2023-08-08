@@ -16,6 +16,7 @@ import (
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -45,7 +46,7 @@ func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 func (n *host) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.State = "deployed"
+	n.State = state.Deployed
 
 	return nil
 }

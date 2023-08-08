@@ -14,6 +14,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
@@ -102,7 +103,7 @@ type Node interface {
 	DeployLinks(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(func(ns.NetNS) error) error
-	GetState() string
+	GetState() state.NodeState
 }
 
 type NodeOption func(Node)

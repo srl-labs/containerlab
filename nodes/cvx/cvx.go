@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
@@ -87,7 +88,7 @@ func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 		c.vmChans = vmChans
 	}
 
-	c.State = "deployed"
+	c.State = state.Deployed
 
 	return nil
 }

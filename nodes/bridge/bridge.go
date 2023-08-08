@@ -16,6 +16,7 @@ import (
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -53,7 +54,7 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *bridge) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.State = "deployed"
+	n.State = state.Deployed
 
 	return nil
 }

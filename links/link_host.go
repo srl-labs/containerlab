@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
 
@@ -179,6 +180,6 @@ func (g *GenericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
 }
 
-func (g *GenericLinkNode) GetState() string {
-	return ""
+func (g *GenericLinkNode) GetState() state.NodeState {
+	return state.Unknown
 }

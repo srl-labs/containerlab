@@ -8,6 +8,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
@@ -278,7 +279,7 @@ type Node interface {
 	GetShortName() string
 	GetEndpoints() []Endpoint
 	ExecFunction(func(ns.NetNS) error) error
-	GetState() string
+	GetState() state.NodeState
 }
 
 type LinkEndpointType string

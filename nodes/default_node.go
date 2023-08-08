@@ -20,6 +20,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -43,7 +44,7 @@ type DefaultNode struct {
 	// List of link endpoints that are connected to the node.
 	Endpoints []links.Endpoint
 	// State of the node
-	State string
+	State state.NodeState
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -134,7 +135,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 		return err
 	}
 
-	d.State = "deployed"
+	d.State = state.Deployed
 
 	return nil
 }
@@ -483,6 +484,6 @@ func (d *DefaultNode) DeployLinks(ctx context.Context) error {
 	return nil
 }
 
-func (d *DefaultNode) GetState() string {
+func (d *DefaultNode) GetState() state.NodeState {
 	return d.State
 }

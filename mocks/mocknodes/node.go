@@ -13,6 +13,7 @@ import (
 	exec "github.com/srl-labs/containerlab/clab/exec"
 	links "github.com/srl-labs/containerlab/links"
 	nodes "github.com/srl-labs/containerlab/nodes"
+	state "github.com/srl-labs/containerlab/nodes/state"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	types "github.com/srl-labs/containerlab/types"
 	netlink "github.com/vishvananda/netlink"
@@ -291,10 +292,10 @@ func (mr *MockNodeMockRecorder) GetShortName() *gomock.Call {
 }
 
 // GetState mocks base method.
-func (m *MockNode) GetState() string {
+func (m *MockNode) GetState() state.NodeState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetState")
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(state.NodeState)
 	return ret0
 }
 

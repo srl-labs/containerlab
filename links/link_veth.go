@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
 
@@ -115,7 +116,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	}
 
 	for _, ep := range l.GetEndpoints() {
-		if ep.GetNode().GetState() != "deployed" {
+		if ep.GetNode().GetState() != state.Deployed {
 			return nil
 		}
 	}

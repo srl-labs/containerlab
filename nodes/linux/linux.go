@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/weaveworks/ignite/pkg/operations"
@@ -59,7 +60,7 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 		n.vmChans = vmChans
 	}
 
-	n.State = "deployed"
+	n.State = state.Deployed
 
 	return err
 }
