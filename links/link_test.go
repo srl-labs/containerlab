@@ -110,6 +110,30 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			},
 		},
 		{
+			name: "brief link with veth endpoints and mtu",
+			args: args{
+				yaml: []byte(`
+                    endpoints: 
+                        - "srl1:e1-5"
+                        - "srl2:e1-5"
+                    mtu: 1500
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						NewEndpointRaw("srl1", "e1-5", ""),
+						NewEndpointRaw("srl2", "e1-5", ""),
+					},
+					LinkCommonParams: LinkCommonParams{
+						MTU: 1500,
+					},
+				},
+			},
+		},
+		{
 			name: "brief link with macvlan endpoint",
 			args: args{
 				yaml: []byte(`
@@ -166,6 +190,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                       - node:          srl1
                         interface:     e1-1
+                        mac:           02:00:00:00:00:01
                       - node:          srl2
                         interface:     e1-2
                 `),
@@ -175,7 +200,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Type: string(LinkTypeVEth),
 				Link: &LinkVEthRaw{
 					Endpoints: []*EndpointRaw{
-						NewEndpointRaw("srl1", "e1-1", ""),
+						NewEndpointRaw("srl1", "e1-1", "02:00:00:00:00:01"),
 						NewEndpointRaw("srl2", "e1-2", ""),
 					},
 					LinkCommonParams: LinkCommonParams{
