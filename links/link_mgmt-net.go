@@ -37,8 +37,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	bridgeEp := &EndpointBridge{
 		EndpointGeneric: EndpointGeneric{
-			Node: fakeMgmtBridgeNode,
-			// state:     EndpointDeployStateDeployed,
+			Node:      fakeMgmtBridgeNode,
 			IfaceName: r.HostInterface,
 			Link:      link,
 		},

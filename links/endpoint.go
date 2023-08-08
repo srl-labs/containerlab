@@ -23,7 +23,6 @@ type Endpoint interface {
 	// HasSameNodeAndInterface returns true if an endpoint that implements this interface
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
-	// GetState() EndpointDeployState
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -34,7 +33,6 @@ type EndpointGeneric struct {
 	Link     Link
 	MAC      net.HardwareAddr
 	randName string
-	// state    EndpointDeployState
 }
 
 func (e *EndpointGeneric) GetRandIfaceName() string {
@@ -48,10 +46,6 @@ func (e *EndpointGeneric) GetRandIfaceName() string {
 func (e *EndpointGeneric) GetIfaceName() string {
 	return e.IfaceName
 }
-
-// func (e *EndpointGeneric) GetState() EndpointDeployState {
-// 	return e.state
-// }
 
 func (e *EndpointGeneric) GetMac() net.HardwareAddr {
 	return e.MAC
@@ -70,10 +64,6 @@ func (e *EndpointGeneric) GetNode() Node {
 func (e *EndpointGeneric) HasSameNodeAndInterface(ept Endpoint) bool {
 	return e.Node == ept.GetNode() && e.IfaceName == ept.GetIfaceName()
 }
-
-// func (e *EndpointGeneric) Deploy(ctx context.Context) error {
-// 	return e.Link.Deploy(ctx)
-// }
 
 func (e *EndpointGeneric) String() string {
 	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.IfaceName)

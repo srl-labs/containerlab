@@ -125,7 +125,6 @@ func (l *LinkHost) GetEndpoints() []Endpoint {
 		l.Endpoint,
 		&EndpointHost{
 			EndpointGeneric: EndpointGeneric{
-				// state:     EndpointDeployStateDeployed,
 				Node:      GetFakeHostLinkNode(),
 				IfaceName: l.HostInterface,
 				Link:      l,
