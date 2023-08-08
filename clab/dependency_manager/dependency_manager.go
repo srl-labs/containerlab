@@ -40,10 +40,10 @@ var RegularNodeStates = []NodeState{NodeStateCreated}
 
 // dependencyNode is the representation of a node in the dependency concept.
 type dependencyNode struct {
-	name      string
-	WaitState map[NodeState]*sync.WaitGroup
-
+	name          string
+	WaitState     map[NodeState]*sync.WaitGroup
 	nodeDependers map[string]*dependencyNode
+	m             sync.Mutex
 }
 
 // newDependencyNode initializes a dependencyNode with the given name.
@@ -52,8 +52,7 @@ func newDependencyNode(name string) *dependencyNode {
 		name: name,
 		// WaitState is initialized with a wait group for each node state.
 		// WaitState is used to for a dependee to wait for a depender to reach a certain state.
-		WaitState: map[NodeState]*sync.WaitGroup{},
-
+		WaitState:     map[NodeState]*sync.WaitGroup{},
 		nodeDependers: map[string]*dependencyNode{},
 	}
 
@@ -69,6 +68,9 @@ func newDependencyNode(name string) *dependencyNode {
 // getStateWG retrieves the provided node state waitgroup if it exists
 // otherwise initializes it.
 func (d *dependencyNode) getStateWG(n NodeState) *sync.WaitGroup {
+	d.m.Lock()
+	defer d.m.Unlock()
+
 	if _, exists := d.WaitState[n]; !exists {
 		d.WaitState[n] = &sync.WaitGroup{}
 	}
@@ -169,7 +171,7 @@ func (dm *defaultDependencyManager) SignalDone(nodeName string, state NodeState)
 }
 
 func (dm *defaultDependencyManager) checkNodesExist(nodeNames []string) error {
-	missing := []string{}
+	var missing []string
 	for _, nodeName := range nodeNames {
 		if _, exists := dm.nodes[nodeName]; !exists {
 			missing = append(missing, nodeName)
@@ -213,7 +215,7 @@ func (dm *defaultDependencyManager) String() string {
 		}
 	}
 
-	result := []string{}
+	var result []string
 	// print dependencies
 	for nodename, deps := range dependencies {
 		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(deps, ", ")))
@@ -252,14 +254,14 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	}
 
 	// debug output
-	d := []string{}
+	var d []string
 	for dependee, dependers := range nodeDependers {
 		d = append(d, fmt.Sprintf("%s <- [ %s ]", dependee, strings.Join(dependers, ", ")))
 	}
 	log.Debugf("- cycle check round %d - \n%s", i, strings.Join(d, "\n"))
 
 	remainingNodeDependers := map[string][]string{}
-	leafNodes := []string{}
+	var leafNodes []string
 	// mark a node as a remaining dependency if other nodes still depend on it,
 	// otherwise add it to the leaf list for it to be removed in the next round of recursive check
 	for dependee, dependers := range nodeDependers {
@@ -279,7 +281,7 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	// these will no longer be there, they suffice the satisfy the acyclicity property
 	for dependee, dependers := range remainingNodeDependers {
 		// new array that keeps track of remaining dependencies
-		newRemainingNodeDependers := []string{}
+		var newRemainingNodeDependers []string
 		// iterate over deleted nodes
 		for _, dep := range dependers {
 			keep := true
