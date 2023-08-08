@@ -64,7 +64,8 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	var a struct {
 		Type string `yaml:"type"`
 		// Throwaway endpoints field, as we don't care about it.
-		Endpoints any `yaml:"endpoints"`
+		Endpoints        any `yaml:"endpoints"`
+		LinkCommonParams `yaml:",inline"`
 	}
 	err := unmarshal(&a)
 	if err != nil {
