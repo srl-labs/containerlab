@@ -46,8 +46,7 @@ func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 func (n *host) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.State = state.Deployed
-
+	n.SetState(state.Deployed)
 	return nil
 }
 

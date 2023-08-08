@@ -54,8 +54,7 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *bridge) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.State = state.Deployed
-
+	n.SetState(state.Deployed)
 	return nil
 }
 

@@ -88,7 +88,7 @@ func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 		c.vmChans = vmChans
 	}
 
-	c.State = state.Deployed
+	c.SetState(state.Deployed)
 
 	return nil
 }

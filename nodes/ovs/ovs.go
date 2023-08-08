@@ -63,8 +63,7 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 }
 
 func (n *ovs) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.State = state.Deployed
-
+	n.SetState(state.Deployed)
 	return nil
 }
 

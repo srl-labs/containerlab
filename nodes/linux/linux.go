@@ -60,7 +60,7 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 		n.vmChans = vmChans
 	}
 
-	n.State = state.Deployed
+	n.SetState(state.Deployed)
 
 	return err
 }

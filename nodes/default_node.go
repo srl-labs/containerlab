@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"text/template"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -44,7 +45,8 @@ type DefaultNode struct {
 	// List of link endpoints that are connected to the node.
 	Endpoints []links.Endpoint
 	// State of the node
-	State state.NodeState
+	state      state.NodeState
+	statemutex sync.Mutex
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -135,7 +137,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 		return err
 	}
 
-	d.State = state.Deployed
+	d.SetState(state.Deployed)
 
 	return nil
 }
@@ -485,5 +487,13 @@ func (d *DefaultNode) DeployLinks(ctx context.Context) error {
 }
 
 func (d *DefaultNode) GetState() state.NodeState {
-	return d.State
+	d.statemutex.Lock()
+	defer d.statemutex.Unlock()
+	return d.state
+}
+
+func (d *DefaultNode) SetState(s state.NodeState) {
+	d.statemutex.Lock()
+	defer d.statemutex.Unlock()
+	d.state = s
 }
