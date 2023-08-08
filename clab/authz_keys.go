@@ -50,9 +50,9 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	return os.Chmod(clabAuthzKeysFPath, 0644) // skipcq: GSC-G302
 }
 
-// RetrieveSSHAuthorizedKeys retrieves public keys present in the pubKeysGlob
-// wildcard path.
-func RetrieveSSHAuthorizedKeys() ([]*types.SSHPubKey, error) {
+// RetrieveSSHPubKeysFromFiles retrieves public keys from the ~/.ssh/*.authorized_keys
+// and ~/.ssh/*.pub files.
+func RetrieveSSHPubKeysFromFiles() ([]*types.SSHPubKey, error) {
 	keys := []*types.SSHPubKey{}
 	p := utils.ResolvePath(pubKeysGlob, "")
 
@@ -68,7 +68,7 @@ func RetrieveSSHAuthorizedKeys() ([]*types.SSHPubKey, error) {
 		all = append(all, f)
 	}
 
-	// iterate through all the *.pub files an parse them as ssh.PublicKey
+	// iterate through all files with key material
 	for _, fn := range all {
 		rb, err := os.ReadFile(fn)
 		if err != nil {
@@ -88,7 +88,7 @@ func RetrieveSSHAuthorizedKeys() ([]*types.SSHPubKey, error) {
 // RetrieveSSHPubKeys retrieves the PubKeys from the different sources
 // SSHAgent as well as all home dir based /.ssh/*.pub files.
 func RetrieveSSHPubKeys() ([]*types.SSHPubKey, error) {
-	keys, err := RetrieveSSHAuthorizedKeys()
+	keys, err := RetrieveSSHPubKeysFromFiles()
 	if err != nil {
 		return nil, err
 	}
