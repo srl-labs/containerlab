@@ -59,6 +59,8 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 		n.vmChans = vmChans
 	}
 
+	n.State = "deployed"
+
 	return err
 }
 

@@ -52,6 +52,8 @@ func (e *extcont) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	// set nspath in node config
 	e.Cfg.NSPath = nspath
 
+	e.State = "deployed"
+
 	return nil
 }
 

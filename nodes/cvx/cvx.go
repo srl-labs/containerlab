@@ -86,6 +86,9 @@ func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	if vmChans, ok := intf.(*operations.VMChannels); ok {
 		c.vmChans = vmChans
 	}
+
+	c.State = "deployed"
+
 	return nil
 }
 
