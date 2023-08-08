@@ -136,6 +136,7 @@ func (l *LinkHost) GetEndpoints() []Endpoint {
 
 type GenericLinkNode struct {
 	shortname string
+	links     []Link
 	endpoints []Endpoint
 	nspath    string
 }
@@ -165,7 +166,7 @@ func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
 }
 
 func (g *GenericLinkNode) AddLink(l Link) {
-
+	g.links = append(g.links, l)
 }
 
 func (g *GenericLinkNode) AddEndpoint(e Endpoint) {
