@@ -88,7 +88,7 @@ func vEthFromLinkConfig(lb *LinkBrief) (*LinkVEthRaw, error) {
 }
 
 type LinkVEth struct {
-	// m mutex is used when deployign the link.
+	// m mutex is used when deploying the link.
 	m sync.Mutex `yaml:"-"`
 	LinkCommonParams
 	Endpoints []Endpoint
@@ -112,6 +112,12 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// the link once, even if multiple nodes call deploy on the same link.
 	if l.deploymentState == LinkDeploymentStateDeployed {
 		return nil
+	}
+
+	for _, ep := range l.GetEndpoints() {
+		if ep.GetNode().GetState() != "deployed" {
+			return nil
+		}
 	}
 
 	// build the netlink.Veth struct for the link provisioning

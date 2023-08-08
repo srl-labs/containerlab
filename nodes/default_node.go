@@ -42,6 +42,8 @@ type DefaultNode struct {
 	Links []links.Link
 	// List of link endpoints that are connected to the node.
 	Endpoints []links.Endpoint
+	// State of the node
+	State string
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -128,7 +130,13 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 		return err
 	}
 	_, err = d.Runtime.StartContainer(ctx, cID, d)
-	return err
+	if err != nil {
+		return err
+	}
+
+	d.State = "deployed"
+
+	return nil
 }
 
 func (d *DefaultNode) Delete(ctx context.Context) error {
@@ -473,4 +481,8 @@ func (d *DefaultNode) DeployLinks(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (d *DefaultNode) GetState() string {
+	return d.State
 }

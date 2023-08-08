@@ -290,6 +290,20 @@ func (mr *MockNodeMockRecorder) GetShortName() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortName", reflect.TypeOf((*MockNode)(nil).GetShortName))
 }
 
+// GetState mocks base method.
+func (m *MockNode) GetState() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetState")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetState indicates an expected call of GetState.
+func (mr *MockNodeMockRecorder) GetState() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockNode)(nil).GetState))
+}
+
 // Init mocks base method.
 func (m *MockNode) Init(arg0 *types.NodeConfig, arg1 ...nodes.NodeOption) error {
 	m.ctrl.T.Helper()

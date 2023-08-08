@@ -279,6 +279,7 @@ type Node interface {
 	GetShortName() string
 	GetEndpoints() []Endpoint
 	ExecFunction(func(ns.NetNS) error) error
+	GetState() string
 }
 
 type LinkEndpointType string

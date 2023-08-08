@@ -102,6 +102,7 @@ type Node interface {
 	DeployLinks(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(func(ns.NetNS) error) error
+	GetState() string
 }
 
 type NodeOption func(Node)

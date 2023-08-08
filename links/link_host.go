@@ -179,3 +179,7 @@ func (g *GenericLinkNode) GetShortName() string {
 func (g *GenericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
 }
+
+func (g *GenericLinkNode) GetState() string {
+	return ""
+}
