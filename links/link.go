@@ -2,6 +2,7 @@ package links
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -71,17 +72,20 @@ var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
 // UnmarshalYAML deserializes links passed via topology file into LinkDefinition struct.
 // It supports both the brief and specific link type notations.
 func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// alias struct to avoid recursion and pass strict yaml unmarshalling
-	// we don't care about the embedded LinkConfig, as we only need to unmarshal
+	// alias struct to avoid recursion used only need to unmarshal
 	// the type field.
 	var a struct {
 		Type string `yaml:"type"`
-		// Throwaway endpoints field, as we don't care about it.
-		Endpoints any `yaml:"endpoints"`
 	}
 
+	// yaml.TypeError is returned when the yaml parser encounters
+	// an unknown field. We want to ignore this error and continue
+	// parsing the rest of the fields as we only care about the type field
+	// in the a struct.
+	var e *yaml.TypeError
+
 	err := unmarshal(&a)
-	if err != nil {
+	if err != nil && !errors.As(err, &e) {
 		return err
 	}
 
@@ -173,7 +177,6 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 // RawVEthLink, such that the generated LinkConfigs adhere to the new LinkDefinition
 // format instead of the brief one.
 func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
-
 	switch r.Link.GetType() {
 	case LinkTypeHost:
 		x := struct {
