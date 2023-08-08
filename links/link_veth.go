@@ -110,7 +110,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
-	if l.deploymentState == LinkDeploymentStateReady {
+	if l.deploymentState == LinkDeploymentStateDeployed {
 		return nil
 	}
 
@@ -162,7 +162,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		}
 	}
 
-	l.deploymentState = LinkDeploymentStateReady
+	l.deploymentState = LinkDeploymentStateDeployed
 
 	return nil
 }
