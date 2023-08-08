@@ -38,6 +38,10 @@ type CLab struct {
 	// reg is a registry of node kinds
 	Reg  *nodes.NodeRegistry
 	Cert *cert.Cert
+	// List of SSH public keys extracted from the ~/.ssh/authorized_keys file
+	// and ~/.ssh/*.pub files.
+	// The keys are used to enable key-based SSH access for the nodes.
+	SSHPubKeys []*types.SSHPubKey
 
 	timeout time.Duration
 }
@@ -276,6 +280,11 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 		return nil, err
 	}
 
+	c.SSHPubKeys, err = RetrieveSSHPubKeys()
+	if err != nil {
+		log.Error(err)
+	}
+
 	// start scheduling
 	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
 
@@ -377,11 +386,6 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 ) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
-	pubKeys, err := RetrieveSSHPubKeys()
-	if err != nil {
-		log.Error(err)
-	}
-
 	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup,
 		dm dependency_manager.DependencyManager,
 	) {
@@ -409,7 +413,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 						Cert:         c.Cert,
 						TopologyName: c.Config.Name,
 						TopoPaths:    c.TopoPaths,
-						SSHPubKeys:   pubKeys,
+						SSHPubKeys:   c.SSHPubKeys,
 					},
 				)
 				if err != nil {
