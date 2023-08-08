@@ -15,8 +15,7 @@ import (
 type LinkDeploymentState uint8
 
 const (
-	LinkDeploymentStateNotReady = iota
-	LinkDeploymentStateReady
+	LinkDeploymentStateNotDeployed = iota
 	LinkDeploymentStateDeployed
 )
 
