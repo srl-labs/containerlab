@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -67,8 +68,13 @@ func (r *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		Endpoints        any `yaml:"endpoints"`
 		LinkCommonParams `yaml:",inline"`
 	}
+	// Strict unmarshalling, as we do with containerlab will cause the
+	// Links sections to fail. The unmarshal call will throw a yaml.TypeError
+	// This section we don't want strict, so if error is not nil but the error type is
+	// yaml.TypeError, we will continue
+	var e *yaml.TypeError
 	err := unmarshal(&a)
-	if err != nil {
+	if err != nil && !errors.As(err, &e) {
 		return err
 	}
 

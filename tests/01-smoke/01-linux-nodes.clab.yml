@@ -44,4 +44,28 @@ topology:
 
   links:
     - endpoints: ["l1:eth1", "l2:some1"]
+      mtu: 1500
+      vars:
+        foo: bar
+        some: ["thing", "else"]
     - endpoints: ["l1:eth2", "l2:eth2"]
+    - type: veth
+      endpoints:
+        - node: l1
+          interface: eth3
+          mac: 02:00:00:00:00:00
+        - node: l2
+          interface: eth3
+          mac: 02:00:00:00:00:01
+    - type: host
+      host-interface: l2eth4
+      endpoint:
+        node: l2
+        interface: eth4
+        mac: 02:00:00:00:00:04
+    - type: mgmt-net
+      host-interface: l2eth5mgmt
+      endpoint:
+        node: l2
+        interface: eth5
+        mac: 02:00:00:00:00:05

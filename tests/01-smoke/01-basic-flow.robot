@@ -112,6 +112,12 @@ Verify links in node l1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l1 ip link show eth3
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+    #Should Contain    ${output}    02:00:00:00:00:00
 
 Verify links in node l2
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -121,6 +127,36 @@ Verify links in node l2
     Should Contain    ${output}    state UP
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth2
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth3
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+    #Should Contain    ${output}    02:00:00:00:00:01
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth4
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+    #Should Contain    ${output}    02:00:00:00:00:04
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth5
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+    #Should Contain    ${output}    02:00:00:00:00:05
+
+Verify links on host
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ip link show l2eth4
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ip link show l2eth5mgmt
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
@@ -286,7 +322,7 @@ Verify iptables allow rule are gone
 
 *** Keywords ***
 Setup
-    Run    rm -rf ${bind-orig-path}
+    Run    sudo rm -rf ${bind-orig-path}
     OperatingSystem.Create File    ${bind-orig-path}    Hello, containerlab
 
 Match IPv6 Address
