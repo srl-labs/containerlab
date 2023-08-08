@@ -525,8 +525,8 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (s *srl) addDefaultConfig(ctx context.Context) error {
-	b, err := s.banner(ctx)
+func (n *srl) addDefaultConfig(ctx context.Context) error {
+	b, err := n.banner(ctx)
 	if err != nil {
 		return err
 	}
@@ -537,16 +537,16 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		Banner     string
 		SSHPubKeys string
 	}{
-		s.Cfg,
+		n.Cfg,
 		b,
 		"",
 	}
 
 	// in srlinux >= v23.7+ linuxadmin and admin user ssh keys can only  be configured via the cli
 	// so we add the keys to the template data for rendering.
-	if semver.Compare(s.swVersion.String(), "v23.7") >= 0 || s.swVersion.major == "0" {
+	if semver.Compare(n.swVersion.String(), "v23.7") >= 0 || n.swVersion.major == "0" {
 		// catenate all ssh keys into a single quoted string accepted in CLI
-		for _, key := range s.sshPubKeys {
+		for _, key := range n.sshPubKeys {
 			tplData.SSHPubKeys += fmt.Sprintf("%q ", key)
 		}
 	}
@@ -562,13 +562,13 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
+	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
 	execCmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
 	})
-	_, err = s.RunExec(ctx, execCmd)
+	_, err = n.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
 	}
@@ -578,12 +578,12 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	execResult, err := s.RunExec(ctx, cmd)
+	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return nil
 }
