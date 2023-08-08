@@ -20,6 +20,11 @@ func (n *srl) parseVersionString(s string) *SrlVersion {
 		// return all zeroes if failed to parse
 		return &SrlVersion{"0", "0", "0", "0", "0"}
 	}
-	n.runningVersion = v[0]
+
 	return &SrlVersion{v[1], v[2], v[3], v[4], v[5]}
+}
+
+// String returns a string representation of the version in a semver fashion (with leading v).
+func (v *SrlVersion) String() string {
+	return "v" + v.major + "." + v.minor + "." + v.patch + "-" + v.build + "-" + v.commit
 }

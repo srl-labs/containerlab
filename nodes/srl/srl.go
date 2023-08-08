@@ -67,8 +67,9 @@ set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
   {{- end }}
 {{ end -}}
-{{- range $key := .SSHPubKeys }}
-set / system aaa authentication linuxadmin-user ssh-key {{ $key }}
+{{- if .SSHPubKeys }}
+set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
+set / system aaa authentication admin-user ssh-key [ {{ .SSHPubKeys }} ]
 {{- end }}
 set / system banner login-banner "{{ .Banner }}"
 commit save`
@@ -140,10 +141,11 @@ type srl struct {
 
 	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
 	// to generate certificates
-	cert           *cert.Cert
-	topologyName   string
-	sshPubKeys     []string
-	runningVersion string
+	cert         *cert.Cert
+	topologyName string
+	sshPubKeys   []string
+	// software version SR Linux node runs
+	swVersion *SrlVersion
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -255,6 +257,7 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 	}
 
 	// store provided pubkeys
+	// TODO: remove non ssh-rsa keys, as they are not supported by SR Linux right now
 	s.sshPubKeys = make([]string, 0, len(params.SSHPubKeys))
 	for _, k := range params.SSHPubKeys {
 		// marshall the publickey in authorizedKeys format
@@ -532,17 +535,20 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	tplData := struct {
 		*types.NodeConfig
 		Banner     string
-		SSHPubKeys []string
+		SSHPubKeys string
 	}{
 		s.Cfg,
 		b,
-		[]string{},
+		"",
 	}
 
-	// srl v23.7.x and above add the ssh authkey for linuxadmin
-	// to the template
-	if semver.Compare(s.runningVersion, "v23.7") >= 0 {
-		tplData.SSHPubKeys = s.sshPubKeys
+	// in srlinux >= v23.7+ linuxadmin and admin user ssh keys can only  be configured via the cli
+	// so we add the keys to the template data for rendering.
+	if semver.Compare(s.swVersion.String(), "v23.7") >= 0 || s.swVersion.major == "0" {
+		// catenate all ssh keys into a single quoted string accepted in CLI
+		for _, key := range s.sshPubKeys {
+			tplData.SSHPubKeys += fmt.Sprintf("%q ", key)
+		}
 	}
 
 	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning
