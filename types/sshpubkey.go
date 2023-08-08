@@ -1,6 +1,10 @@
 package types
 
-import "golang.org/x/crypto/ssh"
+import (
+	"bytes"
+
+	"golang.org/x/crypto/ssh"
+)
 
 type SSHPubKey struct {
 	PublicKey ssh.PublicKey
@@ -12,4 +16,8 @@ func NewSSHPublicKey(pubkey ssh.PublicKey, comment string) *SSHPubKey {
 		PublicKey: pubkey,
 		Comment:   comment,
 	}
+}
+
+func (s *SSHPubKey) Equals(s2 *SSHPubKey) bool {
+	return bytes.Equal(s.PublicKey.Marshal(), s2.PublicKey.Marshal())
 }

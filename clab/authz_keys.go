@@ -100,7 +100,36 @@ func RetrieveSSHPubKeys() ([]*types.SSHPubKey, error) {
 
 	keys = append(keys, agentKeys...)
 
-	return keys, nil
+	return dedupKeys(keys), nil
+}
+
+func dedupKeys(keys []*types.SSHPubKey) []*types.SSHPubKey {
+	if len(keys) <= 1 {
+		return keys
+	}
+	result := make([]*types.SSHPubKey, 0, len(keys))
+
+	// iterate through keys
+	for idx, key := range keys {
+		dupFound := false
+		// keys to compare are the once greater then the index of the actual key
+		// all others have already been compared via previous outer loop runs
+		for i := idx + 1; i < len(keys); i++ {
+			if key.Equals(keys[i]) {
+				// if key is a duplicate one, indicate via dupFound and break
+				// the result is, that the last instance of an x times duplicate key
+				// will be added, since in the remaining list of keys no duplicate
+				// will be found any more
+				dupFound = true
+				break
+			}
+		}
+		// if no dup was found, add it to the result list
+		if !dupFound {
+			result = append(result, key)
+		}
+	}
+	return result
 }
 
 // addKeyToBuffer adds a key to the buffer if the key is not already present.
