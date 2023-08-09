@@ -284,7 +284,7 @@ func FileLines(path, commentStr string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %v: %w", path, err)
 	}
-	defer f.Close()
+	defer f.Close() // skipcq: GO-S2307
 
 	var lines []string
 
