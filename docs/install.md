@@ -37,14 +37,14 @@ It is possible to install official containerlab releases via public APT/YUM repo
 
 === "APT"
     ```bash
-    echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
+    echo "deb [trusted=yes] <https://apt.fury.io/netdevops/> /" | \
     sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
     sudo apt update && sudo apt install containerlab
     ```
 === "YUM"
     ```
-    yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
+    yum-config-manager --add-repo=<https://yum.fury.io/netdevops/> && \
     echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
     sudo yum install containerlab
@@ -254,11 +254,9 @@ When the container is started, you will have a bash shell opened with the direct
     +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
     ```
 
-### How to start Containerlab on ARM-based MacBook
+#### Containerlab on ARM-based Macs
 
-> While techically possible this solution requires further testing once arm64 network images are available.
-
-The easiest option to run Containerlab on M1/M2 laptop is to build container locally. We'll provide an example of custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
+The easiest option to run Containerlab on ARM-based M1/M2 Macs is to build a docker-in-docker container. We'll provide an example of a custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
 
 Create `.devcontainer` directory in the root of the Containerlab repository with the following content:
 
@@ -268,66 +266,65 @@ Create `.devcontainer` directory in the root of the Containerlab repository with
 |- Dockerfile
 ```
 
-`Dockerfile`:
+=== "Dockerfile"
 
-```Dockerfile
-# The devcontainer will be based on Python 3.9
-# The base container already has entrypoint, vscode user account, etc. out of the box
-FROM mcr.microsoft.com/devcontainers/python:0-3.9-bullseye
+    ```Dockerfile
+    # The devcontainer will be based on Python 3.9
+    # The base container already has entrypoint, vscode user account, etc. out of the box
+    FROM mcr.microsoft.com/devcontainers/python:0-3.9-bullseye
 
-# containelab version will be set in devcontainer.json
-ARG _CLAB_VERSION
+    # containelab version will be set in devcontainer.json
+    ARG _CLAB_VERSION
 
-# install some basic tools inside the container
-# adjust this list based on your demands
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    sshpass \
-    curl \
-    iputils-ping \
-    htop \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -Rf /usr/share/doc && rm -Rf /usr/share/man \
-    && apt-get clean
+    # install some basic tools inside the container
+    # adjust this list based on your demands
+    RUN apt-get update \
+        && apt-get install -y --no-install-recommends \
+        sshpass \
+        curl \
+        iputils-ping \
+        htop \
+        && rm -rf /var/lib/apt/lists/* \
+        && rm -Rf /usr/share/doc && rm -Rf /usr/share/man \
+        && apt-get clean
 
-# install preferred version of the containerlab
-RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
-    && pip3 install --user yamllint
-```
+    # install preferred version of the containerlab
+    RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
+        && pip3 install --user yamllint
+    ```
+=== "devcontainer.json"
 
-`devcontainer.json`:
-
-```json
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/python
-{
-    "name": "clab-for-arm",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "args": {
-            "_CLAB_VERSION": "0.43.0"
-        }
-    },
-    "features": {
-        // the Containerlab will run as docker-in-docker
-        // it is also possible to use docker-outside-docker feature
-        "ghcr.io/devcontainers/features/docker-in-docker:2.2.0": {
-            "version": "latest"
-        }
-    },
-    // add any required extensions that must be pre-installed in devcontainer
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                // various tools
-                "tuxtina.json2yaml",
-                "vscode-icons-team.vscode-icons",
-                "mutantdino.resourcemonitor"
-            ]
+    ```json
+    // For format details, see https://aka.ms/devcontainer.json. For config options, see the
+    // README at: https://github.com/devcontainers/templates/tree/main/src/python
+    {
+        "name": "clab-for-arm",
+        "build": {
+            "dockerfile": "Dockerfile",
+            "args": {
+                "_CLAB_VERSION": "0.43.0"
+            }
+        },
+        "features": {
+            // Containerlab will run in a docker-in-docker container
+            // it is also possible to use docker-outside-docker feature
+            "ghcr.io/devcontainers/features/docker-in-docker:2.2.0": {
+                "version": "latest"
+            }
+        },
+        // add any required extensions that must be pre-installed in the devcontainer
+        "customizations": {
+            "vscode": {
+                "extensions": [
+                    // various tools
+                    "tuxtina.json2yaml",
+                    "vscode-icons-team.vscode-icons",
+                    "mutantdino.resourcemonitor"
+                ]
+            }
         }
     }
-}
-```
+    ```
 
 Once the devcontainer is defined as described above:
 
