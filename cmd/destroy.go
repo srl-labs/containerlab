@@ -165,7 +165,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.ListNodesContainers(ctx)
+	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
 	if err != nil {
 		return err
 	}
