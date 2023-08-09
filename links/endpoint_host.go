@@ -6,7 +6,7 @@ type EndpointHost struct {
 	EndpointGeneric
 }
 
-func (e *EndpointHost) Verify() error {
+func (e *EndpointHost) Verify(_ *VerifyLinkParams) error {
 	errs := []error{}
 	err := CheckEndpointUniqueness(e)
 	if err != nil {

@@ -19,7 +19,7 @@ type Endpoint interface {
 	// GetLink retrieves the link that the endpoint is assigned to
 	GetLink() Link
 	// Verify verifies that the endpoint is valid and can be deployed
-	Verify() error
+	Verify(*VerifyLinkParams) error
 	// HasSameNodeAndInterface returns true if an endpoint that implements this interface
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool

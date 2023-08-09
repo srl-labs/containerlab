@@ -5,6 +5,6 @@ type EndpointMacVlan struct {
 }
 
 // Verify verifies the veth based deployment pre-conditions
-func (e *EndpointMacVlan) Verify() error {
+func (e *EndpointMacVlan) Verify(_ *VerifyLinkParams) error {
 	return CheckEndpointExists(e)
 }

@@ -413,3 +413,13 @@ func SetMgmtNetUnderlayingBridge(bridge string) error {
 	getFakeMgmtBrLinkNode().GenericLinkNode.shortname = bridge
 	return nil
 }
+
+type VerifyLinkParams struct {
+	RunBridgeExistsCheck bool
+}
+
+func NewVerifyLinkParams() *VerifyLinkParams {
+	return &VerifyLinkParams{
+		RunBridgeExistsCheck: true,
+	}
+}

@@ -350,7 +350,7 @@ func (c *CLab) verifyLinks() error {
 	var err error
 	verificationErrors := []error{}
 	for _, e := range c.Endpoints {
-		err = e.Verify()
+		err = e.Verify(c.GlobalRuntime().Config().VerifyLinkParams)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
 		}

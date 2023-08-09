@@ -79,6 +79,7 @@ type RuntimeConfig struct {
 	GracefulShutdown bool
 	Debug            bool
 	KeepMgmtNet      bool
+	VerifyLinkParams *links.VerifyLinkParams
 }
 
 var ContainerRuntimes = map[string]Initializer{}

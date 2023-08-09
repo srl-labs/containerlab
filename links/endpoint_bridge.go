@@ -12,15 +12,17 @@ type EndpointBridge struct {
 	EndpointGeneric
 }
 
-func (e *EndpointBridge) Verify() error {
+func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
 	errs := []error{}
 	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)
 	}
-	err = CheckBridgeExists(e.GetNode())
-	if err != nil {
-		errs = append(errs, err)
+	if p.RunBridgeExistsCheck {
+		err = CheckBridgeExists(e.GetNode())
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 	err = CheckEndpointDoesNotExistYet(e)
 	if err != nil {

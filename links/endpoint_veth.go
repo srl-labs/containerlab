@@ -5,6 +5,6 @@ type EndpointVeth struct {
 }
 
 // Verify verifies the veth based deployment pre-conditions
-func (e *EndpointVeth) Verify() error {
+func (e *EndpointVeth) Verify(_ *VerifyLinkParams) error {
 	return CheckEndpointUniqueness(e)
 }

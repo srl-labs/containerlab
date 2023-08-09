@@ -29,6 +29,7 @@ import (
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -68,6 +69,7 @@ func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	for _, o := range opts {
 		o(d)
 	}
+	d.config.VerifyLinkParams = links.NewVerifyLinkParams()
 	return nil
 }
 
