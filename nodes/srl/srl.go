@@ -542,9 +542,9 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	n.filterSSHPubKeys()
 
-	// in srlinux >= v23.7+ linuxadmin and admin user ssh keys can only be configured via the cli
+	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
-	if semver.Compare(n.swVersion.String(), "v23.7") >= 0 || n.swVersion.major == "0" {
+	if semver.Compare(n.swVersion.String(), "v23.10") >= 0 || n.swVersion.major == "0" {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 
