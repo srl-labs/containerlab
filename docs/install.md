@@ -5,6 +5,7 @@ hide:
 Containerlab is distributed as a Linux deb/rpm package and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
 
 ### Pre-requisites
+
 The following requirements must be satisfied to let containerlab tool run successfully:
 
 * A user should have `sudo` privileges to run containerlab.
@@ -12,6 +13,7 @@ The following requirements must be satisfied to let containerlab tool run succes
 * Load container images (e.g. Nokia SR Linux, Arista cEOS) that are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
 ### Install script
+
 Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) which detects the operating system type and installs the relevant package:
 
 !!! note
@@ -30,6 +32,7 @@ bash -c "$(wget -qO - https://get.containerlab.dev)"
 ```
 
 ### Package managers
+
 It is possible to install official containerlab releases via public APT/YUM repository.
 
 === "APT"
@@ -70,6 +73,7 @@ It is possible to install official containerlab releases via public APT/YUM repo
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
 
 ### Container
+
 Containerlab is also available in a container packaging. The latest containerlab release can be pulled with:
 
 ```
@@ -107,6 +111,7 @@ Within the started container you can use the same `containerlab deploy/destroy/i
     ```
 
 ### Manual installation
+
 If the linux distributive can't install deb/rpm packages, containerlab can be installed from the archive:
 
 ```bash
@@ -128,6 +133,7 @@ mv /etc/containerlab/containerlab /usr/bin && chmod a+x /usr/bin/containerlab
 ```
 
 ### Windows Subsystem Linux (WSL)
+
 Containerlab [runs](https://twitter.com/ntdvps/status/1380915270328401922) on WSL, but you need to [install docker-ce](https://docs.docker.com/engine/install/) inside the WSL2 linux system instead of using Docker Desktop[^3].
 
 If you are running Ubuntu 20.04 as your WSL2 machine, you can run [this script](https://gist.github.com/hellt/e8095c1719a3ea0051165ff282d2b62a) to install docker-ce.
@@ -145,6 +151,7 @@ Once installed, issue `sudo service docker start` to start the docker service in
     It appears to be that next versions of WSL2 kernels will support KVM.
 
 ### Mac OS
+
 Running containerlab on Mac OS is possible[^4] by means of a separate docker image with containerlab inside.
 
 !!!warning
@@ -171,7 +178,7 @@ The first command in the snippet above sets the working directory which you inte
     1. It is best to create a directory under the `~/some/path` unless you know what to do[^5]
     2. vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.
     3. Docker Desktop for Mac introduced cgroups v2 support in 4.3.0 version; to support the images that require cgroups v1 follow [these instructions](https://github.com/docker/for-mac/issues/6073).
-    4. Docker Desktop relies on a LinuxKit based HyperKit VM. Unfortunately, it is shipped with a minimalist kernel, and some modules such as VRF are disabled by default. Follow [these instructions](https://medium.com/@notsinge/making-your-own-linuxkit-with-docker-for-mac-5c1234170fb1) to rebuild it with more modules. 
+    4. Docker Desktop relies on a LinuxKit based HyperKit VM. Unfortunately, it is shipped with a minimalist kernel, and some modules such as VRF are disabled by default. Follow [these instructions](https://medium.com/@notsinge/making-your-own-linuxkit-with-docker-for-mac-5c1234170fb1) to rebuild it with more modules.
 
 When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use `containerlab` commands right away.
 
@@ -294,8 +301,8 @@ RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "clab-for-arm",
-	"build": {
+    "name": "clab-for-arm",
+    "build": {
         "dockerfile": "Dockerfile",
         "args": {
             "_CLAB_VERSION": "0.43.0"
@@ -322,14 +329,14 @@ RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
 }
 ```
 
-Once the devcontiner is defined as described above:
+Once the devcontainer is defined as described above:
 
-- Open the devcontainer in VSCode
-- Import the required images for your cLab inside the container (if you are using Docker-in-Docker option)
-- Start you Containerlab
-
+* Open the devcontainer in VSCode
+* Import the required images for your cLab inside the container (if you are using Docker-in-Docker option)
+* Start you Containerlab
 
 ### Upgrade
+
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
 
 ```
@@ -341,6 +348,7 @@ This command will fetch the installation script and will upgrade the tool to its
 or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
 
 ### From source
+
 To build containerlab from source:
 
 === "with go build"
@@ -353,6 +361,7 @@ To build containerlab from source:
     ```
 
 ### Uninstall
+
 To uninstall containerlab when it was installed via installation script or packages:
 
 === "Debian-based system"
@@ -366,8 +375,8 @@ To uninstall containerlab when it was installed via installation script or packa
 === "Manual removal"
     Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
 
-
 ### SELinux
+
 When SELinux set to enforced mode containerlab binary might fail to execute with `Segmentation fault (core dumped)` error. This might be because containerlab binary is compressed with [upx](https://upx.github.io/) and selinux prevents it from being decompressed by default.
 
 To fix this:
