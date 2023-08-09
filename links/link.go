@@ -405,7 +405,7 @@ func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
 	return _fakeMgmtBrLinkMgmtBrInstance
 }
 
-func GetFakeMgmtBrLinkNode() Node {
+func GetFakeMgmtBrLinkNode() Node { // skipcq: RVV-B0001
 	return getFakeMgmtBrLinkNode()
 }
 
