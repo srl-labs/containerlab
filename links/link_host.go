@@ -1,12 +1,7 @@
 package links
 
 import (
-	"context"
 	"fmt"
-
-	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/vishvananda/netlink"
 )
 
 // LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
@@ -53,136 +48,85 @@ func (r *LinkHostRaw) GetType() LinkType {
 }
 
 func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
-	link := &LinkHost{
+	link := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
-		HostInterface:    r.HostInterface,
 	}
 	// resolve and populate the endpoint
 	ep, err := r.Endpoint.Resolve(params, link)
 	if err != nil {
 		return nil, err
 	}
+	hostEp := &EndpointHost{
+		EndpointGeneric: EndpointGeneric{
+			Node:      GetFakeHostLinkNode(),
+			IfaceName: r.HostInterface,
+			Link:      link,
+		},
+	}
+
 	// set the end point in the link
-	link.Endpoint = ep
+	link.Endpoints = []Endpoint{ep, hostEp}
+
 	return link, nil
 }
 
-type LinkHost struct {
-	LinkCommonParams
-	HostInterface string
-	Endpoint      Endpoint
-}
+// type LinkHost struct {
+// 	LinkCommonParams
+// 	HostEndpoint *EndpointHost
+// 	Endpoint     Endpoint
+// }
 
-func (l *LinkHost) Deploy(ctx context.Context) error {
-	// build the netlink.Veth struct for the link provisioning
-	link := &netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{
-			Name: l.Endpoint.GetRandIfaceName(),
-			MTU:  l.MTU,
-			// Mac address is set later on
-		},
-		PeerName: l.HostInterface,
-		// PeerMac address is set later on
-	}
+// func (l *LinkHost) Deploy(ctx context.Context) error {
+// 	// build the netlink.Veth struct for the link provisioning
+// 	link := &netlink.Veth{
+// 		LinkAttrs: netlink.LinkAttrs{
+// 			Name: l.Endpoint.GetRandIfaceName(),
+// 			MTU:  l.MTU,
+// 			// Mac address is set later on
+// 		},
+// 		PeerName: l.HostEndpoint.GetIfaceName(),
+// 		// PeerMac address is set later on
+// 	}
 
-	// add the link
-	err := netlink.LinkAdd(link)
-	if err != nil {
-		return err
-	}
+// 	// add the link
+// 	err := netlink.LinkAdd(link)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// add link to node, rename, set mac and Up
-	err = l.Endpoint.GetNode().AddNetlinkLinkToContainer(ctx, link, SetNameMACAndUpInterface(link, l.Endpoint))
-	if err != nil {
-		return err
-	}
+// 	// add link to node, rename, set mac and Up
+// 	err = l.Endpoint.GetNode().AddNetlinkLinkToContainer(ctx, link, SetNameMACAndUpInterface(link, l.Endpoint))
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// get the link on the host side
-	hostLink, err := netlink.LinkByName(l.HostInterface)
-	if err != nil {
-		return err
-	}
+// 	// get the link on the host side
+// 	hostLink, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// set the host side link to up
-	err = netlink.LinkSetUp(hostLink)
-	if err != nil {
-		return err
-	}
+// 	// set the host side link to up
+// 	err = netlink.LinkSetUp(hostLink)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
-func (l *LinkHost) GetType() LinkType {
-	return LinkTypeHost
-}
+// func (l *LinkHost) GetType() LinkType {
+// 	return LinkTypeHost
+// }
 
-func (l *LinkHost) Remove(_ context.Context) error {
-	// TODO
-	return nil
-}
+// func (l *LinkHost) Remove(ctx context.Context) error {
+// 	// TODO
+// 	return nil
+// }
 
-func (l *LinkHost) GetEndpoints() []Endpoint {
-	return []Endpoint{
-		l.Endpoint,
-		&EndpointHost{
-			EndpointGeneric: EndpointGeneric{
-				Node:      GetFakeHostLinkNode(),
-				IfaceName: l.HostInterface,
-				Link:      l,
-			},
-		},
-	}
-}
-
-type GenericLinkNode struct {
-	shortname string
-	links     []Link
-	endpoints []Endpoint
-	nspath    string
-}
-
-func (g *GenericLinkNode) AddNetlinkLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	// retrieve the namespace handle
-	netns, err := ns.GetNS(g.nspath)
-	if err != nil {
-		return err
-	}
-	// move veth endpoint to namespace
-	if err = netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
-		return err
-	}
-	// execute the given function
-	return netns.Do(f)
-}
-
-func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
-	// retrieve the namespace handle
-	netns, err := ns.GetNS(g.nspath)
-	if err != nil {
-		return err
-	}
-	// execute the given function
-	return netns.Do(f)
-}
-
-func (g *GenericLinkNode) AddLink(l Link) {
-	g.links = append(g.links, l)
-}
-
-func (g *GenericLinkNode) AddEndpoint(e Endpoint) {
-	g.endpoints = append(g.endpoints, e)
-}
-
-func (g *GenericLinkNode) GetShortName() string {
-	return g.shortname
-}
-
-func (g *GenericLinkNode) GetEndpoints() []Endpoint {
-	return g.endpoints
-}
-
-func (g *GenericLinkNode) GetState() state.NodeState {
-	// The GenericLinkNode is the basis for Mgmt-Bridge and Host fake node.
-	// Both of these do generally exist. Hence the Deployed state in generally returned
-	return state.Deployed
-}
+// func (l *LinkHost) GetEndpoints() []Endpoint {
+// 	return []Endpoint{
+// 		l.Endpoint,
+// 		l.HostEndpoint,
+// 	}
+// }
