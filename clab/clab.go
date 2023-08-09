@@ -23,6 +23,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/semaphore"
 )
@@ -38,6 +39,10 @@ type CLab struct {
 	// reg is a registry of node kinds
 	Reg  *nodes.NodeRegistry
 	Cert *cert.Cert
+	// List of SSH public keys extracted from the ~/.ssh/authorized_keys file
+	// and ~/.ssh/*.pub files.
+	// The keys are used to enable key-based SSH access for the nodes.
+	SSHPubKeys []ssh.PublicKey
 
 	timeout time.Duration
 }
@@ -404,6 +409,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 						Cert:         c.Cert,
 						TopologyName: c.Config.Name,
 						TopoPaths:    c.TopoPaths,
+						SSHPubKeys:   c.SSHPubKeys,
 					},
 				)
 				if err != nil {

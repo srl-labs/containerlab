@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -274,4 +275,29 @@ func FilenameForURL(rawUrl string) string {
 		}
 	}
 	return filepath.Base(u.Path)
+}
+
+// FileLines opens a file by the `path` and returns a slice of strings for each line
+// excluding lines that start with `commentStr` or are empty.
+func FileLines(path, commentStr string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file %v: %w", path, err)
+	}
+	defer f.Close() // skipcq: GO-S2307
+
+	var lines []string
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Skip lines that start with comment char
+		if strings.HasPrefix(line, commentStr) || line == "" {
+			continue
+		}
+
+		lines = append(lines, line)
+	}
+
+	return lines, nil
 }

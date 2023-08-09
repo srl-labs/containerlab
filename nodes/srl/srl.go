@@ -21,6 +21,8 @@ import (
 	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/mod/semver"
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -65,6 +67,10 @@ set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num
 set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
   {{- end }}
 {{ end -}}
+{{- if .SSHPubKeys }}
+set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
+set / system aaa authentication admin-user ssh-key [ {{ .SSHPubKeys }} ]
+{{- end }}
 set / system banner login-banner "{{ .Banner }}"
 commit save`
 )
@@ -137,6 +143,10 @@ type srl struct {
 	// to generate certificates
 	cert         *cert.Cert
 	topologyName string
+	// SSH public keys extracted from the clab host
+	sshPubKeys []ssh.PublicKey
+	// software version SR Linux node runs
+	swVersion *SrlVersion
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -247,6 +257,9 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		)
 	}
 
+	// store provided pubkeys
+	s.sshPubKeys = params.SSHPubKeys
+
 	// store the certificate-related parameters
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	s.cert = params.Cert
@@ -282,6 +295,11 @@ func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 
 	// start waiting for initial commit and mgmt server ready
 	if err := s.Ready(ctx); err != nil {
+		return err
+	}
+
+	s.swVersion, err = s.RunningVersion(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -505,8 +523,8 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (s *srl) addDefaultConfig(ctx context.Context) error {
-	b, err := s.banner(ctx)
+func (n *srl) addDefaultConfig(ctx context.Context) error {
+	b, err := n.banner()
 	if err != nil {
 		return err
 	}
@@ -514,10 +532,20 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 	// struct that holds data used in templating of the default config snippet
 	tplData := struct {
 		*types.NodeConfig
-		Banner string
+		Banner     string
+		SSHPubKeys string
 	}{
-		s.Cfg,
+		n.Cfg,
 		b,
+		"",
+	}
+
+	n.filterSSHPubKeys()
+
+	// in srlinux >= v23.7+ linuxadmin and admin user ssh keys can only be configured via the cli
+	// so we add the keys to the template data for rendering.
+	if semver.Compare(n.swVersion.String(), "v23.7") >= 0 || n.swVersion.major == "0" {
+		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 
 	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning
@@ -531,13 +559,13 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
+	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
 	execCmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
 	})
-	_, err = s.RunExec(ctx, execCmd)
+	_, err = n.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
 	}
@@ -547,12 +575,12 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	execResult, err := s.RunExec(ctx, cmd)
+	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return nil
 }
