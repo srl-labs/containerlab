@@ -1,6 +1,12 @@
 package srl
 
-import "regexp"
+import (
+	"context"
+	"regexp"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
+)
 
 // SrlVersion represents an sr linux version as a set of fields.
 type SrlVersion struct {
@@ -9,6 +15,22 @@ type SrlVersion struct {
 	patch  string
 	build  string
 	commit string
+}
+
+// RunningVersion gets the software version of the running node
+// by executing the "info from state /system information version | grep version" command
+// and parsing the output.
+func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
+	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
+
+	execResult, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
 
 func (n *srl) parseVersionString(s string) *SrlVersion {

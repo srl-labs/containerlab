@@ -143,7 +143,8 @@ type srl struct {
 	// to generate certificates
 	cert         *cert.Cert
 	topologyName string
-	sshPubKeys   []string
+	// SSH public keys extracted from the clab host
+	sshPubKeys []*ssh.PublicKey
 	// software version SR Linux node runs
 	swVersion *SrlVersion
 }
@@ -257,15 +258,7 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 	}
 
 	// store provided pubkeys
-	// TODO: remove non ssh-rsa keys, as they are not supported by SR Linux right now
-	s.sshPubKeys = make([]string, 0, len(params.SSHPubKeys))
-	for _, k := range params.SSHPubKeys {
-		// marshall the publickey in authorizedKeys format
-		// convert it to a string
-		// and trim spaces (cause there will be a trailing newline)
-		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(*k)))
-		s.sshPubKeys = append(s.sshPubKeys, x)
-	}
+	s.sshPubKeys = params.SSHPubKeys
 
 	// store the certificate-related parameters
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
@@ -302,6 +295,11 @@ func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 
 	// start waiting for initial commit and mgmt server ready
 	if err := s.Ready(ctx); err != nil {
+		return err
+	}
+
+	s.swVersion, err = s.RunningVersion(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -545,10 +543,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	// in srlinux >= v23.7+ linuxadmin and admin user ssh keys can only  be configured via the cli
 	// so we add the keys to the template data for rendering.
 	if semver.Compare(n.swVersion.String(), "v23.7") >= 0 || n.swVersion.major == "0" {
-		// catenate all ssh keys into a single quoted string accepted in CLI
-		for _, key := range n.sshPubKeys {
-			tplData.SSHPubKeys += fmt.Sprintf("%q ", key)
-		}
+		tplData.SSHPubKeys = n.catenateKeys()
 	}
 
 	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning

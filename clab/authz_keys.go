@@ -62,19 +62,9 @@ func RetrieveSSHPubKeysFromFiles() ([]*ssh.PublicKey, error) {
 		all = append(all, f)
 	}
 
-	// iterate through all files with key material
-	for _, fn := range all {
-		rb, err := os.ReadFile(fn)
-		if err != nil {
-			return nil, fmt.Errorf("failed reading the file %s: %v", fn, err)
-		}
-
-		pubKey, _, _, _, err := ssh.ParseAuthorizedKey(rb)
-		if err != nil {
-			return nil, err
-		}
-
-		keys = append(keys, &pubKey)
+	keys, err = utils.LoadSSHPubKeysFromFiles(all)
+	if err != nil {
+		return nil, err
 	}
 
 	return keys, nil
