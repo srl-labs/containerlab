@@ -1,6 +1,7 @@
 package utils
 
 import (
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -18,6 +19,9 @@ func LoadSSHPubKeysFromFiles(paths []string) ([]ssh.PublicKey, error) {
 
 		for _, l := range lines {
 			pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(l))
+
+			log.Debugf("Loaded public key %s", l)
+
 			if err != nil {
 				return nil, err
 			}

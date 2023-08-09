@@ -58,7 +58,7 @@ func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 	f := utils.ResolvePath(authzKeysFPath, "")
 
 	if utils.FileExists(f) {
-		log.Debugf("%s found, adding the public keys it contains", f)
+		log.Debugf("%s found, adding it to the list of files to get public keys from", f)
 		all = append(all, f)
 	}
 

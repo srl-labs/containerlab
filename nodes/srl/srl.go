@@ -524,7 +524,7 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
 func (n *srl) addDefaultConfig(ctx context.Context) error {
-	b, err := n.banner(ctx)
+	b, err := n.banner()
 	if err != nil {
 		return err
 	}
