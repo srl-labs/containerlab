@@ -14,12 +14,16 @@ import (
 func (n *srl) catenateKeys() string {
 	var keys string
 
-	for _, k := range n.sshPubKeys {
+	for i, k := range n.sshPubKeys {
 		// marshall the publickey in authorizedKeys format
 		// and trim spaces (cause there will be a trailing newline)
 		ks := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(*k)))
 		// catenate all ssh keys into a single quoted string accepted in CLI
-		keys += fmt.Sprintf("%q ", ks)
+		keys += fmt.Sprintf("%q", ks)
+		// only add a space after the key if it is not the last one
+		if i < len(n.sshPubKeys)-1 {
+			keys += " "
+		}
 	}
 
 	return keys
