@@ -387,7 +387,7 @@ func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
+func GetFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
 	if _fakeMgmtBrLinkMgmtBrInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
@@ -405,12 +405,8 @@ func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
 	return _fakeMgmtBrLinkMgmtBrInstance
 }
 
-func GetFakeMgmtBrLinkNode() Node {
-	return getFakeMgmtBrLinkNode()
-}
-
 func SetMgmtNetUnderlayingBridge(bridge string) error {
-	getFakeMgmtBrLinkNode().GenericLinkNode.shortname = bridge
+	GetFakeMgmtBrLinkNode().GenericLinkNode.shortname = bridge
 	return nil
 }
 
