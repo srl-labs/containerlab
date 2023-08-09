@@ -396,7 +396,7 @@ func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
 		nspath := currns.Path()
 		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
-				shortname: "TBD",
+				shortname: "mgmt-net",
 				endpoints: []Endpoint{},
 				nspath:    nspath,
 			},

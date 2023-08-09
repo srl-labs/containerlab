@@ -612,15 +612,30 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 // in host networking namespace or attached to linux bridge.
 // See https://github.com/srl-labs/containerlab/issues/842 for the reference.
 func (c *CLab) VethCleanup(ctx context.Context) error {
-	// remove all the links
-	for _, link := range c.Links {
-		err := link.Remove(ctx)
-		if err != nil {
-			// if error log and continue
-			log.Error(err)
+	hostBasedEndpoints := []links.Endpoint{}
+
+	// collect the endpoints of regular nodes
+	for _, n := range c.Nodes {
+		if n.Config().IsRootNamespaceBased || n.Config().NetworkMode == "host" {
+			hostBasedEndpoints = append(hostBasedEndpoints, n.GetEndpoints()...)
 		}
 	}
-	return nil
+
+	// collect the endpoints of the fake nodes
+	hostBasedEndpoints = append(hostBasedEndpoints, links.GetFakeHostLinkNode().GetEndpoints()...)
+	hostBasedEndpoints = append(hostBasedEndpoints, links.GetFakeMgmtBrLinkNode().GetEndpoints()...)
+
+	var joinedErr error
+	for _, ep := range hostBasedEndpoints {
+		// finally remove all the collected endpoints
+		log.Debugf("removing endpoint %s", ep.String())
+		err := ep.Remove()
+		if err != nil {
+			joinedErr = errors.Join(joinedErr, err)
+		}
+	}
+
+	return joinedErr
 }
 
 // ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
