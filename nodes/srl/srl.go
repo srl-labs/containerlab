@@ -144,7 +144,7 @@ type srl struct {
 	cert         *cert.Cert
 	topologyName string
 	// SSH public keys extracted from the clab host
-	sshPubKeys []*ssh.PublicKey
+	sshPubKeys []ssh.PublicKey
 	// software version SR Linux node runs
 	swVersion *SrlVersion
 }
@@ -540,10 +540,12 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		"",
 	}
 
-	// in srlinux >= v23.7+ linuxadmin and admin user ssh keys can only  be configured via the cli
+	n.filterSSHPubKeys()
+
+	// in srlinux >= v23.7+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
 	if semver.Compare(n.swVersion.String(), "v23.7") >= 0 || n.swVersion.major == "0" {
-		tplData.SSHPubKeys = n.catenateKeys()
+		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 
 	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning

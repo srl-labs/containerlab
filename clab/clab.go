@@ -42,7 +42,7 @@ type CLab struct {
 	// List of SSH public keys extracted from the ~/.ssh/authorized_keys file
 	// and ~/.ssh/*.pub files.
 	// The keys are used to enable key-based SSH access for the nodes.
-	SSHPubKeys []*ssh.PublicKey
+	SSHPubKeys []ssh.PublicKey
 
 	timeout time.Duration
 }

@@ -7,8 +7,8 @@ import (
 // LoadSSHPubKeysFromFiles parses openssh keys from the files referenced by the paths
 // and returns a slice of ssh.PublicKey pointers.
 // The files may contain multiple keys each on a separate line.
-func LoadSSHPubKeysFromFiles(paths []string) ([]*ssh.PublicKey, error) {
-	var keys []*ssh.PublicKey
+func LoadSSHPubKeysFromFiles(paths []string) ([]ssh.PublicKey, error) {
+	var keys []ssh.PublicKey
 
 	for _, p := range paths {
 		lines, err := FileLines(p, "#")
@@ -22,7 +22,7 @@ func LoadSSHPubKeysFromFiles(paths []string) ([]*ssh.PublicKey, error) {
 				return nil, err
 			}
 
-			keys = append(keys, &pubKey)
+			keys = append(keys, pubKey)
 		}
 
 	}
