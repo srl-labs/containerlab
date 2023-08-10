@@ -91,8 +91,13 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
 	}
 	envSb.WriteString("'")
+
 	n.Cfg.Cmd = envSb.String()
-	n.Cfg.MacAddress = utils.GenMac("00:1c:73")
+	hwa, err := utils.GenMac("00:1c:73")
+	if err != nil {
+		return err
+	}
+	n.Cfg.MacAddress = hwa.String()
 
 	// mount config dir
 	cfgPath := filepath.Join(n.Cfg.LabDir, "flash")

@@ -33,8 +33,6 @@ const (
 	hostNSPath = "__host"
 	// veth link mtu.
 	DefaultVethLinkMTU = 9500
-	// containerlab's reserved OUI.
-	ClabOUI = "aa:c1:ab"
 
 	// clab specific topology variables.
 	clabDirVar = "__clabDir__"

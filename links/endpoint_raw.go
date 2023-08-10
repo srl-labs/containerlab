@@ -3,6 +3,8 @@ package links
 import (
 	"fmt"
 	"net"
+
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // EndpointRaw is the raw (string) representation of an endpoint as defined in the topology file
@@ -40,8 +42,15 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		Link:      l,
 	}
 
-	// if MAC is present, set it
-	if er.MAC != "" {
+	var err error
+	if er.MAC == "" {
+		// if mac is not present generate one
+		genericEndpoint.MAC, err = utils.GenMac(ClabOUI)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// if MAC is present, set it
 		m, err := net.ParseMAC(er.MAC)
 		if err != nil {
 			return nil, err
