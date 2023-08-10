@@ -6,6 +6,7 @@ package clab
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
@@ -23,43 +25,14 @@ const (
 	authzKeysFPath = "~/.ssh/authorized_keys"
 )
 
-// CreateAuthzKeysFile creats the authorized_keys file in the lab directory
-// if any files ~/.ssh/*.pub found.
+// CreateAuthzKeysFile creates the authorized_keys file in the lab directory
+// using the public ssh keys retrieved from agent and local files.
 func (c *CLab) CreateAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	p := utils.ResolvePath(pubKeysGlob, "")
-
-	all, err := filepath.Glob(p)
-	if err != nil {
-		return fmt.Errorf("failed globbing the path %s", p)
-	}
-
-	f := utils.ResolvePath(authzKeysFPath, "")
-
-	if utils.FileExists(f) {
-		log.Debugf("%s found, adding the public keys it contains", f)
-		all = append(all, f)
-	}
-
-	// get keys registered with ssh-agent
-	keys, err := SSHAgentKeys()
-	if err != nil {
-		log.Debug(err)
-	}
-
-	log.Debugf("extracted %d keys from ssh-agent", len(keys))
-	for _, k := range keys {
-		addKeyToBuffer(b, k)
-	}
-
-	for _, fn := range all {
-		rb, err := os.ReadFile(fn)
-		if err != nil {
-			return fmt.Errorf("failed reading the file %s: %v", fn, err)
-		}
-
-		addKeyToBuffer(b, string(rb))
+	for _, k := range c.SSHPubKeys {
+		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(k)))
+		addKeyToBuffer(b, x)
 	}
 
 	clabAuthzKeysFPath := c.TopoPaths.AuthorizedKeysFilename()
@@ -71,21 +44,72 @@ func (c *CLab) CreateAuthzKeysFile() error {
 	return os.Chmod(clabAuthzKeysFPath, 0644) // skipcq: GSC-G302
 }
 
-// addKeyToBuffer adds a key to the buffer if the key is not already present.
-func addKeyToBuffer(b *bytes.Buffer, key string) {
-	// since they key might have a comment as a third field, we need to strip it
-	elems := strings.Fields(key)
-	if len(elems) < 2 {
-		return
+// RetrieveSSHPubKeysFromFiles retrieves public keys from the ~/.ssh/*.authorized_keys
+// and ~/.ssh/*.pub files.
+func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
+	var keys []ssh.PublicKey
+	p := utils.ResolvePath(pubKeysGlob, "")
+
+	all, err := filepath.Glob(p)
+	if err != nil {
+		return nil, fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	if !strings.Contains(b.String(), elems[1]) {
+	f := utils.ResolvePath(authzKeysFPath, "")
+
+	if utils.FileExists(f) {
+		log.Debugf("%s found, adding it to the list of files to get public keys from", f)
+		all = append(all, f)
+	}
+
+	keys, err = utils.LoadSSHPubKeysFromFiles(all)
+	if err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+// RetrieveSSHPubKeys retrieves the PubKeys from the different sources
+// SSHAgent as well as all home dir based /.ssh/*.pub files.
+func (c *CLab) RetrieveSSHPubKeys() ([]ssh.PublicKey, error) {
+	keys := make([]ssh.PublicKey, 0)
+
+	var errs error
+
+	// any errors encountered during the retrieval of the keys are not fatal
+	// we accumulate them and log.
+	fkeys, err := RetrieveSSHPubKeysFromFiles()
+	if err != nil {
+		errs = errors.Join(err)
+	}
+
+	agentKeys, err := RetrieveSSHAgentKeys()
+	if err != nil {
+		errs = errors.Join(err)
+	}
+
+	keysM := map[string]ssh.PublicKey{}
+	for _, k := range append(fkeys, agentKeys...) {
+		keysM[string(ssh.MarshalAuthorizedKey(k))] = k
+	}
+
+	for _, k := range keysM {
+		keys = append(keys, k)
+	}
+
+	return keys, errs
+}
+
+// addKeyToBuffer adds a key to the buffer if the key is not already present.
+func addKeyToBuffer(b *bytes.Buffer, key string) {
+	if !strings.Contains(b.String(), key) {
 		b.WriteString(key + "\n")
 	}
 }
 
-// SSHAgentKeys retrieves public keys registered with the ssh-agent.
-func SSHAgentKeys() ([]string, error) {
+// RetrieveSSHAgentKeys retrieves public keys registered with the ssh-agent.
+func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if len(socket) == 0 {
 		return nil, fmt.Errorf("SSH_AUTH_SOCK not set, skipping pubkey fetching")
@@ -101,9 +125,16 @@ func SSHAgentKeys() ([]string, error) {
 		return nil, fmt.Errorf("error listing agent's pub keys %w", err)
 	}
 
-	var pubKeys []string
+	log.Debugf("extracted %d keys from ssh-agent", len(keys))
+
+	var pubKeys []ssh.PublicKey
+
 	for _, key := range keys {
-		pubKeys = append(pubKeys, key.String())
+		pkey, err := ssh.ParsePublicKey(key.Blob)
+		if err != nil {
+			return nil, err
+		}
+		pubKeys = append(pubKeys, pkey)
 	}
 
 	return pubKeys, nil

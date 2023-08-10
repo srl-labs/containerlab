@@ -1,11 +1,7 @@
 package srl
 
 import (
-	"context"
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
 )
 
 const banner = `................................................................
@@ -26,28 +22,17 @@ const banner = `................................................................
 `
 
 // banner returns a banner string with a docs version filled in based on the version information queried from the node.
-func (s *srl) banner(ctx context.Context) (string, error) {
-	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
-
-	execResult, err := s.RunExec(ctx, cmd)
-	if err != nil {
-		return "", err
-	}
-
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
-
-	v := s.parseVersionString(execResult.GetStdOutString())
-
+func (n *srl) banner() (string, error) {
 	// if minor is a single digit value, we need to add extra space to patch version
 	// to have banner table aligned nicely
-	if len(v.minor) == 1 {
-		v.patch = v.patch + " "
+	if len(n.swVersion.minor) == 1 {
+		n.swVersion.patch = n.swVersion.patch + " "
 	}
 
 	b := fmt.Sprintf(banner,
-		v.major, v.minor,
-		v.major, v.minor, v.patch,
-		v.major, v.minor, v.patch)
+		n.swVersion.major, n.swVersion.minor,
+		n.swVersion.major, n.swVersion.minor, n.swVersion.patch,
+		n.swVersion.major, n.swVersion.minor, n.swVersion.patch)
 
 	return b, nil
 }

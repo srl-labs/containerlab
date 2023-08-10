@@ -21,6 +21,8 @@ import (
 	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/mod/semver"
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -62,10 +64,16 @@ set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
   {{- if ne $ep.Mtu 0 }}
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
   {{- end }}
+
   {{- if ne $ep.BreakoutNo  "" }}
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
   {{- end }}
+
+{{ end -}}
+{{- if .SSHPubKeys }}
+set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
+set / system aaa authentication admin-user ssh-key [ {{ .SSHPubKeys }} ]
 {{- end }}
 set / system banner login-banner "{{ .Banner }}"
 commit save`
@@ -139,6 +147,10 @@ type srl struct {
 	// to generate certificates
 	cert         *cert.Cert
 	topologyName string
+	// SSH public keys extracted from the clab host
+	sshPubKeys []ssh.PublicKey
+	// software version SR Linux node runs
+	swVersion *SrlVersion
 }
 
 func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -249,6 +261,9 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		)
 	}
 
+	// store provided pubkeys
+	s.sshPubKeys = params.SSHPubKeys
+
 	// store the certificate-related parameters
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	s.cert = params.Cert
@@ -284,6 +299,11 @@ func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 
 	// start waiting for initial commit and mgmt server ready
 	if err := s.Ready(ctx); err != nil {
+		return err
+	}
+
+	s.swVersion, err = s.RunningVersion(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -508,11 +528,12 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 
 // srlTemplateData top level data struct
 type srlTemplateData struct {
-	TLSKey    string
-	TLSCert   string
-	TLSAnchor string
-	Banner    string
-	IFaces    map[string]tplIFace
+	TLSKey     string
+	TLSCert    string
+	TLSAnchor  string
+	Banner     string
+	IFaces     map[string]tplIFace
+	SSHPubKeys string
 }
 
 // tplIFace template interface struct
@@ -524,23 +545,32 @@ type tplIFace struct {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (s *srl) addDefaultConfig(ctx context.Context) error {
-	b, err := s.banner(ctx)
+func (n *srl) addDefaultConfig(ctx context.Context) error {
+	b, err := n.banner()
 	if err != nil {
 		return err
 	}
 
 	// struct that holds data used in templating of the default config snippet
+
 	tplData := srlTemplateData{
-		TLSKey:    s.Cfg.TLSKey,
-		TLSCert:   s.Cfg.TLSCert,
-		TLSAnchor: s.Cfg.TLSAnchor,
+		TLSKey:    n.Cfg.TLSKey,
+		TLSCert:   n.Cfg.TLSCert,
+		TLSAnchor: n.Cfg.TLSAnchor,
 		Banner:    b,
 		IFaces:    map[string]tplIFace{},
 	}
 
+	n.filterSSHPubKeys()
+
+	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
+	// so we add the keys to the template data for rendering.
+	if semver.Compare(n.swVersion.String(), "v23.10") >= 0 || n.swVersion.major == "0" {
+		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
+	}
+
 	// prepare the endpoints
-	for _, e := range s.Endpoints {
+	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
 		// split the interface identifier into their parts
 		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
@@ -578,13 +608,13 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("Node %q additional config:\n%s", s.Cfg.ShortName, buf.String())
+	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
 	execCmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
 	})
-	_, err = s.RunExec(ctx, execCmd)
+	_, err = n.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
 	}
@@ -594,12 +624,12 @@ func (s *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	execResult, err := s.RunExec(ctx, cmd)
+	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return nil
 }
