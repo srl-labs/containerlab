@@ -12,8 +12,8 @@ type LinkMgmtNetRaw struct {
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (r *LinkMgmtNetRaw) ToLinkConfig() *LinkBrief {
-	lc := &LinkBrief{
+func (r *LinkMgmtNetRaw) ToLinkBrief() *LinkBriefRaw {
+	lc := &LinkBriefRaw{
 		Endpoints: make([]string, 2),
 		LinkCommonParams: LinkCommonParams{
 			MTU:    r.MTU,
@@ -69,7 +69,7 @@ func (r *LinkMgmtNetRaw) GetType() LinkType {
 	return LinkTypeMgmtNet
 }
 
-func mgmtNetLinkFromBrief(lb *LinkBrief, specialEPIndex int) (*LinkMgmtNetRaw, error) {
+func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
 	result := &LinkMgmtNetRaw{

@@ -5,16 +5,16 @@ import (
 	"strings"
 )
 
-// LinkBrief is the representation of any supported link in a brief format as defined in the topology file.
-type LinkBrief struct {
-	Endpoints        []string
-	LinkCommonParams `yaml:",inline"`
+// LinkBriefRaw is the representation of any supported link in a brief format as defined in the topology file.
+type LinkBriefRaw struct {
+	Endpoints        []string `yaml:"endpoints"`
+	LinkCommonParams `yaml:",inline,omitempty"`
 }
 
 // ToRawLink resolves the brief link into a concrete RawLink implementation.
 // LinkBrief is only used to have a short version of a link definition in the topology file,
 // with ToRawLink we convert it into one of the supported link types.
-func (l *LinkBrief) ToRawLink() (RawLink, error) {
+func (l *LinkBriefRaw) ToTypeSpecificRawLink() (RawLink, error) {
 	// check two endpoints defined
 	if len(l.Endpoints) != 2 {
 		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(l.Endpoints))
@@ -39,4 +39,12 @@ func (l *LinkBrief) ToRawLink() (RawLink, error) {
 	}
 
 	return vEthFromLinkConfig(l)
+}
+
+func (l *LinkBriefRaw) GetType() LinkType {
+	return LinkTypeBrief
+}
+
+func (l *LinkBriefRaw) Resolve(params *ResolveParams) (Link, error) {
+	return nil, fmt.Errorf("resolve unimplemented on LinkBriefRaw. use <LinkBriefRaw>.ToTypeSpecificRawLink() an call resolve on the result")
 }

@@ -215,15 +215,22 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 						Type:  nodes[i+1].typ,
 					}
 				}
-				config.Topology.Links = append(config.Topology.Links,
-					&links.LinkDefinition{
-						Link: &links.LinkVEthRaw{
-							Endpoints: []*links.EndpointRaw{
-								links.NewEndpointRaw(node1, fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset), ""),
-								links.NewEndpointRaw(node2, fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1), ""),
-							},
-						},
-					})
+
+				// create a raw veth link
+				l := &links.LinkVEthRaw{
+					Endpoints: []*links.EndpointRaw{
+						links.NewEndpointRaw(node1, fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset), ""),
+						links.NewEndpointRaw(node2, fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1), ""),
+					},
+				}
+
+				// encapsulate the brief rawlink in a linkdefinition
+				ld := &links.LinkDefinition{
+					Link: l.ToLinkBrief(),
+				}
+
+				// add the link to the topology
+				config.Topology.Links = append(config.Topology.Links, ld)
 			}
 		}
 	}
