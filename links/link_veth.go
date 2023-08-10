@@ -3,7 +3,6 @@ package links
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -89,8 +88,6 @@ func vEthFromLinkConfig(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 }
 
 type LinkVEth struct {
-	// m mutex is used when deploying the link.
-	m sync.Mutex `yaml:"-"`
 	LinkCommonParams
 	Endpoints []Endpoint
 
@@ -106,9 +103,6 @@ func (l *LinkVEth) Verify() {
 }
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
-	l.m.Lock()
-	defer l.m.Unlock()
-
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
 	if l.deploymentState == LinkDeploymentStateDeployed {
