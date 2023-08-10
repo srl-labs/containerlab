@@ -46,5 +46,5 @@ func (l *LinkBriefRaw) GetType() LinkType {
 }
 
 func (l *LinkBriefRaw) Resolve(params *ResolveParams) (Link, error) {
-	return nil, fmt.Errorf("resolve unimplemented on LinkBriefRaw. use <LinkBriefRaw>.ToTypeSpecificRawLink() an call resolve on the result")
+	return nil, fmt.Errorf("resolve unimplemented on LinkBriefRaw. Use <LinkBriefRaw>.ToTypeSpecificRawLink() and call resolve on the result")
 }
