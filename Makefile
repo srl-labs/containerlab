@@ -33,7 +33,7 @@ build-with-podman:
 
 build-with-podman-debug:
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -o $(BINARY) -gcflags=all="-N -l" -race -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
 
 test:
 	go test -race ./... -v
