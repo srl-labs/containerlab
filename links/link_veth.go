@@ -27,9 +27,9 @@ func (r *LinkVEthRaw) MarshalYAML() (interface{}, error) {
 	return x, nil
 }
 
-// ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkVEthRaw) ToLinkConfig() *LinkBrief {
-	lc := &LinkBrief{
+// ToLinkBrief converts the raw link into a LinkConfig.
+func (r *LinkVEthRaw) ToLinkBrief() *LinkBriefRaw {
+	lc := &LinkBriefRaw{
 		Endpoints: []string{},
 		LinkCommonParams: LinkCommonParams{
 			MTU:    r.MTU,
@@ -71,7 +71,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	return l, nil
 }
 
-func vEthFromLinkConfig(lb *LinkBrief) (*LinkVEthRaw, error) {
+func vEthFromLinkConfig(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, 0)
 
 	result := &LinkVEthRaw{

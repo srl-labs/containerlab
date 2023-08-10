@@ -16,9 +16,9 @@ type LinkMacVlanRaw struct {
 	Mode             string       `yaml:"mode"`
 }
 
-// ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkMacVlanRaw) ToLinkConfig() *LinkBrief {
-	lc := &LinkBrief{
+// ToLinkBrief converts the raw link into a LinkConfig.
+func (r *LinkMacVlanRaw) ToLinkBrief() *LinkBriefRaw {
+	lc := &LinkBriefRaw{
 		Endpoints: make([]string, 2),
 		LinkCommonParams: LinkCommonParams{
 			MTU:    r.MTU,
@@ -37,7 +37,7 @@ func (r *LinkMacVlanRaw) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
-func macVlanLinkFromBrief(lb *LinkBrief, specialEPIndex int) (*LinkMacVlanRaw, error) {
+func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
 	result := &LinkMacVlanRaw{
