@@ -4,9 +4,11 @@ srl_nokia-interfaces:interface:
     subinterface:
       - index: 0
         ipv4:
+          admin-state: enable
           address:
             - ip-prefix: 10.0.0.16/31
         ipv6:
+          admin-state: enable
           address:
             - ip-prefix: 1000:10::16/127
   - name: ethernet-1/2
@@ -14,9 +16,11 @@ srl_nokia-interfaces:interface:
     subinterface:
       - index: 0
         ipv4:
+          admin-state: enable
           address:
             - ip-prefix: 10.0.0.18/31
         ipv6:
+          admin-state: enable
           address:
             - ip-prefix: 1000:10::18/127
   - name: ethernet-1/3
@@ -24,9 +28,11 @@ srl_nokia-interfaces:interface:
     subinterface:
       - index: 0
         ipv4:
+          admin-state: enable
           address:
             - ip-prefix: 10.0.0.30/31
         ipv6:
+          admin-state: enable
           address:
             - ip-prefix: 1000:10::30/127
   - name: system0
@@ -52,6 +58,11 @@ srl_nokia-network-instance:network-instance:
       srl_nokia-bgp:bgp:
         autonomous-system: 65004
         router-id: 30.0.0.4
+        afi-safi:
+          - afi-safi-name: ipv4-unicast
+            admin-state: enable
+          - afi-safi-name: ipv6-unicast
+            admin-state: enable
         group:
           - group-name: clos02
             admin-state: enable

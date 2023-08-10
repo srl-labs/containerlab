@@ -8,7 +8,7 @@ mgmt:
 topology:
   kinds:
     srl:
-      image: ghcr.io/nokia/srlinux
+      image: ghcr.io/nokia/srlinux:23.3.3 
     linux:
       image: ghcr.io/hellt/network-multitool
   nodes:
