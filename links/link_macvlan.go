@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -138,6 +139,8 @@ func (l *LinkMacVlan) GetParentInterfaceMtu() (int, error) {
 }
 
 func (l *LinkMacVlan) Deploy(ctx context.Context) error {
+	log.Infof("Creating virtual wire (MacVlan): %s <--> %s", l.HostEndpoint.String(), l.NodeEndpoint.String())
+
 	// lookup the parent host interface
 	parentInterface, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
 	if err != nil {

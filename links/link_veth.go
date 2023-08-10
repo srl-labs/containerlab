@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
@@ -106,6 +107,8 @@ func (l *LinkVEth) Verify() {
 }
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
+	logrus.Infof("Creating virtual wire (veth): %s <--> %s", l.GetEndpoints()[0].String(), l.GetEndpoints()[1].String())
+
 	l.m.Lock()
 	defer l.m.Unlock()
 
