@@ -28,7 +28,7 @@ func catenateKeys(in []ssh.PublicKey) string {
 
 // filterSSHPubKeys removes non-rsa keys from n.sshPubKeys until srl adds support for them.
 func (n *srl) filterSSHPubKeys() {
-	filteredKeys := []ssh.PublicKey{}
+	var filteredKeys []ssh.PublicKey
 
 	for _, k := range n.sshPubKeys {
 		if k.Type() == ssh.KeyAlgoRSA {
