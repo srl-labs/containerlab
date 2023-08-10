@@ -12,12 +12,11 @@ import (
 	"testing"
 
 	"github.com/containers/podman/v4/pkg/util"
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/mocks/mockruntime"
 	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -353,29 +352,16 @@ func TestVerifyLinks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got, ""),
+				WithRuntime(docker.RuntimeName,
+					&runtime.RuntimeConfig{
+						VerifyLinkParams: links.NewVerifyLinkParams(),
+					},
+				),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			// init mock controller
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-
-			// mock a runtime
-			runtimeMock := mockruntime.NewMockContainerRuntime(mockCtrl)
-			runtimeName := "mock"
-			// add runtime to clab instance
-			c.Runtimes[runtimeName] = runtimeMock
-			// set globalruntime
-			c.globalRuntime = runtimeName
-
-			runtimeMock.EXPECT().Config().AnyTimes().Return(
-				runtime.RuntimeConfig{
-					VerifyLinkParams: links.NewVerifyLinkParams(),
-				},
-			)
 
 			err = c.ResolveLinks()
 			if err != nil {
