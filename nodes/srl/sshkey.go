@@ -1,6 +1,8 @@
 package srl
 
 import (
+	"bytes"
+	"fmt"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
@@ -15,12 +17,9 @@ func catenateKeys(in []ssh.PublicKey) string {
 	// iterate through keys
 	for _, k := range in {
 		// extract the keys in AuthorizedKeys format (e.g. "ssh-rsa <KEY>")
-		ks := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(k)))
+		ks := bytes.TrimSpace(ssh.MarshalAuthorizedKey(k))
 		// add a space seperator, leading quote, then the key string and trailing quote
-		keys.WriteString(" \"")
-		keys.WriteString(ks)
-		keys.WriteString("\"")
-
+		fmt.Fprintf(&keys, " \"%s\"", ks)
 	}
 	// return all but the first leading quote of the string builders content as string
 	return keys.String()[1:]
