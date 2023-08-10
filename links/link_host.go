@@ -2,6 +2,8 @@ package links
 
 import (
 	"fmt"
+
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
@@ -64,6 +66,10 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		},
 	}
 
+	hostEp.MAC, err = utils.GenMac(ClabOUI)
+	if err != nil {
+		return nil, err
+	}
 	// set the end point in the link
 	link.Endpoints = []Endpoint{ep, hostEp}
 

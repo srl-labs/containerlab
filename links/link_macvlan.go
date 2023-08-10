@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -61,6 +62,12 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 			Node:      hostLinkNode,
 			// Link is being set after the link in created further down
 		},
+	}
+
+	var err error
+	ep.MAC, err = utils.GenMac(ClabOUI)
+	if err != nil {
+		return nil, err
 	}
 
 	link := &LinkMacVlan{

@@ -8,6 +8,11 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+const (
+	// containerlab's reserved OUI.
+	ClabOUI = "aa:c1:ab"
+)
+
 // Endpoint is the interface that all endpoint types implement.
 // Endpoints like bridge, host, veth and macvlan are the types implementing this interface.
 type Endpoint interface {

@@ -2,6 +2,8 @@ package links
 
 import (
 	"fmt"
+
+	"github.com/srl-labs/containerlab/utils"
 )
 
 type LinkMgmtNetRaw struct {
@@ -41,6 +43,12 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 			IfaceName: r.HostInterface,
 			Link:      link,
 		},
+	}
+
+	var err error
+	bridgeEp.MAC, err = utils.GenMac(ClabOUI)
+	if err != nil {
+		return nil, err
 	}
 
 	// add endpoint to fake mgmt bridge node
