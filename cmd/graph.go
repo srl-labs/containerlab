@@ -63,6 +63,11 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	err = c.ResolveLinks()
+	if err != nil {
+		return err
+	}
+
 	if dot {
 		return c.GenerateDotGraph()
 	}
