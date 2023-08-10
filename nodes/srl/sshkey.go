@@ -18,10 +18,10 @@ func catenateKeys(in []ssh.PublicKey) string {
 	for _, k := range in {
 		// extract the keys in AuthorizedKeys format (e.g. "ssh-rsa <KEY>")
 		ks := bytes.TrimSpace(ssh.MarshalAuthorizedKey(k))
-		// add a space seperator, leading quote, then the key string and trailing quote
+		// add a seperator, leading quote, the key string and trailing quote
 		fmt.Fprintf(&keys, " \"%s\"", ks)
 	}
-	// return all but the first leading quote of the string builders content as string
+	// return all but the first leading seperator of the string builders content as string
 	return keys.String()[1:]
 }
 
