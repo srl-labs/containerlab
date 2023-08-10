@@ -107,7 +107,7 @@ func (l *LinkVEth) Verify() {
 }
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
-	logrus.Infof("Creating virtual wire (veth): %s <--> %s", l.GetEndpoints()[0].String(), l.GetEndpoints()[1].String())
+	log.Infof("Creating link: %s <--> %s", l.GetEndpoints()[0].String(), l.GetEndpoints()[1].String())
 
 	l.m.Lock()
 	defer l.m.Unlock()
