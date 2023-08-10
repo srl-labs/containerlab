@@ -139,7 +139,7 @@ func (l *LinkMacVlan) GetParentInterfaceMtu() (int, error) {
 }
 
 func (l *LinkMacVlan) Deploy(ctx context.Context) error {
-	log.Infof("Creating virtual wire (MacVlan): %s <--> %s", l.HostEndpoint.String(), l.NodeEndpoint.String())
+	log.Infof("Creating MACVLAN link: %s <--> %s", l.HostEndpoint.String(), l.NodeEndpoint.String())
 
 	// lookup the parent host interface
 	parentInterface, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
