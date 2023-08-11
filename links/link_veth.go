@@ -17,8 +17,8 @@ type LinkVEthRaw struct {
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
-// ToLinkBrief converts the raw link into a LinkConfig.
-func (r *LinkVEthRaw) ToLinkBrief() *LinkBriefRaw {
+// ToLinkBriefRaw converts the raw link into a LinkConfig.
+func (r *LinkVEthRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	lc := &LinkBriefRaw{
 		Endpoints: []string{},
 		LinkCommonParams: LinkCommonParams{

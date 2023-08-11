@@ -226,7 +226,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 
 				// encapsulate the brief rawlink in a linkdefinition
 				ld := &links.LinkDefinition{
-					Link: l.ToLinkBrief(),
+					Link: l.ToLinkBriefRaw(),
 				}
 
 				// add the link to the topology

@@ -17,8 +17,8 @@ type LinkMacVlanRaw struct {
 	Mode             string       `yaml:"mode"`
 }
 
-// ToLinkBrief converts the raw link into a LinkConfig.
-func (r *LinkMacVlanRaw) ToLinkBrief() *LinkBriefRaw {
+// ToLinkBriefRaw converts the raw link into a LinkConfig.
+func (r *LinkMacVlanRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	lc := &LinkBriefRaw{
 		Endpoints: make([]string, 2),
 		LinkCommonParams: LinkCommonParams{

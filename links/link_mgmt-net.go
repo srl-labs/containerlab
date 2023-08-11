@@ -14,7 +14,7 @@ type LinkMgmtNetRaw struct {
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-func (r *LinkMgmtNetRaw) ToLinkBrief() *LinkBriefRaw {
+func (r *LinkMgmtNetRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	lc := &LinkBriefRaw{
 		Endpoints: make([]string, 2),
 		LinkCommonParams: LinkCommonParams{
