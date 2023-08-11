@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
@@ -103,6 +104,8 @@ func (l *LinkVEth) Verify() {
 }
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
+	log.Infof("Creating link: %s <--> %s", l.GetEndpoints()[0].String(), l.GetEndpoints()[1].String())
+
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
 	if l.deploymentState == LinkDeploymentStateDeployed {
