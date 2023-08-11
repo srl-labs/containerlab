@@ -93,9 +93,9 @@ type Node interface {
 	UpdateConfigWithRuntimeInfo(context.Context) error
 	// RunExec execute a single command for a given node.
 	RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error)
-	// Adds the given link to the Node. After adding the Link to the node,
-	// the given function f is called within the Nodes namespace.
-	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	// Adds the given link to the Node (container). After adding the Link to the node,
+	// the given function f is called within the Nodes namespace to setup the link.
+	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 	AddLink(l links.Link)
 	AddEndpoint(e links.Endpoint)
 	GetEndpoints() []links.Endpoint

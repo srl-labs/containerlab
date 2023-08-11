@@ -128,7 +128,7 @@ func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult
 	return nil, cExec.ErrRunExecNotSupported
 }
 
-func (b *bridge) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	return BridgeAddLink(ctx, link, b.Cfg.ShortName, f)
 }
 

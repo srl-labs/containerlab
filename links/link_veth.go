@@ -167,7 +167,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 
 		// if the node is a regular namespace node
 		// add link to node, rename, set mac and Up
-		err = l.Endpoints[idx].GetNode().AddNetlinkLinkToContainer(ctx, link, linkSetupFunc)
+		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link, linkSetupFunc)
 		if err != nil {
 			return err
 		}

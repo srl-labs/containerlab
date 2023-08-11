@@ -268,14 +268,14 @@ func genRandomIfName() string {
 // It is used a subset of the nodes.Node interface and is used to pass nodes.Nodes
 // to the link resolver without causing a circular dependency.
 type Node interface {
-	// AddLink will take the given link and add it to the LinkNode
-	// in case of a regular container, it will push the link into the
+	// AddLinkToContainer adds a link to the node (container).
+	// In case of a regular container, it will push the link into the
 	// network namespace and then run the function f within the namespace
-	// this is to rename the link, set mtu, set the interface up, e.g. see types.SetNameMACAndUpInterface()
+	// this is to rename the link, set mtu, set the interface up, e.g. see link.SetNameMACAndUpInterface()
 	//
 	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
 	// the master of the interface and bring the interface up.
-	AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 	AddLink(l Link)
 	// AddEndpoint adds the Endpoint to the node
 	AddEndpoint(e Endpoint)

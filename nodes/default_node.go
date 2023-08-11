@@ -413,7 +413,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
-func (d *DefaultNode) AddNetlinkLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	netns, err := ns.GetNS(d.Cfg.NSPath)
 	if err != nil {
