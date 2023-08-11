@@ -146,7 +146,6 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	mode := netlink.MACVLAN_MODE_BRIDGE
 	switch l.Mode {
 	case MacVlanModeBridge:
-		break
 	case MacVlanModePassthru:
 		mode = netlink.MACVLAN_MODE_PASSTHRU
 	case MacVlanModeVepa:
