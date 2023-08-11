@@ -66,18 +66,18 @@ func (mr *MockNodeMockRecorder) AddLink(l interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLink", reflect.TypeOf((*MockNode)(nil).AddLink), l)
 }
 
-// AddNetlinkLinkToContainer mocks base method.
-func (m *MockNode) AddNetlinkLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+// AddLinkToContainer mocks base method.
+func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddNetlinkLinkToContainer", ctx, link, f)
+	ret := m.ctrl.Call(m, "AddLinkToContainer", ctx, link, f)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// AddNetlinkLinkToContainer indicates an expected call of AddNetlinkLinkToContainer.
-func (mr *MockNodeMockRecorder) AddNetlinkLinkToContainer(ctx, link, f interface{}) *gomock.Call {
+// AddLinkToContainer indicates an expected call of AddLinkToContainer.
+func (mr *MockNodeMockRecorder) AddLinkToContainer(ctx, link, f interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNetlinkLinkToContainer", reflect.TypeOf((*MockNode)(nil).AddNetlinkLinkToContainer), ctx, link, f)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLinkToContainer", reflect.TypeOf((*MockNode)(nil).AddLinkToContainer), ctx, link, f)
 }
 
 // CheckDeploymentConditions mocks base method.
