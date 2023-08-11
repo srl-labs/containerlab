@@ -3,6 +3,7 @@ package links
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
@@ -93,6 +94,7 @@ type LinkVEth struct {
 	Endpoints []Endpoint
 
 	deploymentState LinkDeploymentState
+	stateMutex      sync.RWMutex
 }
 
 func (*LinkVEth) GetType() LinkType {
@@ -106,9 +108,11 @@ func (l *LinkVEth) Verify() {
 func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
+	l.stateMutex.RLock()
 	if l.deploymentState == LinkDeploymentStateDeployed {
 		return nil
 	}
+	l.stateMutex.RUnlock()
 
 	for _, ep := range l.GetEndpoints() {
 		if ep.GetNode().GetState() != state.Deployed {
@@ -169,7 +173,9 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		}
 	}
 
+	l.stateMutex.Lock()
 	l.deploymentState = LinkDeploymentStateDeployed
+	l.stateMutex.Unlock()
 
 	return nil
 }
