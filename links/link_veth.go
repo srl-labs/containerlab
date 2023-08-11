@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
