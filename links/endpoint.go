@@ -3,6 +3,7 @@ package links
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
@@ -39,9 +40,13 @@ type EndpointGeneric struct {
 	Link     Link
 	MAC      net.HardwareAddr
 	randName string
+	m        sync.Mutex
 }
 
 func (e *EndpointGeneric) GetRandIfaceName() string {
+	e.m.Lock()
+	defer e.m.Unlock()
+
 	// generate random interface name on the fly if not already generated
 	if e.randName == "" {
 		e.randName = genRandomIfName()

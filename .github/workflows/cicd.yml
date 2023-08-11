@@ -77,7 +77,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build containerlab
-        run: make build-with-podman BINARY=containerlab
+        run: make build-with-podman-debug BINARY=containerlab
       # store clab binary as artifact
       - uses: actions/upload-artifact@v3
         with:

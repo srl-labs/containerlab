@@ -3,7 +3,6 @@ package links
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
@@ -28,9 +27,9 @@ func (r *LinkVEthRaw) MarshalYAML() (interface{}, error) {
 	return x, nil
 }
 
-// ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkVEthRaw) ToLinkConfig() *LinkBrief {
-	lc := &LinkBrief{
+// ToLinkBrief converts the raw link into a LinkConfig.
+func (r *LinkVEthRaw) ToLinkBrief() *LinkBriefRaw {
+	lc := &LinkBriefRaw{
 		Endpoints: []string{},
 		LinkCommonParams: LinkCommonParams{
 			MTU:    r.MTU,
@@ -72,7 +71,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	return l, nil
 }
 
-func vEthFromLinkConfig(lb *LinkBrief) (*LinkVEthRaw, error) {
+func vEthFromLinkConfig(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, 0)
 
 	result := &LinkVEthRaw{
@@ -90,8 +89,6 @@ func vEthFromLinkConfig(lb *LinkBrief) (*LinkVEthRaw, error) {
 }
 
 type LinkVEth struct {
-	// m mutex is used when deploying the link.
-	m sync.Mutex `yaml:"-"`
 	LinkCommonParams
 	Endpoints []Endpoint
 
@@ -108,9 +105,6 @@ func (l *LinkVEth) Verify() {
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
 	log.Infof("Creating link: %s <--> %s", l.GetEndpoints()[0].String(), l.GetEndpoints()[1].String())
-
-	l.m.Lock()
-	defer l.m.Unlock()
 
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.

@@ -150,8 +150,8 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
-			Type      string `yaml:"type"`
-			LinkBrief `yaml:",inline"`
+			Type         string `yaml:"type"`
+			LinkBriefRaw `yaml:",inline"`
 		}
 
 		err := unmarshal(&l)
@@ -161,7 +161,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 		ld.Type = string(LinkTypeBrief)
 
-		ld.Link, err = l.LinkBrief.ToRawLink()
+		ld.Link, err = l.LinkBriefRaw.ToTypeSpecificRawLink()
 		if err != nil {
 			return err
 		}
@@ -216,6 +216,8 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 			Type:           string(LinkTypeMacVLan),
 		}
 		return x, nil
+	case LinkTypeBrief:
+		return r.Link, nil
 	}
 
 	return nil, fmt.Errorf("unable to marshall")
@@ -243,7 +245,7 @@ type Link interface {
 	GetEndpoints() []Endpoint
 }
 
-func extractHostNodeInterfaceData(lb *LinkBrief, specialEPIndex int) (host, hostIf, node, nodeIf string) {
+func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string) {
 	// the index of the node is the specialEndpointIndex +1  modulo 2
 	nodeindex := (specialEPIndex + 1) % 2
 

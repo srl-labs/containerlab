@@ -46,7 +46,7 @@ type DefaultNode struct {
 	Endpoints []links.Endpoint
 	// State of the node
 	state      state.NodeState
-	statemutex sync.Mutex
+	statemutex sync.RWMutex
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -487,8 +487,8 @@ func (d *DefaultNode) DeployLinks(ctx context.Context) error {
 }
 
 func (d *DefaultNode) GetState() state.NodeState {
-	d.statemutex.Lock()
-	defer d.statemutex.Unlock()
+	d.statemutex.RLock()
+	defer d.statemutex.RUnlock()
 	return d.state
 }
 

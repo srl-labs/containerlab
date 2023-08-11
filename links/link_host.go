@@ -13,9 +13,9 @@ type LinkHostRaw struct {
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
 
-// ToLinkConfig converts the raw link into a LinkConfig.
-func (r *LinkHostRaw) ToLinkConfig() *LinkBrief {
-	lc := &LinkBrief{
+// ToLinkBrief converts the raw link into a LinkConfig.
+func (r *LinkHostRaw) ToLinkBrief() *LinkBriefRaw {
+	lc := &LinkBriefRaw{
 		Endpoints: make([]string, 2),
 		LinkCommonParams: LinkCommonParams{
 			MTU:    r.MTU,
@@ -30,7 +30,7 @@ func (r *LinkHostRaw) ToLinkConfig() *LinkBrief {
 	return lc
 }
 
-func hostLinkFromBrief(lb *LinkBrief, specialEPIndex int) (*LinkHostRaw, error) {
+func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
 	result := &LinkHostRaw{
