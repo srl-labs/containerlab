@@ -41,11 +41,15 @@ type EndpointGeneric struct {
 	randName string
 }
 
-func (e *EndpointGeneric) GetRandIfaceName() string {
-	// generate random interface name on the fly if not already generated
-	if e.randName == "" {
-		e.randName = genRandomIfName()
+func NewEndpointGeneric(node Node, iface string) *EndpointGeneric {
+	return &EndpointGeneric{
+		Node:      node,
+		IfaceName: iface,
+		randName:  genRandomIfName(),
 	}
+}
+
+func (e *EndpointGeneric) GetRandIfaceName() string {
 	return e.randName
 }
 

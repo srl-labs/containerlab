@@ -55,13 +55,8 @@ func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw
 
 func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
-	hostLinkNode := GetFakeHostLinkNode()
 	ep := &EndpointMacVlan{
-		EndpointGeneric: EndpointGeneric{
-			IfaceName: r.HostInterface,
-			Node:      hostLinkNode,
-			// Link is being set after the link in created further down
-		},
+		EndpointGeneric: *NewEndpointGeneric(GetFakeHostLinkNode(), r.HostInterface),
 	}
 
 	var err error

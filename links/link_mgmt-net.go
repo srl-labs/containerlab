@@ -38,12 +38,9 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	fakeMgmtBridgeNode := GetFakeMgmtBrLinkNode()
 
 	bridgeEp := &EndpointBridge{
-		EndpointGeneric: EndpointGeneric{
-			Node:      fakeMgmtBridgeNode,
-			IfaceName: r.HostInterface,
-			Link:      link,
-		},
+		EndpointGeneric: *NewEndpointGeneric(fakeMgmtBridgeNode, r.HostInterface),
 	}
+	bridgeEp.Link = link
 
 	var err error
 	bridgeEp.MAC, err = utils.GenMac(ClabOUI)
