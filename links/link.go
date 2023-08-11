@@ -42,6 +42,7 @@ const (
 	LinkTypeMgmtNet LinkType = "mgmt-net"
 	LinkTypeMacVLan LinkType = "macvlan"
 	LinkTypeHost    LinkType = "host"
+	LinkTypeVxlan   LinkType = "vxlan"
 
 	// LinkTypeBrief is a link definition where link types
 	// are encoded in the endpoint definition as string and allow users

@@ -41,7 +41,7 @@ type EndpointGeneric struct {
 	randName string
 }
 
-func NewEndpointGeneric(node Node, iface string) *EndpointGeneric {
+func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
 	return &EndpointGeneric{
 		Node:      node,
 		IfaceName: iface,

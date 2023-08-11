@@ -15,7 +15,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -64,106 +63,59 @@ var vethCreateCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		var vethAEndpoint *vethEndpoint
-		var vethBEndpoint *vethEndpoint
+		link := &links.LinkVEth{}
 
-		if vethAEndpoint, err = parseVethEndpoint(AEnd); err != nil {
-			return err
-		}
-		if vethBEndpoint, err = parseVethEndpoint(BEnd); err != nil {
-			return err
-		}
+		for _, definition := range []string{AEnd, BEnd} {
+			var node, iface, kind string
+			if node, iface, kind, err = parseVethEndpoint(definition); err != nil {
+				return err
+			}
 
-		aNode := &types.NodeConfig{
-			LongName:  vethAEndpoint.node,
-			ShortName: vethAEndpoint.node,
-			Kind:      vethAEndpoint.kind,
-			NSPath:    "__host", // NSPath defaults to __host to make attachment to host. For attachment to containers the NSPath will be overwritten
-		}
-
-		bNode := &types.NodeConfig{
-			LongName:  vethBEndpoint.node,
-			ShortName: vethBEndpoint.node,
-			Kind:      vethBEndpoint.kind,
-			NSPath:    "__host",
-		}
-
-		if aNode.Kind == "container" {
-			aNode.NSPath, err = c.GlobalRuntime().GetNSPath(ctx, aNode.LongName)
+			nspathA, err := c.GlobalRuntime().GetNSPath(ctx, node)
 			if err != nil {
 				return err
 			}
-		}
-		if bNode.Kind == "container" {
-			bNode.NSPath, err = c.GlobalRuntime().GetNSPath(ctx, bNode.LongName)
-			if err != nil {
-				return err
+
+			linkNode := links.NewShorthandLinkNode(node, nspathA)
+
+			ep := &links.EndpointVeth{
+				EndpointGeneric: *links.NewEndpointGeneric(linkNode, iface, link),
 			}
-		}
-		// generate mac for endpoint A
-		aMac, err := utils.GenMac(links.ClabOUI)
-		if err != nil {
-			return err
-		}
-		endpointA := types.Endpoint{
-			Node:         aNode,
-			EndpointName: vethAEndpoint.iface,
-			MAC:          aMac.String(),
+
+			linkNode.AddEndpoint(ep)
+			link.Endpoints = append(link.Endpoints, ep)
+			_ = kind
 		}
 
-		// generate mac for endpoint B
-		bMac, err := utils.GenMac(links.ClabOUI)
-		if err != nil {
-			return err
-		}
-		endpointB := types.Endpoint{
-			Node:         bNode,
-			EndpointName: vethBEndpoint.iface,
-			MAC:          bMac.String(),
-		}
+		link.Deploy(ctx)
 
-		link := &types.Link{
-			A:   &endpointA,
-			B:   &endpointB,
-			MTU: MTU,
-		}
-
-		if err := c.CreateVirtualWiring(link); err != nil {
-			return err
-		}
 		log.Info("veth interface successfully created!")
 		return nil
 	},
 }
 
-func parseVethEndpoint(s string) (*vethEndpoint, error) {
+func parseVethEndpoint(s string) (node, iface, kind string, err error) {
 	supportedKinds := []string{"ovs-bridge", "bridge", "host"}
-	ve := &vethEndpoint{}
+
 	arr := strings.Split(s, ":")
 	if (len(arr) != 2) && (len(arr) != 3) {
-		return ve, errors.New("malformed veth endpoint reference")
+		return node, iface, kind, errors.New("malformed veth endpoint reference")
 	}
 	switch len(arr) {
 	case 2:
-		ve.kind = "container"
+		kind = "container"
 		if arr[0] == "host" {
-			ve.kind = "host"
+			kind = "host"
 		}
-		ve.node = arr[0]
-		ve.iface = arr[1]
+		node = arr[0]
+		iface = arr[1]
 	case 3:
 		if _, ok := utils.StringInSlice(supportedKinds, arr[0]); !ok {
-			return nil, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
+			return node, iface, kind, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
 		}
-		ve.kind = arr[0]
-		ve.node = arr[1]
-		ve.iface = arr[2]
+		kind = arr[0]
+		node = arr[1]
+		iface = arr[2]
 	}
-	return ve, nil
-}
-
-type vethEndpoint struct {
-	kind  string // kind of the node to attach to: ovs-bridge, bridge, host or implicitly container
-	node  string
-	iface string
+	return node, iface, kind, err
 }
