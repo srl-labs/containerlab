@@ -61,7 +61,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 	hostEp := &EndpointHost{
-		EndpointGeneric: *NewEndpointGeneric(GetFakeHostLinkNode(), r.HostInterface),
+		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface),
 	}
 	hostEp.Link = link
 
@@ -75,30 +75,33 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	return link, nil
 }
 
-var _fakeHostLinkNodeInstance *fakeHostLinkNode
+var _hostLinkNodeInstance *hostLinkNode
 
-type fakeHostLinkNode struct {
+// hostLinkNode represents a host node which is implicitly used when
+// a host link is defined in the topology file.
+type hostLinkNode struct {
 	GenericLinkNode
 }
 
-func (*fakeHostLinkNode) GetLinkEndpointType() LinkEndpointType {
+func (*hostLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeHost
 }
 
-func GetFakeHostLinkNode() Node {
-	if _fakeHostLinkNodeInstance == nil {
+// GetHostLinkNode returns the host link node singleton.
+func GetHostLinkNode() Node {
+	if _hostLinkNodeInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
 			log.Error(err)
 		}
 		nspath := currns.Path()
 
-		_fakeHostLinkNodeInstance = &fakeHostLinkNode{
+		_hostLinkNodeInstance = &hostLinkNode{
 			GenericLinkNode: GenericLinkNode{shortname: "host",
 				endpoints: []Endpoint{},
 				nspath:    nspath,
 			},
 		}
 	}
-	return _fakeHostLinkNodeInstance
+	return _hostLinkNodeInstance
 }

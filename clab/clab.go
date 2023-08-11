@@ -628,8 +628,8 @@ func (c *CLab) VethCleanup(ctx context.Context) error {
 	}
 
 	// collect the endpoints of the fake nodes
-	hostBasedEndpoints = append(hostBasedEndpoints, links.GetFakeHostLinkNode().GetEndpoints()...)
-	hostBasedEndpoints = append(hostBasedEndpoints, links.GetFakeMgmtBrLinkNode().GetEndpoints()...)
+	hostBasedEndpoints = append(hostBasedEndpoints, links.GetHostLinkNode().GetEndpoints()...)
+	hostBasedEndpoints = append(hostBasedEndpoints, links.GetMgmtBrLinkNode().GetEndpoints()...)
 
 	var joinedErr error
 	for _, ep := range hostBasedEndpoints {
@@ -657,8 +657,8 @@ func (c *CLab) ResolveLinks() error {
 
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
 	specialNodes := map[string]links.Node{
-		"host":     links.GetFakeHostLinkNode(),
-		"mgmt-net": links.GetFakeMgmtBrLinkNode(),
+		"host":     links.GetHostLinkNode(),
+		"mgmt-net": links.GetMgmtBrLinkNode(),
 	}
 	for _, n := range specialNodes {
 		resolveNodes[n.GetShortName()] = n

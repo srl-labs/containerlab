@@ -37,10 +37,10 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		LinkCommonParams: r.LinkCommonParams,
 	}
 
-	fakeMgmtBridgeNode := GetFakeMgmtBrLinkNode()
+	mgmtBridgeNode := GetMgmtBrLinkNode()
 
 	bridgeEp := &EndpointBridge{
-		EndpointGeneric: *NewEndpointGeneric(fakeMgmtBridgeNode, r.HostInterface),
+		EndpointGeneric: *NewEndpointGeneric(mgmtBridgeNode, r.HostInterface),
 	}
 	bridgeEp.Link = link
 
@@ -51,7 +51,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 
 	// add endpoint to fake mgmt bridge node
-	fakeMgmtBridgeNode.AddEndpoint(bridgeEp)
+	mgmtBridgeNode.AddEndpoint(bridgeEp)
 
 	// resolve and populate the endpoint
 	contEp, err := r.Endpoint.Resolve(params, link)
@@ -83,24 +83,26 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 	return result, nil
 }
 
-var _fakeMgmtBrLinkMgmtBrInstance *fakeMgmtBridgeLinkNode
+var _mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
 
-type fakeMgmtBridgeLinkNode struct {
+// mgmtBridgeLinkNode is a special node that represents the mgmt bridge node
+// that is used when mgmt-net link is defined in the topology.
+type mgmtBridgeLinkNode struct {
 	GenericLinkNode
 }
 
-func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
+func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
-	if _fakeMgmtBrLinkMgmtBrInstance == nil {
+func getMgmtBrLinkNode() *mgmtBridgeLinkNode {
+	if _mgmtBrLinkMgmtBrInstance == nil {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
 			log.Error(err)
 		}
 		nspath := currns.Path()
-		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
+		_mgmtBrLinkMgmtBrInstance = &mgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
 				shortname: "mgmt-net",
 				endpoints: []Endpoint{},
@@ -108,14 +110,14 @@ func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
 			},
 		}
 	}
-	return _fakeMgmtBrLinkMgmtBrInstance
+	return _mgmtBrLinkMgmtBrInstance
 }
 
-func GetFakeMgmtBrLinkNode() Node { // skipcq: RVV-B0001
-	return getFakeMgmtBrLinkNode()
+func GetMgmtBrLinkNode() Node { // skipcq: RVV-B0001
+	return getMgmtBrLinkNode()
 }
 
 func SetMgmtNetUnderlayingBridge(bridge string) error {
-	getFakeMgmtBrLinkNode().GenericLinkNode.shortname = bridge
+	getMgmtBrLinkNode().GenericLinkNode.shortname = bridge
 	return nil
 }
