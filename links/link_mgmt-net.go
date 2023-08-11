@@ -3,6 +3,8 @@ package links
 import (
 	"fmt"
 
+	"github.com/containernetworking/plugins/pkg/ns"
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -79,4 +81,41 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 		Endpoint:      NewEndpointRaw(node, nodeIf, ""),
 	}
 	return result, nil
+}
+
+var _fakeMgmtBrLinkMgmtBrInstance *fakeMgmtBridgeLinkNode
+
+type fakeMgmtBridgeLinkNode struct {
+	GenericLinkNode
+}
+
+func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeBridge
+}
+
+func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
+	if _fakeMgmtBrLinkMgmtBrInstance == nil {
+		currns, err := ns.GetCurrentNS()
+		if err != nil {
+			log.Error(err)
+		}
+		nspath := currns.Path()
+		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
+			GenericLinkNode: GenericLinkNode{
+				shortname: "mgmt-net",
+				endpoints: []Endpoint{},
+				nspath:    nspath,
+			},
+		}
+	}
+	return _fakeMgmtBrLinkMgmtBrInstance
+}
+
+func GetFakeMgmtBrLinkNode() Node { // skipcq: RVV-B0001
+	return getFakeMgmtBrLinkNode()
+}
+
+func SetMgmtNetUnderlayingBridge(bridge string) error {
+	getFakeMgmtBrLinkNode().GenericLinkNode.shortname = bridge
+	return nil
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
@@ -329,7 +328,7 @@ func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpoint, master strin
 	baseFunc := SetNameMACAndUpInterface(l, endpt)
 
 	return func(n ns.NetNS) error {
-		// retrieve the bridg link
+		// retrieve the bridge link
 		bridge, err := netlink.LinkByName(master)
 		if err != nil {
 			return err
@@ -349,71 +348,6 @@ func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpoint, master strin
 type ResolveParams struct {
 	Nodes          map[string]Node
 	MgmtBridgeName string
-}
-
-var _fakeHostLinkNodeInstance *fakeHostLinkNode
-
-type fakeHostLinkNode struct {
-	GenericLinkNode
-}
-
-func (*fakeHostLinkNode) GetLinkEndpointType() LinkEndpointType {
-	return LinkEndpointTypeHost
-}
-
-func GetFakeHostLinkNode() Node {
-	if _fakeHostLinkNodeInstance == nil {
-		currns, err := ns.GetCurrentNS()
-		if err != nil {
-			log.Error(err)
-		}
-		nspath := currns.Path()
-
-		_fakeHostLinkNodeInstance = &fakeHostLinkNode{
-			GenericLinkNode: GenericLinkNode{shortname: "host",
-				endpoints: []Endpoint{},
-				nspath:    nspath,
-			},
-		}
-	}
-	return _fakeHostLinkNodeInstance
-}
-
-var _fakeMgmtBrLinkMgmtBrInstance *fakeMgmtBridgeLinkNode
-
-type fakeMgmtBridgeLinkNode struct {
-	GenericLinkNode
-}
-
-func (*fakeMgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
-	return LinkEndpointTypeBridge
-}
-
-func getFakeMgmtBrLinkNode() *fakeMgmtBridgeLinkNode {
-	if _fakeMgmtBrLinkMgmtBrInstance == nil {
-		currns, err := ns.GetCurrentNS()
-		if err != nil {
-			log.Error(err)
-		}
-		nspath := currns.Path()
-		_fakeMgmtBrLinkMgmtBrInstance = &fakeMgmtBridgeLinkNode{
-			GenericLinkNode: GenericLinkNode{
-				shortname: "mgmt-net",
-				endpoints: []Endpoint{},
-				nspath:    nspath,
-			},
-		}
-	}
-	return _fakeMgmtBrLinkMgmtBrInstance
-}
-
-func GetFakeMgmtBrLinkNode() Node { // skipcq: RVV-B0001
-	return getFakeMgmtBrLinkNode()
-}
-
-func SetMgmtNetUnderlayingBridge(bridge string) error {
-	getFakeMgmtBrLinkNode().GenericLinkNode.shortname = bridge
-	return nil
 }
 
 type VerifyLinkParams struct {

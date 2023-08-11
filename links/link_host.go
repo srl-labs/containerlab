@@ -3,6 +3,8 @@ package links
 import (
 	"fmt"
 
+	"github.com/containernetworking/plugins/pkg/ns"
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -71,4 +73,32 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	link.Endpoints = []Endpoint{ep, hostEp}
 
 	return link, nil
+}
+
+var _fakeHostLinkNodeInstance *fakeHostLinkNode
+
+type fakeHostLinkNode struct {
+	GenericLinkNode
+}
+
+func (*fakeHostLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeHost
+}
+
+func GetFakeHostLinkNode() Node {
+	if _fakeHostLinkNodeInstance == nil {
+		currns, err := ns.GetCurrentNS()
+		if err != nil {
+			log.Error(err)
+		}
+		nspath := currns.Path()
+
+		_fakeHostLinkNodeInstance = &fakeHostLinkNode{
+			GenericLinkNode: GenericLinkNode{shortname: "host",
+				endpoints: []Endpoint{},
+				nspath:    nspath,
+			},
+		}
+	}
+	return _fakeHostLinkNodeInstance
 }
