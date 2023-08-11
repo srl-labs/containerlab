@@ -61,7 +61,8 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	return l, nil
 }
 
-func vEthFromLinkConfig(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
+// linkVEthRawFromLinkBriefRaw creates a raw veth link from a LinkBriefRaw.
+func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, 0)
 
 	result := &LinkVEthRaw{

@@ -38,7 +38,7 @@ func (l *LinkBriefRaw) ToTypeSpecificRawLink() (RawLink, error) {
 		}
 	}
 
-	return vEthFromLinkConfig(l)
+	return linkVEthRawFromLinkBriefRaw(l)
 }
 
 func (l *LinkBriefRaw) GetType() LinkType {
