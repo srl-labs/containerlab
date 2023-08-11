@@ -141,26 +141,29 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// for both ends of the link
+	// both ends of the link need to be moved to the relevant network namespace
+	// and enabled (up). This is done via linkSetupFunc.
+	// based on the endpoint type the link setup function is different.
+	// linkSetupFunc is executed in a netns of a node.
 	for idx, link := range []netlink.Link{linkA, linkB} {
-		var adjustmentFunc func(ns.NetNS) error
-		// if the endpoint is a bridge we also need to set the master of the interface to the bridge
+		var linkSetupFunc func(ns.NetNS) error
 		switch l.Endpoints[idx].GetNode().GetLinkEndpointType() {
+
+		// if the endpoint is a bridge we also need to set the master of the interface to the bridge
 		case LinkEndpointTypeBridge:
-			// retrieve bridge name via node name
 			bridgeName := l.Endpoints[idx].GetNode().GetShortName()
 			// set the adjustmentFunc to the function that, besides the name, mac and up state
 			// also sets the Master of the interface to the bridge
-			adjustmentFunc = SetNameMACMasterAndUpInterface(link, l.Endpoints[idx], bridgeName)
+			linkSetupFunc = SetNameMACMasterAndUpInterface(link, l.Endpoints[idx], bridgeName)
 		default:
-			// use the simple function that renames the link in the container, sets the MAC
-			// as well as its state to up
-			adjustmentFunc = SetNameMACAndUpInterface(link, l.Endpoints[idx])
+			// default case is a regular veth link where both ends are regular linux interfaces
+			// in the relevant containers.
+			linkSetupFunc = SetNameMACAndUpInterface(link, l.Endpoints[idx])
 		}
 
 		// if the node is a regular namespace node
 		// add link to node, rename, set mac and Up
-		err = l.Endpoints[idx].GetNode().AddNetlinkLinkToContainer(ctx, link, adjustmentFunc)
+		err = l.Endpoints[idx].GetNode().AddNetlinkLinkToContainer(ctx, link, linkSetupFunc)
 		if err != nil {
 			return err
 		}

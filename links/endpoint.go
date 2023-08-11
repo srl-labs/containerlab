@@ -45,7 +45,9 @@ func NewEndpointGeneric(node Node, iface string) *EndpointGeneric {
 	return &EndpointGeneric{
 		Node:      node,
 		IfaceName: iface,
-		randName:  genRandomIfName(),
+		// random name is generated for the endpoint to avoid name collisions
+		// when it is first deployed in the root namespace
+		randName: genRandomIfName(),
 	}
 }
 
