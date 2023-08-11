@@ -140,7 +140,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	log.Infof("Creating MACVLAN link: %s <--> %s", l.HostEndpoint.String(), l.NodeEndpoint.String())
+	log.Infof("Creating MACVLAN link: %s <--> %s", l.HostEndpoint, l.NodeEndpoint)
 
 	// set MacVlanMode
 	mode := netlink.MACVLAN_MODE_BRIDGE

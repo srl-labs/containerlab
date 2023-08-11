@@ -116,7 +116,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		}
 	}
 
-	log.Infof("Creating link: %s <--> %s", l.GetEndpoints()[0].String(), l.GetEndpoints()[1].String())
+	log.Infof("Creating link: %s <--> %s", l.GetEndpoints()[0], l.GetEndpoints()[1])
 
 	// build the netlink.Veth struct for the link provisioning
 	linkA := &netlink.Veth{
