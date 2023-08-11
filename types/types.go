@@ -184,6 +184,7 @@ type NodeConfig struct {
 	WaitFor              []string   `json:"wait-for,omitempty"`
 	DNS                  *DNSConfig `json:"dns,omitempty"`
 	IsRootNamespaceBased bool
+	SkipUniquenessCheck  bool
 }
 
 func DisableTxOffload(n *NodeConfig) error {
