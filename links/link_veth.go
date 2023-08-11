@@ -17,17 +17,6 @@ type LinkVEthRaw struct {
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
-func (r *LinkVEthRaw) MarshalYAML() (interface{}, error) {
-	x := struct {
-		Type        string `yaml:"type"`
-		LinkVEthRaw `yaml:",inline"`
-	}{
-		Type:        string(LinkTypeVEth),
-		LinkVEthRaw: *r,
-	}
-	return x, nil
-}
-
 // ToLinkBrief converts the raw link into a LinkConfig.
 func (r *LinkVEthRaw) ToLinkBrief() *LinkBriefRaw {
 	lc := &LinkBriefRaw{
