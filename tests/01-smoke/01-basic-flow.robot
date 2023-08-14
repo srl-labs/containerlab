@@ -5,7 +5,7 @@ Library             Process
 Resource            ../common.robot
 
 Suite Setup         Setup
-Suite Teardown      Run    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
+Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 
 *** Variables ***
@@ -30,7 +30,7 @@ Verify number of Hosts entries before deploy
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -47,7 +47,7 @@ Exec command with no filtering
     [Documentation]    This tests ensures that when `exec` command is called without user provided filters, the command is executed on all nodes of the lab.
     Skip If    '${runtime}' == 'containerd'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
@@ -65,7 +65,7 @@ Exec command with filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
     Skip If    '${runtime}' == 'containerd'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
@@ -79,7 +79,7 @@ Exec command with json output and filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters and json output, the command is executed ONLY on selected nodes of the lab and the actual JSON is populated to stdout.
     Skip If    '${runtime}' == 'containerd'
     ${output} =    Process.Run Process
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -89,7 +89,7 @@ Exec command with json output and filtering
 
 Inspect ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -163,7 +163,7 @@ Verify links on host
 
 Ensure "inspect all" outputs IP addresses
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} inspect --all
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # get a 3rd line from the bottom of the inspect cmd.
@@ -234,12 +234,8 @@ Verify Hosts entries exist
 
     Should Be Equal As Integers    ${rc}    0
 
-    IF    '${runtime}' == 'podman'
-        Should Contain    ${output}    6
-    END
-    IF    '${runtime}' == 'docker'
-        Should Contain    ${output}    6
-    END
+    IF    '${runtime}' == 'podman'    Should Contain    ${output}    6
+    IF    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
@@ -293,7 +289,7 @@ Verify DNS-Options Config
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 

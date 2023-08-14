@@ -1,24 +1,27 @@
 *** Settings ***
-Library           OperatingSystem
-Library           SSHLibrary
-Suite Teardown    Run Keyword    Cleanup
-Resource          ../common.robot
-Resource          ../ssh.robot
+Library             OperatingSystem
+Library             SSHLibrary
+Resource            ../common.robot
+Resource            ../ssh.robot
+
+Suite Teardown      Run Keyword    Cleanup
+
 
 *** Variables ***
-${lab-name}       03-01-two-ceos
+${lab-name}         03-01-two-ceos
 ${lab-file-name}    03-ceos01-clab.yml
-${node1-name}     n1
-${node2-name}     n2
-${n1-mgmt-ip}
-${n2-mgmt-ip}     172.20.20.22
-${runtime}        docker
+${node1-name}       n1
+${node2-name}       n2
+${n1-mgmt-ip}       ${EMPTY}
+${n2-mgmt-ip}       172.20.20.22
+${runtime}          docker
+
 
 *** Test Cases ***
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} deploy -t ${CURDIR}/${lab-file-name}
+    ...    sudo -E ${CLAB_BIN} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -50,7 +53,7 @@ Ensure IPv6 default route is in the config file
 
 Ensure MGMT VRF is present
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    MGMT
@@ -69,7 +72,8 @@ Ensure n2 is reachable over ssh
     ...    password=admin
     ...    try_for=120
 
+
 *** Keywords ***
 Cleanup
-    Run    sudo ${CLAB_BIN} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    sudo -E ${CLAB_BIN} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}

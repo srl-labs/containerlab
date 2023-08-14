@@ -24,7 +24,7 @@ build-with-cover:
 
 build-debug:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -gcflags=all="-N -l" -race main.go
+	go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
 
 
 build-with-podman:
@@ -35,8 +35,14 @@ build-with-podman-debug:
 	mkdir -p $(BIN_DIR)
 	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
 
+convert-coverage:
+	go tool covdata textfmt -i=./tests/coverage -o coverage.out
+
 test:
-	go test -race ./... -v
+	rm -rf $$PWD/tests/coverage
+	mkdir -p $$PWD/tests/coverage
+	go test -cover -race ./... -v -covermode atomic -args -test.gocoverdir="$$PWD/tests/coverage"
+
 
 MOCKDIR = ./mocks
 .PHONY: mocks-gen
