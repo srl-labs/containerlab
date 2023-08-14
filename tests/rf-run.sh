@@ -15,4 +15,9 @@ fi
 
 echo "Running tests with containerlab binary at $(which ${CLAB_BIN}) path and selected runtime: $1"
 
-GOCOVERDIR=tests/coverage robot --consolecolors on -r none --variable CLAB_BIN:${CLAB_BIN} --variable runtime:$1 -l ./tests/out/$(basename $2)-$1-log --output ./tests/out/$(basename $2)-$1-out.xml $2
+COV_DIR=tests/coverage
+
+# coverage output directory
+mkdir -p ${COV_DIR}
+
+GOCOVERDIR=${COV_DIR} robot --consolecolors on -r none --variable CLAB_BIN:${CLAB_BIN} --variable runtime:$1 -l ./tests/out/$(basename $2)-$1-log --output ./tests/out/$(basename $2)-$1-out.xml $2
