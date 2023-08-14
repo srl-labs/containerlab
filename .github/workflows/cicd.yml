@@ -479,7 +479,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: coverage
-      - run: ls -la; ls -la tests/coverage
+          path: tests/coverage
       - name: convert Go's binary coverage to text coverage
         run: make convert-coverage
       - name: Upload coverage to codecov
