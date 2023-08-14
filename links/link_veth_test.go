@@ -206,11 +206,11 @@ func newFakeNode(name string) *fakeNode {
 	return &fakeNode{Name: name}
 }
 
-func (n *fakeNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (*fakeNode) AddLinkToContainer(_ context.Context, _ netlink.Link, _ func(ns.NetNS) error) error {
 	panic("not implemented")
 }
 
-func (f *fakeNode) AddLink(l Link) {
+func (*fakeNode) AddLink(_ Link) {
 	panic("not implemented")
 }
 
@@ -219,22 +219,22 @@ func (f *fakeNode) AddEndpoint(e Endpoint) {
 	f.Endpoints = append(f.Endpoints, e)
 }
 
-func (f *fakeNode) GetLinkEndpointType() LinkEndpointType {
+func (*fakeNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeVeth
 }
 
-func (f *fakeNode) GetShortName() string {
+func (*fakeNode) GetShortName() string {
 	panic("not implemented")
 }
 
-func (f *fakeNode) GetEndpoints() []Endpoint {
+func (*fakeNode) GetEndpoints() []Endpoint {
 	panic("not implemented")
 }
 
-func (f *fakeNode) ExecFunction(_ func(ns.NetNS) error) error {
+func (*fakeNode) ExecFunction(_ func(ns.NetNS) error) error {
 	panic("not implemented")
 }
 
-func (f *fakeNode) GetState() state.NodeState {
+func (*fakeNode) GetState() state.NodeState {
 	panic("not implemented")
 }
