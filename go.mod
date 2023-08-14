@@ -9,7 +9,7 @@ require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.3.0
 	github.com/containers/common v0.55.3
-	github.com/containers/podman/v4 v4.6.0
+	github.com/containers/podman/v4 v4.6.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v24.0.5+incompatible
@@ -142,7 +142,7 @@ require (
 	github.com/containerd/go-runc v1.0.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/containerd/ttrpc v1.2.2 // indirect
-	github.com/containers/buildah v1.31.0 // indirect
+	github.com/containers/buildah v1.31.2 // indirect
 	github.com/containers/image v3.0.2+incompatible // indirect
 	github.com/containers/image/v5 v5.26.1 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
