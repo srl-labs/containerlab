@@ -4,23 +4,26 @@ This test suite verifies
 - connectivity of nodes to the host netns
 - user-specified bridge is honored as a mgmt net bridge
 
-*** Settings ***
-Library           OperatingSystem
-Library           Process
-Resource          ../common.robot
 
-Suite Setup       Setup
-Suite Teardown    Cleanup
+*** Settings ***
+Library             OperatingSystem
+Library             Process
+Resource            ../common.robot
+
+Suite Setup         Setup
+Suite Teardown      Cleanup
+
 
 *** Variables ***
-${lab-name}       bridge-and-host
-${lab-file}       03-linux-nodes-to-bridge-and-host.clab.yml
-${bridge-name}    br-01-03-clab
-${br-link1-name}    l1-eth1
-${br-link2-name}    l1-eth2
-${host-link-name}    l1-01-03-eth3
-${runtime}        docker
-${mgmt-br-name}    01-03-mgmt
+${lab-name}             bridge-and-host
+${lab-file}             03-linux-nodes-to-bridge-and-host.clab.yml
+${bridge-name}          br-01-03-clab
+${br-link1-name}        l1-eth1
+${br-link2-name}        l1-eth2
+${host-link-name}       l1-01-03-eth3
+${runtime}              docker
+${mgmt-br-name}         01-03-mgmt
+
 
 *** Test Cases ***
 Create linux bridge
@@ -31,7 +34,7 @@ Create linux bridge
 
 Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -55,13 +58,14 @@ Verify management network is using user-specified bridge
     # show management interface info and cut the information about the ifindex of the remote veth
     # note that exec returns the info in the stderr stream, thus we use stderr to parse the ifindex
     ${rc}    ${iface} =    OperatingSystem.Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd "ip l show eth0" 2>&1 | perl -lne '/.*[0-9]+: .*\\@if(.*:) .*/ && print $1'
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd "ip l show eth0" 2>&1 | perl -lne '/.*[0-9]+: .*\\@if(.*:) .*/ && print $1'
     Log    ${iface}
     Should Be Equal As Integers    ${rc}    0
     ${rc}    ${res} =    OperatingSystem.Run And Return Rc And Output
     ...    sudo ip l | grep "${iface}"
     Log    ${res}
     Should Contain    ${res}    master ${mgmt-br-name} state UP
+
 
 *** Keywords ***
 Setup
@@ -72,7 +76,8 @@ Setup
     Run    sudo ctr -n clab image rm docker.io/library/alpine:3
 
 Cleanup
-    ${rc}    ${output} =    Run And Return Rc And Output    sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
     Run    sudo ip l del ${bridge-name}
     Run    sudo ip l del ${host-link-name}

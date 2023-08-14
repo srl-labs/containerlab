@@ -7,9 +7,9 @@ This suite tests:
 
 *** Settings ***
 Library             OperatingSystem
-Resource             ../common.robot
+Resource            ../common.robot
 
-Suite Teardown      Run    sudo ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
+Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
 
 
 *** Variables ***
@@ -19,13 +19,13 @@ ${runtime}      docker
 *** Test Cases ***
 Deploy first lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-nodes.clab.yml
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-nodes.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Deploy second lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-single-node.clab.yml
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-single-node.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -42,18 +42,18 @@ Verify host mode networking for node l3
 Verify ipv4-range is set correctly
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/01-linux-single-node.clab.yml
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/01-linux-single-node.clab.yml
     Log    ${output}
     Should Contain    ${output}    172.20.30.9/24
 
 Destroy all labs
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Check all labs have been removed
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} inspect --all
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Contain    ${output}    no containers found
