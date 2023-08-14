@@ -41,7 +41,7 @@ convert-coverage:
 test:
 	rm -rf $$PWD/tests/coverage
 	mkdir -p $$PWD/tests/coverage
-	go test -cover -race ./... -v -covermode atomic -args -test.gocoverdir="$$PWD/tests/coverage"
+	CGO_ENABLED=1 go test -cover -race ./... -v -covermode atomic -args -test.gocoverdir="$$PWD/tests/coverage"
 
 
 MOCKDIR = ./mocks
