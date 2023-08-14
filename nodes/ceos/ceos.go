@@ -91,8 +91,13 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
 	}
 	envSb.WriteString("'")
+
 	n.Cfg.Cmd = envSb.String()
-	n.Cfg.MacAddress = utils.GenMac("00:1c:73")
+	hwa, err := utils.GenMac("00:1c:73")
+	if err != nil {
+		return err
+	}
+	n.Cfg.MacAddress = hwa.String()
 
 	// mount config dir
 	cfgPath := filepath.Join(n.Cfg.LabDir, "flash")
@@ -284,9 +289,9 @@ func (n *ceos) CheckInterfaceName() error {
 	// allow eth and et interfaces
 	// https://regex101.com/r/umQW5Z/2
 	ifRe := regexp.MustCompile(`eth[1-9][\w\.]*$|et[1-9][\w\.]*$`)
-	for _, e := range n.Config().Endpoints {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters", n.Cfg.ShortName, e.EndpointName)
+	for _, e := range n.Endpoints {
+		if !ifRe.MatchString(e.GetIfaceName()) {
+			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters", n.Cfg.ShortName, e.GetIfaceName())
 		}
 	}
 

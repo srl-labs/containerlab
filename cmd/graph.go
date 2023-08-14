@@ -63,6 +63,11 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	err = c.ResolveLinks()
+	if err != nil {
+		return err
+	}
+
 	if dot {
 		return c.GenerateDotGraph()
 	}
@@ -105,11 +110,14 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
 	})
 	for _, l := range c.Links {
+
+		eps := l.GetEndpoints()
+
 		gtopo.Links = append(gtopo.Links, clab.Link{
-			Source:         l.A.Node.ShortName,
-			SourceEndpoint: l.A.EndpointName,
-			Target:         l.B.Node.ShortName,
-			TargetEndpoint: l.B.EndpointName,
+			Source:         eps[0].GetNode().GetShortName(),
+			SourceEndpoint: eps[0].GetIfaceName(),
+			Target:         eps[1].GetNode().GetShortName(),
+			TargetEndpoint: eps[1].GetIfaceName(),
 		})
 	}
 

@@ -8,12 +8,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/bridge"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/vishvananda/netlink"
 )
 
 var kindnames = []string{"ovs-bridge"}
@@ -57,11 +62,15 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 	return nil
 }
 
-func (*ovs) Deploy(_ context.Context, _ *nodes.DeployParams) error { return nil }
-func (*ovs) PullImage(_ context.Context) error                     { return nil }
-func (*ovs) GetImages(_ context.Context) map[string]string         { return map[string]string{} }
-func (*ovs) Delete(_ context.Context) error                        { return nil }
-func (*ovs) DeleteNetnsSymlink() (err error)                       { return nil }
+func (n *ovs) Deploy(_ context.Context, _ *nodes.DeployParams) error {
+	n.SetState(state.Deployed)
+	return nil
+}
+
+func (*ovs) PullImage(_ context.Context) error             { return nil }
+func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (*ovs) Delete(_ context.Context) error                { return nil }
+func (*ovs) DeleteNetnsSymlink() (err error)               { return nil }
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
@@ -74,4 +83,12 @@ func (n *ovs) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, e
 	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
 	return nil, cExec.ErrRunExecNotSupported
+}
+
+func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	return bridge.BridgeAddLink(ctx, link, n.Cfg.ShortName, f)
+}
+
+func (m *ovs) GetLinkEndpointType() links.LinkEndpointType {
+	return links.LinkEndpointTypeBridge
 }

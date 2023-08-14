@@ -13,6 +13,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/mocks"
+	"github.com/srl-labs/containerlab/mocks/mocknodes"
+	"github.com/srl-labs/containerlab/mocks/mockruntime"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
@@ -57,7 +59,7 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 // getNodeMap return a map of nodes for testing purpose.
 func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	// instantiate Mock Node 1
-	mockNode1 := mocks.NewMockNode(mockCtrl)
+	mockNode1 := mocknodes.NewMockNode(mockCtrl)
 	mockNode1.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:     "alpine:3",
@@ -66,7 +68,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 2
-	mockNode2 := mocks.NewMockNode(mockCtrl)
+	mockNode2 := mocknodes.NewMockNode(mockCtrl)
 	mockNode2.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:     "alpine:3",
@@ -76,7 +78,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 3
-	mockNode3 := mocks.NewMockNode(mockCtrl)
+	mockNode3 := mocknodes.NewMockNode(mockCtrl)
 	mockNode3.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:       "alpine:3",
@@ -87,7 +89,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 4
-	mockNode4 := mocks.NewMockNode(mockCtrl)
+	mockNode4 := mocknodes.NewMockNode(mockCtrl)
 	mockNode4.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:           "alpine:3",
@@ -98,7 +100,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	).AnyTimes()
 
 	// instantiate Mock Node 5
-	mockNode5 := mocks.NewMockNode(mockCtrl)
+	mockNode5 := mocknodes.NewMockNode(mockCtrl)
 	mockNode5.EXPECT().Config().Return(
 		&types.NodeConfig{
 			Image:           "alpine:3",
@@ -148,7 +150,7 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	// init a ContainerRuntime mock
-	crMock := mocks.NewMockContainerRuntime(mockCtrl)
+	crMock := mockruntime.NewMockContainerRuntime(mockCtrl)
 
 	// context parameter
 	ctx := context.TODO()
@@ -217,11 +219,10 @@ func Test_filterClabNodes(t *testing.T) {
 		c           *CLab
 		nodesFilter []string
 		wantNodes   []string
-		wantLinks   [][]string
 		wantErr     bool
 		err         error
 	}{
-		"two nodes, no links, one filter node": {
+		"two nodes, one filter node": {
 			c: &CLab{
 				Config: &Config{
 					Topology: &types.Topology{
@@ -238,10 +239,9 @@ func Test_filterClabNodes(t *testing.T) {
 			},
 			nodesFilter: []string{"node1"},
 			wantNodes:   []string{"node1"},
-			wantLinks:   [][]string{},
 			wantErr:     false,
 		},
-		"one node, no links, empty node filter": {
+		"one node, empty node filter": {
 			c: &CLab{
 				Config: &Config{
 					Topology: &types.Topology{
@@ -255,188 +255,9 @@ func Test_filterClabNodes(t *testing.T) {
 			},
 			nodesFilter: []string{},
 			wantNodes:   []string{"node1"},
-			wantLinks:   [][]string{},
 			wantErr:     false,
 		},
-		"two nodes, one link between them, one filter node": {
-			c: &CLab{
-				Links: map[int]*types.Link{
-					0: {
-						A: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node1",
-							},
-							EndpointName: "eth1",
-						},
-						B: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node2",
-							},
-							EndpointName: "eth2",
-						},
-					},
-				},
-				Config: &Config{
-					Topology: &types.Topology{
-						Nodes: map[string]*types.NodeDefinition{
-							"node1": {
-								Kind: "linux",
-							},
-							"node2": {
-								Kind: "linux",
-							},
-						},
-					},
-				},
-			},
-			nodesFilter: []string{"node1"},
-			wantNodes:   []string{"node1"},
-			wantLinks:   [][]string{},
-			wantErr:     false,
-		},
-		"two nodes, one link between them, no filter": {
-			c: &CLab{
-				Links: map[int]*types.Link{
-					0: {
-						A: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node1",
-							},
-							EndpointName: "eth1",
-						},
-						B: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node2",
-							},
-							EndpointName: "eth1",
-						},
-					},
-				},
-				Config: &Config{
-					Topology: &types.Topology{
-						Nodes: map[string]*types.NodeDefinition{
-							"node1": {
-								Kind: "linux",
-							},
-							"node2": {
-								Kind: "linux",
-							},
-						},
-					},
-				},
-			},
-			nodesFilter: []string{},
-			wantNodes:   []string{"node1", "node2"},
-			wantLinks:   [][]string{{"node1:eth1", "node2:eth1"}},
-			wantErr:     false,
-		},
-		"three nodes, two links, two nodes in the filter": {
-			c: &CLab{
-				Links: map[int]*types.Link{
-					0: {
-						A: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node1",
-							},
-							EndpointName: "eth1",
-						},
-						B: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node2",
-							},
-							EndpointName: "eth1",
-						},
-					},
-					1: {
-						A: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node2",
-							},
-							EndpointName: "eth2",
-						},
-						B: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node3",
-							},
-							EndpointName: "eth2",
-						},
-					},
-				},
-				Config: &Config{
-					Topology: &types.Topology{
-						Nodes: map[string]*types.NodeDefinition{
-							"node1": {
-								Kind: "linux",
-							},
-							"node2": {
-								Kind: "linux",
-							},
-							"node3": {
-								Kind: "linux",
-							},
-						},
-					},
-				},
-			},
-			nodesFilter: []string{"node1", "node2"},
-			wantNodes:   []string{"node1", "node2"},
-			wantLinks:   [][]string{{"node1:eth1", "node2:eth1"}},
-			wantErr:     false,
-		},
-		"three nodes, two links, one nodes in the filter": {
-			c: &CLab{
-				Links: map[int]*types.Link{
-					0: {
-						A: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node1",
-							},
-							EndpointName: "eth1",
-						},
-						B: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node2",
-							},
-							EndpointName: "eth1",
-						},
-					},
-					1: {
-						A: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node2",
-							},
-							EndpointName: "eth2",
-						},
-						B: &types.Endpoint{
-							Node: &types.NodeConfig{
-								ShortName: "node3",
-							},
-							EndpointName: "eth2",
-						},
-					},
-				},
-				Config: &Config{
-					Topology: &types.Topology{
-						Nodes: map[string]*types.NodeDefinition{
-							"node1": {
-								Kind: "linux",
-							},
-							"node2": {
-								Kind: "linux",
-							},
-							"node3": {
-								Kind: "linux",
-							},
-						},
-					},
-				},
-			},
-			nodesFilter: []string{"node1"},
-			wantNodes:   []string{"node1"},
-			wantLinks:   [][]string{},
-			wantErr:     false,
-		},
-		"two nodes, no links, one filter node with a wrong name": {
+		"two nodes, one filter node with a wrong name": {
 			c: &CLab{
 				Config: &Config{
 					Topology: &types.Topology{
@@ -453,7 +274,6 @@ func Test_filterClabNodes(t *testing.T) {
 			},
 			nodesFilter: []string{"wrongName"},
 			wantNodes:   []string{"node1", "node2"},
-			wantLinks:   [][]string{},
 			wantErr:     true,
 			err:         errs.ErrIncorrectInput,
 		},
@@ -479,17 +299,8 @@ func Test_filterClabNodes(t *testing.T) {
 			// sort the nodes to make the test deterministic
 			slices.Sort(filteredNodes)
 
-			filteredLinks := make([][]string, 0, len(tt.c.Links))
-			for _, l := range tt.c.Links {
-				filteredLinks = append(filteredLinks, []string{l.A.String(), l.B.String()})
-			}
-
 			if cmp.Diff(filteredNodes, tt.wantNodes) != "" {
 				t.Errorf("filterClabNodes() got = %v, want %v", filteredNodes, tt.wantNodes)
-			}
-
-			if cmp.Diff(filteredLinks, tt.wantLinks) != "" {
-				t.Errorf("filterClabNodes() got = %v, want %v", filteredLinks, tt.wantLinks)
 			}
 		})
 	}

@@ -22,9 +22,18 @@ build-with-cover:
 	mkdir -p $(BIN_DIR)
 	go build -cover -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
 
+build-debug:
+	mkdir -p $(BIN_DIR)
+	go build -o $(BINARY) -gcflags=all="-N -l" -race main.go
+
+
 build-with-podman:
 	mkdir -p $(BIN_DIR)
 	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+
+build-with-podman-debug:
+	mkdir -p $(BIN_DIR)
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
 
 test:
 	go test -race ./... -v
@@ -33,10 +42,10 @@ MOCKDIR = ./mocks
 .PHONY: mocks-gen
 mocks-gen: mocks-rm ## Generate mocks for all the defined interfaces.
 	go install github.com/golang/mock/mockgen@v1.6.0
-	mockgen -package=mocks -source=nodes/node.go -destination=$(MOCKDIR)/node.go
+	mockgen -package=mocknodes -source=nodes/node.go -destination=$(MOCKDIR)/mocknodes/node.go
 	mockgen -package=mocks -source=clab/dependency_manager/dependency_manager.go -destination=$(MOCKDIR)/dependency_manager.go
-	mockgen -package=mocks -source=runtime/runtime.go -destination=$(MOCKDIR)/runtime.go
-	mockgen -package=mocks -source=nodes/default_node.go -destination=$(MOCKDIR)/default_node.go
+	mockgen -package=mockruntime -source=runtime/runtime.go -destination=$(MOCKDIR)/mockruntime/runtime.go
+	mockgen -package=mocknodes -source=nodes/default_node.go -destination=$(MOCKDIR)/mocknodes/default_node.go
 	mockgen -package=mocks -source=clab/exec/exec.go -destination=$(MOCKDIR)/exec.go
 
 .PHONY: mocks-rm

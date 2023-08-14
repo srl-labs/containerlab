@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/weaveworks/ignite/pkg/operations"
@@ -53,11 +54,13 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	if err != nil {
 		return err
 	}
-	intf, err := n.Runtime.StartContainer(ctx, cID, n.Cfg)
+	intf, err := n.Runtime.StartContainer(ctx, cID, n)
 
 	if vmChans, ok := intf.(*operations.VMChannels); ok {
 		n.vmChans = vmChans
 	}
+
+	n.SetState(state.Deployed)
 
 	return err
 }
@@ -93,8 +96,8 @@ func (n *linux) GetImages(_ context.Context) map[string]string {
 // if eth0 is only used with network-mode=none.
 func (n *linux) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
-	for _, e := range n.Config().Endpoints {
-		if e.EndpointName == "eth0" && nm != "none" {
+	for _, e := range n.Endpoints {
+		if e.GetIfaceName() == "eth0" && nm != "none" {
 			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
 		}
 	}

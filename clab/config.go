@@ -6,6 +6,7 @@ package clab
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -14,11 +15,11 @@ import (
 	"github.com/pmorjan/kmod"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	clabRuntimes "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
-	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -32,8 +33,6 @@ const (
 	hostNSPath = "__host"
 	// veth link mtu.
 	DefaultVethLinkMTU = 9500
-	// containerlab's reserved OUI.
-	ClabOUI = "aa:c1:ab"
 
 	// clab specific topology variables.
 	clabDirVar = "__clabDir__"
@@ -67,7 +66,7 @@ func (c *CLab) parseTopology() error {
 
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]nodes.Node)
-	c.Links = make(map[int]*types.Link)
+	c.Links = make(map[int]links.Link)
 
 	// initialize the Node information from the topology map
 	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
@@ -123,10 +122,6 @@ func (c *CLab) parseTopology() error {
 		if err != nil {
 			return err
 		}
-	}
-	for i, l := range c.Config.Topology.Links {
-		// i represents the endpoint integer and l provide the link struct
-		c.Links[i] = c.NewLink(l)
 	}
 
 	// set any containerlab defaults after we've parsed the input
@@ -198,7 +193,6 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
 		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
-		Endpoints:       make([]types.Endpoint, 0),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
@@ -326,141 +320,66 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	return nil
 }
 
-// NewLink initializes a new link object from the link definition provided via topology file.
-func (c *CLab) NewLink(l *types.LinkDefinition) *types.Link {
-	if len(l.Endpoints) != 2 {
-		log.Fatalf("endpoint %q has wrong syntax, unexpected number of items", l.Endpoints) // skipcq: RVV-A0003
-	}
-
-	mtu := l.MTU
-
-	if mtu == 0 {
-		mtu = DefaultVethLinkMTU
-	}
-
-	return &types.Link{
-		A:      c.NewEndpoint(l.Endpoints[0]),
-		B:      c.NewEndpoint(l.Endpoints[1]),
-		MTU:    mtu,
-		Labels: l.Labels,
-		Vars:   l.Vars,
-	}
-}
-
-// NewEndpoint initializes a new endpoint object.
-func (c *CLab) NewEndpoint(e string) *types.Endpoint {
-	// initialize a new endpoint
-	endpoint := new(types.Endpoint)
-
-	// split the string to get node name and endpoint name
-	split := strings.Split(e, ":")
-	if len(split) != 2 {
-		log.Fatalf("endpoint %s has wrong syntax", e) // skipcq: GO-S0904, RVV-A0003
-	}
-	nName := split[0] // node name
-
-	// initialize the endpoint name based on the split function
-	endpoint.EndpointName = split[1] // endpoint name
-	if len(endpoint.EndpointName) > 15 {
-		log.Fatalf("interface '%s' name exceeds maximum length of 15 characters",
-			endpoint.EndpointName) // skipcq: RVV-A0003
-	}
-	// generate unique MAC
-	endpoint.MAC = utils.GenMac(ClabOUI)
-
-	// search the node pointer for a node name referenced in endpoint section
-	switch nName {
-	// "host" is a special reference to host namespace
-	// for which we create an special Node with kind "host"
-	case "host":
-		endpoint.Node = &types.NodeConfig{
-			Kind:      "host",
-			ShortName: "host",
-			NSPath:    hostNSPath,
-		}
-	case "macvlan":
-		endpoint.Node = &types.NodeConfig{
-			Kind:      "macvlan",
-			ShortName: "macvlan",
-			NSPath:    hostNSPath,
-		}
-	// mgmt-net is a special reference to a bridge of the docker network
-	// that is used as the management network
-	case "mgmt-net":
-		endpoint.Node = &types.NodeConfig{
-			Kind:      "bridge",
-			ShortName: "mgmt-net",
-		}
-	default:
-		c.m.Lock()
-		if n, ok := c.Nodes[nName]; ok {
-			endpoint.Node = n.Config()
-			n.Config().Endpoints = append(n.Config().Endpoints, *endpoint)
-		}
-		c.m.Unlock()
-	}
-
-	// stop the deployment if the matching node element was not found
-	// "host" node name is an exception, it may exist without a matching node
-	if endpoint.Node == nil {
-		log.Fatalf("not all nodes are specified in the 'topology.nodes' section or the names don't match in the 'links.endpoints' section: %s", nName) // skipcq: GO-S0904, RVV-A0003
-	}
-
-	return endpoint
-}
-
 // CheckTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	var err error
-
+	if err = c.verifyLinks(); err != nil {
+		return err
+	}
+	if err = c.verifyRootNetNSLinks(); err != nil {
+		return err
+	}
 	for _, node := range c.Nodes {
 		err := node.CheckDeploymentConditions(ctx)
 		if err != nil {
 			return err
 		}
 	}
-	if err = c.verifyLinks(); err != nil {
-		return err
-	}
 	if err = c.verifyDuplicateAddresses(); err != nil {
-		return err
-	}
-	if err = c.verifyRootNetnsInterfaceUniqueness(); err != nil {
 		return err
 	}
 	if err = c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
-	if err = c.verifyHostIfaces(); err != nil {
-		return err
+	return nil
+}
+
+// verifyRootNetNSLinks makes sure, that there will be no overlap in
+// interface names for Root Network Namespace bases nodes.
+func (c *CLab) verifyRootNetNSLinks() error {
+	rootEpNames := map[string]string{}
+
+	// iterate through nodes
+	for _, n := range c.Nodes {
+		// check if they are RootNamespace based
+		if n.Config().IsRootNamespaceBased {
+			// if so, add their ep names to the list of rootEpNames
+			for _, e := range n.GetEndpoints() {
+				if val, exists := rootEpNames[e.GetIfaceName()]; exists {
+					return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]", e.GetIfaceName(), val, e.GetNode().GetShortName())
+				}
+				rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
+			}
+		}
 	}
+
 	return nil
 }
 
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
 func (c *CLab) verifyLinks() error {
-	endpoints := map[string]struct{}{}
-	// dups accumulates duplicate links
-	dups := []string{}
-	for _, l := range c.Links {
-		for _, e := range []*types.Endpoint{l.A, l.B} {
-			e_string := e.String()
-			if _, ok := endpoints[e_string]; ok {
-				// macvlan interface can appear multiple times
-				if strings.Contains(e_string, "macvlan") {
-					continue
-				}
-
-				dups = append(dups, e_string)
-			}
-			endpoints[e_string] = struct{}{}
+	var err error
+	verificationErrors := []error{}
+	for _, e := range c.Endpoints {
+		err = e.Verify(c.GlobalRuntime().Config().VerifyLinkParams)
+		if err != nil {
+			verificationErrors = append(verificationErrors, err)
 		}
 	}
-	if len(dups) != 0 {
-		sort.Strings(dups) // sort for deterministic error message
-		return fmt.Errorf("endpoints %q appeared more than once in the links section of the topology file", dups)
+	if len(verificationErrors) > 0 {
+		return errors.Join(verificationErrors...)
 	}
 	return nil
 }
@@ -569,45 +488,6 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 	return nil
 }
 
-// verifyHostIfaces ensures that host interfaces referenced in the topology
-// do not exist already in the root namespace
-// and ensure that nodes that are configured with host networking mode do not have any interfaces defined.
-func (c *CLab) verifyHostIfaces() error {
-	for _, l := range c.Links {
-		for _, ep := range []*types.Endpoint{l.A, l.B} {
-			if ep.Node.ShortName == "host" {
-				if nl, _ := netlink.LinkByName(ep.EndpointName); nl != nil {
-					return fmt.Errorf("host interface %s referenced in topology already exists", ep.EndpointName)
-				}
-			}
-			if ep.Node.NetworkMode == "host" {
-				return fmt.Errorf("node '%s' is defined with host network mode, it can't have any links. Remove '%s' node links from the topology definition",
-					ep.Node.ShortName, ep.Node.ShortName)
-			}
-		}
-	}
-	return nil
-}
-
-// verifyRootNetnsInterfaceUniqueness ensures that interafaces that appear in the root ns (bridge, ovs-bridge and host)
-// are uniquely defined in the topology file.
-func (c *CLab) verifyRootNetnsInterfaceUniqueness() error {
-	rootNsIfaces := map[string]struct{}{}
-	for _, l := range c.Links {
-		endpoints := [2]*types.Endpoint{l.A, l.B}
-		for _, e := range endpoints {
-			if e.Node.IsRootNamespaceBased {
-				if _, ok := rootNsIfaces[e.EndpointName]; ok {
-					return fmt.Errorf(`interface %s defined for node %s has already been used in other bridges, ovs-bridges or host interfaces.
-					Make sure that nodes of these kinds use unique interface names`, e.EndpointName, e.Node.ShortName)
-				}
-				rootNsIfaces[e.EndpointName] = struct{}{}
-			}
-		}
-	}
-	return nil
-}
-
 // resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
 // it allows host path to have `~` and relative path to an absolute path
 // the list of binds will be changed in place.
@@ -644,10 +524,9 @@ func (c *CLab) setDefaults() {
 	for _, n := range c.Nodes {
 		// Injecting the env var with expected number of links
 		numLinks := map[string]string{
-			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", len(n.Config().Endpoints)),
+			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", len(n.GetEndpoints())),
 		}
 		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numLinks)
-
 	}
 }
 

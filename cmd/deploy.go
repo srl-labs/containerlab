@@ -19,6 +19,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
@@ -127,6 +128,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	err = c.ResolveLinks()
+	if err != nil {
+		return err
+	}
+
 	setFlags(c.Config)
 	log.Debugf("lab Conf: %+v", c.Config)
 
@@ -134,14 +140,21 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	vCh := getLatestClabVersion(ctx)
 
 	if reconfigure {
-		if err != nil {
-			return err
-		}
 		_ = destroyLab(ctx, c)
 		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return err
 		}
+	}
+
+	// create management network or use existing one
+	if err = c.CreateNetwork(ctx); err != nil {
+		return err
+	}
+
+	err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
+	if err != nil {
+		return err
 	}
 
 	if err = c.CheckTopologyDefinition(ctx); err != nil {
@@ -190,13 +203,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
-		return err
-	}
-
 	// determine the number of node and link worker
-	nodeWorkers, linkWorkers, err := countWorkers(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
+	nodeWorkers, _, err := countWorkers(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
 	if err != nil {
 		return err
 	}
@@ -229,7 +237,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	c.CreateLinks(ctx, linkWorkers, dm)
+
 	if nodesWg != nil {
 		nodesWg.Wait()
 	}

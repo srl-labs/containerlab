@@ -98,5 +98,5 @@ func (n *vrXRV) SaveConfig(_ context.Context) error {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *vrXRV) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Cfg.Endpoints)
+	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

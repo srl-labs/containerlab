@@ -15,6 +15,7 @@ import (
 	dockerTypes "github.com/docker/docker/api/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -45,6 +46,9 @@ func (r *PodmanRuntime) Init(opts ...runtime.RuntimeOption) error {
 	for _, f := range opts {
 		f(r)
 	}
+	r.config.VerifyLinkParams = links.NewVerifyLinkParams()
+	r.config.VerifyLinkParams.RunBridgeExistsCheck = false
+
 	return nil
 }
 
@@ -103,6 +107,14 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 			return err
 		}
 		log.Debugf("Create network response was: %+v", resp)
+	}
+	// set bridge name = network name if explicit name was not provided
+	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
+		details, err := network.Inspect(ctx, r.mgmt.Network, &network.InspectOptions{})
+		if err != nil {
+			return err
+		}
+		r.mgmt.Bridge = details.NetworkInterface
 	}
 	return err
 }
@@ -180,11 +192,13 @@ func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConf
 }
 
 // StartContainer starts a previously created container by ID or its name and executes post-start actions method.
-func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, cfg *types.NodeConfig) (interface{}, error) {
+func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, node runtime.Node) (interface{}, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
+	cfg := node.Config()
+
 	err = containers.Start(ctx, cID, &containers.StartOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error while starting a container %q: %w", cfg.LongName, err)

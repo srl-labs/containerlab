@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -66,6 +67,7 @@ func (c *ContainerdRuntime) Init(opts ...runtime.RuntimeOption) error {
 	for _, o := range opts {
 		o(c)
 	}
+	c.config.VerifyLinkParams = links.NewVerifyLinkParams()
 	return nil
 }
 
@@ -172,28 +174,30 @@ func (c *ContainerdRuntime) CreateContainer(_ context.Context, _ *types.NodeConf
 	return "", nil
 }
 
-func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *types.NodeConfig) (interface{}, error) {
+func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node runtime.Node) (interface{}, error) {
 	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
 
+	nodecfg := node.Config()
+
 	var img containerd.Image
-	img, err := c.client.GetImage(ctx, node.Image)
+	img, err := c.client.GetImage(ctx, nodecfg.Image)
 	if err != nil {
 		// try fetching the image with canonical name
 		// as it might be that we pulled this image with canonical name
-		img, err = c.client.GetImage(ctx, utils.GetCanonicalImageName(node.Image))
+		img, err = c.client.GetImage(ctx, utils.GetCanonicalImageName(nodecfg.Image))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	cmd, err := shlex.Split(node.Cmd)
+	cmd, err := shlex.Split(nodecfg.Cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	mounts := make([]specs.Mount, len(node.Binds))
+	mounts := make([]specs.Mount, len(nodecfg.Binds))
 
-	for idx, mount := range node.Binds {
+	for idx, mount := range nodecfg.Binds {
 		s := strings.Split(mount, ":")
 
 		m := specs.Mount{
@@ -209,9 +213,9 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 
 	opts := []oci.SpecOpts{
 		oci.WithImageConfig(img),
-		oci.WithEnv(utils.ConvertEnvs(node.Env)),
-		oci.WithHostname(node.ShortName),
-		WithSysctls(node.Sysctls),
+		oci.WithEnv(utils.ConvertEnvs(nodecfg.Env)),
+		oci.WithHostname(nodecfg.ShortName),
+		WithSysctls(nodecfg.Sysctls),
 		oci.WithoutRunMount,
 		oci.WithPrivileged,
 		oci.WithHostLocaltime,
@@ -223,21 +227,21 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	if len(cmd) > 0 {
 		opts = append(opts, oci.WithProcessArgs(cmd...))
 	}
-	if node.User != "" {
-		opts = append(opts, oci.WithUser(node.User))
+	if nodecfg.User != "" {
+		opts = append(opts, oci.WithUser(nodecfg.User))
 	}
-	if node.Memory != "" {
-		mem, err := humanize.ParseBytes(node.Memory)
+	if nodecfg.Memory != "" {
+		mem, err := humanize.ParseBytes(nodecfg.Memory)
 		if err != nil {
 			return nil, err
 		}
 		opts = append(opts, oci.WithMemoryLimit(mem))
 	}
-	if node.CPU != 0 {
-		opts = append(opts, oci.WithCPUCFS(int64(node.CPU*100000), 100000))
+	if nodecfg.CPU != 0 {
+		opts = append(opts, oci.WithCPUCFS(int64(nodecfg.CPU*100000), 100000))
 	}
-	if node.CPUSet != "" {
-		opts = append(opts, oci.WithCPUs(node.CPUSet))
+	if nodecfg.CPUSet != "" {
+		opts = append(opts, oci.WithCPUs(nodecfg.CPUSet))
 	}
 	if len(mounts) > 0 {
 		opts = append(opts, oci.WithMounts(mounts))
@@ -247,7 +251,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	var cncl *libcni.NetworkConfigList
 	var cnirc *libcni.RuntimeConf
 
-	switch node.NetworkMode {
+	switch nodecfg.NetworkMode {
 	case "host":
 		opts = append(opts,
 			oci.WithHostNamespace(specs.NetworkNamespace),
@@ -256,19 +260,19 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	case "none":
 		// Done!
 	default:
-		cnic, cncl, cnirc, err = cniInit(node.LongName, "eth0", c.mgmt)
+		cnic, cncl, cnirc, err = cniInit(nodecfg.LongName, "eth0", c.mgmt)
 		if err != nil {
 			return nil, err
 		}
 
 		// set mac if defined in node
-		if node.MacAddress != "" {
-			cnirc.CapabilityArgs["mac"] = node.MacAddress
+		if nodecfg.MacAddress != "" {
+			cnirc.CapabilityArgs["mac"] = nodecfg.MacAddress
 		}
 
 		portmappings := []portMapping{}
 
-		for contdatasl, hostdata := range node.PortBindings {
+		for contdatasl, hostdata := range nodecfg.PortBindings {
 			// fmt.Printf("%+v", hostdata)
 			// fmt.Printf("%+v", contdatasl)
 			for _, x := range hostdata {
@@ -290,28 +294,28 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	var cOpts []containerd.NewContainerOpts
 	cOpts = append(cOpts,
 		containerd.WithImage(img),
-		containerd.WithNewSnapshot(node.LongName+"-snapshot", img),
-		containerd.WithAdditionalContainerLabels(node.Labels),
+		containerd.WithNewSnapshot(nodecfg.LongName+"-snapshot", img),
+		containerd.WithAdditionalContainerLabels(nodecfg.Labels),
 		containerd.WithNewSpec(opts...),
 	)
 
 	newContainer, err := c.client.NewContainer(
 		ctx,
-		node.LongName,
+		nodecfg.LongName,
 		cOpts...,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debugf("Container '%s' created", node.LongName)
-	log.Debugf("Start container: %s", node.LongName)
+	log.Debugf("Container '%s' created", nodecfg.LongName)
+	log.Debugf("Start container: %s", nodecfg.LongName)
 
-	container, err := c.client.LoadContainer(ctx, node.LongName)
+	container, err := c.client.LoadContainer(ctx, nodecfg.LongName)
 	if err != nil {
 		return nil, err
 	}
-	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+node.LongName+".log"))
+	task, err := container.NewTask(ctx, cio.LogFile("/tmp/clab/"+nodecfg.LongName+".log"))
 	if err != nil {
 		return nil, err
 	}
@@ -319,14 +323,14 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Container started: %s", node.LongName)
+	log.Debugf("Container started: %s", nodecfg.LongName)
 
-	node.NSPath, err = c.GetNSPath(ctx, node.LongName)
+	nodecfg.NSPath, err = c.GetNSPath(ctx, nodecfg.LongName)
 	if err != nil {
 		return nil, err
 	}
 
-	err = utils.LinkContainerNS(node.NSPath, node.LongName)
+	err = utils.LinkContainerNS(nodecfg.NSPath, nodecfg.LongName)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +339,7 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 	// we have prepared a lot of stuff further up, which
 	// is now to be applied
 	if cnic != nil {
-		cnirc.NetNS = node.NSPath
+		cnirc.NetNS = nodecfg.NSPath
 		res, err := cnic.AddNetworkList(ctx, cncl, cnirc)
 		if err != nil {
 			return nil, err
@@ -343,10 +347,10 @@ func (c *ContainerdRuntime) StartContainer(ctx context.Context, _ string, node *
 		result, _ := current.NewResultFromResult(res)
 
 		// set DNS configuration defined in topology
-		if node.DNS != nil {
-			result.DNS.Nameservers = node.DNS.Servers
-			result.DNS.Options = node.DNS.Options
-			result.DNS.Search = node.DNS.Search
+		if nodecfg.DNS != nil {
+			result.DNS.Nameservers = nodecfg.DNS.Servers
+			result.DNS.Options = nodecfg.DNS.Options
+			result.DNS.Search = nodecfg.DNS.Search
 		}
 
 		ipv4, ipv6, ipv4Gw := "", "", ""

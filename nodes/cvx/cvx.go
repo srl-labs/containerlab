@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
@@ -79,13 +80,16 @@ func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	if err != nil {
 		return err
 	}
-	intf, err := c.Runtime.StartContainer(ctx, cID, c.Cfg)
+	intf, err := c.Runtime.StartContainer(ctx, cID, c)
 	if err != nil {
 		return err
 	}
 	if vmChans, ok := intf.(*operations.VMChannels); ok {
 		c.vmChans = vmChans
 	}
+
+	c.SetState(state.Deployed)
+
 	return nil
 }
 
@@ -116,9 +120,9 @@ func (c *cvx) CheckInterfaceName() error {
 	// allow swpX interface names
 	// https://regex101.com/r/SV0k1J/1
 	ifRe := regexp.MustCompile(`swp[\d\.]+$`)
-	for _, e := range c.Config().Endpoints {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as swpX, where X is >=0", c.Cfg.ShortName, e.EndpointName)
+	for _, e := range c.Endpoints {
+		if !ifRe.MatchString(e.GetIfaceName()) {
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as swpX, where X is >=0", c.Cfg.ShortName, e.GetIfaceName())
 		}
 	}
 

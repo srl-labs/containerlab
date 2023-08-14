@@ -165,8 +165,6 @@ type NodeConfig struct {
 	// Extra /etc/hosts entries for all nodes.
 	ExtraHosts []string          `json:"extra-hosts,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"` // container labels
-	// Slice of pointers to local endpoints, DO NOT marshal into JSON as it creates a cyclical error
-	Endpoints []Endpoint `json:"-"`
 	// List of Subject Alternative Names (SAN) to be added to the node's TLS certificate
 	SANs []string `json:"SANs,omitempty"`
 	// Ignite sandbox and kernel imageNames

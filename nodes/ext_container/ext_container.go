@@ -11,6 +11,7 @@ import (
 
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -54,6 +55,8 @@ func (e *extcont) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	}
 	// set nspath in node config
 	e.Cfg.NSPath = nspath
+
+	e.SetState(state.Deployed)
 
 	return nil
 }

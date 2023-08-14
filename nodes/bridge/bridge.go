@@ -11,12 +11,16 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 var kindnames = []string{"bridge"}
@@ -45,14 +49,17 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-
 	s.Cfg.IsRootNamespaceBased = true
 	return nil
 }
 
-func (*bridge) Deploy(_ context.Context, _ *nodes.DeployParams) error { return nil }
-func (*bridge) Delete(_ context.Context) error                        { return nil }
-func (*bridge) GetImages(_ context.Context) map[string]string         { return map[string]string{} }
+func (n *bridge) Deploy(_ context.Context, _ *nodes.DeployParams) error {
+	n.SetState(state.Deployed)
+	return nil
+}
+
+func (*bridge) Delete(_ context.Context) error                { return nil }
+func (*bridge) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
 // DeleteNetnsSymlink is a noop for bridge nodes.
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
@@ -119,4 +126,35 @@ func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
 
 	return nil, cExec.ErrRunExecNotSupported
+}
+
+func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	return BridgeAddLink(ctx, link, b.Cfg.ShortName, f)
+}
+
+func BridgeAddLink(_ context.Context, link netlink.Link, bridgeName string, f func(ns.NetNS) error) error {
+	// retrieve the namespace handle
+	ns, err := ns.GetCurrentNS()
+	if err != nil {
+		return err
+	}
+
+	// get the bridge as netlink.Link
+	br, err := netlink.LinkByName(bridgeName)
+	if err != nil {
+		return err
+	}
+
+	// assign the bridge to the link as master
+	err = netlink.LinkSetMaster(link, br)
+	if err != nil {
+		return err
+	}
+
+	// execute the given function
+	return ns.Do(f)
+}
+
+func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {
+	return links.LinkEndpointTypeBridge
 }

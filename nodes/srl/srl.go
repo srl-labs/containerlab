@@ -26,6 +26,7 @@ import (
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -57,15 +58,18 @@ set / system snmp network-instance mgmt
 set / system snmp network-instance mgmt admin-state enable
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
-{{/* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
-{{- range $ep := .Endpoints }}
-{{- if eq $ep.EndpointName "mgmt0" }}{{- continue }}{{- end}}
-{{- $parts := ($ep.EndpointName | strings.ReplaceAll "e" "" | strings.Split "-") -}}
-set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} admin-state enable
-  {{- if eq (len $parts) 3 }}
-set / interface ethernet-{{index $parts 0}}/{{index $parts 1}} breakout-mode num-channels 4 channel-speed 25G
-set / interface ethernet-{{index $parts 0}}/{{index $parts 1}}/{{index $parts 2}} admin-state enable
+{{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
+{{- range $epName, $ep := .IFaces }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
+  {{- if ne $ep.Mtu 0 }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
   {{- end }}
+
+  {{- if ne $ep.BreakoutNo  "" }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
+  {{- end }}
+
 {{ end -}}
 {{- if .SSHPubKeys }}
 set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
@@ -522,6 +526,24 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	return f.Close()
 }
 
+// srlTemplateData top level data struct
+type srlTemplateData struct {
+	TLSKey     string
+	TLSCert    string
+	TLSAnchor  string
+	Banner     string
+	IFaces     map[string]tplIFace
+	SSHPubKeys string
+}
+
+// tplIFace template interface struct
+type tplIFace struct {
+	Slot       string
+	Port       string
+	BreakoutNo string
+	Mtu        int
+}
+
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
 func (n *srl) addDefaultConfig(ctx context.Context) error {
 	b, err := n.banner()
@@ -530,14 +552,13 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	}
 
 	// struct that holds data used in templating of the default config snippet
-	tplData := struct {
-		*types.NodeConfig
-		Banner     string
-		SSHPubKeys string
-	}{
-		n.Cfg,
-		b,
-		"",
+
+	tplData := srlTemplateData{
+		TLSKey:    n.Cfg.TLSKey,
+		TLSCert:   n.Cfg.TLSCert,
+		TLSAnchor: n.Cfg.TLSAnchor,
+		Banner:    b,
+		IFaces:    map[string]tplIFace{},
 	}
 
 	n.filterSSHPubKeys()
@@ -548,10 +569,38 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 
-	// remove newlines from tls key/cert so that they nicely apply via the cli provisioning
-	// during the template execution
-	tplData.TLSKey = strings.TrimSpace(tplData.TLSKey)
-	tplData.TLSCert = strings.TrimSpace(tplData.TLSCert)
+	// prepare the endpoints
+	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+		// split the interface identifier into their parts
+		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
+
+		// create a template interface struct
+		iface := tplIFace{
+			Slot: ifNameParts[0],
+			Port: ifNameParts[1],
+		}
+		// if it is a breakout port add the breakout identifier
+		if len(ifNameParts) == 3 {
+			iface.BreakoutNo = ifNameParts[2]
+		}
+
+		// for MACVlan interfaces we need to figure out the parent interface MTU
+		// and specifically define it in the config
+		//
+		// via the endpoint we acquire the link, and check if the link is of type LinkMacVlan
+		// if so cast it and get the parent Interface MTU and finally set that for the interface
+		if link, ok := e.GetLink().(*links.LinkMacVlan); ok {
+			mtu, err := link.GetParentInterfaceMtu()
+			if err != nil {
+				return err
+			}
+			iface.Mtu = mtu
+		}
+
+		// add the template interface definition to the template data
+		tplData.IFaces[ifName] = iface
+	}
 
 	buf := new(bytes.Buffer)
 	err = srlCfgTpl.Execute(buf, tplData)
@@ -688,12 +737,12 @@ func (s *srl) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|mgmt0`)
 	nm := strings.ToLower(s.Cfg.NetworkMode)
 
-	for _, e := range s.Config().Endpoints {
-		if !ifRe.MatchString(e.EndpointName) {
-			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.EndpointName)
+	for _, e := range s.Endpoints {
+		if !ifRe.MatchString(e.GetIfaceName()) {
+			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.GetIfaceName())
 		}
 
-		if e.EndpointName == "mgmt0" && nm != "none" {
+		if e.GetIfaceName() == "mgmt0" && nm != "none" {
 			return fmt.Errorf("mgmt0 interface name is not allowed for %s node when network mode is not set to none", s.Cfg.ShortName)
 		}
 	}
