@@ -59,7 +59,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v3
-      - uses: WillAbides/setup-go-faster@v1.9.0
+      - uses: WillAbides/setup-go-faster@v1.10.1
         with:
           go-version: ${{ env.GOVER }}
 
@@ -90,7 +90,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v3
-      - uses: WillAbides/setup-go-faster@v1.9.0
+      - uses: WillAbides/setup-go-faster@v1.10.1
         with:
           go-version: ${{ env.GOVER }}
 
@@ -105,7 +105,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v3
-      - uses: WillAbides/setup-go-faster@v1.9.0
+      - uses: WillAbides/setup-go-faster@v1.10.1
         with:
           go-version: ${{ env.GOVER }}
 
@@ -150,7 +150,7 @@ jobs:
           repository: containers/podman
           ref: ${{ env.PODMAN_VER }}
 
-      - uses: WillAbides/setup-go-faster@v1.9.0
+      - uses: WillAbides/setup-go-faster@v1.10.1
         if: steps.cache-podman-bin.outputs.cache-hit != 'true'
         with:
           go-version: ${{ env.GOVER }}
@@ -464,7 +464,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: WillAbides/setup-go-faster@v1.9.0
+        uses: WillAbides/setup-go-faster@v1.10.1
         with:
           go-version: ${{ env.GOVER }}
 
