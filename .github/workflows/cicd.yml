@@ -490,7 +490,7 @@ jobs:
       - name: convert Go's binary coverage to text coverage
         run: make convert-coverage
       - name: Upload coverage to codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
 
   docs-test:
     runs-on: ubuntu-22.04
