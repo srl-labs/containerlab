@@ -122,7 +122,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - run: CGO_ENABLED=1 go test -race ./... -coverprofile coverage.out -covermode atomic
+      - run: make test
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
