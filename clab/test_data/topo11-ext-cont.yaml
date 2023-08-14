@@ -1,0 +1,12 @@
+name: topo11
+topology:
+  nodes:
+    node1:
+      kind: ext-container
+      exec:
+        - ip l
+    node2:
+      kind: linux
+      image: alpine:latest
+      
+
