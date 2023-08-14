@@ -124,8 +124,14 @@ jobs:
 
       - run: CGO_ENABLED=1 go test -race ./... -coverprofile coverage.out -covermode atomic
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage
+          path: ./tests/coverage/*
+          retention-days: 1
 
   build-podman-v4:
     env:
@@ -235,6 +241,15 @@ jobs:
           name: 01-smoke-log
           path: ./tests/out/*.html
 
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage
+          path: ./tests/coverage/*
+          retention-days: 1
+
   ext-container-tests:
     runs-on: ubuntu-22.04
     strategy:
@@ -278,6 +293,15 @@ jobs:
         with:
           name: 06-ext-container-log
           path: ./tests/out/*.html
+
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage
+          path: ./tests/coverage/*
+          retention-days: 1
 
   ceos-basic-tests:
     runs-on: ubuntu-22.04
@@ -325,6 +349,15 @@ jobs:
         with:
           name: 03-basic-ceos-log
           path: ./tests/out/*.html
+
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage
+          path: ./tests/coverage/*
+          retention-days: 1
 
   srlinux-basic-tests:
     runs-on: ubuntu-22.04
@@ -376,6 +409,15 @@ jobs:
           name: 02-basic-srl-log
           path: ./tests/out/*.html
 
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage
+          path: ./tests/coverage/*
+          retention-days: 1
+
   ixiac-one-basic-tests:
     runs-on: ubuntu-22.04
     strategy:
@@ -413,6 +455,35 @@ jobs:
         with:
           name: 04-basic-ixiacone-log
           path: ./tests/out/*.html
+
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage
+          path: ./tests/coverage/*
+          retention-days: 1
+
+    # create a job that downloads coverage artifact and uses codecov to upload it
+  coverage:
+    runs-on: ubuntu-22.04
+    needs:
+      - unit-test
+      - smoke-tests
+      - ext-container-tests
+      - ceos-basic-tests
+      - srlinux-basic-tests
+      - ixiac-one-basic-tests
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: coverage
+      - run: ls -la; ls -la tests/coverage
+      - name: convert Go's binary coverage to text coverage
+        run: make convert-coverage
+      - name: Upload coverage to codecov
+        uses: codecov/codecov-action@v2
 
   docs-test:
     runs-on: ubuntu-22.04
