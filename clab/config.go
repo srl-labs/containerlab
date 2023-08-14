@@ -544,6 +544,9 @@ func (c *CLab) VerifyContainersUniqueness(ctx context.Context) error {
 
 	dups := []string{}
 	for _, n := range c.Nodes {
+		if n.Config().SkipUniquenessCheck {
+			continue
+		}
 		for _, cnt := range containers {
 			if n.Config().LongName == cnt.Names[0] {
 				dups = append(dups, n.Config().LongName)
