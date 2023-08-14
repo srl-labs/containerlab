@@ -480,6 +480,10 @@ jobs:
         with:
           name: coverage
           path: tests/coverage
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: convert Go's binary coverage to text coverage
         run: make convert-coverage
       - name: Upload coverage to codecov
