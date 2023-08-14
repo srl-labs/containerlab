@@ -17,7 +17,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/mocks"
+	"github.com/srl-labs/containerlab/mocks/mockruntime"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/utils"
@@ -568,7 +568,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			}
 
 			// set mockRuntime parameters
-			mockRuntime := mocks.NewMockContainerRuntime(ctrl)
+			mockRuntime := mockruntime.NewMockContainerRuntime(ctrl)
 			c.Runtimes[rtName] = mockRuntime
 			c.globalRuntime = rtName
 
