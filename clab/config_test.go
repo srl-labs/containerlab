@@ -482,6 +482,56 @@ func TestLabelsInit(t *testing.T) {
 	}
 }
 
+func TestVerifyRootNetNSLinks(t *testing.T) {
+
+	tests := map[string]struct {
+		topo      string
+		wantError bool
+	}{
+		"dup rootnetns": {
+			topo:      "test_data/topo7-dup-rootnetns.yml",
+			wantError: true,
+		},
+		"topo1": {
+			topo:      "test_data/topo1.yml",
+			wantError: false,
+		},
+		"topo3": {
+			topo:      "test_data/topo3.yml",
+			wantError: false,
+		},
+		"topo4": {
+			topo:      "test_data/topo4.yml",
+			wantError: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoFile(tc.topo, ""),
+			}
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = c.ResolveLinks()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = c.verifyRootNetNSLinks()
+			if tc.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
+}
+
 func TestVerifyContainersUniqueness(t *testing.T) {
 	tests := map[string]struct {
 		mockResult struct {

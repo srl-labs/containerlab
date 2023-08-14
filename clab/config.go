@@ -327,6 +327,9 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyLinks(); err != nil {
 		return err
 	}
+	if err = c.verifyRootNetNSLinks(); err != nil {
+		return err
+	}
 	for _, node := range c.Nodes {
 		err := node.CheckDeploymentConditions(ctx)
 		if err != nil {
@@ -339,6 +342,28 @@ func (c *CLab) CheckTopologyDefinition(ctx context.Context) error {
 	if err = c.VerifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
+	return nil
+}
+
+// verifyRootNetNSLinks makes sure, that there will be no overlap in
+// interface names for Root Network Namespace bases nodes.
+func (c *CLab) verifyRootNetNSLinks() error {
+	rootEpNames := map[string]string{}
+
+	// iterate through nodes
+	for _, n := range c.Nodes {
+		// check if they are RootNamespace based
+		if n.Config().IsRootNamespaceBased {
+			// if so, add their ep names to the list of rootEpNames
+			for _, e := range n.GetEndpoints() {
+				if val, exists := rootEpNames[e.GetIfaceName()]; exists {
+					return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]", e.GetIfaceName(), val, e.GetNode().GetShortName())
+				}
+				rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -1,0 +1,17 @@
+name: topo7
+
+topology:
+  nodes:
+    br1:
+      kind: bridge
+    br2:
+      kind: bridge
+    l1:
+      kind: linux
+      image: alpine:latest
+      cmd: sleep infinity
+
+  links:
+    - endpoints: ["l1:eth1", "br1:eth76"]
+    - endpoints: ["l1:eth2", "br2:eth76"]
+    - endpoints: ["br1:eth77", "br2:eth77"]
