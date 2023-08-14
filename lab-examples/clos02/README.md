@@ -11,6 +11,9 @@ $ chmod +x setup.sh
 $ ./setup.sh 
 ```
 
+!!!note
+    The setup script needs [gnmic](https://gnmic.openconfig.net/)
+
 ### Setup Configures
 1. NEs with Management, System and Ethernet IP Addresses. 
 2. Clients with eth0 (Management) and eth1 interface.

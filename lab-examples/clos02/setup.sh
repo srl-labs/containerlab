@@ -1,9 +1,10 @@
 #!/bin/bash
 
 CFG_DIR=./configs
+SRL_PASSWORD=NokiaSrl1!
 
 configure_SRL() {
-  OUT=$(gnmic -a clab-clos02-$1 --timeout 30s -u admin -p admin -e json_ietf --skip-verify set --update-path / --update-file $CFG_DIR/$1.yaml 2>&1)
+  OUT=$(gnmic -a clab-clos02-$1 --timeout 30s -u admin -p $SRL_PASSWORD -e json_ietf --skip-verify set --update-path / --update-file $CFG_DIR/$1.yaml 2>&1)
   echo $OUT | grep -q -e '\"operation\": \"UPDATE\"'
   if [ $? -eq 0 ]; then
     docker exec clab-clos02-$1 sr_cli "save startup" > /dev/null

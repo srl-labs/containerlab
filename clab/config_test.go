@@ -5,6 +5,7 @@
 package clab
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,12 +13,15 @@ import (
 	"testing"
 
 	"github.com/containers/podman/v4/pkg/util"
+	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/mocks"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func setupTestCase(t *testing.T) func(t *testing.T) {
@@ -473,6 +477,110 @@ func TestLabelsInit(t *testing.T) {
 				if val, exists := env["CLAB_LABEL_"+sk]; !exists || val != v {
 					t.Errorf("env var %q promoted from a label %q was not found", "CLAB_LABEL_"+sk, k)
 				}
+			}
+		})
+	}
+}
+
+func TestVerifyContainersUniqueness(t *testing.T) {
+	tests := map[string]struct {
+		mockResult struct {
+			c []runtime.GenericContainer
+			e error
+		}
+		topo      string
+		wantError bool
+	}{
+		"no dups": {
+			mockResult: struct {
+				c []runtime.GenericContainer
+				e error
+			}{
+				c: []runtime.GenericContainer{
+					{
+						Names:  []string{"some node"},
+						Labels: map[string]string{},
+					},
+					{
+						Names:  []string{"some other node"},
+						Labels: map[string]string{},
+					},
+				},
+				e: nil,
+			},
+			topo:      "test_data/topo1.yml",
+			wantError: false,
+		},
+		"dups": {
+			mockResult: struct {
+				c []runtime.GenericContainer
+				e error
+			}{
+				c: []runtime.GenericContainer{
+					{
+						Names:  []string{"clab-topo1-node1"},
+						Labels: map[string]string{},
+					},
+					{
+						Names:  []string{"somenode"},
+						Labels: map[string]string{},
+					},
+				},
+				e: nil,
+			},
+			wantError: true,
+			topo:      "test_data/topo1.yml",
+		},
+		"ext-container": {
+			mockResult: struct {
+				c []runtime.GenericContainer
+				e error
+			}{
+				c: []runtime.GenericContainer{
+					{
+						Names:  []string{"node1"},
+						Labels: map[string]string{},
+					},
+					{
+						Names:  []string{"somenode"},
+						Labels: map[string]string{},
+					},
+				},
+				e: nil,
+			},
+			wantError: false,
+			topo:      "test_data/topo11-ext-cont.yaml",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// init Runtime Mock
+			ctrl := gomock.NewController(t)
+			rtName := "mock"
+
+			opts := []ClabOption{
+				WithTopoFile(tc.topo, ""),
+			}
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// set mockRuntime parameters
+			mockRuntime := mocks.NewMockContainerRuntime(ctrl)
+			c.Runtimes[rtName] = mockRuntime
+			c.globalRuntime = rtName
+
+			// prepare runtime result
+			mockRuntime.EXPECT().ListContainers(gomock.Any(), gomock.Any()).AnyTimes().Return(tc.mockResult.c, tc.mockResult.e)
+
+			ctx := context.Background()
+			err = c.VerifyContainersUniqueness(ctx)
+			if tc.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

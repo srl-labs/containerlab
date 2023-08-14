@@ -178,10 +178,20 @@ type NodeConfig struct {
 	Memory string  `json:"memory,omitempty"`
 
 	// Extra node parameters
-	Extras               *Extras    `json:"extras,omitempty"`
-	WaitFor              []string   `json:"wait-for,omitempty"`
-	DNS                  *DNSConfig `json:"dns,omitempty"`
+	Extras  *Extras    `json:"extras,omitempty"`
+	WaitFor []string   `json:"wait-for,omitempty"`
+	DNS     *DNSConfig `json:"dns,omitempty"`
+
+	// Kind parameters
+	////////////////////
+	// IsRootNamespaceBased flag indicates that a certain nodes network
+	// namespace (usually based on the kind) is the root network namespace
 	IsRootNamespaceBased bool
+	// SkipUniquenessCheck prevents the pre-deploy uniqueness check, where
+	// we check, that the given node name is not already present on the host.
+	// Introduced to prevent the check from running with ext-containers, since
+	// they should be present by definition.
+	SkipUniquenessCheck bool
 }
 
 func DisableTxOffload(n *NodeConfig) error {
