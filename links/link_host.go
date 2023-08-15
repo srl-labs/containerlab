@@ -66,9 +66,8 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 	hostEp := &EndpointHost{
-		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface),
+		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
 	}
-	hostEp.Link = link
 
 	hostEp.MAC, err = utils.GenMac(ClabOUI)
 	if err != nil {
