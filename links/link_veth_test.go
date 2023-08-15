@@ -200,6 +200,8 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 type fakeNode struct {
 	Name      string
 	Endpoints []Endpoint
+	State     state.NodeState
+	Links     []Link
 }
 
 func newFakeNode(name string) *fakeNode {
@@ -210,8 +212,8 @@ func (*fakeNode) AddLinkToContainer(_ context.Context, _ netlink.Link, _ func(ns
 	panic("not implemented")
 }
 
-func (*fakeNode) AddLink(_ Link) {
-	panic("not implemented")
+func (f *fakeNode) AddLink(l Link) {
+	f.Links = append(f.Links, l)
 }
 
 // AddEndpoint adds the Endpoint to the node
@@ -223,18 +225,18 @@ func (*fakeNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeVeth
 }
 
-func (*fakeNode) GetShortName() string {
-	panic("not implemented")
+func (f *fakeNode) GetShortName() string {
+	return f.Name
 }
 
-func (*fakeNode) GetEndpoints() []Endpoint {
-	panic("not implemented")
+func (f *fakeNode) GetEndpoints() []Endpoint {
+	return f.Endpoints
 }
 
 func (*fakeNode) ExecFunction(_ func(ns.NetNS) error) error {
 	panic("not implemented")
 }
 
-func (*fakeNode) GetState() state.NodeState {
-	panic("not implemented")
+func (f *fakeNode) GetState() state.NodeState {
+	return f.State
 }

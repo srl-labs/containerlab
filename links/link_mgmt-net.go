@@ -50,9 +50,6 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 
-	// add endpoint to fake mgmt bridge node
-	mgmtBridgeNode.AddEndpoint(bridgeEp)
-
 	// resolve and populate the endpoint
 	contEp, err := r.Endpoint.Resolve(params, link)
 	if err != nil {
@@ -60,6 +57,11 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 
 	link.Endpoints = []Endpoint{bridgeEp, contEp}
+
+	// add link to respective endpoint nodes
+	bridgeEp.GetNode().AddLink(link)
+	bridgeEp.GetNode().AddEndpoint(bridgeEp)
+	contEp.GetNode().AddLink(link)
 
 	return link, nil
 }
