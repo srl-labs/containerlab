@@ -196,7 +196,6 @@ jobs:
         runtime:
           - "docker"
           - "podman"
-        # - "containerd"
     needs:
       - unit-test
       - staticcheck
@@ -309,7 +308,6 @@ jobs:
       matrix:
         runtime:
           - "docker"
-          # - "containerd"
     needs:
       - unit-test
       - staticcheck

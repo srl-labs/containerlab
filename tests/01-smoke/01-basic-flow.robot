@@ -37,15 +37,13 @@ Deploy ${lab-name} lab
     Set Suite Variable    ${deploy-output}    ${output}
 
 Ensure exec node option works
-    [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works. NOTE that containerd runtime is excluded because it often doesn't have one of the exec commands. To be investigated further.
-    Skip If    '${runtime}' == 'containerd'
+    [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works.
     # ensure exec commands work
     Should Contain    ${deploy-output}    this_is_an_exec_test
     Should Contain    ${deploy-output}    ID=alpine
 
 Exec command with no filtering
     [Documentation]    This tests ensures that when `exec` command is called without user provided filters, the command is executed on all nodes of the lab.
-    Skip If    '${runtime}' == 'containerd'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
     Log    ${output}
@@ -63,7 +61,6 @@ Exec command with no filtering
 
 Exec command with filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
-    Skip If    '${runtime}' == 'containerd'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
     Log    ${output}
@@ -77,7 +74,6 @@ Exec command with filtering
 
 Exec command with json output and filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters and json output, the command is executed ONLY on selected nodes of the lab and the actual JSON is populated to stdout.
-    Skip If    '${runtime}' == 'containerd'
     ${output} =    Process.Run Process
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
     ...    shell=True
@@ -94,9 +90,6 @@ Inspect ${lab-name} lab
     Should Be Equal As Integers    ${rc}    0
 
 Define runtime exec command
-    IF    "${runtime}" == "containerd"
-        Set Suite Variable    ${runtime-cli-exec-cmd}    sudo ctr -n clab t exec --exec-id clab
-    END
     IF    "${runtime}" == "podman"
         Set Suite Variable    ${runtime-cli-exec-cmd}    sudo podman exec
     END
@@ -243,7 +236,6 @@ Verify Hosts entries exist
 
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
-    Skip If    '${runtime}' == 'containerd'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'
     Log    ${output}

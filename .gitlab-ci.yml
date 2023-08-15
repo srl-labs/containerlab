@@ -36,7 +36,7 @@ smoke-tests:
   stage: smoke-tests
   parallel:
     matrix:
-      - RUNTIME: [docker, containerd]
+      - RUNTIME: [docker]
   tags:
     - containerlab
   script:
@@ -51,7 +51,7 @@ srl-tests:
   stage: integration-tests
   parallel:
     matrix:
-      - RUNTIME: [docker, containerd]
+      - RUNTIME: [docker]
   tags:
     - containerlab
   script:
@@ -66,7 +66,7 @@ ceos-tests:
   stage: integration-tests
   parallel:
     matrix:
-      - RUNTIME: [docker, containerd]
+      - RUNTIME: [docker]
   tags:
     - containerlab
   script:
