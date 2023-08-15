@@ -529,7 +529,6 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestVerifyContainersUniqueness(t *testing.T) {

@@ -54,8 +54,10 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		// add endpoint to the link endpoints
 		l.Endpoints = append(l.Endpoints, ep)
+		// add link to endpoint node
+		ep.GetNode().AddLink(l)
 	}
 
 	return l, nil

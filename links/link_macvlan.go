@@ -83,6 +83,11 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// add endpoint links to nodes
+	link.HostEndpoint.GetNode().AddLink(link)
+	link.NodeEndpoint.GetNode().AddLink(link)
+
 	return link, nil
 }
 
