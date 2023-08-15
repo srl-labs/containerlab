@@ -364,6 +364,17 @@ func (c *CLab) verifyRootNetNSLinks() error {
 		}
 	}
 
+	// we also need to take the two special nodes host and mgmt-br into account
+	for _, n := range []links.Node{links.GetHostLinkNode(), links.GetMgmtBrLinkNode()} {
+		// if so, add their ep names to the list of rootEpNames
+		for _, e := range n.GetEndpoints() {
+			if val, exists := rootEpNames[e.GetIfaceName()]; exists {
+				return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]", e.GetIfaceName(), val, e.GetNode().GetShortName())
+			}
+			rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
+		}
+	}
+
 	return nil
 }
 

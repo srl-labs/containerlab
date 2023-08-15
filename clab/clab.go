@@ -677,15 +677,6 @@ func (c *CLab) ResolveLinks() error {
 
 		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
 		c.Links[i] = l
-
-		// add the link to the nodes connected with it
-		for _, ep := range l.GetEndpoints() {
-			// check if node is in the list of c.Nodes
-			// this will skip fake endpoints like host and mgmt-net
-			if n, ok := c.Nodes[ep.GetNode().GetShortName()]; ok {
-				n.AddLink(l)
-			}
-		}
 	}
 
 	return nil
