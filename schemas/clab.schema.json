@@ -73,8 +73,8 @@
                         "vr-cisco_n9kv",
                         "vr-ftosv",
                         "vr-dell_ftosv",
-			"vr-aoscx",
-			"vr-aruba_aoscx",
+                        "vr-aoscx",
+                        "vr-aruba_aoscx",
                         "linux",
                         "bridge",
                         "ovs-bridge",
@@ -237,7 +237,6 @@
                     "markdownDescription": "[Runtime](https://containerlab.dev/manual/nodes/#runtime) for the node",
                     "enum": [
                         "docker",
-                        "containerd",
                         "ignite"
                     ]
                 },
@@ -638,7 +637,7 @@
                         "vr-vsrx": {
                             "$ref": "#/definitions/node-config"
                         },
-			"vr-aruba_aoscx": {
+                        "vr-aruba_aoscx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-aoscx": {

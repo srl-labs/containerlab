@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # arguments
-# $1 - container runtime: [docker, containerd]
+# $1 - container runtime: [docker, podman]
 # $2 - test suite to execute
 
 # set containerlab binary path to a value of CLAB_BIN env variable

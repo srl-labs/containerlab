@@ -26,10 +26,6 @@ var (
 			"exec": "docker",
 			"open": "exec -it",
 		},
-		"containerd": {
-			"exec": "ctr",
-			"open": "-n clab task exec -t --exec-id clab",
-		},
 	}
 )
 

@@ -21,7 +21,6 @@ Start ext-containers
     ...    sudo ${runtime} run --name ext2 --label clab-node-name=ext2 --rm -d --cap-add NET_ADMIN alpine sleep infinity
 
 Deploy ${lab-name} lab
-    Skip If    '${runtime}' == 'containerd'
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
