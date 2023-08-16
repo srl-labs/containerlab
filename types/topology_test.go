@@ -4,16 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/exp/slices"
-)
-
-func boolptr(b bool) *bool {
-	return &b
-}
-
-var (
-	issueTrue  = true
-	issueFalse = false
 )
 
 var topologyTestSet = map[string]struct {
@@ -27,14 +19,14 @@ var topologyTestSet = map[string]struct {
 					Kind:       "srl",
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: boolptr(true),
+					AutoRemove: utils.BoolPointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
 						Options: []string{"someopt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: &issueTrue,
+						Issue: utils.BoolPointer(true),
 					},
 				},
 			},
@@ -44,14 +36,14 @@ var topologyTestSet = map[string]struct {
 				Kind:       "srl",
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: boolptr(true),
+				AutoRemove: utils.BoolPointer(true),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: &issueTrue,
+					Issue: utils.BoolPointer(true),
 				},
 			},
 		},
@@ -89,14 +81,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: boolptr(true),
+					AutoRemove: utils.BoolPointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: &issueTrue,
+						Issue: utils.BoolPointer(true),
 					},
 				},
 			},
@@ -110,7 +102,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: boolptr(false),
+					AutoRemove: utils.BoolPointer(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -151,14 +143,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: boolptr(false),
+				AutoRemove: utils.BoolPointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: &issueTrue,
+					Issue: utils.BoolPointer(true),
 				},
 			},
 		},
@@ -261,7 +253,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: &issueFalse,
+					Issue: utils.BoolPointer(false),
 				},
 			},
 		},
@@ -339,14 +331,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: boolptr(false),
+				AutoRemove: utils.BoolPointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: &issueFalse,
+					Issue: utils.BoolPointer(false),
 				},
 			},
 		},
