@@ -304,6 +304,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 // certificateAuthoritySetup sets up the certificate authority parameters.
 func certificateAuthoritySetup(c *clab.CLab) error {
+	// init the Cert storage and CA
+	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
+	c.Cert.CA = cert.NewCA()
+
 	s := c.Config.Settings
 
 	// Set defaults for the CA parameters
@@ -351,7 +355,6 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 		KeySize:      keySize,
 	}
 
-	// finally laod and generate the CA
 	return c.LoadOrGenerateCA(caCertInput)
 }
 
