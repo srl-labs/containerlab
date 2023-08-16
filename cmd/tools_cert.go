@@ -61,7 +61,7 @@ func init() {
 	signCertCmd.Flags().StringVarP(&path, "path", "p", "",
 		"path to write certificate and key to. Default is current working directory")
 	signCertCmd.Flags().StringVarP(&certNamePrefix, "name", "n", "cert", "certificate/key filename prefix")
-	signCertCmd.Flags().IntVarP(&keySize, "keysize", "", 2048, "private key size")
+	signCertCmd.Flags().IntVarP(&keySize, "key-size", "", 2048, "private key size")
 }
 
 var certCmd = &cobra.Command{
