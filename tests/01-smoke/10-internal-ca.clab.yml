@@ -1,0 +1,25 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: internal-ca
+  
+topology:
+  settings:
+    certificate-authority:
+      key-size: 512
+      validity-duration: 5h
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      cmd: ash -c "sleep 9999"
+      certificate:
+        issue: true
+    l2:
+      kind: linux
+      image: alpine:3
+      cmd: ash -c "sleep 9999"
+      certificate:
+        issue: true
+        key-size: 1024

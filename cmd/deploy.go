@@ -306,7 +306,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 func certificateAuthoritySetup(c *clab.CLab) error {
 	var err error
-	s := c.Config.Settings
+	s := c.Config.Topology.Settings
 
 	// Set defaults for the CA parameters
 	keySize := 2048

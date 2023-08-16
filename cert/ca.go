@@ -69,7 +69,7 @@ func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 	}
 
 	// generate key
-	caPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	caPrivKey, err := rsa.GenerateKey(rand.Reader, input.KeySize)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error)
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
 
-	newPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	newPrivKey, err := rsa.GenerateKey(rand.Reader, input.KeySize)
 	if err != nil {
 		return nil, err
 	}

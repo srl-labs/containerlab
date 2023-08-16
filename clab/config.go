@@ -45,21 +45,9 @@ type Config struct {
 	Prefix   *string         `json:"prefix,omitempty"`
 	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
 	Topology *types.Topology `json:"topology,omitempty"`
-	Settings *Settings       `yaml:"settings"`
 	// the debug flag value as passed via cli
 	// may be used by other packages to enable debug logging
 	Debug bool `json:"debug"`
-}
-
-type Settings struct {
-	CertificateAuthority *CertificateAuthority `yaml:"certificate-authority"`
-}
-
-type CertificateAuthority struct {
-	Cert             string `yaml:"cert"`
-	Key              string `yaml:"key"`
-	KeySize          int    `yaml:"key-size"`
-	ValidityDuration string `yaml:"validity-duration"`
 }
 
 // ParseTopology parses the lab topology.

@@ -330,6 +330,7 @@ type CertificateConfig struct {
 	Issue bool `yaml:"issue,omitempty"`
 	// additional params would go here, e.g. if
 	// different algos would be needed or so
+	KeySize int `yaml:"key-size,omitempty"`
 }
 
 // PullPolicyValue represents Image pull policy values.
