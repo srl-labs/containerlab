@@ -42,6 +42,7 @@ const (
 	LinkTypeMgmtNet LinkType = "mgmt-net"
 	LinkTypeMacVLan LinkType = "macvlan"
 	LinkTypeHost    LinkType = "host"
+	LinkTypeVxlan   LinkType = "vxlan"
 
 	// LinkTypeBrief is a link definition where link types
 	// are encoded in the endpoint definition as string and allow users
@@ -62,6 +63,8 @@ func parseLinkType(s string) (LinkType, error) {
 		return LinkTypeHost, nil
 	case string(LinkTypeBrief):
 		return LinkTypeBrief, nil
+	case string(LinkTypeVxlan):
+		return LinkTypeVxlan, nil
 	default:
 		return "", fmt.Errorf("unable to parse %q as LinkType", s)
 	}
@@ -147,6 +150,16 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkMacVlanRaw
+	case LinkTypeVxlan:
+		var l struct {
+			Type         string `yaml:"type"`
+			LinkVxlanRaw `yaml:",inline"`
+		}
+		err := unmarshal(&l)
+		if err != nil {
+			return err
+		}
+		ld.Link = &l.LinkVxlanRaw
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
@@ -214,6 +227,15 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 		}{
 			LinkMacVlanRaw: *r.Link.(*LinkMacVlanRaw),
 			Type:           string(LinkTypeMacVLan),
+		}
+		return x, nil
+	case LinkTypeVxlan:
+		x := struct {
+			Type         string `yaml:"type"`
+			LinkVxlanRaw `yaml:",inline"`
+		}{
+			LinkVxlanRaw: *r.Link.(*LinkVxlanRaw),
+			Type:         string(LinkTypeMacVLan),
 		}
 		return x, nil
 	case LinkTypeBrief:
