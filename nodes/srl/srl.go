@@ -171,7 +171,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.Certificate = &types.CertificateConfig{}
 	}
 	// et issue to true, to finally force cert creation
-	s.Cfg.Certificate.Issue = true
+	issueCert := true
+	s.Cfg.Certificate.Issue = &issueCert
 
 	for _, o := range opts {
 		o(s)

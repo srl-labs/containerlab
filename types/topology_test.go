@@ -11,6 +11,11 @@ func boolptr(b bool) *bool {
 	return &b
 }
 
+var (
+	issueTrue  = true
+	issueFalse = false
+)
+
 var topologyTestSet = map[string]struct {
 	input *Topology
 	want  map[string]*NodeDefinition
@@ -29,7 +34,7 @@ var topologyTestSet = map[string]struct {
 						Options: []string{"someopt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: true,
+						Issue: &issueTrue,
 					},
 				},
 			},
@@ -46,7 +51,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: true,
+					Issue: &issueTrue,
 				},
 			},
 		},
@@ -91,7 +96,7 @@ var topologyTestSet = map[string]struct {
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: true,
+						Issue: &issueTrue,
 					},
 				},
 			},
@@ -153,7 +158,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: true,
+					Issue: &issueTrue,
 				},
 			},
 		},

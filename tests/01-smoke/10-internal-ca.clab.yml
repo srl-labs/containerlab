@@ -9,6 +9,10 @@ topology:
     certificate-authority:
       key-size: 512
       validity-duration: 5h
+  defaults:
+    certificate:
+      issue: true
+      key-size: 512
   nodes:
     l1:
       kind: linux
@@ -23,3 +27,9 @@ topology:
       certificate:
         issue: true
         key-size: 1024
+    l3:
+      kind: linux
+      image: alpine:3
+      cmd: ash -c "sleep 9999"
+      certificate:
+        issue: false

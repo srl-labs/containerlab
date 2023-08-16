@@ -12,7 +12,7 @@ Suite Teardown      Run Keyword    Teardown
 ${lab-name}           internal-ca
 ${topo}               ${CURDIR}/10-${lab-name}.clab.yml
 ${ca-keysize}       512
-${default-node-keysize}    2048
+${l1-keysize}    512
 ${l2-keysize}    1024
 ${validity-duration}  5 hours
 
@@ -23,6 +23,8 @@ ${l1-key}        ./clab-${lab-name}/.tls/l1/l1.key
 ${l1-cert}       ./clab-${lab-name}/.tls/l1/l1.pem
 ${l2-key}        ./clab-${lab-name}/.tls/l2/l2.key
 ${l2-cert}       ./clab-${lab-name}/.tls/l2/l2.pem
+${l3-key}        ./clab-${lab-name}/.tls/l3/l3.key
+${l3-cert}       ./clab-${lab-name}/.tls/l3/l3.pem
 
 *** Test Cases ***
 Deploy ${lab-name} lab
@@ -47,6 +49,14 @@ Node l1 cert and key files should exist
     File Should Exist    ${l1-cert}
     File Should Exist    ${l1-key}
 
+Node l2 cert and key files should exist
+    File Should Exist    ${l2-cert}
+    File Should Exist    ${l2-key}
+
+Node l3 cert and key files should not exist
+    File Should Not Exist    ${l3-cert}
+    File Should Not Exist    ${l3-key}
+
 Review Node l1 Certificate
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    openssl x509 -in ${l1-cert} -text
@@ -54,7 +64,7 @@ Review Node l1 Certificate
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    CN = l1.${lab-name}.io
     Should Contain    ${output}    Issuer: C = , L = , O = containerlab, OU = , CN = ${lab-name} lab CA
-    Should Contain    ${output}    Public-Key: (${default-node-keysize} bit)
+    Should Contain    ${output}    Public-Key: (${l1-keysize} bit)
 
 Review Node l2 Certificate
     ${rc}    ${output} =    Run And Return Rc And Output

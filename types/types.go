@@ -327,10 +327,23 @@ type DNSConfig struct {
 // CertificateConfig represents the configuration of a TLS infrastructure used by a node.
 type CertificateConfig struct {
 	// default false value indicates that the node does not use TLS
-	Issue bool `yaml:"issue,omitempty"`
+	Issue *bool `yaml:"issue,omitempty"`
 	// additional params would go here, e.g. if
 	// different algos would be needed or so
 	KeySize int `yaml:"key-size,omitempty"`
+}
+
+func (c *CertificateConfig) Merge(x *CertificateConfig) *CertificateConfig {
+	if x == nil {
+		return c
+	}
+	if x.Issue != nil {
+		c.Issue = x.Issue
+	}
+	if x.KeySize > 0 {
+		c.KeySize = x.KeySize
+	}
+	return c
 }
 
 // PullPolicyValue represents Image pull policy values.

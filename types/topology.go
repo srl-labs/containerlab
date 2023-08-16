@@ -542,19 +542,7 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 }
 
 func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
-	if ndef, ok := t.Nodes[name]; ok {
-		nodeCertConf := ndef.GetCertificateConfig()
-		if nodeCertConf != nil {
-			return nodeCertConf
-		}
-
-		kindCertConf := t.GetKind(t.GetNodeKind(name)).GetCertificateConfig()
-		if kindCertConf != nil {
-			return kindCertConf
-		}
-
-		return t.GetDefaults().GetCertificateConfig()
-	}
-
-	return nil
+	cc := &CertificateConfig{}
+	cc.Merge(t.GetDefaults().GetCertificateConfig()).Merge(t.GetKind(t.GetNodeKind(name)).GetCertificateConfig()).Merge(t.Nodes[name].GetCertificateConfig())
+	return cc
 }
