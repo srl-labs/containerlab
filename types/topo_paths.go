@@ -34,8 +34,8 @@ type TopoPaths struct {
 	topoFile           string
 	labDir             string
 	topoName           string
-	explicitCaCertFile string // if an external CA certificate is used the name to the Cert file is stored here
-	explicitCaKeyFile  string // if an external CA certificate is used the name to the Key file is stored here
+	externalCaCertFile string // if an external CA certificate is used the path to the Cert file is stored here
+	externalCaKeyFile  string // if an external CA certificate is used the path to the Key file is stored here
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
@@ -98,8 +98,8 @@ func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
 	if !utils.FileExists(keyFile) {
 		return fmt.Errorf("external CA key file %s does not exist", keyFile)
 	}
-	t.explicitCaCertFile = certFile
-	t.explicitCaKeyFile = keyFile
+	t.externalCaCertFile = certFile
+	t.externalCaKeyFile = keyFile
 	return nil
 }
 
@@ -216,15 +216,15 @@ func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
 }
 
 func (t *TopoPaths) CaCertFile() string {
-	if t.explicitCaCertFile != "" {
-		return t.explicitCaCertFile
+	if t.externalCaCertFile != "" {
+		return t.externalCaCertFile
 	}
 	return t.NodeCertAbsFilename(caDir)
 }
 
 func (t *TopoPaths) CaKeyFile() string {
-	if t.explicitCaKeyFile != "" {
-		return t.explicitCaKeyFile
+	if t.externalCaKeyFile != "" {
+		return t.externalCaKeyFile
 	}
 	return t.NodeCertKeyAbsFilename(caDir)
 }
