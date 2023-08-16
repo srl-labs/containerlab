@@ -218,7 +218,7 @@ func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
 }
 
 // CADir returns the dir name of the CA directory structure.
-func (t *TopoPaths) CADir() string {
+func (*TopoPaths) CADir() string {
 	return caDir
 }
 
