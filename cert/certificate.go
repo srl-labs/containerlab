@@ -90,7 +90,8 @@ type CaPaths interface {
 	NodeCertKeyAbsFilename(identifier string) string
 	NodeCertCSRAbsFilename(identifier string) string
 	NodeTLSDir(string) string
-	CaCertFile() string
-	CaKeyFile() string
-	CaCSRFile() string
+	CADir() string
+	CaCertAbsFilename() string
+	CaKeyAbsFilename() string
+	CaCSRAbsFilename() string
 }

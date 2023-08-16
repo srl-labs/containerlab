@@ -34,8 +34,8 @@ type TopoPaths struct {
 	topoFile           string
 	labDir             string
 	topoName           string
-	externalCaCertFile string // if an external CA certificate is used the path to the Cert file is stored here
-	externalCaKeyFile  string // if an external CA certificate is used the path to the Key file is stored here
+	externalCACertFile string // if an external CA certificate is used the path to the Cert file is stored here
+	externalCAKeyFile  string // if an external CA certificate is used the path to the Key file is stored here
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
@@ -104,8 +104,8 @@ func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
 		return fmt.Errorf("external CA key file %s does not exist", keyFile)
 	}
 
-	t.externalCaCertFile = certFile
-	t.externalCaKeyFile = keyFile
+	t.externalCACertFile = certFile
+	t.externalCAKeyFile = keyFile
 
 	return nil
 }
@@ -217,25 +217,38 @@ func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
 }
 
+// CADir returns the dir name of the CA directory structure.
+func (t *TopoPaths) CADir() string {
+	return caDir
+}
+
 // NodeCertCSRAbsFilename returns the path to a csr file for the given identifier.
 func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
 }
 
-func (t *TopoPaths) CaCertFile() string {
-	if t.externalCaCertFile != "" {
-		return t.externalCaCertFile
+// CaCertAbsFilename returns the path to the CA cert file.
+// If external CA is used, the path to the external CA cert file is returned.
+// Otherwise the path to the generated CA cert file is returned.
+func (t *TopoPaths) CaCertAbsFilename() string {
+	if t.externalCACertFile != "" {
+		return t.externalCACertFile
 	}
+
 	return t.NodeCertAbsFilename(caDir)
 }
 
-func (t *TopoPaths) CaKeyFile() string {
-	if t.externalCaKeyFile != "" {
-		return t.externalCaKeyFile
+// CaKeyAbsFilename returns the path to the CA key file.
+// If external CA is used, the path to the external CA key file is returned.
+// Otherwise the path to the generated CA key file is returned.
+func (t *TopoPaths) CaKeyAbsFilename() string {
+	if t.externalCAKeyFile != "" {
+		return t.externalCAKeyFile
 	}
+
 	return t.NodeCertKeyAbsFilename(caDir)
 }
 
-func (t *TopoPaths) CaCSRFile() string {
+func (t *TopoPaths) CaCSRAbsFilename() string {
 	return t.NodeCertCSRAbsFilename(caDir)
 }

@@ -1,8 +1,6 @@
 package cert
 
 import (
-	"path/filepath"
-
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -20,7 +18,7 @@ func NewLocalDirCertStorage(paths CaPaths) *LocalDirCertStorage {
 
 // LoadCaCert loads the CA certificate from disk.
 func (c *LocalDirCertStorage) LoadCaCert() (*Certificate, error) {
-	return NewCertificateFromFile(c.paths.CaCertFile(), c.paths.CaKeyFile(), "")
+	return NewCertificateFromFile(c.paths.CaCertAbsFilename(), c.paths.CaKeyAbsFilename(), "")
 }
 
 // LoadNodeCert loads the node certificate from disk.
@@ -34,16 +32,7 @@ func (c *LocalDirCertStorage) LoadNodeCert(nodeName string) (*Certificate, error
 
 // StoreCaCert stores the given CA certificate in a file in the baseFolder.
 func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
-	// create a folder for the node if it does not exist
-	for _, d := range []string{c.paths.CaCertFile(), c.paths.CaKeyFile(), c.paths.CaCSRFile()} {
-		// make sure the directory exists (probably all the same dir, but who knows)
-		directory := filepath.Dir(d)
-		utils.CreateDirectory(directory, 0777)
-	}
-
-	// write cert files
-	return cert.Write(c.paths.CaCertFile(),
-		c.paths.CaKeyFile(), c.paths.CaCSRFile())
+	return c.StoreNodeCert(c.paths.CADir(), cert)
 }
 
 // StoreNodeCert stores the given certificate in a file in the baseFolder.
