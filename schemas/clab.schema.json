@@ -493,6 +493,79 @@
                     "uniqueItems": true
                 }
             }
+        },
+        "certificate-authority-config": {
+            "type": "object",
+            "description": "Certificate Authority",
+            "markdownDescription": "",
+            "properties": {
+                "cert": {
+                    "type": "string",
+                    "description": "Path to the CA certificate file. If set, it is expected that the CA certificate already exists by that path"
+                },
+                "key": {
+                    "type": "string",
+                    "description": "Path to the CA key file. If set, it is expected that the CA certificate already exists by that path"
+                },
+                "key-size": {
+                    "type": "integer",
+                    "description": "Key size. Can only be set if the external CA certificate is not provided"
+                },
+                "validity-duration": {
+                    "type": "string",
+                    "description": "CA certificate validity duration. Can only be set if the external CA certificate is not provided"
+                }
+            },
+            "oneOf": [
+                {
+                    "required": [
+                        "cert",
+                        "key"
+                    ],
+                    "not": {
+                        "anyOf": [
+                            {
+                                "required": [
+                                    "key-size"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "validity-duration"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "anyOf": [
+                        {
+                            "required": [
+                                "key-size"
+                            ]
+                        },
+                        {
+                            "required": [
+                                "validity-duration"
+                            ]
+                        }
+                    ],
+                    "not": {
+                        "anyOf": [
+                            {
+                                "required": [
+                                    "cert"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "key"
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ]
         }
     },
     "type": "object",
@@ -727,6 +800,16 @@
             "required": [
                 "nodes"
             ]
+        },
+        "settings": {
+            "description": "Global containerlab settings",
+            "markdownDescription": "Global [containerlab settings]()",
+            "type": "object",
+            "properties": {
+                "certificate-authority": {
+                    "$ref": "#/definitions/certificate-authority-config"
+                }
+            }
         }
     },
     "additionalProperties": false,
