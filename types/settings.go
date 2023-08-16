@@ -10,10 +10,3 @@ type CertificateAuthority struct {
 	KeySize          int    `yaml:"key-size"`
 	ValidityDuration string `yaml:"validity-duration"`
 }
-
-type LinkConfig struct {
-	Endpoints []string
-	Labels    map[string]string      `yaml:"labels,omitempty"`
-	Vars      map[string]interface{} `yaml:"vars,omitempty"`
-	MTU       int                    `yaml:"mtu,omitempty"`
-}
