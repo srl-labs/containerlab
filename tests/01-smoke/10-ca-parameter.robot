@@ -109,7 +109,7 @@ Get Certificate Date
     ...    ${certificate_output}
     ...    Not ${type}\\W*: (\\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} \\d{4} \\w{3})
     ...    1
-    RETURN    ${date}[0]
+    [Return]    ${date}[0]
 
 Check Certificat Validity Duration
     [Arguments]    ${certificate_output}    ${expected_duration}
