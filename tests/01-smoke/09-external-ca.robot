@@ -8,15 +8,17 @@ Suite Teardown      Run Keyword    Teardown
 
 
 *** Variables ***
-${lab-name}      external-ca
-${topo}          ${CURDIR}/09-external-ca.clab.yml
-${ca-key-file}      rootCAKey.pem
-${ca-cert-file}     rootCACert.pem
-${ca-keylength}  2048
+${lab-name}         external-ca
+${topo}             ${CURDIR}/09-external-ca.clab.yml
+${ca-key-file}      ${CURDIR}/rootCAKey.pem
+${ca-cert-file}     ${CURDIR}/rootCACert.pem
+${ca-keylength}     2048
+${runtime}          docker
 
 # Node based certs files
-${l1-key}        ./clab-${lab-name}/.tls/l1/l1.key
-${l1-cert}       ./clab-${lab-name}/.tls/l1/l1.pem
+${l1-key}           ./clab-${lab-name}/.tls/l1/l1.key
+${l1-cert}          ./clab-${lab-name}/.tls/l1/l1.pem
+
 
 *** Test Cases ***
 Generate CA Key
@@ -30,11 +32,11 @@ Generate Certificate
     ...    openssl req -x509 -sha256 -new -nodes -key ${ca-key-file} -days 3650 -out ${ca-cert-file} -subj "/L=Internet/O=srl-labs/OU=Containerlab/CN=containerlab.dev"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
- 
+
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -68,10 +70,11 @@ Verfiy node cert with CA Cert
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
+
 *** Keywords ***
 Setup
-    Run   rm -f ${ca-key-file} ${ca-cert-file}
+    Run    rm -f ${ca-key-file} ${ca-cert-file}
 
 Teardown
-    Run   sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
-    Run   rm -f ${ca-key-file} ${ca-cert-file}
+    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
+    Run    rm -f ${ca-key-file} ${ca-cert-file}

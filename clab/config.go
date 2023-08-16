@@ -44,6 +44,7 @@ type Config struct {
 	Name     string          `json:"name,omitempty"`
 	Prefix   *string         `json:"prefix,omitempty"`
 	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
+	Settings *types.Settings `json:"settings,omitempty"`
 	Topology *types.Topology `json:"topology,omitempty"`
 	// the debug flag value as passed via cli
 	// may be used by other packages to enable debug logging

@@ -3,16 +3,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: external-ca
-  
+
+settings:
+  certificate-authority:
+    cert: rootCACert.pem
+    key: rootCAKey.pem
+
 topology:
-  settings:
-    certificate-authority:
-      cert: rootCACert.pem
-      key: rootCAKey.pem
   nodes:
     l1:
       kind: linux
       image: alpine:3
-      cmd: ash -c "sleep 9999"
       certificate:
         issue: true

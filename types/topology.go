@@ -12,7 +12,6 @@ type Topology struct {
 	Kinds    map[string]*NodeDefinition `yaml:"kinds,omitempty"`
 	Nodes    map[string]*NodeDefinition `yaml:"nodes,omitempty"`
 	Links    []*links.LinkDefinition    `yaml:"links,omitempty"`
-	Settings *Settings                  `yaml:"settings"`
 }
 
 func NewTopology() *Topology {
