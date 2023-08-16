@@ -4,34 +4,34 @@ Library             String
 Library             DateTime
 Resource            ../common.robot
 
-#Suite Setup         Run Keyword    Setup
 Suite Teardown      Run Keyword    Teardown
 
 
 *** Variables ***
-${lab-name}           internal-ca
-${topo}               ${CURDIR}/10-${lab-name}.clab.yml
-${ca-keysize}       512
-${l1-keysize}    512
-${l1-validity-duration}    25 hours
-${l2-keysize}    1024
-${ca-validity-duration}  5 hours
+${lab-name}                 internal-ca
+${topo}                     ${CURDIR}/10-${lab-name}.clab.yml
+${ca-keysize}               512
+${l1-keysize}               512
+${l1-validity-duration}     25 hours
+${l2-keysize}               1024
+${ca-validity-duration}     5 hours
 
 # cert files
-${ca-cert-key}   ./clab-${lab-name}/.tls/ca/ca.key
-${ca-cert-file}  ./clab-${lab-name}/.tls/ca/ca.pem
-${l1-key}        ./clab-${lab-name}/.tls/l1/l1.key
-${l1-cert}       ./clab-${lab-name}/.tls/l1/l1.pem
-${l2-key}        ./clab-${lab-name}/.tls/l2/l2.key
-${l2-cert}       ./clab-${lab-name}/.tls/l2/l2.pem
-${l3-key}        ./clab-${lab-name}/.tls/l3/l3.key
-${l3-cert}       ./clab-${lab-name}/.tls/l3/l3.pem
+${ca-cert-key}              ./clab-${lab-name}/.tls/ca/ca.key
+${ca-cert-file}             ./clab-${lab-name}/.tls/ca/ca.pem
+${l1-key}                   ./clab-${lab-name}/.tls/l1/l1.key
+${l1-cert}                  ./clab-${lab-name}/.tls/l1/l1.pem
+${l2-key}                   ./clab-${lab-name}/.tls/l2/l2.key
+${l2-cert}                  ./clab-${lab-name}/.tls/l2/l2.pem
+${l3-key}                   ./clab-${lab-name}/.tls/l3/l3.key
+${l3-cert}                  ./clab-${lab-name}/.tls/l3/l3.pem
+
 
 *** Test Cases ***
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -98,25 +98,32 @@ Verify l1 Certificate Validity
     ...    openssl x509 -in ${l1-cert} -text
     Check Certificat Validity Duration    ${certificate_output}    ${l1-validity-duration}
 
+
 *** Keywords ***
 Teardown
-    Run   sudo ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
+    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
 
 Get Certificate Date
-    [Arguments]    ${certificate_output}    ${type} 
-    ${date} =    Get Regexp Matches    ${certificate_output}     Not ${type}\\W*: (\\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} \\d{4} \\w{3})    1
-    [Return]    ${date}[0]
+    [Arguments]    ${certificate_output}    ${type}
+    ${date} =    Get Regexp Matches
+    ...    ${certificate_output}
+    ...    Not ${type}\\W*: (\\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} \\d{4} \\w{3})
+    ...    1
+    RETURN    ${date}[0]
 
 Check Certificat Validity Duration
     [Arguments]    ${certificate_output}    ${expected_duration}
     ${not_before} =    Get Certificate Date    ${certificate_output}    Before
-    ${not_after} =    Get Certificate Date     ${certificate_output}    After
-       
-    ${time_difference} =    Subtract Date From Date    ${not_after}    ${not_before}   date1_format=%b %d %H:%M:%S %Y %Z    date2_format=%b %d %H:%M:%S %Y %Z
+    ${not_after} =    Get Certificate Date    ${certificate_output}    After
 
-    ${verbose_time_difference} =   Convert Time   ${time_difference}   verbose
-    
-    ${expected_verbose_time_difference} =   Convert Time   ${expected_duration}   verbose
+    ${time_difference} =    Subtract Date From Date
+    ...    ${not_after}
+    ...    ${not_before}
+    ...    date1_format=%b %d %H:%M:%S %Y %Z
+    ...    date2_format=%b %d %H:%M:%S %Y %Z
+
+    ${verbose_time_difference} =    Convert Time    ${time_difference}    verbose
+
+    ${expected_verbose_time_difference} =    Convert Time    ${expected_duration}    verbose
 
     Should Be Equal    ${verbose_time_difference}    ${expected_verbose_time_difference}
-    
