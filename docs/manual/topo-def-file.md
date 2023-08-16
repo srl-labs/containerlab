@@ -192,7 +192,7 @@ topology:
       image: ghcr.io/nokia/srlinux
 ```
 
-A lot of unnecessary repetition which is eliminated when we set `srl` kind properties on kind level.
+A lot of unnecessary repetition is eliminated when we set `srl` kind properties on kind level.
 
 #### Defaults
 
@@ -212,6 +212,14 @@ topology:
 ```
 
 Now every node in this topology will have environment variable `MYENV` set to `VALUE`.
+
+### Settings
+
+Global containerlab settings are defined in `settings` container. The following settings are supported:
+
+#### Certificate authority
+
+Global certificate authority settings section allows users to tune certificate management in containerlab. Refer to the [Certificate management](cert.md) doc for more details.
 
 ## Environment variables
 
