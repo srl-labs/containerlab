@@ -305,7 +305,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 }
 
 func certificateAuthoritySetup(c *clab.CLab) error {
-	var err error
 	s := c.Config.Topology.Settings
 
 	// Set defaults for the CA parameters
@@ -315,12 +314,8 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 	// check that Settings.CertificateAuthority exists.
 	if s != nil && s.CertificateAuthority != nil {
 		// if ValidityDuration is set use the value
-		if s.CertificateAuthority.ValidityDuration != "" {
-			// parse string representation of the duration from the topology settings
-			validityDuration, err = time.ParseDuration(s.CertificateAuthority.ValidityDuration)
-			if err != nil {
-				return err
-			}
+		if s.CertificateAuthority.ValidityDuration != 0 {
+			validityDuration = s.CertificateAuthority.ValidityDuration
 		}
 		// if KeyLength is set use the value
 		if s.CertificateAuthority.KeySize != 0 {

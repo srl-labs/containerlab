@@ -13,8 +13,9 @@ ${lab-name}           internal-ca
 ${topo}               ${CURDIR}/10-${lab-name}.clab.yml
 ${ca-keysize}       512
 ${l1-keysize}    512
+${l1-validity-duration}    25 hours
 ${l2-keysize}    1024
-${validity-duration}  5 hours
+${ca-validity-duration}  5 hours
 
 # cert files
 ${ca-cert-key}   ./clab-${lab-name}/.tls/ca/ca.key
@@ -87,19 +88,15 @@ Verfiy node cert l2 with CA Cert
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Verify Certificate Validity
+Verify CA Certificate Validity
     ${rc}    ${certificate_output} =    Run And Return Rc And Output
     ...    openssl x509 -in ${ca-cert-file} -text
-    ${not_before} =    Get Certificate Date    ${certificate_output}    Before
-    ${not_after} =    Get Certificate Date     ${certificate_output}    After
-       
-    ${time_difference} =    Subtract Date From Date    ${not_after}    ${not_before}   date1_format=%b %d %H:%M:%S %Y %Z    date2_format=%b %d %H:%M:%S %Y %Z
+    Check Certificat Validity Duration    ${certificate_output}    ${ca-validity-duration}
 
-    ${verbose_time_difference} =   Convert Time   ${time_difference}   verbose
-    
-    ${expected_verbose_time_difference} =   Convert Time   ${validity-duration}   verbose
-
-    Should Be Equal    ${verbose_time_difference}    ${expected_verbose_time_difference}
+Verify l1 Certificate Validity
+    ${rc}    ${certificate_output} =    Run And Return Rc And Output
+    ...    openssl x509 -in ${l1-cert} -text
+    Check Certificat Validity Duration    ${certificate_output}    ${l1-validity-duration}
 
 *** Keywords ***
 Teardown
@@ -109,3 +106,17 @@ Get Certificate Date
     [Arguments]    ${certificate_output}    ${type} 
     ${date} =    Get Regexp Matches    ${certificate_output}     Not ${type}\\W*: (\\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} \\d{4} \\w{3})    1
     [Return]    ${date}[0]
+
+Check Certificat Validity Duration
+    [Arguments]    ${certificate_output}    ${expected_duration}
+    ${not_before} =    Get Certificate Date    ${certificate_output}    Before
+    ${not_after} =    Get Certificate Date     ${certificate_output}    After
+       
+    ${time_difference} =    Subtract Date From Date    ${not_after}    ${not_before}   date1_format=%b %d %H:%M:%S %Y %Z    date2_format=%b %d %H:%M:%S %Y %Z
+
+    ${verbose_time_difference} =   Convert Time   ${time_difference}   verbose
+    
+    ${expected_verbose_time_difference} =   Convert Time   ${expected_duration}   verbose
+
+    Should Be Equal    ${verbose_time_difference}    ${expected_verbose_time_difference}
+    

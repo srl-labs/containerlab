@@ -7,6 +7,7 @@ package types
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
@@ -330,12 +331,16 @@ type CertificateConfig struct {
 	Issue *bool `yaml:"issue,omitempty"`
 	// additional params would go here, e.g. if
 	// different algos would be needed or so
-	KeySize int `yaml:"key-size,omitempty"`
+	KeySize          int           `yaml:"key-size,omitempty"`
+	ValidityDuration time.Duration `yaml:"validity-duration"`
 }
 
 func (c *CertificateConfig) Merge(x *CertificateConfig) *CertificateConfig {
 	if x == nil {
 		return c
+	}
+	if x.ValidityDuration > 0 {
+		c.ValidityDuration = x.ValidityDuration
 	}
 	if x.Issue != nil {
 		c.Issue = x.Issue

@@ -377,11 +377,6 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 		return nil, nil
 	}
 
-	// default KeySize for node certificates to 2048
-	if d.Cfg.Certificate.KeySize == 0 {
-		d.Cfg.Certificate.KeySize = 2048
-	}
-
 	nodeConfig := d.Cfg
 
 	// try loading existing certificates from disk and generate new ones if they do not exist
@@ -402,6 +397,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 			Hosts:        hosts,
 			Organization: "containerlab",
 			KeySize:      d.Cfg.Certificate.KeySize,
+			Expiry:       d.Cfg.Certificate.ValidityDuration,
 		}
 		// Generate the cert for the node
 		nodeCert, err = certInfra.GenerateAndSignNodeCert(certInput)

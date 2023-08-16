@@ -20,6 +20,7 @@ topology:
       cmd: ash -c "sleep 9999"
       certificate:
         issue: true
+        validity-duration: 25h
     l2:
       kind: linux
       image: alpine:3
