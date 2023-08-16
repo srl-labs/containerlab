@@ -12,8 +12,8 @@ func boolptr(b bool) *bool {
 }
 
 var (
-	issueTrue = true
-	//issueFalse = false
+	issueTrue  = true
+	issueFalse = false
 )
 
 var topologyTestSet = map[string]struct {
@@ -260,7 +260,9 @@ var topologyTestSet = map[string]struct {
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
-				Certificate: &CertificateConfig{},
+				Certificate: &CertificateConfig{
+					Issue: &issueFalse,
+				},
 			},
 		},
 	},
@@ -343,7 +345,9 @@ var topologyTestSet = map[string]struct {
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
-				Certificate: &CertificateConfig{},
+				Certificate: &CertificateConfig{
+					Issue: &issueFalse,
+				},
 			},
 		},
 	},
