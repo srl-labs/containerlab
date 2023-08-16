@@ -109,8 +109,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		clab.WithDebug(debug),
 	}
 
-	opts = prepareExternalCAOptionEnviron(opts)
-
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return err
@@ -342,19 +340,9 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 	return c.LoadOrGenerateCA(caCertInput)
 }
 
-func prepareExternalCAOptionEnviron(opts []clab.ClabOption) []clab.ClabOption {
-	keyFile := os.Getenv("CLAB_CA_KEY_FILE")
-	certFile := os.Getenv("CLAB_CA_CERT_FILE")
-
-	if keyFile != "" && certFile != "" {
-		opts = append(opts, clab.WithExternalCA(certFile, keyFile))
-	}
-	return opts
-}
-
 // setupCTRLCHandler sets-up the handler for CTRL-C
 // The deployment will be stopped and a destroy action is
-// performed.
+// performed when interrupt signal is received.
 func setupCTRLCHandler(cancel context.CancelFunc) {
 	// handle CTRL-C signal
 	sig := make(chan os.Signal, 1)
