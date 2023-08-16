@@ -302,6 +302,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	return printContainerInspect(containers, deployFormat)
 }
 
+// certificateAuthoritySetup sets up the certificate authority parameters.
 func certificateAuthoritySetup(c *clab.CLab) error {
 	s := c.Config.Topology.Settings
 
@@ -315,13 +316,27 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 		if s.CertificateAuthority.ValidityDuration != 0 {
 			validityDuration = s.CertificateAuthority.ValidityDuration
 		}
+
 		// if KeyLength is set use the value
 		if s.CertificateAuthority.KeySize != 0 {
 			keySize = s.CertificateAuthority.KeySize
 		}
+
 		// if external CA cert and and key are set, propagate to topopaths
-		if s.CertificateAuthority.Cert != "" && s.CertificateAuthority.Key != "" {
-			err := c.TopoPaths.SetExternalCaFiles(s.CertificateAuthority.Cert, s.CertificateAuthority.Key)
+		extCACert := s.CertificateAuthority.Cert
+		extCAKey := s.CertificateAuthority.Key
+
+		// override external ca and key from env vars
+		if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
+			extCAKey = v
+		}
+
+		if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
+			extCACert = v
+		}
+
+		if extCACert != "" && extCAKey != "" {
+			err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
 			if err != nil {
 				return err
 			}

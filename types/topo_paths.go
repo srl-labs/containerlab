@@ -90,16 +90,23 @@ func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
 	return nil
 }
 
-// SetExternalCaFiles sets the filename for the cert and key files if externally generated should be used
+// SetExternalCaFiles sets the paths for the cert and key files if externally generated should be used.
 func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
+	// resolve the provided paths to external CA files
+	certFile = utils.ResolvePath(certFile, t.TopologyFileDir())
+	keyFile = utils.ResolvePath(keyFile, t.TopologyFileDir())
+
 	if !utils.FileExists(certFile) {
 		return fmt.Errorf("external CA cert file %s does not exist", certFile)
 	}
+
 	if !utils.FileExists(keyFile) {
 		return fmt.Errorf("external CA key file %s does not exist", keyFile)
 	}
+
 	t.externalCaCertFile = certFile
 	t.externalCaKeyFile = keyFile
+
 	return nil
 }
 

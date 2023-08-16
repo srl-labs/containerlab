@@ -26,7 +26,7 @@ The decision to generate node certificates is driven by either of the following 
 1. node kind
 2. `issue` boolean parameter under `node-name.certificate` section.
 
-For SR Linux nodes the `issue` parameter is set to `true` by default. For other node kinds the `issue` parameter is set to `false` by default and can be [overridden](nodes.md#certificate) by the user.
+For SR Linux nodes the `issue` parameter is set to `true` and can't be changed. For other node kinds the `issue` parameter is set to `false` by default and can be [overridden](nodes.md#certificate) by the user.
 
 ## Simplified CLI for CA and end-node keys generation
 
@@ -50,3 +50,10 @@ settings:
 ```
 
 When using an external CA, containerlab will not generate a CA certificate and key. Instead, it will use the provided CA certificate and key to sign the node certificates.
+
+The paths can be provided in absolute or relative form. If the path is relative, it is relative to the directory where clab file is located.
+
+In addition to setting External CA files via `settings` section, users can also set the following environment variables:
+
+* `CLAB_CA_CERT_FILE` - path to the CA certificate
+* `CLAB_CA_KEY_FILE` - path to the CA key
