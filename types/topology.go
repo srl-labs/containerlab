@@ -541,11 +541,19 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 	return nil
 }
 
+// GetCertificateConfig returns the certificate configuration for the given node.
 func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
+	// default for issuing node certificates is false
 	issueFalse := false
 	cc := &CertificateConfig{
 		Issue: &issueFalse,
 	}
-	cc.Merge(t.GetDefaults().GetCertificateConfig()).Merge(t.GetKind(t.GetNodeKind(name)).GetCertificateConfig()).Merge(t.Nodes[name].GetCertificateConfig())
+
+	// merge defaults, kind and node certificate config into the default certificate config
+	cc.Merge(
+		t.GetDefaults().GetCertificateConfig()).Merge(
+		t.GetKind(t.GetNodeKind(name)).GetCertificateConfig()).Merge(
+		t.Nodes[name].GetCertificateConfig())
+
 	return cc
 }
