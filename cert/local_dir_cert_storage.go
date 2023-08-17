@@ -1,6 +1,8 @@
 package cert
 
 import (
+	"path/filepath"
+
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -32,6 +34,10 @@ func (c *LocalDirCertStorage) LoadNodeCert(nodeName string) (*Certificate, error
 
 // StoreCaCert stores the given CA certificate, its key and CSR on disk.
 func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
+	// CA cert/key/csr can only be stored in the labdir/.tls/ca dir,
+	// so we need to create it if it does not exist.
+	utils.CreateDirectory(filepath.Dir(c.paths.CaCertAbsFilename()), 0777)
+
 	return cert.Write(c.paths.CaCertAbsFilename(), c.paths.CaKeyAbsFilename(), c.paths.CaCSRAbsFilename())
 }
 
