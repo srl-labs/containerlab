@@ -9,6 +9,7 @@ Library             OperatingSystem
 Library             String
 Resource            ../common.robot
 
+Suite Setup         Setup
 Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
 
 
@@ -56,3 +57,9 @@ Check ${lab-name} mgmt network is gone
     ...    sudo ip l show dev ${mgmt-bridge}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
+
+
+*** Keywords ***
+Setup
+    # skipping this test suite for podman as keep-mgmt-net fails with podman for now
+    Skip If    '${runtime}' == 'podman'
