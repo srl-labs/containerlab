@@ -217,11 +217,6 @@ func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
 }
 
-// CADir returns the dir name of the CA directory structure.
-func (*TopoPaths) CADir() string {
-	return caDir
-}
-
 // NodeCertCSRAbsFilename returns the path to a csr file for the given identifier.
 func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
