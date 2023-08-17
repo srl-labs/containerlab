@@ -131,63 +131,7 @@ jobs:
         with:
           name: coverage
           path: ./tests/coverage/*
-          retention-days: 1
-
-  build-podman-v4:
-    env:
-      CGO_ENABLED: 1 # CGO is required for podman
-    runs-on: ubuntu-22.04
-    needs: file-changes
-    if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - name: Cache podman bin
-        id: cache-podman-bin
-        uses: actions/cache@v3
-        with:
-          path: |
-            ./bin
-          key: ${{ runner.os }}-podman-${{ env.PODMAN_VER }}
-          restore-keys: |
-            ${{ runner.os }}-podman
-
-      - uses: actions/checkout@v3
-        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
-        with:
-          repository: containers/podman
-          ref: ${{ env.PODMAN_VER }}
-
-      - uses: WillAbides/setup-go-faster@v1.10.1
-        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
-        with:
-          go-version: ${{ env.GOVER }}
-
-      - name: Cache go modules
-        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
-        uses: actions/cache@v3
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-podman-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-podman
-
-      - name: Add build packages
-        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
-        run: sudo apt update && sudo apt install -y libsystemd-dev libseccomp-dev pkg-config golang-github-proglottis-gpgme-dev
-
-      - name: Build podman v4
-        if: steps.cache-podman-bin.outputs.cache-hit != 'true'
-        run: make binaries
-
-      # store podman binary as artifact
-      - uses: actions/upload-artifact@v3
-        with:
-          name: podman-bins
-          path: bin
+          retention-days: 7
 
   smoke-tests:
     runs-on: ubuntu-22.04
@@ -200,7 +144,6 @@ jobs:
       - unit-test
       - staticcheck
       - build-containerlab
-      - build-podman-v4
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -211,17 +154,15 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
-
-      - name: download podman bin artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: podman-bins
-      - name: Move podman to /usr/bin
-        run: sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
-
-      - name: Enable Podman API service
-        run: sudo systemctl start podman
-
+      - name: Setup Podman
+        if: matrix.runtime == 'podman'
+        run: |
+          sudo apt purge -y podman
+          echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list
+          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
+          sudo apt update
+          sudo apt install -y podman=4:4.6.1-0ubuntu22.04+obs80.5
+          sudo systemctl start podman
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -247,7 +188,7 @@ jobs:
         with:
           name: coverage
           path: ./tests/coverage/*
-          retention-days: 1
+          retention-days: 7
 
   ext-container-tests:
     runs-on: ubuntu-22.04
@@ -300,7 +241,7 @@ jobs:
         with:
           name: coverage
           path: ./tests/coverage/*
-          retention-days: 1
+          retention-days: 7
 
   ceos-basic-tests:
     runs-on: ubuntu-22.04
@@ -355,7 +296,7 @@ jobs:
         with:
           name: coverage
           path: ./tests/coverage/*
-          retention-days: 1
+          retention-days: 7
 
   srlinux-basic-tests:
     runs-on: ubuntu-22.04
@@ -379,15 +320,15 @@ jobs:
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
 
-      - name: download podman bin artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: podman-bins
-      - name: Move podman to /usr/bin
-        run: sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
-
-      - name: Enable Podman API service
-        run: sudo systemctl start podman
+      - name: Setup Podman
+        if: matrix.runtime == 'podman'
+        run: |
+          sudo apt purge -y podman
+          echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list
+          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
+          sudo apt update
+          sudo apt install -y podman=4:4.6.1-0ubuntu22.04+obs80.5
+          sudo systemctl start podman
 
       - uses: actions/setup-python@v4
         with:
@@ -414,7 +355,7 @@ jobs:
         with:
           name: coverage
           path: ./tests/coverage/*
-          retention-days: 1
+          retention-days: 7
 
   ixiac-one-basic-tests:
     runs-on: ubuntu-22.04
@@ -461,7 +402,7 @@ jobs:
         with:
           name: coverage
           path: ./tests/coverage/*
-          retention-days: 1
+          retention-days: 7
 
     # create a job that downloads coverage artifact and uses codecov to upload it
   coverage:

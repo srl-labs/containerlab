@@ -227,12 +227,8 @@ Verify Hosts entries exist
 
     Should Be Equal As Integers    ${rc}    0
 
-    IF    '${runtime}' == 'podman'
-        Should Contain    ${output}    6
-    END
-    IF    '${runtime}' == 'docker'
-        Should Contain    ${output}    6
-    END
+    IF    '${runtime}' == 'podman'    Should Contain    ${output}    6
+    IF    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config

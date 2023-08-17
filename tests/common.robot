@@ -1,2 +1,2 @@
 *** Variables ***
-${CLAB_BIN}    containerlab
+${CLAB_BIN}     containerlab
