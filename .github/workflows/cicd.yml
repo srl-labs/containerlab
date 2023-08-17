@@ -154,7 +154,6 @@ jobs:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
-        
       - name: Setup Podman
         if: matrix.runtime == 'podman'
         run: |
@@ -164,7 +163,6 @@ jobs:
           sudo apt update
           sudo apt install -y podman=4:4.6.1-0ubuntu22.04+obs80.5
           sudo systemctl start podman
-
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -322,15 +320,15 @@ jobs:
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
 
-      - name: download podman bin artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: podman-bins
-      - name: Move podman to /usr/bin
-        run: sudo mv ./podman /usr/bin && sudo chmod a+x /usr/bin/podman
-
-      - name: Enable Podman API service
-        run: sudo systemctl start podman
+      - name: Setup Podman
+        if: matrix.runtime == 'podman'
+        run: |
+          sudo apt purge -y podman
+          echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list
+          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
+          sudo apt update
+          sudo apt install -y podman=4:4.6.1-0ubuntu22.04+obs80.5
+          sudo systemctl start podman
 
       - uses: actions/setup-python@v4
         with:
