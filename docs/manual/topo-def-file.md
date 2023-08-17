@@ -124,7 +124,11 @@ Refer to the [node configuration](nodes.md) document to meet all other options a
 
 Although it is totally fine to define a node without any links (like in [this lab](../lab-examples/single-srl.md)) most of the time we interconnect the nodes to make datapaths. One of containerlab purposes is to make the interconnection of nodes simple.
 
-Links are defined under the `topology.links` container in the following manner:
+Links are defined under the `topology.links` container in the topology file. For their definition two general formats exist. That is a brief and a more expressive form, with the latter allowing for a more distinct setup of the certain link attributes.
+
+##### Brief link format
+
+The brief version looks as follows.
 
 ```yaml
 # nodes configuration omitted for clarity
@@ -150,6 +154,87 @@ endpoints: ["srl:e1-1", "ceos:eth1"]
 
 will result in a creation of a p2p link between the node named `srl` and its `e1-1` interface and the node named `ceos` and its `eth1` interface. The p2p link is realized with a veth pair.
 
+##### Extended link format
+
+The extendended link format allows for even more attributes to be expressed for a certain link. The available attributes vary on the type of Link which is to be deployed.
+Types of links available are the following:
+
+  - **veth**
+
+    The veth link is basically the default virtual ethernet link used in brief format with two regular containers or container and bridge ends.
+    ```
+    links: 
+      - type: veth
+        endpoints:
+          - node: <NodeA-Name>                  # mandatory
+            interface: <NodeA-Interface-Name>   # mandatory
+            mac: <NodeA-Interface-Mac>          # optional
+          - node: <NodeB-Name>                  # mandatory
+            interface: <NodeB-Interface-Name>   # mandatory
+            mac: <NodeB-Interface-Mac>          # optional
+        mtu: <link-mtu>                         # optional
+        vars: <link-variables>                  # optional (used in templating)
+        labels: <link-labels>                   # optional (used in templating)
+    ```
+  - **mgmt-net**
+
+    The mgmt-net link type results also in a veth pair that is connected to a container node on one side and on the other it is attached to the underlaying management network instantiated by the  the container runtime. Basically the network where all the eth0 interfaces of the nodes are connected.
+
+    ```
+      links: 
+      - type: mgmt-net
+        endpoint:
+          - node: <NodeA-Name>                  # mandatory
+            interface: <NodeA-Interface-Name>   # mandatory
+            mac: <NodeA-Interface-Mac>          # optional
+        host-interface: <interface-name         # mandatory
+        mtu: <link-mtu>                         # optional
+        vars: <link-variables>                  # optional (used in templating)
+        labels: <link-labels>                   # optional (used in templating)
+    ```
+
+    The host-interface is the name of the veth pairs interface end, that ends up in the hosts namespace, which will be assigned to the underlaying mgmt-net bridge.
+
+  - **macvlan**
+
+    The macvlan link type results in the creation of a MACVlan interface, which is attached on one end to an existing host interface and a virtual interface in the referenced container.
+
+    ```
+      links: 
+      - type: macvlan
+        endpoint:
+          - node: <NodeA-Name>                  # mandatory
+            interface: <NodeA-Interface-Name>   # mandatory
+            mac: <NodeA-Interface-Mac>          # optional
+        host-interface: <interface-name>        # mandatory
+        mode: <macvlan-mode>                    # optional ("bridge" by default)
+        vars: <link-variables>                  # optional (used in templating)
+        labels: <link-labels>                   # optional (used in templating)
+    ```
+
+    The host-interface is the name of the existing interface present in the host namespace.
+    Options for the mode are (private, vepa, bridge, passthru and source) [Explenation](https://man7.org/linux/man-pages/man8/ip-link.8.html)
+
+  - **host**
+
+    The host link type results in a veth pair between a container an the host network namespace.
+    In comparison to the veth type, no bridge or other namespace is required to be referenced in the definition.
+
+    ```
+      links: 
+      - type: host
+        endpoint:
+          - node: <NodeA-Name>                  # mandatory
+            interface: <NodeA-Interface-Name>   # mandatory
+            mac: <NodeA-Interface-Mac>          # optional
+        host-interface: <interface-name         # mandatory
+        mtu: <link-mtu>                         # optional
+        vars: <link-variables>                  # optional (used in templating)
+        labels: <link-labels>                   # optional (used in templating)
+    ```
+
+    The host-interface parameter defines the name of the veth pairs interface which ends up in the hosts network namespace.
+    
 #### Kinds
 
 Kinds define the behavior and the nature of a node, it says if the node is a specific containerized Network OS, virtualized router or something else. We go into details of kinds in its own [document section](kinds/index.md), so here we will discuss what happens when `kinds` section appears in the topology definition:
