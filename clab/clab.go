@@ -199,10 +199,6 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	var err error
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
-
-		// init the Cert storage and CA
-		c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-		c.Cert.CA = cert.NewCA()
 	}
 	return c, err
 }

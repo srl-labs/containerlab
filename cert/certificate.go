@@ -40,13 +40,17 @@ func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Cer
 	}
 
 	// CSR
-	_, err = os.Stat(csrFilePath)
-	if err != nil {
-		log.Debugf("failed loading csr %s, continuing anyways", csrFilePath)
-	} else {
-		cert.Csr, err = utils.ReadFileContent(csrFilePath)
+	// The CSR might not be there, which is not an issue, just skip it
+	if csrFilePath != "" {
+
+		_, err = os.Stat(csrFilePath)
 		if err != nil {
-			return nil, err
+			log.Debugf("failed loading csr %s, continuing anyways", csrFilePath)
+		} else {
+			cert.Csr, err = utils.ReadFileContent(csrFilePath)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -86,5 +90,7 @@ type CaPaths interface {
 	NodeCertKeyAbsFilename(identifier string) string
 	NodeCertCSRAbsFilename(identifier string) string
 	NodeTLSDir(string) string
-	CaDir() string
+	CaCertAbsFilename() string
+	CaKeyAbsFilename() string
+	CaCSRAbsFilename() string
 }

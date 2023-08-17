@@ -50,6 +50,10 @@ Certificate Organization (O) field is set with `--organization | -o` flag. Defau
 
 Certificate Organization Unit (OU) field is set with `--ou` flag. Defaults to `Containerlab Tools`.
 
+### Key size
+
+To set the key size, use the `--key-size` flag. Defaults to `2048`.
+
 ## Examples
 
 ```bash

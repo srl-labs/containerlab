@@ -7,6 +7,7 @@ package types
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
@@ -324,12 +325,35 @@ type DNSConfig struct {
 	Search []string `yaml:"search,omitempty"`
 }
 
-// CertificateConfig represents the configuration of a TLS infrastructure used by a node.
+// CertificateConfig represents TLS parameters set for a node.
 type CertificateConfig struct {
 	// default false value indicates that the node does not use TLS
-	Issue bool `yaml:"issue,omitempty"`
-	// additional params would go here, e.g. if
-	// different algos would be needed or so
+	Issue *bool `yaml:"issue,omitempty"`
+	// KeySize is the size of the key in bits
+	KeySize int `yaml:"key-size,omitempty"`
+	// ValidityDuration is the duration of the certificate validity
+	ValidityDuration time.Duration `yaml:"validity-duration"`
+}
+
+// Merge merges the given CertificateConfig into the current one.
+func (c *CertificateConfig) Merge(x *CertificateConfig) *CertificateConfig {
+	if x == nil {
+		return c
+	}
+
+	if x.ValidityDuration > 0 {
+		c.ValidityDuration = x.ValidityDuration
+	}
+
+	if x.Issue != nil {
+		c.Issue = x.Issue
+	}
+
+	if x.KeySize > 0 {
+		c.KeySize = x.KeySize
+	}
+
+	return c
 }
 
 // PullPolicyValue represents Image pull policy values.

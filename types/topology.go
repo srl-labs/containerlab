@@ -540,20 +540,18 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 	return nil
 }
 
+// GetCertificateConfig returns the certificate configuration for the given node.
 func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
-	if ndef, ok := t.Nodes[name]; ok {
-		nodeCertConf := ndef.GetCertificateConfig()
-		if nodeCertConf != nil {
-			return nodeCertConf
-		}
-
-		kindCertConf := t.GetKind(t.GetNodeKind(name)).GetCertificateConfig()
-		if kindCertConf != nil {
-			return kindCertConf
-		}
-
-		return t.GetDefaults().GetCertificateConfig()
+	// default for issuing node certificates is false
+	cc := &CertificateConfig{
+		Issue: utils.BoolPointer(false),
 	}
 
-	return nil
+	// merge defaults, kind and node certificate config into the default certificate config
+	cc.Merge(
+		t.GetDefaults().GetCertificateConfig()).Merge(
+		t.GetKind(t.GetNodeKind(name)).GetCertificateConfig()).Merge(
+		t.Nodes[name].GetCertificateConfig())
+
+	return cc
 }

@@ -69,7 +69,7 @@ func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 	}
 
 	// generate key
-	caPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	caPrivKey, err := rsa.GenerateKey(rand.Reader, input.KeySize)
 	if err != nil {
 		return nil, err
 	}
@@ -108,6 +108,16 @@ func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error)
 	// parse hosts from input to retrieve dns and ip SANs
 	dns, ip := parseHostsInput(input.Hosts)
 
+	keysize := 2048
+	if input.KeySize > 0 {
+		keysize = input.KeySize
+	}
+
+	expiry := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
+	if input.Expiry > 0 {
+		expiry = input.Expiry
+	}
+
 	certTemplate := &x509.Certificate{
 		RawSubject:   []byte{},
 		SerialNumber: big.NewInt(1658),
@@ -121,13 +131,13 @@ func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error)
 		DNSNames:     dns,
 		IPAddresses:  ip,
 		NotBefore:    time.Now(),
-		NotAfter:     time.Now().AddDate(1, 0, 0), // HARDCODED 1 year
+		NotAfter:     time.Now().Add(expiry),
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
 
-	newPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	newPrivKey, err := rsa.GenerateKey(rand.Reader, keysize)
 	if err != nil {
 		return nil, err
 	}
