@@ -110,8 +110,9 @@ func (l *LinkVxlan) Deploy(ctx context.Context) error {
 	// create the Vxlan struct
 	vxlanconf := netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:   l.LocalEndpoint.GetRandIfaceName(),
-			TxQLen: 1000,
+			Name:         l.LocalEndpoint.GetRandIfaceName(),
+			TxQLen:       1000,
+			HardwareAddr: l.RemoteEndpoint.mac,
 		},
 		VxlanId:      l.RemoteEndpoint.vni,
 		VtepDevIndex: parentIface.Attrs().Index,
@@ -124,17 +125,27 @@ func (l *LinkVxlan) Deploy(ctx context.Context) error {
 	if l.RemoteEndpoint.udpPort != 0 {
 		vxlanconf.Port = l.RemoteEndpoint.udpPort
 	}
+
 	// define the MTU if defined in the input
 	if l.MTU != 0 {
 		vxlanconf.LinkAttrs.MTU = l.MTU
 	}
+
 	// add the link
 	err = netlink.LinkAdd(&vxlanconf)
 	if err != nil {
 		return nil
 	}
 
-	return nil
+	// retrieve the Link by name
+	mvInterface, err := netlink.LinkByName(l.LocalEndpoint.GetRandIfaceName())
+	if err != nil {
+		return fmt.Errorf("failed to lookup %q: %v", l.LocalEndpoint.GetRandIfaceName(), err)
+	}
+
+	// add the link to the Node Namespace
+	err = l.LocalEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface, SetNameMACAndUpInterface(mvInterface, l.LocalEndpoint))
+	return err
 }
 
 func (l *LinkVxlan) Remove(_ context.Context) error {
