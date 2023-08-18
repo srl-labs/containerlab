@@ -45,8 +45,8 @@ func CheckBridgeExists(n Node) error {
 			return fmt.Errorf("bridge %q referenced in topology but does not exist", n.GetShortName())
 		case err != nil:
 			return err
-		case br.Type() != "bridge":
-			return fmt.Errorf("interface %s found. expected type \"bridge\", actual is %q", n.GetShortName(), br.Type())
+		case br.Type() != "bridge" && br.Type() != "openvswitch":
+			return fmt.Errorf("interface %s found. expected type \"bridge\" or \"openvswitch\", actual is %q", n.GetShortName(), br.Type())
 		}
 		return nil
 	})
