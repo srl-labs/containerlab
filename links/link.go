@@ -322,26 +322,6 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 	}
 }
 
-// SetNameMACMasterAndUpInterface is a helper function that will bind interface name and Mac
-// and return a function that can run in the netns.Do() call for execution in a network namespace
-func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpoint, master string) func(ns.NetNS) error {
-	baseFunc := SetNameMACAndUpInterface(l, endpt)
-
-	return func(n ns.NetNS) error {
-		// retrieve the bridge link
-		bridge, err := netlink.LinkByName(master)
-		if err != nil {
-			return err
-		}
-		// set the retrieved bridge as the master for the actual link
-		err = netlink.LinkSetMaster(l, bridge)
-		if err != nil {
-			return err
-		}
-		return baseFunc(n)
-	}
-}
-
 // ResolveParams is a struct that is passed to the Resolve() function of a raw link
 // to resolve it to a concrete link type.
 // Parameters include all nodes of a topology and the name of the management bridge.
