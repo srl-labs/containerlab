@@ -12,6 +12,12 @@ type EndpointBridge struct {
 	EndpointGeneric
 }
 
+func NewEndpointBridge(eg *EndpointGeneric) *EndpointBridge {
+	return &EndpointBridge{
+		EndpointGeneric: *eg,
+	}
+}
+
 func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
 	var errs []error
 	err := CheckEndpointUniqueness(e)
