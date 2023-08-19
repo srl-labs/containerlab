@@ -13,7 +13,7 @@ type EndpointBridge struct {
 }
 
 func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
-	errs := []error{}
+	var errs []error
 	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)
