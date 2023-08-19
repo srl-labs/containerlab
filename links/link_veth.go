@@ -35,7 +35,7 @@ func (r *LinkVEthRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	return lc
 }
 
-func (r *LinkVEthRaw) GetType() LinkType {
+func (*LinkVEthRaw) GetType() LinkType {
 	return LinkTypeVEth
 }
 
@@ -94,7 +94,7 @@ func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
-func (l *LinkVEth) Verify() {
+func (*LinkVEth) Verify() {
 
 }
 
@@ -180,7 +180,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (l *LinkVEth) Remove(_ context.Context) error {
+func (*LinkVEth) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }
