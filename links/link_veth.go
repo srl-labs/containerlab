@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/utils"
@@ -150,24 +149,9 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// based on the endpoint type the link setup function is different.
 	// linkSetupFunc is executed in a netns of a node.
 	for idx, link := range []netlink.Link{linkA, linkB} {
-		var linkSetupFunc func(ns.NetNS) error
-		switch l.Endpoints[idx].GetNode().GetLinkEndpointType() {
-
-		// if the endpoint is a bridge we also need to set the master of the interface to the bridge
-		case LinkEndpointTypeBridge:
-			bridgeName := l.Endpoints[idx].GetNode().GetShortName()
-			// set the adjustmentFunc to the function that, besides the name, mac and up state
-			// also sets the Master of the interface to the bridge
-			linkSetupFunc = SetNameMACMasterAndUpInterface(link, l.Endpoints[idx], bridgeName)
-		default:
-			// default case is a regular veth link where both ends are regular linux interfaces
-			// in the relevant containers.
-			linkSetupFunc = SetNameMACAndUpInterface(link, l.Endpoints[idx])
-		}
-
 		// if the node is a regular namespace node
 		// add link to node, rename, set mac and Up
-		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link, linkSetupFunc)
+		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link, SetNameMACAndUpInterface(link, l.Endpoints[idx]))
 		if err != nil {
 			return err
 		}

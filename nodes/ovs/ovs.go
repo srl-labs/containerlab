@@ -14,7 +14,6 @@ import (
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/bridge"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -86,7 +85,35 @@ func (n *ovs) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, e
 }
 
 func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	return bridge.BridgeAddLink(ctx, link, n.Cfg.ShortName, f)
+	// retrieve the namespace handle
+	ns, err := ns.GetCurrentNS()
+	if err != nil {
+		return err
+	}
+
+	// execute the given function
+	err = ns.Do(f)
+	if err != nil {
+		return err
+	}
+
+	c := goOvs.New(
+		// Prepend "sudo" to all commands.
+		goOvs.Sudo(),
+	)
+
+	// need to reread the link, due to the changed the function f might have applied to
+	// the link. Usually it renames the link to its final name.
+	link, err = netlink.LinkByIndex(link.Attrs().Index)
+	if err != nil {
+		return err
+	}
+
+	if err := c.VSwitch.AddPort(n.Cfg.ShortName, link.Attrs().Name); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *ovs) GetLinkEndpointType() links.LinkEndpointType {
