@@ -8,6 +8,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes/state"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -34,7 +35,7 @@ func (r *LinkVEthRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	return lc
 }
 
-func (r *LinkVEthRaw) GetType() LinkType {
+func (*LinkVEthRaw) GetType() LinkType {
 	return LinkTypeVEth
 }
 
@@ -93,7 +94,7 @@ func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
-func (l *LinkVEth) Verify() {
+func (*LinkVEth) Verify() {
 
 }
 
@@ -137,6 +138,13 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	// once veth pair is created, disable tx offload for the veth pair
+	for _, ep := range l.Endpoints {
+		if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+			return err
+		}
+	}
+
 	// both ends of the link need to be moved to the relevant network namespace
 	// and enabled (up). This is done via linkSetupFunc.
 	// based on the endpoint type the link setup function is different.
@@ -172,7 +180,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (l *LinkVEth) Remove(_ context.Context) error {
+func (*LinkVEth) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }
