@@ -94,15 +94,11 @@ func (c *CLab) GenerateDotGraph() error {
 		attr = make(map[string]string)
 		attr["color"] = "black"
 
-		eps := link.GetEndpoints()
-		ANodeName := eps[0].GetNode().GetShortName()
-		BNodeName := eps[1].GetNode().GetShortName()
-
-		if (strings.Contains(ANodeName, "client")) ||
-			(strings.Contains(BNodeName, "client")) {
+		if (strings.Contains(link.A.Node.ShortName, "client")) ||
+			(strings.Contains(link.B.Node.ShortName, "client")) {
 			attr["color"] = "blue"
 		}
-		if err := g.AddEdge(ANodeName, BNodeName, false, attr); err != nil {
+		if err := g.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName, false, attr); err != nil {
 			return err
 		}
 		// log.Info(link.A.Node.ShortName, " <-> ", link.B.Node.ShortName)
@@ -225,8 +221,7 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 
 	// Process the links between Nodes
 	for _, link := range c.Links {
-		eps := link.GetEndpoints()
-		fc.AddEdge(eps[0].GetNode().GetShortName(), eps[1].GetNode().GetShortName())
+		fc.AddEdge(link.A.Node.ShortName, link.B.Node.ShortName)
 	}
 
 	// create graph directory

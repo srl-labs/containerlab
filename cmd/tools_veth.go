@@ -13,7 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -100,26 +99,16 @@ var vethCreateCmd = &cobra.Command{
 				return err
 			}
 		}
-		// generate mac for endpoint A
-		aMac, err := utils.GenMac(links.ClabOUI)
-		if err != nil {
-			return err
-		}
+
 		endpointA := types.Endpoint{
 			Node:         aNode,
 			EndpointName: vethAEndpoint.iface,
-			MAC:          aMac.String(),
-		}
-
-		// generate mac for endpoint B
-		bMac, err := utils.GenMac(links.ClabOUI)
-		if err != nil {
-			return err
+			MAC:          utils.GenMac(clab.ClabOUI),
 		}
 		endpointB := types.Endpoint{
 			Node:         bNode,
 			EndpointName: vethBEndpoint.iface,
-			MAC:          bMac.String(),
+			MAC:          utils.GenMac(clab.ClabOUI),
 		}
 
 		link := &types.Link{

@@ -12,7 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 )
@@ -42,11 +41,6 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 			clab.WithDebug(debug),
 		}
 		c, err := clab.NewContainerLab(opts...)
-		if err != nil {
-			return err
-		}
-
-		err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}

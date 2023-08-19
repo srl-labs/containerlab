@@ -7,7 +7,6 @@ package utils
 import (
 	"crypto/rand"
 	"fmt"
-	"net"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -71,12 +70,10 @@ func DeleteLinkByName(name string) error {
 }
 
 // GenMac generates a random MAC address for a given OUI.
-func GenMac(oui string) (net.HardwareAddr, error) {
+func GenMac(oui string) string {
 	buf := make([]byte, 3)
 	_, _ = rand.Read(buf)
-
-	hwa, err := net.ParseMAC(fmt.Sprintf("%s:%02x:%02x:%02x", oui, buf[0], buf[1], buf[2]))
-	return hwa, err
+	return fmt.Sprintf("%s:%02x:%02x:%02x", oui, buf[0], buf[1], buf[2])
 }
 
 // DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS func.

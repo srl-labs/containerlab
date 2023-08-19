@@ -29,7 +29,6 @@ import (
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -69,7 +68,6 @@ func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	for _, o := range opts {
 		o(d)
 	}
-	d.config.VerifyLinkParams = links.NewVerifyLinkParams()
 	return nil
 }
 
@@ -548,13 +546,10 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 }
 
 // StartContainer starts a docker container.
-func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node runtime.Node) (interface{}, error) {
+func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node *types.NodeConfig) (interface{}, error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
-
-	nodecfg := node.Config()
-
-	log.Debugf("Start container: %q", nodecfg.LongName)
+	log.Debugf("Start container: %q", node.LongName)
 	err := d.Client.ContainerStart(nctx,
 		cID,
 		dockerTypes.ContainerStartOptions{
@@ -565,8 +560,8 @@ func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node run
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Container started: %q", nodecfg.LongName)
-	err = d.postStartActions(ctx, cID, nodecfg)
+	log.Debugf("Container started: %q", node.LongName)
+	err = d.postStartActions(ctx, cID, node)
 	return nil, err
 }
 

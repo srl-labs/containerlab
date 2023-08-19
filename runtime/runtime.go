@@ -11,7 +11,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -36,7 +35,7 @@ type ContainerRuntime interface {
 	CreateContainer(context.Context, *types.NodeConfig) (string, error)
 	// Start pre-created container by its name. Returns an extra interface that can be used to receive signals
 	// about the container life-cycle after it was created, e.g. for post-deploy tasks
-	StartContainer(context.Context, string, Node) (interface{}, error)
+	StartContainer(context.Context, string, *types.NodeConfig) (interface{}, error)
 	// Stop running container by its name
 	StopContainer(context.Context, string) error
 	// Pause a container identified by its name
@@ -79,7 +78,6 @@ type RuntimeConfig struct {
 	GracefulShutdown bool
 	Debug            bool
 	KeepMgmtNet      bool
-	VerifyLinkParams *links.VerifyLinkParams
 }
 
 var ContainerRuntimes = map[string]Initializer{}
@@ -147,11 +145,4 @@ TIMEOUT_LOOP:
 		}
 	}
 	return resultErr
-}
-
-// Node is an interface that represents a node in the lab
-// and is implemented by containerlab nodes.
-type Node interface {
-	Config() *types.NodeConfig
-	GetEndpoints() []links.Endpoint
 }

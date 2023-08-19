@@ -2,7 +2,6 @@ package types
 
 import (
 	"github.com/docker/go-connections/nat"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -11,7 +10,7 @@ type Topology struct {
 	Defaults *NodeDefinition            `yaml:"defaults,omitempty"`
 	Kinds    map[string]*NodeDefinition `yaml:"kinds,omitempty"`
 	Nodes    map[string]*NodeDefinition `yaml:"nodes,omitempty"`
-	Links    []*links.LinkDefinition    `yaml:"links,omitempty"`
+	Links    []*LinkDefinition          `yaml:"links,omitempty"`
 }
 
 func NewTopology() *Topology {
@@ -19,8 +18,15 @@ func NewTopology() *Topology {
 		Defaults: new(NodeDefinition),
 		Kinds:    make(map[string]*NodeDefinition),
 		Nodes:    make(map[string]*NodeDefinition),
-		Links:    make([]*links.LinkDefinition, 0),
+		Links:    make([]*LinkDefinition, 0),
 	}
+}
+
+type LinkConfig struct {
+	Endpoints []string
+	Labels    map[string]string      `yaml:"labels,omitempty"`
+	Vars      map[string]interface{} `yaml:"vars,omitempty"`
+	MTU       int                    `yaml:"mtu,omitempty"`
 }
 
 func (t *Topology) GetDefaults() *NodeDefinition {

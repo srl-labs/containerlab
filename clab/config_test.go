@@ -16,10 +16,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/mocks/mockruntime"
+	"github.com/srl-labs/containerlab/mocks"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -341,7 +339,7 @@ func TestVerifyLinks(t *testing.T) {
 	}{
 		"two_duplicated_links": {
 			got:  "test_data/topo6.yml",
-			want: "duplicate endpoint lin1:eth1\nduplicate endpoint lin1:eth1\nduplicate endpoint lin2:eth2\nduplicate endpoint lin2:eth2\nduplicate endpoint lin1:eth4\nduplicate endpoint lin1:eth4",
+			want: "endpoints [\"lin1:eth1\" \"lin2:eth2\"] appeared more than once in the links section of the topology file",
 		},
 		"no_duplicated_links": {
 			got:  "test_data/topo1.yml",
@@ -356,21 +354,12 @@ func TestVerifyLinks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoFile(tc.got, ""),
-				WithRuntime(docker.RuntimeName,
-					&runtime.RuntimeConfig{
-						VerifyLinkParams: links.NewVerifyLinkParams(),
-					},
-				),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			err = c.ResolveLinks()
-			if err != nil {
-				t.Fatal(err)
-			}
 			err = c.verifyLinks()
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
@@ -482,53 +471,20 @@ func TestLabelsInit(t *testing.T) {
 	}
 }
 
-func TestVerifyRootNetNSLinks(t *testing.T) {
-
-	tests := map[string]struct {
-		topo      string
-		wantError bool
-	}{
-		"dup rootnetns": {
-			topo:      "test_data/topo7-dup-rootnetns.yml",
-			wantError: true,
-		},
-		"topo1": {
-			topo:      "test_data/topo1.yml",
-			wantError: false,
-		},
-		"topo3": {
-			topo:      "test_data/topo3.yml",
-			wantError: false,
-		},
-		"topo4": {
-			topo:      "test_data/topo4.yml",
-			wantError: false,
-		},
+func TestVerifyRootNetnsInterfaceUniqueness(t *testing.T) {
+	opts := []ClabOption{
+		WithTopoFile("test_data/topo7-dup-rootnetns.yml", ""),
+	}
+	c, err := NewContainerLab(opts...)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			opts := []ClabOption{
-				WithTopoFile(tc.topo, ""),
-			}
-			c, err := NewContainerLab(opts...)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = c.ResolveLinks()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = c.verifyRootNetNSLinks()
-			if tc.wantError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
+	err = c.verifyRootNetnsInterfaceUniqueness()
+	if err == nil {
+		t.Fatalf("expected duplicate rootns links error")
 	}
+	t.Logf("error: %v", err)
 }
 
 func TestVerifyContainersUniqueness(t *testing.T) {
@@ -617,7 +573,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			}
 
 			// set mockRuntime parameters
-			mockRuntime := mockruntime.NewMockContainerRuntime(ctrl)
+			mockRuntime := mocks.NewMockContainerRuntime(ctrl)
 			c.Runtimes[rtName] = mockRuntime
 			c.globalRuntime = rtName
 

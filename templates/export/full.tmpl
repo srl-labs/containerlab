@@ -6,20 +6,17 @@
     "{{$n}}":{{ $cj := $c | data.ToJSON | data.JSON }} {{ $dst := coll.Merge $cj $k }}{{ ToJSONPretty $dst "    " "  " }}{{$i = add $i 1}}{{end}}
   },
   "links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
-    {{- $eps :=  $l.GetEndpoints }}
-    {{- $ep :=  index $eps 0 }}
     {
       "a": {
-        "node": "{{ $ep.GetNode.GetShortName }}",
-        "interface": "{{ $ep.GetIfaceName }}",
-        "mac": "{{ $ep.GetMac }}",
+        "node": "{{ $l.A.Node.ShortName }}",
+        "interface": "{{ $l.A.EndpointName }}",
+        "mac": "{{ $l.A.MAC }}",
         "peer": "z"
       },
-      {{- $ep :=  index $eps 1 }}
       "z": {
-        "node": "{{  $ep.GetNode.GetShortName }}",
-        "interface": "{{ $ep.GetIfaceName }}",
-        "mac": "{{ $ep.GetMac }}",
+        "node": "{{ $l.B.Node.ShortName }}",
+        "interface": "{{ $l.B.EndpointName }}",
+        "mac": "{{ $l.B.MAC }}",
         "peer": "a"
       }
     }{{end}}

@@ -390,6 +390,10 @@ func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
 // netOpts is an accessory function that returns a network.CreateOptions struct
 // filled with all parameters for CreateNet function.
 func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
+	// set bridge name = network name if explicit name was not provided
+	if r.mgmt.Bridge == "" && r.mgmt.Network != "" {
+		r.mgmt.Bridge = r.mgmt.Network
+	}
 	var (
 		name        = r.mgmt.Network
 		intName     = r.mgmt.Bridge
