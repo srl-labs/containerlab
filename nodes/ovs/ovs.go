@@ -60,7 +60,7 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 	// So listing the bridges is safer
 	bridges, err := c.VSwitch.ListBridges()
 	if err != nil {
-		return fmt.Errorf("Error while looking for ovs bridge %q: %v", n.Cfg.ShortName, err)
+		return fmt.Errorf("error while looking for ovs bridge %q: %v", n.Cfg.ShortName, err)
 	}
 	if !slices.Contains(bridges, n.Cfg.ShortName) {
 		return fmt.Errorf("could not find ovs bridge %q", n.Cfg.ShortName)
