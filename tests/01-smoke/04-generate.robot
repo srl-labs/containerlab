@@ -29,6 +29,19 @@ Verify nodes
     Should Contain    ${output}    clab-${lab-name}-node2-1
     Should Contain    ${output}    clab-${lab-name}-node3-1
 
+    Cleanup
+
+Deploy ${lab-name}-scale lab with generate command
+    [Documentation]    Deploy 3-tier lab with 5 nodes in each tier. Tiers are interconnected with links.
+    ...    This test verifies that scaled topology can be deployed without concurrent errors.
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name}-scale --kind linux --image alpine:3 --nodes 5,5,5 --deploy
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    failed
+    Should Not Contain    ${output}    ERRO
+
 
 *** Keywords ***
 Cleanup
