@@ -1,8 +1,6 @@
 *** Settings ***
-Library             OperatingSystem
-Resource            ../common.robot
-
-Suite Teardown      Cleanup
+Library     OperatingSystem
+Resource    ../common.robot
 
 
 *** Variables ***
@@ -29,7 +27,7 @@ Verify nodes
     Should Contain    ${output}    clab-${lab-name}-node2-1
     Should Contain    ${output}    clab-${lab-name}-node3-1
 
-    Cleanup
+    Cleanup    ${lab-name}
 
 Deploy ${lab-name}-scale lab with generate command
     [Documentation]    Deploy 3-tier lab with 5 nodes in each tier. Tiers are interconnected with links.
@@ -42,9 +40,13 @@ Deploy ${lab-name}-scale lab with generate command
     Should Not Contain    ${output}    failed
     Should Not Contain    ${output}    ERRO
 
+    Cleanup    ${lab-name}-scale
+
 
 *** Keywords ***
 Cleanup
+    [Arguments]    ${lab-name}
+
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${lab-name}.clab.yml --cleanup
