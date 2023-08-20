@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
+    "github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
@@ -54,7 +55,14 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 		goOvs.Sudo(),
 	)
 
-	if _, err := c.VSwitch.Get.Bridge(n.Cfg.ShortName); err != nil {
+    // We were previously doing c.VSwitch.Get.Bridge() but it doesn't work
+    // when the bridge has a propotocol version higher than 1.0
+    // So listing the bridges is safer
+    bridges, err := c.VSwitch.ListBridges()
+    if err != nil {
+        return fmt.Errorf("Error while looking for ovs bridge %q: %v", n.Cfg.ShortName, err)
+	}
+    if !slices.Contains(bridges, n.Cfg.ShortName) {
 		return fmt.Errorf("could not find ovs bridge %q", n.Cfg.ShortName)
 	}
 
