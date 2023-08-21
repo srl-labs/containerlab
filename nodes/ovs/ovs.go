@@ -68,8 +68,24 @@ func (n *ovs) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 
 func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (*ovs) Delete(_ context.Context) error                { return nil }
-func (*ovs) DeleteNetnsSymlink() (err error)               { return nil }
+
+func (n *ovs) Delete(_ context.Context) error {
+	c := goOvs.New(
+		// Prepend "sudo" to all commands.
+		goOvs.Sudo(),
+	)
+
+	for _, ep := range n.GetEndpoints() {
+		// Under the hood, this is called with "--if-exists", so it will handle the case where it doesn't exist for some reason.
+		if err := c.VSwitch.DeletePort(n.Cfg.ShortName, ep.GetIfaceName()); err != nil {
+			log.Errorf("Could not remove OVS port %q from bridge %q", ep.GetIfaceName(), n.Config().ShortName)
+		}
+	}
+
+	return nil
+}
+
+func (*ovs) DeleteNetnsSymlink() (err error) { return nil }
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
