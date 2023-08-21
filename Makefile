@@ -98,8 +98,8 @@ oci-push: build-with-podman
 	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - ./containerlab deploy.... Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
 	@echo 'If https proxy is configured in your environment, pass the proxies via --env HTTPS_PROXY="<proxy-address>" flag of the docker run command.'
 # push to ttl.sh
-	docker run --rm -v $(CURDIR)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$(COMMIT_HASH):1d ./containerlab
-	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$(COMMIT_HASH):1d"
+#	docker run --rm -v $(CURDIR)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$(COMMIT_HASH):1d ./containerlab
+#	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$(COMMIT_HASH):1d"
 # push to ghcr.io
 	@echo ""
 	docker run --rm -v $(CURDIR)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v0.12.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab

@@ -125,9 +125,6 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
-	// set any containerlab defaults after we've parsed the input
-	c.setDefaults()
-
 	return nil
 }
 
@@ -531,14 +528,15 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	return nil
 }
 
-// sets defaults after the topology has been parsed.
-func (c *CLab) setDefaults() {
+// setClabIntfsEnvVar sets CLAB_INTFS env var for each node
+// which holds the number of interfaces a node expects to have (without mgmt interfaces)
+func (c *CLab) SetClabIntfsEnvVar() {
 	for _, n := range c.Nodes {
 		// Injecting the env var with expected number of links
-		numLinks := map[string]string{
+		numIntfs := map[string]string{
 			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", len(n.GetEndpoints())),
 		}
-		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numLinks)
+		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numIntfs)
 	}
 }
 

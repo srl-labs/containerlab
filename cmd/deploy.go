@@ -119,6 +119,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	c.SetClabIntfsEnvVar()
+
 	setFlags(c.Config)
 	log.Debugf("lab Conf: %+v", c.Config)
 
