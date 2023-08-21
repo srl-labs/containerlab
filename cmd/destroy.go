@@ -133,7 +133,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		err = nc.ResolveLinks()
+		err = nc.ResolveLinks(nodeFilter)
 		if err != nil {
 			return err
 		}

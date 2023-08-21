@@ -641,7 +641,8 @@ func (c *CLab) VethCleanup(ctx context.Context) error {
 }
 
 // ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
-func (c *CLab) ResolveLinks() error {
+// It takes a list of nodes to be filtered out from the resolution process.
+func (c *CLab) ResolveLinks(nodesFilter []string) error {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
 	// If no circ deps were in place we could've used c.Nodes map instead.
@@ -663,12 +664,18 @@ func (c *CLab) ResolveLinks() error {
 	resolveParams := &links.ResolveParams{
 		Nodes:          resolveNodes,
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
+		NodesFilter:    nodesFilter,
 	}
 
 	for i, l := range c.Config.Topology.Links {
 		l, err := l.Link.Resolve(resolveParams)
 		if err != nil {
 			return err
+		}
+
+		// if the link is nil, it means that it was filtered out
+		if l == nil {
+			continue
 		}
 
 		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)

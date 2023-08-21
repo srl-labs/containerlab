@@ -52,6 +52,11 @@ func (r *LinkHostRaw) GetType() LinkType {
 }
 
 func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
+	filtered := applyNodesFilter(params, []*EndpointRaw{r.Endpoint})
+	if filtered {
+		return nil, nil
+	}
+
 	link := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
 	}

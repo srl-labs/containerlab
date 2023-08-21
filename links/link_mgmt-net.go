@@ -31,6 +31,10 @@ func (r *LinkMgmtNetRaw) ToLinkBriefRaw() *LinkBriefRaw {
 }
 
 func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
+	filtered := applyNodesFilter(params, []*EndpointRaw{r.Endpoint})
+	if filtered {
+		return nil, nil
+	}
 
 	// create the LinkMgmtNet struct
 	link := &LinkVEth{
