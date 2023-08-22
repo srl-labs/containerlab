@@ -122,11 +122,13 @@ Refer to the [node configuration](nodes.md) document to meet all other options a
 
 #### Links
 
-Although it is totally fine to define a node without any links (like in [this lab](../lab-examples/single-srl.md)) most of the time we interconnect the nodes to make datapaths. One of containerlab purposes is to make the interconnection of nodes simple.
+Although it is absolutely fine to define a node without any links (like in [this lab](../lab-examples/single-srl.md)), we usually interconnect the nodes to make topologies. One of containerlab purposes is to make the interconnection of the nodes simple.
 
-Links are defined under the `topology.links` container in the topology file. For their definition two general formats exist. That is a brief and a more expressive form, with the latter allowing for a more distinct setup of the certain link attributes.
+Links are defined under the `topology.links` section of the topology file. Containerlab understands two formats of link definition - brief and extended.  
+A brief form of a link definition compresses link parameters in a single string and provide a quick way to define a link at the cost of link features available.  
+A more expressive extended form exposes all link features, but requires more typing if done manually. The extended format is perfect for machine-generated link topologies.
 
-##### Brief link format
+##### Brief format
 
 The brief version looks as follows.
 
@@ -154,87 +156,89 @@ endpoints: ["srl:e1-1", "ceos:eth1"]
 
 will result in a creation of a p2p link between the node named `srl` and its `e1-1` interface and the node named `ceos` and its `eth1` interface. The p2p link is realized with a veth pair.
 
-##### Extended link format
+##### Extended format
 
-The extendended link format allows for even more attributes to be expressed for a certain link. The available attributes vary on the type of Link which is to be deployed.
-Types of links available are the following:
+The extended link format allows a user to set every supported link parameter in a structured way. The available link parameters depend on the Link type and provided below.
 
-  - **veth**
+###### veth
 
-    The veth link is basically the default virtual ethernet link used in brief format with two regular containers or container and bridge ends.
-    ```
-    links: 
-      - type: veth
-        endpoints:
-          - node: <NodeA-Name>                  # mandatory
-            interface: <NodeA-Interface-Name>   # mandatory
-            mac: <NodeA-Interface-Mac>          # optional
-          - node: <NodeB-Name>                  # mandatory
-            interface: <NodeB-Interface-Name>   # mandatory
-            mac: <NodeB-Interface-Mac>          # optional
-        mtu: <link-mtu>                         # optional
-        vars: <link-variables>                  # optional (used in templating)
-        labels: <link-labels>                   # optional (used in templating)
-    ```
-  - **mgmt-net**
+The veth link is the most common link type used in containerlab. It creates a virtual ethernet link between two endpoints where each endpoint refers to a node in the topology.
 
-    The mgmt-net link type results also in a veth pair that is connected to a container node on one side and on the other it is attached to the underlaying management network instantiated by the  the container runtime. Basically the network where all the eth0 interfaces of the nodes are connected.
+```yaml
+links:
+  - type: veth
+    endpoints:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+      - node: <NodeB-Name>                  # mandatory
+        interface: <NodeB-Interface-Name>   # mandatory
+        mac: <NodeB-Interface-Mac>          # optional
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
 
-    ```
-      links: 
-      - type: mgmt-net
-        endpoint:
-          - node: <NodeA-Name>                  # mandatory
-            interface: <NodeA-Interface-Name>   # mandatory
-            mac: <NodeA-Interface-Mac>          # optional
-        host-interface: <interface-name         # mandatory
-        mtu: <link-mtu>                         # optional
-        vars: <link-variables>                  # optional (used in templating)
-        labels: <link-labels>                   # optional (used in templating)
-    ```
+###### mgmt-net
 
-    The host-interface is the name of the veth pairs interface end, that ends up in the hosts namespace, which will be assigned to the underlaying mgmt-net bridge.
+The mgmt-net link type represents a veth pair that is connected to a container node on one side and to the management network (usually a bridge) instantiated by the container runtime on the other.
 
-  - **macvlan**
+```yaml
+  links:
+  - type: mgmt-net
+    endpoint:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+    host-interface: <interface-name         # mandatory
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
 
-    The macvlan link type results in the creation of a MACVlan interface, which is attached on one end to an existing host interface and a virtual interface in the referenced container.
+The `host-interface` is the desired interface name that will be attached to the management network in the host namespace.
 
-    ```
-      links: 
-      - type: macvlan
-        endpoint:
-          - node: <NodeA-Name>                  # mandatory
-            interface: <NodeA-Interface-Name>   # mandatory
-            mac: <NodeA-Interface-Mac>          # optional
-        host-interface: <interface-name>        # mandatory
-        mode: <macvlan-mode>                    # optional ("bridge" by default)
-        vars: <link-variables>                  # optional (used in templating)
-        labels: <link-labels>                   # optional (used in templating)
-    ```
+###### macvlan
 
-    The host-interface is the name of the existing interface present in the host namespace.
-    Options for the mode are (private, vepa, bridge, passthru and source) [Explenation](https://man7.org/linux/man-pages/man8/ip-link.8.html)
+The macvlan link type creates a MACVlan interface with the `host-interface` as its parent interface. The MACVlan interface is then moved to a node's network namespace and renamed to the `endpoint.interface` name.
 
-  - **host**
+```yaml
+  links:
+  - type: macvlan
+    endpoint:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+    host-interface: <interface-name>        # mandatory
+    mode: <macvlan-mode>                    # optional ("bridge" by default)
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
 
-    The host link type results in a veth pair between a container an the host network namespace.
-    In comparison to the veth type, no bridge or other namespace is required to be referenced in the definition.
+The `host-interface` is the name of the existing interface present in the host namespace.
 
-    ```
-      links: 
-      - type: host
-        endpoint:
-          - node: <NodeA-Name>                  # mandatory
-            interface: <NodeA-Interface-Name>   # mandatory
-            mac: <NodeA-Interface-Mac>          # optional
-        host-interface: <interface-name         # mandatory
-        mtu: <link-mtu>                         # optional
-        vars: <link-variables>                  # optional (used in templating)
-        labels: <link-labels>                   # optional (used in templating)
-    ```
+[Modes](https://man7.org/linux/man-pages/man8/ip-link.8.html) are `private`, `vepa`, `bridge`, `passthru` and `source`. The default is `bridge`.
 
-    The host-interface parameter defines the name of the veth pairs interface which ends up in the hosts network namespace.
-    
+###### host
+
+The host link type creates a veth pair between a container and the host network namespace.  
+In comparison to the veth type, no bridge or other namespace is required to be referenced in the link definition for a "remote" end of the veth pair.
+
+```yaml
+  links:
+  - type: host
+    endpoint:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+    host-interface: <interface-name         # mandatory
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
+
+The `host-interface` parameter defines the name of the veth interface in the host's network namespace.
+
 #### Kinds
 
 Kinds define the behavior and the nature of a node, it says if the node is a specific containerized Network OS, virtualized router or something else. We go into details of kinds in its own [document section](kinds/index.md), so here we will discuss what happens when `kinds` section appears in the topology definition:
@@ -322,7 +326,7 @@ topology:
 
 In the example above, the `ALPINE_VERSION` environment variable is used to set the version of the alpine image. If the variable is not set, the value of `3` will be used. The following syntax is used to expand the environment variable:
 
-| __Expression__     | __Meaning__                                                          |
+| **Expression**     | **Meaning**                                                          |
 | ------------------ | -------------------------------------------------------------------- |
 | `${var}`           | Value of var (same as `$var`)                                        |
 | `${var-$DEFAULT}`  | If var not set, evaluate expression as $DEFAULT                      |
@@ -343,7 +347,7 @@ Standard Go templating language has been extended with the functions provided in
 
 To help you get started, we created the following lab examples which demonstrate how topology templating can be used:
 
-* [Leaf-Spine topology with parametrized number of leaves/spines](lab-examples/../../lab-examples/templated01.md)
-* [5-stage Clos topology with parametrized number of pods and super-spines](lab-examples/../../lab-examples/templated02.md)
+- [Leaf-Spine topology with parametrized number of leaves/spines](lab-examples/../../lab-examples/templated01.md)
+- [5-stage Clos topology with parametrized number of pods and super-spines](lab-examples/../../lab-examples/templated02.md)
 
 [^1]: if the filename has `.clab.yml` or `-clab.yml` suffix, the YAML file will have autocompletion and linting support in VSCode editor.
