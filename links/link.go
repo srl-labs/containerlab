@@ -296,7 +296,7 @@ const (
 )
 
 // SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
-// and return a function that can run in the netns.Do() call for execution in a network namespace
+// and return a function that can run in the netns.Do() call for execution in a network namespace.
 func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the given link

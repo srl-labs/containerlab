@@ -522,7 +522,7 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	return f.Close()
 }
 
-// srlTemplateData top level data struct
+// srlTemplateData top level data struct.
 type srlTemplateData struct {
 	TLSKey     string
 	TLSCert    string
@@ -532,7 +532,7 @@ type srlTemplateData struct {
 	SSHPubKeys string
 }
 
-// tplIFace template interface struct
+// tplIFace template interface struct.
 type tplIFace struct {
 	Slot       string
 	Port       string

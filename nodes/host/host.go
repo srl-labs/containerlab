@@ -45,6 +45,7 @@ func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.IsRootNamespaceBased = true
 	return nil
 }
+
 func (n *host) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 	n.SetState(state.Deployed)
 	return nil

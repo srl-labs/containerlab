@@ -587,7 +587,7 @@ func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContai
 	return containers, nil
 }
 
-// ListNodesContainersIgnoreNotFound lists all containers based on the nodes stored in clab instance, ignoring errors for non found containers
+// ListNodesContainersIgnoreNotFound lists all containers based on the nodes stored in clab instance, ignoring errors for non found containers.
 func (c *CLab) ListNodesContainersIgnoreNotFound(ctx context.Context) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
 

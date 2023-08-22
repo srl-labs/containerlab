@@ -483,7 +483,6 @@ func TestLabelsInit(t *testing.T) {
 }
 
 func TestVerifyRootNetNSLinks(t *testing.T) {
-
 	tests := map[string]struct {
 		topo      string
 		wantError bool

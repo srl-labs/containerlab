@@ -109,7 +109,8 @@ func GetHostLinkNode() Node {
 		nspath := currns.Path()
 
 		_hostLinkNodeInstance = &hostLinkNode{
-			GenericLinkNode: GenericLinkNode{shortname: "host",
+			GenericLinkNode: GenericLinkNode{
+				shortname: "host",
 				endpoints: []Endpoint{},
 				nspath:    nspath,
 			},

@@ -81,7 +81,6 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 
 // setDelay sets delay and jitter to the qdisc.
 func setDelay(qdisc *tc.Object, delay, jitter time.Duration) error {
-
 	delayTcTime, err := core.Duration2TcTime(delay)
 	if err != nil {
 		return err
