@@ -46,6 +46,9 @@ type CLab struct {
 	m             *sync.RWMutex
 	timeout       time.Duration
 	globalRuntime string
+	// nodeFilter is a list of node names to be deployed,
+	// names are provided exactly as they are listed in the topology file.
+	nodeFilter []string
 }
 
 type ClabOption func(c *CLab) error
@@ -140,14 +143,16 @@ func WithTopoFile(file, varsFile string) ClabOption {
 // be called after WithTopoFile.
 func WithNodeFilter(nodeFilter []string) ClabOption {
 	return func(c *CLab) error {
-		return filterClabNodes(c, nodeFilter)
+		return c.filterClabNodes(nodeFilter)
 	}
 }
 
-func filterClabNodes(c *CLab, nodeFilter []string) error {
+func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	if len(nodeFilter) == 0 {
 		return nil
 	}
+
+	c.nodeFilter = nodeFilter
 
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {
@@ -641,8 +646,7 @@ func (c *CLab) VethCleanup(ctx context.Context) error {
 }
 
 // ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
-// It takes a list of nodes to be filtered out from the resolution process.
-func (c *CLab) ResolveLinks(nodesFilter []string) error {
+func (c *CLab) ResolveLinks() error {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
 	// If no circ deps were in place we could've used c.Nodes map instead.
@@ -664,7 +668,7 @@ func (c *CLab) ResolveLinks(nodesFilter []string) error {
 	resolveParams := &links.ResolveParams{
 		Nodes:          resolveNodes,
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
-		NodesFilter:    nodesFilter,
+		NodesFilter:    c.nodeFilter,
 	}
 
 	for i, l := range c.Config.Topology.Links {

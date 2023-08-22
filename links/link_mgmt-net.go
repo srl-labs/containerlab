@@ -31,8 +31,10 @@ func (r *LinkMgmtNetRaw) ToLinkBriefRaw() *LinkBriefRaw {
 }
 
 func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
-	filtered := applyNodesFilter(params, []*EndpointRaw{r.Endpoint})
-	if filtered {
+	// filtered true means the link is in the filter provided by a user
+	// aka it should be resolved/created/deployed
+	filtered := isInFilter(params, []*EndpointRaw{r.Endpoint})
+	if !filtered {
 		return nil, nil
 	}
 

@@ -114,7 +114,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	err = c.ResolveLinks(nodeFilter)
+	err = c.ResolveLinks()
 	if err != nil {
 		return err
 	}

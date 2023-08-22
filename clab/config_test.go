@@ -367,7 +367,7 @@ func TestVerifyLinks(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = c.ResolveLinks([]string{})
+			err = c.ResolveLinks()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -516,7 +516,7 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = c.ResolveLinks([]string{})
+			err = c.ResolveLinks()
 			if err != nil {
 				t.Fatal(err)
 			}

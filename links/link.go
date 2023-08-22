@@ -344,19 +344,21 @@ func NewVerifyLinkParams() *VerifyLinkParams {
 	}
 }
 
-// applyNodesFilter returns true if the endpoints of the link
-// are part of the nodes filter which means that the link is filtered
-// out and should not be resolved.
-func applyNodesFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
+// isInFilter returns true if the endpoints of the link
+// are part of the nodes filter which means that the link
+// should be resolved and deployed.
+// In other words, returning true means that the link should be deployed.
+func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
+	// empty filter means that all links should be deployed
 	if len(params.NodesFilter) == 0 {
-		return false
+		return true
 	}
 
 	for _, e := range endpoints {
-		if slices.Contains(params.NodesFilter, e.Node) {
-			return true
+		if !slices.Contains(params.NodesFilter, e.Node) {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
