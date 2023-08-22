@@ -72,7 +72,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	return link, nil
 }
 
-func (r *LinkMgmtNetRaw) GetType() LinkType {
+func (*LinkMgmtNetRaw) GetType() LinkType {
 	return LinkTypeMgmtNet
 }
 

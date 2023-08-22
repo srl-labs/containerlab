@@ -34,7 +34,7 @@ func (r *LinkMacVlanRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	return lc
 }
 
-func (r *LinkMacVlanRaw) GetType() LinkType {
+func (*LinkMacVlanRaw) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
@@ -132,7 +132,7 @@ func MacVlanModeParse(s string) (MacVlanMode, error) {
 	return "", fmt.Errorf("unknown MacVlanMode %q", s)
 }
 
-func (l *LinkMacVlan) GetType() LinkType {
+func (*LinkMacVlan) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
@@ -193,7 +193,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (l *LinkMacVlan) Remove(_ context.Context) error {
+func (*LinkMacVlan) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }
