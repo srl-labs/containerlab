@@ -101,7 +101,6 @@ func (*LinkVEth) GetType() LinkType {
 }
 
 func (*LinkVEth) Verify() {
-
 }
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
@@ -158,7 +157,8 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	for idx, link := range []netlink.Link{linkA, linkB} {
 		// if the node is a regular namespace node
 		// add link to node, rename, set mac and Up
-		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link, SetNameMACAndUpInterface(link, l.Endpoints[idx]))
+		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link,
+			SetNameMACAndUpInterface(link, l.Endpoints[idx]))
 		if err != nil {
 			return err
 		}

@@ -355,7 +355,8 @@ func (c *CLab) verifyRootNetNSLinks() error {
 			// if so, add their ep names to the list of rootEpNames
 			for _, e := range n.GetEndpoints() {
 				if val, exists := rootEpNames[e.GetIfaceName()]; exists {
-					return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]", e.GetIfaceName(), val, e.GetNode().GetShortName())
+					return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]",
+						e.GetIfaceName(), val, e.GetNode().GetShortName())
 				}
 				rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
 			}
@@ -367,7 +368,8 @@ func (c *CLab) verifyRootNetNSLinks() error {
 		// if so, add their ep names to the list of rootEpNames
 		for _, e := range n.GetEndpoints() {
 			if val, exists := rootEpNames[e.GetIfaceName()]; exists {
-				return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]", e.GetIfaceName(), val, e.GetNode().GetShortName())
+				return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]",
+					e.GetIfaceName(), val, e.GetNode().GetShortName())
 			}
 			rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
 		}
@@ -529,7 +531,7 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 }
 
 // setClabIntfsEnvVar sets CLAB_INTFS env var for each node
-// which holds the number of interfaces a node expects to have (without mgmt interfaces)
+// which holds the number of interfaces a node expects to have (without mgmt interfaces).
 func (c *CLab) SetClabIntfsEnvVar() {
 	for _, n := range c.Nodes {
 		// Injecting the env var with expected number of links

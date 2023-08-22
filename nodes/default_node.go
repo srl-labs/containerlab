@@ -429,7 +429,7 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 	return netns.Do(f)
 }
 
-// ExecFunction executes the given function in the nodes network namespace
+// ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 	nspath := d.Cfg.NSPath
 

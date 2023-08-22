@@ -189,7 +189,8 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	}
 
 	// add the link to the Node Namespace
-	err = l.NodeEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface, SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
+	err = l.NodeEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
+		SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
 	return err
 }
 

@@ -185,11 +185,13 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 
 			for i, e := range l.Endpoints {
 				if e.(*EndpointVeth).IfaceName != tt.want.Endpoints[i].(*EndpointVeth).IfaceName {
-					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s", e.(*EndpointVeth).IfaceName, tt.want.Endpoints[i].(*EndpointVeth).IfaceName)
+					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s",
+						e.(*EndpointVeth).IfaceName, tt.want.Endpoints[i].(*EndpointVeth).IfaceName)
 				}
 
 				if e.(*EndpointVeth).Node != tt.want.Endpoints[i].(*EndpointVeth).Node {
-					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s", e.(*EndpointVeth).Node, tt.want.Endpoints[i].(*EndpointVeth).Node)
+					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s",
+						e.(*EndpointVeth).Node, tt.want.Endpoints[i].(*EndpointVeth).Node)
 				}
 			}
 		})
@@ -216,7 +218,7 @@ func (f *fakeNode) AddLink(l Link) {
 	f.Links = append(f.Links, l)
 }
 
-// AddEndpoint adds the Endpoint to the node
+// AddEndpoint adds the Endpoint to the node.
 func (f *fakeNode) AddEndpoint(e Endpoint) {
 	f.Endpoints = append(f.Endpoints, e)
 }
