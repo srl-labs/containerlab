@@ -281,7 +281,7 @@ func Test_filterClabNodes(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := filterClabNodes(tt.c, tt.nodesFilter)
+			err := tt.c.filterClabNodes(tt.nodesFilter)
 			if (err != nil) != tt.wantErr {
 				t.Log("hey", tt.c.Config.Topology.Nodes)
 				t.Fatalf("filterClabNodes() error = %v, wantErr %v", err, tt.wantErr)

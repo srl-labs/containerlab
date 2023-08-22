@@ -34,7 +34,7 @@ func (r *LinkMacVlanRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	return lc
 }
 
-func (r *LinkMacVlanRaw) GetType() LinkType {
+func (*LinkMacVlanRaw) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
@@ -55,6 +55,12 @@ func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw
 }
 
 func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
+	// filtered true means the link is in the filter provided by a user
+	// aka it should be resolved/created/deployed
+	filtered := isInFilter(params, []*EndpointRaw{r.Endpoint})
+	if !filtered {
+		return nil, nil
+	}
 
 	ep := &EndpointMacVlan{
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface),
@@ -126,7 +132,7 @@ func MacVlanModeParse(s string) (MacVlanMode, error) {
 	return "", fmt.Errorf("unknown MacVlanMode %q", s)
 }
 
-func (l *LinkMacVlan) GetType() LinkType {
+func (*LinkMacVlan) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
@@ -187,7 +193,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (l *LinkMacVlan) Remove(_ context.Context) error {
+func (*LinkMacVlan) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }

@@ -42,6 +42,13 @@ func (*LinkVEthRaw) GetType() LinkType {
 // by a concrete LinkVEth struct.
 // Resolving a veth link resolves its endpoints.
 func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
+	// filtered true means the link is in the filter provided by a user
+	// aka it should be resolved/created/deployed
+	filtered := isInFilter(params, r.Endpoints)
+	if !filtered {
+		return nil, nil
+	}
+
 	// create LinkVEth struct
 	l := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,

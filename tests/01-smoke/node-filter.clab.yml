@@ -1,0 +1,22 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: node-filter
+# based on https://containerlab.dev/manual/node-filtering/
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+  nodes:
+    node1:
+    node2:
+    node3:
+    node4:
+
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
+    - endpoints: ["node1:eth2", "node3:eth2"]
+    - endpoints: ["node1:eth3", "node4:eth3"]
+    - endpoints: ["node2:eth2", "node4:eth2"]
+    - endpoints: ["node3:eth1", "node4:eth1"]

@@ -8,6 +8,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
+	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
@@ -328,6 +329,9 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 type ResolveParams struct {
 	Nodes          map[string]Node
 	MgmtBridgeName string
+	// list of node shortnames that user
+	// passed as a node filter
+	NodesFilter []string
 }
 
 type VerifyLinkParams struct {
@@ -338,4 +342,23 @@ func NewVerifyLinkParams() *VerifyLinkParams {
 	return &VerifyLinkParams{
 		RunBridgeExistsCheck: true,
 	}
+}
+
+// isInFilter returns true if the endpoints of the link
+// are part of the nodes filter which means that the link
+// should be resolved and deployed.
+// In other words, returning true means that the link should be deployed.
+func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
+	// empty filter means that all links should be deployed
+	if len(params.NodesFilter) == 0 {
+		return true
+	}
+
+	for _, e := range endpoints {
+		if !slices.Contains(params.NodesFilter, e.Node) {
+			return false
+		}
+	}
+
+	return true
 }
