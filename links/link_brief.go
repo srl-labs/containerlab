@@ -41,7 +41,7 @@ func (l *LinkBriefRaw) ToTypeSpecificRawLink() (RawLink, error) {
 	return linkVEthRawFromLinkBriefRaw(l)
 }
 
-func (l *LinkBriefRaw) GetType() LinkType {
+func (*LinkBriefRaw) GetType() LinkType {
 	return LinkTypeBrief
 }
 

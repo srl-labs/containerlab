@@ -47,7 +47,7 @@ func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, erro
 	return result, nil
 }
 
-func (r *LinkHostRaw) GetType() LinkType {
+func (*LinkHostRaw) GetType() LinkType {
 	return LinkTypeHost
 }
 
