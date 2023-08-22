@@ -56,11 +56,11 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 	)
 
 	// We were previously doing c.VSwitch.Get.Bridge() but it doesn't work
-	// when the bridge has a propotocol version higher than 1.0
+	// when the bridge has a protocol version higher than 1.0
 	// So listing the bridges is safer
 	bridges, err := c.VSwitch.ListBridges()
 	if err != nil {
-		return fmt.Errorf("error while looking for ovs bridge %q: %v", n.Cfg.ShortName, err)
+		return fmt.Errorf("error while listing ovs bridges: %v", err)
 	}
 	if !slices.Contains(bridges, n.Cfg.ShortName) {
 		return fmt.Errorf("could not find ovs bridge %q", n.Cfg.ShortName)
