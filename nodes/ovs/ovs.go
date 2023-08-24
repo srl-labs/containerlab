@@ -12,9 +12,9 @@ import (
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
 	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/bridge"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -55,7 +55,14 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 		goOvs.Sudo(),
 	)
 
-	if _, err := c.VSwitch.Get.Bridge(n.Cfg.ShortName); err != nil {
+	// We were previously doing c.VSwitch.Get.Bridge() but it doesn't work
+	// when the bridge has a protocol version higher than 1.0
+	// So listing the bridges is safer
+	bridges, err := c.VSwitch.ListBridges()
+	if err != nil {
+		return fmt.Errorf("error while listing ovs bridges: %v", err)
+	}
+	if !slices.Contains(bridges, n.Cfg.ShortName) {
 		return fmt.Errorf("could not find ovs bridge %q", n.Cfg.ShortName)
 	}
 
@@ -69,8 +76,24 @@ func (n *ovs) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 
 func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (*ovs) Delete(_ context.Context) error                { return nil }
-func (*ovs) DeleteNetnsSymlink() (err error)               { return nil }
+
+func (n *ovs) Delete(_ context.Context) error {
+	c := goOvs.New(
+		// Prepend "sudo" to all commands.
+		goOvs.Sudo(),
+	)
+
+	for _, ep := range n.GetEndpoints() {
+		// Under the hood, this is called with "--if-exists", so it will handle the case where it doesn't exist for some reason.
+		if err := c.VSwitch.DeletePort(n.Cfg.ShortName, ep.GetIfaceName()); err != nil {
+			log.Errorf("Could not remove OVS port %q from bridge %q", ep.GetIfaceName(), n.Config().ShortName)
+		}
+	}
+
+	return nil
+}
+
+func (*ovs) DeleteNetnsSymlink() (err error) { return nil }
 
 // UpdateConfigWithRuntimeInfo is a noop for bridges.
 func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
@@ -86,7 +109,35 @@ func (n *ovs) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, e
 }
 
 func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	return bridge.BridgeAddLink(ctx, link, n.Cfg.ShortName, f)
+	// retrieve the namespace handle
+	ns, err := ns.GetCurrentNS()
+	if err != nil {
+		return err
+	}
+
+	// execute the given function
+	err = ns.Do(f)
+	if err != nil {
+		return err
+	}
+
+	c := goOvs.New(
+		// Prepend "sudo" to all commands.
+		goOvs.Sudo(),
+	)
+
+	// need to reread the link, due to the changed the function f might have applied to
+	// the link. Usually it renames the link to its final name.
+	link, err = netlink.LinkByIndex(link.Attrs().Index)
+	if err != nil {
+		return err
+	}
+
+	if err := c.VSwitch.AddPort(n.Cfg.ShortName, link.Attrs().Name); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *ovs) GetLinkEndpointType() links.LinkEndpointType {

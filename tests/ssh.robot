@@ -1,5 +1,6 @@
 *** Settings ***
-Library           SSHLibrary
+Library     SSHLibrary
+
 
 *** Keywords ***
 Login via SSH with username and password
@@ -14,10 +15,12 @@ Login via SSH with username and password
     FOR    ${i}    IN RANGE    ${try_for}
         SSHLibrary.Open Connection    ${address}    timeout=${conn_timeout}
         ${status}=    Run Keyword And Return Status    SSHLibrary.Login    ${username}    ${password}
-        Exit For Loop If    ${status}
+        IF    ${status}    BREAK
         Sleep    1s
     END
-    Run Keyword If    $status!=True    Fail    Unable to connect to ${address} via SSH in ${try_for} attempts
+    IF    $status!=True
+        Fail    Unable to connect to ${address} via SSH in ${try_for} attempts
+    END
     Log    Exited the loop.
 
 Login via SSH with public key
@@ -33,8 +36,10 @@ Login via SSH with public key
     FOR    ${i}    IN RANGE    ${try_for}
         SSHLibrary.Open Connection    ${address}    timeout=${conn_timeout}
         ${status}=    Run Keyword And Return Status    SSHLibrary.Login With Public Key    ${username}    ${keyfile}
-        Exit For Loop If    ${status}
+        IF    ${status}    BREAK
         Sleep    1s
     END
-    Run Keyword If    $status!=True    Fail    Unable to connect to ${address} via SSH in ${try_for} attempts
+    IF    $status!=True
+        Fail    Unable to connect to ${address} via SSH in ${try_for} attempts
+    END
     Log    Exited the loop.

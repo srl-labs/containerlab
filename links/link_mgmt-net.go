@@ -31,6 +31,12 @@ func (r *LinkMgmtNetRaw) ToLinkBriefRaw() *LinkBriefRaw {
 }
 
 func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
+	// filtered true means the link is in the filter provided by a user
+	// aka it should be resolved/created/deployed
+	filtered := isInFilter(params, []*EndpointRaw{r.Endpoint})
+	if !filtered {
+		return nil, nil
+	}
 
 	// create the LinkMgmtNet struct
 	link := &LinkVEth{
@@ -66,7 +72,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	return link, nil
 }
 
-func (r *LinkMgmtNetRaw) GetType() LinkType {
+func (*LinkMgmtNetRaw) GetType() LinkType {
 	return LinkTypeMgmtNet
 }
 

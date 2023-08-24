@@ -165,12 +165,8 @@ func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	s.Cfg = cfg
 
-	// force cert generation for SR Linux nodes
-	if s.Cfg.Certificate == nil {
-		s.Cfg.Certificate = &types.CertificateConfig{
-			Issue: true,
-		}
-	}
+	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
+	s.Cfg.Certificate.Issue = utils.BoolPointer(true)
 
 	for _, o := range opts {
 		o(s)
@@ -526,7 +522,7 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	return f.Close()
 }
 
-// srlTemplateData top level data struct
+// srlTemplateData top level data struct.
 type srlTemplateData struct {
 	TLSKey     string
 	TLSCert    string
@@ -536,7 +532,7 @@ type srlTemplateData struct {
 	SSHPubKeys string
 }
 
-// tplIFace template interface struct
+// tplIFace template interface struct.
 type tplIFace struct {
 	Slot       string
 	Port       string

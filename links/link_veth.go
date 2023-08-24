@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes/state"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -34,7 +34,7 @@ func (r *LinkVEthRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	return lc
 }
 
-func (r *LinkVEthRaw) GetType() LinkType {
+func (*LinkVEthRaw) GetType() LinkType {
 	return LinkTypeVEth
 }
 
@@ -42,6 +42,13 @@ func (r *LinkVEthRaw) GetType() LinkType {
 // by a concrete LinkVEth struct.
 // Resolving a veth link resolves its endpoints.
 func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
+	// filtered true means the link is in the filter provided by a user
+	// aka it should be resolved/created/deployed
+	filtered := isInFilter(params, r.Endpoints)
+	if !filtered {
+		return nil, nil
+	}
+
 	// create LinkVEth struct
 	l := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
@@ -86,25 +93,24 @@ type LinkVEth struct {
 	Endpoints []Endpoint
 
 	deploymentState LinkDeploymentState
-	stateMutex      sync.RWMutex
+	deployMutex     sync.Mutex
 }
 
 func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
-func (l *LinkVEth) Verify() {
-
+func (*LinkVEth) Verify() {
 }
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
-	l.stateMutex.RLock()
+	l.deployMutex.Lock()
+	defer l.deployMutex.Unlock()
 	if l.deploymentState == LinkDeploymentStateDeployed {
 		return nil
 	}
-	l.stateMutex.RUnlock()
 
 	for _, ep := range l.GetEndpoints() {
 		if ep.GetNode().GetState() != state.Deployed {
@@ -137,42 +143,33 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	// once veth pair is created, disable tx offload for the veth pair
+	for _, ep := range l.Endpoints {
+		if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+			return err
+		}
+	}
+
 	// both ends of the link need to be moved to the relevant network namespace
 	// and enabled (up). This is done via linkSetupFunc.
 	// based on the endpoint type the link setup function is different.
 	// linkSetupFunc is executed in a netns of a node.
 	for idx, link := range []netlink.Link{linkA, linkB} {
-		var linkSetupFunc func(ns.NetNS) error
-		switch l.Endpoints[idx].GetNode().GetLinkEndpointType() {
-
-		// if the endpoint is a bridge we also need to set the master of the interface to the bridge
-		case LinkEndpointTypeBridge:
-			bridgeName := l.Endpoints[idx].GetNode().GetShortName()
-			// set the adjustmentFunc to the function that, besides the name, mac and up state
-			// also sets the Master of the interface to the bridge
-			linkSetupFunc = SetNameMACMasterAndUpInterface(link, l.Endpoints[idx], bridgeName)
-		default:
-			// default case is a regular veth link where both ends are regular linux interfaces
-			// in the relevant containers.
-			linkSetupFunc = SetNameMACAndUpInterface(link, l.Endpoints[idx])
-		}
-
 		// if the node is a regular namespace node
 		// add link to node, rename, set mac and Up
-		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link, linkSetupFunc)
+		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link,
+			SetNameMACAndUpInterface(link, l.Endpoints[idx]))
 		if err != nil {
 			return err
 		}
 	}
 
-	l.stateMutex.Lock()
 	l.deploymentState = LinkDeploymentStateDeployed
-	l.stateMutex.Unlock()
 
 	return nil
 }
 
-func (l *LinkVEth) Remove(_ context.Context) error {
+func (*LinkVEth) Remove(_ context.Context) error {
 	// TODO
 	return nil
 }

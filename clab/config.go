@@ -44,6 +44,7 @@ type Config struct {
 	Name     string          `json:"name,omitempty"`
 	Prefix   *string         `json:"prefix,omitempty"`
 	Mgmt     *types.MgmtNet  `json:"mgmt,omitempty"`
+	Settings *types.Settings `json:"settings,omitempty"`
 	Topology *types.Topology `json:"topology,omitempty"`
 	// the debug flag value as passed via cli
 	// may be used by other packages to enable debug logging
@@ -123,9 +124,6 @@ func (c *CLab) parseTopology() error {
 			return err
 		}
 	}
-
-	// set any containerlab defaults after we've parsed the input
-	c.setDefaults()
 
 	return nil
 }
@@ -357,7 +355,8 @@ func (c *CLab) verifyRootNetNSLinks() error {
 			// if so, add their ep names to the list of rootEpNames
 			for _, e := range n.GetEndpoints() {
 				if val, exists := rootEpNames[e.GetIfaceName()]; exists {
-					return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]", e.GetIfaceName(), val, e.GetNode().GetShortName())
+					return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]",
+						e.GetIfaceName(), val, e.GetNode().GetShortName())
 				}
 				rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
 			}
@@ -369,7 +368,8 @@ func (c *CLab) verifyRootNetNSLinks() error {
 		// if so, add their ep names to the list of rootEpNames
 		for _, e := range n.GetEndpoints() {
 			if val, exists := rootEpNames[e.GetIfaceName()]; exists {
-				return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]", e.GetIfaceName(), val, e.GetNode().GetShortName())
+				return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]",
+					e.GetIfaceName(), val, e.GetNode().GetShortName())
 			}
 			rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
 		}
@@ -530,14 +530,15 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	return nil
 }
 
-// sets defaults after the topology has been parsed.
-func (c *CLab) setDefaults() {
+// setClabIntfsEnvVar sets CLAB_INTFS env var for each node
+// which holds the number of interfaces a node expects to have (without mgmt interfaces).
+func (c *CLab) SetClabIntfsEnvVar() {
 	for _, n := range c.Nodes {
 		// Injecting the env var with expected number of links
-		numLinks := map[string]string{
+		numIntfs := map[string]string{
 			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", len(n.GetEndpoints())),
 		}
-		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numLinks)
+		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numIntfs)
 	}
 }
 

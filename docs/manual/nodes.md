@@ -708,5 +708,14 @@ topology:
         issue: true
 ```
 
+To configure key size and certificate validity duration use the following options:
+
+```yaml
+  certificate:
+    issue: true
+    key-size: 4096
+    validity-duration: 1h
+```
+
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.

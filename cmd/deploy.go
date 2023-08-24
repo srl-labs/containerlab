@@ -93,22 +93,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// handle CTRL-C signal
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sig
-		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
-		cancel()
-
-		// when interrupted, destroy the interrupted lab deployment with cleanup
-		cleanup = true
-		if err := destroyFn(destroyCmd, []string{}); err != nil {
-			log.Errorf("Failed to destroy lab: %v", err)
-		}
-
-		os.Exit(1) // skipcq: RVV-A0003
-	}()
+	setupCTRLCHandler(cancel)
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
@@ -123,6 +108,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		),
 		clab.WithDebug(debug),
 	}
+
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return err
@@ -132,6 +118,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+
+	c.SetClabIntfsEnvVar()
 
 	setFlags(c.Config)
 	log.Debugf("lab Conf: %+v", c.Config)
@@ -183,14 +171,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// define the attributes used to generate the CA Cert
-	caCertInput := &cert.CACSRInput{
-		CommonName:   c.Config.Name + " lab CA",
-		Expiry:       time.Until(time.Now().AddDate(1, 0, 0)), // should expire in a year from now
-		Organization: "containerlab",
-	}
-
-	if err := c.LoadOrGenerateCA(caCertInput); err != nil {
+	if err := certificateAuthoritySetup(c); err != nil {
 		return err
 	}
 
@@ -321,6 +302,84 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// print table summary
 	return printContainerInspect(containers, deployFormat)
+}
+
+// certificateAuthoritySetup sets up the certificate authority parameters.
+func certificateAuthoritySetup(c *clab.CLab) error {
+	// init the Cert storage and CA
+	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
+	c.Cert.CA = cert.NewCA()
+
+	s := c.Config.Settings
+
+	// Set defaults for the CA parameters
+	keySize := 2048
+	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
+
+	// check that Settings.CertificateAuthority exists.
+	if s != nil && s.CertificateAuthority != nil {
+		// if ValidityDuration is set use the value
+		if s.CertificateAuthority.ValidityDuration != 0 {
+			validityDuration = s.CertificateAuthority.ValidityDuration
+		}
+
+		// if KeyLength is set use the value
+		if s.CertificateAuthority.KeySize != 0 {
+			keySize = s.CertificateAuthority.KeySize
+		}
+
+		// if external CA cert and and key are set, propagate to topopaths
+		extCACert := s.CertificateAuthority.Cert
+		extCAKey := s.CertificateAuthority.Key
+
+		// override external ca and key from env vars
+		if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
+			extCAKey = v
+		}
+
+		if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
+			extCACert = v
+		}
+
+		if extCACert != "" && extCAKey != "" {
+			err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// define the attributes used to generate the CA Cert
+	caCertInput := &cert.CACSRInput{
+		CommonName:   c.Config.Name + " lab CA",
+		Expiry:       validityDuration,
+		Organization: "containerlab",
+		KeySize:      keySize,
+	}
+
+	return c.LoadOrGenerateCA(caCertInput)
+}
+
+// setupCTRLCHandler sets-up the handler for CTRL-C
+// The deployment will be stopped and a destroy action is
+// performed when interrupt signal is received.
+func setupCTRLCHandler(cancel context.CancelFunc) {
+	// handle CTRL-C signal
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sig
+		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
+		cancel()
+
+		// when interrupted, destroy the interrupted lab deployment with cleanup
+		cleanup = true
+		if err := destroyFn(destroyCmd, []string{}); err != nil {
+			log.Errorf("Failed to destroy lab: %v", err)
+		}
+
+		os.Exit(1) // skipcq: RVV-A0003
+	}()
 }
 
 func setFlags(conf *clab.Config) {

@@ -47,11 +47,18 @@ func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, erro
 	return result, nil
 }
 
-func (r *LinkHostRaw) GetType() LinkType {
+func (*LinkHostRaw) GetType() LinkType {
 	return LinkTypeHost
 }
 
 func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
+	// filtered true means the link is in the filter provided by a user
+	// aka it should be resolved/created/deployed
+	filtered := isInFilter(params, []*EndpointRaw{r.Endpoint})
+	if !filtered {
+		return nil, nil
+	}
+
 	link := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
 	}
@@ -102,7 +109,8 @@ func GetHostLinkNode() Node {
 		nspath := currns.Path()
 
 		_hostLinkNodeInstance = &hostLinkNode{
-			GenericLinkNode: GenericLinkNode{shortname: "host",
+			GenericLinkNode: GenericLinkNode{
+				shortname: "host",
 				endpoints: []Endpoint{},
 				nspath:    nspath,
 			},

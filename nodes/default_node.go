@@ -373,7 +373,7 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 // provided in certInfra or generates a new one if it does not exist.
 func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName string) (nodeCert *cert.Certificate, err error) {
 	// early return if certificate generation is not required
-	if d.Cfg.Certificate == nil || !d.Cfg.Certificate.Issue {
+	if d.Cfg.Certificate == nil || !*d.Cfg.Certificate.Issue {
 		return nil, nil
 	}
 
@@ -396,6 +396,8 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
 			Organization: "containerlab",
+			KeySize:      d.Cfg.Certificate.KeySize,
+			Expiry:       d.Cfg.Certificate.ValidityDuration,
 		}
 		// Generate the cert for the node
 		nodeCert, err = certInfra.GenerateAndSignNodeCert(certInput)
@@ -427,7 +429,7 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 	return netns.Do(f)
 }
 
-// ExecFunction executes the given function in the nodes network namespace
+// ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 	nspath := d.Cfg.NSPath
 

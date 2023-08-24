@@ -122,9 +122,15 @@ Refer to the [node configuration](nodes.md) document to meet all other options a
 
 #### Links
 
-Although it is totally fine to define a node without any links (like in [this lab](../lab-examples/single-srl.md)) most of the time we interconnect the nodes to make datapaths. One of containerlab purposes is to make the interconnection of nodes simple.
+Although it is absolutely fine to define a node without any links (like in [this lab](../lab-examples/single-srl.md)), we usually interconnect the nodes to make topologies. One of containerlab purposes is to make the interconnection of the nodes simple.
 
-Links are defined under the `topology.links` container in the following manner:
+Links are defined under the `topology.links` section of the topology file. Containerlab understands two formats of link definition - brief and extended.  
+A brief form of a link definition compresses link parameters in a single string and provide a quick way to define a link at the cost of link features available.  
+A more expressive extended form exposes all link features, but requires more typing if done manually. The extended format is perfect for machine-generated link topologies.
+
+##### Brief format
+
+The brief version looks as follows.
 
 ```yaml
 # nodes configuration omitted for clarity
@@ -149,6 +155,89 @@ endpoints: ["srl:e1-1", "ceos:eth1"]
 ```
 
 will result in a creation of a p2p link between the node named `srl` and its `e1-1` interface and the node named `ceos` and its `eth1` interface. The p2p link is realized with a veth pair.
+
+##### Extended format
+
+The extended link format allows a user to set every supported link parameter in a structured way. The available link parameters depend on the Link type and provided below.
+
+###### veth
+
+The veth link is the most common link type used in containerlab. It creates a virtual ethernet link between two endpoints where each endpoint refers to a node in the topology.
+
+```yaml
+links:
+  - type: veth
+    endpoints:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+      - node: <NodeB-Name>                  # mandatory
+        interface: <NodeB-Interface-Name>   # mandatory
+        mac: <NodeB-Interface-Mac>          # optional
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
+
+###### mgmt-net
+
+The mgmt-net link type represents a veth pair that is connected to a container node on one side and to the management network (usually a bridge) instantiated by the container runtime on the other.
+
+```yaml
+  links:
+  - type: mgmt-net
+    endpoint:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+    host-interface: <interface-name         # mandatory
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
+
+The `host-interface` is the desired interface name that will be attached to the management network in the host namespace.
+
+###### macvlan
+
+The macvlan link type creates a MACVlan interface with the `host-interface` as its parent interface. The MACVlan interface is then moved to a node's network namespace and renamed to the `endpoint.interface` name.
+
+```yaml
+  links:
+  - type: macvlan
+    endpoint:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+    host-interface: <interface-name>        # mandatory
+    mode: <macvlan-mode>                    # optional ("bridge" by default)
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
+
+The `host-interface` is the name of the existing interface present in the host namespace.
+
+[Modes](https://man7.org/linux/man-pages/man8/ip-link.8.html) are `private`, `vepa`, `bridge`, `passthru` and `source`. The default is `bridge`.
+
+###### host
+
+The host link type creates a veth pair between a container and the host network namespace.  
+In comparison to the veth type, no bridge or other namespace is required to be referenced in the link definition for a "remote" end of the veth pair.
+
+```yaml
+  links:
+  - type: host
+    endpoint:
+      - node: <NodeA-Name>                  # mandatory
+        interface: <NodeA-Interface-Name>   # mandatory
+        mac: <NodeA-Interface-Mac>          # optional
+    host-interface: <interface-name         # mandatory
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
+
+The `host-interface` parameter defines the name of the veth interface in the host's network namespace.
 
 #### Kinds
 
@@ -192,7 +281,7 @@ topology:
       image: ghcr.io/nokia/srlinux
 ```
 
-A lot of unnecessary repetition which is eliminated when we set `srl` kind properties on kind level.
+A lot of unnecessary repetition is eliminated when we set `srl` kind properties on kind level.
 
 #### Defaults
 
@@ -213,6 +302,14 @@ topology:
 
 Now every node in this topology will have environment variable `MYENV` set to `VALUE`.
 
+### Settings
+
+Global containerlab settings are defined in `settings` container. The following settings are supported:
+
+#### Certificate authority
+
+Global certificate authority settings section allows users to tune certificate management in containerlab. Refer to the [Certificate management](cert.md) doc for more details.
+
 ## Environment variables
 
 Topology definition file may contain environment variables anywhere in the file. The syntax is the same as in the bash shell:
@@ -229,7 +326,7 @@ topology:
 
 In the example above, the `ALPINE_VERSION` environment variable is used to set the version of the alpine image. If the variable is not set, the value of `3` will be used. The following syntax is used to expand the environment variable:
 
-| __Expression__     | __Meaning__                                                          |
+| **Expression**     | **Meaning**                                                          |
 | ------------------ | -------------------------------------------------------------------- |
 | `${var}`           | Value of var (same as `$var`)                                        |
 | `${var-$DEFAULT}`  | If var not set, evaluate expression as $DEFAULT                      |
@@ -250,7 +347,7 @@ Standard Go templating language has been extended with the functions provided in
 
 To help you get started, we created the following lab examples which demonstrate how topology templating can be used:
 
-* [Leaf-Spine topology with parametrized number of leaves/spines](lab-examples/../../lab-examples/templated01.md)
-* [5-stage Clos topology with parametrized number of pods and super-spines](lab-examples/../../lab-examples/templated02.md)
+- [Leaf-Spine topology with parametrized number of leaves/spines](lab-examples/../../lab-examples/templated01.md)
+- [5-stage Clos topology with parametrized number of pods and super-spines](lab-examples/../../lab-examples/templated02.md)
 
 [^1]: if the filename has `.clab.yml` or `-clab.yml` suffix, the YAML file will have autocompletion and linting support in VSCode editor.

@@ -41,10 +41,10 @@ func (l *LinkBriefRaw) ToTypeSpecificRawLink() (RawLink, error) {
 	return linkVEthRawFromLinkBriefRaw(l)
 }
 
-func (l *LinkBriefRaw) GetType() LinkType {
+func (*LinkBriefRaw) GetType() LinkType {
 	return LinkTypeBrief
 }
 
-func (l *LinkBriefRaw) Resolve(_ *ResolveParams) (Link, error) {
+func (*LinkBriefRaw) Resolve(_ *ResolveParams) (Link, error) {
 	return nil, fmt.Errorf("resolve unimplemented on LinkBriefRaw. Use <LinkBriefRaw>.ToTypeSpecificRawLink() and call resolve on the result")
 }

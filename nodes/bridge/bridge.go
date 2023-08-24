@@ -129,10 +129,6 @@ func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult
 }
 
 func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	return BridgeAddLink(ctx, link, b.Cfg.ShortName, f)
-}
-
-func BridgeAddLink(_ context.Context, link netlink.Link, bridgeName string, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	ns, err := ns.GetCurrentNS()
 	if err != nil {
@@ -140,7 +136,7 @@ func BridgeAddLink(_ context.Context, link netlink.Link, bridgeName string, f fu
 	}
 
 	// get the bridge as netlink.Link
-	br, err := netlink.LinkByName(bridgeName)
+	br, err := netlink.LinkByName(b.Cfg.ShortName)
 	if err != nil {
 		return err
 	}

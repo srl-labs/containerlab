@@ -8,6 +8,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
+	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
@@ -295,7 +296,7 @@ const (
 )
 
 // SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
-// and return a function that can run in the netns.Do() call for execution in a network namespace
+// and return a function that can run in the netns.Do() call for execution in a network namespace.
 func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the given link
@@ -322,32 +323,15 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 	}
 }
 
-// SetNameMACMasterAndUpInterface is a helper function that will bind interface name and Mac
-// and return a function that can run in the netns.Do() call for execution in a network namespace
-func SetNameMACMasterAndUpInterface(l netlink.Link, endpt Endpoint, master string) func(ns.NetNS) error {
-	baseFunc := SetNameMACAndUpInterface(l, endpt)
-
-	return func(n ns.NetNS) error {
-		// retrieve the bridge link
-		bridge, err := netlink.LinkByName(master)
-		if err != nil {
-			return err
-		}
-		// set the retrieved bridge as the master for the actual link
-		err = netlink.LinkSetMaster(l, bridge)
-		if err != nil {
-			return err
-		}
-		return baseFunc(n)
-	}
-}
-
 // ResolveParams is a struct that is passed to the Resolve() function of a raw link
 // to resolve it to a concrete link type.
 // Parameters include all nodes of a topology and the name of the management bridge.
 type ResolveParams struct {
 	Nodes          map[string]Node
 	MgmtBridgeName string
+	// list of node shortnames that user
+	// passed as a node filter
+	NodesFilter []string
 }
 
 type VerifyLinkParams struct {
@@ -358,4 +342,23 @@ func NewVerifyLinkParams() *VerifyLinkParams {
 	return &VerifyLinkParams{
 		RunBridgeExistsCheck: true,
 	}
+}
+
+// isInFilter returns true if the endpoints of the link
+// are part of the nodes filter which means that the link
+// should be resolved and deployed.
+// In other words, returning true means that the link should be deployed.
+func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
+	// empty filter means that all links should be deployed
+	if len(params.NodesFilter) == 0 {
+		return true
+	}
+
+	for _, e := range endpoints {
+		if !slices.Contains(params.NodesFilter, e.Node) {
+			return false
+		}
+	}
+
+	return true
 }

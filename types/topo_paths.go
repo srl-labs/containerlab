@@ -6,6 +6,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -29,9 +31,11 @@ var clabTmpDir = filepath.Join(os.TempDir(), ".clab")
 // TopoPaths creates all the required absolute paths and filenames for a topology.
 // generally all these paths are deduced from two main paths. The topology file path and the lab dir path.
 type TopoPaths struct {
-	topoFile string
-	labDir   string
-	topoName string
+	topoFile           string
+	labDir             string
+	topoName           string
+	externalCACertFile string // if an external CA certificate is used the path to the Cert file is stored here
+	externalCAKeyFile  string // if an external CA certificate is used the path to the Key file is stored here
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
@@ -69,7 +73,7 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-// SetLabDir sets the labDir.
+// SetLabDir sets the labDir foldername (no abs path, but the last element) usually the topology name.
 func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
 	t.topoName = topologyName
 	// if "CLAB_LABDIR_BASE" Env Var is set, use that dir as a base
@@ -86,14 +90,29 @@ func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
 	return nil
 }
 
+// SetExternalCaFiles sets the paths for the cert and key files if externally generated should be used.
+func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
+	// resolve the provided paths to external CA files
+	certFile = utils.ResolvePath(certFile, t.TopologyFileDir())
+	keyFile = utils.ResolvePath(keyFile, t.TopologyFileDir())
+
+	if !utils.FileExists(certFile) {
+		return fmt.Errorf("external CA cert file %s does not exist", certFile)
+	}
+
+	if !utils.FileExists(keyFile) {
+		return fmt.Errorf("external CA key file %s does not exist", keyFile)
+	}
+
+	t.externalCACertFile = certFile
+	t.externalCAKeyFile = keyFile
+
+	return nil
+}
+
 // TLSBaseDir returns the path of the TLS directory structure.
 func (t *TopoPaths) TLSBaseDir() string {
 	return path.Join(t.labDir, tlsDir)
-}
-
-// CARootCertDir returns the directory that contains the root CA certificat and key.
-func (t *TopoPaths) CARootCertDir() string {
-	return path.Join(t.TLSBaseDir(), caDir)
 }
 
 // NodeTLSDir returns the directory that contains the certificat data for the given node.
@@ -142,13 +161,13 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 }
 
 // ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
-func (t *TopoPaths) ClabTmpDir() string {
+func (*TopoPaths) ClabTmpDir() string {
 	return clabTmpDir
 }
 
 // StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file
 // when it is downloaded from a remote location to the clab temp directory.
-func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node string, postfix string) string {
+func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node, postfix string) string {
 	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
 }
 
@@ -203,7 +222,28 @@ func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
 	return path.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
 }
 
-// CaDir returns the dir name of the CA directory structure.
-func (t *TopoPaths) CaDir() string {
-	return caDir
+// CaCertAbsFilename returns the path to the CA cert file.
+// If external CA is used, the path to the external CA cert file is returned.
+// Otherwise the path to the generated CA cert file is returned.
+func (t *TopoPaths) CaCertAbsFilename() string {
+	if t.externalCACertFile != "" {
+		return t.externalCACertFile
+	}
+
+	return t.NodeCertAbsFilename(caDir)
+}
+
+// CaKeyAbsFilename returns the path to the CA key file.
+// If external CA is used, the path to the external CA key file is returned.
+// Otherwise the path to the generated CA key file is returned.
+func (t *TopoPaths) CaKeyAbsFilename() string {
+	if t.externalCAKeyFile != "" {
+		return t.externalCAKeyFile
+	}
+
+	return t.NodeCertKeyAbsFilename(caDir)
+}
+
+func (t *TopoPaths) CaCSRAbsFilename() string {
+	return t.NodeCertCSRAbsFilename(caDir)
 }

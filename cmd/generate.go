@@ -38,8 +38,8 @@ var interfaceFormat = map[string]string{
 }
 
 var supportedKinds = []string{
-	"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros",
-	"vr-vmx", "vr-vsrx", "vr-vqfx", "vr-xrv9k", "vr-veos", "xrd", "rare",
+	"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros","vr-vmx", "vr-vsrx", 
+	"vr-vqfx", "vr-vjunosswitch", "vr-xrv9k", "vr-veos", "xrd", "rare",
 }
 
 const (
@@ -219,8 +219,10 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				// create a raw veth link
 				l := &links.LinkVEthRaw{
 					Endpoints: []*links.EndpointRaw{
-						links.NewEndpointRaw(node1, fmt.Sprintf(interfaceFormat[nodes[i].kind], k+1+interfaceOffset), ""),
-						links.NewEndpointRaw(node2, fmt.Sprintf(interfaceFormat[nodes[i+1].kind], j+1), ""),
+						links.NewEndpointRaw(node1, fmt.Sprintf(
+							interfaceFormat[nodes[i].kind], k+1+interfaceOffset), ""),
+						links.NewEndpointRaw(node2, fmt.Sprintf(
+							interfaceFormat[nodes[i+1].kind], j+1), ""),
 					},
 				}
 

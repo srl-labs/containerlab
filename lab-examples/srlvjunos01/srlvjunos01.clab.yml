@@ -1,0 +1,22 @@
+name: srlvjunos01
+
+topology:
+  nodes:
+    n1:
+      kind: srl
+      image: ghcr.io/nokia/srlinux
+      startup-config: srl.cli
+
+    vswitch0:
+      kind: vr-vjunosswitch
+      image: vrnetlab/vr-vjunosswitch:23.2R1.14
+      startup-config: vjunos.cfg
+
+  links:
+    - endpoints: ["n1:e1-1", "vswitch0:eth1"]
+    - endpoints: ["n1:e1-2", "vswitch0:eth2"]
+    - endpoints: ["n1:e1-3", "vswitch0:eth3"]
+    - endpoints: ["n1:e1-4", "vswitch0:eth4"]
+    - endpoints: ["n1:e1-5", "vswitch0:eth5"]
+    - endpoints: ["n1:e1-6", "vswitch0:eth6"]
+

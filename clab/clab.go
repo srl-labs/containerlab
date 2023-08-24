@@ -46,6 +46,9 @@ type CLab struct {
 	m             *sync.RWMutex
 	timeout       time.Duration
 	globalRuntime string
+	// nodeFilter is a list of node names to be deployed,
+	// names are provided exactly as they are listed in the topology file.
+	nodeFilter []string
 }
 
 type ClabOption func(c *CLab) error
@@ -140,14 +143,16 @@ func WithTopoFile(file, varsFile string) ClabOption {
 // be called after WithTopoFile.
 func WithNodeFilter(nodeFilter []string) ClabOption {
 	return func(c *CLab) error {
-		return filterClabNodes(c, nodeFilter)
+		return c.filterClabNodes(nodeFilter)
 	}
 }
 
-func filterClabNodes(c *CLab, nodeFilter []string) error {
+func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	if len(nodeFilter) == 0 {
 		return nil
 	}
+
+	c.nodeFilter = nodeFilter
 
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {
@@ -199,10 +204,6 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	var err error
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
-
-		// init the Cert storage and CA
-		c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-		c.Cert.CA = cert.NewCA()
 	}
 	return c, err
 }
@@ -586,7 +587,7 @@ func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContai
 	return containers, nil
 }
 
-// ListNodesContainersIgnoreNotFound lists all containers based on the nodes stored in clab instance, ignoring errors for non found containers
+// ListNodesContainersIgnoreNotFound lists all containers based on the nodes stored in clab instance, ignoring errors for non found containers.
 func (c *CLab) ListNodesContainersIgnoreNotFound(ctx context.Context) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
 
@@ -667,12 +668,18 @@ func (c *CLab) ResolveLinks() error {
 	resolveParams := &links.ResolveParams{
 		Nodes:          resolveNodes,
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
+		NodesFilter:    c.nodeFilter,
 	}
 
 	for i, l := range c.Config.Topology.Links {
 		l, err := l.Link.Resolve(resolveParams)
 		if err != nil {
 			return err
+		}
+
+		// if the link is nil, it means that it was filtered out
+		if l == nil {
+			continue
 		}
 
 		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)

@@ -22,7 +22,7 @@ require (
 	github.com/hairyhenderson/gomplate/v3 v3.11.5
 	github.com/hashicorp/go-version v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/jsimonetti/rtnetlink v1.3.4
+	github.com/jsimonetti/rtnetlink v1.3.5
 	github.com/kellerza/template v0.0.6
 	github.com/klauspost/cpuid v1.3.1
 	github.com/mackerelio/go-osstat v0.2.4
@@ -53,7 +53,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.10 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/cilium/ebpf v0.10.0 // indirect
+	github.com/cilium/ebpf v0.11.0 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/container-orchestrated-devices/container-device-interface v0.5.4 // indirect
 	github.com/containerd/containerd v1.7.3 // indirect
