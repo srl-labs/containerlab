@@ -1,44 +1,39 @@
-enter candidate
-set / interface ethernet-1/1 admin-state enable
-set / interface ethernet-1/1 subinterface 0
-set / interface ethernet-1/1 subinterface 0 ipv4
-set / interface ethernet-1/1 subinterface 0 ipv4 admin-state enable
-set / interface ethernet-1/1 subinterface 0 ipv4 address 192.168.0.2/24
-set / network-instance default
-set / network-instance default interface ethernet-1/1.0
-set / interface ethernet-1/2 admin-state enable
-set / interface ethernet-1/2 subinterface 0
-set / interface ethernet-1/2 subinterface 0 ipv4
-set / interface ethernet-1/2 subinterface 0 ipv4 admin-state enable
-set / interface ethernet-1/2 subinterface 0 ipv4 address 192.168.1.2/24
-set / network-instance default
-set / network-instance default interface ethernet-1/2.0
-set / interface ethernet-1/3 admin-state enable
-set / interface ethernet-1/3 subinterface 0
-set / interface ethernet-1/3 subinterface 0 ipv4
-set / interface ethernet-1/3 subinterface 0 ipv4 admin-state enable
-set / interface ethernet-1/3 subinterface 0 ipv4 address 192.168.2.2/24
-set / network-instance default
-set / network-instance default interface ethernet-1/3.0
-set / interface ethernet-1/4 admin-state enable
-set / interface ethernet-1/4 subinterface 0
-set / interface ethernet-1/4 subinterface 0 ipv4
-set / interface ethernet-1/4 subinterface 0 ipv4 admin-state enable
-set / interface ethernet-1/4 subinterface 0 ipv4 address 192.168.3.2/24
-set / network-instance default
-set / network-instance default interface ethernet-1/4.0
-set / interface ethernet-1/5 admin-state enable
-set / interface ethernet-1/5 subinterface 0
-set / interface ethernet-1/5 subinterface 0 ipv4
-set / interface ethernet-1/5 subinterface 0 ipv4 admin-state enable
-set / interface ethernet-1/5 subinterface 0 ipv4 address 192.168.4.2/24
-set / network-instance default
-set / network-instance default interface ethernet-1/5.0
-set / interface ethernet-1/6 admin-state enable
-set / interface ethernet-1/6 subinterface 0
-set / interface ethernet-1/6 subinterface 0 ipv4
-set / interface ethernet-1/6 subinterface 0 ipv4 admin-state enable
-set / interface ethernet-1/6 subinterface 0 ipv4 address 192.168.5.2/24
-set / network-instance default
-set / network-instance default interface ethernet-1/6.0
-commit now
+interface ethernet-1/1 {
+    admin-state enable
+    subinterface 0 {
+        ipv4 {
+            admin-state enable
+            address 192.168.0.2/24 {
+            }
+        }
+    }
+}
+interface ethernet-1/2 {
+    admin-state enable
+    subinterface 0 {
+        ipv4 {
+            admin-state enable
+            address 192.168.1.2/24 {
+            }
+        }
+    }
+}
+interface ethernet-1/3 {
+    admin-state enable
+    subinterface 0 {
+        ipv4 {
+            admin-state enable
+            address 192.168.2.2/24 {
+            }
+        }
+    }
+}
+
+network-instance default {
+    interface ethernet-1/1.0 {
+    }
+    interface ethernet-1/2.0 {
+    }
+    interface ethernet-1/3.0 {
+    }
+}
