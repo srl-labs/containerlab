@@ -73,11 +73,11 @@ Configuration is applied after the node is started, thus it can contain partial 
 
 The following labs feature the vr-vjunosswitch node:
 
-* [SR Linux and Juniper vJunos-Switch](../../../../tree/main/lab-examples/srlvjunos01)
+* [SR Linux and Juniper vJunos-switch](../../../../main/lab-examples/srlvjunos01)
 
 ## Known issues and limitations
 
-* vJunos-Switch requires Linux kernel 4.17+
+* vJunos-switch requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.
 
 [^1]: https://github.com/hellt/vrnetlab/pull/138
