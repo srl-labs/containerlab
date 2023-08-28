@@ -6,7 +6,7 @@ require (
 	github.com/a8m/envsubst v1.4.2
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/containernetworking/plugins v1.3.0
-	github.com/containers/common v0.55.3
+	github.com/containers/common v0.55.4
 	github.com/containers/podman/v4 v4.6.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/docker/distribution v2.8.2+incompatible
@@ -146,11 +146,11 @@ require (
 	github.com/containerd/ttrpc v1.2.2 // indirect
 	github.com/containers/buildah v1.31.2 // indirect
 	github.com/containers/image v3.0.2+incompatible // indirect
-	github.com/containers/image/v5 v5.26.1 // indirect
+	github.com/containers/image/v5 v5.26.2 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.1.7 // indirect
 	github.com/containers/psgo v1.8.0 // indirect
-	github.com/containers/storage v1.48.0 // indirect
+	github.com/containers/storage v1.48.1 // indirect
 	github.com/coreos/go-iptables v0.6.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/creack/pty v1.1.18 // indirect
