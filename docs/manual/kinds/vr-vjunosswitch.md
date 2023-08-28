@@ -8,6 +8,10 @@ search:
 
 vr-vjunosswitch nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
+## How to obtain the image
+
+The qcow2 image can be downloaded from [Juniper website](https://support.juniper.net/support/downloads/?p=vjunos) and built with [vrnetlab](../vrnetlab.md).
+
 ## Managing vr-vjunosswitch nodes
 
 !!!note
@@ -73,11 +77,9 @@ Configuration is applied after the node is started, thus it can contain partial 
 
 The following labs feature the vr-vjunosswitch node:
 
-* [SR Linux and Juniper vJunos-switch](../../../../main/lab-examples/srlvjunos01)
+* [SR Linux and Juniper vJunos-switch](lab-examples/srlvjunos01.md)
 
 ## Known issues and limitations
 
 * vJunos-switch requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.
-
-[^1]: https://github.com/hellt/vrnetlab/pull/138
