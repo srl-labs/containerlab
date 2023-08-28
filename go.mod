@@ -17,7 +17,7 @@ require (
 	github.com/florianl/go-tc v0.4.2
 	github.com/google/go-cmp v0.5.9
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/h2non/gock v1.2.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.5
 	github.com/hashicorp/go-version v1.6.0
