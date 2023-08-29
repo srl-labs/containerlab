@@ -231,13 +231,50 @@ In comparison to the veth type, no bridge or other namespace is required to be r
       - node: <NodeA-Name>                  # mandatory
         interface: <NodeA-Interface-Name>   # mandatory
         mac: <NodeA-Interface-Mac>          # optional
-    host-interface: <interface-name         # mandatory
+    host-interface: <interface-name>        # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
 ```
 
 The `host-interface` parameter defines the name of the veth interface in the host's network namespace.
+
+###### vxlan
+The vxlan type results in a vxlan tunnel interface that is created in the host namespace and subsequently pushed into the nodes network namespace.
+
+```yaml
+  links:
+    - type: vxlan                       
+      endpoint:                              # mandatory
+        node: <Node-Name>                    # mandatory
+        interface: <Node-Interface-Name>     # mandatory
+        mac: <Node-Interface-Mac>            # optional
+      remote: <Remote-VTEP-IP>               # mandatory
+      vni: <VNI>                             # mandatory
+      udp-port: <VTEP-UDP-Port>              # mandatory
+      mtu: <link-mtu>                        # optional
+      vars: <link-variables>                 # optional (used in templating)
+      labels: <link-labels>                  # optional (used in templating)
+```
+
+###### vxlan-stitched
+The vxlan-stitched type results in a veth pair linking the host namespace and the nodes namespace and a vxlan tunnel that also terminates in the host namespace.
+In addition to these interfaces, tc rules are being provisioned to stitch the vxlan tunnel and the host based veth interface together.
+
+```yaml
+  links:
+    - type: vxlan-stitch
+      endpoint:                              # mandatory
+        node: <Node-Name>                    # mandatory
+        interface: <Node-Interface-Name>     # mandatory
+        mac: <Node-Interface-Mac>            # optional
+      remote: <Remote-VTEP-IP>               # mandatory
+      vni: <VNI>                             # mandatory
+      udp-port: <VTEP-UDP-Port>              # mandatory
+      mtu: <link-mtu>                        # optional
+      vars: <link-variables>                 # optional (used in templating)
+      labels: <link-labels>                  # optional (used in templating)
+```
 
 #### Kinds
 
