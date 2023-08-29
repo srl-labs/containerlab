@@ -1,0 +1,16 @@
+name: srl-bgp
+
+topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      startup-config: 03-srl1-bgp.config
+    srl2:
+      kind: nokia_srlinux
+      startup-config: 03-srl2-bgp.config
+
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
