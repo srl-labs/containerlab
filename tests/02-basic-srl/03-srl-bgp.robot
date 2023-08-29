@@ -15,6 +15,7 @@ ${runtime}          docker
 *** Test Cases ***
 Deploy ${lab-name} lab
     Log    ${CURDIR}
+    Sleep    5s    Give some time for networking stack to settle after a previous test case
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
@@ -39,33 +40,34 @@ Ensure srl1 can ping srl2 over ethernet-1/1 interface
     Should Contain    ${output}    0% packet loss
 
 Check BGP session is Established
-    Wait Until Keyword Succeeds 	2 min	5 sec	Check BGP session is Established Keyword
+    Wait Until Keyword Succeeds    2 min    5 sec    Check BGP session is Established
 
 Check BGP session received routes count
-    Wait Until Keyword Succeeds 	10 sec	2 sec	Check BGP session received routes count Keyword
-    
+    Wait Until Keyword Succeeds    10 sec    2 sec    Check BGP session received routes count
+
 Check BGP session sent routes count
-    Wait Until Keyword Succeeds 	10 sec	2 sec	Check BGP session sent routes count Keyword
+    Wait Until Keyword Succeeds    10 sec    2 sec    Check BGP session sent routes count
+
 
 *** Keywords ***
 Cleanup
     Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
 
-Check BGP session is Established Keyword
+Check BGP session is Established
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd 'sr_cli -- info from state network-instance default protocols bgp neighbor 192.168.0.1 session-state'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    established
 
-Check BGP session received routes count Keyword
+Check BGP session received routes count
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd 'sr_cli -- info from state network-instance default protocols bgp neighbor 192.168.0.1 afi-safi ipv4-unicast received-routes'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    received-routes 2
 
-Check BGP session sent routes count Keyword
+Check BGP session sent routes count
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd 'sr_cli -- info from state network-instance default protocols bgp neighbor 192.168.0.1 afi-safi ipv4-unicast sent-routes'
     Log    ${output}
