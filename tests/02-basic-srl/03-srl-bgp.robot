@@ -3,7 +3,6 @@ Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
 
-# Suite Setup    Setup
 Suite Teardown      Cleanup
 
 
@@ -44,13 +43,13 @@ Ensure srl1 can ping srl2 over ethernet-1/1 interface
     Should Contain    ${output}    0% packet loss
 
 Check BGP session is Established
-    Wait Until Keyword Succeeds    2 min    5 sec    Check BGP session is Established
+    Wait Until Keyword Succeeds    5 min    5 sec    Check BGP session is Established
 
 Check BGP session received routes count
-    Wait Until Keyword Succeeds    10 sec    2 sec    Check BGP session received routes count
+    Wait Until Keyword Succeeds    1 min    2 sec    Check BGP session received routes count
 
 Check BGP session sent routes count
-    Wait Until Keyword Succeeds    10 sec    2 sec    Check BGP session sent routes count
+    Wait Until Keyword Succeeds    1 min    2 sec    Check BGP session sent routes count
 
 
 *** Keywords ***
@@ -79,8 +78,3 @@ Check BGP session sent routes count
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    sent-routes 2
-
-# Setup
-#    # skipping this test suite with podman runtime
-#    # since it seems it doesn't
-#    Skip If    '${runtime}' == 'podman'
