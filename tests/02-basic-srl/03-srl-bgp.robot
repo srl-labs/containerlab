@@ -3,7 +3,8 @@ Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
 
-Suite Teardown      Run Keyword    Cleanup
+# Suite Setup    Setup
+Suite Teardown      Cleanup
 
 
 *** Variables ***
@@ -15,6 +16,9 @@ ${runtime}          docker
 *** Test Cases ***
 Deploy ${lab-name} lab
     Log    ${CURDIR}
+    # trying to run cleanup once again since podman reported
+    # that default network range is already in use
+    Cleanup
     Sleep    5s    Give some time for networking stack to settle after a previous test case
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
@@ -51,7 +55,9 @@ Check BGP session sent routes count
 
 *** Keywords ***
 Cleanup
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Log    ${output}
 
 Check BGP session is Established
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -73,3 +79,8 @@ Check BGP session sent routes count
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    sent-routes 2
+
+# Setup
+#    # skipping this test suite with podman runtime
+#    # since it seems it doesn't
+#    Skip If    '${runtime}' == 'podman'
