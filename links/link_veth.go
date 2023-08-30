@@ -170,6 +170,8 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 }
 
 func (l *LinkVEth) Remove(_ context.Context) error {
+	l.deployMutex.Lock()
+	defer l.deployMutex.Unlock()
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
