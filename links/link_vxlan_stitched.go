@@ -71,7 +71,7 @@ func (l *VxlanStitched) GetEndpoints() []Endpoint {
 	return []Endpoint{l.vxlanLink.localEndpoint, l.vxlanLink.remoteEndpoint}
 }
 
-func (l *VxlanStitched) GetType() LinkType {
+func (*VxlanStitched) GetType() LinkType {
 	return LinkTypeVxlanStitch
 }
 

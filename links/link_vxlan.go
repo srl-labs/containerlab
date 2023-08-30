@@ -252,7 +252,7 @@ func (lr *LinkVxlanRaw) resolveRegular(params *ResolveParams) (Link, error) {
 	return link, nil
 }
 
-func (lr *LinkVxlanRaw) GetType() LinkType {
+func (*LinkVxlanRaw) GetType() LinkType {
 	return LinkTypeVxlan
 }
 
@@ -348,6 +348,6 @@ func (l *LinkVxlan) GetEndpoints() []Endpoint {
 	return []Endpoint{l.localEndpoint, l.remoteEndpoint}
 }
 
-func (l *LinkVxlan) GetType() LinkType {
+func (*LinkVxlan) GetType() LinkType {
 	return LinkTypeVxlan
 }

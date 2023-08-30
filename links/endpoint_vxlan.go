@@ -28,9 +28,7 @@ func (e *EndpointVxlan) String() string {
 	return fmt.Sprintf("vxlan remote: %q, udp-port: %d, vni: %d", e.remote, e.udpPort, e.vni)
 }
 
-// // GetLink retrieves the link that the endpoint is assigned to
-// func (e *EndpointVxlan) GetLink() Link
-// // Verify verifies that the endpoint is valid and can be deployed
+// Verify verifies that the endpoint is valid and can be deployed
 func (e *EndpointVxlan) Verify(*VerifyLinkParams) error {
 	return CheckEndpointUniqueness(e)
 }

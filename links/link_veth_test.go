@@ -241,6 +241,6 @@ func (f *fakeNode) GetState() state.NodeState {
 	return f.State
 }
 
-func (f *fakeNode) Delete(ctx context.Context) error {
+func (*fakeNode) Delete(context.Context) error {
 	return nil
 }

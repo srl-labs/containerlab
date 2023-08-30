@@ -55,7 +55,7 @@ func (g *GenericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
 }
 
-func (g *GenericLinkNode) GetState() state.NodeState {
+func (*GenericLinkNode) GetState() state.NodeState {
 	// The GenericLinkNode is the basis for Mgmt-Bridge and Host fake node.
 	// Both of these do generally exist. Hence the Deployed state in generally returned
 	return state.Deployed
