@@ -158,7 +158,9 @@ func (lr *LinkVxlanRaw) resolveStitched(params *ResolveParams) (Link, error) {
 	// this will be used for the vxlan and and veth endpoint on the host side
 	// but with different prefixes
 	if len(ifaceNamePost) > 14 {
+		oldName := ifaceNamePost
 		ifaceNamePost = stableHashedInterfacename(ifaceNamePost, 8)
+		log.Debugf("can't use %s as interface name postfix, falling back to %s", oldName, ifaceNamePost)
 	}
 
 	// prepare the vxlan struct
