@@ -195,14 +195,14 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 }
 
 func (l *LinkMacVlan) Remove(_ context.Context) error {
-	if l.deploymentState == LinkDeploymentStateRemoved {
+	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
 	err := l.NodeEndpoint.Remove()
 	if err != nil {
 		log.Debug(err)
 	}
-	l.deploymentState = LinkDeploymentStateRemoved
+	l.DeploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 

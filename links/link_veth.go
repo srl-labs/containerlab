@@ -108,7 +108,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// the link once, even if multiple nodes call deploy on the same link.
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()
-	if l.deploymentState == LinkDeploymentStateDeployed {
+	if l.DeploymentState == LinkDeploymentStateDeployed {
 		return nil
 	}
 
@@ -164,13 +164,13 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		}
 	}
 
-	l.deploymentState = LinkDeploymentStateDeployed
+	l.DeploymentState = LinkDeploymentStateDeployed
 
 	return nil
 }
 
 func (l *LinkVEth) Remove(_ context.Context) error {
-	if l.deploymentState == LinkDeploymentStateRemoved {
+	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
 	for _, ep := range l.GetEndpoints() {
@@ -179,7 +179,7 @@ func (l *LinkVEth) Remove(_ context.Context) error {
 			log.Debug(err)
 		}
 	}
-	l.deploymentState = LinkDeploymentStateRemoved
+	l.DeploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 

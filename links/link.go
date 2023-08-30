@@ -29,7 +29,7 @@ type LinkCommonParams struct {
 	MTU             int                    `yaml:"mtu,omitempty"`
 	Labels          map[string]string      `yaml:"labels,omitempty"`
 	Vars            map[string]interface{} `yaml:"vars,omitempty"`
-	deploymentState LinkDeploymentState
+	DeploymentState LinkDeploymentState
 }
 
 func (l *LinkCommonParams) GetMtu() int {

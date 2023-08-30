@@ -333,14 +333,14 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 }
 
 func (l *LinkVxlan) Remove(_ context.Context) error {
-	if l.deploymentState == LinkDeploymentStateRemoved {
+	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
 	err := l.localEndpoint.Remove()
 	if err != nil {
 		log.Debug(err)
 	}
-	l.deploymentState = LinkDeploymentStateRemoved
+	l.DeploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 
