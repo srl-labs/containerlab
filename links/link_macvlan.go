@@ -194,8 +194,15 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (*LinkMacVlan) Remove(_ context.Context) error {
-	// TODO
+func (l *LinkMacVlan) Remove(_ context.Context) error {
+	if l.deploymentState == LinkDeploymentStateRemoved {
+		return nil
+	}
+	err := l.NodeEndpoint.Remove()
+	if err != nil {
+		log.Debug(err)
+	}
+	l.deploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 

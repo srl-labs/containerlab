@@ -26,7 +26,6 @@ import (
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -581,18 +580,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 			iface.BreakoutNo = ifNameParts[2]
 		}
 
-		// for MACVlan interfaces we need to figure out the parent interface MTU
-		// and specifically define it in the config
-		//
-		// via the endpoint we acquire the link, and check if the link is of type LinkMacVlan
-		// if so cast it and get the parent Interface MTU and finally set that for the interface
-		if link, ok := e.GetLink().(*links.LinkMacVlan); ok {
-			mtu, err := link.GetParentInterfaceMtu()
-			if err != nil {
-				return err
-			}
-			iface.Mtu = mtu
-		}
+		iface.Mtu = e.GetLink().GetMtu()
 
 		// add the template interface definition to the template data
 		tplData.IFaces[ifName] = iface

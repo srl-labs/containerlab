@@ -2,8 +2,10 @@ package links
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -19,13 +21,19 @@ type LinkDeploymentState uint8
 const (
 	LinkDeploymentStateNotDeployed = iota
 	LinkDeploymentStateDeployed
+	LinkDeploymentStateRemoved
 )
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
-	MTU    int                    `yaml:"mtu,omitempty"`
-	Labels map[string]string      `yaml:"labels,omitempty"`
-	Vars   map[string]interface{} `yaml:"vars,omitempty"`
+	MTU             int                    `yaml:"mtu,omitempty"`
+	Labels          map[string]string      `yaml:"labels,omitempty"`
+	Vars            map[string]interface{} `yaml:"vars,omitempty"`
+	deploymentState LinkDeploymentState
+}
+
+func (l *LinkCommonParams) GetMtu() int {
+	return l.MTU
 }
 
 // LinkDefinition represents a link definition in the topology file.
@@ -280,6 +288,8 @@ type Link interface {
 	GetType() LinkType
 	// GetEndpoints returns the endpoints of the link.
 	GetEndpoints() []Endpoint
+	// GetMtu returns the Link MTU
+	GetMtu() int
 }
 
 func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string) {
@@ -298,8 +308,18 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 }
 
 func genRandomIfName() string {
+	return "clab-" + genRandomString(8)
+}
+
+func genRandomString(length int) string {
 	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
-	return "clab-" + string(s[:8])
+	return string(s[:length])
+}
+
+func stableHashedInterfacename(data string, length int) string {
+	h := fnv.New128()
+	h.Write([]byte(data))
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(h.Sum(nil))[:length]
 }
 
 // Node interface is an interface that is satisfied by all nodes.
@@ -322,6 +342,7 @@ type Node interface {
 	GetEndpoints() []Endpoint
 	ExecFunction(func(ns.NetNS) error) error
 	GetState() state.NodeState
+	Delete(ctx context.Context) error
 }
 
 type LinkEndpointType string

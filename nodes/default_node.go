@@ -143,6 +143,12 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 }
 
 func (d *DefaultNode) Delete(ctx context.Context) error {
+	for _, l := range d.Links {
+		err := l.Remove(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	return d.Runtime.DeleteContainer(ctx, d.OverwriteNode.GetContainerName())
 }
 

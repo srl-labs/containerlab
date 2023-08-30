@@ -11,6 +11,7 @@ import (
 )
 
 type VxlanStitched struct {
+	LinkCommonParams
 	vxlanLink *LinkVxlan
 	vethLink  *LinkVEth
 	// the veth does not distinguist between endpoints. but we
@@ -22,9 +23,10 @@ type VxlanStitched struct {
 func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *VxlanStitched {
 	// init the VxlanStitched struct
 	vxlanStitched := &VxlanStitched{
-		vxlanLink:    vxlan,
-		vethLink:     veth,
-		vethStitchEp: vethStitchEp,
+		LinkCommonParams: vxlan.LinkCommonParams,
+		vxlanLink:        vxlan,
+		vethLink:         veth,
+		vethStitchEp:     vethStitchEp,
 	}
 
 	return vxlanStitched
@@ -53,8 +55,15 @@ func (l *VxlanStitched) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (l *VxlanStitched) Remove(_ context.Context) error {
-	// TODO
+func (l *VxlanStitched) Remove(ctx context.Context) error {
+	err := l.vethLink.Remove(ctx)
+	if err != nil {
+		log.Debug(err)
+	}
+	err = l.vxlanLink.Remove(ctx)
+	if err != nil {
+		log.Debug(err)
+	}
 	return nil
 }
 

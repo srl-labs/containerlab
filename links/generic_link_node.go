@@ -60,3 +60,13 @@ func (g *GenericLinkNode) GetState() state.NodeState {
 	// Both of these do generally exist. Hence the Deployed state in generally returned
 	return state.Deployed
 }
+
+func (g *GenericLinkNode) Delete(ctx context.Context) error {
+	for _, l := range g.links {
+		err := l.Remove(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

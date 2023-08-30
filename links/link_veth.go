@@ -90,14 +90,12 @@ type LinkVEth struct {
 	LinkCommonParams
 	endpoints []Endpoint
 
-	deploymentState LinkDeploymentState
-	deployMutex     sync.Mutex
+	deployMutex sync.Mutex
 }
 
 func NewLinkVEth() *LinkVEth {
 	return &LinkVEth{
-		endpoints:       make([]Endpoint, 0, 2),
-		deploymentState: LinkDeploymentStateNotDeployed,
+		endpoints: make([]Endpoint, 0, 2),
 	}
 }
 
@@ -171,8 +169,17 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (*LinkVEth) Remove(_ context.Context) error {
-	// TODO
+func (l *LinkVEth) Remove(_ context.Context) error {
+	if l.deploymentState == LinkDeploymentStateRemoved {
+		return nil
+	}
+	for _, ep := range l.GetEndpoints() {
+		err := ep.Remove()
+		if err != nil {
+			log.Debug(err)
+		}
+	}
+	l.deploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 

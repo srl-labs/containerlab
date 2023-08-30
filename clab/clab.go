@@ -554,6 +554,14 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	close(concurrentChan)
 	close(serialChan)
 
+	// also call delete on the special nodes
+	for _, n := range c.GetSpecialLinkNodes() {
+		err := n.Delete(ctx)
+		if err != nil {
+			log.Warn(err)
+		}
+	}
+
 	wg.Wait()
 }
 
@@ -615,38 +623,8 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 	return nil, fmt.Errorf("could not find a container matching name %q", contName)
 }
 
-// VethCleanup iterates over links found in clab topology to initiate removal of dangling veths
-// in host networking namespace or attached to linux bridge.
-// See https://github.com/srl-labs/containerlab/issues/842 for the reference.
-func (c *CLab) VethCleanup(ctx context.Context) error {
-	hostBasedEndpoints := []links.Endpoint{}
-
-	// collect the endpoints of regular nodes
-	for _, n := range c.Nodes {
-		if n.Config().IsRootNamespaceBased || n.Config().NetworkMode == "host" {
-			hostBasedEndpoints = append(hostBasedEndpoints, n.GetEndpoints()...)
-		}
-	}
-
-	// collect the endpoints of the fake nodes
-	hostBasedEndpoints = append(hostBasedEndpoints, links.GetHostLinkNode().GetEndpoints()...)
-	hostBasedEndpoints = append(hostBasedEndpoints, links.GetMgmtBrLinkNode().GetEndpoints()...)
-
-	var joinedErr error
-	for _, ep := range hostBasedEndpoints {
-		// finally remove all the collected endpoints
-		log.Debugf("removing endpoint %s", ep.String())
-		err := ep.Remove()
-		if err != nil {
-			joinedErr = errors.Join(joinedErr, err)
-		}
-	}
-
-	return joinedErr
-}
-
-// ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
-func (c *CLab) ResolveLinks() error {
+// GetLinkNodes returns all the nodes as LinkNodes enriched with the specialNode for the host and the mgmt-net.
+func (c *CLab) GetLinkNodes() map[string]links.Node {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
 	// If no circ deps were in place we could've used c.Nodes map instead.
@@ -657,16 +635,26 @@ func (c *CLab) ResolveLinks() error {
 	}
 
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
+	specialNodes := c.GetSpecialLinkNodes()
+	for _, n := range specialNodes {
+		resolveNodes[n.GetShortName()] = n
+	}
+	return resolveNodes
+}
+
+func (c *CLab) GetSpecialLinkNodes() map[string]links.Node {
+	// add the virtual host and mgmt-bridge nodes to the resolve nodes
 	specialNodes := map[string]links.Node{
 		"host":     links.GetHostLinkNode(),
 		"mgmt-net": links.GetMgmtBrLinkNode(),
 	}
-	for _, n := range specialNodes {
-		resolveNodes[n.GetShortName()] = n
-	}
+	return specialNodes
+}
 
+// ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
+func (c *CLab) ResolveLinks() error {
 	resolveParams := &links.ResolveParams{
-		Nodes:          resolveNodes,
+		Nodes:          c.GetLinkNodes(),
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
 		NodesFilter:    c.nodeFilter,
 	}

@@ -39,10 +39,9 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 }
 
-func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (*LinkVxlan, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams, ifaceNamePost string) (*LinkVxlan, error) {
 	var err error
 	link := &LinkVxlan{
-		deploymentState:  LinkDeploymentStateNotDeployed,
 		LinkCommonParams: lr.LinkCommonParams,
 		noLearning:       lr.NoLearning,
 		noL2Miss:         lr.NoL2Miss,
@@ -51,7 +50,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (*LinkVxlan,
 
 	// point the vxlan endpoint to the host system
 	vxlanRawEp := lr.Endpoint
-	vxlanRawEp.Iface = fmt.Sprintf("vx-%s-%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+	vxlanRawEp.Iface = fmt.Sprintf("vx-%s", ifaceNamePost)
 	vxlanRawEp.Node = "host"
 	vxlanRawEp.MAC = ""
 	if err != nil {
@@ -110,7 +109,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (*LinkVxlan,
 	link.remoteEndpoint.udpPort = lr.UdpPort
 	link.remoteEndpoint.remote = ip
 	link.remoteEndpoint.vni = lr.Vni
-	link.remoteEndpoint.mac, err = utils.GenMac(ClabOUI)
+	link.remoteEndpoint.MAC, err = utils.GenMac(ClabOUI)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +122,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (*LinkVxlan,
 
 // resolveStitchedVEth creates the veth link and return it, the endpoint that is
 // supposed to be stitched is returned seperately for further processing
-func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams) (*LinkVEth, Endpoint, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams, ifaceNamePost string) (*LinkVEth, Endpoint, error) {
 	var err error
 
 	veth := NewLinkVEth()
@@ -131,7 +130,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams) (*LinkVEth, E
 
 	hostEpRaw := &EndpointRaw{
 		Node:  "host",
-		Iface: fmt.Sprintf("ve-%s-%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+		Iface: fmt.Sprintf("ve-%s", ifaceNamePost),
 	}
 
 	hostEp, err := hostEpRaw.Resolve(params, veth)
@@ -152,14 +151,24 @@ func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams) (*LinkVEth, E
 }
 
 func (lr *LinkVxlanRaw) resolveStitched(params *ResolveParams) (Link, error) {
+
+	ifaceNamePost := fmt.Sprintf("%s-%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+
+	// if the resulting interface name is too long, we generate a random name
+	// this will be used for the vxlan and and veth endpoint on the host side
+	// but with different prefixes
+	if len(ifaceNamePost) > 14 {
+		ifaceNamePost = stableHashedInterfacename(ifaceNamePost, 8)
+	}
+
 	// prepare the vxlan struct
-	vxlanLink, err := lr.resolveStitchedVxlan(params)
+	vxlanLink, err := lr.resolveStitchedVxlan(params, ifaceNamePost)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare the veth struct
-	vethLink, stitchEp, err := lr.resolveStitchedVEth(params)
+	vethLink, stitchEp, err := lr.resolveStitchedVEth(params, ifaceNamePost)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +185,6 @@ func (lr *LinkVxlanRaw) resolveStitched(params *ResolveParams) (Link, error) {
 func (lr *LinkVxlanRaw) resolveRegular(params *ResolveParams) (Link, error) {
 	var err error
 	link := &LinkVxlan{
-		deploymentState:  LinkDeploymentStateNotDeployed,
 		LinkCommonParams: lr.LinkCommonParams,
 		noLearning:       lr.NoLearning,
 		noL2Miss:         lr.NoL2Miss,
@@ -248,12 +256,11 @@ func (lr *LinkVxlanRaw) GetType() LinkType {
 
 type LinkVxlan struct {
 	LinkCommonParams
-	localEndpoint   Endpoint
-	remoteEndpoint  *EndpointVxlan
-	noLearning      bool
-	noL2Miss        bool
-	noL3Miss        bool
-	deploymentState LinkDeploymentState
+	localEndpoint  Endpoint
+	remoteEndpoint *EndpointVxlan
+	noLearning     bool
+	noL2Miss       bool
+	noL3Miss       bool
 }
 
 func (l *LinkVxlan) Deploy(ctx context.Context) error {
@@ -271,7 +278,6 @@ func (l *LinkVxlan) Deploy(ctx context.Context) error {
 	// add the link to the Node Namespace
 	err = l.localEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface, SetNameMACAndUpInterface(mvInterface, l.localEndpoint))
 	return err
-
 }
 
 // deployVxlanInterface internal function to create the vxlan interface in the host namespace
@@ -287,7 +293,7 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 		LinkAttrs: netlink.LinkAttrs{
 			Name:         l.localEndpoint.GetRandIfaceName(),
 			TxQLen:       1000,
-			HardwareAddr: l.remoteEndpoint.mac,
+			HardwareAddr: l.remoteEndpoint.MAC,
 		},
 		VxlanId:      l.remoteEndpoint.vni,
 		VtepDevIndex: parentIface.Attrs().Index,
@@ -311,11 +317,28 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	if err != nil {
 		return err
 	}
+
+	// fetch the mtu from the actual state for templated config generation
+	if l.MTU == 0 {
+		interf, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
+		if err != nil {
+			return err
+		}
+		l.MTU = interf.Attrs().MTU
+	}
+
 	return nil
 }
 
 func (l *LinkVxlan) Remove(_ context.Context) error {
-	// TODO
+	if l.deploymentState == LinkDeploymentStateRemoved {
+		return nil
+	}
+	err := l.localEndpoint.Remove()
+	if err != nil {
+		log.Debug(err)
+	}
+	l.deploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 
