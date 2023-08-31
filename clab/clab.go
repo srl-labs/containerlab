@@ -124,7 +124,7 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
-func WithTopoRef(topoRef, varsFile string) ClabOption {
+func WithTopoPath(topoRef, varsFile string) ClabOption {
 	return func(c *CLab) error {
 		if topoRef == "" {
 			return fmt.Errorf("provide a path to the clab topology file")

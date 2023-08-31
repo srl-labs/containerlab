@@ -64,7 +64,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	if topo != "" {
 		opts = append(opts,
-			clab.WithTopoRef(topo, varsFile),
+			clab.WithTopoPath(topo, varsFile),
 			clab.WithNodeFilter(nodeFilter),
 		)
 	}
