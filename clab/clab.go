@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -123,17 +124,62 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
-func WithTopoFile(file, varsFile string) ClabOption {
+func WithTopoRef(topoRef, varsFile string) ClabOption {
 	return func(c *CLab) error {
-		if file == "" {
+		if topoRef == "" {
 			return fmt.Errorf("provide a path to the clab topology file")
 		}
+
+		file, err := resolveTopoRefToSingleFile(topoRef)
+		if err != nil {
+			return err
+		}
+
 		if err := c.GetTopology(file, varsFile); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
 
 		return c.initMgmtNetwork()
 	}
+}
+
+// resolveTopoRefToSingleFile takes a topology reference, which might be the path to a
+func resolveTopoRefToSingleFile(topoRef string) (string, error) {
+	// stat the toporef
+	fsref, err := os.Stat(topoRef)
+	if err != nil {
+		return "", err
+	}
+
+	// by default we assume the toporef is the topo file
+	file := topoRef
+
+	// we might have gotten a dirname
+	// lets try to find a single *.clab.yml
+	if fsref.IsDir() {
+		matches, err := filepath.Glob(filepath.Join(topoRef, "*.clab.yml"))
+		if err != nil {
+			return "", err
+		}
+
+		switch len(matches) {
+		case 1:
+			// single file found, using it
+			file = matches[0]
+		case 0:
+			// no files found
+			return "", fmt.Errorf("no topology files found in directory %q", topoRef)
+		default:
+			// multiple files found
+			var filenames []string
+			// extract just filename -> no path
+			for _, match := range matches {
+				filenames = append(filenames, filepath.Base(match))
+			}
+			return "", fmt.Errorf("found multiple topology definitions [ %s ] in given diretory %q. Provide the specific filename", strings.Join(filenames, ", "), topoRef)
+		}
+	}
+	return file, nil
 }
 
 // WithNodeFilter option sets a filter for nodes to be deployed.

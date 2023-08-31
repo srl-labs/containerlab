@@ -30,7 +30,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		}
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
-			clab.WithTopoFile(topo, varsFile),
+			clab.WithTopoRef(topo, varsFile),
 			clab.WithNodeFilter(nodeFilter),
 			clab.WithRuntime(rt,
 				&runtime.RuntimeConfig{
