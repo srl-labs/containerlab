@@ -107,7 +107,7 @@ Get Certificate Date
     [Arguments]    ${certificate_output}    ${type}
     ${date} =    Get Regexp Matches
     ...    ${certificate_output}
-    ...    Not ${type}\\W*: (\\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} \\d{4} \\w{3})
+    ...    Not ${type}\\W*: (\\w{3}\\W+\\d{1,2} \\d{2}:\\d{2}:\\d{2} \\d{4} \\w{3})
     ...    1
     [Return]    ${date}[0]
 
