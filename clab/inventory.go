@@ -26,6 +26,11 @@ func (c *CLab) GenerateInventories() error {
 // generateAnsibleInventory generates and writes ansible inventory file to w.
 func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	invT := `all:
+  vars:
+    # The generated inventory is assumed to be used from the clab host.
+    # Hence no http proxy should be used. Therefore we make sure the http
+    # module does not attempt using any global http proxy.
+    ansible_httpapi_use_proxy: false
   children:
 {{- range $kind, $nodes := .Nodes}}
     {{$kind}}:
