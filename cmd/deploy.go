@@ -277,7 +277,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// execute commands specified for nodes with `exec` node parameter
 	execCollection := exec.NewExecCollection()
-	first := true
+	first := ""
 	for _, n := range c.Nodes {
 		for _, e := range n.Config().Exec {
 			exec, err := exec.NewExecCmdFromString(e)
@@ -293,9 +293,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 			execCollection.Add(n.Config().ShortName, res)
 		}
-		if first {
-			first = false
-			n.Restart(ctx)
+		if first == "" {
+			first = n.GetShortName()
 		}
 	}
 
@@ -306,7 +305,17 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	newVerNotification(vCh)
 
 	// print table summary
-	return printContainerInspect(containers, deployFormat)
+	err = printContainerInspect(containers, deployFormat)
+	if err != nil {
+		return err
+	}
+
+	err = c.Nodes[first].Restart(ctx)
+	if err != nil {
+		log.Error(err)
+	}
+
+	return nil
 }
 
 // certificateAuthoritySetup sets up the certificate authority parameters.

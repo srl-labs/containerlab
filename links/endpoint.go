@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -29,7 +30,8 @@ type Endpoint interface {
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
 	Remove() error
-	Relocate(netNsFd int) error
+	PushTo(context.Context, *ParkingNetNs) error
+	PullFrom(context.Context, *ParkingNetNs) error
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -72,6 +74,10 @@ func (e *EndpointGeneric) GetNode() Node {
 	return e.Node
 }
 
+func (e *EndpointGeneric) Verify(*VerifyLinkParams) error {
+	return nil
+}
+
 func (e *EndpointGeneric) Remove() error {
 	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
 		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
@@ -99,14 +105,32 @@ func (e *EndpointGeneric) String() string {
 	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.IfaceName)
 }
 
-func (e *EndpointGeneric) Relocate(netNsFd int) error {
+// PullFrom pulls the interface referenced via the endpoint from the given ParkingNetNs namespace
+// This is used to get back the interfaces saved before a reboot in the ParkingNetNs
+func (e *EndpointGeneric) PullFrom(ctx context.Context, pns *ParkingNetNs) error {
+	// execute the following function in the context of the parking container
+	return pns.ExecFunction(
+		func(_ ns.NetNS) error {
+			// retrieve the endpoints interface
+			ep, err := netlink.LinkByName(e.GetIfaceName())
+			if err != nil {
+				return err
+			}
+			// push the specifc interface to the final container
+			return e.GetNode().AddLinkToContainer(ctx, ep, SetNameMACAndUpInterface(ep, e))
+		},
+	)
+}
+
+// PushTo pushed the interface referenced by the endpoint into the given ParkingNetNs
+// This is used to save interfaces prior to restarting a node.
+func (e *EndpointGeneric) PushTo(ctx context.Context, pns *ParkingNetNs) error {
 	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
 		ep, err := netlink.LinkByName(e.GetIfaceName())
 		if err != nil {
 			return err
 		}
-
-		return netlink.LinkSetNsFd(ep, netNsFd)
+		return netlink.LinkSetNsFd(ep, pns.GetFd())
 	})
 }
 

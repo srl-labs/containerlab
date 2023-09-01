@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -26,7 +27,6 @@ import (
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
 )
 
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
@@ -502,27 +502,20 @@ func (d *DefaultNode) SetState(s state.NodeState) {
 }
 
 func (d *DefaultNode) Restart(ctx context.Context) error {
-	// store the actual namespace handle
-	baseNetNs, err := netns.Get()
-	if err != nil {
-		return err
-	}
+	rebootNsName := fmt.Sprintf("clab-rs-%d-%s", rand.Int(), d.Cfg.LongName)
+	log.Warnf("Reboot NS Name: %s", rebootNsName)
 
-	// create a "parking" namespace for the network interfaces
-	rebootNs, err := netns.NewNamed("rs-" + d.Cfg.LongName)
-	if err != nil {
-		return err
-	}
-
-	// revert back to the inital network namespace
-	err = netns.Set(baseNetNs)
+	ParkingNs, err := links.NewParkingNetNs(rebootNsName)
 	if err != nil {
 		return err
 	}
 
 	// relocate all defined endpoints
-	for _, l := range d.Endpoints {
-		l.Relocate(int(rebootNs))
+	for _, e := range d.Endpoints {
+		err = e.PushTo(ctx, ParkingNs)
+		if err != nil {
+			return err
+		}
 	}
 
 	// delete the given node
@@ -542,15 +535,18 @@ func (d *DefaultNode) Restart(ctx context.Context) error {
 		return err
 	}
 
-	log.Info(execres.String())
-
-	newNs, err := netns.GetFromPath(d.Cfg.NSPath)
-	if err != nil {
-		return err
-	}
+	log.Warn(execres.String())
 
 	for _, e := range d.Endpoints {
-		e.Relocate(int(newNs))
+		err = e.PullFrom(ctx, ParkingNs)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = ParkingNs.Delete()
+	if err != nil {
+		return err
 	}
 
 	return nil
