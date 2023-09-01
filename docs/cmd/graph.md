@@ -87,9 +87,13 @@ If `--offline` flag was not provided and no containers were found matching the l
 
 #### topology
 
-With the global `--topo | -t` flag a user sets the path to the topology file that will be used to get the nodes of a lab.
+With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to spin up a lab.
 
-When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory. If a single file is found, it will be used.
+When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` extension in that directory and use it as a topology definition file.
+
+When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory.
+
+If more than one file is found for directory-based path or when the flag is omitted entirely, containerlab will fail with an error.
 
 #### srv
 
