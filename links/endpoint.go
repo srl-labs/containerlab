@@ -29,6 +29,7 @@ type Endpoint interface {
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
 	Remove() error
+	Relocate(netNsFd int) error
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -96,6 +97,17 @@ func (e *EndpointGeneric) HasSameNodeAndInterface(ept Endpoint) bool {
 
 func (e *EndpointGeneric) String() string {
 	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.IfaceName)
+}
+
+func (e *EndpointGeneric) Relocate(netNsFd int) error {
+	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
+		ep, err := netlink.LinkByName(e.GetIfaceName())
+		if err != nil {
+			return err
+		}
+
+		return netlink.LinkSetNsFd(ep, netNsFd)
+	})
 }
 
 // CheckEndpointUniqueness checks that the given endpoint appears only once for the node

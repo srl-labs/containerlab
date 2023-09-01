@@ -26,6 +26,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
@@ -498,4 +499,59 @@ func (d *DefaultNode) SetState(s state.NodeState) {
 	d.statemutex.Lock()
 	defer d.statemutex.Unlock()
 	d.state = s
+}
+
+func (d *DefaultNode) Restart(ctx context.Context) error {
+	// store the actual namespace handle
+	baseNetNs, err := netns.Get()
+	if err != nil {
+		return err
+	}
+
+	// create a "parking" namespace for the network interfaces
+	rebootNs, err := netns.NewNamed("rs-" + d.Cfg.LongName)
+	if err != nil {
+		return err
+	}
+
+	// revert back to the inital network namespace
+	err = netns.Set(baseNetNs)
+	if err != nil {
+		return err
+	}
+
+	// relocate all defined endpoints
+	for _, l := range d.Endpoints {
+		l.Relocate(int(rebootNs))
+	}
+
+	// delete the given node
+	err = d.Delete(ctx)
+	if err != nil {
+		return err
+	}
+
+	// start the node again
+	err = d.Deploy(ctx, &DeployParams{})
+	if err != nil {
+		return err
+	}
+
+	execres, err := d.RunExec(ctx, exec.NewExecCmdFromSlice([]string{"ip", "l"}))
+	if err != nil {
+		return err
+	}
+
+	log.Info(execres.String())
+
+	newNs, err := netns.GetFromPath(d.Cfg.NSPath)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range d.Endpoints {
+		e.Relocate(int(newNs))
+	}
+
+	return nil
 }

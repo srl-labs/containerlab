@@ -352,6 +352,20 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, params interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, params)
 }
 
+// Restart mocks base method.
+func (m *MockNode) Restart(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Restart", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Restart indicates an expected call of Restart.
+func (mr *MockNodeMockRecorder) Restart(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockNode)(nil).Restart), ctx)
+}
+
 // RunExec mocks base method.
 func (m *MockNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
 	m.ctrl.T.Helper()
