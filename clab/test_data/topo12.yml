@@ -1,0 +1,23 @@
+name: topo12
+
+topology:
+  defaults:
+    suppress-startup-config: true
+  kinds:
+    ceos:
+      suppress-startup-config: false
+  nodes:
+    node1:
+      kind: ceos
+      suppress-startup-config: true
+    node2:
+      kind: ceos
+      suppress-startup-config: false
+    node3:
+      kind: ceos
+    node4:
+      kind: linux
+
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
+    - endpoints: ["node2:eth2", "node3:eth1"]

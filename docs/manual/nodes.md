@@ -142,6 +142,10 @@ The remote file will be downloaded to the containerlab's temp directory at `$TMP
 
 By default, containerlab will use the config file that is available in the lab directory for a given node even if the `startup config` parameter points to another file. To make a node to boot with the config set with `startup-config` parameter no matter what, set the `enforce-startup-config` to `true`.
 
+### suppress-startup-config
+
+By default, containerlab will create a startup-config when intially creating a lab.  To prevent a startup-config file from being created (in a Zero-Touch Provisioning lab, for example), set the `suppress-startup-config` to `true`.
+
 ### auto-remove
 
 By default, containerlab will not remove the failed or stopped nodes so that you can read their logs and understand the reason of a failure. If it is required to remove the failed/stopped nodes, use `auto-remove: true` property.
