@@ -124,13 +124,13 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
-func WithTopoPath(topoRef, varsFile string) ClabOption {
+func WithTopoPath(path, varsFile string) ClabOption {
 	return func(c *CLab) error {
-		if topoRef == "" {
+		if path == "" {
 			return fmt.Errorf("provide a path to the clab topology file")
 		}
 
-		file, err := resolveTopoRefToSingleFile(topoRef)
+		file, err := findTopoFileByPath(path)
 		if err != nil {
 			return err
 		}
@@ -143,21 +143,21 @@ func WithTopoPath(topoRef, varsFile string) ClabOption {
 	}
 }
 
-// resolveTopoRefToSingleFile takes a topology reference, which might be the path to a
-func resolveTopoRefToSingleFile(topoRef string) (string, error) {
-	// stat the toporef
-	fsref, err := os.Stat(topoRef)
+// findTopoFileByPath takes a topology path, which might be the path to a directory
+// and returns the topology file name if found.
+func findTopoFileByPath(path string) (string, error) {
+	finfo, err := os.Stat(path)
 	if err != nil {
 		return "", err
 	}
 
-	// by default we assume the toporef is the topo file
-	file := topoRef
+	// by default we assume the path points to a clab file
+	file := path
 
 	// we might have gotten a dirname
 	// lets try to find a single *.clab.yml
-	if fsref.IsDir() {
-		matches, err := filepath.Glob(filepath.Join(topoRef, "*.clab.yml"))
+	if finfo.IsDir() {
+		matches, err := filepath.Glob(filepath.Join(path, "*.clab.yml"))
 		if err != nil {
 			return "", err
 		}
@@ -168,7 +168,7 @@ func resolveTopoRefToSingleFile(topoRef string) (string, error) {
 			file = matches[0]
 		case 0:
 			// no files found
-			return "", fmt.Errorf("no topology files found in directory %q", topoRef)
+			return "", fmt.Errorf("no topology files found in directory %q", path)
 		default:
 			// multiple files found
 			var filenames []string
@@ -176,9 +176,11 @@ func resolveTopoRefToSingleFile(topoRef string) (string, error) {
 			for _, match := range matches {
 				filenames = append(filenames, filepath.Base(match))
 			}
-			return "", fmt.Errorf("found multiple topology definitions [ %s ] in given diretory %q. Provide the specific filename", strings.Join(filenames, ", "), topoRef)
+
+			return "", fmt.Errorf("found multiple topology definitions [ %s ] in a given directory %q. Provide the specific filename", strings.Join(filenames, ", "), path)
 		}
 	}
+
 	return file, nil
 }
 
