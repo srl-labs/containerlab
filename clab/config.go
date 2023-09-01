@@ -229,10 +229,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg.SuppressStartupConfig = c.Config.Topology.GetNodeSuppressStartupConfig(nodeCfg.ShortName)
 
 	// initialize license field
-	p, err := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
-	if err != nil {
-		return nil, err
-	}
+	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	// resolve the lic path to an abs path
 	nodeCfg.License = utils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
@@ -263,10 +260,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 // Returns an absolute path to the startup-config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// process startup-config
-	p, err := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
-	if err != nil {
-		return err
-	}
+	p := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
 
 	// embedded config is a config that is defined as a multi-line string in the topology file
 	// it contains at least one newline
@@ -287,7 +281,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(
 				nodeCfg.ShortName, "embedded.partial.cfg")
 
-			err = utils.CreateFile(absDestFile, p)
+			err := utils.CreateFile(absDestFile, p)
 			if err != nil {
 				return err
 			}

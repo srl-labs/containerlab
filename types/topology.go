@@ -48,16 +48,13 @@ func (t *Topology) GetKinds() map[string]*NodeDefinition {
 }
 
 func (t *Topology) GetNodeKind(name string) string {
-	if t == nil {
-		return ""
-	}
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetKind() != "" {
-			return ndef.GetKind()
+		if v := ndef.GetKind(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetKind()
+		// if no node kind is set, there is no way for us to look up the kind in the kind ... obviousely
 	}
-	return ""
+	return t.GetDefaults().GetKind()
 }
 
 func (t *Topology) GetNodeBinds(name string) ([]string, error) {
@@ -177,42 +174,41 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 	return nil
 }
 
-func (t *Topology) GetNodeStartupConfig(name string) (string, error) {
-	var cfg string
+func (t *Topology) GetNodeStartupConfig(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		cfg = ndef.GetStartupConfig()
-		if t.GetKind(t.GetNodeKind(name)).GetStartupConfig() != "" && cfg == "" {
-			cfg = t.GetKind(t.GetNodeKind(name)).GetStartupConfig()
+		if v := ndef.GetStartupConfig(); v != "" {
+			return v
 		}
-		if cfg == "" {
-			cfg = t.GetDefaults().GetStartupConfig()
+		if v := t.GetKind(t.GetNodeKind(name)).GetStartupConfig(); v != "" {
+			return v
 		}
 	}
-	return cfg, nil
+	return t.GetDefaults().GetStartupConfig()
 }
 
 func (t *Topology) GetNodeStartupDelay(name string) uint {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetStartupDelay() != 0 {
-			return ndef.GetStartupDelay()
+		if v := ndef.GetStartupDelay(); v != 0 {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetStartupDelay() != 0 {
-			return t.GetKind(t.GetNodeKind(name)).GetStartupDelay()
+		if v := t.GetKind(t.GetNodeKind(name)).GetStartupDelay(); v != 0 {
+			return v
 		}
-		return t.GetDefaults().GetStartupDelay()
 	}
-	return 0
+	return t.GetDefaults().GetStartupDelay()
 }
 
 func (t *Topology) GetNodeEnforceStartupConfig(name string) bool {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetEnforceStartupConfig() {
-			return true
+		if v := ndef.GetEnforceStartupConfig(); v != nil {
+			return *v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetEnforceStartupConfig() {
-			return true
+		if v := t.GetKind(t.GetNodeKind(name)).GetEnforceStartupConfig(); v != nil {
+			return *v
 		}
-		return t.GetDefaults().GetEnforceStartupConfig()
+	}
+	if v := t.GetDefaults().GetEnforceStartupConfig(); v != nil {
+		return *v
 	}
 	return false
 }
@@ -233,53 +229,43 @@ func (t *Topology) GetNodeSuppressStartupConfig(name string) bool {
 
 }
 
-func (t *Topology) GetNodeAutoRemove(name string) *bool {
+func (t *Topology) GetNodeAutoRemove(name string) bool {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetAutoRemove() != nil {
-			return ndef.AutoRemove
+		if v := ndef.GetAutoRemove(); v != nil {
+			return *v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetAutoRemove() != nil {
-			return t.GetKind(t.GetNodeKind(name)).GetAutoRemove()
+		if v := t.GetKind(t.GetNodeKind(name)).GetAutoRemove(); v != nil {
+			return *v
 		}
 	}
-
-	if t.GetDefaults().GetAutoRemove() != nil {
-		return t.GetDefaults().GetAutoRemove()
+	if v := t.GetDefaults().GetAutoRemove(); v != nil {
+		return *v
 	}
-
-	def := false
-	return &def
+	return false
 }
 
-func (t *Topology) GetNodeLicense(name string) (string, error) {
-	var license string
+func (t *Topology) GetNodeLicense(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-
-		license = ndef.GetLicense()
-		if t.GetKind(t.GetNodeKind(name)).GetLicense() != "" && license == "" {
-			license = t.GetKind(t.GetNodeKind(name)).GetLicense()
+		if l := ndef.GetLicense(); l != "" {
+			return l
 		}
-
-		if license == "" {
-			license = t.GetDefaults().GetLicense()
+		if l := t.GetKind(t.GetNodeKind(name)).GetLicense(); l != "" {
+			return l
 		}
-
 	}
-
-	return license, nil
+	return t.GetDefaults().GetLicense()
 }
 
 func (t *Topology) GetNodeImage(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetImage() != "" {
-			return ndef.GetImage()
+		if v := ndef.GetImage(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetImage() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetImage()
+		if v := t.GetKind(t.GetNodeKind(name)).GetImage(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetImage()
 	}
-	return ""
+	return t.GetDefaults().GetImage()
 }
 
 func (t *Topology) GetNodeImagePullPolicy(name string) PullPolicyValue {
@@ -290,77 +276,68 @@ func (t *Topology) GetNodeImagePullPolicy(name string) PullPolicyValue {
 		if pp := t.GetKind(t.GetNodeKind(name)).GetImagePullPolicy(); pp != "" {
 			return ParsePullPolicyValue(pp)
 		}
-		if pp := t.GetDefaults().GetImagePullPolicy(); pp != "" {
-			return ParsePullPolicyValue(pp)
-		}
 	}
-	// let ParsePullPolicyValue return a default value for missing pull policy.
-	return ParsePullPolicyValue("")
+	return ParsePullPolicyValue(t.GetDefaults().GetImagePullPolicy())
 }
 
 func (t *Topology) GetNodeGroup(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetGroup() != "" {
-			return ndef.GetGroup()
+		if v := ndef.GetGroup(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetGroup() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetGroup()
+		if v := t.GetKind(t.GetNodeKind(name)).GetGroup(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetGroup()
 	}
-	return ""
+	return t.GetDefaults().GetGroup()
 }
 
 func (t *Topology) GetNodeType(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetType() != "" {
-			return ndef.GetType()
+		if v := ndef.GetType(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetType() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetType()
+		if v := t.GetKind(t.GetNodeKind(name)).GetType(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetType()
 	}
-	return ""
+	return t.GetDefaults().GetType()
 }
 
 func (t *Topology) GetNodePosition(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetPostion() != "" {
-			return ndef.GetPostion()
+		if v := ndef.GetPostion(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetPostion() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetPostion()
+		if v := t.GetKind(t.GetNodeKind(name)).GetPostion(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetPostion()
 	}
-	return ""
+	return t.GetDefaults().GetPostion()
 }
 
 func (t *Topology) GetNodeEntrypoint(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetEntrypoint() != "" {
-			return ndef.GetEntrypoint()
+		if v := ndef.GetEntrypoint(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetEntrypoint() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetEntrypoint()
+		if v := t.GetKind(t.GetNodeKind(name)).GetEntrypoint(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetEntrypoint()
 	}
-	return ""
+	return t.GetDefaults().GetEntrypoint()
 }
 
 func (t *Topology) GetNodeCmd(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetCmd() != "" {
-			return ndef.GetCmd()
+		if v := ndef.GetCmd(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetCmd() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetCmd()
+		if v := t.GetKind(t.GetNodeKind(name)).GetCmd(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetCmd()
 	}
-	return ""
+	return t.GetDefaults().GetCmd()
 }
 
 func (t *Topology) GetNodeExec(name string) []string {
@@ -376,106 +353,98 @@ func (t *Topology) GetNodeExec(name string) []string {
 
 func (t *Topology) GetNodeUser(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetUser() != "" {
-			return ndef.GetUser()
+		if v := ndef.GetUser(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetUser() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetUser()
+		if v := t.GetKind(t.GetNodeKind(name)).GetUser(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetUser()
 	}
-	return ""
+	return t.GetDefaults().GetUser()
 }
 
 func (t *Topology) GetNodeNetworkMode(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNetworkMode() != "" {
-			return ndef.GetNetworkMode()
+		if v := ndef.GetNetworkMode(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNetworkMode() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetNetworkMode()
+		if v := t.GetKind(t.GetNodeKind(name)).GetNetworkMode(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetNetworkMode()
 	}
-	return ""
+	return t.GetDefaults().GetNetworkMode()
 }
 
 func (t *Topology) GetNodeSandbox(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeSandbox() != "" {
-			return ndef.GetNodeSandbox()
+		if v := ndef.GetNodeSandbox(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeSandbox() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetNodeSandbox()
+		if v := t.GetKind(t.GetNodeKind(name)).GetNodeSandbox(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetNodeSandbox()
 	}
-	return ""
+	return t.GetDefaults().GetNodeSandbox()
 }
 
 func (t *Topology) GetNodeKernel(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeKernel() != "" {
-			return ndef.GetNodeKernel()
+		if v := ndef.GetNodeKernel(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeKernel() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetNodeKernel()
+		if v := t.GetKind(t.GetNodeKind(name)).GetNodeKernel(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetNodeKernel()
 	}
-	return ""
+	return t.GetDefaults().GetNodeKernel()
 }
 
 func (t *Topology) GetNodeRuntime(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeRuntime() != "" {
-			return ndef.GetNodeRuntime()
+		if v := ndef.GetNodeRuntime(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeRuntime() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetNodeRuntime()
+		if v := t.GetKind(t.GetNodeKind(name)).GetNodeRuntime(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetNodeRuntime()
 	}
-	return ""
+	return t.GetDefaults().GetNodeRuntime()
 }
 
 func (t *Topology) GetNodeCPU(name string) float64 {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeCPU() != 0 {
-			return ndef.GetNodeCPU()
+		if v := ndef.GetNodeCPU(); v != 0 {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeCPU() != 0 {
-			return t.GetKind(t.GetNodeKind(name)).GetNodeCPU()
+		if v := t.GetKind(t.GetNodeKind(name)).GetNodeCPU(); v != 0 {
+			return v
 		}
-		return t.GetDefaults().GetNodeCPU()
 	}
-	return 0
+	return t.GetDefaults().GetNodeCPU()
 }
 
 func (t *Topology) GetNodeCPUSet(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeCPUSet() != "" {
-			return ndef.GetNodeCPUSet()
+		if v := ndef.GetNodeCPUSet(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeCPUSet() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetNodeCPUSet()
+		if v := t.GetKind(t.GetNodeKind(name)).GetNodeCPUSet(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetNodeCPUSet()
 	}
-	return ""
+	return t.GetDefaults().GetNodeCPUSet()
 }
 
 func (t *Topology) GetNodeMemory(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
-		if ndef.GetNodeMemory() != "" {
-			return ndef.GetNodeMemory()
+		if v := ndef.GetNodeMemory(); v != "" {
+			return v
 		}
-		if t.GetKind(t.GetNodeKind(name)).GetNodeMemory() != "" {
-			return t.GetKind(t.GetNodeKind(name)).GetNodeMemory()
+		if v := t.GetKind(t.GetNodeKind(name)).GetNodeMemory(); v != "" {
+			return v
 		}
-		return t.GetDefaults().GetNodeMemory()
 	}
-	return ""
+	return t.GetDefaults().GetNodeMemory()
 }
 
 // GetSysCtl return the Sysctl configuration for the given node.
@@ -506,15 +475,12 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 		if node_extras != nil {
 			return node_extras
 		}
-
 		kind_extras := t.GetKind(t.GetNodeKind(name)).GetExtras()
 		if kind_extras != nil {
 			return kind_extras
 		}
-
-		return t.GetDefaults().GetExtras()
 	}
-	return nil
+	return t.GetDefaults().GetExtras()
 }
 
 // GetWaitFor return the wait-for configuration for the given node.
@@ -545,15 +511,12 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 		if nodeDNS != nil {
 			return nodeDNS
 		}
-
 		kindDNS := t.GetKind(t.GetNodeKind(name)).GetDns()
 		if kindDNS != nil {
 			return kindDNS
 		}
-
-		return t.GetDefaults().GetDns()
 	}
-	return nil
+	return t.GetDefaults().GetDns()
 }
 
 // GetCertificateConfig returns the certificate configuration for the given node.
