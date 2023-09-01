@@ -213,6 +213,22 @@ func (t *Topology) GetNodeEnforceStartupConfig(name string) bool {
 	return false
 }
 
+func (t *Topology) GetNodeSuppressStartupConfig(name string) bool {
+	if ndef, ok := t.Nodes[name]; ok {
+		if ndef.GetSuppressStartupConfig() != nil {
+			return *ndef.SuppressStartupConfig
+		}
+		if r := t.GetKind(t.GetNodeKind(name)).GetSuppressStartupConfig(); r != nil {
+			return *r
+		}
+		if r := t.GetDefaults().GetSuppressStartupConfig(); r != nil {
+			return *r
+		}
+	}
+	return false
+
+}
+
 func (t *Topology) GetNodeAutoRemove(name string) bool {
 	if ndef, ok := t.Nodes[name]; ok {
 		if v := ndef.GetAutoRemove(); v != nil {
