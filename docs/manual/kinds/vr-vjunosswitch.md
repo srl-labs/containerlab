@@ -15,7 +15,7 @@ The qcow2 image can be downloaded from [Juniper website](https://support.juniper
 ## Managing vr-vjunosswitch nodes
 
 !!!note
-    Containers with vJunos-switch inside will take ~5min to fully boot.  
+    Containers with vJunos-switch inside will take ~15min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>`.
 
 Juniper vJunos-switch node launched with containerlab can be managed via the following interfaces:
@@ -77,7 +77,7 @@ Configuration is applied after the node is started, thus it can contain partial 
 
 The following labs feature the vr-vjunosswitch node:
 
-* [SR Linux and Juniper vJunos-switch](lab-examples/srlvjunos01.md)
+* [SR Linux and Juniper vJunos-switch](../../lab-examples/srl-vjunos-switch.md)
 
 ## Known issues and limitations
 
