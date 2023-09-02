@@ -9,7 +9,7 @@ topology:
 
     vswitch:
       kind: vr-juniper_vjunosswitch
-      image: registry.srlinux.dev/pub/vr-vjunosswitch:23.2R1.14
+      image: vrnetlab/vr-vjunosswitch:23.2R1.14
       startup-config: vjunos.cfg
 
   links:

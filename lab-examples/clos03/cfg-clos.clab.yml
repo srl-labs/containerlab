@@ -12,7 +12,7 @@ topology:
     srl:
       image: ghcr.io/nokia/srlinux:21.6.2-67
     vr-sros:
-      image: registry.srlinux.dev/pub/vr-sros:21.7.R1 # internal image, external users should build/use their own image
+      image: vrnetlab/vr-sros:21.7.R1 # internal image, external users should build/use their own image
       license: ./license_sr.key # license file must be obtained from Nokia
 
   #######################################################
