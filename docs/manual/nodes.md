@@ -114,9 +114,38 @@ Some containerized NOSes require a license to operate or can leverage a license 
 
 ### startup-config
 
-For some kinds it's possible to pass a path to a config file that a node will use on start instead of a bare config. Check documentation for a specific kind to see if `startup-config` element is supported.
+For all Network OS kinds, it's possible to provide startup configuration that the node applies on boot. The startup config can be provided in two ways:
 
-Note, that if a config file exists in the lab directory for a given node, then it will take preference over the startup config passed with this setting. If it is desired to discard the previously saved config and use the startup config instead, use the `enforce-startup-config` setting or deploy a lab with the [`reconfigure`](../cmd/deploy.md#reconfigure) flag.
+1. As a path to a file that is available on the host machine and contains the config blob that the node understands.
+2. As an embedded config blob that is provided as a multiline string.
+
+#### path to a startup-config file
+
+When a path to a startup-config file is provided, containerlab either mounts the file to the container by a path that NOS expects to have its startup-config file, or it will apply the config via using the NOS-dependent method.
+
+```yaml
+topology:
+  nodes:
+    srl:
+      startup-config: ./some/path/to/startup-config.cfg
+```
+
+Check the particular kind documentation to see if the startup-config is supported and how it is applied.
+
+#### embedded startup-config
+
+It is possible to embed the startup configuraion in the topology file itself. This is done by providing the startup-config as a multiline string.
+
+```yaml
+topology:
+  nodes:
+    srl:
+      startup-config: |
+        system information location "I am embedded config"
+```
+
+!!!note
+    If a config file exists in the lab directory for a given node, then it will take preference over the startup config passed with this setting. If it is desired to discard the previously saved config and use the startup config instead, use the `enforce-startup-config` setting or deploy a lab with the [`reconfigure`](../cmd/deploy.md#reconfigure) flag.
 
 #### remote startup-config
 
