@@ -1,6 +1,6 @@
 {
     "$id": "https://containerlab.dev/clab.schema.json",
-    "$schema": "https://json-schema.org/draft-07/schema#",
+    "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Containerlab topology definition file",
     "definitions": {
         "node-config": {
@@ -56,7 +56,7 @@
                         "vr-vsrx",
                         "vr-juniper_vsrx",
                         "vr-vjunosswitch",
-                        "vr-juniper_vjunosswitch",                      
+                        "vr-juniper_vjunosswitch",
                         "vr-xrv",
                         "vr-cisco_xrv",
                         "vr-xrv9k",
@@ -717,7 +717,7 @@
                         },
                         "vr-vjunosswitch": {
                             "$ref": "#/definitions/node-config"
-                        },                      
+                        },
                         "vr-aruba_aoscx": {
                             "$ref": "#/definitions/node-config"
                         },
