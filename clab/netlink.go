@@ -5,6 +5,9 @@
 package clab
 
 import (
+	"fmt"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -45,4 +48,27 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 		}
 	}
 	return nil
+}
+
+// GetLinksByNamePrefix returns a list of links whose name matches a prefix.
+func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
+	// filtered list of interfaces
+	if prefix == "" {
+		return nil, fmt.Errorf("prefix is not specified")
+	}
+	var fls []netlink.Link
+
+	ls, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range ls {
+		if strings.HasPrefix(l.Attrs().Name, prefix) {
+			fls = append(fls, l)
+		}
+	}
+	if len(fls) == 0 {
+		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
+	}
+	return fls, nil
 }
