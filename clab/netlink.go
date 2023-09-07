@@ -7,7 +7,6 @@ package clab
 import (
 	"fmt"
 	"net"
-	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
@@ -315,27 +314,4 @@ func (veth *vEthEndpoint) toBridge() error {
 func genIfName() string {
 	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
 	return string(s[:8])
-}
-
-// GetLinksByNamePrefix returns a list of links whose name matches a prefix.
-func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
-	// filtered list of interfaces
-	if prefix == "" {
-		return nil, fmt.Errorf("prefix is not specified")
-	}
-	var fls []netlink.Link
-
-	ls, err := netlink.LinkList()
-	if err != nil {
-		return nil, err
-	}
-	for _, l := range ls {
-		if strings.HasPrefix(l.Attrs().Name, prefix) {
-			fls = append(fls, l)
-		}
-	}
-	if len(fls) == 0 {
-		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
-	}
-	return fls, nil
 }

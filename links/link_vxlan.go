@@ -12,6 +12,10 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+const (
+	VxLANDefaultPort = 4789
+)
+
 // LinkVxlanRaw is the raw (string) representation of a vxlan link as defined in the topology file.
 type LinkVxlanRaw struct {
 	LinkCommonParams `yaml:",inline"`
@@ -51,6 +55,9 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams, ifaceNamePos
 	// point the vxlan endpoint to the host system
 	vxlanRawEp := lr.Endpoint
 	vxlanRawEp.Iface = fmt.Sprintf("vx-%s", ifaceNamePost)
+	if params.VxlanIfaceNameOverwrite != "" {
+		vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
+	}
 	vxlanRawEp.Node = "host"
 	vxlanRawEp.MAC = ""
 	if err != nil {
@@ -107,6 +114,9 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams, ifaceNamePos
 	link.remoteEndpoint = NewEndpointVxlan(params.Nodes["host"], link)
 	link.remoteEndpoint.parentIface = parentIf
 	link.remoteEndpoint.udpPort = lr.UdpPort
+	if lr.UdpPort == 0 {
+		link.remoteEndpoint.udpPort = VxLANDefaultPort
+	}
 	link.remoteEndpoint.remote = ip
 	link.remoteEndpoint.vni = lr.Vni
 	link.remoteEndpoint.MAC, err = utils.GenMac(ClabOUI)
@@ -131,6 +141,11 @@ func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams, ifaceNamePost
 	hostEpRaw := &EndpointRaw{
 		Node:  "host",
 		Iface: fmt.Sprintf("ve-%s", ifaceNamePost),
+	}
+
+	// overwrite the host side veth name. Used with the tools command
+	if params.VxlanIfaceNameOverwrite != "" {
+		hostEpRaw.Iface = params.VxlanIfaceNameOverwrite
 	}
 
 	hostEp, err := hostEpRaw.Resolve(params, veth)

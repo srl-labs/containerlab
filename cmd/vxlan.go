@@ -5,13 +5,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/vishvananda/netlink"
 )
 
@@ -55,6 +57,9 @@ var vxlanCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create vxlan interface",
 	RunE: func(cmd *cobra.Command, args []string) error {
+
+		ctx := context.Background()
+
 		if _, err := netlink.LinkByName(cntLink); err != nil {
 			return fmt.Errorf("failed to lookup link %q: %v",
 				cntLink, err)
@@ -74,19 +79,48 @@ var vxlanCreateCmd = &cobra.Command{
 			parentDev = r.Interface.Name
 		}
 
-		vxlanCfg := clab.VxLAN{
-			Name:     "vx-" + cntLink,
-			ID:       vxlanID,
-			ParentIf: parentDev,
-			Remote:   net.ParseIP(vxlanRemote),
-			MTU:      vxlanMTU,
+		vxlraw := &links.LinkVxlanRaw{
+			Remote:          vxlanRemote,
+			Vni:             vxlanID,
+			ParentInterface: parentDev,
+			LinkCommonParams: links.LinkCommonParams{
+				MTU: vxlanMTU,
+			},
+			UdpPort:    links.VxLANDefaultPort, // no option to set udp port exposed so far so we use the default
+			NoLearning: true,
+			NoL2Miss:   true,
+			NoL3Miss:   true,
+			LinkType:   links.LinkTypeVxlanStitch,
+			Endpoint: *links.NewEndpointRaw(
+				"host",
+				cntLink,
+				"",
+			),
 		}
 
-		if err := clab.AddVxLanInterface(vxlanCfg); err != nil {
+		rp := &links.ResolveParams{
+			Nodes: map[string]links.Node{
+				"host": links.GetHostLinkNode(),
+			},
+			VxlanIfaceNameOverwrite: cntLink,
+		}
+
+		link, err := vxlraw.Resolve(rp)
+		if err != nil {
 			return err
 		}
 
-		return clab.BindIfacesWithTC(vxlanCfg.Name, cntLink)
+		var vxl *links.VxlanStitched
+		var ok bool
+		if vxl, ok = link.(*links.VxlanStitched); !ok {
+			return fmt.Errorf("not a VxlanStitched link")
+		}
+
+		err = vxl.DeployWithExistingVeth(ctx)
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
 
@@ -97,7 +131,7 @@ var vxlanDeleteCmd = &cobra.Command{
 		var ls []netlink.Link
 		var err error
 
-		ls, err = clab.GetLinksByNamePrefix(delPrefix)
+		ls, err = GetLinksByNamePrefix(delPrefix)
 
 		if err != nil {
 			return err
@@ -114,4 +148,27 @@ var vxlanDeleteCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+// GetLinksByNamePrefix returns a list of links whose name matches a prefix.
+func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
+	// filtered list of interfaces
+	if prefix == "" {
+		return nil, fmt.Errorf("prefix is not specified")
+	}
+	var fls []netlink.Link
+
+	ls, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range ls {
+		if strings.HasPrefix(l.Attrs().Name, prefix) {
+			fls = append(fls, l)
+		}
+	}
+	if len(fls) == 0 {
+		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
+	}
+	return fls, nil
 }

@@ -32,6 +32,23 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 	return vxlanStitched
 }
 
+func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
+	err := l.vxlanLink.Deploy(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
+	if err != nil {
+		return err
+	}
+	err = stitch(l.vethStitchEp, l.vxlanLink.localEndpoint)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (l *VxlanStitched) Deploy(ctx context.Context) error {
 	err := l.vxlanLink.Deploy(ctx)
 	if err != nil {
@@ -76,7 +93,6 @@ func (*VxlanStitched) GetType() LinkType {
 }
 
 func stitch(ep1, ep2 Endpoint) error {
-
 	var err error
 	var linkSrc, linkDest netlink.Link
 	log.Infof("configuring ingress mirroring with tc in the direction of %s -> %s", ep1, ep2)

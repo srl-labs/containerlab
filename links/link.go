@@ -390,6 +390,11 @@ type ResolveParams struct {
 	// list of node shortnames that user
 	// passed as a node filter
 	NodesFilter []string
+	// for the tools command we need to overwrite the
+	// veth interface name on the host side. So this can
+	// be set and will thereby overwrite the general interface
+	// name generation.
+	VxlanIfaceNameOverwrite string
 }
 
 type VerifyLinkParams struct {
