@@ -108,6 +108,12 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+### Rapid deployment of Cilium BGP environments using Containerlab + Kind
+
+<small>:material-text: [Blog](https://www.sobyte.net/post/2022-09/containerlab-kind-cilium-bgp/) by [SoByte](https://www.sobyte.net/about/) · :material-calendar: 2022-09-02</small>
+
+A clever use of KinD and containerlab to deploy a k8s cluster with a network underlay to test Cilium's BGP capabilities.
+
 ### Cilium BGP tested with Containerlab
 
 <small>:material-youtube: [screencast](https://www.youtube.com/watch?v=AXTKS0WCXjE) by [Nico Vibert](https://twitter.com/nicovibert) · :material-calendar: 2022-07-20</small>
