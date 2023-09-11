@@ -24,7 +24,7 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
       docs: ${{ steps.filter.outputs.docs }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
         id: filter
         with:
@@ -60,7 +60,7 @@ jobs:
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: WillAbides/setup-go-faster@v1.10.1
         with:
           go-version: ${{ env.GOVER }}
@@ -91,7 +91,7 @@ jobs:
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: WillAbides/setup-go-faster@v1.10.1
         with:
           go-version: ${{ env.GOVER }}
@@ -106,7 +106,7 @@ jobs:
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: WillAbides/setup-go-faster@v1.10.1
         with:
           go-version: ${{ env.GOVER }}
@@ -148,7 +148,7 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v3
@@ -204,7 +204,7 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v3
@@ -257,7 +257,7 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v3
@@ -313,7 +313,7 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v3
@@ -373,7 +373,7 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v3
@@ -420,7 +420,7 @@ jobs:
       - ixiac-one-basic-tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: WillAbides/setup-go-faster@v1.10.1
@@ -440,7 +440,7 @@ jobs:
     needs: file-changes
     if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -480,7 +480,7 @@ jobs:
       - ext-container-tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -524,7 +524,7 @@ jobs:
     needs: build-and-release
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -546,7 +546,7 @@ jobs:
     needs: docs-test
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
