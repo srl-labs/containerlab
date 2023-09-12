@@ -488,6 +488,12 @@ func (s *srl) createSRLFiles() error {
 		cfgTemplate = string(c)
 	}
 
+	if cfgTemplate == "" {
+		log.Debugf("configuration template for node %s is empty, skipping startup config file generation", s.Cfg.ShortName)
+
+		return nil
+	}
+
 	err = s.GenerateConfig(cfgPath, cfgTemplate)
 	if err != nil {
 		log.Errorf("node=%s, failed to generate config: %v", s.Cfg.ShortName, err)
