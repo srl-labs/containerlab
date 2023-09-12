@@ -19,7 +19,7 @@ jobs:
       git_tag: ${{ steps.git_tag.outputs.git_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Get git tag
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -64,7 +64,7 @@ jobs:
     if: contains(github.ref, '-') != true # do not publish docs for beta releases which will have something like v0.0.0-0.33.0-beta
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
