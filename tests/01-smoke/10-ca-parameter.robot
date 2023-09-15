@@ -42,8 +42,8 @@ Review Root Certificate
     ...    openssl x509 -in ${ca-cert-file} -text
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Issuer: C = , L = , O = containerlab, OU = , CN = ${lab-name} lab CA
-    Should Contain    ${output}    Subject: C = , L = , O = containerlab, OU = , CN = ${lab-name} lab CA
+    Should Contain    ${output}    Issuer: C = US, L = , O = containerlab, OU = , CN = ${lab-name} lab CA
+    Should Contain    ${output}    Subject: C = US, L = , O = containerlab, OU = , CN = ${lab-name} lab CA
     Should Contain    ${output}    Public-Key: (${ca-keysize} bit)
 
 Node l1 cert and key files should exist
@@ -64,7 +64,7 @@ Review Node l1 Certificate
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    CN = l1.${lab-name}.io
-    Should Contain    ${output}    Issuer: C = , L = , O = containerlab, OU = , CN = ${lab-name} lab CA
+    Should Contain    ${output}    Issuer: C = US, L = , O = containerlab, OU = , CN = ${lab-name} lab CA
     Should Contain    ${output}    Public-Key: (${l1-keysize} bit)
 
 Review Node l2 Certificate
@@ -73,7 +73,7 @@ Review Node l2 Certificate
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    CN = l2.${lab-name}.io
-    Should Contain    ${output}    Issuer: C = , L = , O = containerlab, OU = , CN = ${lab-name} lab CA
+    Should Contain    ${output}    Issuer: C = US, L = , O = containerlab, OU = , CN = ${lab-name} lab CA
     Should Contain    ${output}    Public-Key: (${l2-keysize} bit)
 
 Verfiy node cert l1 with CA Cert
@@ -109,7 +109,7 @@ Get Certificate Date
     ...    ${certificate_output}
     ...    Not ${type}\\W*: (\\w{3}\\W+\\d{1,2} \\d{2}:\\d{2}:\\d{2} \\d{4} \\w{3})
     ...    1
-    [Return]    ${date}[0]
+    RETURN    ${date}[0]
 
 Check Certificat Validity Duration
     [Arguments]    ${certificate_output}    ${expected_duration}

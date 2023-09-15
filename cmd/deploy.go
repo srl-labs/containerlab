@@ -352,6 +352,7 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 	// define the attributes used to generate the CA Cert
 	caCertInput := &cert.CACSRInput{
 		CommonName:   c.Config.Name + " lab CA",
+		Country:      "US",
 		Expiry:       validityDuration,
 		Organization: "containerlab",
 		KeySize:      keySize,
