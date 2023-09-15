@@ -400,6 +400,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
 			Organization: "containerlab",
+			Country:      "US", // don't leave this empty, must be 2 letters
 			KeySize:      d.Cfg.Certificate.KeySize,
 			Expiry:       d.Cfg.Certificate.ValidityDuration,
 		}
