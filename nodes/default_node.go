@@ -395,11 +395,11 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 		}
 		hosts = append(hosts, nodeConfig.SANs...)
 
-		// collect cert details
 		certInput := &cert.NodeCSRInput{
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
 			Organization: "containerlab",
+			Country:      "US",
 			KeySize:      d.Cfg.Certificate.KeySize,
 			Expiry:       d.Cfg.Certificate.ValidityDuration,
 		}

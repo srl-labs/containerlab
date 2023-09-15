@@ -163,7 +163,7 @@ jobs:
           echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list
           curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
           sudo apt update
-          sudo apt install -y podman=4:4.6.2-0ubuntu22.04+obs81.2
+          sudo apt install -y podman
           sudo systemctl start podman
       - uses: actions/setup-python@v4
         with:
@@ -331,7 +331,7 @@ jobs:
           echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list
           curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
           sudo apt update
-          sudo apt install -y podman=4:4.6.2-0ubuntu22.04+obs81.2
+          sudo apt install -y podman
           sudo systemctl start podman
 
       - uses: actions/setup-python@v4
