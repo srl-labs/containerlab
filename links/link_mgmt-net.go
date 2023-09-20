@@ -71,7 +71,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMtu
+		link.MTU = DefaultLinkMTU
 	}
 
 	return link, nil
@@ -92,7 +92,7 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMtu
+		link.MTU = DefaultLinkMTU
 	}
 
 	return link, nil

@@ -39,7 +39,7 @@ func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, erro
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMtu
+		link.MTU = DefaultLinkMTU
 	}
 
 	return link, nil
@@ -84,7 +84,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMtu
+		link.MTU = DefaultLinkMTU
 	}
 
 	return link, nil

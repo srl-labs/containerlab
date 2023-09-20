@@ -49,7 +49,7 @@ func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMtu
+		link.MTU = DefaultLinkMTU
 	}
 
 	return link, nil
@@ -97,7 +97,7 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMtu
+		link.MTU = DefaultLinkMTU
 	}
 
 	return link, nil

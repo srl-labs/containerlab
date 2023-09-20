@@ -17,7 +17,7 @@ import (
 type LinkDeploymentState uint8
 
 const (
-	DefaultLinkMtu = 9500
+	DefaultLinkMTU = 9500
 
 	LinkDeploymentStateNotDeployed = iota
 	LinkDeploymentStateDeployed

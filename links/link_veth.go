@@ -65,7 +65,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if l.MTU == 0 {
-		l.MTU = DefaultLinkMtu
+		l.MTU = DefaultLinkMTU
 	}
 
 	return l, nil
@@ -85,7 +85,7 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMtu
+		link.MTU = DefaultLinkMTU
 	}
 
 	return link, nil
