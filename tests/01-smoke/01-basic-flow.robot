@@ -117,11 +117,17 @@ Verify links in node l1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+    # testing user-defined MTU is set
+    Should Contain    ${output}    2000
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l1 ip link show eth2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+    # testing default MTU is set
+    Should Contain    ${output}    9500
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l1 ip link show eth3
     Log    ${output}
