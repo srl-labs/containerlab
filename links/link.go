@@ -17,6 +17,8 @@ import (
 type LinkDeploymentState uint8
 
 const (
+	DefaultLinkMTU = 9500
+
 	LinkDeploymentStateNotDeployed = iota
 	LinkDeploymentStateDeployed
 )
@@ -72,8 +74,8 @@ var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
 // UnmarshalYAML deserializes links passed via topology file into LinkDefinition struct.
 // It supports both the brief and specific link type notations.
 func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// alias struct to avoid recursion used only need to unmarshal
-	// the type field.
+	// struct to avoid recursion when unmarshalling
+	// used only to unmarshal the type field.
 	var a struct {
 		Type string `yaml:"type"`
 	}

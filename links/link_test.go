@@ -106,6 +106,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						NewEndpointRaw("srl1", "e1-5", ""),
 						NewEndpointRaw("srl2", "e1-5", ""),
 					},
+					LinkCommonParams: LinkCommonParams{
+						MTU: DefaultLinkMTU,
+					},
 				},
 			},
 		},
@@ -146,6 +149,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Link: &LinkMacVlanRaw{
 					HostInterface: "eth0",
 					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
+					LinkCommonParams: LinkCommonParams{
+						MTU: DefaultLinkMTU,
+					},
 				},
 			},
 		},
@@ -162,6 +168,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Link: &LinkMgmtNetRaw{
 					HostInterface: "srl1-e1-1",
 					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
+					LinkCommonParams: LinkCommonParams{
+						MTU: DefaultLinkMTU,
+					},
 				},
 			},
 		},
@@ -178,6 +187,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Link: &LinkHostRaw{
 					HostInterface: "srl1-e1-1",
 					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
+					LinkCommonParams: LinkCommonParams{
+						MTU: DefaultLinkMTU,
+					},
 				},
 			},
 		},

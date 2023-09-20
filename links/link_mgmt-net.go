@@ -69,6 +69,11 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	bridgeEp.GetNode().AddEndpoint(bridgeEp)
 	contEp.GetNode().AddLink(link)
 
+	// set default link mtu if MTU is unset
+	if link.MTU == 0 {
+		link.MTU = DefaultLinkMTU
+	}
+
 	return link, nil
 }
 
@@ -79,16 +84,18 @@ func (*LinkMgmtNetRaw) GetType() LinkType {
 func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
-	result := &LinkMgmtNetRaw{
-		LinkCommonParams: LinkCommonParams{
-			MTU:    lb.MTU,
-			Labels: lb.Labels,
-			Vars:   lb.Vars,
-		},
-		HostInterface: hostIf,
-		Endpoint:      NewEndpointRaw(node, nodeIf, ""),
+	link := &LinkMgmtNetRaw{
+		LinkCommonParams: lb.LinkCommonParams,
+		HostInterface:    hostIf,
+		Endpoint:         NewEndpointRaw(node, nodeIf, ""),
 	}
-	return result, nil
+
+	// set default link mtu if MTU is unset
+	if link.MTU == 0 {
+		link.MTU = DefaultLinkMTU
+	}
+
+	return link, nil
 }
 
 var _mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
