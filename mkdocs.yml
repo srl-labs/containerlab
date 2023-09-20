@@ -42,6 +42,10 @@ nav:
       - Network wiring concepts: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
+      - Clabernetes:
+          - manual/clabernetes/index.md
+          - Install: manual/clabernetes/install.md
+          - Quickstart: manual/clabernetes/quickstart.md
       - Node filtering: manual/node-filtering.md
       - Publish ports: manual/published-ports.md
       - Multi-node labs: manual/multi-node.md
@@ -239,6 +243,7 @@ markdown_extensions:
   - markdown.extensions.def_list
   - markdown.extensions.footnotes
   - markdown.extensions.meta
+  - md_in_html
   - toc:
       permalink: "#"
   - pymdownx.arithmatex
