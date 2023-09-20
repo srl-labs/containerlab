@@ -22,7 +22,7 @@ import (
 var (
 	AEnd = ""
 	BEnd = ""
-	MTU  = clab.DefaultVethLinkMTU
+	MTU  = links.DefaultLinkMTU
 )
 
 func init() {
