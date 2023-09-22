@@ -1,6 +1,6 @@
 # Clabernetes Quickstart
 
-The best way to understand how clabernets works is to walk through a short example where we create a three-node k8s
+The best way to understand how clabernetes works is to walk through a short example where we create a three-node k8s
 cluster and deploy a lab topology on it with clabernetes.
 
 This quickstart uses [kind](https://kind.sigs.k8s.io/) to create a local kubernetes cluster and
@@ -10,21 +10,13 @@ SR Linux nodes connected back to back together.
 Next, we examine how clabernetes slices and dices the original lab to make it deployable onto the cluster
 with tunnels stitching lab nodes together to form point to point connections between the nodes.
 
-## Prerequisites
-
-Before we begin let's have a look at the short list the tools and permissions one must have to successfully get through this quickstart:
-
-- [Helm](https://helm.sh/docs/intro/install/) to install the clabernetes CRDs.
-- [jq](https://jqlang.github.io/jq/download/) to support kube-vip load balancer installation.
-- The ability to run privileged pods in your cluster.
-
 ## Creating a cluster
 
 Clabernetes goal is to allow users to run networking labs with the easy of use of containerlab,
 but with the scaling powers of kubernetes. To simulate the scaling aspect, we'll use [`kind`](https://kind.sigs.k8s.io/) to
-create a local multi-node kubernetes cluster.
+create a local multi-node kubernetes cluster. But if you already have a k8s cluster, feel free to use it instead.
 
-Cluster configuration provided with a heredoc instructs kind to setup a three node cluster with two worker
+Kind cluster configuration provided with a heredoc instructs kind to setup a three node cluster with two worker
 and one control plane nodes.
 
 ```bash
@@ -42,6 +34,16 @@ EOF
 
 Clabernetes is [installed](install.md) into a kubernetes cluster using [helm](https://helm.sh/docs/intro/install/):
 
+We use `alpine/helm` container image here instead of installing Helm locally, and you can skip this step if you already have Helm installed.
+
+```bash
+alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
+    -v ~/.kube:/root/.kube -v ~/.helm:/root/.helm \
+    -v ~/.config/helm:/root/.config/helm \
+    -v ~/.cache/helm:/root/.cache/helm \
+    alpine/helm:3.12.3"
+```
+
 ```bash
 helm upgrade --install \
     clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
@@ -57,6 +59,10 @@ clabernetes-manager-786495f848-2gm9p   1/1     Running   0          4h26m   10.2
 clabernetes-manager-786495f848-ghnt2   1/1     Running   0          4h26m   10.244.2.4   kind-worker2   <none>           <none>
 clabernetes-manager-786495f848-wqj8l   1/1     Running   0          4h25m   10.244.1.6   kind-worker    <none>           <none>
 ```
+
+We will also need clabverter CLI to convert containerlab topology files to clabernetes manifests. As per clabverter [installation instructions](install.md#clabverter) we will setup an alias for the latest version:
+
+--8<-- "docs/manual/clabernetes/install.md:cv-install"
 
 ## Installing Load Balancer
 
