@@ -25,9 +25,10 @@ We are sharing Clabernetes in its early alpha stages to allow people to see what
 
 In the alpha release we focus on basic topology constructs working our way towards full feature parity with Containerlab. Here is what is supported from the topology definitions so far:
 
-1. [startup-config](../nodes.md#startup-config) both inline and file-based formats.
-2. [binds](../nodes.md#binds)
-3. point to point links between the nodes.
+1. Images used in the topology should be available in the k8s cluster either by pulling them from a public registry or by using a private registry.
+2. [startup-config](../nodes.md#startup-config) both inline and file-based formats.
+3. [binds](../nodes.md#binds)
+4. point to point links between the nodes.
 4. automatic port exposure via Load Balancer, see [quickstart](quickstart.md#accessing-the-nodes).
 5. custom ports exposure to expose ports which are not exposed by default.
 6. Nodes requiring a license are not supported yet.

@@ -107,167 +107,174 @@ kube-system          kube-vip-ds-z8q67                           1/1     Running
 Clabernetes biggest advantage is that it uses the same topology file format as containerlab; as much as possible. Undestandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on k8s as is.  
 We've created a converter tool called `clabverter` that takes containerlab topology file and converts it to kubernetes manifests. The manifests can then be deployed on a k8s cluster.
 
-So how do we do that? Just enter the directory where original `clab.yml` file is located and let `clabverter` do its job. With the [Two SR Linux nodes](../../lab-examples/two-srls.md) lab this would look like this:
+So how do we do that? Just enter the directory where original `clab.yml` file is located; for the [Two SR Linux nodes](../../lab-examples/two-srls.md) lab this would look like this:
 
-```bash
+```bash title="Entering the lab directory"
 ❯ cd lab-examples/srl02/
 
 ❯ ls
 srl02.clab.yml  srl1.cfg  srl2.cfg
 ```
 
- Take a look at manifest file that defines a simple
-[2-node topology](https://github.com/srl-labs/clabernetes/blob/main/examples/two-srl.c9s.yml) consisting of two SR Linux nodes:
+And let `clabverter` do its job:
 
-```yaml
----
-apiVersion: topology.clabernetes/v1alpha1
-kind: Containerlab
-metadata:
-  name: clab-srl02
-  namespace: srl02
-spec:
-  # nodes' startup config is omitted for brevity
-  config: |-
-    name: srl02
-    topology:
-      nodes:
-        srl1:
-          kind: srl
-          image: ghcr.io/nokia/srlinux:23.7.1
-
-        srl2:
-          kind: srl
-          image: ghcr.io/nokia/srlinux:23.7.1
-      links:
-        - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+```bash title="Converting the containerlab topology to clabernetes manifests and applying it"
+kubectl create namespace clabernetes #(1)!
+clabverter --quiet --stdout | kubectl apply -f - #(2)!
 ```
 
-As you can see, the familiar Containerlab topology is simply wrapped in a `Containerlab` Custom
-Resource. The `spec.config` field contains the containerlab's topology definition in its entirety.
+1. We create `clabernetes` namespace where all clabernetes labs will leave.
+2. `clabverter` converts the original containerlab topology to a set of k8s manifests and applies them to the cluster.
 
-The `metadata.name` field is the name of the topology. The `metadata.namespace` field is the namespace in which the topology
-will be deployed.
+    We will cover what `clabverter` does in more details in the user manual some time later, but if you're curious, you can check the manifests it generates by running `clabverter --stdout > manifests.yml` and inspecting the `manifests.yml` file.
 
-!!!note
-    1. We use `c9s.yml` extension for clabernetes manifests. Because clabernetes == c9s.
-    2. A `clabverter` CLI will be available to users to convert existing containerlab `clab.yml` files to `c9s.yml` manifests!
-
-Before deploying this lab we need to create the namespace as set in our Clabernetes resource:
-
-```bash
-kubectl create namespace srl02
-```
-
-And now we are ready to deploy our first clabernetes topology by downloading it from clabernetes repo and feeding to kubectl:
-
-```bash
-curl -sL https://raw.githubusercontent.com/srl-labs/clabernetes/main/examples/two-srl.c9s.yml | \
-kubectl apply -f -
-```
+In the background, `clabverter` created `Clabernetes` custom resource (CR) in the `clabernetes` namespace that defines our topology and also created a set of config maps for each startup config used in the lab.
 
 ## Verifying the deployment
 
-Once the topology is deployed, clabernetes will do its magic. Let's verify run some verification commands to see what objects get created:
+Once clabverter is done, clabernetes controller casts its spell which is called reconciliation in k8s world. It takes the spec of the `Clabernetes` CR and creates a set of deployments, config maps and services that are required to deploy the lab.
 
-Starting with listing `Containerlab` CRs in the `srl02` namespace we can see it is available:
+Let's run some verification commands to see what we have in our cluster so far.
 
-```bash
-$ kubectl get --namespace srl02 Containerlab
-NAME         AGE
-clab-srl02   26m
+Starting with listing `Containerlab` CRs in the `clabernetes` namespace:
+
+``` {.bash .no-select}
+kubectl get --namespace clabernetes Containerlab
 ```
 
-Looking in the Containerlab CR we can see that clabernetes took the topology definition from the `spec.config` field and split it to sub-topologies that are outlined in the `status.configs` section
-of the resource:
+<div class="embed-result">
+```
+NAME    AGE
+srl02   3m27s
+```
+</div>
 
-```bash
-kubectl get --namespace srl02 Containerlabs clab-srl02 -o yaml
+Looking in the Containerlab CR we can see that clabverter created a Clabernetes CR where he put original topology under the `spec.config` field. Clabernetes controller on its turn took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
+
+``` {.bash .no-select}
+kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
 ```
 
-```yaml
-# --snip--
-status:
-  configs: |
-    srl1:
-        name: clabernetes-srl1
-        prefix: null
+<div class="embed-result" markdown>
+=== "spec.config"
+    ```yaml
+    spec:
+      config: |-
+        # topology documentation: http://containerlab.dev/lab-examples/two-srls/
+        name: srl02
+
         topology:
-            defaults:
-                ports:
-                    - 60000:21/tcp
-                    # here goes a list of ports exposed
-                    # by default
-            nodes:
-                srl1:
-                    kind: srl
-                    image: ghcr.io/nokia/srlinux:23.7.1
-            links:
-                - endpoints:
-                    - srl1:e1-1
-                    - host:srl1-e1-1
-        debug: false
-    srl2:
-        name: clabernetes-srl2
-        prefix: null
-        topology:
-            nodes:
-                srl2:
-                    kind: srl
-                    image: ghcr.io/nokia/srlinux:23.7.1
-            links:
-                - endpoints:
-                    - srl2:e1-1
-                    - host:srl2-e1-1
-```
+          nodes:
+            srl1:
+              kind: srl
+              image: ghcr.io/nokia/srlinux
+              startup-config: srl1.cfg
+            srl2:
+              kind: srl
+              image: ghcr.io/nokia/srlinux
+              startup-config: srl2.cfg
+
+          links:
+            - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+    ```
+=== "status.configs"
+    ```yaml
+    # --snip--
+    status:
+      configs: |
+        srl1:
+            name: clabernetes-srl1
+            prefix: ""
+            topology:
+                defaults:
+                    ports:
+                        - 60000:21/tcp
+                        # here goes a list of exposed ports
+                nodes:
+                    srl1:
+                        kind: srl
+                        startup-config: srl1.cfg
+                        image: ghcr.io/nokia/srlinux
+                links:
+                    - endpoints:
+                        - srl1:e1-1
+                        - host:srl1-e1-1
+            debug: false
+        srl2:
+            name: clabernetes-srl2
+            prefix: ""
+            topology:
+                defaults:
+                    ports:
+                        - 60000:21/tcp
+                        # here goes a list of exposed ports
+                nodes:
+                    srl2:
+                        kind: srl
+                        startup-config: srl2.cfg
+                        image: ghcr.io/nokia/srlinux
+                links:
+                    - endpoints:
+                        - srl2:e1-1
+                        - host:srl2-e1-1
+    ```
+</div>
 
 The subtopologies are then deployed as deployments (which in their turn create pods) in the cluster, and
 containerlab that runs inside each pod deploys the topology as it would normally do on a single node:
 
-```bash title="Listing pods in srl02 namespace"
-$ kubectl get pods --namespace srl02 -o wide
-NAME                               READY   STATUS    RESTARTS   AGE   IP           NODE           NOMINATED NODE   READINESS GATES
-clab-srl02-srl1-7bf78d568c-jw9q6   1/1     Running   0          24s   10.244.1.12   kind-worker   <none>           <none>
-clab-srl02-srl2-59fb9465d-k5vkb    1/1     Running   0          24s   10.244.1.11   kind-worker   <none>           <none>
+``` {.bash .no-select title="Listing pods in srl02 namespace"}
+kubectl get pods --namespace clabernetes -o wide
 ```
 
-We see that two pods are running on different worker nodes (they may run on the same node, if schedulers decides so).
-These pods run containerlab inside in a docker-in-docker mode and each node deploys a subset of
-the original topology. We can enter the pod and use containerlab CLI to verify the topology:
+<div class="embed-result">
+```
+NAME                          READY   STATUS    RESTARTS   AGE    IP           NODE          NOMINATED NODE   READINESS GATES
+srl02-srl1-56675cdbfd-7tbk2   1/1     Running   0          102m   10.244.1.4   c9s-worker2   <none>           <none>
+srl02-srl2-79dfbbd4f9-ksq9q   1/1     Running   0          102m   10.244.2.3   c9s-worker    <none>           <none>
+```
+</div>
 
-```bash
-kubectl exec -n srl02 -it clab-srl02-srl1-7bf78d568c-jw9q6 -- bash
+We see that two pods running (one per each lab node our original topology had) on different worker nodes[^3].
+These pods run containerlab inside in a docker-in-docker mode and each node deploys a subset of the original topology. We can enter the pod and use containerlab CLI to verify the topology:
+
+```{.bash .no-select}
+kubectl exec -n clabernetes -it srl02-srl1-56675cdbfd-7tbk2 -- bash
 ```
 
 And in the pod's shell we swim in the familiar containerlab waters:
 
-```bash
-root@clab-srl02-srl1-77f7585fbc-m9v54:/clabernetes# clab ins -a
-+---+-----------+------------------+-----------------------------------+--------------+------------------------------+------+---------+----------------+----------------------+
-| # | Topo Path |     Lab Name     |               Name                | Container ID |            Image             | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+-----------+------------------+-----------------------------------+--------------+------------------------------+------+---------+----------------+----------------------+
-| 1 | topo.yaml | clabernetes-srl1 | clabernetes-clabernetes-srl1-srl1 | 0a16495fb358 | ghcr.io/nokia/srlinux:23.7.1 | srl  | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-+---+-----------+------------------+-----------------------------------+--------------+------------------------------+------+---------+----------------+----------------------+
+```{.bash .no-select}
+root@srl02-srl1-56675cdbfd-7tbk2:/clabernetes# containerlab inspect -a
 ```
+
+<div class="embed-result">
+```
++---+-----------+------------------+------+--------------+-----------------------+------+---------+----------------+----------------------+
+| # | Topo Path |     Lab Name     | Name | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
++---+-----------+------------------+------+--------------+-----------------------+------+---------+----------------+----------------------+
+| 1 | topo.yaml | clabernetes-srl1 | srl1 | b0f17872023a | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
++---+-----------+------------------+------+--------------+-----------------------+------+---------+----------------+----------------------+
+```
+</div>
 
 We can `cat topo.yaml` to see the subset of a topology that containerlab started in this pod.
 
 !!!note
-    It is worth reiterating it again, unmodified containerlab runs inside a pod as if it runs in a Linux system in a standalone mode. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists.
+    It is worth repeating that unmodified containerlab runs inside a pod as if it would've run on a Linux system in a standalone mode. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists.
 
 ## Accessing the nodes
 
-There are two common ways to access the network OS'es shell:
+There are two common ways to access the lab nodes deployed by clabernetes:
 
 1. External access using Load Balancer service.
-2. Getting access to the pod's shell and from there login to the nested NOS. No LB is required.
+2. Entering the pod's shell and from there login to the running NOS. No LB is required.
 
 We are going to show you both options.
 
 ### Load Balancer
 
-Adding a Load Balancer to the k8s cluster makes accessing the nodes almost as easy when working with containerlab.
-Kube-vip load balancer that we added a few steps before is going to create a LoadBalancer k8s service for each exposed
+Adding a Load Balancer to the k8s cluster makes accessing the nodes almost as easy as when working with containerlab. Kube-vip load balancer that we added a few steps before is going to create a LoadBalancer k8s service for each exposed
 port.
 
 By default, clabernetes exposes[^1] the following ports for each lab node:
@@ -277,28 +284,30 @@ By default, clabernetes exposes[^1] the following ports for each lab node:
 | tcp      | `21`, `80`, `443`, `830`, `5000`, `5900`, `6030`, `9339`, `9340`, `9559`, `57400` |
 | udp      | `161`                                                                             |
 
-The good work that LB is doing can be seen by running:
+The good work that LB is doing can be listing services in the `clabernetes` namespace:
 
-```bash
-$ kubectl get -n srl02 svc --field-selector='type=LoadBalancer'
-NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                                                                                                                                                                   AGE
-clab-srl02-srl1      LoadBalancer   10.96.130.76    172.18.1.10   161:31968/UDP,21:32230/TCP,22:30722/TCP,23:32329/TCP,80:31708/TCP,443:30392/TCP,830:30954/TCP,5000:30852/TCP,5900:30031/TCP,6030:31250/TCP,9339:32620/TCP,9340:30104/TCP,9559:32624/TCP,57400:30806/TCP   39s
-clab-srl02-srl1-vx   ClusterIP      10.96.198.42    <none>        4789/UDP                                                                                                                                                                                                  40s
-clab-srl02-srl2      LoadBalancer   10.96.227.153   172.18.1.11   161:32330/UDP,21:31274/TCP,22:31321/TCP,23:31466/TCP,80:30947/TCP,443:32154/TCP,830:32300/TCP,5000:30241/TCP,5900:30688/TCP,6030:30977/TCP,9339:30847/TCP,9340:32687/TCP,9559:31699/TCP,57400:32644/TCP   39s
-clab-srl02-srl2-vx   ClusterIP      10.96.161.133   <none>        4789/UDP
+```{.bash .no-select}
+kubectl get -n clabernetes svc | grep -iv vx
 ```
+
+<div class="embed-result">
+```
+NAME            TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                                                                                                                                                                   AGE
+srl02-srl1      LoadBalancer   10.96.120.2     172.18.1.10   161:30700/UDP,21:32307/TCP,22:31202/TCP,23:32412/TCP,80:31940/TCP,443:31832/TCP,830:30576/TCP,5000:30702/TCP,5900:31502/TCP,6030:31983/TCP,9339:31113/TCP,9340:30835/TCP,9559:32702/TCP,57400:32037/TCP   125m
+srl02-srl2      LoadBalancer   10.96.175.237   172.18.1.11   161:30810/UDP,21:32208/TCP,22:31701/TCP,23:31177/TCP,80:31229/TCP,443:31872/TCP,830:32395/TCP,5000:31799/TCP,5900:30292/TCP,6030:31442/TCP,9339:32298/TCP,9340:30475/TCP,9559:32595/TCP,57400:31253/TCP   125m
+```
+</div>
 
 The two LoadBalancer services provide external IPs (`172.18.1.10` and `172.18.1.11`) for the lab nodes. The long list of ports are the ports clabernetes exposes by default which spans both regular SSH as well as other common automation interfaces.
 
 You can immediately SSH into one of the nodes using its External-IP:
 
+```{.text .no-select}
+ssh admin@172.18.1.10
 ```
-❯ ssh admin@172.18.1.12
-The authenticity of host '172.18.1.12 (172.18.1.12)' can't be established.
-ED25519 key fingerprint is SHA256:kpR071TK0ll86/vdYbsDE+PBI81RoYigZTRugTgFbl8.
-This key is not known by any other names
-Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
-Warning: Permanently added '172.18.1.12' (ED25519) to the list of known hosts.
+
+<div class="embed-result">
+```
 ................................................................
 :                  Welcome to Nokia SR Linux!                  :
 :              Open Network OS for the NetOps era.             :
@@ -315,36 +324,68 @@ Warning: Permanently added '172.18.1.12' (ED25519) to the list of known hosts.
 : Contact:     https://go.srlinux.dev/contact-sales            :
 ................................................................
 
-admin@172.18.1.12's password: 
+admin@172.18.1.10's password:
 Using configuration file(s): []
 Welcome to the srlinux CLI.
 Type 'help' (and press <ENTER>) if you need any help using this.
 --{ running }--[  ]--
 A:srl1#  
+
 ```
+</div>
 
 Other services, like gNMI, JSON-RPC, SNMP are available as well since those ports are already exposed.
+
+???example "gNMI access"
+    ```{.bash .no-select}
+    gnmic -a 172.18.1.10 -u admin -p 'NokiaSrl1!' --skip-verify -e json_ietf \
+      get --path /system/information/version
+    ```
+    <div class="embed-result">
+    ```
+    [
+      {
+        "source": "172.18.1.10",
+        "timestamp": 1695423561467118891,
+        "time": "2023-09-23T01:59:21.467118891+03:00",
+        "updates": [
+          {
+            "Path": "srl_nokia-system:system/srl_nokia-system-info:information/version",
+            "values": {
+              "srl_nokia-system:system/srl_nokia-system-info:information/version": "v23.7.1-163-gd408df6a0c"
+            }
+          }
+        ]
+      }
+    ]
+    ```
+    </div>
 
 ### Pod Shell
 
 Load Balancer makes it easy to get external access to the lab nodes, but don't panic if for whatever reason you can't install one.
-It is still possible to access the nodes without LB, it will just be less convenient and powerful.
+It is still possible to access the nodes without LB, it will just be less convenient.
 
 For example, to access `srl1` lab node in our k8s cluster we just need to figure out which pod runs this node.
 
 Since all pods are named after the nodes they are running, we can find the right one by listing all pods in a namespace:
 
 ```bash
-$ kubectl get pods -n srl02
-NAME                               READY   STATUS    RESTARTS   AGE
-clab-srl02-srl1-55477468c4-vprj4   1/1     Running   0          23m
-clab-srl02-srl2-5b948687d5-pwhlr   1/1     Running   0          23m
+kubectl get pods -n clabernetes
 ```
 
-Looking at the pod nameed `clab-srl02-srl1-55477468c4-vprj4` we understand that it runs `srl1` node we specified in the topology. To get shell access to this node we can run:
+<div class="embed-result">
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+srl02-srl1-56675cdbfd-7tbk2   1/1     Running   0          137m
+srl02-srl2-79dfbbd4f9-ksq9q   1/1     Running   0          137m
+```
+</div>
+
+Looking at the pod named `srl02-srl1-56675cdbfd-7tbk2` we understand that it runs `srl1` node we specified in the topology. To get shell access to this node we can run:
 
 ```bash
-kubectl -n srl02 exec -it clab-srl02-srl1-55477468c4-vprj4 -- ssh admin@srl1
+kubectl -n clabernetes exec -it srl02-srl1-56675cdbfd-7tbk2 -- ssh admin@srl1
 ```
 
 We essentially execute `ssh admin@srl1` command inside the pod, as you'd normally do with containerlab.
@@ -353,9 +394,9 @@ We essentially execute `ssh admin@srl1` command inside the pod, as you'd normall
 
 One of the challanges associated with distributed labs is to enable connectivity between the nodes as per user's intent.
 
-Thanks to k8s and accompanying Load Balancer service, the management network access is taken care of. You get access to the management interfaces of each pod out of the box. But what about the data plane?
+Thanks to k8s and accompanying Load Balancer service, the management network access is taken care of. You get access to the management interfaces of each pod out of the box. But what about the non-management links we defined in the original topology file?
 
-In containerlab this is easy to solve by creating the veth pairs between the nodes, but things are a bit more complicated in distributed environments like k8s.
+In containerlab the links defined in the topology most often represented by the veth pairs between the nodes, but things are a bit more complicated in distributed environments like k8s.
 
 Remember our manifest file we deployed in the beginning of this quickstart? It had a single link between two nodes defined in the same way you'd do it in containerlab:
 
@@ -369,8 +410,50 @@ How does clabernetes layout this link when the lab nodes srl1 and srl2 can be sc
 
 Two nodes appear to be connected to each other as if they were connected with a veth pair. We can check that LLDP neighbors are discovered on either other side of the link:
 
-```srl
+```{.bash .no-select}
+kubectl -n clabernetes exec -it srl02-srl1-56675cdbfd-7tbk2 -- \
+    ssh admin@srl1 #(1)!
+```
 
+1. Logging to `srl1` node
+
+<div class="embed-result">
+```
+Last login: Fri Sep 22 23:07:30 2023 from 2001:172:20:20::1
+Using configuration file(s): []
+Welcome to the srlinux CLI.
+Type 'help' (and press <ENTER>) if you need any help using this.
+```
+</div>
+<div class="embed-result">
+```srl
+--{ running }--[  ]--
+A:srl1# show system lldp neighbor
+```
+</div>
+<div class="embed-result">
+```
+  +--------------+-------------------+----------------------+---------------------+------------------------+----------------------+---------------+
+  |     Name     |     Neighbor      | Neighbor System Name | Neighbor Chassis ID | Neighbor First Message | Neighbor Last Update | Neighbor Port |
+  +==============+===================+======================+=====================+========================+======================+===============+
+  | ethernet-1/1 | 1A:48:00:FF:00:00 | srl2                 | 1A:48:00:FF:00:00   | 2 hours ago            | 2 seconds ago        | ethernet-1/1  |
+  +--------------+-------------------+----------------------+---------------------+------------------------+----------------------+---------------+
+```
+</div>
+
+We can also make sure that our startup-configuration that was provided in [external files](https://github.com/srl-labs/containerlab/tree/main/lab-examples/srl02) in original topology is applied in good orde and we can perform ping between two nodes:
+
+```text
+--{ running }--[  ]--
+A:srl1# ping 192.168.0.1 network-instance default -c 2 
+Using network instance default
+PING 192.168.0.1 (192.168.0.1) 56(84) bytes of data.
+64 bytes from 192.168.0.1: icmp_seq=1 ttl=64 time=74.8 ms
+64 bytes from 192.168.0.1: icmp_seq=2 ttl=64 time=8.82 ms
+
+--- 192.168.0.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1002ms
+rtt min/avg/max/mdev = 8.823/41.798/74.773/32.975 ms
 ```
 
 ???warning "VXLAN and MTU"
@@ -384,3 +467,4 @@ Two nodes appear to be connected to each other as if they were connected with a 
 
 [^1]: Default exposed ports can be ovewritten by a user via Containerlab CR.
 [^2]: Using containerlab's [vxlan tunneling workflow](../../manual/multi-node.md#vxlan-tunneling) to create tunnels.
+[^3]: They may run on the same node, if scheduler decides so.

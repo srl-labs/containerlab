@@ -28,9 +28,10 @@ Clabverter is versioned the same way as Clabernetes, and the recommended way to 
 
 === "installing latest version"
     <!-- --8<-- [start:cv-install] -->
-    ```bash
+    ```bash title="set up <code>clabverter</code> alias"
     docker pull ghcr.io/srl-labs/clabernetes/clabverter
-    alias clabverter="docker run -v $(pwd):/clabverter --rm \
+    alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
+        docker run -v $(pwd):/clabernetes/work --rm \
         ghcr.io/srl-labs/clabernetes/clabverter"
     ```
     <!-- --8<-- [end:cv-install] -->
