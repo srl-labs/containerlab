@@ -6,7 +6,7 @@ status: new
 
 <small>Clabernetes is in [:material-alpha: state](#whats-in-material-alpha-release) at the moment. We are trying (& breaking) things.</small>
 
-Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/srl-labs/clabernetes/).
+Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/srl-labs/clabernetes/) or simply **c9s**.
 
 <figure markdown>
 ![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/4fdd35b5f4553d766216a4bda2b9a20c/geogebra-export.svg#only-light)

@@ -1,26 +1,24 @@
 # Clabernetes Quickstart
 
 The best way to understand how clabernetes works is to walk through a short example where we create a three-node k8s
-cluster and deploy a lab topology on it with clabernetes.
+cluster and deploy a lab there.
 
 This quickstart uses [kind](https://kind.sigs.k8s.io/) to create a local kubernetes cluster and
-then deploys clabernetes into. Once clanernetes is installed we deploy a small topology with two
-SR Linux nodes connected back to back together.
+then deploys clabernetes into. Once clanernetes is installed we deploy a small
+[topology with two SR Linux nodes](../../lab-examples/two-srls.md) connected back to back together.
 
-Next, we examine how clabernetes slices and dices the original lab to make it deployable onto the cluster
-with tunnels stitching lab nodes together to form point to point connections between the nodes.
+Once the lab is deployed, we explain how clabverter & clabernetes work in unison to to make the original topology files deployable onto the cluster
+with tunnels stitching lab nodes together to form point to point connections between the nodes.  
+Buckle up!
 
 ## Creating a cluster
 
-Clabernetes goal is to allow users to run networking labs with the easy of use of containerlab,
-but with the scaling powers of kubernetes. To simulate the scaling aspect, we'll use [`kind`](https://kind.sigs.k8s.io/) to
-create a local multi-node kubernetes cluster. But if you already have a k8s cluster, feel free to use it instead.
+Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use but with the scaling powers of kubernetes. To simulate the scaling aspect, we'll use [`kind`](https://kind.sigs.k8s.io/) to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead.
 
-Kind cluster configuration provided with a heredoc instructs kind to setup a three node cluster with two worker
-and one control plane nodes.
+With the following command we instruct kind to setup a three node k8s cluster with two worker and one control plane nodes.
 
 ```bash
-kind create cluster --config - <<EOF
+kind create cluster --name c9s --config - <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
@@ -30,11 +28,15 @@ nodes:
 EOF
 ```
 
+Don't forget to install [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)!
+
+When the cluster is ready we can proceed with installing clabernetes.
+
 ## Installing clabernetes
 
-Clabernetes is [installed](install.md) into a kubernetes cluster using [helm](https://helm.sh/docs/intro/install/):
+Clabernetes is [installed](install.md) into a kubernetes cluster using [helm](https://helm.sh):
 
-We use `alpine/helm` container image here instead of installing Helm locally, and you can skip this step if you already have Helm installed.
+We use `alpine/helm` container image here instead of installing the tool locally; you can skip this step if you already have `helm` installed.
 
 ```bash
 alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
@@ -44,33 +46,33 @@ alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     alpine/helm:3.12.3"
 ```
 
-```bash
+```bash title="Installing latest clabernetes version"
 helm upgrade --install \
     clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
 ```
 
-A successful installation will result in a clabernetes-manager deployment of three pods running in
+A successful installation will result in a `clabernetes-manager` deployment of three pods running in
 the cluster:
 
 ```bash
-$ kubectl get pods -o wide
-NAME                                   READY   STATUS    RESTARTS   AGE    IP           NODE           NOMINATED NODE   READINESS GATES
-clabernetes-manager-786495f848-2gm9p   1/1     Running   0          4h26m   10.244.1.5   kind-worker    <none>           <none>
-clabernetes-manager-786495f848-ghnt2   1/1     Running   0          4h26m   10.244.2.4   kind-worker2   <none>           <none>
-clabernetes-manager-786495f848-wqj8l   1/1     Running   0          4h25m   10.244.1.6   kind-worker    <none>           <none>
+$ kubectl get pods -o wide #(1)!
+NAME                                   READY   STATUS     RESTARTS   AGE   IP           NODE          NOMINATED NODE   READINESS GATES
+clabernetes-manager-7d8d9b4785-9xbnn   0/1     Init:0/1   0          27s   10.244.2.2   c9s-worker    <none>           <none>
+clabernetes-manager-7d8d9b4785-hpc6h   0/1     Init:0/1   0          27s   10.244.1.3   c9s-worker2   <none>           <none>
+clabernetes-manager-7d8d9b4785-z47dr   1/1     Running    0          27s   10.244.1.2   c9s-worker2   <none>           <none>
 ```
 
-We will also need clabverter CLI to convert containerlab topology files to clabernetes manifests. As per clabverter [installation instructions](install.md#clabverter) we will setup an alias for the latest version:
+1. Note, that `clabernetes-manager` is installed as a 3-node deployment, and you can see that two pods might be in Init stay for a little while until the leader election is completed.
+
+We will also need `clabverter` CLI to convert containerlab topology files to clabernetes manifests. As per clabverter [installation instructions](install.md#clabverter) we will setup an alias for its latest version:
 
 --8<-- "docs/manual/clabernetes/install.md:cv-install"
 
 ## Installing Load Balancer
 
-To get access to the nodes deployed by clabernetes from outside of the k8s cluster we will install [kube-vip](https://kube-vip.io/) load
-balancer into the cluster. Any load balancer will do, kube-vip is just an example. Moreover, if no
-external access to the nodes is desired, load balancer installation can be skipped altogether.
+To get access to the nodes deployed by clabernetes from outside of the k8s cluster we will install need a load balancer. Any load balancer will do, we will use up [kube-vip](https://kube-vip.io/) in this quickstart. Moreover, if no external access to the nodes is required, load balancer installation can be skipped altogether.
 
-Following [kube-vip + kind](https://kube-vip.io/docs/usage/kind/) installation instructions:
+Following [kube-vip + kind](https://kube-vip.io/docs/usage/kind/) installation instructions we execute the following commands:
 
 ```bash
 kubectl apply -f https://kube-vip.io/manifests/rbac.yaml
@@ -78,7 +80,7 @@ kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provi
 kubectl create configmap --namespace kube-system kubevip --from-literal range-global=172.18.1.10-172.18.1.250
 ```
 
-Next we setup kube-vip's container image:
+Next we setup kube-vip's CLI tool:
 
 ```bash
 KVVERSION=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
@@ -95,14 +97,26 @@ We can check kube-vip daemonset pods are running on both worker nodes:
 
 ```bash
 $ kubectl get pods -A -o wide | grep kube-vip
-kube-system          kube-vip-cloud-provider-54c878b6c5-tlvh5     1/1     Running   0          2m34s   10.244.0.5   kind-control-plane   <none>           <none>
-kube-system          kube-vip-ds-jn8qg                            1/1     Running   0          84s     172.18.0.3   kind-worker2         <none>           <none>
-kube-system          kube-vip-ds-tmfrq                            1/1     Running   0          84s     172.18.0.4   kind-worker          <none>           <none>
+kube-system          kube-vip-cloud-provider-54c878b6c5-qwvf5    1/1     Running   0          91s   10.244.0.5   c9s-control-plane   <none>           <none>
+kube-system          kube-vip-ds-fj7qp                           1/1     Running   0          9s    172.18.0.3   c9s-worker2         <none>           <none>
+kube-system          kube-vip-ds-z8q67                           1/1     Running   0          9s    172.18.0.4   c9s-worker          <none>           <none>
 ```
 
 ## Deploying a topology
 
-Clabernetes biggest advantage is that it uses the same topology format as containerlab; as much as possible. Take a look at manifest file that defines a simple
+Clabernetes biggest advantage is that it uses the same topology file format as containerlab; as much as possible. Undestandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on k8s as is.  
+We've created a converter tool called `clabverter` that takes containerlab topology file and converts it to kubernetes manifests. The manifests can then be deployed on a k8s cluster.
+
+So how do we do that? Just enter the directory where original `clab.yml` file is located and let `clabverter` do its job. With the [Two SR Linux nodes](../../lab-examples/two-srls.md) lab this would look like this:
+
+```bash
+❯ cd lab-examples/srl02/
+
+❯ ls
+srl02.clab.yml  srl1.cfg  srl2.cfg
+```
+
+ Take a look at manifest file that defines a simple
 [2-node topology](https://github.com/srl-labs/clabernetes/blob/main/examples/two-srl.c9s.yml) consisting of two SR Linux nodes:
 
 ```yaml

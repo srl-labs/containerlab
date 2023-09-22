@@ -29,7 +29,8 @@ Clabverter is versioned the same way as Clabernetes, and the recommended way to 
 === "installing latest version"
     <!-- --8<-- [start:cv-install] -->
     ```bash
-    alias clabverter="docker run -v $(pwd):/workdir --rm \
+    docker pull ghcr.io/srl-labs/clabernetes/clabverter
+    alias clabverter="docker run -v $(pwd):/clabverter --rm \
         ghcr.io/srl-labs/clabernetes/clabverter"
     ```
     <!-- --8<-- [end:cv-install] -->
@@ -38,14 +39,15 @@ Clabverter is versioned the same way as Clabernetes, and the recommended way to 
     In case you need to install a specific version:
 
     ```bash
-    alias clabverter="docker run -v $(pwd):/workdir --rm ghcr.io/srl-labs/clabernetes/clabverter:<version>"
+    alias clabverter="docker run -v $(pwd):/clabverter --rm \
+        ghcr.io/srl-labs/clabernetes/clabverter:<version>"
     ```
 === "installing development version"
-
     In case you need to install a specific version:
 
     ```bash
-    alias clabverter="docker run -v $(pwd):/workdir --rm ghcr.io/srl-labs/clabernetes/clabverter:dev-latest"
+    alias clabverter="docker run -v $(pwd):/clabverter --rm \
+        ghcr.io/srl-labs/clabernetes/clabverter:dev-latest"
     ```
 
 [^1]: Want to quickly spin up a local k8s clsuter with clabernetes? Check out our [Quickstart](quickstart.md).
