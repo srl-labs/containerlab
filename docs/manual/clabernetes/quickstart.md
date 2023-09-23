@@ -47,10 +47,7 @@ alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     alpine/helm:3.12.3"
 ```
 
-```bash title="Installing latest clabernetes version"
-helm upgrade --install \
-    clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
-```
+--8<-- "docs/manual/clabernetes/install.md:chart-install"
 
 A successful installation will result in a `clabernetes-manager` deployment of three pods running in
 the cluster:
@@ -120,20 +117,18 @@ srl02.clab.yml  srl1.cfg  srl2.cfg
 And let `clabverter` do its job:
 
 ```bash title="Converting the containerlab topology to clabernetes manifests and applying it"
-kubectl create namespace clabernetes #(1)!
-clabverter --quiet --stdout | kubectl apply -f - #(2)!
+clabverter --stdout | kubectl apply -f - #(1)!
 ```
 
-1. We create `clabernetes` namespace where all clabernetes labs will leave.
-2. `clabverter` converts the original containerlab topology to a set of k8s manifests and applies them to the cluster.
+1. `clabverter` converts the original containerlab topology to a set of k8s manifests and applies them to the cluster.
 
     We will cover what `clabverter` does in more details in the user manual some time later, but if you're curious, you can check the manifests it generates by running `clabverter --stdout > manifests.yml` and inspecting the `manifests.yml` file.
 
-In the background, `clabverter` created `Clabernetes` custom resource (CR) in the `clabernetes` namespace that defines our topology and also created a set of config maps for each startup config used in the lab.
+In the background, `clabverter` created `Containerlab` custom resource (CR) in the `clabernetes` namespace that defines our topology and also created a set of config maps for each startup config used in the lab.
 
 ## Verifying the deployment
 
-Once clabverter is done, clabernetes controller casts its spell which is called reconciliation in k8s world. It takes the spec of the `Clabernetes` CR (custom resource) and creates a set of deployments, config maps and services that are required to deploy the lab.
+Once clabverter is done, clabernetes controller casts its spell which is called reconciliation in k8s world. It takes the spec of the `Containerlab` CR (custom resource) and creates a set of deployments, config maps and services that are required to deploy the lab.
 
 Let's run some verification commands to see what we have in our cluster so far.
 
@@ -150,7 +145,7 @@ srl02   3m27s
 ```
 </div>
 
-Looking in the Containerlab CR we can see that clabverter created a Clabernetes CR where it put original topology under the `spec.config` field. Clabernetes controller on its turn took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
+Looking in the Containerlab CR we can see that clabverter put original topology under the `spec.config` field. Clabernetes controller on its turn took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
 
 ``` {.bash .no-select}
 kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
@@ -245,7 +240,7 @@ kubectl exec -n clabernetes -it srl02-srl1-56675cdbfd-7tbk2 -- bash
 And in the pod's shell we swim in the familiar containerlab waters:
 
 ```{.bash .no-select}
-root@srl02-srl1-56675cdbfd-7tbk2:/clabernetes# containerlab inspect -a
+root@srl02-srl1-56675cdbfd-7tbk2:/clabernetes# clab inspect
 ```
 
 <div class="embed-result">
@@ -258,7 +253,7 @@ root@srl02-srl1-56675cdbfd-7tbk2:/clabernetes# containerlab inspect -a
 ```
 </div>
 
-We can `cat topo.yaml` to see the subset of a topology that containerlab started in this pod.
+We can `cat topo.clab.yaml` to see the subset of a topology that containerlab started in this pod.
 
 !!!note
     It is worth repeating that unmodified containerlab runs inside a pod as if it would've run on a Linux system in a standalone mode. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists.
@@ -468,4 +463,3 @@ rtt min/avg/max/mdev = 8.823/41.798/74.773/32.975 ms
 [^2]: They may run on the same node, this is up to the kubernetes scheduler whose job it is to schedule pods on the nodes it deems most appropriate.
 [^3]: Default exposed ports can be overwritten by a user via Containerlab CR.
 [^4]: Using containerlab's [vxlan tunneling workflow](../../manual/multi-node.md#vxlan-tunneling) to create tunnels.
-
