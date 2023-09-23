@@ -155,9 +155,9 @@ func findTopoFileByPath(path string) (string, error) {
 	file := path
 
 	// we might have gotten a dirname
-	// lets try to find a single *.clab.yml
+	// lets try to find a single *.clab.y*ml
 	if finfo.IsDir() {
-		matches, err := filepath.Glob(filepath.Join(path, "*.clab.yml"))
+		matches, err := filepath.Glob(filepath.Join(path, "*.clab.y*ml"))
 		if err != nil {
 			return "", err
 		}
