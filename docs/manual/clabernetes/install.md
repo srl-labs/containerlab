@@ -2,7 +2,7 @@
 
 ## Controller
 
-Clabernetes controller (a.k.a manager) is installed via Helm; this means if you don't have Helm - [install it](https://helm.sh/docs/intro/install/), it's easy.
+Clabernetes controller (a.k.a. manager) is installed via Helm; this means if you don't have Helm - [install it](https://helm.sh/docs/intro/install/), it's easy.
 
 With Helm installed, to install the latest released Clabernetes to an existing k8s cluster[^1] do:
 
@@ -51,5 +51,5 @@ Clabverter is versioned the same way as Clabernetes, and the recommended way to 
         ghcr.io/srl-labs/clabernetes/clabverter:dev-latest"
     ```
 
-[^1]: Want to quickly spin up a local k8s clsuter with clabernetes? Check out our [Quickstart](quickstart.md).
-[^2]: You anyway has Docker installed if you use containerlab, right?
+[^1]: Want to quickly spin up a local k8s cluster with clabernetes? Check out our [Quickstart](quickstart.md).
+[^2]: You already have Docker installed if you use containerlab, right?

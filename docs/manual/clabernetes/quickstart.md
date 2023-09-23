@@ -4,18 +4,19 @@ The best way to understand how clabernetes works is to walk through a short exam
 cluster and deploy a lab there.
 
 This quickstart uses [kind](https://kind.sigs.k8s.io/) to create a local kubernetes cluster and
-then deploys clabernetes into. Once clanernetes is installed we deploy a small
+then deploys clabernetes into. Once clabernetes is installed we deploy a small
 [topology with two SR Linux nodes](../../lab-examples/two-srls.md) connected back to back together.
 
 Once the lab is deployed, we explain how clabverter & clabernetes work in unison to to make the original topology files deployable onto the cluster
 with tunnels stitching lab nodes together to form point to point connections between the nodes.  
+
 Buckle up!
 
 ## Creating a cluster
 
-Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use but with the scaling powers of kubernetes. To simulate the scaling aspect, we'll use [`kind`](https://kind.sigs.k8s.io/) to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead.
+Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use, but with the scaling powers of kubernetes. To simulate the scaling aspect, we'll use [`kind`](https://kind.sigs.k8s.io/) to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead -- clabernetes can run in any kubernetes cluster[^1]!
 
-With the following command we instruct kind to setup a three node k8s cluster with two worker and one control plane nodes.
+With the following command we instruct kind to set up a three node k8s cluster with two worker and one control plane nodes.
 
 ```bash
 kind create cluster --name c9s --config - <<EOF
@@ -104,7 +105,7 @@ kube-system          kube-vip-ds-z8q67                           1/1     Running
 
 ## Deploying a topology
 
-Clabernetes biggest advantage is that it uses the same topology file format as containerlab; as much as possible. Undestandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on k8s as is.  
+Clabernetes biggest advantage is that it uses the same topology file format as containerlab; as much as possible. Understandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on k8s as is.  
 We've created a converter tool called `clabverter` that takes containerlab topology file and converts it to kubernetes manifests. The manifests can then be deployed on a k8s cluster.
 
 So how do we do that? Just enter the directory where original `clab.yml` file is located; for the [Two SR Linux nodes](../../lab-examples/two-srls.md) lab this would look like this:
@@ -132,7 +133,7 @@ In the background, `clabverter` created `Clabernetes` custom resource (CR) in th
 
 ## Verifying the deployment
 
-Once clabverter is done, clabernetes controller casts its spell which is called reconciliation in k8s world. It takes the spec of the `Clabernetes` CR and creates a set of deployments, config maps and services that are required to deploy the lab.
+Once clabverter is done, clabernetes controller casts its spell which is called reconciliation in k8s world. It takes the spec of the `Clabernetes` CR (custom resource) and creates a set of deployments, config maps and services that are required to deploy the lab.
 
 Let's run some verification commands to see what we have in our cluster so far.
 
@@ -149,7 +150,7 @@ srl02   3m27s
 ```
 </div>
 
-Looking in the Containerlab CR we can see that clabverter created a Clabernetes CR where he put original topology under the `spec.config` field. Clabernetes controller on its turn took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
+Looking in the Containerlab CR we can see that clabverter created a Clabernetes CR where it put original topology under the `spec.config` field. Clabernetes controller on its turn took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
 
 ``` {.bash .no-select}
 kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
@@ -220,8 +221,7 @@ kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
     ```
 </div>
 
-The subtopologies are then deployed as deployments (which in their turn create pods) in the cluster, and
-containerlab that runs inside each pod deploys the topology as it would normally do on a single node:
+The sub-topologies are then deployed as deployments (which in their turn create pods) in the cluster, and containerlab is then run inside each pod deploying the topology as it would normally do on a single node:
 
 ``` {.bash .no-select title="Listing pods in srl02 namespace"}
 kubectl get pods --namespace clabernetes -o wide
@@ -235,7 +235,7 @@ srl02-srl2-79dfbbd4f9-ksq9q   1/1     Running   0          102m   10.244.2.3   c
 ```
 </div>
 
-We see that two pods running (one per each lab node our original topology had) on different worker nodes[^3].
+We see that two pods running (one per each lab node our original topology had) on different worker nodes[^2].
 These pods run containerlab inside in a docker-in-docker mode and each node deploys a subset of the original topology. We can enter the pod and use containerlab CLI to verify the topology:
 
 ```{.bash .no-select}
@@ -274,10 +274,9 @@ We are going to show you both options.
 
 ### Load Balancer
 
-Adding a Load Balancer to the k8s cluster makes accessing the nodes almost as easy as when working with containerlab. Kube-vip load balancer that we added a few steps before is going to create a LoadBalancer k8s service for each exposed
-port.
+Adding a Load Balancer to the k8s cluster makes accessing the nodes almost as easy as when working with containerlab. The kube-vip load balancer that we added a few steps before is going to create a LoadBalancer k8s service for each exposed port.
 
-By default, clabernetes exposes[^1] the following ports for each lab node:
+By default, clabernetes exposes[^3] the following ports for each lab node:
 
 | Protocol | Ports                                                                             |
 | -------- | --------------------------------------------------------------------------------- |
@@ -406,7 +405,7 @@ links:
   - endpoints: ["srl1:e1-1", "srl2:e1-1"]
 ```
 
-How does clabernetes layout this link when the lab nodes srl1 and srl2 can be scheduled on different worker nodes? Well, clabernetes takes original link definition as provided by a user and transforms it into a set of point-topoint VXLAN tunnels[^2] that stitch the nodes together.
+How does clabernetes layout this link when the lab nodes srl1 and srl2 can be scheduled on different worker nodes? Well, clabernetes takes the original link definition as provided by a user and transforms it into a set of point-to-point VXLAN tunnels[^4] that stitch the nodes together.
 
 Two nodes appear to be connected to each other as if they were connected with a veth pair. We can check that LLDP neighbors are discovered on either other side of the link:
 
@@ -441,7 +440,7 @@ A:srl1# show system lldp neighbor
 ```
 </div>
 
-We can also make sure that our startup-configuration that was provided in [external files](https://github.com/srl-labs/containerlab/tree/main/lab-examples/srl02) in original topology is applied in good orde and we can perform ping between two nodes:
+We can also make sure that our startup-configuration that was provided in [external files](https://github.com/srl-labs/containerlab/tree/main/lab-examples/srl02) in original topology is applied in good order and we can perform ping between two nodes:
 
 ```text
 --{ running }--[  ]--
@@ -465,6 +464,8 @@ rtt min/avg/max/mdev = 8.823/41.798/74.773/32.975 ms
     ```
     In our kind cluster that has a single network attached, the VXLAN tunnel is routed through the management network interface of the pod. It is possible to configure kind nodes to have more than one network and therefore have a dedicated network for the VXLAN tunnels with a higher MTU value.
 
-[^1]: Default exposed ports can be ovewritten by a user via Containerlab CR.
-[^2]: Using containerlab's [vxlan tunneling workflow](../../manual/multi-node.md#vxlan-tunneling) to create tunnels.
-[^3]: They may run on the same node, if scheduler decides so.
+[^1]: In general there are no requirements for clabernetes from a kubernetes cluster perspective, however, many device types may have requirements for nested virtualization or specific CPU flags that your nodes would need to support in order to run the device.
+[^2]: They may run on the same node, this is up to the kubernetes scheduler whose job it is to schedule pods on the nodes it deems most appropriate.
+[^3]: Default exposed ports can be overwritten by a user via Containerlab CR.
+[^4]: Using containerlab's [vxlan tunneling workflow](../../manual/multi-node.md#vxlan-tunneling) to create tunnels.
+

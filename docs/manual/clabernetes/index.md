@@ -31,7 +31,6 @@ In the alpha release we focus on basic topology constructs working our way towar
 4. point to point links between the nodes.
 4. automatic port exposure via Load Balancer, see [quickstart](quickstart.md#accessing-the-nodes).
 5. custom ports exposure to expose ports which are not exposed by default.
-6. Nodes requiring a license are not supported yet.
 
 !!!question "Why not `openconfig/kne`"
     Clabernetes is an experiment to see if we can scale containerlab beyond a single node. Therefore, we wanted to keep containerlab core "as is" and not change the way users create topology files. We also wanted to offer the same user experience and more importantly the same set of supported Network OSes.
