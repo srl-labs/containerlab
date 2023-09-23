@@ -4,7 +4,7 @@ status: new
 
 # Clabernetes
 
-<small>Clabernetes is in [:material-alpha: state](#whats-in-material-alpha-release) at the moment. We are trying (& breaking) things.</small>
+<small>Clabernetes is in [:material-alpha: state](#whats-in-release) at the moment. We are trying (& breaking) things.</small>
 
 Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/srl-labs/clabernetes/) or simply **c9s**.
 
@@ -27,10 +27,10 @@ In the alpha release we focus on basic topology constructs working our way towar
 
 1. Images used in the topology should be available in the k8s cluster either by pulling them from a public registry or by using a private registry.
 2. [startup-config](../nodes.md#startup-config) both inline and file-based formats.
-3. [binds](../nodes.md#binds)
+3. [license](../nodes.md#license) provisioning.
 4. point to point links between the nodes.
-4. automatic port exposure via Load Balancer, see [quickstart](quickstart.md#accessing-the-nodes).
-5. custom ports exposure to expose ports which are not exposed by default.
+5. automatic port exposure via Load Balancer, see [quickstart](quickstart.md#accessing-the-nodes).
+6. custom ports exposure to expose ports which are not exposed by default.
 
 !!!question "Why not `openconfig/kne`"
     Clabernetes is an experiment to see if we can scale containerlab beyond a single node. Therefore, we wanted to keep containerlab core "as is" and not change the way users create topology files. We also wanted to offer the same user experience and more importantly the same set of supported Network OSes.
