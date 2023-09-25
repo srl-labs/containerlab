@@ -173,7 +173,7 @@ By default, containerlab will use the config file that is available in the lab d
 
 ### suppress-startup-config
 
-By default, containerlab will create a startup-config when intially creating a lab.  To prevent a startup-config file from being created (in a Zero-Touch Provisioning lab, for example), set the `suppress-startup-config` to `true`.
+By default, containerlab will create a startup-config when initially creating a lab.  To prevent a startup-config file from being created (in a Zero-Touch Provisioning lab, for example), set the `suppress-startup-config` to `true`.
 
 ### auto-remove
 

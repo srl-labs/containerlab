@@ -29,7 +29,7 @@ drwxr-xr-x  3 root root   79 Dec  1 22:11 srl2
 
 The contents of this directory will contain kind-specific files and directories. Containerlab will name directories after the node names and will only created those if they are needed. For instance, by default any node of kind `linux` will not have it's own directory under the Lab Directory.
 
-### Persistance of a lab directory
+### Persistence of a lab directory
 
 When a user first deploy a lab, the Lab Directory gets created if it was not present. Depending on a node's kind, this directory might act as a persistent storage area for a node. A common case is having the configuration file saved when the changes are made to the node via management interfaces.
 
