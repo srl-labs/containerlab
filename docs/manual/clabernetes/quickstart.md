@@ -52,15 +52,20 @@ alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
 A successful installation will result in a `clabernetes-manager` deployment of three pods running in
 the cluster:
 
-```bash
-$ kubectl get pods -o wide #(1)!
+```{.bash .no-select}
+kubectl get pods -o wide #(1)!
+```
+
+1. Note, that `clabernetes-manager` is installed as a 3-node deployment, and you can see that two pods might be in Init stay for a little while until the leader election is completed.
+
+<div class="embed-result">
+```
 NAME                                   READY   STATUS     RESTARTS   AGE   IP           NODE          NOMINATED NODE   READINESS GATES
 clabernetes-manager-7d8d9b4785-9xbnn   0/1     Init:0/1   0          27s   10.244.2.2   c9s-worker    <none>           <none>
 clabernetes-manager-7d8d9b4785-hpc6h   0/1     Init:0/1   0          27s   10.244.1.3   c9s-worker2   <none>           <none>
 clabernetes-manager-7d8d9b4785-z47dr   1/1     Running    0          27s   10.244.1.2   c9s-worker2   <none>           <none>
 ```
-
-1. Note, that `clabernetes-manager` is installed as a 3-node deployment, and you can see that two pods might be in Init stay for a little while until the leader election is completed.
+</div>
 
 We will also need `clabverter` CLI to convert containerlab topology files to clabernetes manifests. As per clabverter [installation instructions](install.md#clabverter) we will setup an alias for its latest version:
 
@@ -108,15 +113,17 @@ We've created a converter tool called `clabverter` that takes containerlab topol
 So how do we do that? Just enter the directory where original `clab.yml` file is located; for the [Two SR Linux nodes](../../lab-examples/two-srls.md) lab this would look like this:
 
 ```bash title="Entering the lab directory"
-❯ cd lab-examples/srl02/
+❯ cd lab-examples/srl02/ #(1)!
 
 ❯ ls
 srl02.clab.yml  srl1.cfg  srl2.cfg
 ```
 
+1. The path is relative to containerlab repository root.
+
 And let `clabverter` do its job:
 
-```bash title="Converting the containerlab topology to clabernetes manifests and applying it"
+```{.bash .no-select title="Converting the containerlab topology to clabernetes manifests and applying it"}
 clabverter --stdout | kubectl apply -f - #(1)!
 ```
 
@@ -225,16 +232,19 @@ kubectl get pods --namespace clabernetes -o wide
 <div class="embed-result">
 ```
 NAME                          READY   STATUS    RESTARTS   AGE    IP           NODE          NOMINATED NODE   READINESS GATES
-srl02-srl1-56675cdbfd-7tbk2   1/1     Running   0          102m   10.244.1.4   c9s-worker2   <none>           <none>
-srl02-srl2-79dfbbd4f9-ksq9q   1/1     Running   0          102m   10.244.2.3   c9s-worker    <none>           <none>
+clabernetes-manager-77bcc9484c-fn2gq   1/1     Running   0          11m   10.244.2.10   c9s-worker    <none>           <none>
+clabernetes-manager-77bcc9484c-hs9c7   1/1     Running   0          11m   10.244.2.9    c9s-worker    <none>           <none>
+clabernetes-manager-77bcc9484c-tvr42   1/1     Running   0          11m   10.244.1.10   c9s-worker2   <none>           <none>
+srl02-srl1-646dbff599-c65gw            1/1     Running   0          43s   10.244.1.11   c9s-worker2   <none>           <none>
+srl02-srl2-d654ffbcd-4l2q7             1/1     Running   0          43s   10.244.2.11   c9s-worker    <none>           <none>
 ```
 </div>
 
-We see that two pods running (one per each lab node our original topology had) on different worker nodes[^2].
+Besides the `clabernetes-manager` pods, we see that two pods running (one per each lab node our original topology had) on different worker nodes[^2].
 These pods run containerlab inside in a docker-in-docker mode and each node deploys a subset of the original topology. We can enter the pod and use containerlab CLI to verify the topology:
 
 ```{.bash .no-select}
-kubectl exec -n clabernetes -it srl02-srl1-56675cdbfd-7tbk2 -- bash
+kubectl exec -n clabernetes -it srl02-srl1-646dbff599-c65gw -- bash
 ```
 
 And in the pod's shell we swim in the familiar containerlab waters:
@@ -245,13 +255,16 @@ root@srl02-srl1-56675cdbfd-7tbk2:/clabernetes# clab inspect
 
 <div class="embed-result">
 ```
-+---+-----------+------------------+------+--------------+-----------------------+------+---------+----------------+----------------------+
-| # | Topo Path |     Lab Name     | Name | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+-----------+------------------+------+--------------+-----------------------+------+---------+----------------+----------------------+
-| 1 | topo.yaml | clabernetes-srl1 | srl1 | b0f17872023a | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-+---+-----------+------------------+------+--------------+-----------------------+------+---------+----------------+----------------------+
+INFO[0000] Parsing & checking topology file: topo.clab.yaml
++---+------+--------------+-----------------------+------+---------+----------------+----------------------+
+| # | Name | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
++---+------+--------------+-----------------------+------+---------+----------------+----------------------+
+| 1 | srl1 | 80fae9ccf43b | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
++---+------+--------------+-----------------------+------+---------+----------------+----------------------+
 ```
 </div>
+
+If you do not see any nodes in the `inspect` output give it a few minutes, as containerlab is pulling the image and starting the nodes. The logs of this process can be seen by running `tail -f clab.log`.
 
 We can `cat topo.clab.yaml` to see the subset of a topology that containerlab started in this pod.
 
@@ -365,21 +378,21 @@ For example, to access `srl1` lab node in our k8s cluster we just need to figure
 Since all pods are named after the nodes they are running, we can find the right one by listing all pods in a namespace:
 
 ```bash
-kubectl get pods -n clabernetes
+kubectl get pods -n clabernetes | grep -iv manager 
 ```
 
 <div class="embed-result">
 ```
-NAME                          READY   STATUS    RESTARTS   AGE
-srl02-srl1-56675cdbfd-7tbk2   1/1     Running   0          137m
-srl02-srl2-79dfbbd4f9-ksq9q   1/1     Running   0          137m
+NAME                                   READY   STATUS    RESTARTS   AGE
+srl02-srl1-646dbff599-c65gw            1/1     Running   0          8m12s
+srl02-srl2-d654ffbcd-4l2q7             1/1     Running   0          8m12s
 ```
 </div>
 
 Looking at the pod named `srl02-srl1-56675cdbfd-7tbk2` we understand that it runs `srl1` node we specified in the topology. To get shell access to this node we can run:
 
-```bash
-kubectl -n clabernetes exec -it srl02-srl1-56675cdbfd-7tbk2 -- ssh admin@srl1
+```{.bash .no-select}
+kubectl -n clabernetes exec -it srl02-srl1-646dbff599-c65gw -- ssh admin@srl1
 ```
 
 We essentially execute `ssh admin@srl1` command inside the pod, as you'd normally do with containerlab.
@@ -458,6 +471,16 @@ rtt min/avg/max/mdev = 8.823/41.798/74.773/32.975 ms
     9: vx-srl1-e1-1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1400 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
     ```
     In our kind cluster that has a single network attached, the VXLAN tunnel is routed through the management network interface of the pod. It is possible to configure kind nodes to have more than one network and therefore have a dedicated network for the VXLAN tunnels with a higher MTU value.
+
+## VM-based nodes?
+
+In this quickstart we used native containerized Network OS - SR Linux - as it is lightweigt and publicly available. But what if you want to use a VM-based Network OS like Nokia SR OS, Cisco IOS-XRv or Juniper vMX? Can you do that with clabernetes?
+
+Short answer is yes. Clabernetes should be able to run VM-based nodes as well, but your cluster nodes must support nested virtualization, same as you would need to run VM-based nodes in containerlab.
+
+Also you need to ensure that your VM-based container image is accessible to your cluster nodes, either via a public registry or a private one.
+
+When these considerations are taken care of, you can use the same topology file as you would use with containerlab. The only difference is that you need to specify the image in the topology file as a fully qualified image name, including the registry name.
 
 [^1]: In general there are no requirements for clabernetes from a kubernetes cluster perspective, however, many device types may have requirements for nested virtualization or specific CPU flags that your nodes would need to support in order to run the device.
 [^2]: They may run on the same node, this is up to the kubernetes scheduler whose job it is to schedule pods on the nodes it deems most appropriate.
