@@ -37,14 +37,14 @@ It is possible to install official containerlab releases via public APT/YUM repo
 
 === "APT"
     ```bash
-    echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
+    echo "deb [trusted=yes] <https://apt.fury.io/netdevops/> /" | \
     sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
     sudo apt update && sudo apt install containerlab
     ```
 === "YUM"
     ```
-    yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
+    yum-config-manager --add-repo=<https://yum.fury.io/netdevops/> && \
     echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
     sudo yum install containerlab
@@ -255,6 +255,14 @@ When the container is started, you will have a bash shell opened with the direct
     ```
 
 #### Containerlab on ARM-based Macs
+
+##### UTM
+
+```
+wget -qO- containerlab.dev/setup-debian | bash -s -- all
+```
+
+##### Docker in Docker
 
 The easiest option to run Containerlab on ARM-based M1/M2 Macs is to build a docker-in-docker container. We'll provide an example of a custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
 
