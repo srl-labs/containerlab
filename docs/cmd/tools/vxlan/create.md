@@ -1,6 +1,6 @@
 # vxlan create
 
-### Description
+## Description
 
 The `create` sub-command under the `tools vxlan` command creates a VxLAN interface and sets `tc` rules to redirect traffic to/from a specified interface available in root namespace of a container host.
 
@@ -8,32 +8,41 @@ This combination of a VxLAN interface and `tc` rules make possible to transparen
 
 VxLAN interface name will be a catenation of a prefix `vx-` and the interface name that is used to redirect traffic. If the existing interface is named `srl_e1-1`, then VxLAN interface created for this interface will be named `vx-srl_e1-1`.
 
-### Usage
+## Usage
 
 `containerlab tools vxlan create [local-flags]`
 
-### Flags
+## Flags
 
-#### remote
+### remote
+
 VxLAN tunnels set up with this command are unidirectional in nature. To set the remote endpoint address the `--remote` flag should be used.
 
-#### id
+### port
+
+Port number that the VxLAN tunnel will use is set with `--port | -p` flag. Defaults to `14789`[^1].
+
+### id
+
 VNI that the VxLAN tunnel will use is set with `--id | -i` flag. Defaults to `10`.
 
-#### link
+### link
+
 As mentioned above, the tunnels are set up with a goal to transparently connect containers deployed on different hosts.
 
 To indicate which interface will be "piped" to a VxLAN tunnel the `--link | -l` flag should be used.
 
-#### dev
+### dev
+
 With `--dev` flag users can set the linux device that should be used in setting up the tunnel.
 
 Normally this flag can be omitted, since containerlab will take the device name which is used to reach the remote address as seen by the kernel routing table.
 
-#### mtu
+### mtu
+
 With `--mtu | -m` flag it is possible to set VxLAN MTU. Max MTU is automatically set, so this flag is only needed when MTU lower than max is needed to be provisioned.
 
-### Examples
+## Examples
 
 ```bash
 # create vxlan tunnel and redirect traffic to/from existing interface srl_e1-1 to it
@@ -56,3 +65,5 @@ INFO[0000] configuring ingress mirroring with tc in the direction of srl_e1-1 ->
 619: vx-srl_e1-1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1400 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
     link/ether 7a:6e:ba:82:a4:6f brd ff:ff:ff:ff:ff:ff
 ```
+
+[^1]: The reason we don't use default `4789` port number is because it is often blocked/filtered in (cloud) environments and we want to make sure that the VxLAN tunnels have higher chances to be established.
