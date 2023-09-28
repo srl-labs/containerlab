@@ -16,12 +16,13 @@ import (
 )
 
 var (
-	vxlanRemote string
-	cntLink     string
-	parentDev   string
-	vxlanMTU    int
-	vxlanID     int
-	delPrefix   string
+	vxlanRemote  string
+	cntLink      string
+	parentDev    string
+	vxlanMTU     int
+	vxlanID      int
+	delPrefix    string
+	vxlanUDPPort int
 )
 
 func init() {
@@ -36,6 +37,7 @@ func init() {
 	vxlanCreateCmd.Flags().StringVarP(&cntLink, "link", "l", "",
 		"link to which 'attach' vxlan tunnel with tc redirect")
 	vxlanCreateCmd.Flags().IntVarP(&vxlanMTU, "mtu", "m", 1554, "VxLAN MTU")
+	vxlanCreateCmd.Flags().IntVarP(&vxlanUDPPort, "port", "p", 4789, "VxLAN Destination UDP Port")
 
 	_ = vxlanCreateCmd.MarkFlagRequired("remote")
 	_ = vxlanCreateCmd.MarkFlagRequired("id")
@@ -80,6 +82,7 @@ var vxlanCreateCmd = &cobra.Command{
 			ParentIf: parentDev,
 			Remote:   net.ParseIP(vxlanRemote),
 			MTU:      vxlanMTU,
+			UDPPort:  vxlanUDPPort,
 		}
 
 		if err := clab.AddVxLanInterface(vxlanCfg); err != nil {
