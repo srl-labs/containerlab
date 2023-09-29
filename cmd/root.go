@@ -6,12 +6,14 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -106,12 +108,28 @@ func getTopoFilePath(cmd *cobra.Command) error {
 		return nil
 	}
 
+	var err error
+	if utils.IsHttpUri(topo){
+		switch {
+		case utils.IsGitHubURL(topo):
+			err := utils.CheckSuffix(topo)
+			if err != nil {
+				return err
+			}
+			rawUrl := utils.GetRawURL(topo)
+			topo = utils.GetFileName(topo)
+			utils.DownloadFile(rawUrl, topo)
+			// utils.DownloadFile(tempTopo, topo)
+		default:
+			return fmt.Errorf("unsupported URL: %s", topo)
+		} 
+	}
+
 	// if topo or name flags have been provided, don't try to derive the topo file
 	if topo != "" || name != "" {
 		return nil
 	}
 
-	var err error
 
 	log.Debugf("trying to find topology files automatically")
 
