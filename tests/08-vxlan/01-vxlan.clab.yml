@@ -1,7 +1,6 @@
 name: vxlan
 
 topology:
-      
   nodes:
     s1:
       kind: srl

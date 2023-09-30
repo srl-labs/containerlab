@@ -26,6 +26,7 @@ Check VxLAN connectivity srl-linux
 Check VxLAN connectivity linux-srl
     Wait Until Keyword Succeeds    15    2s    Check VxLAN connectivity linux-srl
 
+
 *** Keywords ***
 Check VxLAN connectivity srl-linux
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -40,7 +41,7 @@ Check VxLAN connectivity linux-srl
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
-     
+
 Setup
     # skipping this test suite for podman for now
     Skip If    '${runtime}' == 'podman'
@@ -48,7 +49,7 @@ Setup
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CURDIR}/01-host-setup.sh
     Log    ${output}
-    Should Be Equal As Integers    ${rc}    0    
+    Should Be Equal As Integers    ${rc}    0
 
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
