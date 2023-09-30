@@ -19,6 +19,11 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 		"case1": {
 			got: "test_data/topo1.yml",
 			want: `all:
+  vars:
+    # The generated inventory is assumed to be used from the clab host.
+    # Hence no http proxy should be used. Therefore we make sure the http
+    # module does not attempt using any global http proxy.
+    ansible_httpapi_use_proxy: false
   children:
     srl:
       hosts:
@@ -31,6 +36,11 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 		"case2": {
 			got: "test_data/topo8_ansible_groups.yml",
 			want: `all:
+  vars:
+    # The generated inventory is assumed to be used from the clab host.
+    # Hence no http proxy should be used. Therefore we make sure the http
+    # module does not attempt using any global http proxy.
+    ansible_httpapi_use_proxy: false
   children:
     linux:
       hosts:
@@ -60,7 +70,7 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoFile(tc.got, ""),
+				WithTopoPath(tc.got, ""),
 			}
 			c, err := NewContainerLab(opts...)
 			if err != nil {

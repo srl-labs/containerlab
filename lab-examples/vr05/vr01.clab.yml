@@ -12,7 +12,7 @@ topology:
           sid_idx: 11
     sros:
       kind: vr-sros
-      image: registry.srlinux.dev/pub/vr-sros:21.2.R1
+      image: vrnetlab/vr-sros:21.2.R1
       type: sr-1
       license: ~/license/sros.txt
       config:

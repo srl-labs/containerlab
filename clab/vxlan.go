@@ -28,7 +28,6 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 	var parentIf netlink.Link
 	var vxlanIf netlink.Link
 	log.Infof("Adding VxLAN link %s to remote address %s via %s with VNI %v", vxlan.Name, vxlan.Remote, vxlan.ParentIf, vxlan.ID)
-	UDPPort := 4789
 
 	// before creating vxlan interface, check if it doesn't exist already
 	if vxlanIf, err = netlink.LinkByName(vxlan.Name); err != nil {
@@ -44,10 +43,6 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 		return fmt.Errorf("failed to get VxLAN parent interface %s: %v", vxlan.ParentIf, err)
 	}
 
-	if vxlan.UDPPort != 0 {
-		UDPPort = vxlan.UDPPort
-	}
-
 	vxlanconf := netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:   vxlan.Name,
@@ -56,7 +51,7 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 		VxlanId:      vxlan.ID,
 		VtepDevIndex: parentIf.Attrs().Index,
 		Group:        vxlan.Remote,
-		Port:         UDPPort,
+		Port:         vxlan.UDPPort,
 		Learning:     true,
 		L2miss:       true,
 		L3miss:       true,

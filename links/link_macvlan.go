@@ -41,17 +41,18 @@ func (*LinkMacVlanRaw) GetType() LinkType {
 func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw, error) {
 	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
 
-	result := &LinkMacVlanRaw{
-		LinkCommonParams: LinkCommonParams{
-			MTU:    lb.MTU,
-			Labels: lb.Labels,
-			Vars:   lb.Vars,
-		},
-		HostInterface: hostIf,
-		Endpoint:      NewEndpointRaw(node, nodeIf, ""),
+	link := &LinkMacVlanRaw{
+		LinkCommonParams: lb.LinkCommonParams,
+		HostInterface:    hostIf,
+		Endpoint:         NewEndpointRaw(node, nodeIf, ""),
 	}
 
-	return result, nil
+	// set default link mtu if MTU is unset
+	if link.MTU == 0 {
+		link.MTU = DefaultLinkMTU
+	}
+
+	return link, nil
 }
 
 func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
@@ -93,6 +94,11 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	// add endpoint links to nodes
 	link.HostEndpoint.GetNode().AddLink(link)
 	link.NodeEndpoint.GetNode().AddLink(link)
+
+	// set default link mtu if MTU is unset
+	if link.MTU == 0 {
+		link.MTU = DefaultLinkMTU
+	}
 
 	return link, nil
 }

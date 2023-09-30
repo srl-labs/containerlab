@@ -305,3 +305,74 @@ func Test_filterClabNodes(t *testing.T) {
 		})
 	}
 }
+
+func TestWithTopo(t *testing.T) {
+	type args struct {
+		topoRef string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantError bool
+	}{
+		{
+			name: "empty toporef",
+			args: args{
+				topoRef: "",
+			},
+			wantError: true,
+		},
+		{
+			name: "ref single file",
+			args: args{
+				topoRef: "../lab-examples/srl01/srl01.clab.yml",
+			},
+			wantError: false,
+		},
+		{
+			name: "no topology in folder",
+			args: args{
+				topoRef: "../cmd",
+			},
+			wantError: true,
+		},
+		{
+			name: "single topology in folder",
+			args: args{
+				topoRef: "../lab-examples/srl01/",
+			},
+			wantError: false,
+		},
+		{
+			name: "multiple topologies in folder",
+			args: args{
+				topoRef: "./tests/01-smoke",
+			},
+			wantError: true,
+		},
+		{
+			name: "non existing folder",
+			args: args{
+				topoRef: "/someNonExistingFolder",
+			},
+			wantError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wt := WithTopoPath(tt.args.topoRef, "")
+
+			c, err := NewContainerLab()
+			if err != nil {
+				t.Error(err)
+			}
+			err = wt(c)
+			if tt.wantError && err == nil {
+				t.Errorf("expected error, got non")
+			}
+			if !tt.wantError && err != nil {
+				t.Errorf("got error %v, expected no error", err)
+			}
+		})
+	}
+}

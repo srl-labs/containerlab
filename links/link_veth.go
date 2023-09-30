@@ -17,15 +17,11 @@ type LinkVEthRaw struct {
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
-// ToLinkBriefRaw converts the raw link into a LinkConfig.
+// ToLinkBriefRaw converts the raw link into a LinkBriefRaw.
 func (r *LinkVEthRaw) ToLinkBriefRaw() *LinkBriefRaw {
 	lc := &LinkBriefRaw{
-		Endpoints: []string{},
-		LinkCommonParams: LinkCommonParams{
-			MTU:    r.MTU,
-			Labels: r.Labels,
-			Vars:   r.Vars,
-		},
+		Endpoints:        []string{},
+		LinkCommonParams: r.LinkCommonParams,
 	}
 
 	for _, e := range r.Endpoints {
@@ -65,6 +61,11 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 		ep.GetNode().AddLink(l)
 	}
 
+	// set default link mtu if MTU is unset
+	if l.MTU == 0 {
+		l.MTU = DefaultLinkMTU
+	}
+
 	return l, nil
 }
 
@@ -72,18 +73,20 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, 0)
 
-	result := &LinkVEthRaw{
-		LinkCommonParams: LinkCommonParams{
-			MTU:    lb.MTU,
-			Labels: lb.Labels,
-			Vars:   lb.Vars,
-		},
+	link := &LinkVEthRaw{
+		LinkCommonParams: lb.LinkCommonParams,
 		Endpoints: []*EndpointRaw{
 			NewEndpointRaw(host, hostIf, ""),
 			NewEndpointRaw(node, nodeIf, ""),
 		},
 	}
-	return result, nil
+
+	// set default link mtu if MTU is unset
+	if link.MTU == 0 {
+		link.MTU = DefaultLinkMTU
+	}
+
+	return link, nil
 }
 
 type LinkVEth struct {

@@ -97,7 +97,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
-		clab.WithTopoFile(topo, varsFile),
+		clab.WithTopoPath(topo, varsFile),
 		clab.WithNodeFilter(nodeFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
@@ -352,6 +352,7 @@ func certificateAuthoritySetup(c *clab.CLab) error {
 	// define the attributes used to generate the CA Cert
 	caCertInput := &cert.CACSRInput{
 		CommonName:   c.Config.Name + " lab CA",
+		Country:      "US",
 		Expiry:       validityDuration,
 		Organization: "containerlab",
 		KeySize:      keySize,

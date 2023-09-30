@@ -37,14 +37,14 @@ It is possible to install official containerlab releases via public APT/YUM repo
 
 === "APT"
     ```bash
-    echo "deb [trusted=yes] <https://apt.fury.io/netdevops/> /" | \
+    echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
     sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
     sudo apt update && sudo apt install containerlab
     ```
 === "YUM"
     ```
-    yum-config-manager --add-repo=<https://yum.fury.io/netdevops/> && \
+    yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
     echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
     sudo yum install containerlab

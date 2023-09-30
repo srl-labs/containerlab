@@ -238,11 +238,15 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 	// If the config file is already present in the node dir
 	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
 	// this will persist the changes that users make to a running config when booted from some startup config
-	if utils.FileExists(dst) && (d.Cfg.StartupConfig == "" || !d.Cfg.EnforceStartupConfig) {
-		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, d.Cfg.ShortName)
+	if d.Cfg.SuppressStartupConfig {
+		log.Infof("Startup config generation for '%s' node suppressed", d.Cfg.ShortName)
 		return nil
 	} else if d.Cfg.EnforceStartupConfig {
 		log.Infof("Startup config for '%s' node enforced: '%s'", d.Cfg.ShortName, dst)
+		// continue with config generation
+	} else if utils.FileExists(dst) && d.Cfg.StartupConfig == "" {
+		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, d.Cfg.ShortName)
+		return nil
 	}
 
 	log.Debugf("generating config for node %s from file %s", d.Cfg.ShortName, d.Cfg.StartupConfig)
@@ -397,11 +401,11 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 		}
 		hosts = append(hosts, nodeConfig.SANs...)
 
-		// collect cert details
 		certInput := &cert.NodeCSRInput{
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
 			Organization: "containerlab",
+			Country:      "US",
 			KeySize:      d.Cfg.Certificate.KeySize,
 			Expiry:       d.Cfg.Certificate.ValidityDuration,
 		}

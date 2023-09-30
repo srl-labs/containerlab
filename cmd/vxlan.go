@@ -18,12 +18,13 @@ import (
 )
 
 var (
-	vxlanRemote string
-	cntLink     string
-	parentDev   string
-	vxlanMTU    int
-	vxlanID     int
-	delPrefix   string
+	vxlanRemote  string
+	cntLink      string
+	parentDev    string
+	vxlanMTU     int
+	vxlanID      int
+	delPrefix    string
+	vxlanUDPPort int
 )
 
 func init() {
@@ -38,6 +39,7 @@ func init() {
 	vxlanCreateCmd.Flags().StringVarP(&cntLink, "link", "l", "",
 		"link to which 'attach' vxlan tunnel with tc redirect")
 	vxlanCreateCmd.Flags().IntVarP(&vxlanMTU, "mtu", "m", 1554, "VxLAN MTU")
+	vxlanCreateCmd.Flags().IntVarP(&vxlanUDPPort, "port", "p", 14789, "VxLAN Destination UDP Port")
 
 	_ = vxlanCreateCmd.MarkFlagRequired("remote")
 	_ = vxlanCreateCmd.MarkFlagRequired("id")
@@ -86,7 +88,7 @@ var vxlanCreateCmd = &cobra.Command{
 			LinkCommonParams: links.LinkCommonParams{
 				MTU: vxlanMTU,
 			},
-			UdpPort:    links.VxLANDefaultPort, // no option to set udp port exposed so far so we use the default
+			UdpPort:    vxlanUDPPort,
 			NoLearning: true,
 			NoL2Miss:   true,
 			NoL3Miss:   true,

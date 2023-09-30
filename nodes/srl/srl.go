@@ -437,16 +437,15 @@ func (s *srl) CheckDeploymentConditions(ctx context.Context) error {
 func (s *srl) createSRLFiles() error {
 	log.Debugf("Creating directory structure for SRL container: %s", s.Cfg.ShortName)
 	var src string
-	var dst string
 
 	if s.Cfg.License != "" {
 		// copy license file to node specific directory in lab
 		src = s.Cfg.License
-		dst = filepath.Join(s.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(src, dst, 0644); err != nil {
-			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, dst, err)
+		licPath := filepath.Join(s.Cfg.LabDir, "license.key")
+		if err := utils.CopyFile(src, licPath, 0644); err != nil {
+			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
-		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
+		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
 	}
 
 	// generate SRL topology file, including base MAC
@@ -460,9 +459,9 @@ func (s *srl) createSRLFiles() error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
+	var cfgTemplate string
+	cfgPath := filepath.Join(s.Cfg.LabDir, "config", "config.json")
 	if s.Cfg.StartupConfig != "" {
-		dst = filepath.Join(s.Cfg.LabDir, "config", "config.json")
-
 		log.Debugf("Reading startup-config %s", s.Cfg.StartupConfig)
 
 		c, err := os.ReadFile(s.Cfg.StartupConfig)
@@ -485,13 +484,18 @@ func (s *srl) createSRLFiles() error {
 			// as we will apply it over the top of a default config in the post deploy stage
 			return nil
 		}
+		cfgTemplate = string(c)
+	}
 
-		cfgTemplate := string(c)
+	if cfgTemplate == "" {
+		log.Debugf("configuration template for node %s is empty, skipping startup config file generation", s.Cfg.ShortName)
 
-		err = s.GenerateConfig(dst, cfgTemplate)
-		if err != nil {
-			log.Errorf("node=%s, failed to generate config: %v", s.Cfg.ShortName, err)
-		}
+		return nil
+	}
+
+	err = s.GenerateConfig(cfgPath, cfgTemplate)
+	if err != nil {
+		log.Errorf("node=%s, failed to generate config: %v", s.Cfg.ShortName, err)
 	}
 
 	return err
@@ -560,7 +564,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
-	if semver.Compare(n.swVersion.String(), "v23.10") >= 0 || n.swVersion.major == "0" {
+	if len(n.sshPubKeys) > 0 && (semver.Compare(n.swVersion.String(), "v23.10") >= 0 || n.swVersion.major == "0") {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 

@@ -29,7 +29,7 @@ topology:
 
     Additionally, the [auto-generated schema documentation](https://json-schema.app/view/%23?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsrl-labs%2Fcontainerlab%2Fmain%2Fschemas%2Fclab.schema.json) can be explored to understand the full scope of the configuration options containerlab provides. 
 
-This topology results in the two nodes being started up and interconnected with each other using a single point-po-point interface:
+This topology results in the two nodes being started up and interconnected with each other using a single point-to-point interface:
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlceos01.drawio&quot;}"></div>
 
 Let's touch on the key components of the topology definition file used in this example.

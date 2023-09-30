@@ -14,20 +14,21 @@ const (
 
 // NodeDefinition represents a configuration a given node can have in the lab definition file.
 type NodeDefinition struct {
-	Kind                 string            `yaml:"kind,omitempty"`
-	Group                string            `yaml:"group,omitempty"`
-	Type                 string            `yaml:"type,omitempty"`
-	StartupConfig        string            `yaml:"startup-config,omitempty"`
-	StartupDelay         uint              `yaml:"startup-delay,omitempty"`
-	EnforceStartupConfig bool              `yaml:"enforce-startup-config,omitempty"`
-	AutoRemove           *bool             `yaml:"auto-remove,omitempty"`
-	Config               *ConfigDispatcher `yaml:"config,omitempty"`
-	Image                string            `yaml:"image,omitempty"`
-	ImagePullPolicy      string            `yaml:"image-pull-policy,omitempty"`
-	License              string            `yaml:"license,omitempty"`
-	Position             string            `yaml:"position,omitempty"`
-	Entrypoint           string            `yaml:"entrypoint,omitempty"`
-	Cmd                  string            `yaml:"cmd,omitempty"`
+	Kind                  string            `yaml:"kind,omitempty"`
+	Group                 string            `yaml:"group,omitempty"`
+	Type                  string            `yaml:"type,omitempty"`
+	StartupConfig         string            `yaml:"startup-config,omitempty"`
+	StartupDelay          uint              `yaml:"startup-delay,omitempty"`
+	EnforceStartupConfig  *bool             `yaml:"enforce-startup-config,omitempty"`
+	SuppressStartupConfig *bool             `yaml:"suppress-startup-config,omitempty"`
+	AutoRemove            *bool             `yaml:"auto-remove,omitempty"`
+	Config                *ConfigDispatcher `yaml:"config,omitempty"`
+	Image                 string            `yaml:"image,omitempty"`
+	ImagePullPolicy       string            `yaml:"image-pull-policy,omitempty"`
+	License               string            `yaml:"license,omitempty"`
+	Position              string            `yaml:"position,omitempty"`
+	Entrypoint            string            `yaml:"entrypoint,omitempty"`
+	Cmd                   string            `yaml:"cmd,omitempty"`
 	// list of subject Alternative Names (SAN) to be added to the node's certificate
 	SANs []string `yaml:"SANs,omitempty"`
 	// list of commands to run in container
@@ -147,11 +148,18 @@ func (n *NodeDefinition) GetStartupDelay() uint {
 	return n.StartupDelay
 }
 
-func (n *NodeDefinition) GetEnforceStartupConfig() bool {
+func (n *NodeDefinition) GetEnforceStartupConfig() *bool {
 	if n == nil {
-		return false
+		return nil
 	}
 	return n.EnforceStartupConfig
+}
+
+func (n *NodeDefinition) GetSuppressStartupConfig() *bool {
+	if n == nil {
+		return nil
+	}
+	return n.SuppressStartupConfig
 }
 
 func (n *NodeDefinition) GetAutoRemove() *bool {
