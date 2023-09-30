@@ -15,9 +15,9 @@ ${runtime}                  docker
 ${bridge-name}              clabtestbr
 ${bridge-n1-iface}          n1eth1
 ${host-n1-iface}            n1hosteth1
-${runtime-cli-exec-cmd}     sudo docker exec
 # runtime command to execute tasks in a container
 # defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
+${runtime-cli-exec-cmd}     sudo docker exec
 
 
 *** Test Cases ***
@@ -29,6 +29,11 @@ Deploy ${lab-name} lab
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
     Set Suite Variable    ${deploy-output}    ${output}
+
+Define runtime exec command
+    IF    "${runtime}" == "podman"
+        Set Suite Variable    ${runtime-cli-exec-cmd}    sudo podman exec
+    END
 
 Verify links in node n1 pre-deploy
     ${rc}    ${output} =    Run And Return Rc And Output
