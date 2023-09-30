@@ -3,14 +3,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: dual-node
-  
+
 topology:
   nodes:
     n1:
       kind: linux
       image: alpine:latest
-      cmd: sleep infinity
+
     n2:
       kind: linux
       image: alpine:latest
-      cmd: sleep infinity

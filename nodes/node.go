@@ -106,6 +106,7 @@ type Node interface {
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(func(ns.NetNS) error) error
 	GetState() state.NodeState
+	SetState(state.NodeState)
 }
 
 type NodeOption func(Node)

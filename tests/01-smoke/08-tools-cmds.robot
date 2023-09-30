@@ -25,18 +25,18 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Create new veth pair between nodes
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools veth create -a clab-${lab-name}-l1:eth63 -b clab-${lab-name}-l2:eth63
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+# Create new veth pair between nodes
+#    ${rc}    ${output} =    Run And Return Rc And Output
+#    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools veth create -a clab-${lab-name}-l1:eth63 -b clab-${lab-name}-l2:eth63
+#    Log    ${output}
+#    Should Be Equal As Integers    ${rc}    0
 
-Check the new interface has been created
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip netns exec clab-${lab-name}-l1 ip l show dev eth63
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    eth63
+# Check the new interface has been created
+#    ${rc}    ${output} =    Run And Return Rc And Output
+#    ...    sudo ip netns exec clab-${lab-name}-l1 ip l show dev eth63
+#    Log    ${output}
+#    Should Be Equal As Integers    ${rc}    0
+#    Should Contain    ${output}    eth63
 
 Add link impairments
     ${rc}    ${output} =    Run And Return Rc And Output

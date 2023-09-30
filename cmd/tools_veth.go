@@ -10,12 +10,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -45,6 +47,17 @@ var vethCreateCmd = &cobra.Command{
 	Short: "Create a veth interface and attach its sides to the specified containers",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
+
+		parsedAEnd, err := parseVethEndpoint(AEnd)
+		if err != nil {
+			return err
+		}
+
+		parsedBEnd, err := parseVethEndpoint(BEnd)
+		if err != nil {
+			return err
+		}
+
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
 			clab.WithRuntime(rt,
@@ -64,49 +77,36 @@ var vethCreateCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		link := &links.LinkVEth{}
+		// create fake nodes to make links resolve work
+		err = createNodes(ctx, c, parsedAEnd, parsedBEnd)
+		if err != nil {
+			return err
+		}
 
-		for _, definition := range []string{AEnd, BEnd} {
-			var node, iface string
-			var kind links.LinkEndpointType
-			if node, iface, kind, err = parseVethEndpoint(definition); err != nil {
-				return err
-			}
-			var nspath string
+		// now create link brief as if the link was passed via topology file
+		linkBrief := &links.LinkBriefRaw{
+			Endpoints: []string{fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
+				fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface)},
+			LinkCommonParams: links.LinkCommonParams{
+				MTU: MTU,
+			},
+		}
 
-			var leType links.LinkEndpointType
-			switch kind {
-			case links.LinkEndpointTypeHost:
-				leType = links.LinkEndpointTypeHost
-				nsp, err := ns.GetCurrentNS()
-				if err != nil {
-					return err
-				}
-				nspath = nsp.Path()
-			case links.LinkEndpointTypeBridge:
-				leType = links.LinkEndpointTypeBridge
-				nsp, err := ns.GetCurrentNS()
-				if err != nil {
-					return err
-				}
-				nspath = nsp.Path()
-			default:
-				leType = links.LinkEndpointTypeVeth
-				nspath, err = c.GlobalRuntime().GetNSPath(ctx, node)
-				if err != nil {
-					return err
-				}
-			}
+		linkRaw, err := linkBrief.ToTypeSpecificRawLink()
+		if err != nil {
+			return err
+		}
 
-			linkNode := links.NewShorthandLinkNode(node, nspath, leType)
+		// we need to copy nodes.Nodes to links.Nodes since two interfaces
+		// are not identical, but a subset
+		resolveNodes := make(map[string]links.Node, len(c.Nodes))
+		for k, v := range c.Nodes {
+			resolveNodes[k] = v
+		}
 
-			r := links.NewEndpointRaw(node, iface, "")
-			ep, err := r.Resolve(&links.ResolveParams{Nodes: map[string]links.Node{node: linkNode}}, link)
-			if err != nil {
-				return err
-			}
-			link.Endpoints = append(link.Endpoints, ep)
-			linkNode.AddLink(link)
+		link, err := linkRaw.Resolve(&links.ResolveParams{Nodes: resolveNodes})
+		if err != nil {
+			return err
 		}
 
 		err = link.Deploy(ctx)
@@ -119,22 +119,81 @@ var vethCreateCmd = &cobra.Command{
 	},
 }
 
-func parseVethEndpoint(s string) (node, iface string, kind links.LinkEndpointType, err error) {
-	arr := strings.Split(s, ":")
-	if (len(arr) != 2) && (len(arr) != 3) {
-		return node, iface, kind, errors.New("malformed veth endpoint reference")
+// createNodes creates fake nodes in c.Nodes map to make link resolve work.
+// It checks which endpoint type is set by a user and creates a node that matches the type.
+func createNodes(ctx context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) error {
+	for _, epDefinition := range []parsedEndpoint{AEnd, BEnd} {
+		switch epDefinition.Kind {
+		case links.LinkEndpointTypeHost:
+			err := createFakeNode(c, "host", &types.NodeConfig{
+				ShortName: epDefinition.Node,
+			})
+			if err != nil {
+				return err
+			}
+
+		case links.LinkEndpointTypeBridge:
+			err := createFakeNode(c, "bridge", &types.NodeConfig{
+				ShortName: epDefinition.Node,
+			})
+			if err != nil {
+				return err
+			}
+		default:
+			// default endpoint type is veth
+			// so we create a fake linux node for it and fetch
+			// its namespace path.
+			// techinically we don't care which node this is, as long as it uses
+			// standard veth interface attachment process.
+			nspath, err := c.GlobalRuntime().GetNSPath(ctx, epDefinition.Node)
+			if err != nil {
+				return err
+			}
+
+			err = createFakeNode(c, "linux", &types.NodeConfig{
+				ShortName: epDefinition.Node,
+				NSPath:    nspath,
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
+
+	return nil
+}
+
+// parsedEndpoint is a parsed veth endpoint definition.
+type parsedEndpoint struct {
+	Node  string
+	Iface string
+	Kind  links.LinkEndpointType
+}
+
+// parseVethEndpoint parses the veth endpoint definition as passed in the veth create command.
+func parseVethEndpoint(s string) (parsedEndpoint, error) {
+	s = strings.TrimSpace(s)
+
+	ep := parsedEndpoint{}
+
+	arr := strings.Split(s, ":")
+
+	var kind links.LinkEndpointType
+
 	switch len(arr) {
 	case 2:
-		kind = links.LinkEndpointTypeVeth
+		ep.Kind = links.LinkEndpointTypeVeth
+
 		if arr[0] == "host" {
-			kind = links.LinkEndpointTypeHost
+			ep.Kind = links.LinkEndpointTypeHost
 		}
-		node = arr[0]
-		iface = arr[1]
+
+		ep.Node = arr[0]
+		ep.Iface = arr[1]
+
 	case 3:
 		if _, ok := utils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
-			return node, iface, kind, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
+			return ep, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
 		}
 
 		switch arr[0] {
@@ -144,8 +203,37 @@ func parseVethEndpoint(s string) (node, iface string, kind links.LinkEndpointTyp
 			kind = links.LinkEndpointTypeVeth
 		}
 
-		node = arr[1]
-		iface = arr[2]
+		ep.Kind = kind
+
+		ep.Node = arr[1]
+		ep.Iface = arr[2]
+
+	default:
+		return ep, errors.New("malformed veth endpoint reference")
 	}
-	return node, iface, kind, err
+
+	return ep, nil
+}
+
+// createFakeNode creates a fake node in c.Nodes map using the provided node kind and its config.
+func createFakeNode(c *clab.CLab, kind string, nodeCfg *types.NodeConfig) error {
+	name := nodeCfg.ShortName
+	// construct node
+	n, err := c.Reg.NewNodeOfKind(kind)
+	if err != nil {
+		return fmt.Errorf("error constructing node %s: %v", name, err)
+	}
+
+	// Init
+	err = n.Init(nodeCfg, nodes.WithRuntime(c.GlobalRuntime()))
+	if err != nil {
+		return fmt.Errorf("failed to initialize node %s: %v", name, err)
+	}
+
+	// fake node is always assumed to be deployed in case of tools veth command
+	n.SetState(state.Deployed)
+
+	c.Nodes[name] = n
+
+	return nil
 }
