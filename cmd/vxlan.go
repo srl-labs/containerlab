@@ -8,12 +8,12 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 
 	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -133,7 +133,7 @@ var vxlanDeleteCmd = &cobra.Command{
 		var ls []netlink.Link
 		var err error
 
-		ls, err = GetLinksByNamePrefix(delPrefix)
+		ls, err = utils.GetLinksByNamePrefix(delPrefix)
 
 		if err != nil {
 			return err
@@ -150,27 +150,4 @@ var vxlanDeleteCmd = &cobra.Command{
 		}
 		return nil
 	},
-}
-
-// GetLinksByNamePrefix returns a list of links whose name matches a prefix.
-func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
-	// filtered list of interfaces
-	if prefix == "" {
-		return nil, fmt.Errorf("prefix is not specified")
-	}
-	var fls []netlink.Link
-
-	ls, err := netlink.LinkList()
-	if err != nil {
-		return nil, err
-	}
-	for _, l := range ls {
-		if strings.HasPrefix(l.Attrs().Name, prefix) {
-			fls = append(fls, l)
-		}
-	}
-	if len(fls) == 0 {
-		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
-	}
-	return fls, nil
 }
