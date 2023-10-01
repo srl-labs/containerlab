@@ -62,7 +62,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 
-	link.endpoints = []Endpoint{bridgeEp, contEp}
+	link.Endpoints = []Endpoint{bridgeEp, contEp}
 
 	// add link to respective endpoint nodes
 	bridgeEp.GetNode().AddLink(link)

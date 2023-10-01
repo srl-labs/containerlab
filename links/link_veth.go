@@ -56,7 +56,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 			return nil, err
 		}
 		// add endpoint to the link endpoints
-		l.endpoints = append(l.endpoints, ep)
+		l.Endpoints = append(l.Endpoints, ep)
 		// add link to endpoint node
 		ep.GetNode().AddLink(l)
 	}
@@ -91,14 +91,14 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 
 type LinkVEth struct {
 	LinkCommonParams
-	endpoints []Endpoint
+	Endpoints []Endpoint
 
 	deployMutex sync.Mutex
 }
 
 func NewLinkVEth() *LinkVEth {
 	return &LinkVEth{
-		endpoints: make([]Endpoint, 0, 2),
+		Endpoints: make([]Endpoint, 0, 2),
 	}
 }
 
@@ -126,11 +126,11 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// build the netlink.Veth struct for the link provisioning
 	linkA := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: l.endpoints[0].GetRandIfaceName(),
+			Name: l.Endpoints[0].GetRandIfaceName(),
 			MTU:  l.MTU,
 			// Mac address is set later on
 		},
-		PeerName: l.endpoints[1].GetRandIfaceName(),
+		PeerName: l.Endpoints[1].GetRandIfaceName(),
 		// PeerMac address is set later on
 	}
 
@@ -141,13 +141,13 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the netlink.Link for the B / Peer side of the link
-	linkB, err := netlink.LinkByName(l.endpoints[1].GetRandIfaceName())
+	linkB, err := netlink.LinkByName(l.Endpoints[1].GetRandIfaceName())
 	if err != nil {
 		return err
 	}
 
 	// once veth pair is created, disable tx offload for the veth pair
-	for _, ep := range l.endpoints {
+	for _, ep := range l.Endpoints {
 		if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
 			return err
 		}
@@ -160,8 +160,8 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	for idx, link := range []netlink.Link{linkA, linkB} {
 		// if the node is a regular namespace node
 		// add link to node, rename, set mac and Up
-		err = l.endpoints[idx].GetNode().AddLinkToContainer(ctx, link,
-			SetNameMACAndUpInterface(link, l.endpoints[idx]))
+		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link,
+			SetNameMACAndUpInterface(link, l.Endpoints[idx]))
 		if err != nil {
 			return err
 		}
@@ -189,5 +189,5 @@ func (l *LinkVEth) Remove(_ context.Context) error {
 }
 
 func (l *LinkVEth) GetEndpoints() []Endpoint {
-	return l.endpoints
+	return l.Endpoints
 }

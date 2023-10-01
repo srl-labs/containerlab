@@ -160,7 +160,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams, ifaceNamePost
 		return nil, nil, err
 	}
 
-	veth.endpoints = append(veth.endpoints, hostEp, containerEp)
+	veth.Endpoints = append(veth.Endpoints, hostEp, containerEp)
 
 	return veth, hostEp, nil
 }

@@ -75,7 +75,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 	// set the end point in the link
-	link.endpoints = []Endpoint{ep, hostEp}
+	link.Endpoints = []Endpoint{ep, hostEp}
 
 	// add the link to the endpoints node
 	hostEp.GetNode().AddLink(link)
