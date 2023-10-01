@@ -67,18 +67,25 @@ func parseLinkType(s string) (LinkType, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
 	case string(LinkTypeMacVLan):
 		return LinkTypeMacVLan, nil
+
 	case string(LinkTypeVEth):
 		return LinkTypeVEth, nil
+
 	case string(LinkTypeMgmtNet):
 		return LinkTypeMgmtNet, nil
+
 	case string(LinkTypeHost):
 		return LinkTypeHost, nil
+
 	case string(LinkTypeBrief):
 		return LinkTypeBrief, nil
+
 	case string(LinkTypeVxlan):
 		return LinkTypeVxlan, nil
+
 	case string(LinkTypeVxlanStitch):
 		return LinkTypeVxlanStitch, nil
+
 	default:
 		return "", fmt.Errorf("unable to parse %q as LinkType", s)
 	}
@@ -134,6 +141,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkVEthRaw
+
 	case LinkTypeMgmtNet:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -144,6 +152,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkMgmtNetRaw
+
 	case LinkTypeHost:
 		var l struct {
 			Type        string `yaml:"type"`
@@ -154,6 +163,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkHostRaw
+
 	case LinkTypeMacVLan:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -164,6 +174,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkMacVlanRaw
+
 	case LinkTypeVxlan:
 		var l struct {
 			Type         string `yaml:"type"`
@@ -175,6 +186,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 		}
 		l.LinkVxlanRaw.LinkType = LinkTypeVxlan
 		ld.Link = &l.LinkVxlanRaw
+
 	case LinkTypeVxlanStitch:
 		var l struct {
 			Type         string `yaml:"type"`
@@ -186,6 +198,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 		}
 		l.LinkVxlanRaw.LinkType = LinkTypeVxlanStitch
 		ld.Link = &l.LinkVxlanRaw
+
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
@@ -204,6 +217,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 		if err != nil {
 			return err
 		}
+
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
 	}
