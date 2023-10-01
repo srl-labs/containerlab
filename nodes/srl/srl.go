@@ -26,6 +26,7 @@ import (
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -584,7 +585,11 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 			iface.BreakoutNo = ifNameParts[2]
 		}
 
-		iface.Mtu = e.GetLink().GetMtu()
+		// if the endpoint has a custom MTU set, use it in the template logic
+		// otherwise we don't set the mtu as srlinux will use the default max value 9232
+		if m := e.GetLink().GetMtu(); m != links.DefaultLinkMTU {
+			iface.Mtu = m
+		}
 
 		// add the template interface definition to the template data
 		tplData.IFaces[ifName] = iface
