@@ -10,7 +10,7 @@ func NewEndpointMacVlan(eg *EndpointGeneric) *EndpointMacVlan {
 	}
 }
 
-// Verify verifies the veth based deployment pre-conditions
+// Verify runs verification to check if the endpoint can be deployed.
 func (e *EndpointMacVlan) Verify(_ *VerifyLinkParams) error {
 	return CheckEndpointExists(e)
 }
