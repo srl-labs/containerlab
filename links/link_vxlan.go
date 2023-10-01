@@ -20,9 +20,9 @@ const (
 type LinkVxlanRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	Remote           string      `yaml:"remote"`
-	Vni              int         `yaml:"vni"`
+	VNI              int         `yaml:"vni"`
 	Endpoint         EndpointRaw `yaml:"endpoint"`
-	UdpPort          int         `yaml:"udp-port,omitempty"`
+	UDPPort          int         `yaml:"udp-port,omitempty"`
 	ParentInterface  string      `yaml:"parent-interface,omitempty"`
 	NoLearning       bool        `yaml:"no-learning,omitempty"`
 	NoL2Miss         bool        `yaml:"no-l2miss,omitempty"`
@@ -113,12 +113,12 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams, ifaceNamePos
 	// resolve remote endpoint
 	link.remoteEndpoint = NewEndpointVxlan(params.Nodes["host"], link)
 	link.remoteEndpoint.parentIface = parentIf
-	link.remoteEndpoint.udpPort = lr.UdpPort
-	if lr.UdpPort == 0 {
+	link.remoteEndpoint.udpPort = lr.UDPPort
+	if lr.UDPPort == 0 {
 		link.remoteEndpoint.udpPort = VxLANDefaultPort
 	}
 	link.remoteEndpoint.remote = ip
-	link.remoteEndpoint.vni = lr.Vni
+	link.remoteEndpoint.vni = lr.VNI
 	link.remoteEndpoint.MAC, err = utils.GenMac(ClabOUI)
 	if err != nil {
 		return nil, err
@@ -257,9 +257,9 @@ func (lr *LinkVxlanRaw) resolveRegular(params *ResolveParams) (Link, error) {
 	// resolve remote endpoint
 	link.remoteEndpoint = NewEndpointVxlan(params.Nodes["host"], link)
 	link.remoteEndpoint.parentIface = parentIf
-	link.remoteEndpoint.udpPort = lr.UdpPort
+	link.remoteEndpoint.udpPort = lr.UDPPort
 	link.remoteEndpoint.remote = ip
-	link.remoteEndpoint.vni = lr.Vni
+	link.remoteEndpoint.vni = lr.VNI
 
 	// add link to local endpoints node
 	link.localEndpoint.GetNode().AddLink(link)

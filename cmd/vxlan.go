@@ -83,12 +83,12 @@ var vxlanCreateCmd = &cobra.Command{
 
 		vxlraw := &links.LinkVxlanRaw{
 			Remote:          vxlanRemote,
-			Vni:             vxlanID,
+			VNI:             vxlanID,
 			ParentInterface: parentDev,
 			LinkCommonParams: links.LinkCommonParams{
 				MTU: vxlanMTU,
 			},
-			UdpPort:    vxlanUDPPort,
+			UDPPort:    vxlanUDPPort,
 			NoLearning: true,
 			NoL2Miss:   true,
 			NoL3Miss:   true,
