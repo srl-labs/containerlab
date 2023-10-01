@@ -13,7 +13,9 @@ import (
 )
 
 const (
-	VxLANDefaultPort = 4789
+	// vxlan port is different from the default port number 4789
+	// since 4789 may be filtered by the firewalls or clash with other overlay services.
+	VxLANDefaultPort = 14789
 )
 
 // LinkVxlanRaw is the raw (string) representation of a vxlan link as defined in the topology file.
