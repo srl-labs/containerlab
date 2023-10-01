@@ -671,7 +671,8 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 	return nil, fmt.Errorf("could not find a container matching name %q", contName)
 }
 
-// GetLinkNodes returns all the nodes as LinkNodes enriched with the specialNode for the host and the mgmt-net.
+// GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes - host and mgmt-net.
+// The CLab nodes are copied to a new map and thus clab.Node interface is converted to link.Node.
 func (c *CLab) GetLinkNodes() map[string]links.Node {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
@@ -687,15 +688,20 @@ func (c *CLab) GetLinkNodes() map[string]links.Node {
 	for _, n := range specialNodes {
 		resolveNodes[n.GetShortName()] = n
 	}
+
 	return resolveNodes
 }
 
+// GetSpecialLinkNodes returns a map of special nodes that are used to resolve links.
+// Special nodes are host and mgmt-bridge nodes that are not typically present in the topology file
+// but are required to resolve links.
 func (c *CLab) GetSpecialLinkNodes() map[string]links.Node {
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
 	specialNodes := map[string]links.Node{
 		"host":     links.GetHostLinkNode(),
 		"mgmt-net": links.GetMgmtBrLinkNode(),
 	}
+
 	return specialNodes
 }
 
