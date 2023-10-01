@@ -34,7 +34,8 @@ type LinkCommonParams struct {
 	DeploymentState LinkDeploymentState
 }
 
-func (l *LinkCommonParams) GetMtu() int {
+// GetMTU returns the MTU of the link.
+func (l *LinkCommonParams) GetMTU() int {
 	return l.MTU
 }
 
@@ -290,8 +291,8 @@ type Link interface {
 	GetType() LinkType
 	// GetEndpoints returns the endpoints of the link.
 	GetEndpoints() []Endpoint
-	// GetMtu returns the Link MTU
-	GetMtu() int
+	// GetMTU returns the Link MTU.
+	GetMTU() int
 }
 
 func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string) {
