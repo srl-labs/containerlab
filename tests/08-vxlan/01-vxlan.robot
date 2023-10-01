@@ -55,3 +55,7 @@ Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
+
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker rm -f vxlep
+    Log    ${output}
