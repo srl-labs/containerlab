@@ -601,7 +601,6 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		// if the endpoint has a custom MTU set, use it in the template logic
 		// otherwise we don't set the mtu as srlinux will use the default max value 9232
 		if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
-			log.Error(m)
 			iface.Mtu = m
 		}
 
