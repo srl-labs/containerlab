@@ -261,7 +261,13 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams) (Link, error) {
 	// resolve remote endpoint
 	link.remoteEndpoint = NewEndpointVxlan(params.Nodes["host"], link)
 	link.remoteEndpoint.parentIface = parentIf
-	link.remoteEndpoint.udpPort = lr.UDPPort
+
+	if lr.UDPPort == 0 {
+		link.remoteEndpoint.udpPort = VxLANDefaultPort
+	} else {
+		link.remoteEndpoint.udpPort = lr.UDPPort
+	}
+
 	link.remoteEndpoint.remote = ip
 	link.remoteEndpoint.vni = lr.VNI
 
