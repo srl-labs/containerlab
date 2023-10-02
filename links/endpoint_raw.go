@@ -60,8 +60,10 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	switch node.GetLinkEndpointType() {
 	case LinkEndpointTypeBridge:
 		e = NewEndpointBridge(genericEndpoint)
+
 	case LinkEndpointTypeHost:
 		e = NewEndpointHost(genericEndpoint)
+
 	case LinkEndpointTypeVeth:
 		e = NewEndpointVeth(genericEndpoint)
 	}

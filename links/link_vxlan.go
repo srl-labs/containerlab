@@ -37,15 +37,17 @@ type LinkVxlanRaw struct {
 func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	switch lr.LinkType {
 	case LinkTypeVxlan:
-		return lr.resolveRegular(params)
+		return lr.resolveVxlan(params)
+
 	case LinkTypeVxlanStitch:
-		return lr.resolveStitched(params)
+		return lr.resolveStitchedVxlan(params)
+
 	default:
 		return nil, fmt.Errorf("unexpected LinkType %s for Vxlan based link", lr.LinkType)
 	}
 }
 
-func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams, ifaceNamePost string) (*LinkVxlan, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams, ifaceNamePost string) (*LinkVxlan, error) {
 	var err error
 	link := &LinkVxlan{
 		LinkCommonParams: lr.LinkCommonParams,
@@ -132,9 +134,9 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams, ifaceNamePos
 	return link, nil
 }
 
-// resolveStitchedVEth creates the veth link and return it, the endpoint that is
+// resolveStitchedVEthComponent creates the veth link and return it, the endpoint that is
 // supposed to be stitched is returned seperately for further processing
-func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams, ifaceNamePost string) (*LinkVEth, Endpoint, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams, ifaceNamePost string) (*LinkVEth, Endpoint, error) {
 	var err error
 
 	veth := NewLinkVEth()
@@ -167,7 +169,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEth(params *ResolveParams, ifaceNamePost
 	return veth, hostEp, nil
 }
 
-func (lr *LinkVxlanRaw) resolveStitched(params *ResolveParams) (Link, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error) {
 
 	ifaceNamePost := fmt.Sprintf("%s-%s", lr.Endpoint.Node, lr.Endpoint.Iface)
 
@@ -181,13 +183,13 @@ func (lr *LinkVxlanRaw) resolveStitched(params *ResolveParams) (Link, error) {
 	}
 
 	// prepare the vxlan struct
-	vxlanLink, err := lr.resolveStitchedVxlan(params, ifaceNamePost)
+	vxlanLink, err := lr.resolveStitchedVxlanComponent(params, ifaceNamePost)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare the veth struct
-	vethLink, stitchEp, err := lr.resolveStitchedVEth(params, ifaceNamePost)
+	vethLink, stitchEp, err := lr.resolveStitchedVEthComponent(params, ifaceNamePost)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +203,7 @@ func (lr *LinkVxlanRaw) resolveStitched(params *ResolveParams) (Link, error) {
 	return stitchedLink, nil
 }
 
-func (lr *LinkVxlanRaw) resolveRegular(params *ResolveParams) (Link, error) {
+func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams) (Link, error) {
 	var err error
 	link := &LinkVxlan{
 		LinkCommonParams: lr.LinkCommonParams,
