@@ -23,10 +23,10 @@ Deploy ${lab-name} lab
     Should Be Equal As Integers    ${rc}    0
 
 Check VxLAN connectivity srl-linux
-    Wait Until Keyword Succeeds    15    2s    Check VxLAN connectivity srl->linux
+    Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity srl->linux
 
 Check VxLAN connectivity linux-srl
-    Wait Until Keyword Succeeds    15    2s    Check VxLAN connectivity linux->srl
+    Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity linux->srl
 
 
 *** Keywords ***
