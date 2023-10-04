@@ -1,6 +1,7 @@
 name: vxlan
 
 mgmt:
+  network: clab-vxlan
   bridge: clab-vxlan-br
   ipv4-subnet: 172.20.25.0/24
 
