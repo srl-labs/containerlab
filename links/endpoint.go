@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -132,11 +133,15 @@ func CheckEndpointDoesNotExistYet(e Endpoint) error {
 	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
 		// we expect a netlink.LinkNotFoundError when querying for
 		// the interface with the given endpoints name
-		_, err := netlink.LinkByName(e.GetIfaceName())
+		var err error
+		// long interface names (14+ chars) are aliased in the node's namespace
+
+		_, err = utils.LinkByNameOrAlias(e.GetIfaceName())
+
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
 			return nil
 		}
 
-		return fmt.Errorf("interface %s is defined via topology but does already exist", e.String())
+		return fmt.Errorf("interface %s is defined via topology but does already exist: %v", e.String(), err)
 	})
 }

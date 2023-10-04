@@ -2,10 +2,8 @@ package links
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -333,12 +331,6 @@ func genRandomString(length int) string {
 	return string(s[:length])
 }
 
-func stableHashedInterfacename(data string, length int) string {
-	h := fnv.New128()
-	h.Write([]byte(data))
-	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(h.Sum(nil))[:length]
-}
-
 // Node interface is an interface that is satisfied by all nodes.
 // It is used a subset of the nodes.Node interface and is used to pass nodes.Nodes
 // to the link resolver without causing a circular dependency.
@@ -374,26 +366,38 @@ const (
 // and return a function that can run in the netns.Do() call for execution in a network namespace.
 func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
-		// rename the given link
-		err := netlink.LinkSetName(l, endpt.GetIfaceName())
-		if err != nil {
-			return fmt.Errorf(
-				"failed to rename link: %v", err)
+		// rename the link created with random name if its length is acceptable by linux
+		if len(endpt.GetIfaceName()) < 15 {
+			err := netlink.LinkSetName(l, endpt.GetIfaceName())
+			if err != nil {
+				return fmt.Errorf(
+					"failed to rename link: %v", err)
+			}
+		} else {
+			// else we set the desired long name as alias
+			// in future we need to set it as an alternative name,
+			// pending https://twitter.com/ntdvps/status/1709580216648024296
+			err := netlink.LinkSetAlias(l, endpt.GetIfaceName())
+			if err != nil {
+				return fmt.Errorf(
+					"failed to add alias: %v", err)
+			}
 		}
 
 		// lets set the MAC address if provided
 		if len(endpt.GetMac()) == 6 {
-			err = netlink.LinkSetHardwareAddr(l, endpt.GetMac())
+			err := netlink.LinkSetHardwareAddr(l, endpt.GetMac())
 			if err != nil {
 				return err
 			}
 		}
 
 		// bring the given link up
-		if err = netlink.LinkSetUp(l); err != nil {
+		if err := netlink.LinkSetUp(l); err != nil {
 			return fmt.Errorf("failed to set %q up: %v",
 				endpt.GetIfaceName(), err)
 		}
+
 		return nil
 	}
 }

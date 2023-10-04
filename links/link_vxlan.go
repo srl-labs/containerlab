@@ -47,7 +47,7 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 }
 
-func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams, ifaceNamePost string) (*LinkVxlan, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams) (*LinkVxlan, error) {
 	var err error
 	link := &LinkVxlan{
 		LinkCommonParams: lr.LinkCommonParams,
@@ -58,15 +58,15 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams, ifa
 
 	// point the vxlan endpoint to the host system
 	vxlanRawEp := lr.Endpoint
-	vxlanRawEp.Iface = fmt.Sprintf("vx-%s", ifaceNamePost)
+	vxlanRawEp.Iface = fmt.Sprintf("vx-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+
 	if params.VxlanIfaceNameOverwrite != "" {
 		vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
 	}
+
+	// in the stiched vxlan mode we create vxlan interface in the host node namespace
 	vxlanRawEp.Node = "host"
 	vxlanRawEp.MAC = ""
-	if err != nil {
-		return nil, err
-	}
 
 	// resolve local Endpoint
 	link.localEndpoint, err = vxlanRawEp.Resolve(params, link)
@@ -128,7 +128,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams, ifa
 		return nil, err
 	}
 
-	// add link to local endpoints node
+	// add link to local endpoint's node
 	link.localEndpoint.GetNode().AddLink(link)
 
 	return link, nil
@@ -136,7 +136,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams, ifa
 
 // resolveStitchedVEthComponent creates the veth link and return it, the endpoint that is
 // supposed to be stitched is returned seperately for further processing
-func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams, ifaceNamePost string) (*LinkVEth, Endpoint, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
 	var err error
 
 	veth := NewLinkVEth()
@@ -144,7 +144,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams, ifac
 
 	hostEpRaw := &EndpointRaw{
 		Node:  "host",
-		Iface: fmt.Sprintf("ve-%s", ifaceNamePost),
+		Iface: fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
 	}
 
 	// overwrite the host side veth name. Used with the tools command
@@ -169,27 +169,16 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams, ifac
 	return veth, hostEp, nil
 }
 
+// resolveStitchedVxlan resolves the stitched raw vxlan link.
 func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error) {
-
-	ifaceNamePost := fmt.Sprintf("%s-%s", lr.Endpoint.Node, lr.Endpoint.Iface)
-
-	// if the resulting interface name is too long, we generate a random name
-	// this will be used for the vxlan and and veth endpoint on the host side
-	// but with different prefixes
-	if len(ifaceNamePost) > 14 {
-		oldName := ifaceNamePost
-		ifaceNamePost = stableHashedInterfacename(ifaceNamePost, 8)
-		log.Debugf("can't use %s as interface name postfix, falling back to %s", oldName, ifaceNamePost)
-	}
-
 	// prepare the vxlan struct
-	vxlanLink, err := lr.resolveStitchedVxlanComponent(params, ifaceNamePost)
+	vxlanLink, err := lr.resolveStitchedVxlanComponent(params)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare the veth struct
-	vethLink, stitchEp, err := lr.resolveStitchedVEthComponent(params, ifaceNamePost)
+	vethLink, stitchEp, err := lr.resolveStitchedVEthComponent(params)
 	if err != nil {
 		return nil, err
 	}

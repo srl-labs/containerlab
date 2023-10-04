@@ -152,3 +152,17 @@ func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
 	}
 	return fls, nil
 }
+
+func LinkByNameOrAlias(name string) (netlink.Link, error) {
+	var l netlink.Link
+	var err error
+
+	// long interface names (14+ chars) are aliased by clab
+	if len(name) > 13 {
+		l, err = netlink.LinkByAlias(name)
+	} else {
+		l, err = netlink.LinkByName(name)
+	}
+
+	return l, err
+}

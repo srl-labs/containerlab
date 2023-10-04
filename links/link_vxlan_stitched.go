@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -97,12 +98,12 @@ func stitch(ep1, ep2 Endpoint) error {
 	var linkSrc, linkDest netlink.Link
 	log.Infof("configuring ingress mirroring with tc in the direction of %s -> %s", ep1, ep2)
 
-	if linkSrc, err = netlink.LinkByName(ep1.GetIfaceName()); err != nil {
+	if linkSrc, err = utils.LinkByNameOrAlias(ep1.GetIfaceName()); err != nil {
 		return fmt.Errorf("failed to lookup %q: %v",
 			ep1, err)
 	}
 
-	if linkDest, err = netlink.LinkByName(ep2.GetIfaceName()); err != nil {
+	if linkDest, err = utils.LinkByNameOrAlias(ep2.GetIfaceName()); err != nil {
 		return fmt.Errorf("failed to lookup %q: %v",
 			ep2, err)
 	}
