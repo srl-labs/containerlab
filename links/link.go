@@ -376,7 +376,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 		} else {
 			// else we set the desired long name as alias
 			// in future we need to set it as an alternative name,
-			// pending https://twitter.com/ntdvps/status/1709580216648024296
+			// pending https://github.com/vishvananda/netlink/pull/862
 			err := netlink.LinkSetAlias(l, endpt.GetIfaceName())
 			if err != nil {
 				return fmt.Errorf(
