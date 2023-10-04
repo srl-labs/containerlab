@@ -18,6 +18,10 @@ build:
 	mkdir -p $(BIN_DIR)
 	go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
 
+build-linux-arm64:
+	mkdir -p $(BIN_DIR)
+	GOARCH=arm64 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+
 build-with-cover:
 	mkdir -p $(BIN_DIR)
 	go build -cover -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
@@ -91,16 +95,24 @@ htmltest:
 	rm -rf ./site
 
 # build containerlab bin and push it as an OCI artifact to ttl.sh and ghcr registries
-# to obtain the pushed artifact use: docker run --rm -v $(pwd):/workspace ghcr.io/deislabs/oras:v0.11.1 pull ttl.sh/<image-name>
+# to obtain the pushed artifact use: docker run --rm -v $(pwd):/workspace ghcr.io/deislabs/oras:v1.1.0 pull ttl.sh/<image-name>
 .PHONY: oci-push
 oci-push: build-with-podman
 	@echo
 	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - ./containerlab deploy.... Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
 	@echo 'If https proxy is configured in your environment, pass the proxies via --env HTTPS_PROXY="<proxy-address>" flag of the docker run command.'
 # push to ttl.sh
-#	docker run --rm -v $(CURDIR)/bin:/workspace ghcr.io/oras-project/oras:v0.12.0 push ttl.sh/clab-$(COMMIT_HASH):1d ./containerlab
-#	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ttl.sh/clab-$(COMMIT_HASH):1d"
+#	docker run --rm -v $(CURDIR)/bin:/workspace ghcr.io/oras-project/oras:v1.1.0 push ttl.sh/clab-$(COMMIT_HASH):1d ./containerlab
+#	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull ttl.sh/clab-$(COMMIT_HASH):1d"
 # push to ghcr.io
 	@echo ""
-	docker run --rm -v $(CURDIR)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v0.12.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab
-	@echo "download with: docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v0.12.0 pull ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH)"
+	docker run --rm -v $(CURDIR)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v1.1.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab
+	@echo "download with: sudo docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH)"
+
+oci-arm-push: build-linux-arm64
+	@echo
+	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - ./containerlab deploy.... Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
+	@echo 'If https proxy is configured in your environment, pass the proxies via --env HTTPS_PROXY="<proxy-address>" flag of the docker run command.'
+	@echo ""
+	docker run --rm -v $(CURDIR)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v1.1.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab
+	@echo "download with: sudo docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH)"
