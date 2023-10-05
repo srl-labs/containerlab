@@ -139,34 +139,24 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams) (*L
 func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
 	var err error
 
-	veth := NewLinkVEth()
-	veth.LinkCommonParams = lr.LinkCommonParams
-
-	hostEpRaw := &EndpointRaw{
-		Node:  "host",
-		Iface: fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+	lhr := &LinkHostRaw{
+		LinkCommonParams: lr.LinkCommonParams,
+		HostInterface:    fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+		Endpoint: &EndpointRaw{
+			Node:  lr.Endpoint.Node,
+			Iface: lr.Endpoint.Iface,
+		},
 	}
 
-	// overwrite the host side veth name. Used with the tools command
-	if params.VxlanIfaceNameOverwrite != "" {
-		hostEpRaw.Iface = params.VxlanIfaceNameOverwrite
-	}
-
-	hostEp, err := hostEpRaw.Resolve(params, veth)
+	hl, err := lhr.Resolve(params)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	containerEpRaw := lr.Endpoint
+	vethLink := hl.(*LinkVEth)
 
-	containerEp, err := containerEpRaw.Resolve(params, veth)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	veth.Endpoints = append(veth.Endpoints, hostEp, containerEp)
-
-	return veth, hostEp, nil
+	// host endpoint is always a 2nd element in the Endpoints slice
+	return vethLink, vethLink.Endpoints[1], nil
 }
 
 // resolveStitchedVxlan resolves the stitched raw vxlan link.
