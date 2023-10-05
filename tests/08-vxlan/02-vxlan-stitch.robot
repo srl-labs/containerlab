@@ -53,7 +53,8 @@ Check veth interface parameters on the host for very long name node
 
     Should Contain    ${output}    mtu 9500 qdisc noqueue state UP
 
-    Should Contain    ${output}    link-netns clab-vxlan-stitch-some_very_long_node_name_l1
+    # in github actions the output for this link weirdly state the netnsid instead of nsname, thus we check for any of those
+    Should Contain Any    ${output}    link-netns clab-vxlan-stitch-some_very_long_node_name_l1    link-netnsid 2
 
     Should Contain    ${output}    alias ve-some_very_long_node_name_l1_e1-1
 
