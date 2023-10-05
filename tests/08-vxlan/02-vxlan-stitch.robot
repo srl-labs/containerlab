@@ -9,7 +9,7 @@ Suite Teardown      Cleanup
 
 *** Variables ***
 ${lab-name}         vxlan
-${lab-file}         01-vxlan.clab.yml
+${lab-file}         02-vxlan-stitch.clab.yml
 ${runtime}          docker
 ${lab-net}          clab-vxlan
 ${vxlan-br}         clab-vxlan-br
@@ -39,6 +39,24 @@ Check veth interface parameters on the host for srl1 node
 
     Should Contain    ${output}    link-netns clab-vxlan-stitch-srl1
 
+Check VxLAN interface parameters on the host for very long name node
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "vx-some_very_long_node_name_l1_e1-1") | .ifname' | xargs ip -d l show
+
+    Should Contain    ${output}    mtu 9050
+
+    Should Contain    ${output}    vxlan id 101 remote 172.20.25.23 dev clab-vxlan-br srcport 0 0 dstport 14789
+
+Check veth interface parameters on the host for very long name node
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "ve-some_very_long_node_name_l1_e1-1") | .ifname' | xargs ip -d l show
+
+    Should Contain    ${output}    mtu 9500 qdisc noqueue state UP
+
+    Should Contain    ${output}    link-netns clab-vxlan-stitch-some_very_long_node_name_l1
+
+    Should Contain    ${output}    alias ve-some_very_long_node_name_l1_e1-1
+
 Check VxLAN connectivity srl-linux
     # CI env var is set to true in Github Actions
     # and this test won't run there, since it fails for unknown reason
@@ -55,14 +73,14 @@ Check VxLAN connectivity linux-srl
 *** Keywords ***
 Check VxLAN connectivity srl->linux
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E docker exec -it clab-vxlan-srl1 ip netns exec srbase-default ping 192.168.67.2 -c 1
+    ...    sudo -E docker exec -it clab-vxlan-stitch-srl1 ip netns exec srbase-default ping 192.168.67.2 -c 1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
 
 Check VxLAN connectivity linux->srl
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E docker exec clab-vxlan-l2 ping 192.168.67.1 -c 1
+    ...    sudo -E docker exec clab-vxlan-stitch-l2 ping 192.168.67.1 -c 1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
