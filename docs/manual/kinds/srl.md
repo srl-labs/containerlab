@@ -116,7 +116,9 @@ For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that 
 
 The available type values are: `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrd4`, `ixrd5`, `ixrd5t`, `ixrh2`, `ixrh3` and `ixrh4`, which correspond to a hardware variant of Nokia 7220 IXR chassis.
 
-Nokia 7250 IXR chassis identified with types `ixr6e` and `ixr10e` require a valid license to boot.
+Nokia 7250 IXR chassis identified with types `ixr6e` and `ixr10e` require a valid license to operate.
+
+Nokia 7730 SXR models are identified with types `sxr1x44s`, `sxr1d32d` and require a valid license to operate.
 
 If type is not set in the clab file `ixrd2` value will be used by containerlab.
 
