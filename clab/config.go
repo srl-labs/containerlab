@@ -29,8 +29,8 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/64"
-	// NSPath value assigned to host interfaces.
-	hostNSPath = "__host"
+	// veth link mtu.
+	DefaultVethLinkMTU = 9500
 
 	// clab specific topology variables.
 	clabDirVar = "__clabDir__"

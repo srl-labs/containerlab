@@ -36,8 +36,7 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		return nil, fmt.Errorf("unable to find node %s", er.Node)
 	}
 
-	genericEndpoint := NewEndpointGeneric(node, er.Iface)
-	genericEndpoint.Link = l
+	genericEndpoint := NewEndpointGeneric(node, er.Iface, l)
 
 	var err error
 	if er.MAC == "" {

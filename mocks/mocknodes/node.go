@@ -381,6 +381,18 @@ func (mr *MockNodeMockRecorder) SaveConfig(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockNode)(nil).SaveConfig), arg0)
 }
 
+// SetState mocks base method.
+func (m *MockNode) SetState(arg0 state.NodeState) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetState", arg0)
+}
+
+// SetState indicates an expected call of SetState.
+func (mr *MockNodeMockRecorder) SetState(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockNode)(nil).SetState), arg0)
+}
+
 // UpdateConfigWithRuntimeInfo mocks base method.
 func (m *MockNode) UpdateConfigWithRuntimeInfo(arg0 context.Context) error {
 	m.ctrl.T.Helper()

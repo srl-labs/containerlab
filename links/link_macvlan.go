@@ -63,9 +63,13 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, nil
 	}
 
-	ep := &EndpointMacVlan{
-		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface),
+	link := &LinkMacVlan{
+		LinkCommonParams: r.LinkCommonParams,
 	}
+	ep := &EndpointMacVlan{
+		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
+	}
+	link.HostEndpoint = ep
 
 	var err error
 	ep.MAC, err = utils.GenMac(ClabOUI)
@@ -73,11 +77,6 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 
-	link := &LinkMacVlan{
-		LinkCommonParams: r.LinkCommonParams,
-		HostEndpoint:     ep,
-	}
-	ep.Link = link
 	// parse the MacVlanMode
 	mode, err := MacVlanModeParse(r.Mode)
 	if err != nil {
