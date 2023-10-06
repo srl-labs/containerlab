@@ -126,13 +126,24 @@ func WithKeepMgmtNet() ClabOption {
 
 func WithTopoPath(path, varsFile string) ClabOption {
 	return func(c *CLab) error {
-		if path == "" {
-			return fmt.Errorf("provide a path to the clab topology file")
-		}
+		var file string
+		var err error
 
-		file, err := findTopoFileByPath(path)
-		if err != nil {
-			return err
+		switch path {
+		case "-", "stdin":
+			file, err = c.readFromStdin()
+			if err != nil {
+				return err
+			}
+
+		case "":
+			return fmt.Errorf("provide a path to the clab topology file")
+
+		default:
+			file, err = findTopoFileByPath(path)
+			if err != nil {
+				return err
+			}
 		}
 
 		if err := c.GetTopology(file, varsFile); err != nil {
@@ -182,6 +193,23 @@ func findTopoFileByPath(path string) (string, error) {
 	}
 
 	return file, nil
+}
+
+// readFromStdin reads the topology file from stdin
+// creates a temp file with topology contents
+// and returns a path to the temp file.
+func (c *CLab) readFromStdin() (string, error) {
+	tmpFile, err := os.CreateTemp(c.TopoPaths.ClabTmpDir(), "topo-*.yml")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tmpFile.ReadFrom(os.Stdin)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
 }
 
 // WithNodeFilter option sets a filter for nodes to be deployed.
