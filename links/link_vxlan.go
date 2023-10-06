@@ -37,7 +37,7 @@ type LinkVxlanRaw struct {
 func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	switch lr.LinkType {
 	case LinkTypeVxlan:
-		return lr.resolveVxlan(params)
+		return lr.resolveVxlan(params, false)
 
 	case LinkTypeVxlanStitch:
 		return lr.resolveStitchedVxlan(params)
@@ -47,9 +47,56 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 }
 
-func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams) (*LinkVxlan, error) {
+// resolveStitchedVEthComponent creates the veth link and return it, the endpoint that is
+// supposed to be stitched is returned seperately for further processing
+func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
 	var err error
 
+	lhr := &LinkHostRaw{
+		LinkCommonParams: lr.LinkCommonParams,
+		HostInterface:    fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+		Endpoint: &EndpointRaw{
+			Node:  lr.Endpoint.Node,
+			Iface: lr.Endpoint.Iface,
+		},
+	}
+
+	hl, err := lhr.Resolve(params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	vethLink := hl.(*LinkVEth)
+
+	// host endpoint is always a 2nd element in the Endpoints slice
+	return vethLink, vethLink.Endpoints[1], nil
+}
+
+// resolveStitchedVxlan resolves the stitched raw vxlan link.
+func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error) {
+	// prepare the vxlan struct
+	vxlanLink, err := lr.resolveVxlan(params, true)
+	if err != nil {
+		return nil, err
+	}
+
+	// prepare the veth struct
+	vethLink, stitchEp, err := lr.resolveStitchedVEthComponent(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// return the stitched vxlan link
+	stitchedLink := NewVxlanStitched(vxlanLink, vethLink, stitchEp)
+
+	// add stitched link to node
+	params.Nodes[lr.Endpoint.Node].AddLink(stitchedLink)
+
+	return stitchedLink, nil
+}
+
+func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*LinkVxlan, error) {
+	var err error
 	link := &LinkVxlan{
 		LinkCommonParams: lr.LinkCommonParams,
 		noLearning:       lr.NoLearning,
@@ -57,22 +104,31 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams) (*L
 		noL3Miss:         lr.NoL3Miss,
 	}
 
-	// point the vxlan endpoint to the host system
-	vxlanRawEp := lr.Endpoint
-	vxlanRawEp.Iface = fmt.Sprintf("vx-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+	if stitched {
+		// point the vxlan endpoint to the host system
+		vxlanRawEp := lr.Endpoint
+		vxlanRawEp.Iface = fmt.Sprintf("vx-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
 
-	if params.VxlanIfaceNameOverwrite != "" {
-		vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
-	}
+		if params.VxlanIfaceNameOverwrite != "" {
+			vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
+		}
 
-	// in the stiched vxlan mode we create vxlan interface in the host node namespace
-	vxlanRawEp.Node = "host"
-	vxlanRawEp.MAC = ""
+		// in the stiched vxlan mode we create vxlan interface in the host node namespace
+		vxlanRawEp.Node = "host"
+		vxlanRawEp.MAC = ""
 
-	// resolve local Endpoint
-	link.localEndpoint, err = vxlanRawEp.Resolve(params, link)
-	if err != nil {
-		return nil, err
+		// resolve local Endpoint
+		link.localEndpoint, err = vxlanRawEp.Resolve(params, link)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// resolve local Endpoint
+		link.localEndpoint, err = lr.Endpoint.Resolve(params, link)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	ip := net.ParseIP(lr.Remote)
@@ -124,132 +180,21 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams) (*L
 	}
 	link.remoteEndpoint.remote = ip
 	link.remoteEndpoint.vni = lr.VNI
-	link.remoteEndpoint.MAC, err = utils.GenMac(ClabOUI)
-	if err != nil {
-		return nil, err
-	}
-
-	// add link to local endpoint's node
-	link.localEndpoint.GetNode().AddLink(link)
-
-	return link, nil
-}
-
-// resolveStitchedVEthComponent creates the veth link and return it, the endpoint that is
-// supposed to be stitched is returned seperately for further processing
-func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
-	var err error
-
-	lhr := &LinkHostRaw{
-		LinkCommonParams: lr.LinkCommonParams,
-		HostInterface:    fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
-		Endpoint: &EndpointRaw{
-			Node:  lr.Endpoint.Node,
-			Iface: lr.Endpoint.Iface,
-		},
-	}
-
-	hl, err := lhr.Resolve(params)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	vethLink := hl.(*LinkVEth)
-
-	// host endpoint is always a 2nd element in the Endpoints slice
-	return vethLink, vethLink.Endpoints[1], nil
-}
-
-// resolveStitchedVxlan resolves the stitched raw vxlan link.
-func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error) {
-	// prepare the vxlan struct
-	vxlanLink, err := lr.resolveStitchedVxlanComponent(params)
-	if err != nil {
-		return nil, err
-	}
-
-	// prepare the veth struct
-	vethLink, stitchEp, err := lr.resolveStitchedVEthComponent(params)
-	if err != nil {
-		return nil, err
-	}
-
-	// return the stitched vxlan link
-	stitchedLink := NewVxlanStitched(vxlanLink, vethLink, stitchEp)
-
-	// add stitched link to node
-	params.Nodes[lr.Endpoint.Node].AddLink(stitchedLink)
-
-	return stitchedLink, nil
-}
-
-func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams) (Link, error) {
-	var err error
-	link := &LinkVxlan{
-		LinkCommonParams: lr.LinkCommonParams,
-		noLearning:       lr.NoLearning,
-		noL2Miss:         lr.NoL2Miss,
-		noL3Miss:         lr.NoL3Miss,
-	}
-
-	// resolve local Endpoint
-	link.localEndpoint, err = lr.Endpoint.Resolve(params, link)
-	if err != nil {
-		return nil, err
-	}
-
-	ip := net.ParseIP(lr.Remote)
-	// if the returned ip is nil, an error occured.
-	// we consider, that we maybe have a textual hostname
-	// e.g. dns name so we try to resolve the string next
-	if ip == nil {
-		ips, err := net.LookupIP(lr.Remote)
+	// check if MAC-Addr is set in the raw vxlan link
+	if lr.Endpoint.MAC == "" {
+		// if it is not set generate a MAC
+		link.remoteEndpoint.MAC, err = utils.GenMac(ClabOUI)
 		if err != nil {
 			return nil, err
 		}
-
-		// prepare log message
-		sb := strings.Builder{}
-		for _, ip := range ips {
-			sb.WriteString(", ")
-			sb.WriteString(ip.String())
-		}
-		log.Debugf("looked up hostname %s, received IP addresses [%s]", lr.Remote, sb.String()[2:])
-
-		// always use the first address
-		if len(ips) <= 0 {
-			return nil, fmt.Errorf("unable to resolve %s", lr.Remote)
-		}
-		ip = ips[0]
-	}
-
-	parentIf := lr.ParentInterface
-
-	if parentIf == "" {
-		conn, err := rtnl.Dial(nil)
-		if err != nil {
-			return nil, fmt.Errorf("can't establish netlink connection: %s", err)
-		}
-		defer conn.Close()
-		r, err := conn.RouteGet(ip)
-		if err != nil {
-			return nil, fmt.Errorf("failed to find a route to VxLAN remote address %s", ip.String())
-		}
-		parentIf = r.Interface.Name
-	}
-
-	// resolve remote endpoint
-	link.remoteEndpoint = NewEndpointVxlan(params.Nodes["host"], link)
-	link.remoteEndpoint.parentIface = parentIf
-
-	if lr.UDPPort == 0 {
-		link.remoteEndpoint.udpPort = VxLANDefaultPort
 	} else {
-		link.remoteEndpoint.udpPort = lr.UDPPort
+		// if a MAC is set, parse and use it
+		hwaddr, err := net.ParseMAC(lr.Endpoint.MAC)
+		if err != nil {
+			return nil, err
+		}
+		link.remoteEndpoint.MAC = hwaddr
 	}
-
-	link.remoteEndpoint.remote = ip
-	link.remoteEndpoint.vni = lr.VNI
 
 	// add link to local endpoints node
 	link.localEndpoint.GetNode().AddLink(link)
