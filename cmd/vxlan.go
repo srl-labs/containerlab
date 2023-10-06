@@ -83,11 +83,8 @@ var vxlanCreateCmd = &cobra.Command{
 			LinkCommonParams: links.LinkCommonParams{
 				MTU: vxlanMTU,
 			},
-			UDPPort:    vxlanUDPPort,
-			NoLearning: true,
-			NoL2Miss:   true,
-			NoL3Miss:   true,
-			LinkType:   links.LinkTypeVxlanStitch,
+			UDPPort:  vxlanUDPPort,
+			LinkType: links.LinkTypeVxlanStitch,
 			Endpoint: *links.NewEndpointRaw(
 				"host",
 				cntLink,

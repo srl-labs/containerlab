@@ -25,9 +25,6 @@ type LinkVxlanRaw struct {
 	Endpoint         EndpointRaw `yaml:"endpoint"`
 	UDPPort          int         `yaml:"udp-port,omitempty"`
 	ParentInterface  string      `yaml:"parent-interface,omitempty"`
-	NoLearning       bool        `yaml:"no-learning,omitempty"`
-	NoL2Miss         bool        `yaml:"no-l2miss,omitempty"`
-	NoL3Miss         bool        `yaml:"no-l3miss,omitempty"`
 
 	// we use the same struct for vxlan and vxlan stitch, so we need to differentiate them in the raw format
 	LinkType LinkType
@@ -98,9 +95,6 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	var err error
 	link := &LinkVxlan{
 		LinkCommonParams: lr.LinkCommonParams,
-		noLearning:       lr.NoLearning,
-		noL2Miss:         lr.NoL2Miss,
-		noL3Miss:         lr.NoL3Miss,
 	}
 
 	link.localEndpoint, err = lr.resolveLocalEndpoint(stitched, params, link)
@@ -206,9 +200,6 @@ type LinkVxlan struct {
 	LinkCommonParams
 	localEndpoint  Endpoint
 	remoteEndpoint *EndpointVxlan
-	noLearning     bool
-	noL2Miss       bool
-	noL3Miss       bool
 }
 
 func (l *LinkVxlan) Deploy(ctx context.Context) error {
@@ -246,9 +237,6 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 		VxlanId:      l.remoteEndpoint.vni,
 		VtepDevIndex: parentIface.Attrs().Index,
 		Group:        l.remoteEndpoint.remote,
-		Learning:     !l.noLearning, // invert the value - we make use of the bool default value == false
-		L2miss:       !l.noL2Miss,   // invert the value
-		L3miss:       !l.noL3Miss,   // invert the value
 	}
 	// set the upd port if defined in the input
 	if l.remoteEndpoint.udpPort != 0 {
