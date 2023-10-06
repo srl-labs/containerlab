@@ -6,8 +6,14 @@ type EndpointHost struct {
 	EndpointGeneric
 }
 
+func NewEndpointHost(eg *EndpointGeneric) *EndpointHost {
+	return &EndpointHost{
+		EndpointGeneric: *eg,
+	}
+}
+
 func (e *EndpointHost) Verify(_ *VerifyLinkParams) error {
-	errs := []error{}
+	var errs []error
 	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)

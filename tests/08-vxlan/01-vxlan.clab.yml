@@ -1,0 +1,35 @@
+name: vxlan
+
+mgmt:
+  network: clab-vxlan
+  bridge: clab-vxlan-br
+  ipv4-subnet: 172.20.25.0/24
+
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      startup-config: 01-vxlan-s1.config
+      mgmt-ipv4: 172.20.25.21
+    l2:
+      kind: linux
+      image: alpine:3
+      exec:
+        - >
+          ash -c '
+          apk add iproute2 &&
+          ip link add name vxlan0 type vxlan id 100 remote 172.20.25.21 dstport 14788 &&
+          ip l set dev vxlan0 up &&
+          ip addr add dev vxlan0 192.168.67.2/30'
+      mgmt-ipv4: 172.20.25.22
+
+  links:
+    - type: vxlan
+      endpoint:
+        node: srl1
+        interface: e1-1
+        mac: 02:00:00:00:00:04
+      remote: 172.20.25.22
+      vni: 100
+      udp-port: 14788

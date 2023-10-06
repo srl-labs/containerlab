@@ -185,13 +185,11 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 
 			for i, e := range l.Endpoints {
 				if e.(*EndpointVeth).IfaceName != tt.want.Endpoints[i].(*EndpointVeth).IfaceName {
-					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s",
-						e.(*EndpointVeth).IfaceName, tt.want.Endpoints[i].(*EndpointVeth).IfaceName)
+					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s", e.(*EndpointVeth).IfaceName, tt.want.Endpoints[i].(*EndpointVeth).IfaceName)
 				}
 
 				if e.(*EndpointVeth).Node != tt.want.Endpoints[i].(*EndpointVeth).Node {
-					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s",
-						e.(*EndpointVeth).Node, tt.want.Endpoints[i].(*EndpointVeth).Node)
+					t.Errorf("LinkVEthRaw.Resolve() EndpointVeth got %s, want %s", e.(*EndpointVeth).Node, tt.want.Endpoints[i].(*EndpointVeth).Node)
 				}
 			}
 		})
@@ -241,4 +239,8 @@ func (*fakeNode) ExecFunction(_ func(ns.NetNS) error) error {
 
 func (f *fakeNode) GetState() state.NodeState {
 	return f.State
+}
+
+func (*fakeNode) Delete(context.Context) error {
+	return nil
 }

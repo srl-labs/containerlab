@@ -37,6 +37,14 @@ const (
 
 	readyTimeout = time.Minute * 2 // max wait time for node to boot
 	retryTimer   = time.Second
+
+	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory config.
+	// Default config is a config that adds some basic configuration to the node, such as tls certs, gnmi/json-rpc, login-banner.
+	defaultCfgPath = "/tmp/clab-default-config"
+	// overlayCfgPath is a path to a file with additional config that clab adds on top of the default config.
+	// Partial config provided via startup-config parameter is an overlay config.
+	overlayCfgPath = "/tmp/clab-overlay-config"
+
 	// additional config that clab adds on top of the factory config.
 	srlConfigCmdsTpl = `set / system tls server-profile clab-profile
 set / system tls server-profile clab-profile key "{{ .TLSKey }}"
@@ -318,6 +326,11 @@ func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 		return err
 	}
 
+	// once default and overlay config is added, we can commit the config
+	if err := s.commitConfig(ctx); err != nil {
+		return err
+	}
+
 	return s.generateCheckpoint(ctx)
 }
 
@@ -585,17 +598,10 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 			iface.BreakoutNo = ifNameParts[2]
 		}
 
-		// for MACVlan interfaces we need to figure out the parent interface MTU
-		// and specifically define it in the config
-		//
-		// via the endpoint we acquire the link, and check if the link is of type LinkMacVlan
-		// if so cast it and get the parent Interface MTU and finally set that for the interface
-		if link, ok := e.GetLink().(*links.LinkMacVlan); ok {
-			mtu, err := link.GetParentInterfaceMtu()
-			if err != nil {
-				return err
-			}
-			iface.Mtu = mtu
+		// if the endpoint has a custom MTU set, use it in the template logic
+		// otherwise we don't set the mtu as srlinux will use the default max value 9232
+		if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+			iface.Mtu = m
 		}
 
 		// add the template interface definition to the template data
@@ -612,17 +618,17 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	execCmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
-		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
+		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
 	})
 	_, err = n.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
 	}
 
-	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed < /tmp/clab-config"`)
-	if err != nil {
-		return err
-	}
+	cmd := exec.NewExecCmdFromSlice([]string{
+		"bash", "-c",
+		fmt.Sprintf("/opt/srlinux/bin/sr_cli -ed < %s", defaultCfgPath),
+	})
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -636,20 +642,51 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 // addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive.
 func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
+	if len(s.startupCliCfg) == 0 {
+		log.Debugf("node %q: startup-config empty, committing existing candidate", s.Config().ShortName)
+
+		return nil
+	}
+
 	cfgStr := string(s.startupCliCfg)
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
 
 	cmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
-		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
+		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
 	})
 	_, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	cmd, _ = exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed --post 'commit save' < tmp/clab-config"`)
+	cmd = exec.NewExecCmdFromSlice([]string{
+		"bash", "-c",
+		fmt.Sprintf("/opt/srlinux/bin/sr_cli -ed < %s", overlayCfgPath),
+	})
+	execResult, err := s.RunExec(ctx, cmd)
+	if err != nil {
+		return err
+	}
+
+	if len(execResult.GetStdErrString()) != 0 {
+		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return nil
+}
+
+// commitConfig commits and saves default+overlay config to the startup-config file.
+func (s *srl) commitConfig(ctx context.Context) error {
+	log.Debugf("Node %q: commiting configuration", s.Cfg.ShortName)
+
+	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
+	if err != nil {
+		return err
+	}
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err

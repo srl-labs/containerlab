@@ -9,6 +9,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/digitalocean/go-openvswitch/ovs"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -20,7 +21,7 @@ func (veth *vEthEndpoint) toOvsBridge() error {
 		return err
 	}
 	err = vethNS.Do(func(_ ns.NetNS) error {
-		_, err := netlink.LinkByName(veth.OvsBridge)
+		_, err := utils.LinkByNameOrAlias(veth.OvsBridge)
 		if err != nil {
 			return fmt.Errorf("could not find ovs bridge %q: %v", veth.OvsBridge, err)
 		}

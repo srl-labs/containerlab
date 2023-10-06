@@ -143,7 +143,7 @@ func (*LinkMacVlan) GetType() LinkType {
 }
 
 func (l *LinkMacVlan) GetParentInterfaceMtu() (int, error) {
-	hostLink, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
+	hostLink, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return 0, err
 	}
@@ -152,7 +152,7 @@ func (l *LinkMacVlan) GetParentInterfaceMtu() (int, error) {
 
 func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	// lookup the parent host interface
-	parentInterface, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
+	parentInterface, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the Link by name
-	mvInterface, err := netlink.LinkByName(l.NodeEndpoint.GetRandIfaceName())
+	mvInterface, err := utils.LinkByNameOrAlias(l.NodeEndpoint.GetRandIfaceName())
 	if err != nil {
 		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandIfaceName(), err)
 	}
@@ -200,8 +200,15 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (*LinkMacVlan) Remove(_ context.Context) error {
-	// TODO
+func (l *LinkMacVlan) Remove(_ context.Context) error {
+	if l.DeploymentState == LinkDeploymentStateRemoved {
+		return nil
+	}
+	err := l.NodeEndpoint.Remove()
+	if err != nil {
+		log.Debug(err)
+	}
+	l.DeploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 

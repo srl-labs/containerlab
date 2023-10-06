@@ -408,7 +408,14 @@ jobs:
           path: ./tests/coverage/*
           retention-days: 7
 
-    # create a job that downloads coverage artifact and uses codecov to upload it
+  vxlan-tests:
+    uses: ./.github/workflows/vxlan-tests.yml
+    needs:
+      - unit-test
+      - staticcheck
+      - build-containerlab
+
+  # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-22.04
     needs:
@@ -418,6 +425,7 @@ jobs:
       - ceos-basic-tests
       - srlinux-basic-tests
       - ixiac-one-basic-tests
+      - vxlan-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -473,11 +481,13 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - docs-test
+      - unit-test
       - smoke-tests
       - ceos-basic-tests
       - srlinux-basic-tests
       - ixiac-one-basic-tests
       - ext-container-tests
+      - vxlan-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4

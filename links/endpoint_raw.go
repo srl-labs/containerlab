@@ -59,17 +59,13 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 
 	switch node.GetLinkEndpointType() {
 	case LinkEndpointTypeBridge:
-		e = &EndpointBridge{
-			EndpointGeneric: *genericEndpoint,
-		}
+		e = NewEndpointBridge(genericEndpoint)
+
 	case LinkEndpointTypeHost:
-		e = &EndpointHost{
-			EndpointGeneric: *genericEndpoint,
-		}
+		e = NewEndpointHost(genericEndpoint)
+
 	case LinkEndpointTypeVeth:
-		e = &EndpointVeth{
-			EndpointGeneric: *genericEndpoint,
-		}
+		e = NewEndpointVeth(genericEndpoint)
 	}
 
 	// also add the endpoint to the node

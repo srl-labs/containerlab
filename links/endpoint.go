@@ -5,6 +5,8 @@ import (
 	"net"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -72,8 +74,8 @@ func (e *EndpointGeneric) GetNode() Node {
 }
 
 func (e *EndpointGeneric) Remove() error {
-	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
-		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
+	return e.GetNode().ExecFunction(func(n ns.NetNS) error {
+		brSideEp, err := utils.LinkByNameOrAlias(e.GetIfaceName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 
 		switch {
@@ -83,7 +85,7 @@ func (e *EndpointGeneric) Remove() error {
 		case err != nil:
 			return err
 		}
-
+		log.Debugf("Removing interface %q from namespace %q", e.GetIfaceName(), e.GetNode().GetShortName())
 		return netlink.LinkDel(brSideEp)
 	})
 }
@@ -132,11 +134,15 @@ func CheckEndpointDoesNotExistYet(e Endpoint) error {
 	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
 		// we expect a netlink.LinkNotFoundError when querying for
 		// the interface with the given endpoints name
-		_, err := netlink.LinkByName(e.GetIfaceName())
+		var err error
+		// long interface names (14+ chars) are aliased in the node's namespace
+
+		_, err = utils.LinkByNameOrAlias(e.GetIfaceName())
+
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
 			return nil
 		}
 
-		return fmt.Errorf("interface %s is defined via topology but does already exist", e.String())
+		return fmt.Errorf("interface %s is defined via topology but does already exist: %v", e.String(), err)
 	})
 }
