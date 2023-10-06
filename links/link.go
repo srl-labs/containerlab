@@ -367,7 +367,7 @@ const (
 func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the link created with random name if its length is acceptable by linux
-		if len(endpt.GetIfaceName()) < 15 {
+		if len(endpt.GetIfaceName()) < 16 {
 			err := netlink.LinkSetName(l, endpt.GetIfaceName())
 			if err != nil {
 				return fmt.Errorf(

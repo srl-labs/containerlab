@@ -193,6 +193,15 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		maxWorkers = 1
 	}
 
+	// populating the nspath for the nodes
+	for _, n := range c.Nodes {
+		nsp, err := n.GetRuntime().GetNSPath(ctx, n.Config().LongName)
+		if err != nil {
+			continue
+		}
+		n.Config().NSPath = nsp
+	}
+
 	log.Infof("Destroying lab: %s", c.Config.Name)
 	c.DeleteNodes(ctx, maxWorkers, serialNodes)
 

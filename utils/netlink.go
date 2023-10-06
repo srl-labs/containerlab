@@ -17,7 +17,7 @@ import (
 
 // BridgeByName returns a *netlink.Bridge referenced by its name.
 func BridgeByName(name string) (*netlink.Bridge, error) {
-	l, err := netlink.LinkByName(name)
+	l, err := LinkByNameOrAlias(name)
 	if err != nil {
 		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
 	}
@@ -43,34 +43,6 @@ func LinkContainerNS(nspath, containerName string) error {
 	return nil
 }
 
-func CheckBrInUse(brname string) (bool, error) {
-	InUse := false
-	l, err := netlink.LinkList()
-	if err != nil {
-		return InUse, err
-	}
-	mgmtbr, err := netlink.LinkByName(brname)
-	if err != nil {
-		return InUse, err
-	}
-	mgmtbridx := mgmtbr.Attrs().Index
-	for _, link := range l {
-		if link.Attrs().MasterIndex == mgmtbridx {
-			InUse = true
-			break
-		}
-	}
-	return InUse, nil
-}
-
-func DeleteLinkByName(name string) error {
-	l, err := netlink.LinkByName(name)
-	if err != nil {
-		return err
-	}
-	return netlink.LinkDel(l)
-}
-
 // GenMac generates a random MAC address for a given OUI.
 func GenMac(oui string) (net.HardwareAddr, error) {
 	buf := make([]byte, 3)
@@ -93,7 +65,7 @@ func DeleteNetnsSymlink(n string) error {
 
 // LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name.
 func LinkIPs(ln string) (v4addrs, v6addrs []netlink.Addr, err error) {
-	l, err := netlink.LinkByName(ln)
+	l, err := LinkByNameOrAlias(ln)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to lookup link %q: %w", ln, err)
 	}
@@ -157,8 +129,8 @@ func LinkByNameOrAlias(name string) (netlink.Link, error) {
 	var l netlink.Link
 	var err error
 
-	// long interface names (14+ chars) are aliased by clab
-	if len(name) > 13 {
+	// long interface names (16+ chars) are aliased by clab
+	if len(name) > 15 {
 		l, err = netlink.LinkByAlias(name)
 	} else {
 		l, err = netlink.LinkByName(name)

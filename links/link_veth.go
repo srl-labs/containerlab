@@ -141,7 +141,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the netlink.Link for the B / Peer side of the link
-	linkB, err := netlink.LinkByName(l.Endpoints[1].GetRandIfaceName())
+	linkB, err := utils.LinkByNameOrAlias(l.Endpoints[1].GetRandIfaceName())
 	if err != nil {
 		return err
 	}

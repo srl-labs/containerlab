@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -73,8 +74,8 @@ func (e *EndpointGeneric) GetNode() Node {
 }
 
 func (e *EndpointGeneric) Remove() error {
-	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
-		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
+	return e.GetNode().ExecFunction(func(n ns.NetNS) error {
+		brSideEp, err := utils.LinkByNameOrAlias(e.GetIfaceName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 
 		switch {
@@ -84,7 +85,7 @@ func (e *EndpointGeneric) Remove() error {
 		case err != nil:
 			return err
 		}
-
+		log.Debugf("Removing interface %q from namespace %q", e.GetIfaceName(), e.GetNode().GetShortName())
 		return netlink.LinkDel(brSideEp)
 	})
 }

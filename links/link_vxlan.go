@@ -49,6 +49,7 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
 func (lr *LinkVxlanRaw) resolveStitchedVxlanComponent(params *ResolveParams) (*LinkVxlan, error) {
 	var err error
+
 	link := &LinkVxlan{
 		LinkCommonParams: lr.LinkCommonParams,
 		noLearning:       lr.NoLearning,
@@ -276,7 +277,7 @@ func (l *LinkVxlan) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the Link by name
-	mvInterface, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
+	mvInterface, err := utils.LinkByNameOrAlias(l.localEndpoint.GetRandIfaceName())
 	if err != nil {
 		return fmt.Errorf("failed to lookup %q: %v", l.localEndpoint.GetRandIfaceName(), err)
 	}
@@ -289,7 +290,7 @@ func (l *LinkVxlan) Deploy(ctx context.Context) error {
 // deployVxlanInterface internal function to create the vxlan interface in the host namespace
 func (l *LinkVxlan) deployVxlanInterface() error {
 	// retrieve the parent interface netlink handle
-	parentIface, err := netlink.LinkByName(l.remoteEndpoint.parentIface)
+	parentIface, err := utils.LinkByNameOrAlias(l.remoteEndpoint.parentIface)
 	if err != nil {
 		return err
 	}
@@ -326,7 +327,7 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 
 	// fetch the mtu from the actual state for templated config generation
 	if l.MTU == 0 {
-		interf, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
+		interf, err := utils.LinkByNameOrAlias(l.localEndpoint.GetRandIfaceName())
 		if err != nil {
 			return err
 		}

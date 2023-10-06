@@ -62,7 +62,7 @@ var vxlanCreateCmd = &cobra.Command{
 
 		ctx := context.Background()
 
-		if _, err := netlink.LinkByName(cntLink); err != nil {
+		if _, err := utils.LinkByNameOrAlias(cntLink); err != nil {
 			return fmt.Errorf("failed to lookup link %q: %v",
 				cntLink, err)
 		}

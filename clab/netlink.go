@@ -153,7 +153,7 @@ func (c *CLab) CreateVirtualWiring(l *types.Link) (err error) {
 func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 	switch {
 	case l.A.Node.Kind == "host" || l.A.Node.Kind == "bridge":
-		link, err := netlink.LinkByName(l.A.EndpointName)
+		link, err := utils.LinkByNameOrAlias(l.A.EndpointName)
 		if err != nil {
 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
 			break
@@ -167,7 +167,7 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
 		}
 	case l.B.Node.Kind == "host" || l.B.Node.Kind == "bridge":
-		link, err := netlink.LinkByName(l.B.EndpointName)
+		link, err := utils.LinkByNameOrAlias(l.B.EndpointName)
 		if err != nil {
 			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
 			break
@@ -186,7 +186,7 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 
 // createMACVLANInterface creates a macvlan interface in the root netns.
 func createMACVLANInterface(ifName, parentIfName string, mtu int, MAC net.HardwareAddr) (netlink.Link, error) {
-	parentInterface, err := netlink.LinkByName(parentIfName)
+	parentInterface, err := utils.LinkByNameOrAlias(parentIfName)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func createVethIface(ifName, peerName string, mtu int, aMAC, bMAC net.HardwareAd
 		return nil, nil, err
 	}
 
-	if linkB, err = netlink.LinkByName(peerName); err != nil {
+	if linkB, err = utils.LinkByNameOrAlias(peerName); err != nil {
 		err = fmt.Errorf("failed to lookup %q: %v", peerName, err)
 	}
 
