@@ -10,6 +10,9 @@ jobs:
       matrix:
         runtime:
           - "docker"
+        test-suite:
+          - "01*.robot"
+          - "02*.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,13 +45,13 @@ jobs:
 
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/08-vxlan/
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/08-vxlan/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: 08-vxlan-log
+          name: 08-${{ matrix.runtime }}-vxlan-log
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
