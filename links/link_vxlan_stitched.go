@@ -38,15 +38,15 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 // veth interface does already exist, hence it is not created as part of this
 // deployment
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
-	return l.deploy(ctx, true)
+	return l.internalDeploy(ctx, true)
 }
 
 // Deploy provisions the stitched vxlan link with all its underlaying sub-links
 func (l *VxlanStitched) Deploy(ctx context.Context) error {
-	return l.deploy(ctx, false)
+	return l.internalDeploy(ctx, false)
 }
 
-func (l *VxlanStitched) deploy(ctx context.Context, skipVethCreation bool) error {
+func (l *VxlanStitched) internalDeploy(ctx context.Context, skipVethCreation bool) error {
 	// deploy the vxlan link
 	err := l.vxlanLink.Deploy(ctx)
 	if err != nil {

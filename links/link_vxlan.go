@@ -104,31 +104,9 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		noL3Miss:         lr.NoL3Miss,
 	}
 
-	if stitched {
-		// point the vxlan endpoint to the host system
-		vxlanRawEp := lr.Endpoint
-		vxlanRawEp.Iface = fmt.Sprintf("vx-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
-
-		if params.VxlanIfaceNameOverwrite != "" {
-			vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
-		}
-
-		// in the stiched vxlan mode we create vxlan interface in the host node namespace
-		vxlanRawEp.Node = "host"
-		vxlanRawEp.MAC = ""
-
-		// resolve local Endpoint
-		link.localEndpoint, err = vxlanRawEp.Resolve(params, link)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// resolve local Endpoint
-		link.localEndpoint, err = lr.Endpoint.Resolve(params, link)
-		if err != nil {
-			return nil, err
-		}
-
+	link.localEndpoint, err = lr.resolveLocalEndpoint(stitched, params, link)
+	if err != nil {
+		return nil, err
 	}
 
 	ip := net.ParseIP(lr.Remote)
@@ -200,6 +178,29 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	link.localEndpoint.GetNode().AddLink(link)
 
 	return link, nil
+}
+
+func (lr *LinkVxlanRaw) resolveLocalEndpoint(stitched bool, params *ResolveParams, link *LinkVxlan) (Endpoint, error) {
+	if stitched {
+		// point the vxlan endpoint to the host system
+		vxlanRawEp := lr.Endpoint
+		vxlanRawEp.Iface = fmt.Sprintf("vx-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+
+		if params.VxlanIfaceNameOverwrite != "" {
+			vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
+		}
+
+		// in the stiched vxlan mode we create vxlan interface in the host node namespace
+		vxlanRawEp.Node = "host"
+		vxlanRawEp.MAC = ""
+
+		// resolve local Endpoint
+		return vxlanRawEp.Resolve(params, link)
+
+	} else {
+		// resolve local Endpoint
+		return lr.Endpoint.Resolve(params, link)
+	}
 }
 
 func (*LinkVxlanRaw) GetType() LinkType {
