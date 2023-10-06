@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -137,4 +138,16 @@ func LinkByNameOrAlias(name string) (netlink.Link, error) {
 	}
 
 	return l, err
+}
+
+func GetRouteForIP(ip net.IP) (*rtnl.Route, error) {
+	conn, err := rtnl.Dial(nil)
+	if err != nil {
+		return nil, fmt.Errorf("can't establish netlink connection: %s", err)
+	}
+	defer conn.Close()
+
+	r, err := conn.RouteGet(ip)
+
+	return r, err
 }

@@ -6,7 +6,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -137,15 +136,11 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	parentIf := lr.ParentInterface
 
 	if parentIf == "" {
-		conn, err := rtnl.Dial(nil)
-		if err != nil {
-			return nil, fmt.Errorf("can't establish netlink connection: %s", err)
-		}
-		defer conn.Close()
-		r, err := conn.RouteGet(ip)
+		r, err := utils.GetRouteForIP(ip)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find a route to VxLAN remote address %s", ip.String())
 		}
+
 		parentIf = r.Interface.Name
 	}
 

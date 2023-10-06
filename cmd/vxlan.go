@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/links"
@@ -69,15 +68,11 @@ var vxlanCreateCmd = &cobra.Command{
 		// if vxlan device was not set specifically, we will use
 		// the device that is reported by `ip route get $remote`
 		if parentDev == "" {
-			conn, err := rtnl.Dial(nil)
-			if err != nil {
-				return fmt.Errorf("can't establish netlink connection: %s", err)
-			}
-			defer conn.Close()
-			r, err := conn.RouteGet(net.ParseIP(vxlanRemote))
+			r, err := utils.GetRouteForIP(net.ParseIP(vxlanRemote))
 			if err != nil {
 				return fmt.Errorf("failed to find a route to VxLAN remote address %s", vxlanRemote)
 			}
+
 			parentDev = r.Interface.Name
 		}
 
