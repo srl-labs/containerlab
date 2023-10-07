@@ -14,6 +14,14 @@ ${lab-url}      https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1b
 *** Test Cases ***
 Deploy remote lab
     ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo curl -s ${lab-url}
+    Log    ${output}
+
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo curl -sk ${lab-url}
+    Log    ${output}
+
+    ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo curl -s ${lab-url} | sudo ${CLAB_BIN} --runtime ${runtime} deploy -c -t -
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
