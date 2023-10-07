@@ -165,6 +165,11 @@ func (*TopoPaths) ClabTmpDir() string {
 	return clabTmpDir
 }
 
+// CreateTmpDir creates a clab temp directory.
+func (t *TopoPaths) CreateTmpDir() {
+	utils.CreateDirectory(t.ClabTmpDir(), 0755)
+}
+
 // StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file
 // when it is downloaded from a remote location to the clab temp directory.
 func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node, postfix string) string {
