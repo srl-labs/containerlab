@@ -199,6 +199,8 @@ func findTopoFileByPath(path string) (string, error) {
 // creates a temp file with topology contents
 // and returns a path to the temp file.
 func (c *CLab) readFromStdin() (string, error) {
+	c.TopoPaths.CreateTmpDir()
+
 	tmpFile, err := os.CreateTemp(c.TopoPaths.ClabTmpDir(), "topo-*.clab.yml")
 	if err != nil {
 		return "", err

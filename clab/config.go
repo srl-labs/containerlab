@@ -268,8 +268,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 
 	if isEmbeddedConfig || isDownloadableConfig {
 		// both embedded and downloadable configs are require clab tmp dir to be created
-		tmpLoc := c.TopoPaths.ClabTmpDir()
-		utils.CreateDirectory(tmpLoc, 0755)
+		c.TopoPaths.CreateTmpDir()
 
 		switch {
 		case isEmbeddedConfig:
