@@ -50,7 +50,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*Li
 
 	lhr := &LinkHostRaw{
 		LinkCommonParams: lr.LinkCommonParams,
-		HostInterface:    fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+		HostInterface:    fmt.Sprintf("vx-%s", lr.Endpoint.Iface),
 		Endpoint: &EndpointRaw{
 			Node:  lr.Endpoint.Node,
 			Iface: lr.Endpoint.Iface,
