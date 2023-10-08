@@ -48,9 +48,18 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
 	var err error
 
+	// hostIface is the name of the host interface that will be created
+	hostIface := fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface)
+
+	// when tools vxlan create command is used, the hostIface is provided
+	// by the user, otherwise it is generated
+	if params.VxlanIfaceNameOverwrite != "" {
+		hostIface = params.VxlanIfaceNameOverwrite
+	}
+
 	lhr := &LinkHostRaw{
 		LinkCommonParams: lr.LinkCommonParams,
-		HostInterface:    fmt.Sprintf("ve-%s_%s", lr.Endpoint.Node, lr.Endpoint.Iface),
+		HostInterface:    hostIface,
 		Endpoint: &EndpointRaw{
 			Node:  lr.Endpoint.Node,
 			Iface: lr.Endpoint.Iface,

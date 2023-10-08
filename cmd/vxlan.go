@@ -41,7 +41,6 @@ func init() {
 	vxlanCreateCmd.Flags().IntVarP(&vxlanUDPPort, "port", "p", 14789, "VxLAN Destination UDP Port")
 
 	_ = vxlanCreateCmd.MarkFlagRequired("remote")
-	_ = vxlanCreateCmd.MarkFlagRequired("id")
 	_ = vxlanCreateCmd.MarkFlagRequired("link")
 
 	vxlanDeleteCmd.Flags().StringVarP(&delPrefix, "prefix", "p", "vx-",
