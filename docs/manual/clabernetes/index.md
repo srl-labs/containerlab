@@ -8,6 +8,8 @@ status: new
 
 Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/srl-labs/clabernetes/) or simply **c9s**.
 
+![Clabernetes](https://gitlab.com/rdodin/pics/-/wikis/uploads/9d8c5abcb8db2c80811635d928aa98df/c9s_logo1_border_2.webp){ align=left width="300" }
+
 <figure markdown>
 ![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/4fdd35b5f4553d766216a4bda2b9a20c/geogebra-export.svg#only-light)
 ![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/a139e454c70614298f5bf5b86fe1eeb0/geogebra-export-darkbg.svg#only-dark)

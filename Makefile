@@ -77,15 +77,15 @@ site:
 	docker run -it --rm -p 8000:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
 
 # serve the site locally using mkdocs-material insiders container
-.PHONY: serve-insiders
-serve-docs:
+.PHONY: serve-docs-full
+serve-docs-full:
 	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
 
 # serve the site locally using mkdocs-material insiders container and dirty-reload
 # in this mode navigation might not update properly, but the content will be updated
 # if nav is not updated, re-run the target.
-.PHONY: serve-insiders-dirty
-serve-insiders-dirty:
+.PHONY: serve-docs
+serve-docs:
 	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER) serve -a 0.0.0.0:8000 --dirtyreload
 
 .PHONY: htmltest

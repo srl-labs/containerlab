@@ -240,6 +240,7 @@ In comparison to the veth type, no bridge or other namespace is required to be r
 The `host-interface` parameter defines the name of the veth interface in the host's network namespace.
 
 ###### vxlan
+
 The vxlan type results in a vxlan tunnel interface that is created in the host namespace and subsequently pushed into the nodes network namespace.
 
 ```yaml
@@ -258,6 +259,7 @@ The vxlan type results in a vxlan tunnel interface that is created in the host n
 ```
 
 ###### vxlan-stitched
+
 The vxlan-stitched type results in a veth pair linking the host namespace and the nodes namespace and a vxlan tunnel that also terminates in the host namespace.
 In addition to these interfaces, tc rules are being provisioned to stitch the vxlan tunnel and the host based veth interface together.
 
