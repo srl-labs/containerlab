@@ -1,5 +1,5 @@
 BIN_DIR = $(CURDIR)/bin
-BINARY = $(CURDIR)/bin/containerlab
+BINARY = $(BIN_DIR)/containerlab
 MKDOCS_VER = 9.1.4
 # insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
 # make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
@@ -47,6 +47,15 @@ test:
 	mkdir -p $$PWD/tests/coverage
 	CGO_ENABLED=1 go test -cover -race ./... -v -covermode atomic -args -test.gocoverdir="$$PWD/tests/coverage"
 
+
+ifndef runtime
+override runtime = docker
+endif
+ifndef suite
+override suite = .
+endif
+robot-test: build-debug
+	CLAB_BIN=$(BINARY) $$PWD/tests/rf-run.sh $(runtime) $$PWD/tests/$(suite)
 
 MOCKDIR = ./mocks
 .PHONY: mocks-gen
