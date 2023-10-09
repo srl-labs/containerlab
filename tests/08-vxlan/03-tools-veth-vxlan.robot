@@ -42,11 +42,11 @@ Define runtime exec command
 
 Get netns id for host interface of some_very_long_node_name_l1
     ${output} =    Run
-    ...    ip -j netns list
+    ...    ip netns list-id
     Log    ${output}
 
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ip -j netns list | jq -r '.[] | select(.name == "clab-${lab-name}-${l1_name}") | .id'
+    ...    ip netns list-id | awk '/clab-${lab-name}-${l1_name}/ {print $2}'
 
     Set Suite Variable    ${l1_host_link_netnsid}    ${output}
 

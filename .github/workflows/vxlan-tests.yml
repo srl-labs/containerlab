@@ -44,11 +44,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install iproute2
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y iproute2
-
       - name: Run tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/08-vxlan/${{ matrix.test-suite }}
