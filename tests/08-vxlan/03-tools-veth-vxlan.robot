@@ -40,13 +40,22 @@ Define runtime exec command
         Set Suite Variable    ${runtime-cli-exec-cmd}    sudo podman exec
     END
 
+Get netns id for host interface of some_very_long_node_name_l1
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ip -j netns list | jq -r '.[] | select(.name == "clab-${lab-name}-${l1_name}") | .id'
+
+    Set Suite Variable    ${l1_host_link_netnsid}    ${output}
+
 Check host interface for some_very_long_node_name_l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "${l1_host_link}") | .ifname' | xargs ip -d l show
 
     Should Contain    ${output}    mtu 9500
 
-    Should Contain    ${output}    link-netns clab-vxlan-tools-some_very_long_node_name_l1
+    Should Contain Any
+    ...    ${output}
+    ...    link-netns clab-vxlan-tools-some_very_long_node_name_l1
+    ...    link-netnsid ${l1_host_link_netnsid}
 
 Check host interface for l2 node
     ${rc}    ${output} =    Run And Return Rc And Output
