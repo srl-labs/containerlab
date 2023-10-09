@@ -14,13 +14,13 @@ ${lab-url}      https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1b
 *** Test Cases ***
 Deploy remote lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo curl -s ${lab-url} | sudo ${CLAB_BIN} --runtime ${runtime} deploy -c -t -
+    ...    sudo curl -s ${lab-url} | sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -c -t -
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Ensure inspect works
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} inspect --all
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -28,4 +28,4 @@ Ensure inspect works
 *** Keywords ***
 Teardown
     # destroy all labs
-    Run    sudo ${CLAB_BIN} --runtime ${runtime} destroy -c -a
+    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -c -a

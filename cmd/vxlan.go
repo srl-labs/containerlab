@@ -37,11 +37,10 @@ func init() {
 		"parent (source) interface name for VxLAN")
 	vxlanCreateCmd.Flags().StringVarP(&cntLink, "link", "l", "",
 		"link to which 'attach' vxlan tunnel with tc redirect")
-	vxlanCreateCmd.Flags().IntVarP(&vxlanMTU, "mtu", "m", 1554, "VxLAN MTU")
+	vxlanCreateCmd.Flags().IntVarP(&vxlanMTU, "mtu", "m", 0, "VxLAN MTU")
 	vxlanCreateCmd.Flags().IntVarP(&vxlanUDPPort, "port", "p", 14789, "VxLAN Destination UDP Port")
 
 	_ = vxlanCreateCmd.MarkFlagRequired("remote")
-	_ = vxlanCreateCmd.MarkFlagRequired("id")
 	_ = vxlanCreateCmd.MarkFlagRequired("link")
 
 	vxlanDeleteCmd.Flags().StringVarP(&delPrefix, "prefix", "p", "vx-",
