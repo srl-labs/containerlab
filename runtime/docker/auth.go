@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/distribution/distribution/reference"
+	"github.com/distribution/reference"
 	"github.com/docker/docker/api/types/registry"
 	log "github.com/sirupsen/logrus"
 )

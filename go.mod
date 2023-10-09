@@ -9,7 +9,7 @@ require (
 	github.com/containers/common v0.56.0
 	github.com/containers/podman/v4 v4.7.0
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
-	github.com/distribution/distribution v2.8.3+incompatible
+	github.com/distribution/reference v0.5.0
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/docker/go-connections v0.4.1-0.20210727194412-58542c764a11
 	github.com/docker/go-units v0.5.0
@@ -61,7 +61,6 @@ require (
 	github.com/containerd/typeurl/v2 v2.1.1 // indirect
 	github.com/containernetworking/cni v1.1.2 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20230710064741-aa7fe85c7dbd // indirect
-	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
 	github.com/go-openapi/analysis v0.21.4 // indirect
