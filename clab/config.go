@@ -226,7 +226,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
 	nodeCfg.SuppressStartupConfig = c.Config.Topology.GetNodeSuppressStartupConfig(nodeCfg.ShortName)
 
-	// process startup-config
+	// process NodeLicense
 	err = c.processNodeLicense(nodeCfg)
 	if err != nil {
 		return nil, err
