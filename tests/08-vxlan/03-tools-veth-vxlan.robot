@@ -29,7 +29,7 @@ ${runtime-cli-exec-cmd}     sudo docker exec
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -41,6 +41,10 @@ Define runtime exec command
     END
 
 Get netns id for host interface of some_very_long_node_name_l1
+    ${output} =    Run
+    ...    ip -j netns list
+    Log    ${output}
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ip -j netns list | jq -r '.[] | select(.name == "clab-${lab-name}-${l1_name}") | .id'
 
@@ -67,7 +71,7 @@ Check host interface for l2 node
 
 Deploy vxlab link between l1 and l3 with tools cmd
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.23 --link ${l1_host_link} --id 101 --port 14788
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.23 --link ${l1_host_link} --id 101 --port 14788
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -88,7 +92,7 @@ Check VxLAN connectivity l1-l3
 
 Deploy vxlab link between l2 and l4 with tools cmd
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.24 --link ${l2_host_link} --id 102
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.24 --link ${l2_host_link} --id 102
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
