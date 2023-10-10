@@ -117,9 +117,7 @@ func getTopoFilePath(cmd *cobra.Command) error {
 				return err
 			}
 			rawUrl := utils.GetRawURL(topo)
-			// topo = utils.GetFileName(topo)
 			topo = utils.FilenameForURL(topo)
-			// utils.DownloadFile(rawUrl, topo)
 			utils.CopyFileContents(rawUrl, topo, 0754)
 		default:
 			return fmt.Errorf("unsupported git repositoy: %s", topo)
