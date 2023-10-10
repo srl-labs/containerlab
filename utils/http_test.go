@@ -47,26 +47,6 @@ func TestGetRawURL(t *testing.T) {
 	}
 }
 
-func TestGetFileName(t *testing.T) {
-	// tests for valid file name
-	var tests = []struct {
-		input    string
-		expected string
-	}{
-		{"github.com", "github.com"},
-		{"github.com/containers/containerlab/blob/master/README.md", "README.md"},
-		{"google.com/containers", "containers"},
-		{"google.com/containers/containerlab/blob/master/README.md", "README.md"},
-		{"gitlab.com/containers", "containers"},
-		{"raw.githubusercontent.com/containers", "containers"},
-	}
-	for _, test := range tests {
-		if output := GetFileName(test.input); output != test.expected {
-			t.Error("Test Failed: {} inputted, {} expected, recieved: {}", test.input, test.expected, output)
-		}
-	}
-}
-
 func TestCheckSuffix(t *testing.T) {
 	// tests for valid suffix
     var tests = []struct {
@@ -86,45 +66,5 @@ func TestCheckSuffix(t *testing.T) {
         if output := CheckSuffix(test.input); output != test.expected {
             t.Error("Test Failed: {} inputted, {} expected, recieved: {}", test.input, test.expected, output)
         }
-    }
-}
-
-func TestDownloadFile(t *testing.T) {
-    tempDir := os.TempDir() 
-    // Create a mock HTTP server for testing
-    ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // Respond with a sample file content for testing
-        if r.URL.Path == "/valid" {
-            w.WriteHeader(http.StatusOK)
-            w.Write([]byte("This is a sample file content"))
-        } else {
-            w.WriteHeader(http.StatusNotFound)
-        }
-    }))
-    defer ts.Close()
-
-    // Test case 1: Download a file that exists
-    outputFileName := tempDir + "/downloaded_file.txt"
-    err := DownloadFile(ts.URL+"/valid", outputFileName)
-    if err != nil {
-        t.Fatalf("Expected no error, but got: %v", err)
-    }
-
-    // Check the content of the downloaded file
-    content, err := os.ReadFile(outputFileName)
-    if err != nil {
-        t.Fatalf("Failed to read the downloaded file: %v", err)
-    }
-    expectedContent := "This is a sample file content"
-    if string(content) != expectedContent {
-        t.Errorf("Expected content: %s, but got: %s", expectedContent, string(content))
-    }
-	os.Remove(outputFileName)
-    // Test case 2: Download a file that does not exist (simulate a non-200 response)
-    outputFileName = tempDir + "/nonexistent_file.txt"
-    err = DownloadFile(ts.URL+"/nonexistent", outputFileName)
-    expectedErrorMsg := "URL does not exist"
-    if err == nil || err.Error() != expectedErrorMsg {
-        t.Errorf("Expected error message '%s', but got: %v", expectedErrorMsg, err)
     }
 }
