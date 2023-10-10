@@ -175,9 +175,10 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	// build Netlink Macvlan struct
 	link := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:        l.NodeEndpoint.GetRandIfaceName(),
-			ParentIndex: parentInterface.Attrs().Index,
-			MTU:         l.MTU,
+			Name:         l.NodeEndpoint.GetRandIfaceName(),
+			ParentIndex:  parentInterface.Attrs().Index,
+			MTU:          l.MTU,
+			HardwareAddr: l.NodeEndpoint.GetMac(),
 		},
 		Mode: mode,
 	}
