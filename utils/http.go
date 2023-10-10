@@ -3,9 +3,6 @@ package utils
 import (
   "strings"
   "errors"
-  "net/http"
-  "io"
-  "os"
 )
 
 
