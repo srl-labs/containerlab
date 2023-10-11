@@ -27,9 +27,11 @@ Check VxLAN interface parameters on the host for srl1 node
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ip -d l show vx-srl1_e1-1
 
-    Should Contain    ${output}    mtu 9050
+    Should Contain        ${output}    mtu 9050
 
-    Should Contain    ${output}    vxlan id 100 remote 172.20.25.22 dev clab-vxlan-br srcport 0 0 dstport 14788
+    Should Contain        ${output}    vxlan id 100 remote 172.20.25.22 dev clab-vxlan-br srcport 0 0 dstport 14788
+    
+    Should Not Contain    ${output}    nolearning
 
 Check veth interface parameters on the host for srl1 node
     ${rc}    ${output} =    Run And Return Rc And Output

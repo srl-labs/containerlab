@@ -246,6 +246,7 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 		VxlanId:      l.remoteEndpoint.vni,
 		VtepDevIndex: parentIface.Attrs().Index,
 		Group:        l.remoteEndpoint.remote,
+		Learning:     true,
 	}
 	// set the upd port if defined in the input
 	if l.remoteEndpoint.udpPort != 0 {
