@@ -40,7 +40,7 @@ Deploy ${lab-name} lab
 
 Check macvlan interface on l1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E docker exec -it clab-${lab-name}-l1 ip -d link show ${macvlan-iface}
+    ...    sudo -E docker exec clab-${lab-name}-l1 ip -d link show ${macvlan-iface}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
