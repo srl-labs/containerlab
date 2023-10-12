@@ -89,7 +89,7 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	// propagate the parent interface MTU to the link
 	// because the macvlan interface MTU is inherited from
 	// its parent interface
-	link.MTU, err = link.GetParentInterfaceMtu()
+	link.MTU, err = link.GetParentInterfaceMTU()
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (*LinkMacVlan) GetType() LinkType {
 	return LinkTypeMacVLan
 }
 
-func (l *LinkMacVlan) GetParentInterfaceMtu() (int, error) {
+func (l *LinkMacVlan) GetParentInterfaceMTU() (int, error) {
 	hostLink, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return 0, err
