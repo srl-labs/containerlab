@@ -9,11 +9,11 @@ Suite Teardown      Run Keyword    Teardown
 
 
 *** Variables ***
-${lab-name}         2-linux-nodes
-${topo}             ${CURDIR}/01-linux-nodes.clab.yml
+${lab-name}         macvlan
+${topo}             ${CURDIR}/macvlan.clab.yml
 ${runtime}          docker
 # interface inside l1 node that should be macvlan
-${macvlan-iface}    eth4
+${macvlan-iface}    eth1
 
 
 *** Test Cases ***

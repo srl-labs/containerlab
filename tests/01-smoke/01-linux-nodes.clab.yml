@@ -18,7 +18,6 @@ topology:
       exec:
         - echo this_is_an_exec_test
         - cat /etc/os-release
-        - apk add iproute2
       cpu: 1.5
       memory: 1G
       mgmt_ipv4: 172.20.20.99 # test deprecated mgmt_ipv4 still works
@@ -70,4 +69,3 @@ topology:
         node: l2
         interface: eth5
         mac: 02:00:00:00:00:05
-    - endpoints: ["l1:eth4", "macvlan:${host_link:=ens3}"]
