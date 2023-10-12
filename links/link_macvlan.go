@@ -56,6 +56,7 @@ func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw
 }
 
 func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
+	var err error
 	// filtered true means the link is in the filter provided by a user
 	// aka it should be resolved/created/deployed
 	filtered := isInFilter(params, []*EndpointRaw{r.Endpoint})
@@ -63,18 +64,13 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, nil
 	}
 
+	// create the MacVlan Link
 	link := &LinkMacVlan{
 		LinkCommonParams: r.LinkCommonParams,
 	}
-	ep := &EndpointMacVlan{
+	// create the host side MacVlan Endpoint
+	link.HostEndpoint = &EndpointMacVlan{
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
-	}
-	link.HostEndpoint = ep
-
-	var err error
-	ep.MAC, err = utils.GenMac(ClabOUI)
-	if err != nil {
-		return nil, err
 	}
 
 	// parse the MacVlanMode
@@ -90,23 +86,95 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 
-	// add endpoint links to nodes
-	link.HostEndpoint.GetNode().AddLink(link)
-	link.NodeEndpoint.GetNode().AddLink(link)
-
-	// set default link mtu if MTU is unset
-	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+	// propagate the parent interface MTU to the link
+	// because the macvlan interface MTU is inherited from
+	// its parent interface
+	link.MTU, err = link.GetParentInterfaceMTU()
+	if err != nil {
+		return nil, err
 	}
+
+	// add endpoint links to nodes
+	link.NodeEndpoint.GetNode().AddLink(link)
 
 	return link, nil
 }
 
 type LinkMacVlan struct {
 	LinkCommonParams
-	HostEndpoint Endpoint
+	HostEndpoint *EndpointMacVlan
 	NodeEndpoint Endpoint
 	Mode         MacVlanMode
+}
+
+func (*LinkMacVlan) GetType() LinkType {
+	return LinkTypeMacVLan
+}
+
+func (l *LinkMacVlan) GetParentInterfaceMTU() (int, error) {
+	hostLink, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
+	if err != nil {
+		return 0, err
+	}
+	return hostLink.Attrs().MTU, nil
+}
+
+func (l *LinkMacVlan) Deploy(ctx context.Context) error {
+	// lookup the parent host interface
+	parentInterface, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Creating MACVLAN link: %s <--> %s", l.HostEndpoint, l.NodeEndpoint)
+
+	// build Netlink Macvlan struct
+	link := &netlink.Macvlan{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:        l.NodeEndpoint.GetRandIfaceName(),
+			ParentIndex: parentInterface.Attrs().Index,
+		},
+		Mode: l.Mode.ToNetlinkMode(),
+	}
+	// add the link in the Host NetNS
+	err = netlink.LinkAdd(link)
+	if err != nil {
+		return err
+	}
+
+	// retrieve the Link by name
+	mvInterface, err := utils.LinkByNameOrAlias(l.NodeEndpoint.GetRandIfaceName())
+	if err != nil {
+		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandIfaceName(), err)
+	}
+
+	// add the link to the Node Namespace
+	err = l.NodeEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
+		SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
+	return err
+}
+
+func (l *LinkMacVlan) Remove(_ context.Context) error {
+	// check Deployment state, if the Link was already
+	// removed via e.g. the peer node
+	if l.DeploymentState == LinkDeploymentStateRemoved {
+		return nil
+	}
+	// trigger link removal via the NodeEndpoint
+	err := l.NodeEndpoint.Remove()
+	if err != nil {
+		log.Debug(err)
+	}
+	// adjust the Deployment status to reflect the removal
+	l.DeploymentState = LinkDeploymentStateRemoved
+	return nil
+}
+
+func (l *LinkMacVlan) GetEndpoints() []Endpoint {
+	return []Endpoint{
+		l.NodeEndpoint,
+		l.HostEndpoint,
+	}
 }
 
 type MacVlanMode string
@@ -137,31 +205,11 @@ func MacVlanModeParse(s string) (MacVlanMode, error) {
 	return "", fmt.Errorf("unknown MacVlanMode %q", s)
 }
 
-func (*LinkMacVlan) GetType() LinkType {
-	return LinkTypeMacVLan
-}
-
-func (l *LinkMacVlan) GetParentInterfaceMtu() (int, error) {
-	hostLink, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
-	if err != nil {
-		return 0, err
-	}
-	return hostLink.Attrs().MTU, nil
-}
-
-func (l *LinkMacVlan) Deploy(ctx context.Context) error {
-	// lookup the parent host interface
-	parentInterface, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Creating MACVLAN link: %s <--> %s", l.HostEndpoint, l.NodeEndpoint)
-
-	// set MacVlanMode
-	mode := netlink.MACVLAN_MODE_BRIDGE
-	switch l.Mode {
+func (m MacVlanMode) ToNetlinkMode() netlink.MacvlanMode {
+	var mode netlink.MacvlanMode
+	switch m {
 	case MacVlanModeBridge:
+		mode = netlink.MACVLAN_MODE_BRIDGE
 	case MacVlanModePassthru:
 		mode = netlink.MACVLAN_MODE_PASSTHRU
 	case MacVlanModeVepa:
@@ -171,49 +219,5 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	case MacVlanModeSource:
 		mode = netlink.MACVLAN_MODE_SOURCE
 	}
-
-	// build Netlink Macvlan struct
-	link := &netlink.Macvlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:        l.NodeEndpoint.GetRandIfaceName(),
-			ParentIndex: parentInterface.Attrs().Index,
-			MTU:         l.MTU,
-		},
-		Mode: mode,
-	}
-	// add the link in the Host NetNS
-	err = netlink.LinkAdd(link)
-	if err != nil {
-		return err
-	}
-
-	// retrieve the Link by name
-	mvInterface, err := utils.LinkByNameOrAlias(l.NodeEndpoint.GetRandIfaceName())
-	if err != nil {
-		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandIfaceName(), err)
-	}
-
-	// add the link to the Node Namespace
-	err = l.NodeEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
-		SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
-	return err
-}
-
-func (l *LinkMacVlan) Remove(_ context.Context) error {
-	if l.DeploymentState == LinkDeploymentStateRemoved {
-		return nil
-	}
-	err := l.NodeEndpoint.Remove()
-	if err != nil {
-		log.Debug(err)
-	}
-	l.DeploymentState = LinkDeploymentStateRemoved
-	return nil
-}
-
-func (l *LinkMacVlan) GetEndpoints() []Endpoint {
-	return []Endpoint{
-		l.NodeEndpoint,
-		l.HostEndpoint,
-	}
+	return mode
 }
