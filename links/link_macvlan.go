@@ -73,6 +73,13 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
 	}
 
+	// populate the host interfaces mac address
+	hostLink, err := netlink.LinkByName(r.HostInterface)
+	if err != nil {
+		return nil, err
+	}
+	link.HostEndpoint.MAC = hostLink.Attrs().HardwareAddr
+
 	// parse the MacVlanMode
 	mode, err := MacVlanModeParse(r.Mode)
 	if err != nil {
