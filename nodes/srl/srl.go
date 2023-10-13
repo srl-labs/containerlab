@@ -66,6 +66,10 @@ set / system snmp network-instance mgmt
 set / system snmp network-instance mgmt admin-state enable
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
+{{- /* if e.g. node is run with none mgmt networking but a macvlan interface is attached as mgmt0, we need to adjust the mtu */}}
+{{- if ne .MgmtMTU 0 }}
+set / interface mgmt0 mtu {{ .MgmtMTU }}
+{{- end }}
 {{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
 {{- range $epName, $ep := .IFaces }}
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
@@ -548,6 +552,7 @@ type srlTemplateData struct {
 	Banner     string
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
+	MgmtMTU    int
 }
 
 // tplIFace template interface struct.
@@ -573,6 +578,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		TLSAnchor: n.Cfg.TLSAnchor,
 		Banner:    b,
 		IFaces:    map[string]tplIFace{},
+		MgmtMTU:   0,
 	}
 
 	n.filterSSHPubKeys()
@@ -586,6 +592,16 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	// prepare the endpoints
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
+		if ifName == "mgmt0" {
+			// skip the mgmt0 interface. This is just for traffic carrying interface
+
+			// if the endpoint has a custom MTU set, use it in the template logic
+			// otherwise we don't set the mtu as srlinux will use the default max value 9232
+			if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+				tplData.MgmtMTU = m
+			}
+			continue
+		}
 		// split the interface identifier into their parts
 		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
 
