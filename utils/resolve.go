@@ -21,7 +21,7 @@ func ExtractDNSServerFromResolvConf(filenames []string) ([]string, error) {
 			log.Debugf("Error opening host DNS config %s: %v", filename, err)
 			continue
 		}
-		defer readFile.Close()
+
 		fileScanner := bufio.NewScanner(readFile)
 		fileScanner.Split(bufio.ScanLines)
 		ipPattern := `\s*nameserver\s+((\d{1,3}\.){3}\d{1,3})`
@@ -38,6 +38,8 @@ func ExtractDNSServerFromResolvConf(filenames []string) ([]string, error) {
 				DNSServersMap[match[1]] = struct{}{}
 			}
 		}
+		// close the file
+		readFile.Close()
 	}
 
 	// if we've not found any DNS Servers we return
