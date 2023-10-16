@@ -187,9 +187,9 @@ The mgmt-net link type represents a veth pair that is connected to a container n
   links:
   - type: mgmt-net
     endpoint:
-      - node: <NodeA-Name>                  # mandatory
-        interface: <NodeA-Interface-Name>   # mandatory
-        mac: <NodeA-Interface-Mac>          # optional
+      node: <NodeA-Name>                  # mandatory
+      interface: <NodeA-Interface-Name>   # mandatory
+      mac: <NodeA-Interface-Mac>          # optional
     host-interface: <interface-name         # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
@@ -206,9 +206,9 @@ The macvlan link type creates a MACVlan interface with the `host-interface` as i
   links:
   - type: macvlan
     endpoint:
-      - node: <NodeA-Name>                  # mandatory
-        interface: <NodeA-Interface-Name>   # mandatory
-        mac: <NodeA-Interface-Mac>          # optional
+      node: <NodeA-Name>                  # mandatory
+      interface: <NodeA-Interface-Name>   # mandatory
+      mac: <NodeA-Interface-Mac>          # optional
     host-interface: <interface-name>        # mandatory
     mode: <macvlan-mode>                    # optional ("bridge" by default)
     vars: <link-variables>                  # optional (used in templating)
@@ -228,9 +228,9 @@ In comparison to the veth type, no bridge or other namespace is required to be r
   links:
   - type: host
     endpoint:
-      - node: <NodeA-Name>                  # mandatory
-        interface: <NodeA-Interface-Name>   # mandatory
-        mac: <NodeA-Interface-Mac>          # optional
+      node: <NodeA-Name>                  # mandatory
+      interface: <NodeA-Interface-Name>   # mandatory
+      mac: <NodeA-Interface-Mac>          # optional
     host-interface: <interface-name>        # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
