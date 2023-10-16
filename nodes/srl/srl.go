@@ -59,6 +59,10 @@ set / system gnmi-server admin-state enable network-instance mgmt admin-state en
 set / system gnmi-server rate-limit 65000
 set / system gnmi-server trace-options [ request response common ]
 set / system gnmi-server unix-socket admin-state enable
+{{- if .DNSServers }}
+set / system dns network-instance mgmt
+set / system dns server-list [ {{ range $dnsserver := .DNSServers}}{{$dnsserver}} {{ end }}]
+{{- end }}
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
 set / system snmp community public
@@ -553,6 +557,7 @@ type srlTemplateData struct {
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
 	MgmtMTU    int
+	DNSServers []string
 }
 
 // tplIFace template interface struct.
@@ -573,12 +578,13 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	// struct that holds data used in templating of the default config snippet
 
 	tplData := srlTemplateData{
-		TLSKey:    n.Cfg.TLSKey,
-		TLSCert:   n.Cfg.TLSCert,
-		TLSAnchor: n.Cfg.TLSAnchor,
-		Banner:    b,
-		IFaces:    map[string]tplIFace{},
-		MgmtMTU:   0,
+		TLSKey:     n.Cfg.TLSKey,
+		TLSCert:    n.Cfg.TLSCert,
+		TLSAnchor:  n.Cfg.TLSAnchor,
+		Banner:     b,
+		IFaces:     map[string]tplIFace{},
+		MgmtMTU:    0,
+		DNSServers: n.Config().DNS.Servers,
 	}
 
 	n.filterSSHPubKeys()

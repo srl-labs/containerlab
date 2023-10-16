@@ -25,6 +25,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/exp/slices"
 )
@@ -756,6 +757,34 @@ func (c *CLab) ResolveLinks() error {
 
 		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
 		c.Links[i] = l
+	}
+
+	return nil
+}
+
+func (c *CLab) PrepareDNSServers() error {
+	// extract DNS servers from relevant resolv.conf files
+	DNSServers, err := utils.ExtractDNSServerFromResolvConf([]string{"/etc/resolv.conf", "/run/systemd/resolve/resolv.conf"})
+	if err != nil {
+		return err
+	}
+
+	// no DNS Servers found, return
+	if len(DNSServers) == 0 {
+		return nil
+	}
+
+	// if no dns servers are explicitly configured,
+	// we set the DNS servers that we've discovered.
+	for _, n := range c.Nodes {
+		config := n.Config()
+		if config.DNS == nil {
+			config.DNS = &types.DNSConfig{}
+		}
+
+		if n.Config().DNS.Servers == nil {
+			n.Config().DNS.Servers = DNSServers
+		}
 	}
 
 	return nil

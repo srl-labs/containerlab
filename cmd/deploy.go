@@ -184,6 +184,10 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if err := c.PrepareDNSServers(); err != nil {
+		return err
+	}
+
 	// determine the number of node and link worker
 	nodeWorkers, _, err := countWorkers(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
 	if err != nil {
