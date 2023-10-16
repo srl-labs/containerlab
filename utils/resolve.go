@@ -9,16 +9,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ExtractDNSServerFromResolvConf takes a list of filenames
+// the files are supposed to be formated in the resolv.conf format.
+// it will extract ipv4 DNS server addresses and return these
 func ExtractDNSServerFromResolvConf(filenames []string) ([]string, error) {
 	DNSServersMap := map[string]struct{}{}
 
 	for _, filename := range filenames {
 		readFile, err := os.Open(filename)
-		defer readFile.Close()
 		if err != nil {
 			log.Debugf("Error opening host DNS config %s: %v", filename, err)
 			continue
 		}
+		defer readFile.Close()
 		fileScanner := bufio.NewScanner(readFile)
 		fileScanner.Split(bufio.ScanLines)
 		ipPattern := `\s*nameserver\s+((\d{1,3}\.){3}\d{1,3})`
@@ -44,7 +47,7 @@ func ExtractDNSServerFromResolvConf(filenames []string) ([]string, error) {
 
 	// convert the map into a slice
 	DNSServers := make([]string, 0, len(DNSServersMap))
-	for k, _ := range DNSServersMap {
+	for k := range DNSServersMap {
 		DNSServers = append(DNSServers, k)
 	}
 	return DNSServers, nil
