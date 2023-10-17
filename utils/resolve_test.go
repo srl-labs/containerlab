@@ -2,9 +2,12 @@ package utils
 
 import (
 	"io/fs"
-	"reflect"
+	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestExtractDNSServerFromResolvConf(t *testing.T) {
@@ -129,8 +132,17 @@ search .
 				t.Errorf("ExtractDNSServerFromResolvConf() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ExtractDNSServerFromResolvConf() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.want, got, cmpopts.SortSlices(func(s1, s2 string) bool {
+				switch strings.Compare(s1, s2) {
+				case -1:
+					return false
+				case 0:
+					return true
+				}
+				return true
+			},
+			)); diff != "" {
+				t.Errorf(diff)
 			}
 		})
 	}

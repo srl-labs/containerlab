@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"io/fs"
 	"regexp"
-	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -53,8 +52,5 @@ func ExtractDNSServerFromResolvConf(filesys fs.FS, filenames []string) ([]string
 	for k := range DNSServersMap {
 		DNSServers = append(DNSServers, k)
 	}
-
-	// sort the slice to allow for stable testing
-	slices.Sort(DNSServers)
 	return DNSServers, nil
 }
