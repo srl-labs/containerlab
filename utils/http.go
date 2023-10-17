@@ -14,7 +14,7 @@ type GithubURIType struct {
 }
 
 type GithubURI struct {
-	urlBase string
+	URLBase string
 	projectOwner string
 	RepositoryName string
 	gitBranch string
@@ -38,11 +38,11 @@ func TokenizeGithubURL(uri string, githubURIStruct *GithubURI) error {
 	}
 	splitUrl := strings.Split(uriParsed.Path, "/")[1:]
 	// copy(splitUrl[1:], splitUrl)
-	githubURIStruct.urlBase = uriParsed.Scheme + "://" + uriParsed.Host
+	githubURIStruct.URLBase = uriParsed.Scheme + "://" + uriParsed.Host
 	githubURIStruct.projectOwner = splitUrl[0]
 	githubURIStruct.RepositoryName = splitUrl[1]
 	if strings.Contains(uri, "raw.githubusercontent.com") && suffix == ".yml" || suffix == ".yaml" {
-		githubURIStruct.urlBase = "https://github.com"
+		githubURIStruct.URLBase = "https://github.com"
 		githubURIStruct.gitBranch = splitUrl[2]
 		githubURIStruct.FileName = splitUrl[len(splitUrl)-1]
 		githubURIStruct.uriType.RawWithYaml = true
@@ -66,7 +66,7 @@ func TokenizeGithubURL(uri string, githubURIStruct *GithubURI) error {
 }
 
 func RetrieveGithubRepo(githubURIStruct *GithubURI) (error) {
-	cmd := exec.Command("git", "clone", githubURIStruct.urlBase + "/" + githubURIStruct.projectOwner + "/" + githubURIStruct.RepositoryName + ".git", "--branch", githubURIStruct.gitBranch, "--depth", "1" )
+	cmd := exec.Command("git", "clone", githubURIStruct.URLBase + "/" + githubURIStruct.projectOwner + "/" + githubURIStruct.RepositoryName + ".git", "--branch", githubURIStruct.gitBranch, "--depth", "1" )
 	cmd.Dir = "./"
 	err := cmd.Run()
 	cmd.Stdout = os.Stdout

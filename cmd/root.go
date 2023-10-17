@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -129,7 +130,9 @@ func getTopoFilePath(cmd *cobra.Command) error {
 			if err != nil {
 				return err
 			}
-			if githubURI.FileName != "" {
+			if strings.Contains(topo, githubURI.URLBase) {
+				topo = ""
+			} else if githubURI.FileName != "" {
 				topo = githubURI.FileName
 			}
 		default:
