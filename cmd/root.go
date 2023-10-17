@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -130,10 +129,10 @@ func getTopoFilePath(cmd *cobra.Command) error {
 			if err != nil {
 				return err
 			}
-			if strings.Contains(topo, githubURI.URLBase) {
-				topo = ""
-			} else if githubURI.FileName != "" {
+			if githubURI.FileName != "" {
 				topo = githubURI.FileName
+			} else {
+				topo = ""
 			}
 		default:
 			return fmt.Errorf("unsupported git repositoy: %s", topo)
