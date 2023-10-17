@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -284,6 +285,14 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
 	}
+
+	// Extract the host systems DNS servers and populate the
+	// Nodes DNS Config with these if not specifically provided
+	fileSystem := os.DirFS("/")
+	if err := c.ExtractDNSServers(fileSystem); err != nil {
+		return nil, err
+	}
+
 	return c, err
 }
 
@@ -762,9 +771,9 @@ func (c *CLab) ResolveLinks() error {
 	return nil
 }
 
-func (c *CLab) PrepareDNSServers() error {
+func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
 	// extract DNS servers from relevant resolv.conf files
-	DNSServers, err := utils.ExtractDNSServerFromResolvConf([]string{"/etc/resolv.conf", "/run/systemd/resolve/resolv.conf"})
+	DNSServers, err := utils.ExtractDNSServerFromResolvConf(filesys, []string{"etc/resolv.conf", "run/systemd/resolve/resolv.conf"})
 	if err != nil {
 		return err
 	}
