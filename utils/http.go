@@ -54,7 +54,6 @@ func TokenizeGithubURL(uri string, githubURIStruct *GithubURI) error {
 		if len(splitUrl) > 3 && splitUrl[2] == "tree"{
 			githubURIStruct.gitBranch = splitUrl[3]
 		} else if len(splitUrl) == 2 {
-			// updatedRepoName := splitUrl[1]
 			updatedRepoName := strings.Split(splitUrl[1], ".git")[0]
 			githubURIStruct.RepositoryName = updatedRepoName
 			githubURIStruct.gitBranch = "main"
@@ -67,7 +66,7 @@ func TokenizeGithubURL(uri string, githubURIStruct *GithubURI) error {
 }
 
 func RetrieveGithubRepo(githubURIStruct *GithubURI) (error) {
-	cmd := exec.Command("git", "clone", githubURIStruct.urlBase + "/" + githubURIStruct.projectOwner + "/" + githubURIStruct.repositoyName + ".git", "--branch", githubURIStruct.gitBranch, "--depth", "1" )
+	cmd := exec.Command("git", "clone", githubURIStruct.urlBase + "/" + githubURIStruct.projectOwner + "/" + githubURIStruct.RepositoryName + ".git", "--branch", githubURIStruct.gitBranch, "--depth", "1" )
 	cmd.Dir = "./"
 	err := cmd.Run()
 	cmd.Stdout = os.Stdout

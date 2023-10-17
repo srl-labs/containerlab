@@ -121,7 +121,11 @@ func getTopoFilePath(cmd *cobra.Command) error {
 			if err != nil {
 				return err
 			}
-			err = os.Chdir(githubURI.RepositoryName)
+			currentDir, err:= os.Getwd()
+			if err != nil {
+				return err
+			}
+			err = os.Chdir(currentDir + "/" + githubURI.RepositoryName)
 			if err != nil {
 				return err
 			}
