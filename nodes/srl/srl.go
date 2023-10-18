@@ -479,6 +479,13 @@ func (s *srl) createSRLFiles() error {
 
 	utils.CreateDirectory(path.Join(s.Cfg.LabDir, "config"), 0777)
 
+	// create repository files (for yum/apt) that
+	// are mounted to srl container during the init phase
+	err = s.createRepoFiles()
+	if err != nil {
+		return err
+	}
+
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
@@ -806,6 +813,36 @@ func (s *srl) CheckInterfaceName() error {
 			return fmt.Errorf("mgmt0 interface name is not allowed for %s node when network mode is not set to none", s.Cfg.ShortName)
 		}
 	}
+
+	return nil
+}
+
+// createRepoFiles creates apt/ym repository files
+// to enable srl nodes to install ndk apps.
+func (s *srl) createRepoFiles() error {
+	yumRepo := `[srlinux]
+name=SR Linux NDK apps
+baseurl=https://yum.fury.io/srlinux/
+enabled=1
+gpgcheck=0`
+
+	aptRepo := `deb [trusted=yes] https://apt.fury.io/srlinux/ /`
+
+	yumPath := s.Cfg.LabDir + "/yum.repo"
+	err := utils.CreateFile(yumPath, yumRepo)
+	if err != nil {
+		return err
+	}
+
+	aptPath := s.Cfg.LabDir + "/apt.list"
+	err = utils.CreateFile(aptPath, aptRepo)
+	if err != nil {
+		return err
+	}
+
+	// mount srlinux repository files
+	s.Cfg.Binds = append(s.Cfg.Binds, yumPath+":/etc/yum.repos.d/srlinux.repo:ro")
+	s.Cfg.Binds = append(s.Cfg.Binds, aptPath+":/etc/apt/sources.list.d/srlinux.list:ro")
 
 	return nil
 }
