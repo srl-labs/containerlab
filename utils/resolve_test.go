@@ -10,7 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func TestExtractDNSServerFromResolvConf(t *testing.T) {
+func TestExtractDNSServersFromResolvConf(t *testing.T) {
 	type args struct {
 		filesys   fs.FS
 		filenames []string
@@ -127,7 +127,7 @@ search .
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ExtractDNSServerFromResolvConf(tt.args.filesys, tt.args.filenames)
+			got, err := ExtractDNSServersFromResolvConf(tt.args.filesys, tt.args.filenames)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExtractDNSServerFromResolvConf() error = %v, wantErr %v", err, tt.wantErr)
 				return

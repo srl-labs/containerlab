@@ -771,9 +771,12 @@ func (c *CLab) ResolveLinks() error {
 	return nil
 }
 
+// ExtractDNSServers extracts DNS servers from the resolv.conf files
+// and populates the Nodes DNS Config with these if not specifically provided.
 func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
-	// extract DNS servers from relevant resolv.conf files
-	DNSServers, err := utils.ExtractDNSServerFromResolvConf(filesys, []string{"etc/resolv.conf", "run/systemd/resolve/resolv.conf"})
+	// extract DNS servers from the relevant resolv.conf files
+	DNSServers, err := utils.ExtractDNSServersFromResolvConf(filesys,
+		[]string{"etc/resolv.conf", "run/systemd/resolve/resolv.conf"})
 	if err != nil {
 		return err
 	}
@@ -784,7 +787,7 @@ func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
 	}
 
 	// if no dns servers are explicitly configured,
-	// we set the DNS servers that we've discovered.
+	// we set the DNS servers that we've extracted.
 	for _, n := range c.Nodes {
 		config := n.Config()
 		if config.DNS == nil {

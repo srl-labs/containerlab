@@ -3,16 +3,16 @@ package utils
 import (
 	"bufio"
 	"io/fs"
-	"regexp"
+	"net"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// ExtractDNSServerFromResolvConf takes a list of filenames
-// the files are supposed to be formated in the resolv.conf format.
-// it will extract ipv4 DNS server addresses and return these
-func ExtractDNSServerFromResolvConf(filesys fs.FS, filenames []string) ([]string, error) {
+// ExtractDNSServersFromResolvConf extracts IP addresses
+// of the DNS servers from the resolv.conf-formatted files passed in filenames list.
+// Returns a list of IP addresses of the DNS servers.
+func ExtractDNSServersFromResolvConf(filesys fs.FS, filenames []string) ([]string, error) {
 	DNSServersMap := map[string]struct{}{}
 
 	for _, filename := range filenames {
@@ -24,30 +24,32 @@ func ExtractDNSServerFromResolvConf(filesys fs.FS, filenames []string) ([]string
 
 		fileScanner := bufio.NewScanner(readFile)
 		fileScanner.Split(bufio.ScanLines)
-		ipPattern := `\s*nameserver\s+((\d{1,3}\.){3}\d{1,3})`
-		// Compile the regular expression.
-		re := regexp.MustCompile(ipPattern)
 
 		// check line by line for a match
 		for fileScanner.Scan() {
-			if match := re.FindStringSubmatch(fileScanner.Text()); match != nil {
-				// skip 127.x.y.z addresses
-				if strings.HasPrefix(match[1], "127") {
+			line := strings.TrimSpace(fileScanner.Text())
+			if strings.HasPrefix(line, "nameserver") {
+				fields := strings.Fields(line)
+				if len(fields) != 2 {
 					continue
 				}
-				DNSServersMap[match[1]] = struct{}{}
+
+				ip := net.ParseIP(fields[1])
+				if ip == nil || ip.IsLoopback() {
+					continue
+				}
+
+				DNSServersMap[ip.String()] = struct{}{}
 			}
 		}
-		// close the file
+
 		readFile.Close()
 	}
 
-	// if we've not found any DNS Servers we return
 	if len(DNSServersMap) == 0 {
 		return nil, nil
 	}
 
-	// convert the map into a slice
 	DNSServers := make([]string, 0, len(DNSServersMap))
 	for k := range DNSServersMap {
 		DNSServers = append(DNSServers, k)
