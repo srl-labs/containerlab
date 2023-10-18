@@ -26,6 +26,10 @@ var (
 			"exec": "docker",
 			"open": "exec -it",
 		},
+		"podman": {
+			"exec": "podman",
+			"open": "exec -it",
+		},
 	}
 )
 
