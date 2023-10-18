@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/exp/slices"
 )
@@ -283,6 +285,14 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
 	}
+
+	// Extract the host systems DNS servers and populate the
+	// Nodes DNS Config with these if not specifically provided
+	fileSystem := os.DirFS("/")
+	if err := c.ExtractDNSServers(fileSystem); err != nil {
+		return nil, err
+	}
+
 	return c, err
 }
 
@@ -756,6 +766,37 @@ func (c *CLab) ResolveLinks() error {
 
 		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
 		c.Links[i] = l
+	}
+
+	return nil
+}
+
+// ExtractDNSServers extracts DNS servers from the resolv.conf files
+// and populates the Nodes DNS Config with these if not specifically provided.
+func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
+	// extract DNS servers from the relevant resolv.conf files
+	DNSServers, err := utils.ExtractDNSServersFromResolvConf(filesys,
+		[]string{"etc/resolv.conf", "run/systemd/resolve/resolv.conf"})
+	if err != nil {
+		return err
+	}
+
+	// no DNS Servers found, return
+	if len(DNSServers) == 0 {
+		return nil
+	}
+
+	// if no dns servers are explicitly configured,
+	// we set the DNS servers that we've extracted.
+	for _, n := range c.Nodes {
+		config := n.Config()
+		if config.DNS == nil {
+			config.DNS = &types.DNSConfig{}
+		}
+
+		if n.Config().DNS.Servers == nil {
+			n.Config().DNS.Servers = DNSServers
+		}
 	}
 
 	return nil

@@ -349,7 +349,7 @@ banner  cli  config.json  devices  tls  ztp
 
 The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type`, the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
 
-#### authorized keys
+#### Authorized keys
 
 Additionally, containerlab will mount the `authorized_keys` file that will have contents of every public key found in `~/.ssh` directory as well as the contents of a `~/.ssh/authorized_keys` file if it exists[^2]. This file will be mounted to `~/.ssh/authorized_keys` path for the following users:
 
@@ -358,6 +358,35 @@ Additionally, containerlab will mount the `authorized_keys` file that will have 
 * `admin`
 
 This will enable passwordless access for the users above if any public key is found in the user's directory.
+
+#### DNS configuration
+
+SR Linux's management stack lives in a separate network namespace `srbase-mgmt`. Due to this fact, the DNS resolver provided by Docker in the root network namespace is not available to the SR Linux management stack.
+
+To enable DNS resolution for SR Linux, containerlab will extract the DNS servers configured on the host system from
+
+* `/etc/resolv.conf`
+* `run/systemd/resolve/resolv.conf`
+
+files and configure IP addresses found there as DNS servers in the management network instance of SR Linux:
+
+```srl
+--{ running }--[  ]--
+A:srl# info system dns  
+    system {
+        dns {
+            network-instance mgmt
+            server-list [
+                # these servers were extracted from the host
+                # and provisioned by containerlab
+                10.171.10.1
+                10.171.10.2
+            ]
+        }
+    }
+```
+
+If you wish to turn off the automatic DNS provisioning, set the `servers` list to an empty value in the [node configuration](../nodes.md#dns).
 
 ## Host Requirements
 
