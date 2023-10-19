@@ -331,7 +331,7 @@ To start an SR Linux NOS containerlab uses the configuration that is described i
 
 ### File mounts
 
-When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `srl` kind, containerlab creates directories for each node of that kind.
+When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `nokia_srlinux` kind, containerlab creates directories for each node of that kind.
 
 ```
 ~/clab/clab-srl02
@@ -359,7 +359,16 @@ Additionally, containerlab will mount the `authorized_keys` file that will have 
 
 This will enable passwordless access for the users above if any public key is found in the user's directory.
 
-#### DNS configuration
+#### YUM/APT repositories
+
+Containerlab will create and mount repository files for YUM and APT to ensure that SR Linux users can install packages from the aforementioned repos.
+
+The repo files are mounted to the following paths:
+
+* `/etc/yum.repos.d/srlinux.repo` - for YUM package manager (used in SR Linux releases prior to 23.10)
+* `/etc/apt/sources.list.d/srlinux.list` - for APT package manager
+
+### DNS configuration
 
 SR Linux's management stack lives in a separate network namespace `srbase-mgmt`. Due to this fact, the DNS resolver provided by Docker in the root network namespace is not available to the SR Linux management stack.
 
