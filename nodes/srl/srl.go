@@ -602,17 +602,19 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 
+	// set mgmt net MTU in config template data
+	tplData.MgmtMTU = n.Runtime.Mgmt().MTU
+
 	// prepare the endpoints
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
 		if ifName == "mgmt0" {
-			// skip the mgmt0 interface. This is just for traffic carrying interface
-
 			// if the endpoint has a custom MTU set, use it in the template logic
 			// otherwise we don't set the mtu as srlinux will use the default max value 9232
 			if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
 				tplData.MgmtMTU = m
 			}
+			// skip the mgmt0 interface. Remainder is just for traffic carrying interfaces
 			continue
 		}
 		// split the interface identifier into their parts
