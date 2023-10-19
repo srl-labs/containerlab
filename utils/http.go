@@ -17,7 +17,7 @@ type GithubURI struct {
 	FileName string
 }
 
-// creates a new GithubURI struct
+// NewGithubURI returns a pointer to a GithubURI struct
 func NewGithubURI() *GithubURI { 
 	return &GithubURI{}
 }
@@ -73,12 +73,12 @@ func RetrieveGithubRepo(githubURIStruct *GithubURI) (error) {
 	return nil
 }
 
-// simple bool check validates if user passed in github url
+// IsGitHubURL checks if the url is a github url
 func IsGitHubURL(url string) bool {
 	return strings.Contains(url, "github")
 }
 
-// required global variable for tests, otherwise comparison operator fails as error instances were not equal
+// ErrInvalidSuffix is returned when the url passed in does not have a supported suffix, global function was required for test cases to work
 var ErrInvalidSuffix = errors.New("invalid uri path passed as topology argument, supported suffixes are .yml, .yaml, .git, or no suffix at all")
 func HasSupportedSuffix(url string) (string, error) {
 	// ckecks if the url has a valid suffix, if not it returns an error
