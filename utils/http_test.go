@@ -2,6 +2,7 @@ package utils
 
 import (
 	"testing"
+	
 )
 
 func TestIsGithubURL(t *testing.T) {
@@ -24,44 +25,23 @@ func TestIsGithubURL(t *testing.T) {
 	}
 }
 
-func TestGetRawURL(t *testing.T) {
-	// tests that github urls are converted to raw urls evething else is left as is
+
+func TestHasSupportedSuffix(t *testing.T) {
+	// tests that supported suffixes are detected
 	var tests = []struct {
 		input    string
 		expected string
 	}{
-		{"github.com", "raw.githubusercontent.com"},
-		{"github.com/containers/containerlab/blob/master/README.md", "raw.githubusercontent.com/containers/containerlab/master/README.md"},
-		{"google.com/containers", "google.com/containers"},
-		{"google.com/containers/containerlab/blob/master/README.md", "google.com/containers/containerlab/blob/master/README.md"},
-		{"gitlab.com/containers", "gitlab.com/containers"},
-		{"raw.githubusercontent.com/containers", "raw.githubusercontent.com/containers"},
+		{"google.com/containers/containerlab/blob/master/README.md", ""},
+		{"gitlab.com/containers", ""},
+		{"raw.githubusercontent.com/containers.git", ".git"},
+		{"github.com/containers/containerlab/blob/master/README.yml", ".yml"},
+		{"github.com/containers/containerlab/blob/master/README.yaml", ".yaml"},
+		{"github.com/containers/containerlab/blob/master/README.txt", ""},
 	}
 	for _, test := range tests {
-		if output := GetRawURL(test.input); output != test.expected {
+		if output, _ := HasSupportedSuffix(test.input); output != test.expected {
 			t.Error("Test Failed: {} inputted, {} expected, recieved: {}", test.input, test.expected, output)
 		}
 	}
-}
-
-func TestCheckSuffix(t *testing.T) {
-	// tests for valid suffix
-    var tests = []struct {
-        input    string
-        expected error
-    }{
-        {"github.com", ErrInvalidSuffix},
-        {"github.com/containers/containerlab/blob/master/README.md", ErrInvalidSuffix},
-        {"google.com/containers", ErrInvalidSuffix},
-        {"google.com/containers/containerlab/blob/master/README.md", ErrInvalidSuffix},
-        {"gitlab.com/containers", ErrInvalidSuffix},
-        {"raw.githubusercontent.com/containers", ErrInvalidSuffix},
-        {"github.com/containers/containerlab/blob/master/README.yml", nil},
-        {"github.com/containers/containerlab/blob/master/README.yaml", nil},
-    }
-    for _, test := range tests {
-        if output := CheckSuffix(test.input); output != test.expected {
-            t.Error("Test Failed: {} inputted, {} expected, recieved: {}", test.input, test.expected, output)
-        }
-    }
 }
