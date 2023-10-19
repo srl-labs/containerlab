@@ -6,22 +6,22 @@ import (
 	"text/template"
 )
 
-// tmplSshConfigData is the top-level data structure for the
+// SSHConfigDataTmpl is the top-level data structure for the
 // sshconfig template
-type tmplSshConfigData struct {
-	Nodes        []tmplSshConfigDataNode
+type SSHConfigDataTmpl struct {
+	Nodes        []SSHConfigDataNodeTmpl
 	TopologyName string
 }
 
-// tmplSshConfigDataNode is the per node structure
+// SSHConfigDataNodeTmpl is the per node structure
 // thats handed to the template engine
-type tmplSshConfigDataNode struct {
+type SSHConfigDataNodeTmpl struct {
 	Name     string
 	Hostname string
 	Username string
 }
 
-// tmplSshConfig is the SSH config template itself
+// tmplSshConfig is the SSH config template
 const tmplSshConfig = `# Clab SSH Config for topology {{ .TopologyName }}
 
 {{- range  .Nodes }}
@@ -45,9 +45,9 @@ func (c *CLab) RemoveSSHConfig() error {
 // DeploySSHConfig deploys the lab specific ssh config file
 func (c *CLab) DeploySSHConfig() error {
 	// create the struct that holds the template input data
-	tmplData := &tmplSshConfigData{
+	tmplData := &SSHConfigDataTmpl{
 		TopologyName: c.Config.Name,
-		Nodes:        make([]tmplSshConfigDataNode, 0, len(c.Nodes)),
+		Nodes:        make([]SSHConfigDataNodeTmpl, 0, len(c.Nodes)),
 	}
 
 	// add the data for all nodes to the template input
@@ -55,7 +55,7 @@ func (c *CLab) DeploySSHConfig() error {
 		// get the Kind from the KindRegistry and and extract
 		// the kind registered Username from there
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
-		nodeData := tmplSshConfigDataNode{
+		nodeData := SSHConfigDataNodeTmpl{
 			Name:     n.Config().LongName,
 			Hostname: n.Config().LongName,
 			Username: NodeRegistryEntry.Credentials().GetUsername(),
