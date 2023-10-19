@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-// githubURI struct holds the parsed github url
+// GithubURI struct holds the parsed github url
 type GithubURI struct {
 	URLBase string
 	projectOwner string
