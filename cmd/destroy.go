@@ -212,7 +212,7 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	log.Info("Removing ssh config for containerlab nodes")
-	err = c.DestroySSHConfig()
+	err = c.RemoveSSHConfig()
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)
 	}
