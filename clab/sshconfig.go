@@ -17,7 +17,7 @@ type tmplSshConfigData struct {
 // thats handed to the template engine
 type tmplSshConfigDataNode struct {
 	Name     string
-	HostName string
+	Hostname string
 	Username string
 }
 
@@ -57,7 +57,7 @@ func (c *CLab) DeploySSHConfig() error {
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
 		nodeData := tmplSshConfigDataNode{
 			Name:     n.Config().LongName,
-			HostName: n.Config().LongName,
+			Hostname: n.Config().LongName,
 			Username: NodeRegistryEntry.Credentials().GetUsername(),
 		}
 		tmplData.Nodes = append(tmplData.Nodes, nodeData)
