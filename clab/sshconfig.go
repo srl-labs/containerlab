@@ -6,83 +6,77 @@ import (
 	"text/template"
 )
 
-// SSHConfigDataTmpl is the top-level data structure for the
-// sshconfig template
-type SSHConfigDataTmpl struct {
-	Nodes        []SSHConfigDataNodeTmpl
+// SSHConfigTmpl is the top-level data structure for the
+// sshconfig template.
+type SSHConfigTmpl struct {
+	Nodes        []SSHConfigNodeTmpl
 	TopologyName string
 }
 
-// SSHConfigDataNodeTmpl is the per node structure
-// thats handed to the template engine
-type SSHConfigDataNodeTmpl struct {
+// SSHConfigNodeTmpl represents values for a single node
+// in the sshconfig template.
+type SSHConfigNodeTmpl struct {
 	Name     string
-	Hostname string
 	Username string
 }
 
-// tmplSshConfig is the SSH config template
-const tmplSshConfig = `# Clab SSH Config for topology {{ .TopologyName }}
+// tmplSshConfig is the SSH config template.
+const tmplSshConfig = `# Containerlab SSH Config for the {{ .TopologyName }} lab
 
 {{- range  .Nodes }}
 Host {{ .Name }}
-	Hostname {{ .HostName }}
 	User {{ .Username }}
 	StrictHostKeyChecking=no 
 	UserKnownHostsFile=/dev/null
 {{ end }}`
 
-// sshConfigFileTmpl is the sprintf based string, representing the
-// sshconfig filename. It just requres the labname as the fmt.Sprintf argument
+// sshConfigFileTmpl is the template for the ssh config file.
 const sshConfigFileTmpl = "/etc/ssh/ssh_config.d/clab-%s.conf"
 
 // RemoveSSHConfig removes the lab specific ssh config file
 func (c *CLab) RemoveSSHConfig() error {
 	filename := fmt.Sprintf(sshConfigFileTmpl, c.Config.Name)
+
 	return os.Remove(filename)
 }
 
-// AddSSHConfig adds the lab specific ssh config file
+// AddSSHConfig adds the lab specific ssh config file.
 func (c *CLab) AddSSHConfig() error {
-	// create the struct that holds the template input data
-	tmplData := &SSHConfigDataTmpl{
+	tmpl := &SSHConfigTmpl{
 		TopologyName: c.Config.Name,
-		Nodes:        make([]SSHConfigDataNodeTmpl, 0, len(c.Nodes)),
+		Nodes:        make([]SSHConfigNodeTmpl, 0, len(c.Nodes)),
 	}
 
 	// add the data for all nodes to the template input
 	for _, n := range c.Nodes {
 		// get the Kind from the KindRegistry and and extract
-		// the kind registered Username from there
+		// the kind registered Username
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
-		nodeData := SSHConfigDataNodeTmpl{
+		nodeData := SSHConfigNodeTmpl{
 			Name:     n.Config().LongName,
-			Hostname: n.Config().LongName,
 			Username: NodeRegistryEntry.Credentials().GetUsername(),
 		}
-		tmplData.Nodes = append(tmplData.Nodes, nodeData)
+		tmpl.Nodes = append(tmpl.Nodes, nodeData)
 	}
 
-	// parse the template
 	t, err := template.New("sshconfig").Parse(tmplSshConfig)
 	if err != nil {
 		return err
 	}
 
-	// completly resolve the output filename with the topology name
+	// resolve the output filename with the topology name
 	filename := fmt.Sprintf(sshConfigFileTmpl, c.Config.Name)
 
-	// open the output file, creating if it does not exist, truncate it otherwise
-	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	err = t.Execute(f, tmpl)
 	if err != nil {
 		return err
 	}
 
-	// execute the template and write the result
-	// to the open file
-	err = t.Execute(f, tmplData)
-	if err != nil {
-		return err
-	}
 	return nil
 }
