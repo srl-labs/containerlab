@@ -211,6 +211,12 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
+	log.Info("Removing ssh config for containerlab nodes")
+	err = c.DestroySSHConfig()
+	if err != nil {
+		log.Errorf("failed to remove ssh config file: %v", err)
+	}
+
 	// delete lab management network
 	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
 		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)

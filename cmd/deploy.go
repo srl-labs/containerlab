@@ -275,6 +275,12 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
 
+	log.Info("Adding ssh config for containerlab nodes")
+	err = c.DeploySSHConfig()
+	if err != nil {
+		log.Errorf("failed to create ssh config file: %v", err)
+	}
+
 	// execute commands specified for nodes with `exec` node parameter
 	execCollection := exec.NewExecCollection()
 	for _, n := range c.Nodes {
