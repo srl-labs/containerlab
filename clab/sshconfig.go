@@ -42,8 +42,8 @@ func (c *CLab) RemoveSSHConfig() error {
 	return os.Remove(filename)
 }
 
-// DeploySSHConfig deploys the lab specific ssh config file
-func (c *CLab) DeploySSHConfig() error {
+// AddSSHConfig adds the lab specific ssh config file
+func (c *CLab) AddSSHConfig() error {
 	// create the struct that holds the template input data
 	tmplData := &SSHConfigDataTmpl{
 		TopologyName: c.Config.Name,
