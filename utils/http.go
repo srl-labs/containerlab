@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// GithubURI struct holds the parsed github url.
-type GithubURI struct {
+// GithubURL struct holds the parsed github url.
+type GithubURL struct {
 	URLBase        string
 	projectOwner   string
 	RepositoryName string
@@ -18,51 +18,52 @@ type GithubURI struct {
 }
 
 // NewGithubURL returns a pointer to a GithubURI struct
-func NewGithubURL() *GithubURI {
-	return &GithubURI{}
+func NewGithubURL() *GithubURL {
+	return &GithubURL{}
 }
 
 // TokenizeGithubURL parses the github url and updates a GithubURI struct.
-func TokenizeGithubURL(uri string, githubURIStruct *GithubURI) error {
-	suffix, err := HasSupportedSuffix(uri)
+func TokenizeGithubURL(ghURL string, githubURL *GithubURL) error {
+	suffix, err := HasSupportedSuffix(ghURL)
 	if err != nil {
 		return err
 	}
-	uriParsed, err := url.Parse(uri)
+	parsedURL, err := url.Parse(ghURL)
 	if err != nil {
 		return err
 	}
 	// split the url path and remove the first empty element
-	splitUrl := strings.Split(uriParsed.Path, "/")[1:]
-	githubURIStruct.URLBase = uriParsed.Scheme + "://" + uriParsed.Host
-	githubURIStruct.projectOwner = splitUrl[0]
-	githubURIStruct.RepositoryName = splitUrl[1]
-	if strings.Contains(uri, "raw.githubusercontent.com") && suffix == ".yml" || suffix == ".yaml" {
-		githubURIStruct.URLBase = "https://github.com"
-		githubURIStruct.gitBranch = splitUrl[2]
-		githubURIStruct.FileName = splitUrl[len(splitUrl)-1]
-	} else if strings.Contains(uri, "github.com") && suffix == ".yml" || suffix == ".yaml" {
-		githubURIStruct.gitBranch = splitUrl[3]
-		githubURIStruct.FileName = splitUrl[len(splitUrl)-1]
-	} else if strings.Contains(uri, "github.com") && suffix == ".git" || suffix == "" {
+	splitUrl := strings.Split(parsedURL.Path, "/")[1:]
+	githubURL.URLBase = parsedURL.Scheme + "://" + parsedURL.Host
+	githubURL.projectOwner = splitUrl[0]
+	githubURL.RepositoryName = splitUrl[1]
+	if strings.Contains(ghURL, "raw.githubusercontent.com") && suffix == ".yml" || suffix == ".yaml" {
+		githubURL.URLBase = "https://github.com"
+		githubURL.gitBranch = splitUrl[2]
+		githubURL.FileName = splitUrl[len(splitUrl)-1]
+	} else if strings.Contains(ghURL, "github.com") && suffix == ".yml" || suffix == ".yaml" {
+		githubURL.gitBranch = splitUrl[3]
+		githubURL.FileName = splitUrl[len(splitUrl)-1]
+	} else if strings.Contains(ghURL, "github.com") && suffix == ".git" || suffix == "" {
 		// if lenth of the slice of url path is greater than 3, it means that the user has passed in a repo with a branch
 		if len(splitUrl) > 3 && splitUrl[2] == "tree" {
-			githubURIStruct.gitBranch = splitUrl[3]
+			githubURL.gitBranch = splitUrl[3]
 			// if the length equals 2 they have passed in a repo without a branch
 		} else if len(splitUrl) == 2 {
 			updatedRepoName := strings.Split(splitUrl[1], ".git")[0]
-			githubURIStruct.RepositoryName = updatedRepoName
-			githubURIStruct.gitBranch = "main"
+			githubURL.RepositoryName = updatedRepoName
+			githubURL.gitBranch = "main"
 		} else {
 			return errors.New("unsupported git repositoy URI format")
 		}
 	}
+
 	return nil
 }
 
 // RetrieveGithubRepo clones the github repo into the current directory.
-func RetrieveGithubRepo(githubURIStruct *GithubURI) error {
-	cmd := exec.Command("git", "clone", githubURIStruct.URLBase+"/"+githubURIStruct.projectOwner+"/"+githubURIStruct.RepositoryName+".git", "--branch", githubURIStruct.gitBranch, "--depth", "1")
+func RetrieveGithubRepo(githubURL *GithubURL) error {
+	cmd := exec.Command("git", "clone", githubURL.URLBase+"/"+githubURL.projectOwner+"/"+githubURL.RepositoryName+".git", "--branch", githubURL.gitBranch, "--depth", "1")
 	cmd.Dir = "./"
 	err := cmd.Run()
 	cmd.Stdout = os.Stdout
@@ -70,6 +71,7 @@ func RetrieveGithubRepo(githubURIStruct *GithubURI) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
