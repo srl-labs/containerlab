@@ -11,9 +11,9 @@ import (
 // GithubURL struct holds the parsed github url.
 type GithubURL struct {
 	URLBase        string
-	projectOwner   string
+	ProjectOwner   string
 	RepositoryName string
-	gitBranch      string
+	GitBranch      string
 	FileName       string
 }
 
@@ -37,26 +37,26 @@ func (u *GithubURL) Tokenize(ghURL string) error {
 	// split the url path and remove the first empty element
 	splitUrl := strings.Split(parsedURL.Path, "/")[1:]
 	u.URLBase = parsedURL.Scheme + "://" + parsedURL.Host
-	u.projectOwner = splitUrl[0]
+	u.ProjectOwner = splitUrl[0]
 	u.RepositoryName = splitUrl[1]
 
 	switch {
 	case strings.Contains(ghURL, "raw.githubusercontent.com") && (suffix == ".yml" || suffix == ".yaml"):
 		u.URLBase = "https://github.com"
-		u.gitBranch = splitUrl[2]
+		u.GitBranch = splitUrl[2]
 		u.FileName = splitUrl[len(splitUrl)-1]
 	case strings.Contains(ghURL, "github.com") && suffix == ".yml" || suffix == ".yaml":
-		u.gitBranch = splitUrl[3]
+		u.GitBranch = splitUrl[3]
 		u.FileName = splitUrl[len(splitUrl)-1]
 	case strings.Contains(ghURL, "github.com") && suffix == ".git" || suffix == "":
 		// if lenth of the slice of url path is greater than 3, it means that the user has passed in a repo with a branch
 		if len(splitUrl) > 3 && splitUrl[2] == "tree" {
-			u.gitBranch = splitUrl[3]
+			u.GitBranch = splitUrl[3]
 			// if the length equals 2 they have passed in a repo without a branch
 		} else if len(splitUrl) == 2 {
 			updatedRepoName := strings.Split(splitUrl[1], ".git")[0]
 			u.RepositoryName = updatedRepoName
-			u.gitBranch = "main"
+			u.GitBranch = "main"
 		} else {
 			return errors.New("unsupported git repositoy URI format")
 		}
@@ -67,7 +67,7 @@ func (u *GithubURL) Tokenize(ghURL string) error {
 
 // RetrieveGithubRepo clones the github repo into the current directory.
 func RetrieveGithubRepo(githubURL *GithubURL) error {
-	cmd := exec.Command("git", "clone", githubURL.URLBase+"/"+githubURL.projectOwner+"/"+githubURL.RepositoryName+".git", "--branch", githubURL.gitBranch, "--depth", "1")
+	cmd := exec.Command("git", "clone", githubURL.URLBase+"/"+githubURL.ProjectOwner+"/"+githubURL.RepositoryName+".git", "--branch", githubURL.GitBranch, "--depth", "1")
 	cmd.Dir = "./"
 	err := cmd.Run()
 	cmd.Stdout = os.Stdout
