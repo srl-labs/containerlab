@@ -120,23 +120,26 @@ func getTopoFilePath(cmd *cobra.Command) error {
 			if err != nil {
 				return err
 			}
+
 			err = utils.RetrieveGithubRepo(githubURL)
 			if err != nil {
 				return err
 			}
+
 			currentDir, err := os.Getwd()
 			if err != nil {
 				return err
 			}
+
 			err = os.Chdir(currentDir + "/" + githubURL.RepositoryName)
 			if err != nil {
 				return err
 			}
+
 			if githubURL.FileName != "" {
 				topo = githubURL.FileName
-			} else {
-				topo = ""
 			}
+
 		default:
 			return fmt.Errorf("unsupported git repositoy: %s", topo)
 		}
