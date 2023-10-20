@@ -2,7 +2,6 @@ package utils
 
 import (
 	"testing"
-	
 )
 
 func TestIsGithubURL(t *testing.T) {
@@ -25,23 +24,45 @@ func TestIsGithubURL(t *testing.T) {
 	}
 }
 
-
-func TestHasSupportedSuffix(t *testing.T) {
-	// tests that supported suffixes are detected
-	var tests = []struct {
-		input    string
-		expected string
+func TestGetYAMLOrGitSuffix(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		want    string
+		wantErr error
 	}{
-		{"google.com/containers/containerlab/blob/master/README.md", ""},
-		{"gitlab.com/containers", ""},
-		{"raw.githubusercontent.com/containers.git", ".git"},
-		{"github.com/containers/containerlab/blob/master/README.yml", ".yml"},
-		{"github.com/containers/containerlab/blob/master/README.yaml", ".yaml"},
-		{"github.com/containers/containerlab/blob/master/README.txt", ""},
+		{
+			name: "valid suffix .yml",
+			url:  "https://example.com/config.yml",
+			want: ".yml",
+		},
+		{
+			name: "valid suffix .yaml",
+			url:  "https://example.com/config.yaml",
+			want: ".yaml",
+		},
+		{
+			name: "valid suffix .git",
+			url:  "https://example.com/repo.git",
+			want: ".git",
+		},
+		{
+			name: "empty suffix",
+			url:  "https://example.com/",
+			want: "",
+		},
 	}
-	for _, test := range tests {
-		if output, _ := HasSupportedSuffix(test.input); output != test.expected {
-			t.Error("Test Failed: {} inputted, {} expected, recieved: {}", test.input, test.expected, output)
-		}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetYAMLOrGitSuffix(tt.url)
+			if err != tt.wantErr {
+				t.Errorf("HasSupportedSuffix() error = %v, wantErr %v, but got = %v", err, tt.wantErr, got)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("HasSupportedSuffix() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

@@ -24,7 +24,7 @@ func NewGithubURL() *GithubURL {
 
 // Tokenize parses the string url.
 func (u *GithubURL) Tokenize(ghURL string) error {
-	suffix, err := HasSupportedSuffix(ghURL)
+	suffix, err := GetYAMLOrGitSuffix(ghURL)
 	if err != nil {
 		return err
 	}
@@ -87,9 +87,10 @@ func IsGitHubURL(url string) bool {
 // ErrInvalidSuffix is returned when the url passed in does not have a supported suffix, global function was required for test cases to work.
 var ErrInvalidSuffix = errors.New("invalid uri path passed as topology argument, supported suffixes are .yml, .yaml, .git, or no suffix at all")
 
-func HasSupportedSuffix(url string) (string, error) {
+// GetYAMLOrGitSuffix checks if the string has .y*ml or .git suffix and returns it.
+func GetYAMLOrGitSuffix(url string) (string, error) {
 	// ckecks if the url has a valid suffix, if not it returns an error
-	supported_suffix := []string{".yml", ".yaml", ".git", ""}
+	supported_suffix := []string{".yml", ".yaml", ".git"}
 	for _, suffix := range supported_suffix {
 		if strings.HasSuffix(url, suffix) {
 			return suffix, nil
