@@ -25,7 +25,9 @@ const tmplSshConfig = `# Containerlab SSH Config for the {{ .TopologyName }} lab
 
 {{- range  .Nodes }}
 Host {{ .Name }}
+	{{-  if ne .Username ""}}
 	User {{ .Username }}
+	{{- end }}
 	StrictHostKeyChecking=no 
 	UserKnownHostsFile=/dev/null
 {{ end }}`
@@ -36,8 +38,12 @@ const sshConfigFileTmpl = "/etc/ssh/ssh_config.d/clab-%s.conf"
 // RemoveSSHConfig removes the lab specific ssh config file
 func (c *CLab) RemoveSSHConfig() error {
 	filename := fmt.Sprintf(sshConfigFileTmpl, c.Config.Name)
-
-	return os.Remove(filename)
+	err := os.Remove(filename)
+	// if there is an error, thats not "Not Exists", then return it
+	if err != nil && err != os.ErrNotExist {
+		return err
+	}
+	return nil
 }
 
 // AddSSHConfig adds the lab specific ssh config file.
