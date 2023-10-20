@@ -1,9 +1,10 @@
 package clab
 
 import (
-	"fmt"
 	"os"
 	"text/template"
+
+	"github.com/srl-labs/containerlab/types"
 )
 
 // SSHConfigTmpl is the top-level data structure for the
@@ -32,22 +33,18 @@ Host {{ .Name }}
 	UserKnownHostsFile=/dev/null
 {{ end }}`
 
-// sshConfigFileTmpl is the template for the ssh config file.
-const sshConfigFileTmpl = "/etc/ssh/ssh_config.d/clab-%s.conf"
-
 // RemoveSSHConfig removes the lab specific ssh config file
-func (c *CLab) RemoveSSHConfig() error {
-	filename := fmt.Sprintf(sshConfigFileTmpl, c.Config.Name)
-	err := os.Remove(filename)
+func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
+	err := os.Remove(topoPaths.SSHConfigPath())
 	// if there is an error, thats not "Not Exists", then return it
-	if err != nil && err != os.ErrNotExist {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return nil
 }
 
 // AddSSHConfig adds the lab specific ssh config file.
-func (c *CLab) AddSSHConfig() error {
+func (c *CLab) AddSSHConfig(topoPaths *types.TopoPaths) error {
 	tmpl := &SSHConfigTmpl{
 		TopologyName: c.Config.Name,
 		Nodes:        make([]SSHConfigNodeTmpl, 0, len(c.Nodes)),
@@ -70,10 +67,7 @@ func (c *CLab) AddSSHConfig() error {
 		return err
 	}
 
-	// resolve the output filename with the topology name
-	filename := fmt.Sprintf(sshConfigFileTmpl, c.Config.Name)
-
-	f, err := os.Create(filename)
+	f, err := os.Create(topoPaths.SSHConfigPath())
 	if err != nil {
 		return err
 	}

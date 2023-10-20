@@ -276,7 +276,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	log.Info("Adding ssh config for containerlab nodes")
-	err = c.AddSSHConfig()
+	err = c.AddSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
 	}

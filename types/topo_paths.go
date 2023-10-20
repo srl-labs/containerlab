@@ -23,6 +23,7 @@ const (
 	CertFileSuffix            = ".pem"
 	KeyFileSuffix             = ".key"
 	CSRFileSuffix             = ".csr"
+	sshConfigFilePathTmpl     = "/etc/ssh/ssh_config.d/clab-%s.conf"
 )
 
 // clabTmpDir is the directory where clab stores temporary and/or downloaded files.
@@ -108,6 +109,10 @@ func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
 	t.externalCAKeyFile = keyFile
 
 	return nil
+}
+
+func (t *TopoPaths) SSHConfigPath() string {
+	return fmt.Sprintf(sshConfigFilePathTmpl, t.topoName)
 }
 
 // TLSBaseDir returns the path of the TLS directory structure.
