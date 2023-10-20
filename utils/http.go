@@ -17,8 +17,8 @@ type GithubURI struct {
 	FileName       string
 }
 
-// NewGithubURI returns a pointer to a GithubURI struct
-func NewGithubURI() *GithubURI {
+// NewGithubURL returns a pointer to a GithubURI struct
+func NewGithubURL() *GithubURI {
 	return &GithubURI{}
 }
 

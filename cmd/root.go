@@ -114,12 +114,13 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	if utils.IsHttpUri(topo) {
 		switch {
 		case utils.IsGitHubURL(topo):
-			githubURI := utils.NewGithubURI()
-			err := utils.TokenizeGithubURL(topo, githubURI)
+			githubURL := utils.NewGithubURL()
+
+			err := utils.TokenizeGithubURL(topo, githubURL)
 			if err != nil {
 				return err
 			}
-			err = utils.RetrieveGithubRepo(githubURI)
+			err = utils.RetrieveGithubRepo(githubURL)
 			if err != nil {
 				return err
 			}
@@ -127,12 +128,12 @@ func getTopoFilePath(cmd *cobra.Command) error {
 			if err != nil {
 				return err
 			}
-			err = os.Chdir(currentDir + "/" + githubURI.RepositoryName)
+			err = os.Chdir(currentDir + "/" + githubURL.RepositoryName)
 			if err != nil {
 				return err
 			}
-			if githubURI.FileName != "" {
-				topo = githubURI.FileName
+			if githubURL.FileName != "" {
+				topo = githubURL.FileName
 			} else {
 				topo = ""
 			}
