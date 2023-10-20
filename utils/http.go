@@ -40,14 +40,15 @@ func (u *GithubURL) Tokenize(ghURL string) error {
 	u.projectOwner = splitUrl[0]
 	u.RepositoryName = splitUrl[1]
 
-	if strings.Contains(ghURL, "raw.githubusercontent.com") && suffix == ".yml" || suffix == ".yaml" {
+	switch {
+	case strings.Contains(ghURL, "raw.githubusercontent.com") && (suffix == ".yml" || suffix == ".yaml"):
 		u.URLBase = "https://github.com"
 		u.gitBranch = splitUrl[2]
 		u.FileName = splitUrl[len(splitUrl)-1]
-	} else if strings.Contains(ghURL, "github.com") && suffix == ".yml" || suffix == ".yaml" {
+	case strings.Contains(ghURL, "github.com") && suffix == ".yml" || suffix == ".yaml":
 		u.gitBranch = splitUrl[3]
 		u.FileName = splitUrl[len(splitUrl)-1]
-	} else if strings.Contains(ghURL, "github.com") && suffix == ".git" || suffix == "" {
+	case strings.Contains(ghURL, "github.com") && suffix == ".git" || suffix == "":
 		// if lenth of the slice of url path is greater than 3, it means that the user has passed in a repo with a branch
 		if len(splitUrl) > 3 && splitUrl[2] == "tree" {
 			u.gitBranch = splitUrl[3]
