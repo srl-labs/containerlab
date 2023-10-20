@@ -55,7 +55,7 @@ type MgmtNet struct {
 	IPv6Subnet     string `yaml:"ipv6-subnet,omitempty" json:"ipv6-subnet,omitempty"`
 	IPv6Gw         string `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
 	IPv6Range      string `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
-	MTU            string `yaml:"mtu,omitempty" json:"mtu,omitempty"`
+	MTU            int    `yaml:"mtu,omitempty" json:"mtu,omitempty"`
 	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
 }
 

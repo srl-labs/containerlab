@@ -74,6 +74,9 @@ set / system aaa authentication idle-timeout 7200
 {{- if ne .MgmtMTU 0 }}
 set / interface mgmt0 mtu {{ .MgmtMTU }}
 {{- end }}
+{{- if ne .MgmtIPMTU 0 }}
+set / interface mgmt0 subinterface 0 ip-mtu {{ .MgmtIPMTU }}
+{{- end }}
 {{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
 {{- range $epName, $ep := .IFaces }}
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
@@ -564,6 +567,7 @@ type srlTemplateData struct {
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
 	MgmtMTU    int
+	MgmtIPMTU  int
 	DNSServers []string
 }
 
@@ -582,8 +586,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	// struct that holds data used in templating of the default config snippet
-
+	// tplData holds data used in templating of the default config snippet
 	tplData := srlTemplateData{
 		TLSKey:     n.Cfg.TLSKey,
 		TLSCert:    n.Cfg.TLSCert,
@@ -591,6 +594,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		Banner:     b,
 		IFaces:     map[string]tplIFace{},
 		MgmtMTU:    0,
+		MgmtIPMTU:  0,
 		DNSServers: n.Config().DNS.Servers,
 	}
 
@@ -602,17 +606,25 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 
+	// set MgmtMTU to the MTU value of the runtime management network
+	// so that the two MTUs match.
+	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
+
 	// prepare the endpoints
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
 		if ifName == "mgmt0" {
-			// skip the mgmt0 interface. This is just for traffic carrying interface
-
 			// if the endpoint has a custom MTU set, use it in the template logic
 			// otherwise we don't set the mtu as srlinux will use the default max value 9232
 			if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
 				tplData.MgmtMTU = m
+				// MgmtMTU seems to be only set when we use macvlan interface
+				// with network-mode: none. For this super narrow use case
+				// we setup mgmt port mtu to match the mtu of the macvlan parnet interface
+				// but then we need to make sure that IP MTU is smaller by 14B
+				tplData.MgmtIPMTU = m - 14
 			}
+			// the rest is just for traffic carrying interfaces
 			continue
 		}
 		// split the interface identifier into their parts

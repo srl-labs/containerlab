@@ -94,20 +94,23 @@ func (d *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	d.mgmt = n
 	// return if MTU value was set by a user via config file
-	if n.MTU != "" {
+	if n.MTU != 0 {
 		return
 	}
 
 	// detect default MTU if this config parameter was not provided in the clab file
 	netRes, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
 	if err != nil {
-		d.mgmt.MTU = "1500"
+		d.mgmt.MTU = 1500
 		log.Debugf("an error occurred when trying to detect docker default network mtu")
 	}
 
 	if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
 		log.Debugf("detected docker network mtu value - %s", mtu)
-		d.mgmt.MTU = mtu
+		d.mgmt.MTU, err = strconv.Atoi(mtu)
+		if err != nil {
+			log.Errorf("Error parsing MTU value of %q as int", mtu)
+		}
 	}
 
 	// if bridge was not set in the topo file, find out the bridge name
@@ -139,96 +142,10 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, dockerTypes.NetworkInspectOptions{})
 	switch {
 	case dockerC.IsErrNotFound(err):
-		log.Debugf("Network %q does not exist", d.mgmt.Network)
-		log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%q",
-			d.mgmt.Network, d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet, d.mgmt.MTU)
-
-		enableIPv6 := false
-		var ipamConfig []network.IPAMConfig
-
-		var v4gw, v6gw string
-		// check if IPv4/6 addr are assigned to a mgmt bridge
-		if d.mgmt.Bridge != "" {
-			v4gw, v6gw, err = utils.FirstLinkIPs(d.mgmt.Bridge)
-			if err != nil {
-				// only return error if the error is not about link not found
-				// we will create the bridge if it doesn't exist
-				if !errors.As(err, &netlink.LinkNotFoundError{}) {
-					return err
-				}
-			}
-			log.Debugf("bridge %q has ipv4 addr of %q and ipv6 addr of %q", d.mgmt.Bridge, v4gw, v6gw)
-		}
-
-		if d.mgmt.IPv4Subnet != "" {
-			if d.mgmt.IPv4Gw != "" {
-				v4gw = d.mgmt.IPv4Gw
-			}
-			ipamCfg := network.IPAMConfig{
-				Subnet:  d.mgmt.IPv4Subnet,
-				Gateway: v4gw,
-			}
-			if d.mgmt.IPv4Range != "" {
-				ipamCfg.IPRange = d.mgmt.IPv4Range
-			}
-			ipamConfig = append(ipamConfig, ipamCfg)
-		}
-
-		if d.mgmt.IPv6Subnet != "" {
-			if d.mgmt.IPv6Gw != "" {
-				v6gw = d.mgmt.IPv6Gw
-			}
-			ipamCfg := network.IPAMConfig{
-				Subnet:  d.mgmt.IPv6Subnet,
-				Gateway: v6gw,
-			}
-			if d.mgmt.IPv6Range != "" {
-				ipamCfg.IPRange = d.mgmt.IPv6Range
-			}
-			ipamConfig = append(ipamConfig, ipamCfg)
-			enableIPv6 = true
-		}
-
-		ipam := &network.IPAM{
-			Driver: "default",
-			Config: ipamConfig,
-		}
-
-		netwOpts := map[string]string{
-			"com.docker.network.driver.mtu": d.mgmt.MTU,
-		}
-
-		if bridgeName != "" {
-			netwOpts["com.docker.network.bridge.name"] = bridgeName
-		}
-
-		opts := dockerTypes.NetworkCreate{
-			CheckDuplicate: true,
-			Driver:         "bridge",
-			EnableIPv6:     enableIPv6,
-			IPAM:           ipam,
-			Internal:       false,
-			Attachable:     false,
-			Labels: map[string]string{
-				"containerlab": "",
-			},
-			Options: netwOpts,
-		}
-
-		netCreateResponse, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
+		bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
 		if err != nil {
 			return err
 		}
-
-		if len(netCreateResponse.ID) < 12 {
-			return fmt.Errorf("could not get bridge ID")
-		}
-		// when bridge is not set by a user explicitly
-		// we use the 12 chars of docker net as its name
-		if bridgeName == "" {
-			bridgeName = "br-" + netCreateResponse.ID[:12]
-		}
-
 	case err == nil:
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		if len(netResource.ID) < 12 {
@@ -256,6 +173,113 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	// get management bridge v4/6 addresses and save it under mgmt struct
 	// so that nodes can use this information prior to being deployed
 	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
+	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
+
+	return d.postCreateNetActions()
+}
+
+func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
+	var err error
+	log.Debugf("Network %q does not exist", d.mgmt.Network)
+	log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%q",
+		d.mgmt.Network, d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet, d.mgmt.MTU)
+
+	enableIPv6 := false
+	var ipamConfig []network.IPAMConfig
+
+	var v4gw, v6gw string
+	// check if IPv4/6 addr are assigned to a mgmt bridge
+	if d.mgmt.Bridge != "" {
+		v4gw, v6gw, err = utils.FirstLinkIPs(d.mgmt.Bridge)
+		if err != nil {
+			// only return error if the error is not about link not found
+			// we will create the bridge if it doesn't exist
+			if !errors.As(err, &netlink.LinkNotFoundError{}) {
+				return "", err
+			}
+		}
+		log.Debugf("bridge %q has ipv4 addr of %q and ipv6 addr of %q", d.mgmt.Bridge, v4gw, v6gw)
+	}
+
+	if d.mgmt.IPv4Subnet != "" {
+		if d.mgmt.IPv4Gw != "" {
+			v4gw = d.mgmt.IPv4Gw
+		}
+		ipamCfg := network.IPAMConfig{
+			Subnet:  d.mgmt.IPv4Subnet,
+			Gateway: v4gw,
+		}
+		if d.mgmt.IPv4Range != "" {
+			ipamCfg.IPRange = d.mgmt.IPv4Range
+		}
+		ipamConfig = append(ipamConfig, ipamCfg)
+	}
+
+	if d.mgmt.IPv6Subnet != "" {
+		if d.mgmt.IPv6Gw != "" {
+			v6gw = d.mgmt.IPv6Gw
+		}
+		ipamCfg := network.IPAMConfig{
+			Subnet:  d.mgmt.IPv6Subnet,
+			Gateway: v6gw,
+		}
+		if d.mgmt.IPv6Range != "" {
+			ipamCfg.IPRange = d.mgmt.IPv6Range
+		}
+		ipamConfig = append(ipamConfig, ipamCfg)
+		enableIPv6 = true
+	}
+
+	ipam := &network.IPAM{
+		Driver: "default",
+		Config: ipamConfig,
+	}
+
+	netwOpts := map[string]string{
+		"com.docker.network.driver.mtu": strconv.Itoa(d.mgmt.MTU),
+	}
+
+	if bridgeName != "" {
+		netwOpts["com.docker.network.bridge.name"] = bridgeName
+	}
+
+	opts := dockerTypes.NetworkCreate{
+		CheckDuplicate: true,
+		Driver:         "bridge",
+		EnableIPv6:     enableIPv6,
+		IPAM:           ipam,
+		Internal:       false,
+		Attachable:     false,
+		Labels: map[string]string{
+			"containerlab": "",
+		},
+		Options: netwOpts,
+	}
+
+	netCreateResponse, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
+	if err != nil {
+		return "", err
+	}
+
+	if len(netCreateResponse.ID) < 12 {
+		return "", fmt.Errorf("could not get bridge ID")
+	}
+	// when bridge is not set by a user explicitly
+	// we use the 12 chars of docker net as its name
+	if bridgeName == "" {
+		bridgeName = "br-" + netCreateResponse.ID[:12]
+	}
+	return bridgeName, nil
+}
+
+// getMgmtBridgeIPs gets the management bridge v4/6 addresses
+func getMgmtBridgeIPs(bridgeName string, netResource dockerTypes.NetworkResource) (string, string, error) {
+	var err error
 	var v4, v6 string
 	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
 		log.Warn(
@@ -278,21 +302,8 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 				break
 			}
 		}
-
-		if v4 == "" && v6 == "" {
-			// didn't get address in any way -- the case of needing to inspect the docker ipam
-			// config should be less common (for dind use case basically), so we can just return
-			// the main error form checking via ip link
-			return err
-		}
 	}
-
-	d.mgmt.IPv4Gw = v4
-	d.mgmt.IPv6Gw = v6
-
-	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
-
-	return d.postCreateNetActions()
+	return v4, v6, err
 }
 
 // postCreateNetActions performs additional actions after the network has been created.
