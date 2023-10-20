@@ -26,10 +26,9 @@ func TestIsGithubURL(t *testing.T) {
 
 func TestGetYAMLOrGitSuffix(t *testing.T) {
 	tests := []struct {
-		name    string
-		url     string
-		want    string
-		wantErr error
+		name string
+		url  string
+		want string
 	}{
 		{
 			name: "valid suffix .yml",
@@ -55,11 +54,8 @@ func TestGetYAMLOrGitSuffix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetYAMLOrGitSuffix(tt.url)
-			if err != tt.wantErr {
-				t.Errorf("HasSupportedSuffix() error = %v, wantErr %v, but got = %v", err, tt.wantErr, got)
-				return
-			}
+			got := GetYAMLOrGitSuffix(tt.url)
+
 			if got != tt.want {
 				t.Errorf("HasSupportedSuffix() = %v, want %v", got, tt.want)
 			}

@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // GithubURL struct holds the parsed github url.
@@ -24,10 +26,7 @@ func NewGithubURL() *GithubURL {
 
 // Tokenize parses the string url.
 func (u *GithubURL) Tokenize(ghURL string) error {
-	suffix, err := GetYAMLOrGitSuffix(ghURL)
-	if err != nil {
-		return err
-	}
+	suffix := GetYAMLOrGitSuffix(ghURL)
 
 	parsedURL, err := url.Parse(ghURL)
 	if err != nil {
@@ -36,6 +35,9 @@ func (u *GithubURL) Tokenize(ghURL string) error {
 
 	// split the url path and remove the first empty element
 	splitUrl := strings.Split(parsedURL.Path, "/")[1:]
+
+	log.Warnf("%q", splitUrl)
+
 	u.URLBase = parsedURL.Scheme + "://" + parsedURL.Host
 	u.ProjectOwner = splitUrl[0]
 	u.RepositoryName = splitUrl[1]
@@ -48,7 +50,7 @@ func (u *GithubURL) Tokenize(ghURL string) error {
 	case strings.Contains(ghURL, "github.com") && suffix == ".yml" || suffix == ".yaml":
 		u.GitBranch = splitUrl[3]
 		u.FileName = splitUrl[len(splitUrl)-1]
-	case strings.Contains(ghURL, "github.com") && suffix == ".git" || suffix == "":
+	case strings.Contains(ghURL, "github.com") && (suffix == ".git" || suffix == ""):
 		// if lenth of the slice of url path is greater than 3, it means that the user has passed in a repo with a branch
 		if len(splitUrl) > 3 && splitUrl[2] == "tree" {
 			u.GitBranch = splitUrl[3]
@@ -84,18 +86,15 @@ func IsGitHubURL(url string) bool {
 	return strings.Contains(url, "github.com") || strings.Contains(url, "raw.githubusercontent.com")
 }
 
-// ErrInvalidSuffix is returned when the url passed in does not have a supported suffix, global function was required for test cases to work.
-var ErrInvalidSuffix = errors.New("invalid uri path passed as topology argument, supported suffixes are .yml, .yaml, .git, or no suffix at all")
-
 // GetYAMLOrGitSuffix checks if the string has .y*ml or .git suffix and returns it.
-func GetYAMLOrGitSuffix(url string) (string, error) {
+func GetYAMLOrGitSuffix(url string) string {
 	// ckecks if the url has a valid suffix, if not it returns an error
 	supported_suffix := []string{".yml", ".yaml", ".git"}
 	for _, suffix := range supported_suffix {
 		if strings.HasSuffix(url, suffix) {
-			return suffix, nil
+			return suffix
 		}
 	}
 
-	return "", ErrInvalidSuffix
+	return ""
 }
