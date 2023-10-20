@@ -116,7 +116,7 @@ func getTopoFilePath(cmd *cobra.Command) error {
 		case utils.IsGitHubURL(topo):
 			githubURL := utils.NewGithubURL()
 
-			err := utils.TokenizeGithubURL(topo, githubURL)
+			err := githubURL.Tokenize(topo)
 			if err != nil {
 				return err
 			}
