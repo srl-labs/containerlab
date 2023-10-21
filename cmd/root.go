@@ -126,22 +126,22 @@ func getTopoFilePath(cmd *cobra.Command) error {
 				return err
 			}
 
-			currentDir, err := os.Getwd()
+			err = os.Chdir(githubURL.RepositoryName)
 			if err != nil {
 				return err
 			}
 
-			err = os.Chdir(currentDir + "/" + githubURL.RepositoryName)
-			if err != nil {
-				return err
-			}
+			// once the repo is cloned the topo file is emptied
+			// to ensure that auto find functionality can kick in
+			topo = ""
 
+			// unless the file name is provided in the github url
 			if githubURL.FileName != "" {
 				topo = githubURL.FileName
 			}
 
 		default:
-			return fmt.Errorf("unsupported git repositoy: %s", topo)
+			return fmt.Errorf("unsupported git repository: %s", topo)
 		}
 	}
 
