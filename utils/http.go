@@ -2,13 +2,14 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
+
+var errInvalidGithubURL = errors.New("invalid Github URL")
 
 // GithubURL struct holds the parsed github url.
 type GithubURL struct {
@@ -24,44 +25,43 @@ func NewGithubURL() *GithubURL {
 	return &GithubURL{}
 }
 
-// Tokenize parses the string url.
-func (u *GithubURL) Tokenize(ghURL string) error {
-	suffix := GetYAMLOrGitSuffix(ghURL)
-
+// Parse parses the github.com string url into the GithubURL struct.
+func (u *GithubURL) Parse(ghURL string) error {
 	parsedURL, err := url.Parse(ghURL)
 	if err != nil {
 		return err
 	}
 
-	// split the url path and remove the first empty element
-	splitUrl := strings.Split(parsedURL.Path, "/")[1:]
+	splitPath := strings.Split(parsedURL.Path, "/")
 
-	log.Warnf("%q", splitUrl)
+	if len(splitPath) < 3 || splitPath[2] == "" {
+		return fmt.Errorf("%w %s", errInvalidGithubURL, ghURL)
+	}
 
 	u.URLBase = parsedURL.Scheme + "://" + parsedURL.Host
-	u.ProjectOwner = splitUrl[0]
-	u.RepositoryName = splitUrl[1]
+	u.ProjectOwner = splitPath[1]
+
+	// in case repo url has a trailing .git suffix, trim it
+	splitPath[2] = strings.TrimSuffix(splitPath[2], ".git")
+	u.RepositoryName = splitPath[2]
 
 	switch {
-	case strings.Contains(ghURL, "raw.githubusercontent.com") && (suffix == ".yml" || suffix == ".yaml"):
-		u.URLBase = "https://github.com"
-		u.GitBranch = splitUrl[2]
-		u.FileName = splitUrl[len(splitUrl)-1]
-	case strings.Contains(ghURL, "github.com") && suffix == ".yml" || suffix == ".yaml":
-		u.GitBranch = splitUrl[3]
-		u.FileName = splitUrl[len(splitUrl)-1]
-	case strings.Contains(ghURL, "github.com") && (suffix == ".git" || suffix == ""):
-		// if lenth of the slice of url path is greater than 3, it means that the user has passed in a repo with a branch
-		if len(splitUrl) > 3 && splitUrl[2] == "tree" {
-			u.GitBranch = splitUrl[3]
-			// if the length equals 2 they have passed in a repo without a branch
-		} else if len(splitUrl) == 2 {
-			updatedRepoName := strings.Split(splitUrl[1], ".git")[0]
-			u.RepositoryName = updatedRepoName
-			u.GitBranch = "main"
-		} else {
-			return errors.New("unsupported git repositoy URI format")
+	// path points to a file at a specific git ref
+	case strings.Contains(ghURL, "/blob/"):
+		if splitPath[len(splitPath)-1] == "" || !(strings.HasSuffix(ghURL, ".yml") || strings.HasSuffix(ghURL, ".yaml")) {
+			return errInvalidGithubURL
 		}
+
+		u.FileName = splitPath[len(splitPath)-1]
+		u.GitBranch = splitPath[len(splitPath)-2]
+
+	// path points to a git ref (branch or tag)
+	case strings.Contains(ghURL, "/tree/"):
+		if splitPath[len(splitPath)-1] == "" {
+			return errInvalidGithubURL
+		}
+
+		u.GitBranch = splitPath[len(splitPath)-1]
 	}
 
 	return nil
@@ -84,17 +84,4 @@ func RetrieveGithubRepo(githubURL *GithubURL) error {
 // IsGitHubURL checks if the url is a github url.
 func IsGitHubURL(url string) bool {
 	return strings.Contains(url, "github.com") || strings.Contains(url, "raw.githubusercontent.com")
-}
-
-// GetYAMLOrGitSuffix checks if the string has .y*ml or .git suffix and returns it.
-func GetYAMLOrGitSuffix(url string) string {
-	// ckecks if the url has a valid suffix, if not it returns an error
-	supported_suffix := []string{".yml", ".yaml", ".git"}
-	for _, suffix := range supported_suffix {
-		if strings.HasSuffix(url, suffix) {
-			return suffix
-		}
-	}
-
-	return ""
 }
