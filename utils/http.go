@@ -67,13 +67,18 @@ func (u *GithubURL) Parse(ghURL string) error {
 	return nil
 }
 
-// RetrieveGithubRepo clones the github repo into the current directory.
-func RetrieveGithubRepo(githubURL *GithubURL) error {
-	cmd := exec.Command("git", "clone", githubURL.URLBase+"/"+githubURL.ProjectOwner+"/"+githubURL.RepositoryName+".git", "--branch", githubURL.GitBranch, "--depth", "1")
-	cmd.Dir = "./"
-	err := cmd.Run()
+// CloneGithubRepo clones the github repo into the current directory.
+func CloneGithubRepo(u *GithubURL) error {
+	cloneArgs := []string{"clone", u.URLBase + "/" + u.ProjectOwner + "/" + u.RepositoryName, "--depth", "1"}
+	if u.GitBranch != "" {
+		cloneArgs = append(cloneArgs, []string{"--branch", u.GitBranch}...)
+	}
+
+	cmd := exec.Command("git", cloneArgs...)
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	err := cmd.Run()
 	if err != nil {
 		return err
 	}

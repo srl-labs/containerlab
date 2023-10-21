@@ -121,7 +121,7 @@ func getTopoFilePath(cmd *cobra.Command) error {
 				return err
 			}
 
-			err = utils.RetrieveGithubRepo(githubURL)
+			err = utils.CloneGithubRepo(githubURL)
 			if err != nil {
 				return err
 			}
