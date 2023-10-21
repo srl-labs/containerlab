@@ -1,12 +1,14 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"os/exec"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var errInvalidGithubURL = errors.New("invalid Github URL")
@@ -76,10 +78,17 @@ func CloneGithubRepo(u *GithubURL) error {
 
 	cmd := exec.Command("git", cloneArgs...)
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	log.Infof("cloning %s/%s", u.ProjectOwner, u.RepositoryName)
+
+	cmd.Stdout = log.New().Writer()
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	err := cmd.Run()
 	if err != nil {
+		log.Errorf("failed to clone %s/%s: %v", u.ProjectOwner, u.RepositoryName, err)
+		log.Error(stderr.String())
 		return err
 	}
 
@@ -88,5 +97,7 @@ func CloneGithubRepo(u *GithubURL) error {
 
 // IsGitHubURL checks if the url is a github url.
 func IsGitHubURL(url string) bool {
-	return strings.Contains(url, "github.com") || strings.Contains(url, "raw.githubusercontent.com")
+	return strings.Contains(url, "://github.com") ||
+		strings.Contains(url, "://github.dev") ||
+		strings.Contains(url, "://raw.githubusercontent.com")
 }
