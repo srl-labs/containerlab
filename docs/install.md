@@ -37,14 +37,14 @@ It is possible to install official containerlab releases via public APT/YUM repo
 
 === "APT"
     ```bash
-    echo "deb [trusted=yes] <https://apt.fury.io/netdevops/> /" | \
+    echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
     sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
     sudo apt update && sudo apt install containerlab
     ```
 === "YUM"
     ```
-    yum-config-manager --add-repo=<https://yum.fury.io/netdevops/> && \
+    yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
     echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
     sudo yum install containerlab
@@ -146,18 +146,126 @@ bash
 Once installed, issue `sudo service docker start` to start the docker service inside WSL2 machine.
 
 ??? "Running VM-based routers inside WSL"
-    At the moment of this writing, KVM support was not available out-of-the box with WSL2 VMs. There are [ways](https://www.reddit.com/r/bashonubuntuonwindows/comments/ldbyxa/what_is_the_current_state_of_kvm_acceleration_on/) to enable KVM support, but they were not tested with containerlab. This means that running traditional VM based routers via [vrnetlab integration](manual/vrnetlab.md) is not readily available.
+    In Windows 11 with WSL2 it is now possible to [enable KVM support](https://serverfault.com/a/1115773/351978). Let us know if that worked for you in our [Discord](community.md).
 
-    It appears to be that next versions of WSL2 kernels will support KVM.
+### Apple macOS
 
-### Mac OS
+Running containerlab on Mac OS is possible both on ARM (M1/M2) and Intel chipsets with certain limitations and caveats rooted in different architectures and underlying OS.
 
-Running containerlab on Mac OS is possible[^4] by means of a separate docker image with containerlab inside.
+#### ARM
 
-!!!warning
-    ARM-based Macs (M1/2) are not supported, and no binaries are generated for this platform. This is mainly due to the lack of network images built for arm64 architecture as of now. Nevertheless, it is technically possible to run Containerlab on ARM-based MacBook. Check [How to start Containerlab on ARM-based MacBook](#containerlab-on-arm-based-macs) for details.
+At the moment of this writing, there are not a lot[^6] of Network OSes built for arm64 architecture. This fact alone makes it not practical to run containerlab natively on ARM-based Macs. Nevertheless, it is technically possible to run containerlab on ARM-based Macs by launching a Linux VM with x86_64 architecture and running containerlab inside this VM. This approach comes with a hefty performance penalty, therefore it is suitable only for tiny labs.
 
-To use this container use the following command:
+##### UTM
+
+The easiest way to start a Linux VM with x86_64 architecture on macOS is to use [UTM](https://mac.getutm.app/). UTM is a free[^7] and open-source graphical virtual machine manager that provides a simple and intuitive interface for creating, managing, and running virtual machines with qemu.
+
+When you have UTM installed, you can download a pre-built Debian 12 UTM image built by the Containerlab team using the following command[^8]:
+
+```bash
+sudo docker run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull \
+    ghcr.io/srl-labs/containerlab/clab-utm-box:0.1.0
+```
+
+By running this command you will download the `clab_debian12.utm` file which is a UTM image with `containerlab`, `docker-ce` and `gh` tools pre-installed[^9].
+
+Open the downloaded image with UTM **File -> Open -> select .utm file** and start the VM.
+
+Once the VM is started, you can log in using `debian:debian` credentials. Run `ip -4 addr` in the terminal to find out which IP got assigned to this VM.  
+Now you can use this IP for your Mac terminal to connect to the VM via SSH[^10].
+
+When logged in, you can upgrade the containerlab to the latest version with:
+
+```bash
+sudo clab version upgrade
+```
+
+and start downloading the labs you want to run.
+
+##### Docker in Docker
+
+Another option to run containerlab on ARM-based Macs is to use Docker in Docker approach. With this approach, a docker-in-docker container is launched on the Mac OS inside the VM providing a docker environment. Below is a step-by-step guide on how to set it up.
+
+???tip "Docker in docker guide"
+    We'll provide an example of a custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
+
+    Create `.devcontainer` directory in the root of the Containerlab repository with the following content:
+
+    ```text
+    .devcontainer
+    |- devcontainer.json
+    |- Dockerfile
+    ```
+
+    === "Dockerfile"
+
+        ```Dockerfile
+        # The devcontainer will be based on Python 3.9
+        # The base container already has entrypoint, vscode user account, etc. out of the box
+        FROM mcr.microsoft.com/devcontainers/python:0-3.9-bullseye
+
+        # containelab version will be set in devcontainer.json
+        ARG _CLAB_VERSION
+
+        # install some basic tools inside the container
+        # adjust this list based on your demands
+        RUN apt-get update \
+            && apt-get install -y --no-install-recommends \
+            sshpass \
+            curl \
+            iputils-ping \
+            htop \
+            && rm -rf /var/lib/apt/lists/* \
+            && rm -Rf /usr/share/doc && rm -Rf /usr/share/man \
+            && apt-get clean
+
+        # install preferred version of the containerlab
+        RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
+            && pip3 install --user yamllint
+        ```
+    === "devcontainer.json"
+
+        ```json
+        // For format details, see https://aka.ms/devcontainer.json. For config options, see the
+        // README at: https://github.com/devcontainers/templates/tree/main/src/python
+        {
+            "name": "clab-for-arm",
+            "build": {
+                "dockerfile": "Dockerfile",
+                "args": {
+                    "_CLAB_VERSION": "0.43.0"
+                }
+            },
+            "features": {
+                // Containerlab will run in a docker-in-docker container
+                // it is also possible to use docker-outside-docker feature
+                "ghcr.io/devcontainers/features/docker-in-docker:2.2.0": {
+                    "version": "latest"
+                }
+            },
+            // add any required extensions that must be pre-installed in the devcontainer
+            "customizations": {
+                "vscode": {
+                    "extensions": [
+                        // various tools
+                        "tuxtina.json2yaml",
+                        "vscode-icons-team.vscode-icons",
+                        "mutantdino.resourcemonitor"
+                    ]
+                }
+            }
+        }
+        ```
+
+    Once the devcontainer is defined as described above:
+
+    * Open the devcontainer in VSCode
+    * Import the required images for your cLab inside the container (if you are using Docker-in-Docker option)
+    * Start you Containerlab
+
+#### Intel
+
+On Intel based Macs, containerlab can be run in a Linux VM started by Docker Desktop for Mac[^4]. To start using containerlab in this Linux VM we start a container with containerlab inside and mount the directory with our lab files into the container.
 
 ```shell linenums="1"
 CLAB_WORKDIR=~/clab
@@ -254,84 +362,6 @@ When the container is started, you will have a bash shell opened with the direct
     +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
     ```
 
-#### Containerlab on ARM-based Macs
-
-The easiest option to run Containerlab on ARM-based M1/M2 Macs is to build a docker-in-docker container. We'll provide an example of a custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
-
-Create `.devcontainer` directory in the root of the Containerlab repository with the following content:
-
-```text
-.devcontainer
-|- devcontainer.json
-|- Dockerfile
-```
-
-=== "Dockerfile"
-
-    ```Dockerfile
-    # The devcontainer will be based on Python 3.9
-    # The base container already has entrypoint, vscode user account, etc. out of the box
-    FROM mcr.microsoft.com/devcontainers/python:0-3.9-bullseye
-
-    # containelab version will be set in devcontainer.json
-    ARG _CLAB_VERSION
-
-    # install some basic tools inside the container
-    # adjust this list based on your demands
-    RUN apt-get update \
-        && apt-get install -y --no-install-recommends \
-        sshpass \
-        curl \
-        iputils-ping \
-        htop \
-        && rm -rf /var/lib/apt/lists/* \
-        && rm -Rf /usr/share/doc && rm -Rf /usr/share/man \
-        && apt-get clean
-
-    # install preferred version of the containerlab
-    RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
-        && pip3 install --user yamllint
-    ```
-=== "devcontainer.json"
-
-    ```json
-    // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-    // README at: https://github.com/devcontainers/templates/tree/main/src/python
-    {
-        "name": "clab-for-arm",
-        "build": {
-            "dockerfile": "Dockerfile",
-            "args": {
-                "_CLAB_VERSION": "0.43.0"
-            }
-        },
-        "features": {
-            // Containerlab will run in a docker-in-docker container
-            // it is also possible to use docker-outside-docker feature
-            "ghcr.io/devcontainers/features/docker-in-docker:2.2.0": {
-                "version": "latest"
-            }
-        },
-        // add any required extensions that must be pre-installed in the devcontainer
-        "customizations": {
-            "vscode": {
-                "extensions": [
-                    // various tools
-                    "tuxtina.json2yaml",
-                    "vscode-icons-team.vscode-icons",
-                    "mutantdino.resourcemonitor"
-                ]
-            }
-        }
-    }
-    ```
-
-Once the devcontainer is defined as described above:
-
-* Open the devcontainer in VSCode
-* Import the required images for your cLab inside the container (if you are using Docker-in-Docker option)
-* Start you Containerlab
-
 ### Upgrade
 
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
@@ -394,3 +424,8 @@ sudo setsebool -P selinuxuser_execmod 1
 [^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
 [^4]: kudos to Michael Kashin who [shared](https://github.com/srl-labs/containerlab/issues/577#issuecomment-895847387) this approach with us
 [^5]: otherwise make sure to add a custom shared directory to the docker on mac.
+[^6]: FRR is a good example of arm64-capable network OS. Nokia SR Linux is going to be available for arm64 in the 2024.
+[^7]: There are two options to install UTM: via [downloadable dmg](https://github.com/utmapp/UTM/releases/latest/download/UTM.dmg) file (free) or App Store (paid). The App Store version is exactly the same, it is just a way to support the project.
+[^8]: This command requires docker to be installed on your Mac OS. You can use Docker Desktop, Rancher or [colima](https://github.com/abiosoft/colima) to run docker on your Mac OS.
+[^9]: If you want to install these tools on an existing Debian machine, you can run `wget -qO- containerlab.dev/setup-debian | bash -s -- all` command.
+[^10]: The UTM image has a pre-installed ssh key for the `debian` user. You can download the shared private key from [here](https://github.com/srl-labs/clabernetes/blob/main/launcher/assets/default_id_rsa).

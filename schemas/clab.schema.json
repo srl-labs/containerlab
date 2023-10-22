@@ -348,7 +348,9 @@
                                     "ixr6",
                                     "ixr6e",
                                     "ixr10",
-                                    "ixr10e"
+                                    "ixr10e",
+                                    "sxr1x44s",
+                                    "sxr1d32d"
                                 ]
                             }
                         }
@@ -384,6 +386,7 @@
                                             "sr-a4",
                                             "ixr-e-small",
                                             "ixr-e-big",
+                                            "ixr-e2",
                                             "ixr-ec",
                                             "ixr-r6",
                                             "ixr-s"

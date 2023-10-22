@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	netTypes "github.com/containers/common/libnetwork/types"
@@ -435,8 +436,8 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	}
 
 	// add custom mtu if defined
-	if r.mgmt.MTU != "" {
-		options["mtu"] = r.mgmt.MTU
+	if r.mgmt.MTU != 0 {
+		options["mtu"] = strconv.Itoa(r.mgmt.MTU)
 	}
 	// compile the resulting struct
 	toReturn := netTypes.Network{

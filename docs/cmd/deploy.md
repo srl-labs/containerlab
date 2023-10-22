@@ -22,6 +22,8 @@ When the topology file flag is omitted, containerlab will try to find the matchi
 
 If more than one file is found for directory-based path or when the flag is omitted entirely, containerlab will fail with an error.
 
+It is possible to read the topology file from stdin by passing `-` as a value to the `--topo` flag. See [examples](#deploy-a-lab-from-a-remote-url-with-curl) for more details.
+
 ##### Remote topology files
 
 To simplify the deployment of labs that are stored in remote version control systems, containerlab supports the use of remote topology files for Github.
@@ -158,6 +160,14 @@ containerlab deploy
 
 ```bash
 clab dep -t mylab.clab.yml
+```
+
+
+#### Deploy a lab from a remote URL with curl
+
+```bash
+curl -s https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1be38a8d12b/raw/03067e242d44c9bbe38afa81131e46bab1fa0c42/test.clab.yml | \
+    sudo containerlab deploy -t -
 ```
 
 [^1]: The repository is cloned with `--depth 1` parameter.

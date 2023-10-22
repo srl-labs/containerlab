@@ -29,8 +29,6 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "2001:172:20:20::/64"
-	// NSPath value assigned to host interfaces.
-	hostNSPath = "__host"
 	// veth link mtu.
 	DefaultVethLinkMTU = 9500
 
@@ -270,8 +268,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 
 	if isEmbeddedConfig || isDownloadableConfig {
 		// both embedded and downloadable configs are require clab tmp dir to be created
-		tmpLoc := c.TopoPaths.ClabTmpDir()
-		utils.CreateDirectory(tmpLoc, 0755)
+		c.TopoPaths.CreateTmpDir()
 
 		switch {
 		case isEmbeddedConfig:

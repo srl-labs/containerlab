@@ -4,7 +4,13 @@ type EndpointMacVlan struct {
 	EndpointGeneric
 }
 
-// Verify verifies the veth based deployment pre-conditions.
+func NewEndpointMacVlan(eg *EndpointGeneric) *EndpointMacVlan {
+	return &EndpointMacVlan{
+		EndpointGeneric: *eg,
+	}
+}
+
+// Verify runs verification to check if the endpoint can be deployed.
 func (e *EndpointMacVlan) Verify(_ *VerifyLinkParams) error {
 	return CheckEndpointExists(e)
 }

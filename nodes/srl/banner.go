@@ -15,7 +15,7 @@ const banner = `................................................................
 : Container:   https://go.srlinux.dev/container-image          :
 : Docs:        https://doc.srlinux.dev/%s-%-2s                   :
 : Rel. notes:  https://doc.srlinux.dev/rn%s-%s-%s               :
-: YANG:        https://yang.srlinux.dev/v%s.%s.%s               :
+: YANG:        https://yang.srlinux.dev/release/v%s.%s.%s       :
 : Discord:     https://go.srlinux.dev/discord                  :
 : Contact:     https://go.srlinux.dev/contact-sales            :
 ................................................................

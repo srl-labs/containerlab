@@ -9,14 +9,16 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
+	"github.com/jsimonetti/rtnetlink/rtnl"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
 
 // BridgeByName returns a *netlink.Bridge referenced by its name.
 func BridgeByName(name string) (*netlink.Bridge, error) {
-	l, err := netlink.LinkByName(name)
+	l, err := LinkByNameOrAlias(name)
 	if err != nil {
 		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
 	}
@@ -42,34 +44,6 @@ func LinkContainerNS(nspath, containerName string) error {
 	return nil
 }
 
-func CheckBrInUse(brname string) (bool, error) {
-	InUse := false
-	l, err := netlink.LinkList()
-	if err != nil {
-		return InUse, err
-	}
-	mgmtbr, err := netlink.LinkByName(brname)
-	if err != nil {
-		return InUse, err
-	}
-	mgmtbridx := mgmtbr.Attrs().Index
-	for _, link := range l {
-		if link.Attrs().MasterIndex == mgmtbridx {
-			InUse = true
-			break
-		}
-	}
-	return InUse, nil
-}
-
-func DeleteLinkByName(name string) error {
-	l, err := netlink.LinkByName(name)
-	if err != nil {
-		return err
-	}
-	return netlink.LinkDel(l)
-}
-
 // GenMac generates a random MAC address for a given OUI.
 func GenMac(oui string) (net.HardwareAddr, error) {
 	buf := make([]byte, 3)
@@ -92,7 +66,7 @@ func DeleteNetnsSymlink(n string) error {
 
 // LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name.
 func LinkIPs(ln string) (v4addrs, v6addrs []netlink.Addr, err error) {
-	l, err := netlink.LinkByName(ln)
+	l, err := LinkByNameOrAlias(ln)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to lookup link %q: %w", ln, err)
 	}
@@ -127,4 +101,53 @@ func FirstLinkIPs(ln string) (v4, v6 string, err error) {
 	}
 
 	return v4, v6, err
+}
+
+// GetLinksByNamePrefix returns a list of links whose name matches a prefix.
+func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
+	// filtered list of interfaces
+	if prefix == "" {
+		return nil, fmt.Errorf("prefix is not specified")
+	}
+	var fls []netlink.Link
+
+	ls, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range ls {
+		if strings.HasPrefix(l.Attrs().Name, prefix) {
+			fls = append(fls, l)
+		}
+	}
+	if len(fls) == 0 {
+		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
+	}
+	return fls, nil
+}
+
+func LinkByNameOrAlias(name string) (netlink.Link, error) {
+	var l netlink.Link
+	var err error
+
+	// long interface names (16+ chars) are aliased by clab
+	if len(name) > 15 {
+		l, err = netlink.LinkByAlias(name)
+	} else {
+		l, err = netlink.LinkByName(name)
+	}
+
+	return l, err
+}
+
+func GetRouteForIP(ip net.IP) (*rtnl.Route, error) {
+	conn, err := rtnl.Dial(nil)
+	if err != nil {
+		return nil, fmt.Errorf("can't establish netlink connection: %s", err)
+	}
+	defer conn.Close()
+
+	r, err := conn.RouteGet(ip)
+
+	return r, err
 }

@@ -9,6 +9,7 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -28,10 +29,9 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 	var parentIf netlink.Link
 	var vxlanIf netlink.Link
 	log.Infof("Adding VxLAN link %s to remote address %s via %s with VNI %v", vxlan.Name, vxlan.Remote, vxlan.ParentIf, vxlan.ID)
-	UDPPort := 4789
 
 	// before creating vxlan interface, check if it doesn't exist already
-	if vxlanIf, err = netlink.LinkByName(vxlan.Name); err != nil {
+	if vxlanIf, err = utils.LinkByNameOrAlias(vxlan.Name); err != nil {
 		if _, ok := err.(netlink.LinkNotFoundError); !ok {
 			return fmt.Errorf("failed to check if VxLAN interface %s exists: %v", vxlan.Name, err)
 		}
@@ -40,12 +40,8 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 		return fmt.Errorf("interface %s already exists", vxlan.Name)
 	}
 
-	if parentIf, err = netlink.LinkByName(vxlan.ParentIf); err != nil {
+	if parentIf, err = utils.LinkByNameOrAlias(vxlan.ParentIf); err != nil {
 		return fmt.Errorf("failed to get VxLAN parent interface %s: %v", vxlan.ParentIf, err)
-	}
-
-	if vxlan.UDPPort != 0 {
-		UDPPort = vxlan.UDPPort
 	}
 
 	vxlanconf := netlink.Vxlan{
@@ -56,7 +52,7 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 		VxlanId:      vxlan.ID,
 		VtepDevIndex: parentIf.Attrs().Index,
 		Group:        vxlan.Remote,
-		Port:         UDPPort,
+		Port:         vxlan.UDPPort,
 		Learning:     true,
 		L2miss:       true,
 		L3miss:       true,
