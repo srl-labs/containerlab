@@ -7,10 +7,10 @@ Suite Teardown      Cleanup
 
 
 *** Variables ***
-${lab1-url}                 https://github.com/hellt/clab-test-repo
-${lab1-url2}                https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
-${lab2-url}                 https://github.com/hellt/clab-test-repo/tree/branch1
-${runtime}                  docker
+${lab1-url}     https://github.com/hellt/clab-test-repo
+${lab1-url2}    https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
+${lab2-url}     https://github.com/hellt/clab-test-repo/tree/branch1
+${runtime}      docker
 
 
 *** Test Cases ***
