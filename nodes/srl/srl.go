@@ -33,9 +33,9 @@ import (
 )
 
 const (
-	srlDefaultType = "ixrd2"
+	srlDefaultType = "ixrd2" // default srl node type
 
-	readyTimeout = time.Minute * 2 // max wait time for node to boot
+	readyTimeout = time.Minute * 5 // max wait time for node to boot
 	retryTimer   = time.Second
 
 	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory config.
