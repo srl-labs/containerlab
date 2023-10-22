@@ -43,6 +43,11 @@ func (u *GithubURL) Parse(ghURL string) error {
 		return fmt.Errorf("%w %s", errInvalidGithubURL, ghURL)
 	}
 
+	// github.dev links can be cloned using github.com
+	if parsedURL.Host == "github.dev" {
+		parsedURL.Host = "github.com"
+	}
+
 	u.URLBase = parsedURL.Scheme + "://" + parsedURL.Host
 	u.ProjectOwner = splitPath[1]
 
@@ -101,6 +106,5 @@ func CloneGithubRepo(u *GithubURL) error {
 // IsGitHubURL checks if the url is a github url.
 func IsGitHubURL(url string) bool {
 	return strings.Contains(url, "github.com") ||
-		strings.Contains(url, "github.dev") ||
-		strings.Contains(url, "raw.githubusercontent.com")
+		strings.Contains(url, "github.dev")
 }

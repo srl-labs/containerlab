@@ -38,11 +38,6 @@ func TestIsGitHubURL(t *testing.T) {
 			input: "gitlab.com/containers",
 			want:  false,
 		},
-		{
-			name:  "raw.githubusercontent.com/containers",
-			input: "raw.githubusercontent.com/containers",
-			want:  true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -74,6 +69,16 @@ func TestGithubURLParse(t *testing.T) {
 		{
 			name:  "bare github url with trailing slash",
 			ghURL: "https://github.com/srl-labs/repo-name/",
+			expectedResult: &GithubURL{
+				URLBase:        "https://github.com",
+				ProjectOwner:   "srl-labs",
+				RepositoryName: "repo-name",
+			},
+			expectedError: nil,
+		},
+		{
+			name:  "bare github.dev url with trailing slash",
+			ghURL: "https://github.dev/srl-labs/repo-name/",
 			expectedResult: &GithubURL{
 				URLBase:        "https://github.com",
 				ProjectOwner:   "srl-labs",
