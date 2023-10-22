@@ -6,12 +6,14 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -91,8 +93,10 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 	return getTopoFilePath(cmd)
 }
 
-// getTopoFilePath finds *.clab.y*ml file in the current working directory if the files was note specified using flags
-// errors if more than one file is found by the glob path.
+// getTopoFilePath finds *.clab.y*ml file in the current working directory
+// if the file was not specified.
+// If the topology file refers to a git repository, it will be cloned to the current directory.
+// Errors if more than one file is found by the glob path.
 func getTopoFilePath(cmd *cobra.Command) error {
 	// set commands which may use topo file find functionality, the rest don't need it
 	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" ||
@@ -106,12 +110,45 @@ func getTopoFilePath(cmd *cobra.Command) error {
 		return nil
 	}
 
+	var err error
+	if utils.IsHttpUri(topo) {
+		switch {
+		case utils.IsGitHubURL(topo):
+			githubURL := utils.NewGithubURL()
+
+			err := githubURL.Parse(topo)
+			if err != nil {
+				return err
+			}
+
+			err = utils.CloneGithubRepo(githubURL)
+			if err != nil {
+				return err
+			}
+
+			err = os.Chdir(githubURL.RepositoryName)
+			if err != nil {
+				return err
+			}
+
+			// once the repo is cloned the topo file is emptied
+			// to ensure that auto find functionality can kick in
+			topo = ""
+
+			// unless the file name is provided in the github url
+			if githubURL.FileName != "" {
+				topo = githubURL.FileName
+			}
+
+		default:
+			return fmt.Errorf("unsupported git repository: %s", topo)
+		}
+	}
+
 	// if topo or name flags have been provided, don't try to derive the topo file
 	if topo != "" || name != "" {
 		return nil
 	}
-
-	var err error
 
 	log.Debugf("trying to find topology files automatically")
 

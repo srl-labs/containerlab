@@ -24,6 +24,25 @@ If more than one file is found for directory-based path or when the flag is omit
 
 It is possible to read the topology file from stdin by passing `-` as a value to the `--topo` flag. See [examples](#deploy-a-lab-from-a-remote-url-with-curl) for more details.
 
+##### Remote topology files
+
+To simplify the deployment of labs that are stored in remote version control systems, containerlab supports the use of remote topology files for Github.
+
+By specifying an URL to a repository or a `.clab.yml` file in a repository, containerlab will automatically clone[^1] the repository in your current directory and deploy it. If the URL points to a `.clab.yml` file, containerlab will clone the repository and deploy the lab defined in the file.
+
+The following URL formats are supported:
+
+| Type                                  | Example                                                            | Which topology file is used                                                        |
+| ------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Link to github repository             | <https://github.com/hellt/clab-test-repo/>                           | An auto-find procedure will find a `clab.yml` in the repository root and deploy it |
+| Link to a file in a github repository | <https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml>    | A file specified in the URL will be deployed                                       |
+| Link to a repo's branch               | <https://github.com/hellt/clab-test-repo/tree/branch1>               | A branch of a repo is cloned and auto-find procedure kicks in                      |
+| Link to a file in a branch of a repo  | <https://github.com/hellt/clab-test-repo/blob/branch1/lab2.clab.yml> | A branch is cloned and a file specified in the URL is used for deployment          |
+
+When the lab is deployed using the URL, the repository is cloned in the current working directory. If the repository is already cloned, the clone operation will fail.
+
+Subsequent lab operations (such as destroy) must use the filesystem path to the topology file and not the URL.
+
 #### name
 
 With the global `--name | -n` flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.
@@ -143,9 +162,12 @@ containerlab deploy
 clab dep -t mylab.clab.yml
 ```
 
+
 #### Deploy a lab from a remote URL with curl
 
 ```bash
 curl -s https://gist.githubusercontent.com/hellt/9baa28d7e3cb8290ade1e1be38a8d12b/raw/03067e242d44c9bbe38afa81131e46bab1fa0c42/test.clab.yml | \
     sudo containerlab deploy -t -
 ```
+
+[^1]: The repository is cloned with `--depth 1` parameter.
