@@ -97,7 +97,7 @@ func CloneGithubRepo(u *GithubURL) error {
 
 // IsGitHubURL checks if the url is a github url.
 func IsGitHubURL(url string) bool {
-	return strings.Contains(url, "://github.com") ||
-		strings.Contains(url, "://github.dev") ||
-		strings.Contains(url, "://raw.githubusercontent.com")
+	return strings.Contains(url, "github.com") ||
+		strings.Contains(url, "github.dev") ||
+		strings.Contains(url, "raw.githubusercontent.com")
 }

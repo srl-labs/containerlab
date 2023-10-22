@@ -7,23 +7,50 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestIsGithubURL(t *testing.T) {
-	// tests that github urls are detected
-	var tests = []struct {
-		input    string
-		expected bool
+func TestIsGitHubURL(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
 	}{
-		{"github.com", true},
-		{"github.com/containers/containerlab/blob/master/README.md", true},
-		{"google.com/containers", false},
-		{"google.com/containers/containerlab/blob/master/README.md", false},
-		{"gitlab.com/containers", false},
-		{"raw.githubusercontent.com/containers", true},
+		{
+			name:  "github.com",
+			input: "github.com",
+			want:  true,
+		},
+		{
+			name:  "github.com/containers/containerlab/blob/master/README.md",
+			input: "github.com/containers/containerlab/blob/master/README.md",
+			want:  true,
+		},
+		{
+			name:  "google.com/containers",
+			input: "google.com/containers",
+			want:  false,
+		},
+		{
+			name:  "google.com/containers/containerlab/blob/master/README.md",
+			input: "google.com/containers/containerlab/blob/master/README.md",
+			want:  false,
+		},
+		{
+			name:  "gitlab.com/containers",
+			input: "gitlab.com/containers",
+			want:  false,
+		},
+		{
+			name:  "raw.githubusercontent.com/containers",
+			input: "raw.githubusercontent.com/containers",
+			want:  true,
+		},
 	}
-	for _, test := range tests {
-		if output := IsGitHubURL(test.input); output != test.expected {
-			t.Error("Test Failed: {} inputted, {} expected, recieved: {}", test.input, test.expected, output)
-		}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if output := IsGitHubURL(tt.input); output != tt.want {
+				t.Errorf("Test %q failed: want %v, but got %v", tt.name, tt.want, output)
+			}
+		})
 	}
 }
 
