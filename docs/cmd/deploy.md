@@ -22,6 +22,21 @@ When the topology file flag is omitted, containerlab will try to find the matchi
 
 If more than one file is found for directory-based path or when the flag is omitted entirely, containerlab will fail with an error.
 
+##### Remote topology files
+
+To simplify the deployment of labs that are stored in remote version control systems, containerlab supports the use of remote topology files for Github.
+
+By specifying an URL to a repository or a `.clab.yml` file in a repository, containerlab will automatically clone[^1] the repository in your current directory and deploy it. If the URL points to a `.clab.yml` file, containerlab will clone the repository and deploy the lab defined in the file.
+
+The following URL formats are supported:
+
+| Type                                  | Example                                                            | Which topology file is used                                                        |
+| ------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Link to github repository             | https://github.com/hellt/clab-test-repo/                           | An auto-find procedure will find a `clab.yml` in the repository root and deploy it |
+| Link to a file in a github repository | https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml    | A file specified in the URL will be deployed                                       |
+| Link to a repo's branch               | https://github.com/hellt/clab-test-repo/tree/branch1               | A branch of a repo is cloned and auto-find procedure kicks in                      |
+| Link to a file in a branch of a repo  | https://github.com/hellt/clab-test-repo/blob/branch1/lab2.clab.yml | A branch is cloned and a file specified in the URL is used for deployment          |
+
 #### name
 
 With the global `--name | -n` flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.
@@ -140,3 +155,5 @@ containerlab deploy
 ```bash
 clab dep -t mylab.clab.yml
 ```
+
+[^1]: The repository is cloned with `--depth 1` parameter.
