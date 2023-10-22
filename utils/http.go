@@ -29,6 +29,9 @@ func NewGithubURL() *GithubURL {
 
 // Parse parses the github.com string url into the GithubURL struct.
 func (u *GithubURL) Parse(ghURL string) error {
+	// strip trailing slash
+	ghURL = strings.TrimSuffix(ghURL, "/")
+
 	parsedURL, err := url.Parse(ghURL)
 	if err != nil {
 		return err

@@ -144,6 +144,17 @@ func TestGithubURLParse(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name:  "github url with a specified git ref and no file and trailing slash",
+			ghURL: "https://github.com/srl-labs/repo-name/tree/some-branch/",
+			expectedResult: &GithubURL{
+				URLBase:        "https://github.com",
+				ProjectOwner:   "srl-labs",
+				RepositoryName: "repo-name",
+				GitBranch:      "some-branch",
+			},
+			expectedError: nil,
+		},
 	}
 
 	for _, tt := range tests {
