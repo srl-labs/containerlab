@@ -27,7 +27,7 @@ type GithubURL struct {
 	FileName       string
 }
 
-// Parse parses the github.com string url into the GithubURL struct.
+// ParseGitHubRepoUrl parses the github.com string url into the GithubURL struct.
 func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 	if !IsGitHubURL(ghURL) {
 		return nil, fmt.Errorf("not a github url %q", ghURL)
@@ -96,7 +96,7 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 	return u, nil
 }
 
-// CloneGithubRepo clones the github repo into the current directory.
+// Clone clones the github repo into the current directory.
 func (u *GithubURL) Clone() error {
 	// build the URL with owner and repo name
 	repoUrl := u.URLBase.JoinPath(u.ProjectOwner, u.RepositoryName)
@@ -150,11 +150,11 @@ type GitRepo interface {
 	GetPath() []string
 }
 
-type repoParserRegistry struct {
+type RepositoryParserRegistry struct {
 	Parser []*RepoParser
 }
 
-func (r *repoParserRegistry) Parse(url string) (GitRepo, error) {
+func (r *RepositoryParserRegistry) Parse(url string) (GitRepo, error) {
 	var err error
 	var repo GitRepo
 	for _, p := range r.Parser {
@@ -166,15 +166,15 @@ func (r *repoParserRegistry) Parse(url string) (GitRepo, error) {
 	return nil, fmt.Errorf("%w unable to determine repo parser for %q", errInvalidGithubURL, url)
 }
 
-func NewRepoParserRegistry(rps ...*RepoParser) *repoParserRegistry {
-	reg := &repoParserRegistry{}
+func NewRepoParserRegistry(rps ...*RepoParser) *RepositoryParserRegistry {
+	reg := &RepositoryParserRegistry{}
 	for _, rp := range rps {
 		reg.AddRepoParser(rp)
 	}
 	return reg
 }
 
-func (r *repoParserRegistry) AddRepoParser(rp *RepoParser) {
+func (r *RepositoryParserRegistry) AddRepoParser(rp *RepoParser) {
 	r.Parser = append(r.Parser, rp)
 }
 
