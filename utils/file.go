@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -300,4 +301,40 @@ func FileLines(path, commentStr string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func RecursiveAdjustUIDAndGUID(fsPath string) error {
+	userId, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		return fmt.Errorf("unable to adjust UID and GUI for %q. SUDO_UID not set", fsPath)
+	}
+	groupId, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
+	}
+
+	intUserId, err := strconv.Atoi(userId)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", userId)
+	}
+	intGroupId, err := strconv.Atoi(groupId)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", groupId)
+	}
+
+	err = chownR(fsPath, intUserId, intGroupId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// chownR function to recursively change User and Group
+func chownR(path string, uid, gid int) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err == nil {
+			err = os.Chown(name, uid, gid)
+		}
+		return err
+	})
 }

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"net/url"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -60,7 +61,11 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "bare github url without trailing slash",
 			ghURL: "https://github.com/srl-labs/repo-name",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				Path:           nil,
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 			},
@@ -70,7 +75,11 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "bare github url with trailing slash",
 			ghURL: "https://github.com/srl-labs/repo-name/",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				Path:           nil,
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 			},
@@ -80,7 +89,11 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "bare github.dev url with trailing slash",
 			ghURL: "https://github.dev/srl-labs/repo-name/",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				Path:           nil,
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 			},
@@ -90,7 +103,11 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "bare github url with .git suffix",
 			ghURL: "https://github.com/srl-labs/repo-name.git",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				Path:           nil,
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 			},
@@ -112,7 +129,11 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "github url with a clab file on the main branch",
 			ghURL: "https://github.com/srl-labs/repo-name/blob/main/file.clab.yml",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				Path:           []string{},
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 				GitBranch:      "main",
@@ -124,10 +145,14 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "github url with a yaml file on the main branch",
 			ghURL: "https://github.com/srl-labs/repo-name/blob/main/file.yaml",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 				GitBranch:      "main",
+				Path:           []string{},
 				FileName:       "file.yaml",
 			},
 			expectedError: nil,
@@ -142,10 +167,14 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "github url with a specified git ref and no file",
 			ghURL: "https://github.com/srl-labs/repo-name/tree/some-branch",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 				GitBranch:      "some-branch",
+				Path:           []string{},
 			},
 			expectedError: nil,
 		},
@@ -153,10 +182,76 @@ func TestGithubURLParse(t *testing.T) {
 			name:  "github url with a specified git ref and no file and trailing slash",
 			ghURL: "https://github.com/srl-labs/repo-name/tree/some-branch/",
 			expectedResult: &GithubURL{
-				URLBase:        "https://github.com",
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
 				ProjectOwner:   "srl-labs",
 				RepositoryName: "repo-name",
 				GitBranch:      "some-branch",
+				Path:           []string{},
+			},
+			expectedError: nil,
+		},
+		{
+			name:  "github url with ref to file in subdir",
+			ghURL: "https://github.com/srl-labs/containerlab/blob/main/lab-examples/srl01/srl01.clab.yml",
+			expectedResult: &GithubURL{
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				ProjectOwner:   "srl-labs",
+				RepositoryName: "containerlab",
+				GitBranch:      "main",
+				Path:           []string{"lab-examples", "srl01"},
+				FileName:       "srl01.clab.yml",
+			},
+			expectedError: nil,
+		},
+		{
+			name:  "github url with ref to subdir",
+			ghURL: "https://github.com/srl-labs/containerlab/tree/main/lab-examples/srl01/",
+			expectedResult: &GithubURL{
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				ProjectOwner:   "srl-labs",
+				RepositoryName: "containerlab",
+				GitBranch:      "main",
+				Path:           []string{"lab-examples", "srl01"},
+			},
+			expectedError: nil,
+		},
+		{
+			name:  "github url with tree ref to repo root",
+			ghURL: "https://github.com/srl-labs/containerlab/tree/main",
+			expectedResult: &GithubURL{
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				ProjectOwner:   "srl-labs",
+				RepositoryName: "containerlab",
+				GitBranch:      "main",
+				Path:           []string{},
+			},
+			expectedError: nil,
+		},
+		{
+			name:  "github url with tree ref to file in repo root",
+			ghURL: "https://github.com/srl-labs/containerlab/blob/main/mytopo.yml",
+			expectedResult: &GithubURL{
+				URLBase: url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+				},
+				ProjectOwner:   "srl-labs",
+				RepositoryName: "containerlab",
+				GitBranch:      "main",
+				Path:           []string{},
+				FileName:       "mytopo.yml",
 			},
 			expectedError: nil,
 		},
@@ -164,8 +259,8 @@ func TestGithubURLParse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := NewGithubURL()
-			err := u.Parse(tt.ghURL)
+
+			repo, err := ParseGitHubRepoUrl(tt.ghURL)
 
 			if err != nil && tt.expectedError == nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -185,8 +280,8 @@ func TestGithubURLParse(t *testing.T) {
 				return
 			}
 
-			if diff := cmp.Diff(u, tt.expectedResult); diff != "" {
-				t.Errorf("got result: = %v, expected %v, diff:\n%s", u, tt.expectedResult, diff)
+			if diff := cmp.Diff(repo, tt.expectedResult); diff != "" {
+				t.Errorf("got result: = %v, expected %v, diff:\n%s", repo, tt.expectedResult, diff)
 			}
 		})
 	}

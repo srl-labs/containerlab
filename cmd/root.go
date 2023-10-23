@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -112,37 +111,31 @@ func getTopoFilePath(cmd *cobra.Command) error {
 
 	var err error
 	if utils.IsHttpUri(topo) {
-		switch {
-		case utils.IsGitHubURL(topo):
-			githubURL := utils.NewGithubURL()
 
-			err := githubURL.Parse(topo)
-			if err != nil {
-				return err
-			}
-
-			err = utils.CloneGithubRepo(githubURL)
-			if err != nil {
-				return err
-			}
-
-			err = os.Chdir(githubURL.RepositoryName)
-			if err != nil {
-				return err
-			}
-
-			// once the repo is cloned the topo file is emptied
-			// to ensure that auto find functionality can kick in
-			topo = ""
-
-			// unless the file name is provided in the github url
-			if githubURL.FileName != "" {
-				topo = githubURL.FileName
-			}
-
-		default:
-			return fmt.Errorf("unsupported git repository: %s", topo)
+		repo, err := utils.RepoParserRegistry.Parse(topo)
+		if err != nil {
+			return err
 		}
+
+		err = repo.Clone()
+		if err != nil {
+			return err
+		}
+
+		err = utils.RecursiveAdjustUIDAndGUID(repo.GetRepoName())
+		if err != nil {
+			log.Errorf("error adjusting repository permissions %v. Continuing anyways", err)
+		}
+
+		// change dir to the
+		err = os.Chdir(filepath.Join(repo.GetPath()...))
+		if err != nil {
+			return err
+		}
+
+		// once the repo is cloned the topo file is emptied
+		// to ensure that auto find functionality can kick in
+		topo = repo.GetFilename()
 	}
 
 	// if topo or name flags have been provided, don't try to derive the topo file
