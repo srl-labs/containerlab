@@ -34,14 +34,19 @@ The following URL formats are supported:
 
 | Type                                  | Example                                                            | Which topology file is used                                                        |
 | ------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Link to github repository             | <https://github.com/hellt/clab-test-repo/>                           | An auto-find procedure will find a `clab.yml` in the repository root and deploy it |
-| Link to a file in a github repository | <https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml>    | A file specified in the URL will be deployed                                       |
-| Link to a repo's branch               | <https://github.com/hellt/clab-test-repo/tree/branch1>               | A branch of a repo is cloned and auto-find procedure kicks in                      |
-| Link to a file in a branch of a repo  | <https://github.com/hellt/clab-test-repo/blob/branch1/lab2.clab.yml> | A branch is cloned and a file specified in the URL is used for deployment          |
+| Link to github repository             | https://github.com/hellt/clab-test-repo/                           | An auto-find procedure will find a `clab.yml` in the repository root and deploy it |
+| Link to a file in a github repository | https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml    | A file specified in the URL will be deployed                                       |
+| Link to a repo's branch               | https://github.com/hellt/clab-test-repo/tree/branch1               | A branch of a repo is cloned and auto-find procedure kicks in                      |
+| Link to a file in a branch of a repo  | https://github.com/hellt/clab-test-repo/blob/branch1/lab2.clab.yml | A branch is cloned and a file specified in the URL is used for deployment          |
 
 When the lab is deployed using the URL, the repository is cloned in the current working directory. If the repository is already cloned, the clone operation will fail.
 
 Subsequent lab operations (such as destroy) must use the filesystem path to the topology file and not the URL.
+
+???note "Remote labs workflow in action"
+    <video width="100%" controls>
+        <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/5f0a7579f85c7d6af1fe05c254f42bb5/remote-labs2.mp4" type="video/mp4">
+    </video>
 
 #### name
 
@@ -161,7 +166,6 @@ containerlab deploy
 ```bash
 clab dep -t mylab.clab.yml
 ```
-
 
 #### Deploy a lab from a remote URL with curl
 
