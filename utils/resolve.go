@@ -53,7 +53,7 @@ func ExtractDNSServersFromResolvConf(filesys fs.FS, filenames []string) ([]strin
 	DNSServers := make([]string, 0, len(DNSServersMap))
 	var count int
 	for k := range DNSServersMap {
-		if count == 2 {
+		if count == 3 {
 			// keep only the first three DNS servers
 			// since C DNS resolver can't handle more
 			break
