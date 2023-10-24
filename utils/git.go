@@ -21,16 +21,11 @@ type GoGit struct {
 // make sure GoGit satisfies the Git interface
 var _ Git = (*GoGit)(nil)
 
-func NewGoGit(gitRepo GitRepo) (*GoGit, error) {
-	// load the git repository
-	r, err := gogit.PlainOpen(gitRepo.GetRepoName())
-	if err != nil {
-		return nil, err
-	}
+func NewGoGit(gitRepo GitRepo) *GoGit {
+
 	return &GoGit{
 		gitRepo: gitRepo,
-		r:       r,
-	}, nil
+	}
 }
 
 // Clone takes the given GitRepo reference and clones the repo
@@ -73,12 +68,32 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 func (g *GoGit) cloneExistingRepo() error {
 	log.Debugf("loading git repository %q", g.gitRepo.GetRepoName())
 
+	// load the git repository
+	r, err := gogit.PlainOpen(g.gitRepo.GetRepoName())
+	if err != nil {
+		return err
+	}
+
+	// loading remote
+	remote, err := r.Remote("origin")
+	if err != nil {
+		return err
+	}
+
+	// checking that the configured remote equals the provided remote
+	if remote.Config().URLs[0] != g.gitRepo.GetRepoUrl().String() {
+		return fmt.Errorf("repository url of %q differs (%q) from the provided url (%q). stopping", g.gitRepo.GetRepoName(), remote.Config().URLs[0], g.gitRepo.GetRepoUrl().String())
+	}
+
 	// get the worktree reference
 	tree, err := g.r.Worktree()
 	if err != nil {
 		return err
 	}
 
+	// resolve the branch
+	// the branch ref from the URL might be empty -> ""
+	// then we need to figure out whats the default branch main / master / sth. else.
 	branch := g.gitRepo.GetBranch()
 	if g.gitRepo.GetBranch() != "" {
 		log.Debugf("default branch not set. determining it")
