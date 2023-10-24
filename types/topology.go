@@ -516,7 +516,15 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 			return kindDNS
 		}
 	}
-	return t.GetDefaults().GetDns()
+
+	defaultDNS := t.GetDefaults().GetDns()
+	if defaultDNS == nil {
+		// initialize defaultDNS to an empty DNSConfig struct
+		// so that we don't have to check for nil in the caller
+		defaultDNS = &DNSConfig{}
+	}
+
+	return defaultDNS
 }
 
 // GetCertificateConfig returns the certificate configuration for the given node.
