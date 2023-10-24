@@ -2,6 +2,8 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
+	"os"
 	"os/exec"
 
 	gogit "github.com/go-git/go-git/v5"
@@ -25,6 +27,61 @@ func NewGoGit(gitRepo GitRepo) *GoGit {
 // Clone takes the given GitRepo reference and clones the repo
 // with its internal implementation.
 func (g *GoGit) Clone() error {
+	// if the directory is not present
+	if s, err := os.Stat(g.gitRepo.GetRepoName()); os.IsNotExist(err) {
+		return g.cloneNonExisting()
+	} else if s.IsDir() {
+		return g.cloneExisting()
+	}
+	return fmt.Errorf("error %q exists already but is a file", g.gitRepo.GetRepoName())
+}
+
+func (g *GoGit) cloneExisting() error {
+	log.Debugf("loading git repository %q", g.gitRepo.GetRepoName())
+	// load the git repository
+	r, err := gogit.PlainOpen(g.gitRepo.GetRepoName())
+	if err != nil {
+		return err
+	}
+	// get the worktree reference
+	tree, err := r.Worktree()
+	if err != nil {
+		return err
+	}
+
+	if g.gitRepo.GetBranch() != "" {
+		log.Debugf("checking out branch %q", g.gitRepo.GetBranch())
+		// prepare the checkout options
+		checkoutOpts := &gogit.CheckoutOptions{
+			Branch: plumbing.NewBranchReferenceName(g.gitRepo.GetBranch()),
+			Keep:   true,
+			Force:  true,
+		}
+		// execute the checkout
+		err = tree.Checkout(checkoutOpts)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Debug("pulling latest repo data")
+	// init the pull options
+	pullOpts := &gogit.PullOptions{
+		Depth:        1,
+		SingleBranch: true,
+		Force:        true,
+	}
+	// execute the pull
+	err = tree.Pull(pullOpts)
+	if err == gogit.NoErrAlreadyUpToDate {
+		log.Debugf("git repository up to date")
+		err = nil
+	}
+
+	return err
+}
+
+func (g *GoGit) cloneNonExisting() error {
 	// init clone options
 	co := &gogit.CloneOptions{
 		Depth:        1,
