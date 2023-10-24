@@ -35,8 +35,6 @@ site/
 .DS_Store
 __rd*
 tests/out
-**/.*clab.y?ml
-
-# ignore clab backup topo files in test directories
-clab/test_data/*.bak
-tests/**/*.bak
+# ignore backup clab topo files
+**/.*clab.y*ml.bak
+**/*.y*ml.bak
