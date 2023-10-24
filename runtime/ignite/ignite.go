@@ -198,7 +198,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runti
 	vm.Labels = nodecfg.Labels
 	metadata.SetNameAndUID(vm, providers.Client)
 
-	copyFiles := []api.FileMapping{}
+	var copyFiles []api.FileMapping
 	for _, bind := range nodecfg.Binds {
 		parts := strings.Split(bind, ":")
 		if len(parts) < 2 {
@@ -328,7 +328,7 @@ func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.Gene
 		return result, fmt.Errorf("failed to generate filters: %s", err)
 	}
 
-	filteredVMs := []*api.VM{}
+	var filteredVMs []*api.VM
 	for _, vm := range allVMs {
 		isExpected, err := filters.AreExpected(vm)
 		if err != nil {
