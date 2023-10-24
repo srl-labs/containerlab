@@ -7,21 +7,30 @@ import (
 	"os/exec"
 
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/storage/memory"
 	log "github.com/sirupsen/logrus"
 )
 
 type GoGit struct {
 	gitRepo GitRepo
+	r       *gogit.Repository
 }
 
 // make sure GoGit satisfies the Git interface
 var _ Git = (*GoGit)(nil)
 
-func NewGoGit(gitRepo GitRepo) *GoGit {
+func NewGoGit(gitRepo GitRepo) (*GoGit, error) {
+	// load the git repository
+	r, err := gogit.PlainOpen(gitRepo.GetRepoName())
+	if err != nil {
+		return nil, err
+	}
 	return &GoGit{
 		gitRepo: gitRepo,
-	}
+		r:       r,
+	}, nil
 }
 
 // Clone takes the given GitRepo reference and clones the repo
@@ -31,37 +40,84 @@ func (g *GoGit) Clone() error {
 	if s, err := os.Stat(g.gitRepo.GetRepoName()); os.IsNotExist(err) {
 		return g.cloneNonExisting()
 	} else if s.IsDir() {
-		return g.cloneExisting()
+		return g.cloneExistingRepo()
 	}
 	return fmt.Errorf("error %q exists already but is a file", g.gitRepo.GetRepoName())
 }
 
-func (g *GoGit) cloneExisting() error {
-	log.Debugf("loading git repository %q", g.gitRepo.GetRepoName())
-	// load the git repository
-	r, err := gogit.PlainOpen(g.gitRepo.GetRepoName())
+func (g *GoGit) getDefaultBranch() (string, error) {
+
+	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{g.gitRepo.GetRepoUrl().String()},
+	})
+
+	log.Debug("Fetching tags...")
+
+	// We can then use every Remote functions to retrieve wanted information
+	refs, err := rem.List(&gogit.ListOptions{})
 	if err != nil {
-		return err
+		return "", err
 	}
+
+	for _, ref := range refs {
+		if ref.Type() == plumbing.SymbolicReference && ref.Name() == plumbing.HEAD {
+			return ref.Target().Short(), nil
+		}
+	}
+
+	return "", fmt.Errorf("unable to determine default branch for %q", g.gitRepo.GetRepoUrl().String())
+
+}
+
+func (g *GoGit) cloneExistingRepo() error {
+	log.Debugf("loading git repository %q", g.gitRepo.GetRepoName())
+
 	// get the worktree reference
-	tree, err := r.Worktree()
+	tree, err := g.r.Worktree()
 	if err != nil {
 		return err
 	}
 
+	branch := g.gitRepo.GetBranch()
 	if g.gitRepo.GetBranch() != "" {
-		log.Debugf("checking out branch %q", g.gitRepo.GetBranch())
-		// prepare the checkout options
-		checkoutOpts := &gogit.CheckoutOptions{
-			Branch: plumbing.NewBranchReferenceName(g.gitRepo.GetBranch()),
-			Keep:   true,
-			Force:  true,
-		}
-		// execute the checkout
-		err = tree.Checkout(checkoutOpts)
+		log.Debugf("default branch not set. determining it")
+		branch, err = g.getDefaultBranch()
 		if err != nil {
 			return err
 		}
+		log.Debugf("default branch is %q", branch)
+	}
+
+	// prepare the checkout options
+	checkoutOpts := &gogit.CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName(branch),
+	}
+
+	// check if the branch already exists locally.
+	// if not fetch it and check it out.
+
+	if _, err = g.r.Reference(plumbing.NewBranchReferenceName(branch), false); err != nil {
+		err = g.fetchNonExistingBranch(branch)
+		if err != nil {
+			return err
+		}
+
+		ref, err := g.r.Reference(plumbing.NewRemoteReferenceName("origin", branch), true)
+		if err != nil {
+			return err
+		}
+
+		checkoutOpts.Hash = ref.Hash()
+		checkoutOpts.Create = true
+	}
+
+	log.Debugf("checking out branch %q", branch)
+
+	// execute the checkout
+	err = tree.Checkout(checkoutOpts)
+	if err != nil {
+		return err
 	}
 
 	log.Debug("pulling latest repo data")
@@ -81,7 +137,34 @@ func (g *GoGit) cloneExisting() error {
 	return err
 }
 
+func (g *GoGit) fetchNonExistingBranch(branch string) error {
+	// init the remote
+	remote, err := g.r.Remote("origin")
+	if err != nil {
+		return err
+	}
+
+	localRef := plumbing.NewBranchReferenceName(branch)
+	remoteRef := plumbing.NewRemoteReferenceName("origin", branch)
+
+	// init fetch options
+	fetchOpts := &gogit.FetchOptions{
+		Depth:    1,
+		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("%s:%s", localRef, remoteRef))},
+	}
+
+	// execute the fetch
+	err = remote.Fetch(fetchOpts)
+	if err == gogit.NoErrAlreadyUpToDate {
+		log.Debugf("git repository up to date")
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (g *GoGit) cloneNonExisting() error {
+	var err error
 	// init clone options
 	co := &gogit.CloneOptions{
 		Depth:        1,
@@ -92,10 +175,15 @@ func (g *GoGit) cloneNonExisting() error {
 	if g.gitRepo.GetBranch() != "" {
 		co.ReferenceName = plumbing.NewBranchReferenceName(g.gitRepo.GetBranch())
 	} else {
-		co.ReferenceName = plumbing.HEAD
+		branchName, err := g.getDefaultBranch()
+		if err != nil {
+			return err
+		}
+		co.ReferenceName = plumbing.NewBranchReferenceName(branchName)
 	}
+
 	// perform clone
-	_, err := gogit.PlainClone(g.gitRepo.GetRepoName(), false, co)
+	_, err = gogit.PlainClone(g.gitRepo.GetRepoName(), false, co)
 	return err
 }
 

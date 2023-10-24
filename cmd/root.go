@@ -119,7 +119,10 @@ func getTopoFilePath(cmd *cobra.Command) error {
 		}
 
 		// Instantiate the git implementation to use.
-		gitImpl := utils.NewGoGit(repo)
+		gitImpl, err := utils.NewGoGit(repo)
+		if err != nil {
+			return err
+		}
 
 		// clone the repo via the Git Implementation
 		err = gitImpl.Clone()

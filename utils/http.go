@@ -111,6 +111,9 @@ func (u *GitHubGitRepo) GetRepoName() string {
 // GetBranch returns the referenced Git branch name.
 // the empty string is returned otherwise.
 func (u *GitHubGitRepo) GetBranch() string {
+	if u.GitBranch == "" {
+		return "HEAD"
+	}
 	return u.GitBranch
 }
 
