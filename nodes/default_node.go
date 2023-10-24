@@ -162,7 +162,7 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericConta
 	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
-			Match:      fmt.Sprintf("^%s$", d.OverwriteNode.GetContainerName()), // this regexp ensure we have an exact match for name
+			Match:      d.OverwriteNode.GetContainerName(),
 		},
 	})
 	if err != nil {

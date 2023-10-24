@@ -644,36 +644,37 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 }
 
 func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*runtime.GenericContainer, error) {
-	var ctr *runtime.GenericContainer
-	gFilter := types.GenericFilter{
-		FilterType: "name",
-		Field:      "",
-		Operator:   "",
-		Match:      fmt.Sprintf("^%s$", cID), // this regexp ensure we have an exact match for name
-	}
-
-	ctrs, err := d.ListContainers(ctx, []*types.GenericFilter{&gFilter})
+	ctrs, err := d.ListContainers(ctx, []*types.GenericFilter{
+		{
+			FilterType: "name",
+			Match:      cID,
+		},
+	})
 	if err != nil {
-		return ctr, err
+		return nil, err
 	}
 
 	if len(ctrs) != 1 {
-		return ctr, fmt.Errorf("found unexpected number of containers: %d", len(ctrs))
+		return nil, fmt.Errorf("found unexpected number of containers: %d", len(ctrs))
 	}
 
 	return &ctrs[0], nil
 }
 
-func (*DockerRuntime) buildFilterString(gfilters []*types.GenericFilter) filters.Args {
+func (*DockerRuntime) buildFilterString(gFilters []*types.GenericFilter) filters.Args {
 	filter := filters.NewArgs()
-	for _, filterentry := range gfilters {
-		filterstr := filterentry.Field
-		if filterentry.Operator != "exists" {
-			filterstr = filterstr + filterentry.Operator + filterentry.Match
+	for _, gF := range gFilters {
+		filterStr := ""
+		if gF.Operator == "exists" {
+			filterStr = gF.Field
+		} else if gF.FilterType == "name" {
+			filterStr = fmt.Sprintf("^%s$", gF.Match) // this regexp ensure we have an exact match for name
+		} else {
+			filterStr = gF.Field + gF.Operator + gF.Match
 		}
 
-		log.Debugf("Filter key: %s, filter value: %s", filterentry.FilterType, filterstr)
-		filter.Add(filterentry.FilterType, filterstr)
+		log.Debugf("Filter key: %s, filter value: %s", gF.FilterType, filterStr)
+		filter.Add(gF.FilterType, filterStr)
 	}
 
 	return filter
