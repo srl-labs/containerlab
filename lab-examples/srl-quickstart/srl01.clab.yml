@@ -1,6 +1,6 @@
-name: clab
-# node name will be clab-srl
-prefix: __lab-name
+name: srl
+# node name will be srl unless overridden by CLAB_PREFIX
+prefix: ${CLAB_PREFIX:=""}
 
 topology:
   nodes:
