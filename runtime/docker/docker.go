@@ -647,7 +647,7 @@ func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*runtime.
 	ctrs, err := d.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "name",
-			Match:      fmt.Sprintf("^%s$", cID), // this regexp ensure we have an exact match for name
+			Match:      cID,
 		},
 	})
 	if err != nil {
@@ -668,7 +668,7 @@ func (*DockerRuntime) buildFilterString(gFilters []*types.GenericFilter) filters
 		if gF.Operator == "exists" {
 			filterStr = gF.Field
 		} else if gF.FilterType == "name" {
-			filterStr = gF.Match
+			filterStr = fmt.Sprintf("^%s$", gF.Match) // this regexp ensure we have an exact match for name
 		} else {
 			filterStr = gF.Field + gF.Operator + gF.Match
 		}

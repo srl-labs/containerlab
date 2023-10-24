@@ -303,11 +303,13 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	var result []runtime.GenericContainer
 
-	var labelStrings []string
+	var metaFilters []string
 	for _, gf := range gfilters {
 		if gf.FilterType == "label" && gf.Operator == "=" {
-			labelStrings = append(labelStrings, fmt.Sprintf(
+			metaFilters = append(metaFilters, fmt.Sprintf(
 				"{{.ObjectMeta.Labels.%s}}=%s", gf.Field, gf.Match))
+		} else if gf.FilterType == "name" {
+			metaFilters = append(metaFilters, fmt.Sprintf("{{.ObjectMeta.Name}}=%s", gf.Match))
 		}
 	}
 
@@ -316,11 +318,11 @@ func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.Gene
 		return result, fmt.Errorf("failed to list all VMs: %s", err)
 	}
 
-	if len(labelStrings) < 1 {
+	if len(metaFilters) < 1 {
 		return c.produceGenericContainerList(allVMs)
 	}
 
-	metaFilter := strings.Join(labelStrings, ",")
+	metaFilter := strings.Join(metaFilters, ",")
 	filters, err := filter.GenerateMultipleMetadataFiltering(metaFilter)
 	if err != nil {
 		return result, fmt.Errorf("failed to generate filters: %s", err)
