@@ -2,12 +2,10 @@ package utils
 
 import (
 	"io/fs"
-	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestExtractDNSServersFromResolvConf(t *testing.T) {
@@ -132,6 +130,7 @@ search .
 					"etc/someother/resolv.conf": &fstest.MapFile{
 						Data: []byte(
 							`
+nameserver 2.2.2.2
 nameserver 8.8.8.8
 options edns0 trust-ad
 search .					
@@ -141,7 +140,7 @@ search .
 				},
 				filenames: []string{"etc/resolv.conf", "etc/someother/resolv.conf"},
 			},
-			want:    []string{"1.1.1.1", "8.8.8.8"},
+			want:    []string{"1.1.1.1", "2.2.2.2", "8.8.8.8"},
 			wantErr: false,
 		},
 		{
@@ -163,16 +162,7 @@ search .
 				return
 			}
 
-			if diff := cmp.Diff(got, tt.want, cmpopts.SortSlices(func(s1, s2 string) bool {
-				switch strings.Compare(s1, s2) {
-				case -1:
-					return false
-				case 0:
-					return true
-				}
-				return true
-			},
-			)); diff != "" {
+			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf(diff)
 			}
 		})
