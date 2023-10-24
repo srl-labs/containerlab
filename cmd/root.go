@@ -112,16 +112,23 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	var err error
 	if utils.IsHttpUri(topo) {
 
+		// parse the Repo reference via the RepoParserRegistry
 		repo, err := utils.RepoParserRegistry.Parse(topo)
 		if err != nil {
 			return err
 		}
 
-		err = repo.Clone()
+		// Instantiate the git implementation to use.
+		gitImpl := utils.NewGoGit(repo)
+
+		// clone the repo via the Git Implementation
+		err = gitImpl.Clone()
 		if err != nil {
 			return err
 		}
 
+		// adjust permissions for the checked out repo
+		// it would belong to root/root otherwise
 		err = utils.RecursiveAdjustUIDAndGUID(repo.GetRepoName())
 		if err != nil {
 			log.Errorf("error adjusting repository permissions %v. Continuing anyways", err)

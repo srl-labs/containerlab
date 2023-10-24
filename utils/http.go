@@ -1,14 +1,10 @@
 package utils
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
-	"os/exec"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var RepoParserRegistry = NewRepoParserRegistry(
@@ -17,8 +13,8 @@ var RepoParserRegistry = NewRepoParserRegistry(
 
 var errInvalidGithubURL = errors.New("invalid Github URL")
 
-// GithubURL struct holds the parsed github url.
-type GithubURL struct {
+// GitHubGitRepo struct holds the parsed github url.
+type GitHubGitRepo struct {
 	URLBase        url.URL
 	ProjectOwner   string
 	RepositoryName string
@@ -33,7 +29,7 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 		return nil, fmt.Errorf("not a github url %q", ghURL)
 	}
 
-	u := &GithubURL{}
+	u := &GitHubGitRepo{}
 
 	// strip trailing slash
 	ghURL = strings.TrimSuffix(ghURL, "/")
@@ -96,45 +92,31 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 	return u, nil
 }
 
-// Clone clones the github repo into the current directory.
-func (u *GithubURL) Clone() error {
-	// build the URL with owner and repo name
-	repoUrl := u.URLBase.JoinPath(u.ProjectOwner, u.RepositoryName)
-
-	cloneArgs := []string{"clone", repoUrl.String(), "--depth", "1"}
-	if u.GitBranch != "" {
-		cloneArgs = append(cloneArgs, []string{"--branch", u.GitBranch}...)
-	}
-
-	cmd := exec.Command("git", cloneArgs...)
-
-	log.Infof("cloning %q", repoUrl.String())
-
-	cmd.Stdout = log.New().Writer()
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		log.Errorf("failed to clone %q: %v", repoUrl.String(), err)
-		log.Error(stderr.String())
-		return err
-	}
-
-	return nil
-}
-
-func (u *GithubURL) GetFilename() string {
+// GetFilename returns the filename if a file was specifically referenced.
+// the empty string is returned otherwise.
+func (u *GitHubGitRepo) GetFilename() string {
 	return u.FileName
 }
 
-func (u *GithubURL) GetPath() []string {
+// Returns the path within the repository that was pointed to
+func (u *GitHubGitRepo) GetPath() []string {
 	return u.Path
 }
 
-func (u *GithubURL) GetRepoName() string {
+// GetRepoName returns the repository name
+func (u *GitHubGitRepo) GetRepoName() string {
 	return u.RepositoryName
+}
+
+// GetBranch returns the referenced Git branch name.
+// the empty string is returned otherwise.
+func (u *GitHubGitRepo) GetBranch() string {
+	return u.GitBranch
+}
+
+// GetRepoUrl returns the URL of the repository
+func (u *GitHubGitRepo) GetRepoUrl() *url.URL {
+	return u.URLBase.JoinPath(u.ProjectOwner, u.RepositoryName)
 }
 
 // IsGitHubURL checks if the url is a github url.
@@ -145,9 +127,10 @@ func IsGitHubURL(url string) bool {
 
 type GitRepo interface {
 	GetRepoName() string
-	Clone() error
 	GetFilename() string
 	GetPath() []string
+	GetRepoUrl() *url.URL
+	GetBranch() string
 }
 
 type RepositoryParserRegistry struct {
