@@ -459,20 +459,16 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 	filters := map[string][]string{}
 	for _, gF := range gFilters {
 		filterType := gF.FilterType
-		filterOp := gF.Operator
-		filterValue := gF.Match
-		if filterOp == "exists" {
-			filterOp = "="
-			filterValue = ""
-		}
 		filterStr := ""
-		if filterType == "name" {
-			filterStr = filterValue
-		} else if filterOp != "=" {
+		if gF.Operator == "exists" {
+			filterStr = gF.Field + "="
+		} else if filterType == "name" {
+			filterStr = gF.Match
+		} else if gF.Operator != "=" {
 			log.Warnf("received a filter with unsupported match type: %+v", gF)
 			continue
 		} else {
-			filterStr = gF.Field + filterOp + filterValue
+			filterStr = gF.Field + "=" + gF.Match
 		}
 		log.Debugf("produced a filterStr %q from inputs %+v", filterStr, gF)
 		_, ok := filters[filterType]
