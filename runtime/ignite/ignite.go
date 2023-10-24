@@ -277,7 +277,7 @@ func (*IgniteRuntime) CreateContainer(_ context.Context, node *types.NodeConfig)
 	return node.LongName, nil
 }
 
-func (i *IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
+func (*IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
 	pid, err := utils.ContainerNSToPID(cID)
 	if err != nil {
 		return err
@@ -286,7 +286,7 @@ func (i *IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
 	return utils.PauseProcessGroup(pid)
 }
 
-func (i *IgniteRuntime) UnpauseContainer(_ context.Context, cID string) error {
+func (*IgniteRuntime) UnpauseContainer(_ context.Context, cID string) error {
 	pid, err := utils.ContainerNSToPID(cID)
 	if err != nil {
 		return err
@@ -448,12 +448,12 @@ func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string)
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
 // no-op for ignite.
-func (c *IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
+func (*IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container.
-func (c *IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) runtime.ContainerStatus {
+func (*IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) runtime.ContainerStatus {
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {
 		return runtime.NotFound
