@@ -223,7 +223,7 @@ func processScpUri(src string) (io.ReadCloser, error) {
 	knownHostsPath := ResolvePath("~/.ssh/known_hosts", "")
 
 	// try loading ssh agent keys
-	clientConfig, _ := auth.SshAgent(u.User.Username(), getCustomHostKeyCallback(knownHostsPath, "/tmp/foobar")) // skipcq: GSC-G106
+	clientConfig, _ := auth.SshAgent(u.User.Username(), getCustomHostKeyCallback(knownHostsPath)) // skipcq: GSC-G106
 
 	// if CLAB_SSH_KEY is set we use the key referenced here
 	keyPath := os.Getenv("CLAB_SSH_KEY")
@@ -271,7 +271,7 @@ func processScpUri(src string) (io.ReadCloser, error) {
 	}
 
 	// Create a new SCP client
-	client := scp.NewClient(fmt.Sprintf("%s:%s", hostname, port), &clientConfig)
+	client := scp.NewClient(net.JoinHostPort(hostname, port), &clientConfig)
 
 	// Connect to the remote server
 	err = client.Connect()
@@ -312,7 +312,7 @@ func processFtpUri(src string) (io.ReadCloser, error) {
 	}
 
 	// establish connection
-	c, err := ftp.Dial(fmt.Sprintf("%s:%s", hostname, port), ftp.DialWithTimeout(5*time.Second))
+	c, err := ftp.Dial(net.JoinHostPort(hostname, port), ftp.DialWithTimeout(5*time.Second))
 	if err != nil {
 		return nil, err
 	}
