@@ -34,25 +34,19 @@ type GitLabGitRepo struct {
 	GitRepoStruct
 }
 
-func ParseGitLabRepoUrl(urlStr string) (GitRepo, error) {
-
-	if !IsGitLabURL(urlStr) {
-		return nil, fmt.Errorf("not a gitlab url %q", urlStr)
+func ParseGitLabRepoUrl(parsedURL *url.URL) (GitRepo, error) {
+	if !IsGitLabURL(parsedURL) {
+		return nil, fmt.Errorf("not a gitlab url %q", parsedURL.String())
 	}
 
 	u := &GitLabGitRepo{}
-
-	parsedURL, err := url.Parse(urlStr)
-	if err != nil {
-		return nil, err
-	}
 
 	splitPath := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
 
 	// path need to hold at least 2 elements,
 	// user / org and repo
 	if len(splitPath) < 2 || splitPath[0] == "" || splitPath[1] == "" {
-		return nil, fmt.Errorf("%w %s", errInvalidURL, urlStr)
+		return nil, fmt.Errorf("%w %s", errInvalidURL, parsedURL.String())
 	}
 
 	u.URLBase = *parsedURL  // copy parsed url
@@ -94,29 +88,27 @@ func ParseGitLabRepoUrl(urlStr string) (GitRepo, error) {
 	return u, nil
 }
 
-func IsGitLabURL(url string) bool {
-	return strings.Contains(url, "gitlab")
+func IsGitLabURL(u *url.URL) bool {
+	// we're looking for the "gitlab" sub-string in the entire URL
+	// we probably need a better strategy here. Anyways it is working for now.
+	return strings.Contains(u.String(), "gitlab")
 }
 
 // ParseGitHubRepoUrl parses the github.com string url into the GithubURL struct.
-func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
-	if !IsGitHubURL(ghURL) {
-		return nil, fmt.Errorf("not a github url %q", ghURL)
+func ParseGitHubRepoUrl(parsedURL *url.URL) (GitRepo, error) {
+
+	if !IsGitHubURL(parsedURL) {
+		return nil, fmt.Errorf("not a github url %q", parsedURL.String())
 	}
 
 	u := &GitHubGitRepo{}
-
-	parsedURL, err := url.Parse(ghURL)
-	if err != nil {
-		return nil, err
-	}
 
 	splitPath := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
 
 	// path need to hold at least 2 elements,
 	// user / org and repo
 	if len(splitPath) < 2 || splitPath[0] == "" || splitPath[1] == "" {
-		return nil, fmt.Errorf("%w %s", errInvalidURL, ghURL)
+		return nil, fmt.Errorf("%w %s", errInvalidURL, parsedURL.String())
 	}
 
 	// github.dev links can be cloned using github.com
@@ -191,9 +183,9 @@ func (u *GitRepoStruct) GetRepoUrl() *url.URL {
 }
 
 // IsGitHubURL checks if the url is a github url.
-func IsGitHubURL(url string) bool {
-	return strings.Contains(url, "github.com") ||
-		strings.Contains(url, "github.dev")
+func IsGitHubURL(url *url.URL) bool {
+	return strings.Contains(url.Host, "github.com") ||
+		strings.Contains(url.Host, "github.dev")
 }
 
 type GitRepo interface {
@@ -208,16 +200,22 @@ type RepositoryParserRegistry struct {
 	Parser []*RepoParser
 }
 
-func (r *RepositoryParserRegistry) Parse(url string) (GitRepo, error) {
+func (r *RepositoryParserRegistry) Parse(urlStr string) (GitRepo, error) {
 	var err error
 	var repo GitRepo
+
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, p := range r.Parser {
-		repo, err = p.Parser(url)
+		repo, err = p.Parser(parsedURL)
 		if err == nil {
 			return repo, nil
 		}
 	}
-	return nil, fmt.Errorf("%w unable to determine repo parser for %q", errInvalidURL, url)
+	return nil, fmt.Errorf("%w unable to determine repo parser for %q", errInvalidURL, urlStr)
 }
 
 func NewRepoParserRegistry(rps ...*RepoParser) *RepositoryParserRegistry {
@@ -237,4 +235,4 @@ type RepoParser struct {
 	Parser ParserFunc
 }
 
-type ParserFunc func(string) (GitRepo, error)
+type ParserFunc func(*url.URL) (GitRepo, error)
