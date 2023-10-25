@@ -9,13 +9,14 @@ import (
 
 var RepoParserRegistry = NewRepoParserRegistry(
 	&RepoParser{"github", ParseGitHubRepoUrl},
+	&RepoParser{"gitlab", ParseGitLabRepoUrl},
 )
 
-var errInvalidGithubURL = errors.New("invalid Github URL")
+var errInvalidURL = errors.New("invalid URL")
 
-// gitRepoStruct is a struct that contains all the fields
+// GitRepoStruct is a struct that contains all the fields
 // required for a GitRepo instance.
-type gitRepoStruct struct {
+type GitRepoStruct struct {
 	URLBase        url.URL
 	ProjectOwner   string
 	RepositoryName string
@@ -26,28 +27,71 @@ type gitRepoStruct struct {
 
 // GitHubGitRepo struct holds the parsed github url.
 type GitHubGitRepo struct {
-	gitRepoStruct
+	GitRepoStruct
 }
 
 type GitLabGitRepo struct {
-	gitRepoStruct
+	GitRepoStruct
 }
 
-// func ParseGitLabRepoUrl(urlStr string) (GitRepo, error) {
-// 	u := &GitLabGitRepo{}
+func ParseGitLabRepoUrl(urlStr string) (GitRepo, error) {
+	u := &GitLabGitRepo{}
 
-// 	// strip trailing slash
-// 	urlStr = strings.TrimSuffix(urlStr, "/")
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
 
-// 	parsedURL, err := url.Parse(urlStr)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	splitPath := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
 
-// 	splitPath := strings.Split(strings.TrimPrefix(parsedURL.Path, "/"), "/")
+	// path need to hold at least 2 elements,
+	// user / org and repo
+	if len(splitPath) < 2 || splitPath[0] == "" || splitPath[1] == "" {
+		return nil, fmt.Errorf("%w %s", errInvalidURL, urlStr)
+	}
 
-// 	return u, nil
-// }
+	u.URLBase = *parsedURL  // copy parsed url
+	u.URLBase.Fragment = "" // reset fragment
+	u.URLBase.Path = ""     // reset path
+	u.URLBase.RawQuery = "" // reset rawquery
+
+	u.ProjectOwner = splitPath[0]
+
+	// in case repo url has a trailing .git suffix, trim it
+	u.RepositoryName = strings.TrimSuffix(splitPath[1], ".git")
+
+	switch {
+	case len(splitPath) == 2:
+		return u, nil
+	case len(splitPath) < 5:
+		return nil, fmt.Errorf("%w invalid github path. should have either 2 or >= 5 path elements", errInvalidURL)
+	}
+
+	u.GitBranch = splitPath[4]
+
+	switch {
+	// path points to a file at a specific git ref
+	case splitPath[3] == "blob":
+		if !(strings.HasSuffix(parsedURL.Path, ".yml") || strings.HasSuffix(parsedURL.Path, ".yaml")) {
+			return nil, errInvalidURL
+		}
+		u.Path = splitPath[5 : len(splitPath)-1]
+		u.FileName = splitPath[len(splitPath)-1]
+	// path points to a git ref (branch or tag)
+	case splitPath[3] == "tree":
+		if splitPath[len(splitPath)-1] == "" {
+			return nil, errInvalidURL
+		}
+		u.Path = splitPath[5:]
+		u.FileName = "" // no filename, a dir is referenced
+	}
+
+	return u, nil
+}
+
+func IsGitLabURL(url string) bool {
+	return strings.Contains(url, "gitlab")
+}
 
 // ParseGitHubRepoUrl parses the github.com string url into the GithubURL struct.
 func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
@@ -57,20 +101,17 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 
 	u := &GitHubGitRepo{}
 
-	// strip trailing slash
-	ghURL = strings.TrimSuffix(ghURL, "/")
-
 	parsedURL, err := url.Parse(ghURL)
 	if err != nil {
 		return nil, err
 	}
 
-	splitPath := strings.Split(strings.TrimPrefix(parsedURL.Path, "/"), "/")
+	splitPath := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
 
 	// path need to hold at least 2 elements,
 	// user / org and repo
 	if len(splitPath) < 2 || splitPath[0] == "" || splitPath[1] == "" {
-		return nil, fmt.Errorf("%w %s", errInvalidGithubURL, ghURL)
+		return nil, fmt.Errorf("%w %s", errInvalidURL, ghURL)
 	}
 
 	// github.dev links can be cloned using github.com
@@ -86,14 +127,13 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 	u.ProjectOwner = splitPath[0]
 
 	// in case repo url has a trailing .git suffix, trim it
-	splitPath[1] = strings.TrimSuffix(splitPath[1], ".git")
-	u.RepositoryName = splitPath[1]
+	u.RepositoryName = strings.TrimSuffix(splitPath[1], ".git")
 
 	switch {
 	case len(splitPath) == 2:
 		return u, nil
 	case len(splitPath) < 4:
-		return nil, fmt.Errorf("%w invalid github path. should have either 2 or >= 4 path elements", errInvalidGithubURL)
+		return nil, fmt.Errorf("%w invalid github path. should have either 2 or >= 4 path elements", errInvalidURL)
 	}
 
 	u.GitBranch = splitPath[3]
@@ -101,15 +141,15 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 	switch {
 	// path points to a file at a specific git ref
 	case splitPath[2] == "blob":
-		if !(strings.HasSuffix(ghURL, ".yml") || strings.HasSuffix(ghURL, ".yaml")) {
-			return nil, errInvalidGithubURL
+		if !(strings.HasSuffix(parsedURL.Path, ".yml") || strings.HasSuffix(parsedURL.Path, ".yaml")) {
+			return nil, errInvalidURL
 		}
 		u.Path = splitPath[4 : len(splitPath)-1]
 		u.FileName = splitPath[len(splitPath)-1]
 	// path points to a git ref (branch or tag)
 	case splitPath[2] == "tree":
 		if splitPath[len(splitPath)-1] == "" {
-			return nil, errInvalidGithubURL
+			return nil, errInvalidURL
 		}
 		u.Path = splitPath[4:]
 		u.FileName = "" // no filename, a dir is referenced
@@ -120,28 +160,28 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 
 // GetFilename returns the filename if a file was specifically referenced.
 // the empty string is returned otherwise.
-func (u *gitRepoStruct) GetFilename() string {
+func (u *GitRepoStruct) GetFilename() string {
 	return u.FileName
 }
 
 // Returns the path within the repository that was pointed to
-func (u *gitRepoStruct) GetPath() []string {
+func (u *GitRepoStruct) GetPath() []string {
 	return u.Path
 }
 
 // GetRepoName returns the repository name
-func (u *gitRepoStruct) GetRepoName() string {
+func (u *GitRepoStruct) GetRepoName() string {
 	return u.RepositoryName
 }
 
 // GetBranch returns the referenced Git branch name.
 // the empty string is returned otherwise.
-func (u *gitRepoStruct) GetBranch() string {
+func (u *GitRepoStruct) GetBranch() string {
 	return u.GitBranch
 }
 
 // GetRepoUrl returns the URL of the repository
-func (u *gitRepoStruct) GetRepoUrl() *url.URL {
+func (u *GitRepoStruct) GetRepoUrl() *url.URL {
 	return u.URLBase.JoinPath(u.ProjectOwner, u.RepositoryName)
 }
 
@@ -172,7 +212,7 @@ func (r *RepositoryParserRegistry) Parse(url string) (GitRepo, error) {
 			return repo, nil
 		}
 	}
-	return nil, fmt.Errorf("%w unable to determine repo parser for %q", errInvalidGithubURL, url)
+	return nil, fmt.Errorf("%w unable to determine repo parser for %q", errInvalidURL, url)
 }
 
 func NewRepoParserRegistry(rps ...*RepoParser) *RepositoryParserRegistry {
