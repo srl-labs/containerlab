@@ -61,13 +61,15 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "bare github url without trailing slash",
 			ghURL: "https://github.com/srl-labs/repo-name",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					Path:           nil,
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
 				},
-				Path:           nil,
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
 			},
 			expectedError: nil,
 		},
@@ -75,13 +77,15 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "bare github url with trailing slash",
 			ghURL: "https://github.com/srl-labs/repo-name/",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					Path:           nil,
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
 				},
-				Path:           nil,
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
 			},
 			expectedError: nil,
 		},
@@ -89,13 +93,15 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "bare github.dev url with trailing slash",
 			ghURL: "https://github.dev/srl-labs/repo-name/",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					Path:           nil,
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
 				},
-				Path:           nil,
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
 			},
 			expectedError: nil,
 		},
@@ -103,13 +109,15 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "bare github url with .git suffix",
 			ghURL: "https://github.com/srl-labs/repo-name.git",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					Path:           nil,
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
 				},
-				Path:           nil,
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
 			},
 			expectedError: nil,
 		},
@@ -129,15 +137,17 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with a clab file on the main branch",
 			ghURL: "https://github.com/srl-labs/repo-name/blob/main/file.clab.yml",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					Path:           []string{},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
+					GitBranch:      "main",
+					FileName:       "file.clab.yml",
 				},
-				Path:           []string{},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
-				GitBranch:      "main",
-				FileName:       "file.clab.yml",
 			},
 			expectedError: nil,
 		},
@@ -145,15 +155,17 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with a yaml file on the main branch",
 			ghURL: "https://github.com/srl-labs/repo-name/blob/main/file.yaml",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
+					GitBranch:      "main",
+					Path:           []string{},
+					FileName:       "file.yaml",
 				},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
-				GitBranch:      "main",
-				Path:           []string{},
-				FileName:       "file.yaml",
 			},
 			expectedError: nil,
 		},
@@ -167,14 +179,16 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with a specified git ref and no file",
 			ghURL: "https://github.com/srl-labs/repo-name/tree/some-branch",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
+					GitBranch:      "some-branch",
+					Path:           []string{},
 				},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
-				GitBranch:      "some-branch",
-				Path:           []string{},
 			},
 			expectedError: nil,
 		},
@@ -182,14 +196,16 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with a specified git ref and no file and trailing slash",
 			ghURL: "https://github.com/srl-labs/repo-name/tree/some-branch/",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "repo-name",
+					GitBranch:      "some-branch",
+					Path:           []string{},
 				},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "repo-name",
-				GitBranch:      "some-branch",
-				Path:           []string{},
 			},
 			expectedError: nil,
 		},
@@ -197,15 +213,17 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with ref to file in subdir",
 			ghURL: "https://github.com/srl-labs/containerlab/blob/main/lab-examples/srl01/srl01.clab.yml",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "containerlab",
+					GitBranch:      "main",
+					Path:           []string{"lab-examples", "srl01"},
+					FileName:       "srl01.clab.yml",
 				},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "containerlab",
-				GitBranch:      "main",
-				Path:           []string{"lab-examples", "srl01"},
-				FileName:       "srl01.clab.yml",
 			},
 			expectedError: nil,
 		},
@@ -213,14 +231,16 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with ref to subdir",
 			ghURL: "https://github.com/srl-labs/containerlab/tree/main/lab-examples/srl01/",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "containerlab",
+					GitBranch:      "main",
+					Path:           []string{"lab-examples", "srl01"},
 				},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "containerlab",
-				GitBranch:      "main",
-				Path:           []string{"lab-examples", "srl01"},
 			},
 			expectedError: nil,
 		},
@@ -228,14 +248,16 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with tree ref to repo root",
 			ghURL: "https://github.com/srl-labs/containerlab/tree/main",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "containerlab",
+					GitBranch:      "main",
+					Path:           []string{},
 				},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "containerlab",
-				GitBranch:      "main",
-				Path:           []string{},
 			},
 			expectedError: nil,
 		},
@@ -243,15 +265,17 @@ func TestGitHubGitRepoParse(t *testing.T) {
 			name:  "github url with tree ref to file in repo root",
 			ghURL: "https://github.com/srl-labs/containerlab/blob/main/mytopo.yml",
 			expectedResult: &GitHubGitRepo{
-				URLBase: url.URL{
-					Scheme: "https",
-					Host:   "github.com",
+				gitRepoStruct: gitRepoStruct{
+					URLBase: url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+					},
+					ProjectOwner:   "srl-labs",
+					RepositoryName: "containerlab",
+					GitBranch:      "main",
+					Path:           []string{},
+					FileName:       "mytopo.yml",
 				},
-				ProjectOwner:   "srl-labs",
-				RepositoryName: "containerlab",
-				GitBranch:      "main",
-				Path:           []string{},
-				FileName:       "mytopo.yml",
 			},
 			expectedError: nil,
 		},

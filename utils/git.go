@@ -47,8 +47,6 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 		URLs: []string{g.gitRepo.GetRepoUrl().String()},
 	})
 
-	log.Debug("Fetching tags...")
-
 	// We can then use every Remote functions to retrieve wanted information
 	refs, err := rem.List(&gogit.ListOptions{})
 	if err != nil {
@@ -106,7 +104,7 @@ func (g *GoGit) cloneExistingRepo() error {
 	// the branch ref from the URL might be empty -> ""
 	// then we need to figure out whats the default branch main / master / sth. else.
 	branch := g.gitRepo.GetBranch()
-	if g.gitRepo.GetBranch() != "" {
+	if branch == "" {
 		log.Debugf("default branch not set. determining it")
 		branch, err = g.getDefaultBranch()
 		if err != nil {

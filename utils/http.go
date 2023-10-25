@@ -13,8 +13,9 @@ var RepoParserRegistry = NewRepoParserRegistry(
 
 var errInvalidGithubURL = errors.New("invalid Github URL")
 
-// GitHubGitRepo struct holds the parsed github url.
-type GitHubGitRepo struct {
+// gitRepoStruct is a struct that contains all the fields
+// required for a GitRepo instance.
+type gitRepoStruct struct {
 	URLBase        url.URL
 	ProjectOwner   string
 	RepositoryName string
@@ -22,6 +23,31 @@ type GitHubGitRepo struct {
 	Path           []string
 	FileName       string
 }
+
+// GitHubGitRepo struct holds the parsed github url.
+type GitHubGitRepo struct {
+	gitRepoStruct
+}
+
+type GitLabGitRepo struct {
+	gitRepoStruct
+}
+
+// func ParseGitLabRepoUrl(urlStr string) (GitRepo, error) {
+// 	u := &GitLabGitRepo{}
+
+// 	// strip trailing slash
+// 	urlStr = strings.TrimSuffix(urlStr, "/")
+
+// 	parsedURL, err := url.Parse(urlStr)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	splitPath := strings.Split(strings.TrimPrefix(parsedURL.Path, "/"), "/")
+
+// 	return u, nil
+// }
 
 // ParseGitHubRepoUrl parses the github.com string url into the GithubURL struct.
 func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
@@ -94,31 +120,28 @@ func ParseGitHubRepoUrl(ghURL string) (GitRepo, error) {
 
 // GetFilename returns the filename if a file was specifically referenced.
 // the empty string is returned otherwise.
-func (u *GitHubGitRepo) GetFilename() string {
+func (u *gitRepoStruct) GetFilename() string {
 	return u.FileName
 }
 
 // Returns the path within the repository that was pointed to
-func (u *GitHubGitRepo) GetPath() []string {
+func (u *gitRepoStruct) GetPath() []string {
 	return u.Path
 }
 
 // GetRepoName returns the repository name
-func (u *GitHubGitRepo) GetRepoName() string {
+func (u *gitRepoStruct) GetRepoName() string {
 	return u.RepositoryName
 }
 
 // GetBranch returns the referenced Git branch name.
 // the empty string is returned otherwise.
-func (u *GitHubGitRepo) GetBranch() string {
-	if u.GitBranch == "" {
-		return "HEAD"
-	}
+func (u *gitRepoStruct) GetBranch() string {
 	return u.GitBranch
 }
 
 // GetRepoUrl returns the URL of the repository
-func (u *GitHubGitRepo) GetRepoUrl() *url.URL {
+func (u *gitRepoStruct) GetRepoUrl() *url.URL {
 	return u.URLBase.JoinPath(u.ProjectOwner, u.RepositoryName)
 }
 
