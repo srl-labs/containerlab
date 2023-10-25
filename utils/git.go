@@ -65,17 +65,28 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 
 }
 
+func (g *GoGit) openRepo() error {
+	var err error
+
+	// load the git repository
+	g.r, err = gogit.PlainOpen(g.gitRepo.GetRepoName())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (g *GoGit) cloneExistingRepo() error {
 	log.Debugf("loading git repository %q", g.gitRepo.GetRepoName())
 
-	// load the git repository
-	r, err := gogit.PlainOpen(g.gitRepo.GetRepoName())
+	// open the existing repo
+	err := g.openRepo()
 	if err != nil {
 		return err
 	}
 
 	// loading remote
-	remote, err := r.Remote("origin")
+	remote, err := g.r.Remote("origin")
 	if err != nil {
 		return err
 	}
@@ -159,13 +170,15 @@ func (g *GoGit) fetchNonExistingBranch(branch string) error {
 		return err
 	}
 
+	// build the RefSpec, that wires the remote to the locla branch
 	localRef := plumbing.NewBranchReferenceName(branch)
 	remoteRef := plumbing.NewRemoteReferenceName("origin", branch)
+	refSpec := config.RefSpec(fmt.Sprintf("+%s:%s", localRef, remoteRef))
 
 	// init fetch options
 	fetchOpts := &gogit.FetchOptions{
 		Depth:    1,
-		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("%s:%s", localRef, remoteRef))},
+		RefSpecs: []config.RefSpec{refSpec},
 	}
 
 	// execute the fetch
@@ -175,7 +188,15 @@ func (g *GoGit) fetchNonExistingBranch(branch string) error {
 	} else if err != nil {
 		return err
 	}
-	return nil
+
+	// make sure the branch is also showing up in .git/config
+	err = g.r.CreateBranch(&config.Branch{
+		Name:   branch,
+		Remote: "origin",
+		Merge:  localRef,
+	})
+
+	return err
 }
 
 func (g *GoGit) cloneNonExisting() error {
@@ -198,7 +219,8 @@ func (g *GoGit) cloneNonExisting() error {
 	}
 
 	// perform clone
-	_, err = gogit.PlainClone(g.gitRepo.GetRepoName(), false, co)
+	g.r, err = gogit.PlainClone(g.gitRepo.GetRepoName(), false, co)
+
 	return err
 }
 
