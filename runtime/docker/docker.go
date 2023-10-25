@@ -460,7 +460,10 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		AutoRemove:  node.AutoRemove,
 	}
 
-	if node.DNS != nil {
+	netModeArr := strings.SplitN(node.NetworkMode, ":", 2)
+
+	// docker does not allow mixing DNS and container mode options
+	if node.DNS != nil && netModeArr[0] != "container" {
 		containerHostConfig.DNS = node.DNS.Servers
 		containerHostConfig.DNSSearch = node.DNS.Search
 		containerHostConfig.DNSOptions = node.DNS.Options
