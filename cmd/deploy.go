@@ -306,6 +306,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// log new version availability info if ready
 	newVerNotification(vCh)
 
+	err = utils.RecursiveAdjustUIDAndGUID(c.TopoPaths.TopologyLabDir())
+	if err != nil {
+		log.Infof("error adjusting LabDir permissions: %v. Continuing anyways", err)
+	}
+
 	// print table summary
 	return printContainerInspect(containers, deployFormat)
 }
