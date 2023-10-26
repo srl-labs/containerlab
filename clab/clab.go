@@ -790,6 +790,13 @@ func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
 	// we set the DNS servers that we've extracted.
 	for _, n := range c.Nodes {
 		config := n.Config()
+		// skip nodes in container network mode since docker doesn't allow
+		// setting dns config for them
+		if strings.HasPrefix(config.NetworkMode, "container") {
+			log.Debugf("Skipping DNS config for node %s as it is in container network mode", config.ShortName)
+			continue
+		}
+
 		if config.DNS == nil {
 			config.DNS = &types.DNSConfig{}
 		}
