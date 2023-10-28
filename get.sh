@@ -128,6 +128,24 @@ setDesiredVersion() {
     fi
 }
 
+# docsLinkFromVer returns the url portion for release notes
+# based on the Go docsLinkFromVer() function in version.go
+docsLinkFromVer() {
+  ver=$1
+  IFS='.' read -ra segments <<< "$ver"
+  maj=${segments[0]}
+  min=${segments[1]}
+  patch=${segments[2]}
+
+  relSlug="$maj.$min/"
+  if [ -n "$patch" ]; then
+    if [ "$patch" -ne 0 ]; then
+      relSlug="$relSlug#$maj$min$patch"
+    fi
+  fi
+  echo "$relSlug"
+}
+
 # checkInstalledVersion checks which version is installed and
 # if it needs to be changed.
 checkInstalledVersion() {
@@ -138,10 +156,11 @@ checkInstalledVersion() {
             return 0
         else
             if [ "$(printf '%s\n' "$TAG_WO_VER" "$version" | sort -V | head -n1)" = "$TAG_WO_VER" ]; then
+                RN_VER=$(docsLinkFromVer $TAG_WO_VER)
                 echo "A newer ${BINARY_NAME} version $version is already installed"
                 echo "You are running ${BINARY_NAME} version $version"
                 echo "You are trying to downgrade to ${BINARY_NAME} version ${TAG_WO_VER}"
-                echo "Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
+                echo "Release notes: https://containerlab.dev/rn/${RN_VER}"
                 UPGR_NEEDED="Y"
                 # check if stdin is open (i.e. capable of getting users input)
                 if [ -t 0 ]; then
@@ -152,7 +171,8 @@ checkInstalledVersion() {
                 fi
                 return 0
             else
-                echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
+                RN_VER=$(docsLinkFromVer $TAG_WO_VER)
+                echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${RN_VER}"
                 echo "You are running containerlab $version version"
                 UPGR_NEEDED="Y"
                 # check if stdin is open (i.e. capable of getting users input)
