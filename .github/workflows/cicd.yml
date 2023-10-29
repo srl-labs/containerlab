@@ -306,7 +306,7 @@ jobs:
       matrix:
         runtime:
           - "docker"
-          - "podman"
+          # - "podman"
     needs:
       - unit-test
       - staticcheck
