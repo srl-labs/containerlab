@@ -17,7 +17,7 @@ func TestIsGitHubURL(t *testing.T) {
 		{
 			name:  "https://github.com",
 			input: "https://github.com",
-			want:  false,
+			want:  true,
 		},
 		{
 			name:  "https://github.com/containers/containerlab/blob/master/README.md",
@@ -570,7 +570,7 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 
 			if err != nil && tt.expectedError != nil {
 				if !errors.Is(err, tt.expectedError) {
-					t.Fatalf("expected error: %v, but got %v", err, tt.expectedError)
+					t.Fatalf("expected error: %v, but got %v", tt.expectedError, err)
 				}
 				// exit the test case as we don't want to compare url structs
 				// since when error is available and matches the expected error

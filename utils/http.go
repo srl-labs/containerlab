@@ -72,7 +72,7 @@ func ParseGitLabRepoUrl(parsedURL *url.URL) (GitRepo, error) {
 	// path points to a file at a specific git ref
 	case splitPath[3] == "blob":
 		if !(strings.HasSuffix(parsedURL.Path, ".yml") || strings.HasSuffix(parsedURL.Path, ".yaml")) {
-			return nil, fmt.Errorf("referenced file must be *.yml or *.yaml. %q is therefor invlaid", splitPath[len(splitPath)-1])
+			return nil, fmt.Errorf("%w referenced file must be *.yml or *.yaml. %q is therefor invalid", errInvalidURL, splitPath[len(splitPath)-1])
 		}
 		u.Path = splitPath[5 : len(splitPath)-1]
 		u.FileName = splitPath[len(splitPath)-1]
