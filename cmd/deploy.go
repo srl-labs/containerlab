@@ -306,7 +306,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// log new version availability info if ready
 	newVerNotification(vCh)
 
-	err = utils.RecursiveAdjustUIDAndGUID(c.TopoPaths.TopologyLabDir())
+	// setting uid/gid of a calling user to the lab directory
+	err = utils.SetUIDAndGID(c.TopoPaths.TopologyLabDir())
 	if err != nil {
 		log.Infof("error adjusting LabDir permissions: %v. Continuing anyways", err)
 	}

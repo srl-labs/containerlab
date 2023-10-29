@@ -303,42 +303,46 @@ func FileLines(path, commentStr string) ([]string, error) {
 	return lines, nil
 }
 
-// RecursiveAdjustUIDAndGUID tries to changes the UID and GID
-// of the given path recursively to value taken from
+// SetUIDAndGID changes the UID and GID
+// of the given path recursively to the values taken from
 // SUDO_UID and SUDO_GID. Which should reflect be the non-root
 // user that called clab via sudo.
-func RecursiveAdjustUIDAndGUID(fsPath string) error {
-	userId, isSet := os.LookupEnv("SUDO_UID")
+func SetUIDAndGID(fsPath string) error {
+	uid, isSet := os.LookupEnv("SUDO_UID")
 	if !isSet {
-		return fmt.Errorf("unable to adjust UID and GUI for %q. SUDO_UID not set", fsPath)
-	}
-	groupId, isSet := os.LookupEnv("SUDO_GID")
-	if !isSet {
-		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
+		return errors.New("failed to lookup SUDO_UID env var")
 	}
 
-	intUserId, err := strconv.Atoi(userId)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_UID %q to int", userId)
-	}
-	intGroupId, err := strconv.Atoi(groupId)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_GID %q to int", groupId)
+	gid, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return errors.New("failed to lookup SUDO_GID env var")
 	}
 
-	err = chownR(fsPath, intUserId, intGroupId)
+	iUID, err := strconv.Atoi(uid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
+	}
+
+	iGID, err := strconv.Atoi(gid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
+	}
+
+	err = recursiveChown(fsPath, iUID, iGID)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
-// chownR function to recursively change User and Group
-func chownR(path string, uid, gid int) error {
+// recursiveChown function recursively chowns a path.
+func recursiveChown(path string, uid, gid int) error {
 	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
 		if err == nil {
 			err = os.Chown(name, uid, gid)
 		}
+
 		return err
 	})
 }
