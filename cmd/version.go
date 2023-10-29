@@ -99,7 +99,7 @@ func newVerNotification(vc chan string) {
 	case ver, ok := <-vc:
 		if ok {
 			relSlug := docsLinkFromVer(ver)
-			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.dev/install/\n", ver, relSlug)
+			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.dev/rn/%s\nRun 'sudo containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.dev/install/\n", ver, relSlug)
 		}
 	default:
 		return

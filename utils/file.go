@@ -308,9 +308,13 @@ func FileLines(path, commentStr string) ([]string, error) {
 // SUDO_UID and SUDO_GID. Which should reflect be the non-root
 // user that called clab via sudo.
 func SetUIDAndGID(fsPath string) error {
+	// here we trust sudo to set up env variables
+	// a missing SUDO_UID env var indicates the root user
+	// runs clab without sudo
 	uid, isSet := os.LookupEnv("SUDO_UID")
 	if !isSet {
-		return errors.New("failed to lookup SUDO_UID env var")
+		// nothing to do, already running as root
+		return nil
 	}
 
 	gid, isSet := os.LookupEnv("SUDO_GID")
