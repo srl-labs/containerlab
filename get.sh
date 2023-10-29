@@ -47,6 +47,9 @@ detectOS() {
             PKG_FORMAT="rpm"
         ;;
 
+        alpine)
+            PKG_FORMAT="apk"
+        ;;
         *)
             if type "rpm" &>/dev/null; then
                 PKG_FORMAT="rpm"
@@ -247,6 +250,8 @@ installPkg() {
 setPkgInstaller() {
     if [ $PKG_FORMAT == "deb" ]; then
         PKG_INSTALLER="dpkg -i"
+    elif [ $PKG_FORMAT == "apk" ]; then
+        PKG_INSTALLER="apk add --allow-untrusted"
     elif [ $PKG_FORMAT == "rpm" ]; then
         if [ -f /etc/os-release ]; then
             VARIANT_ID="$(. /etc/os-release && echo "$VARIANT_ID")"
