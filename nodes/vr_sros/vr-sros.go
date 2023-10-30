@@ -164,8 +164,6 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 		return err
 	}
 
-	print(buf.String())
-
 	err = s.applyDefaultConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
 		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
 		buf.String(),
