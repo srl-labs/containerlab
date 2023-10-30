@@ -1,13 +1,13 @@
 package vr_sros
 
 import (
-	"slices"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/exp/slices"
 )
 
-// filterSSHPubKeys removes non-rsa keys from n.sshPubKeys until srl adds support for them.
+// filterSSHPubKeys provides extracted key values based on key-algo for usage in vrSROS configuration
 func (s *vrSROS) filterSSHPubKeys(sshKeyAlgo []string) []string {
 
 	keyValues := []string{}

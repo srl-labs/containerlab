@@ -145,7 +145,6 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	// creating a list of ECDSA Key Types
 	rsaKeyTypes := []string{"ssh-rsa"}
 	ecdsaKeyTypes := []string{"ssh-ed25519", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"}
-	//ecdsaKeyTypes := "\"ecdsa-sha2-nistp256\", \"ecdsa-sha2-nistp384\", \"ecdsa-sha2-nistp521\", \"ssh-ed25519\""
 
 	// checking on existence of SSH Public Keys and populating tplData
 	if len(s.sshPubKeys) > 0 {
