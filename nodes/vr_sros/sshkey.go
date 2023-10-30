@@ -14,8 +14,6 @@ func (s *vrSROS) filterSSHPubKeys(sshKeyAlgo []string) []string {
 
 	for _, k := range s.sshPubKeys {
 		if slices.Contains(sshKeyAlgo, k.Type()) {
-			//switch k.Type() {
-			//case slices.Contains(sshKeyAlgo):
 
 			keyType := k.Type()
 			keyString := string(ssh.MarshalAuthorizedKey(k))
