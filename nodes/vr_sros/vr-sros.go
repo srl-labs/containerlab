@@ -142,10 +142,15 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	// tplData holds data used in templating of the default config snippet
 	tplData := vrSROSTemplateData{}
 
+	// creating a list of ECDSA Key Types
+	rsaKeyTypes := []string{"ssh-rsa"}
+	ecdsaKeyTypes := []string{"ssh-ed25519", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"}
+	//ecdsaKeyTypes := "\"ecdsa-sha2-nistp256\", \"ecdsa-sha2-nistp384\", \"ecdsa-sha2-nistp521\", \"ssh-ed25519\""
+
 	// checking on existence of SSH Public Keys and populating tplData
 	if len(s.sshPubKeys) > 0 {
-		tplData.SSHPubKeysRSA = s.filterSSHPubKeys("ssh-rsa")
-		tplData.SSHPubKeysECDSA = s.filterSSHPubKeys("ecdsa-sha2-nistp256, ecdsa-sha2-nistp384, ecdsa-sha2-nistp521, ssh-ed25519")
+		tplData.SSHPubKeysRSA = s.filterSSHPubKeys(rsaKeyTypes)
+		tplData.SSHPubKeysECDSA = s.filterSSHPubKeys(ecdsaKeyTypes)
 	}
 
 	t, err := template.New("DefCfg").Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(vrSrosConfigCmdsTpl)
