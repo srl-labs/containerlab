@@ -322,6 +322,38 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, use
 		return err
 	}
 
+	// after successful readiness probe a new session is established to send config
+	li, err := scraplilogging.NewInstance(
+		scraplilogging.WithLevel("debug"),
+		scraplilogging.WithLogger(log.Debugln))
+	if err != nil {
+		return err
+	}
+
+	opts := []util.Option{
+		options.WithAuthNoStrictKey(),
+		options.WithAuthUsername(username),
+		options.WithAuthPassword(password),
+		options.WithTransportType(transport.StandardTransport),
+		options.WithTimeoutOps(5 * time.Second),
+		options.WithLogger(li),
+	}
+
+	p, err := platform.NewPlatform(platformName, addr, opts...)
+	if err != nil {
+		return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
+	}
+
+	d, err = p.GetNetworkDriver()
+	if err != nil {
+		return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
+	}
+
+	err = d.Open()
+	if err != nil {
+		return fmt.Errorf("%s: could not open connection: %+v", addr, err)
+	}
+
 	mr, err := d.SendConfigsFromFile(configFile)
 	if err != nil || mr.Failed != nil {
 		return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
@@ -340,7 +372,8 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, use
 	return nil
 }
 
-// applyPartialConfig applies partial configuration to the SR OS.
+// Apply Default Config applies default configuration to the SR OS.
+// This function simply pushes config available as string using scrapligo to the NE
 func (s *vrSROS) applyDefaultConfig(ctx context.Context, addr, platformName, username, password string, config string) error {
 	var err error
 	var d *network.Driver
