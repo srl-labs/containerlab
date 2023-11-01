@@ -39,8 +39,10 @@ func (*LinkMacVlanRaw) GetType() LinkType {
 }
 
 func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw, error) {
-	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
-
+	_, hostIf, node, nodeIf, err := extractHostNodeInterfaceData(lb, specialEPIndex)
+	if err != nil {
+		return nil, err
+	}
 	link := &LinkMacVlanRaw{
 		LinkCommonParams: lb.LinkCommonParams,
 		HostInterface:    hostIf,

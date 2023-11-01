@@ -307,19 +307,26 @@ type Link interface {
 	GetMTU() int
 }
 
-func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string) {
+func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string, err error) {
 	// the index of the node is the specialEndpointIndex +1  modulo 2
 	nodeindex := (specialEPIndex + 1) % 2
 
 	hostData := strings.SplitN(lb.Endpoints[specialEPIndex], ":", 2)
 	nodeData := strings.SplitN(lb.Endpoints[nodeindex], ":", 2)
 
+	if len(hostData) != 2 {
+		return "", "", "", "", fmt.Errorf("Invalid link endpoint format. expected is <node>:<port>, got %s", lb.Endpoints[specialEPIndex])
+	}
+	if len(nodeData) != 2 {
+		return "", "", "", "", fmt.Errorf("Invalid link endpoint format. expected is <node>:<port>, got %s", lb.Endpoints[specialEPIndex])
+	}
+
 	host = hostData[0]
 	hostIf = hostData[1]
 	node = nodeData[0]
 	nodeIf = nodeData[1]
 
-	return host, hostIf, node, nodeIf
+	return host, hostIf, node, nodeIf, nil
 }
 
 func genRandomIfName() string {
