@@ -207,6 +207,11 @@ Another option to run containerlab on ARM-based Macs is to use Docker in Docker 
         # containelab version will be set in devcontainer.json
         ARG _CLAB_VERSION
 
+        # Set permissions for mounts in devcontainer.json
+        RUN mkdir /home/vscode/.vscode-server/
+        RUN mkdir /home/vscode/.vscode-server/bin
+        RUN chown -R vscode:vscode /home/vscode/.vscode-server
+
         # install some basic tools inside the container
         # adjust this list based on your demands
         RUN apt-get update \
