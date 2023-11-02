@@ -112,8 +112,7 @@ func getTopoFilePath(cmd *cobra.Command) error {
 
 	var err error
 	if utils.IsHttpUri(topo) {
-		// parse the Repo reference via the RepoParserRegistry
-		repo, err := git.RepoParserRegistry.Parse(topo)
+		repo, err := git.NewGitRepo(topo)
 		if err != nil {
 			return err
 		}

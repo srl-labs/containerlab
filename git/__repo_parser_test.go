@@ -59,15 +59,15 @@ func TestGitHubGitRepoParse(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          string
-		expectedResult *GitHubGitRepo
+		expectedResult *GitHubRepo
 		expectedError  error
 	}{
 		{
 			name:  "bare github url without trailing slash",
 			input: "https://github.com/srl-labs/repo-name",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -81,9 +81,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "bare github url with trailing slash",
 			input: "https://github.com/srl-labs/repo-name/",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -97,9 +97,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "bare github.dev url with trailing slash",
 			input: "https://github.dev/srl-labs/repo-name/",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -113,9 +113,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "bare github url with .git suffix",
 			input: "https://github.com/srl-labs/repo-name.git",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -129,21 +129,21 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:           "invalid url with just org name",
 			input:          "https://github.com/srl-labs/",
-			expectedResult: &GitHubGitRepo{},
+			expectedResult: &GitHubRepo{},
 			expectedError:  errInvalidURL,
 		},
 		{
 			name:           "invalid url with no owner and no org",
 			input:          "https://github.com/",
-			expectedResult: &GitHubGitRepo{},
+			expectedResult: &GitHubRepo{},
 			expectedError:  errInvalidURL,
 		},
 		{
 			name:  "github url with a clab file on the main branch",
 			input: "https://github.com/srl-labs/repo-name/blob/main/file.clab.yml",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -159,9 +159,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "github url with a yaml file on the main branch",
 			input: "https://github.com/srl-labs/repo-name/blob/main/file.yaml",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -177,15 +177,15 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:           "url with invalid file on the main branch",
 			input:          "https://github.com/srl-labs/repo-name/blob/main/file.foo",
-			expectedResult: &GitHubGitRepo{},
+			expectedResult: &GitHubRepo{},
 			expectedError:  errInvalidURL,
 		},
 		{
 			name:  "github url with a specified git ref and no file",
 			input: "https://github.com/srl-labs/repo-name/tree/some-branch",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -200,9 +200,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "github url with a specified git ref and no file and trailing slash",
 			input: "https://github.com/srl-labs/repo-name/tree/some-branch/",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -217,9 +217,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "github url with ref to file in subdir",
 			input: "https://github.com/srl-labs/containerlab/blob/main/lab-examples/srl01/srl01.clab.yml",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -235,9 +235,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "github url with ref to subdir",
 			input: "https://github.com/srl-labs/containerlab/tree/main/lab-examples/srl01/",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -252,9 +252,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "github url with tree ref to repo root",
 			input: "https://github.com/srl-labs/containerlab/tree/main",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -269,9 +269,9 @@ func TestGitHubGitRepoParse(t *testing.T) {
 		{
 			name:  "github url with tree ref to file in repo root",
 			input: "https://github.com/srl-labs/containerlab/blob/main/mytopo.yml",
-			expectedResult: &GitHubGitRepo{
+			expectedResult: &GitHubRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "github.com",
 					},
@@ -323,15 +323,15 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          string
-		expectedResult *GitLabGitRepo
+		expectedResult *GitLabRepo
 		expectedError  error
 	}{
 		{
 			name:  "bare gitlab url without trailing slash",
 			input: "https://fake.gitlab.com/user/repo-name",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -345,9 +345,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "bare gitlab url with trailing slash",
 			input: "https://fake.gitlab.com/user/repo-name/",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -361,9 +361,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "bare github url with .git suffix",
 			input: "https://fake.gitlab.com/user/repo-name.git",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -377,21 +377,21 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:           "invalid url with just org name",
 			input:          "https://fake.gitlab.com/user/",
-			expectedResult: &GitLabGitRepo{},
+			expectedResult: &GitLabRepo{},
 			expectedError:  errInvalidURL,
 		},
 		{
 			name:           "invalid url with no owner and no org",
 			input:          "https:/fake.gitlab.com/",
-			expectedResult: &GitLabGitRepo{},
+			expectedResult: &GitLabRepo{},
 			expectedError:  errInvalidURL,
 		},
 		{
 			name:  "gitlab url with a clab file on the main branch",
 			input: "https://fake.gitlab.com/user/repo-name/-/blob/main/file.clab.yml",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -407,9 +407,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "gitlab url with a yaml file on the main branch",
 			input: "https://fake.gitlab.com/user/repo-name/-/blob/main/file.yaml",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -425,15 +425,15 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:           "url with invalid file on the main branch",
 			input:          "https://fake.gitlab.com/user/repo-name/-/blob/main/file.foo",
-			expectedResult: &GitLabGitRepo{},
+			expectedResult: &GitLabRepo{},
 			expectedError:  errInvalidURL,
 		},
 		{
 			name:  "gitlab url with a specified git ref and no file",
 			input: "https://fake.gitlab.com/user/repo-name/-/tree/some-branch",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -448,9 +448,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "gitlab url with a specified git ref and no file and trailing slash",
 			input: "https://fake.gitlab.com/user/repo-name/-/tree/some-branch/",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -465,9 +465,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "gitlab url with ref to file in subdir",
 			input: "https://fake.gitlab.com/user/containerlab/-/blob/main/lab-examples/srl01/srl01.clab.yml",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -483,9 +483,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "gitlab url with ref to subdir",
 			input: "https://fake.gitlab.com/user/containerlab/-/tree/main/lab-examples/srl01/",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -500,9 +500,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "gitlab url with tree ref to repo root",
 			input: "https://fake.gitlab.com/user/containerlab/-/tree/main",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -517,9 +517,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "gitlab url with tree ref to file in repo root",
 			input: "https://fake.gitlab.com/user/containerlab/-/blob/main/mytopo.yml",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
@@ -535,9 +535,9 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 		{
 			name:  "gitlab url with tree ref to file in repo root and query parameters",
 			input: "https://fake.gitlab.com/user/containerlab/-/blob/main/mytopo.yml?foo=bar",
-			expectedResult: &GitLabGitRepo{
+			expectedResult: &GitLabRepo{
 				GitRepoStruct: GitRepoStruct{
-					URLBase: url.URL{
+					URL: url.URL{
 						Scheme: "https",
 						Host:   "fake.gitlab.com",
 					},
