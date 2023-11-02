@@ -1,4 +1,4 @@
-package utils
+package git
 
 import (
 	"bytes"

@@ -12,6 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/git"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -112,13 +113,13 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	var err error
 	if utils.IsHttpUri(topo) {
 		// parse the Repo reference via the RepoParserRegistry
-		repo, err := utils.RepoParserRegistry.Parse(topo)
+		repo, err := git.RepoParserRegistry.Parse(topo)
 		if err != nil {
 			return err
 		}
 
 		// Instantiate the git implementation to use.
-		gitImpl := utils.NewGoGit(repo)
+		gitImpl := git.NewGoGit(repo)
 
 		// clone the repo via the Git Implementation
 		err = gitImpl.Clone()
