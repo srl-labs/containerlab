@@ -1,10 +1,10 @@
 |                               |                                                                                    |
 | ----------------------------- | ---------------------------------------------------------------------------------- |
 | **Description**               | A Juniper vSRX connected to two Alpine Linux Hosts                                 |
-| **Components**                | [Juniper vSRX][vsrx], [Multitool Alpine Linux][client]                             |                                 |
+| **Components**                | [Juniper vSRX][vsrx], [Multitool Alpine Linux][client]                             |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 4 GB               |
 | **Topology file**             | [vsrx01.yml][topofile]                                                             |
-| **Name**                      | vsrx01                                                                              |
+| **Name**                      | vsrx01                                                                             |
 | **Version information**[^2]   | `containerlab:0.47.2`, `junos-vsrx3-x86-64-23.2R1.13.qcow2`, `docker:24.0.6`       |
 
 ## Description
@@ -52,7 +52,7 @@ First attach to the container process `docker exec -it clab-vsrx1-client1 ash`
   192.168.2.0/30 via 192.168.1.1 dev eth1
  ```
 
-#### Verificaton
+### Verificaton
 Traceroute from client1 to client2 to verify the dataplane via the vSRX. 
 
 #### "client1"
@@ -63,6 +63,8 @@ Traceroute from client1 to client2 to verify the dataplane via the vSRX.
      2  192.168.2.2 (192.168.2.2)  0.263 ms  0.374 ms  0.762 ms
     / #
 ```
+#### "vSRX Web Gui"
+To access the vSRX web interface point a browsers at the vSRX management IP address (fxp0) and use https. Login is admin/admin@123.
   
 [vsrx]: https://www.juniper.net/us/en/products/security/srx-series/vsrx-virtual-firewall-datasheet.html
 [client]: https://github.com/wbitt/Network-MultiTool
