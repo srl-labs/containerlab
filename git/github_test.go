@@ -123,6 +123,45 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "github url pointing to a branch",
+			url:  "https://github.com/hellt/clab-test-repo/tree/branch1",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+					GitBranch:      "branch1",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "github url pointing to a file in a branch",
+			url:  "https://github.com/hellt/clab-test-repo/blob/branch1/lab2.clab.yml",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+					GitBranch:      "branch1",
+					FileName:       "lab2.clab.yml",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "github url pointing to a file in a branch",
+			url:  "https://github.com/hellt/clab-test-repo/blob/branch1/dir/lab2.clab.yml",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+					GitBranch:      "branch1",
+					Path:           []string{"dir"},
+					FileName:       "lab2.clab.yml",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

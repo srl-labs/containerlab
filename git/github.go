@@ -69,7 +69,11 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 		if splitPath[len(splitPath)-1] == "" {
 			return nil, errInvalidURL
 		}
-		r.Path = splitPath[4:]
+
+		if len(splitPath) > 4 {
+			r.Path = splitPath[4:]
+		}
+
 		r.FileName = "" // no filename, a dir is referenced
 	}
 
