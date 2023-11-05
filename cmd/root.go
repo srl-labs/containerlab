@@ -126,13 +126,6 @@ func getTopoFilePath(cmd *cobra.Command) error {
 			return err
 		}
 
-		// adjust permissions for the checked out repo
-		// it would belong to root/root otherwise
-		err = utils.RecursiveAdjustUIDAndGUID(repo.GetName())
-		if err != nil {
-			log.Errorf("error adjusting repository permissions %v. Continuing anyways", err)
-		}
-
 		// prepare the path with the repo based path
 		path := filepath.Join(repo.GetPath()...)
 		// prepend that path with the repo base directory
