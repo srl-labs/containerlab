@@ -10,7 +10,10 @@ var errInvalidURL = errors.New("invalid URL")
 // GitRepoStruct is a struct that contains all the fields
 // required for a GitRepo instance.
 type GitRepoStruct struct {
-	URL            *url.URL
+	// original URL parsed from the user input
+	URL *url.URL
+	// CloneURL is the URL that will be used for cloning the repo
+	CloneURL       *url.URL
 	ProjectOwner   string
 	RepositoryName string
 	GitBranch      string
@@ -40,16 +43,16 @@ func (u *GitRepoStruct) GetBranch() string {
 	return u.GitBranch
 }
 
-// GetRepoUrl returns the URL of the repository
-func (u *GitRepoStruct) GetRepoUrl() *url.URL {
-	return u.URL.JoinPath(u.ProjectOwner, u.RepositoryName)
+// GetCloneURL returns the CloneURL of the repository
+func (u *GitRepoStruct) GetCloneURL() *url.URL {
+	return u.CloneURL
 }
 
 type GitRepo interface {
 	GetRepoName() string
 	GetFilename() string
 	GetPath() []string
-	GetRepoUrl() *url.URL
+	GetCloneURL() *url.URL
 	GetBranch() string
 	// ParseGitURL parses the git url into GitRepo struct.
 	ParseGitURL() error

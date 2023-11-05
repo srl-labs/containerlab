@@ -44,7 +44,7 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 
 	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
-		URLs: []string{g.gitRepo.GetRepoUrl().String()},
+		URLs: []string{g.gitRepo.GetCloneURL().String()},
 	})
 
 	// We can then use every Remote functions to retrieve wanted information
@@ -59,7 +59,7 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("unable to determine default branch for %q", g.gitRepo.GetRepoUrl().String())
+	return "", fmt.Errorf("unable to determine default branch for %q", g.gitRepo.GetCloneURL().String())
 
 }
 
@@ -90,8 +90,9 @@ func (g *GoGit) cloneExistingRepo() error {
 	}
 
 	// checking that the configured remote equals the provided remote
-	if remote.Config().URLs[0] != g.gitRepo.GetRepoUrl().String() {
-		return fmt.Errorf("repository url of %q differs (%q) from the provided url (%q). stopping", g.gitRepo.GetRepoName(), remote.Config().URLs[0], g.gitRepo.GetRepoUrl().String())
+	if remote.Config().URLs[0] != g.gitRepo.GetCloneURL().String() {
+		return fmt.Errorf("repository url of %q differs (%q) from the provided url (%q). stopping",
+			g.gitRepo.GetRepoName(), remote.Config().URLs[0], g.gitRepo.GetCloneURL().String())
 	}
 
 	// get the worktree reference
@@ -202,7 +203,7 @@ func (g *GoGit) cloneNonExisting() error {
 	// init clone options
 	co := &gogit.CloneOptions{
 		Depth:        1,
-		URL:          g.gitRepo.GetRepoUrl().String(),
+		URL:          g.gitRepo.GetCloneURL().String(),
 		SingleBranch: true,
 	}
 	// set brach reference if set
@@ -239,7 +240,7 @@ func NewExecGit(gitRepo GitRepo) *ExecGit {
 // with its internal implementation.
 func (g *ExecGit) Clone() error {
 	// build the URL with owner and repo name
-	repoUrl := g.gitRepo.GetRepoUrl().String()
+	repoUrl := g.gitRepo.GetCloneURL().String()
 	cloneArgs := []string{"clone", repoUrl, "--depth", "1"}
 	if g.gitRepo.GetBranch() != "" {
 		cloneArgs = append(cloneArgs, []string{"--branch", g.gitRepo.GetBranch()}...)

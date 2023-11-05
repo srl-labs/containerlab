@@ -34,6 +34,9 @@ func (r *GitHubRepo) ParseGitURL() error {
 		r.URL.Host = "github.com"
 	}
 
+	// set CloneURL to the original URL
+	r.CloneURL = r.URL
+
 	r.ProjectOwner = splitPath[0]
 
 	// in case repo url has a trailing .git suffix, trim it

@@ -41,6 +41,7 @@ func TestParseGitURL(t *testing.T) {
 				GitRepoStruct{
 					// github.dev links can be cloned using github.com
 					URL:            urlFromStr("https://github.com/hellt/clab-test-repo"),
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
 				},
@@ -69,11 +70,18 @@ func TestParseGitURL(t *testing.T) {
 				return
 			}
 
-			// in case we do not manipulate url path in the ParseGitURL method
+			// when we do not manipulate url path in the ParseGitURL method
 			// the wantRepo.URL field will be nil, so we need to set it up
 			// to match the original URL
 			if tt.wantRepo.URL == nil {
 				tt.wantRepo.URL = urlFromStr(tt.url)
+			}
+
+			// when we do not manipulate CloneURL in the ParseGitURL method
+			// the wantRepo.CloneURL field will be nil, so we need to set it up
+			// to match the original URL
+			if tt.wantRepo.CloneURL == nil {
+				tt.wantRepo.CloneURL = urlFromStr(tt.url)
 			}
 
 			if diff := cmp.Diff(repo, tt.wantRepo); diff != "" {
