@@ -2,7 +2,7 @@ package git
 
 import (
 	"fmt"
-	"net/url"
+
 	neturl "net/url"
 	"strings"
 )
@@ -77,7 +77,7 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 }
 
 // IsGitHubURL checks if the url is a github url.
-func IsGitHubURL(url *url.URL) bool {
+func IsGitHubURL(url *neturl.URL) bool {
 	return strings.Contains(url.Host, "github.com") ||
 		strings.Contains(url.Host, "github.dev")
 }
