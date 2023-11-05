@@ -16,17 +16,17 @@ func urlFromStr(s string) *url.URL {
 	return u
 }
 
-func TestParseGitURL(t *testing.T) {
+func TestNewGitLabRepoFromURL(t *testing.T) {
 	tests := []struct {
-		name     string
-		url      string
-		wantRepo *GitHubRepo
-		wantErr  bool
+		name    string
+		url     string
+		repo    *GitHubRepo
+		wantErr bool
 	}{
 		{
 			name: "valid github url without trailing slash and with https schema",
 			url:  "https://github.com/hellt/clab-test-repo",
-			wantRepo: &GitHubRepo{
+			repo: &GitHubRepo{
 				GitRepoStruct{
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
@@ -37,7 +37,7 @@ func TestParseGitURL(t *testing.T) {
 		{
 			name: "valid github.dev url without trailing slash and with https schema",
 			url:  "https://github.dev/hellt/clab-test-repo",
-			wantRepo: &GitHubRepo{
+			repo: &GitHubRepo{
 				GitRepoStruct{
 					// github.dev links can be cloned using github.com
 					URL:            urlFromStr("https://github.com/hellt/clab-test-repo"),
@@ -57,10 +57,8 @@ func TestParseGitURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &GitHubRepo{}
-			repo.URL = urlFromStr(tt.url) // set up initial URL for the repo struct
+			repo, err := NewGitHubRepoFromURL(urlFromStr(tt.url))
 
-			err := repo.ParseURL()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseGitURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -73,18 +71,18 @@ func TestParseGitURL(t *testing.T) {
 			// when we do not manipulate url path in the ParseGitURL method
 			// the wantRepo.URL field will be nil, so we need to set it up
 			// to match the original URL
-			if tt.wantRepo.URL == nil {
-				tt.wantRepo.URL = urlFromStr(tt.url)
+			if tt.repo.URL == nil {
+				tt.repo.URL = urlFromStr(tt.url)
 			}
 
 			// when we do not manipulate CloneURL in the ParseGitURL method
 			// the wantRepo.CloneURL field will be nil, so we need to set it up
 			// to match the original URL
-			if tt.wantRepo.CloneURL == nil {
-				tt.wantRepo.CloneURL = urlFromStr(tt.url)
+			if tt.repo.CloneURL == nil {
+				tt.repo.CloneURL = urlFromStr(tt.url)
 			}
 
-			if diff := cmp.Diff(repo, tt.wantRepo); diff != "" {
+			if diff := cmp.Diff(repo, tt.repo); diff != "" {
 				t.Errorf("ParseGitURL() mismatch:\n%s", diff)
 			}
 		})
