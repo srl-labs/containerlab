@@ -32,8 +32,8 @@ func (u *GitRepoStruct) GetPath() []string {
 	return u.Path
 }
 
-// GetRepoName returns the repository name
-func (u *GitRepoStruct) GetRepoName() string {
+// GetName returns the repository name
+func (u *GitRepoStruct) GetName() string {
 	return u.RepositoryName
 }
 
@@ -49,7 +49,7 @@ func (u *GitRepoStruct) GetCloneURL() *url.URL {
 }
 
 type GitRepo interface {
-	GetRepoName() string
+	GetName() string
 	GetFilename() string
 	GetPath() []string
 	GetCloneURL() *url.URL

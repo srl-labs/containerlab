@@ -32,12 +32,12 @@ func NewGoGit(gitRepo GitRepo) *GoGit {
 // with its internal implementation.
 func (g *GoGit) Clone() error {
 	// if the directory is not present
-	if s, err := os.Stat(g.gitRepo.GetRepoName()); os.IsNotExist(err) {
+	if s, err := os.Stat(g.gitRepo.GetName()); os.IsNotExist(err) {
 		return g.cloneNonExisting()
 	} else if s.IsDir() {
 		return g.cloneExistingRepo()
 	}
-	return fmt.Errorf("error %q exists already but is a file", g.gitRepo.GetRepoName())
+	return fmt.Errorf("error %q exists already but is a file", g.gitRepo.GetName())
 }
 
 func (g *GoGit) getDefaultBranch() (string, error) {
@@ -67,7 +67,7 @@ func (g *GoGit) openRepo() error {
 	var err error
 
 	// load the git repository
-	g.r, err = gogit.PlainOpen(g.gitRepo.GetRepoName())
+	g.r, err = gogit.PlainOpen(g.gitRepo.GetName())
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (g *GoGit) openRepo() error {
 }
 
 func (g *GoGit) cloneExistingRepo() error {
-	log.Debugf("loading git repository %q", g.gitRepo.GetRepoName())
+	log.Debugf("loading git repository %q", g.gitRepo.GetName())
 
 	// open the existing repo
 	err := g.openRepo()
@@ -92,7 +92,7 @@ func (g *GoGit) cloneExistingRepo() error {
 	// checking that the configured remote equals the provided remote
 	if remote.Config().URLs[0] != g.gitRepo.GetCloneURL().String() {
 		return fmt.Errorf("repository url of %q differs (%q) from the provided url (%q). stopping",
-			g.gitRepo.GetRepoName(), remote.Config().URLs[0], g.gitRepo.GetCloneURL().String())
+			g.gitRepo.GetName(), remote.Config().URLs[0], g.gitRepo.GetCloneURL().String())
 	}
 
 	// get the worktree reference
@@ -218,7 +218,7 @@ func (g *GoGit) cloneNonExisting() error {
 	}
 
 	// perform clone
-	g.r, err = gogit.PlainClone(g.gitRepo.GetRepoName(), false, co)
+	g.r, err = gogit.PlainClone(g.gitRepo.GetName(), false, co)
 
 	return err
 }
