@@ -16,7 +16,7 @@ type GitLabRepo struct {
 	GitRepoStruct
 }
 
-func (r *GitLabRepo) ParseGitURL() error {
+func (r *GitLabRepo) ParseURL() error {
 	splitPath := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 
 	// path need to hold at least 2 elements,

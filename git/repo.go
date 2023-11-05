@@ -54,8 +54,8 @@ type GitRepo interface {
 	GetPath() []string
 	GetCloneURL() *url.URL
 	GetBranch() string
-	// ParseGitURL parses the git url into GitRepo struct.
-	ParseGitURL() error
+	// ParseURL parses the user-provided url into GitRepo struct.
+	ParseURL() error
 }
 
 // NewGitRepo parses the given git urlPath and returns an interface
@@ -83,7 +83,7 @@ func NewGitRepo(urlPath string) (GitRepo, error) {
 			}}
 	}
 
-	err = r.ParseGitURL()
+	err = r.ParseURL()
 
 	return r, err
 }

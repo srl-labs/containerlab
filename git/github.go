@@ -17,8 +17,8 @@ type GitHubRepo struct {
 	GitRepoStruct
 }
 
-// ParseGitURL parses the github url into GitRepo struct.
-func (r *GitHubRepo) ParseGitURL() error {
+// ParseURL parses the github url into GitRepo struct.
+func (r *GitHubRepo) ParseURL() error {
 	// trimming the leading and trailing slashes
 	// so that splitPath will have the slashes between the elements only
 	splitPath := strings.Split(strings.Trim(r.URL.Path, "/"), "/")

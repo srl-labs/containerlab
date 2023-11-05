@@ -60,7 +60,7 @@ func TestParseGitURL(t *testing.T) {
 			repo := &GitHubRepo{}
 			repo.URL = urlFromStr(tt.url) // set up initial URL for the repo struct
 
-			err := repo.ParseGitURL()
+			err := repo.ParseURL()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseGitURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
