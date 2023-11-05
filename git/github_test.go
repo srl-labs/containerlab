@@ -35,12 +35,39 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid github url with trailing slash and with https schema",
+			url:  "https://github.com/hellt/clab-test-repo/",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					URL:            urlFromStr("https://github.com/hellt/clab-test-repo/"),
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "valid github.dev url without trailing slash and with https schema",
 			url:  "https://github.dev/hellt/clab-test-repo",
 			repo: &GitHubRepo{
 				GitRepoStruct{
 					// github.dev links can be cloned using github.com
 					URL:            urlFromStr("https://github.com/hellt/clab-test-repo"),
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid github.dev url with trailing slash and with https schema",
+			url:  "https://github.dev/hellt/clab-test-repo/",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					// github.dev links can be cloned using github.com
+					URL:            urlFromStr("https://github.com/hellt/clab-test-repo/"),
 					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
@@ -83,7 +110,7 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(repo, tt.repo); diff != "" {
-				t.Errorf("ParseGitURL() mismatch:\n%s", diff)
+				t.Errorf("TestNewGitLabRepoFromURL() mismatch:\n%s", diff)
 			}
 		})
 	}

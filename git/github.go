@@ -3,11 +3,12 @@ package git
 import (
 	"fmt"
 	"net/url"
+	neturl "net/url"
 	"strings"
 )
 
 // NewGitRepoFromURL parses the given url and returns a GitHubRepo.
-func NewGitHubRepoFromURL(url *url.URL) (*GitHubRepo, error) {
+func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 	r := &GitHubRepo{
 		GitRepoStruct: GitRepoStruct{
 			URL: url,
@@ -28,8 +29,13 @@ func NewGitHubRepoFromURL(url *url.URL) (*GitHubRepo, error) {
 		r.URL.Host = "github.com"
 	}
 
-	// set CloneURL to the original URL
-	r.CloneURL = r.URL
+	// set CloneURL to the copy of the original URL
+	r.CloneURL = &neturl.URL{}
+	*r.CloneURL = *r.URL
+
+	// remove trailing slash from the path
+	// as it bears no meaning for the clone url
+	r.CloneURL.Path = strings.TrimSuffix(r.CloneURL.Path, "/")
 
 	r.ProjectOwner = splitPath[0]
 
