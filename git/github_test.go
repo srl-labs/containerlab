@@ -104,6 +104,25 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name:    "invalid file in a github url with on the main branch",
+			url:     "https://github.com/hellt/clab-test-repo/blob/main/lab1.foo",
+			wantErr: true,
+		},
+		{
+			name: "github url with a clab file on the main branch in a nested dir",
+			url:  "https://github.com/hellt/clab-test-repo/blob/main/dir/lab3.clab.yml",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+					GitBranch:      "main",
+					Path:           []string{"dir"},
+					FileName:       "lab3.clab.yml",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
