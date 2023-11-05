@@ -158,3 +158,45 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 		})
 	}
 }
+
+func TestIsGitHubURL(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{
+			name:  "github.com",
+			input: "http://github.com",
+			want:  true,
+		},
+		{
+			name:  "github.com/containers/containerlab/blob/master/README.md",
+			input: "https://github.com/containers/containerlab/blob/master/README.md",
+			want:  true,
+		},
+		{
+			name:  "google.com/containers",
+			input: "http://google.com/containers",
+			want:  false,
+		},
+		{
+			name:  "google.com/containers/containerlab/blob/master/README.md",
+			input: "https://google.com/containers/containerlab/blob/master/README.md",
+			want:  false,
+		},
+		{
+			name:  "gitlab.com/containers",
+			input: "http://gitlab.com/containers",
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if output := IsGitHubURL(urlFromStr(tt.input)); output != tt.want {
+				t.Errorf("Test %q failed: want %v, but got %v", tt.name, tt.want, output)
+			}
+		})
+	}
+}
