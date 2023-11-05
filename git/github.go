@@ -19,9 +19,11 @@ type GitHubRepo struct {
 
 // ParseGitURL parses the github url into GitRepo struct.
 func (r *GitHubRepo) ParseGitURL() error {
+	// trimming the leading and trailing slashes
+	// so that splitPath will have the slashes between the elements only
 	splitPath := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 
-	// path need to hold at least 2 elements,
+	// path needs to hold at least 2 elements,
 	// user / org and repo
 	if len(splitPath) < 2 || splitPath[0] == "" || splitPath[1] == "" {
 		return fmt.Errorf("%w %s", errInvalidURL, r.URL.String())
@@ -31,10 +33,6 @@ func (r *GitHubRepo) ParseGitURL() error {
 	if r.URL.Host == "github.dev" {
 		r.URL.Host = "github.com"
 	}
-
-	r.URL.Fragment = "" // reset fragment
-	r.URL.Path = ""     // reset path
-	r.URL.RawQuery = "" // reset rawquery
 
 	r.ProjectOwner = splitPath[0]
 
