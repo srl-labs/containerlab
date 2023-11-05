@@ -80,6 +80,30 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 			url:     "https://github.com/hellt/",
 			wantErr: true,
 		},
+		{
+			name: "valid github url with https schema and with .git suffix",
+			url:  "https://github.com/hellt/clab-test-repo.git",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "github url with a clab file on the main branch",
+			url:  "https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml",
+			repo: &GitHubRepo{
+				GitRepoStruct{
+					ProjectOwner:   "hellt",
+					RepositoryName: "clab-test-repo",
+					GitBranch:      "main",
+					FileName:       "lab1.clab.yml",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

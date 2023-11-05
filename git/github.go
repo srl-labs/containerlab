@@ -57,8 +57,13 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 		if !(strings.HasSuffix(r.URL.Path, ".yml") || strings.HasSuffix(r.URL.Path, ".yaml")) {
 			return nil, errInvalidURL
 		}
-		r.Path = splitPath[4 : len(splitPath)-1]
+
+		if len(splitPath)-1 > 4 {
+			r.Path = splitPath[4 : len(splitPath)-1]
+		}
+
 		r.FileName = splitPath[len(splitPath)-1]
+
 	// path points to a git ref (branch or tag)
 	case splitPath[2] == "tree":
 		if splitPath[len(splitPath)-1] == "" {

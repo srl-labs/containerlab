@@ -16,9 +16,12 @@ type GitRepoStruct struct {
 	CloneURL       *url.URL
 	ProjectOwner   string
 	RepositoryName string
-	GitBranch      string
-	Path           []string
-	FileName       string
+	// GitBranch is the referenced Git branch name.
+	GitBranch string
+	// Path is the path within the repository where the file is located.
+	Path []string
+	// FileName is the name of the file located at repo_root/path/filename.
+	FileName string
 }
 
 // GetFilename returns the filename if a file was specifically referenced.
