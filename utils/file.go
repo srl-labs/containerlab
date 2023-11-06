@@ -6,6 +6,7 @@ package utils
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -87,7 +88,19 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
 	if IsHttpUri(src) {
-		resp, err := http.Get(src)
+		// set InsecureSkipVerify to true to allow fetching
+		// files form servers with self-signed certificates
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // skipcq: GSC-G402
+				MinVersion:         tls.VersionTLS12,
+			},
+		}
+
+		client := &http.Client{Transport: tr}
+
+		// download using client
+		resp, err := client.Get(src)
 		if err != nil || resp.StatusCode != 200 {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
