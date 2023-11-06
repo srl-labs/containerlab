@@ -98,6 +98,7 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 				GitRepoStruct{
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					GitBranch:      "main",
 					FileName:       "lab1.clab.yml",
 				},
@@ -116,6 +117,7 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 				GitRepoStruct{
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					GitBranch:      "main",
 					Path:           []string{"dir"},
 					FileName:       "lab3.clab.yml",
@@ -130,6 +132,7 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 				GitRepoStruct{
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					GitBranch:      "branch1",
 				},
 			},
@@ -142,6 +145,7 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 				GitRepoStruct{
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					GitBranch:      "branch1",
 					FileName:       "lab2.clab.yml",
 				},
@@ -155,6 +159,7 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 				GitRepoStruct{
 					ProjectOwner:   "hellt",
 					RepositoryName: "clab-test-repo",
+					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					GitBranch:      "branch1",
 					Path:           []string{"dir"},
 					FileName:       "lab2.clab.yml",

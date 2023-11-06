@@ -30,6 +30,8 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 	}
 
 	// set CloneURL to the copy of the original URL
+	// this is overriden later for repo urls with
+	// paths containing blob or tree elements
 	r.CloneURL = &neturl.URL{}
 	*r.CloneURL = *r.URL
 
@@ -62,6 +64,9 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 			r.Path = splitPath[4 : len(splitPath)-1]
 		}
 
+		// overriding CloneURL Path to point to the git repo
+		r.CloneURL.Path = "/" + splitPath[0] + "/" + splitPath[1]
+
 		r.FileName = splitPath[len(splitPath)-1]
 
 	// path points to a git ref (branch or tag)
@@ -73,6 +78,9 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 		if len(splitPath) > 4 {
 			r.Path = splitPath[4:]
 		}
+
+		// overriding CloneURL Path to point to the git repo
+		r.CloneURL.Path = "/" + splitPath[0] + "/" + splitPath[1]
 
 		r.FileName = "" // no filename, a dir is referenced
 	}
