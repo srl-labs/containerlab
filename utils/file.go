@@ -74,9 +74,16 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return CopyFileContents(src, dst, mode)
 }
 
-// IsHttpUri check if the url is a downloadable uri.
+// IsHttpUri checks if the url is a downloadable uri.
+// It returns true for s containing http/https.
 func IsHttpUri(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
+// IsGitHubShortURL returns true for github-friendly short urls
+// such as srl-labs/containerlab.
+func IsGitHubShortURL(s string) bool {
+	return strings.Count(s, "/") == 1 && !strings.HasPrefix(s, "http")
 }
 
 // CopyFileContents copies the contents of the file named src to the file named

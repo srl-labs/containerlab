@@ -15,7 +15,7 @@ fi
 
 echo "Running tests with containerlab binary at $(which ${CLAB_BIN}) path and selected runtime: $1"
 
-COV_DIR=tests/coverage
+COV_DIR=/tmp/clab-tests/coverage
 
 # coverage output directory
 mkdir -p ${COV_DIR}

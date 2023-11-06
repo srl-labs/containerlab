@@ -61,5 +61,5 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ./tests/coverage/*
+          path: /tmp/clab-tests/coverage/*
           retention-days: 7

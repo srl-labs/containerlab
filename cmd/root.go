@@ -6,13 +6,13 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/git"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -111,38 +111,41 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	}
 
 	var err error
-	if utils.IsHttpUri(topo) {
-		switch {
-		case utils.IsGitHubURL(topo):
-			githubURL := utils.NewGithubURL()
-
-			err := githubURL.Parse(topo)
-			if err != nil {
-				return err
-			}
-
-			err = utils.CloneGithubRepo(githubURL)
-			if err != nil {
-				return err
-			}
-
-			err = os.Chdir(githubURL.RepositoryName)
-			if err != nil {
-				return err
-			}
-
-			// once the repo is cloned the topo file is emptied
-			// to ensure that auto find functionality can kick in
-			topo = ""
-
-			// unless the file name is provided in the github url
-			if githubURL.FileName != "" {
-				topo = githubURL.FileName
-			}
-
-		default:
-			return fmt.Errorf("unsupported git repository: %s", topo)
+	if !utils.FileExists(topo) && (utils.IsHttpUri(topo) || utils.IsGitHubShortURL(topo)) {
+		// for short github urls, prepend https://github.com
+		// note that short notation only works for github links
+		if utils.IsGitHubShortURL(topo) {
+			topo = "https://github.com/" + topo
 		}
+
+		repo, err := git.NewRepo(topo)
+		if err != nil {
+			return err
+		}
+
+		// Instantiate the git implementation to use.
+		gitImpl := git.NewGoGit(repo)
+
+		// clone the repo via the Git Implementation
+		err = gitImpl.Clone()
+		if err != nil {
+			return err
+		}
+
+		// prepare the path with the repo based path
+		path := filepath.Join(repo.GetPath()...)
+		// prepend that path with the repo base directory
+		path = filepath.Join(repo.GetName(), path)
+
+		// change dir to the
+		err = os.Chdir(path)
+		if err != nil {
+			return err
+		}
+
+		// once the repo is cloned the topo file is emptied
+		// to ensure that auto find functionality can kick in
+		topo = repo.GetFilename()
 	}
 
 	// if topo or name flags have been provided, don't try to derive the topo file

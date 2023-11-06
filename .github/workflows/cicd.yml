@@ -132,7 +132,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ./tests/coverage/*
+          path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   smoke-tests:
@@ -189,7 +189,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ./tests/coverage/*
+          path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   ext-container-tests:
@@ -242,7 +242,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ./tests/coverage/*
+          path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   ceos-basic-tests:
@@ -297,7 +297,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ./tests/coverage/*
+          path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   srlinux-basic-tests:
@@ -358,7 +358,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ./tests/coverage/*
+          path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   ixiac-one-basic-tests:
@@ -405,7 +405,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ./tests/coverage/*
+          path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   vxlan-tests:
@@ -437,7 +437,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: coverage
-          path: tests/coverage
+          path: /tmp/clab-tests/coverage
       - name: convert Go's binary coverage to text coverage
         run: make convert-coverage
       - name: Upload coverage to codecov
