@@ -63,4 +63,6 @@ Configuration is applied after the node is started. Thus it can contain partial 
 
 ## Lab examples
 
-Coming soon.
+The following simple lab consists of two Linux hosts connected via one vSRX:
+
+* [SR Linux and cRPD](../../lab-examples/vsrx01.md)
