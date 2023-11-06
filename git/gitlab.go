@@ -2,37 +2,53 @@ package git
 
 import (
 	"fmt"
-	"net/url"
+	neturl "net/url"
 	"strings"
 )
 
-func IsGitLabURL(u *url.URL) bool {
-	// we're looking for the "gitlab" sub-string in the entire URL
-	// we probably need a better strategy here. Anyways it is working for now.
+// IsGitLabURL returns true if the given url is a gitlab url.
+func IsGitLabURL(u *neturl.URL) bool {
+	// besides simply looking for gitlab substring in the url,
+	// we should consider fetching the http response and check
+	// for gitlab string in the body.
 	return strings.Contains(u.String(), "gitlab")
 }
 
+// GitLabRepo represents a gitlab repository.
 type GitLabRepo struct {
 	GitRepoStruct
 }
 
-func NewGitLabRepoFromURL(url *url.URL) (*GitLabRepo, error) {
+// NewGitLabRepoFromURL parses the given url and returns a GitLabRepo.
+func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 	r := &GitLabRepo{
 		GitRepoStruct: GitRepoStruct{
 			URL: url,
 		}}
 
+	// trimming the leading and trailing slashes
+	// so that splitPath will have the slashes between the elements only
 	splitPath := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 
-	// path need to hold at least 2 elements,
+	// path needs to hold at least 2 elements,
 	// user / org and repo
 	if len(splitPath) < 2 || splitPath[0] == "" || splitPath[1] == "" {
 		return nil, fmt.Errorf("%w %s", errInvalidURL, r.URL.String())
 	}
 
-	r.URL.Fragment = "" // reset fragment
-	r.URL.Path = ""     // reset path
-	r.URL.RawQuery = "" // reset rawquery
+	// set CloneURL to the copy of the original URL
+	// this is overriden later for repo urls with
+	// paths containing blob or tree elements
+	r.CloneURL = &neturl.URL{}
+	*r.CloneURL = *r.URL
+	// remove raw query from the clone url
+	// raw query is ref_type=heads
+	// in https://gitlab.com/rdodin/clab-test-repo/-/tree/branch1?ref_type=heads
+	r.CloneURL.RawQuery = ""
+
+	// remove trailing slash from the path
+	// as it bears no meaning for the clone url
+	r.CloneURL.Path = strings.TrimSuffix(r.CloneURL.Path, "/")
 
 	r.ProjectOwner = splitPath[0]
 
@@ -52,16 +68,27 @@ func NewGitLabRepoFromURL(url *url.URL) (*GitLabRepo, error) {
 	// path points to a file at a specific git ref
 	case splitPath[3] == "blob":
 		if !(strings.HasSuffix(r.URL.Path, ".yml") || strings.HasSuffix(r.URL.Path, ".yaml")) {
-			return nil, fmt.Errorf("%w referenced file must be *.yml or *.yaml. %q is therefor invalid", errInvalidURL, splitPath[len(splitPath)-1])
+			return nil, fmt.Errorf("%w: topology file must have yml or yaml extension", errInvalidURL)
 		}
-		r.Path = splitPath[5 : len(splitPath)-1]
+
+		if len(splitPath)-1 > 5 {
+			r.Path = splitPath[5 : len(splitPath)-1]
+		}
+
+		// overriding CloneURL Path to point to the git repo
+		r.CloneURL.Path = "/" + splitPath[0] + "/" + splitPath[1]
+
 		r.FileName = splitPath[len(splitPath)-1]
+
 	// path points to a git ref (branch or tag)
 	case splitPath[3] == "tree":
-		if splitPath[len(splitPath)-1] == "" {
-			return nil, errInvalidURL
+		if len(splitPath) > 5 {
+			r.Path = splitPath[5:]
 		}
-		r.Path = splitPath[5:]
+
+		// overriding CloneURL Path to point to the git repo
+		r.CloneURL.Path = "/" + splitPath[0] + "/" + splitPath[1]
+
 		r.FileName = "" // no filename, a dir is referenced
 	}
 
