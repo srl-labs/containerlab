@@ -158,7 +158,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	err = utils.AdjustACL(c.TopoPaths.TopologyLabDir())
 	if err != nil {
-		return err
+		log.Errorf("error adjusting Labdir ACLs: %v", err)
 	}
 
 	// create an empty ansible inventory file that will get populated later
@@ -310,11 +310,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// log new version availability info if ready
 	newVerNotification(vCh)
-
-	// err = utils.AdjustACL(c.TopoPaths.TopologyLabDir())
-	// if err != nil {
-	// 	return err
-	// }
 
 	// print table summary
 	return printContainerInspect(containers, deployFormat)
