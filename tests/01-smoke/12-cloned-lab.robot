@@ -7,10 +7,11 @@ Suite Teardown      Cleanup
 
 
 *** Variables ***
-${lab1-url}     https://github.com/hellt/clab-test-repo
-${lab1-url2}    https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
-${lab2-url}     https://github.com/hellt/clab-test-repo/tree/branch1
-${runtime}      docker
+${lab1-url}         https://github.com/hellt/clab-test-repo
+${lab1-shorturl}    hellt/clab-test-repo
+${lab1-url2}        https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
+${lab2-url}         https://github.com/hellt/clab-test-repo/tree/branch1
+${runtime}          docker
 
 
 *** Test Cases ***
@@ -56,6 +57,23 @@ Test lab3
 
     # check that node3 was filtered and not present in the lab output
     Should Contain    ${output.stdout}    clab-lab2-node1
+
+    Cleanup
+
+Test lab1 with short github url
+    ${output} =    Process.Run Process
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-shorturl}
+    ...    shell=True
+
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+
+    Should Be Equal As Integers    ${output.rc}    0
+
+    # check that node3 was filtered and not present in the lab output
+    Should Contain    ${output.stdout}    clab-lab1-node1
+
+    Cleanup
 
 
 *** Keywords ***
