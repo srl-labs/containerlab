@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// NewGitRepoFromURL parses the given url and returns a GitHubRepo.
+// NewGitHubRepoFromURL parses the given url and returns a GitHubRepo.
 func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 	r := &GitHubRepo{
 		GitRepoStruct: GitRepoStruct{

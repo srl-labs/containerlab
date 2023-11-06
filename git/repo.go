@@ -30,12 +30,12 @@ func (u *GitRepoStruct) GetFilename() string {
 	return u.FileName
 }
 
-// Returns the path within the repository that was pointed to
+// GetPath returns the path of the repository.
 func (u *GitRepoStruct) GetPath() []string {
 	return u.Path
 }
 
-// GetName returns the repository name
+// GetName returns the repository name.
 func (u *GitRepoStruct) GetName() string {
 	return u.RepositoryName
 }
