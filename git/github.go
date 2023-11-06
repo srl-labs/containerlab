@@ -71,10 +71,6 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 
 	// path points to a git ref (branch or tag)
 	case splitPath[2] == "tree":
-		if splitPath[len(splitPath)-1] == "" {
-			return nil, errInvalidURL
-		}
-
 		if len(splitPath) > 4 {
 			r.Path = splitPath[4:]
 		}
