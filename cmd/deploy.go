@@ -156,6 +156,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
 	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 
+	err = utils.AdjustACL(c.TopoPaths.TopologyLabDir())
+	if err != nil {
+		return err
+	}
+
 	// create an empty ansible inventory file that will get populated later
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
@@ -305,6 +310,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// log new version availability info if ready
 	newVerNotification(vCh)
+
+	// err = utils.AdjustACL(c.TopoPaths.TopologyLabDir())
+	// if err != nil {
+	// 	return err
+	// }
 
 	// print table summary
 	return printContainerInspect(containers, deployFormat)

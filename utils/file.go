@@ -18,7 +18,10 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/steiler/acls"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -344,4 +347,52 @@ func NewHTTPClient() *http.Client {
 	}
 
 	return &http.Client{Transport: tr}
+}
+
+func AdjustACL(fsPath string) error {
+
+	userId, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		return fmt.Errorf("unable to adjust UID and GUI for %q. SUDO_UID not set", fsPath)
+	}
+	groupId, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
+	}
+
+	intUserId, err := strconv.Atoi(userId)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", userId)
+	}
+	intGroupId, err := strconv.Atoi(groupId)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", groupId)
+	}
+
+	// create a new ACL instance
+	a := &acls.ACL{}
+	// load the existing ACL entries of the PosixACLAccess type
+	err = a.Load(fsPath, acls.PosixACLAccess)
+	if err != nil {
+		return err
+	}
+
+	// add an entry for the group
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(intGroupId), 7))
+	if err != nil {
+		return err
+	}
+
+	// add an entry for the User
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_USER, uint32(intUserId), 7))
+	if err != nil {
+		return err
+	}
+	// apply the ACL and return the error result
+	err = a.Apply(fsPath, acls.PosixACLAccess)
+	if err != nil {
+		return err
+	}
+	return a.Apply(fsPath, acls.PosixACLDefault)
+
 }
