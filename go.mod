@@ -34,7 +34,7 @@ require (
 	github.com/scrapli/scrapligo v1.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
-	github.com/steiler/acls v0.0.0-20231106135104-9c34ae82c793
+	github.com/steiler/acls v0.0.0-20231106152733-bb3d5d7b05c8
 	github.com/stretchr/testify v1.8.4
 	github.com/tklauser/numcpus v0.6.1
 	github.com/vishvananda/netlink v1.2.1-beta.2
