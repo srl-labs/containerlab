@@ -111,7 +111,13 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	}
 
 	var err error
-	if utils.IsHttpUri(topo) {
+	if !utils.FileExists(topo) && (utils.IsHttpUri(topo) || utils.IsGitHubShortURL(topo)) {
+		// for short github urls, prepend https://github.com
+		// note that short notation only works for github links
+		if utils.IsGitHubShortURL(topo) {
+			topo = "https://github.com/" + topo
+		}
+
 		repo, err := git.NewGitRepo(topo)
 		if err != nil {
 			return err
