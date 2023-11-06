@@ -349,8 +349,11 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
+// AdjustACL takes the given fs path, tries to load
+// the access acl of that path and adjusts it by adding
+// rwx for the SUDO_UID and r-x for the SUDO_GID group.
 func AdjustACL(fsPath string) error {
-
+	// load UID and GID from the env vars
 	userId, isSet := os.LookupEnv("SUDO_UID")
 	if !isSet {
 		return fmt.Errorf("unable to adjust UID and GUI for %q. SUDO_UID not set", fsPath)
@@ -360,6 +363,7 @@ func AdjustACL(fsPath string) error {
 		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
 	}
 
+	// convert string IDs to ints
 	intUserId, err := strconv.Atoi(userId)
 	if err != nil {
 		return fmt.Errorf("unable to convert SUDO_UID %q to int", userId)
@@ -378,7 +382,7 @@ func AdjustACL(fsPath string) error {
 	}
 
 	// add an entry for the group
-	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(intGroupId), 7))
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(intGroupId), 5))
 	if err != nil {
 		return err
 	}
