@@ -166,6 +166,7 @@ The remote file will be downloaded to the containerlab's temp directory at `$TMP
 
     * Upon deletion of a lab, the downloaded startup-config files will not be removed. A manual cleanup should be performed if required.
     * If a lab is redeployed with the lab name and startup-config paths unchanged, the local file will be overwritten.
+    * For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
 
 ### enforce-startup-config
 

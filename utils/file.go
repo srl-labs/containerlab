@@ -88,12 +88,15 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
 	if IsHttpUri(src) {
-		// create http.Transport instance to configure
-		// skipping of Certificate Verification
+		// set InsecureSkipVerify to true to allow fetching
+		// files form servers with self-signed certificates
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // skipcq: GSC-G402
+				MinVersion:         tls.VersionTLS12,
+			},
 		}
-		// create an http client with the given transport
+
 		client := &http.Client{Transport: tr}
 
 		// download using client
