@@ -59,9 +59,9 @@ type GitRepo interface {
 	GetBranch() string
 }
 
-// NewGitRepo parses the given git urlPath and returns an interface
+// NewRepo parses the given git urlPath and returns an interface
 // that is backed by Github or Gitlab repo implementations.
-func NewGitRepo(urlPath string) (GitRepo, error) {
+func NewRepo(urlPath string) (GitRepo, error) {
 	var r GitRepo
 	var err error
 

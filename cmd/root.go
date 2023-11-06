@@ -118,7 +118,7 @@ func getTopoFilePath(cmd *cobra.Command) error {
 			topo = "https://github.com/" + topo
 		}
 
-		repo, err := git.NewGitRepo(topo)
+		repo, err := git.NewRepo(topo)
 		if err != nil {
 			return err
 		}
