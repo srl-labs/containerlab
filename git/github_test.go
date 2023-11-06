@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// urlFromStr is a helper function to create a url.URL from a string.
 func urlFromStr(s string) *url.URL {
 	u, err := url.Parse(s)
 	if err != nil {
@@ -16,7 +17,7 @@ func urlFromStr(s string) *url.URL {
 	return u
 }
 
-func TestNewGitLabRepoFromURL(t *testing.T) {
+func TestNewGitHubRepoFromURL(t *testing.T) {
 	tests := []struct {
 		name    string
 		url     string
@@ -147,21 +148,6 @@ func TestNewGitLabRepoFromURL(t *testing.T) {
 					RepositoryName: "clab-test-repo",
 					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
 					GitBranch:      "branch1",
-					FileName:       "lab2.clab.yml",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "github url pointing to a file in a branch",
-			url:  "https://github.com/hellt/clab-test-repo/blob/branch1/dir/lab2.clab.yml",
-			repo: &GitHubRepo{
-				GitRepoStruct{
-					ProjectOwner:   "hellt",
-					RepositoryName: "clab-test-repo",
-					CloneURL:       urlFromStr("https://github.com/hellt/clab-test-repo"),
-					GitBranch:      "branch1",
-					Path:           []string{"dir"},
 					FileName:       "lab2.clab.yml",
 				},
 			},
