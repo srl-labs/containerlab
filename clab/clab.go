@@ -230,7 +230,7 @@ func (c *CLab) downloadTopoFile(url string) (string, error) {
 		return "", err
 	}
 
-	err = utils.DownloadFile(url, tmpFile.Name())
+	err = utils.CopyFile(url, tmpFile.Name(), 0644)
 
 	return tmpFile.Name(), err
 }
