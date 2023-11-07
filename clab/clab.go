@@ -138,7 +138,7 @@ func WithTopoPath(path, varsFile string) ClabOption {
 				return err
 			}
 		// if the path is not a local file and a URL, download the file and store it in the tmp dir
-		case !utils.FileOrDirExists(path) && utils.IsHttpURL(path):
+		case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
 			file, err = c.downloadTopoFile(path)
 			if err != nil {
 				return err

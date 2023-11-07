@@ -264,7 +264,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// it contains at least one newline
 	isEmbeddedConfig := strings.Count(p, "\n") >= 1
 	// downloadable config starts with http(s)://
-	isDownloadableConfig := utils.IsHttpURL(p)
+	isDownloadableConfig := utils.IsHttpURL(p, false)
 
 	if isEmbeddedConfig || isDownloadableConfig {
 		// both embedded and downloadable configs are require clab tmp dir to be created

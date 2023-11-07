@@ -49,7 +49,7 @@ func FileOrDirExists(filename string) bool {
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpURL(src) {
+	if !IsHttpURL(src, false) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -82,7 +82,21 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 }
 
 // IsHttpURL checks if the url is a downloadable HTTP URL.
-func IsHttpURL(s string) bool {
+// The allowSchemaless toggle when set to true will allow URLs without a schema
+// such as "srlinux.dev/clab-srl". This is shortened notion that is used with
+// "deploy -t <url>" only.
+// Other callers of IsHttpURL should set the toggle to false.
+func IsHttpURL(s string, allowSchemaless bool) bool {
+	// '-' denotes stdin and not the URL
+	if s == "-" {
+		return false
+	}
+
+	//
+	if !allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		return false
+	}
+
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 		s = "https://" + s
 	}
@@ -100,7 +114,7 @@ func IsHttpURL(s string) bool {
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if IsHttpURL(src) {
+	if IsHttpURL(src, false) {
 		client := NewHTTPClient()
 
 		// download using client
@@ -280,7 +294,7 @@ func FilenameForURL(rawUrl string) string {
 	}
 
 	// try extracting the filename from "content-disposition" header
-	if IsHttpURL(rawUrl) {
+	if IsHttpURL(rawUrl, false) {
 		resp, err := http.Head(rawUrl)
 		if err != nil {
 			return filepath.Base(u.Path)
