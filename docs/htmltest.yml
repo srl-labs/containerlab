@@ -17,6 +17,7 @@ IgnoreURLs:
   - mysocket.io # remove mysocket.io links until we rework to border0.com
   - https://supportcenter.checkpoint.com/ # started to fail, meh.
   - https://marketplace.visualstudio.com/*
+  - https://gist.githubusercontent.com/hellt/abc/raw/def/linux.clab.yml # test link used in docs
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
