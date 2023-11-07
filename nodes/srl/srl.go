@@ -252,7 +252,7 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		for _, fullpath := range agents {
 			basename := filepath.Base(fullpath)
 			// if it is a url extract filename from url or content-disposition header
-			if utils.IsHttpUri(fullpath) {
+			if utils.IsHttpURL(fullpath, false) {
 				basename = utils.FilenameForURL(fullpath)
 			}
 			// enforce yml extension

@@ -264,7 +264,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// it contains at least one newline
 	isEmbeddedConfig := strings.Count(p, "\n") >= 1
 	// downloadable config starts with http(s)://
-	isDownloadableConfig := utils.IsHttpUri(p)
+	isDownloadableConfig := utils.IsHttpURL(p, false)
 
 	if isEmbeddedConfig || isDownloadableConfig {
 		// both embedded and downloadable configs are require clab tmp dir to be created
@@ -522,7 +522,7 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	return nil
 }
 
-// setClabIntfsEnvVar sets CLAB_INTFS env var for each node
+// SetClabIntfsEnvVar sets CLAB_INTFS env var for each node
 // which holds the number of interfaces a node expects to have (without mgmt interfaces).
 func (c *CLab) SetClabIntfsEnvVar() {
 	for _, n := range c.Nodes {

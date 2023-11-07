@@ -26,6 +26,8 @@ It is possible to read the topology file from stdin by passing `-` as a value to
 
 ##### Remote topology files
 
+###### Git
+
 To simplify the deployment of labs that are stored in remote version control systems, containerlab supports the use of remote topology files for GitHub.com and GitLab.com hosted projects.
 
 By specifying a URL to a repository or a `.clab.yml` file in a repository, containerlab will automatically clone[^1] the repository in your current directory and deploy it. If the URL points to a `.clab.yml` file, containerlab will clone the repository and deploy the lab defined in the file.
@@ -49,6 +51,19 @@ Subsequent lab operations (such as destroy) must use the filesystem path to the 
     <video width="100%" controls>
         <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/5f0a7579f85c7d6af1fe05c254f42bb5/remote-labs2.mp4" type="video/mp4">
     </video>
+
+###### HTTP(S)
+
+Labs can be deployed from remote HTTP(S) URLs as well. These labs should be self-contained and not reference any external resources, like startup-config files, licenses, binds, etc.
+
+The following URL formats are supported:
+
+| Type                           | Example                                                             | Description                                           |
+| ------------------------------ | ------------------------------------------------------------------- | ----------------------------------------------------- |
+| Link to raw github gist        | https://gist.githubusercontent.com/hellt/abc/raw/def/linux.clab.yml | A file is downloaded to a temp directory and launched |
+| Link to a short schemaless URL | srlinux.dev/clab-srl                                                | A file is downloaded to a temp directory and launched |
+
+Containerlab distinct HTTP URLs from GitHub/GitLab by checking if github.com or gitlab.com is present in the URL. If not, it will treat the URL as a plain HTTP(S) URL.
 
 #### name
 
@@ -118,7 +133,7 @@ Read more about [node filtering](../manual/node-filtering.md) in the documentati
 
 ### Environment variables
 
-#### CLAB_RUNTIME
+#### `CLAB_RUNTIME`
 
 Default value of "runtime" key for nodes, same as global `--runtime | -r` flag described above.
 Affects all containerlab commands in the same way, not just `deploy`.
@@ -127,7 +142,7 @@ Intended to be set in environments where non-default container runtime should be
 
 Example command-line usage: `CLAB_RUNTIME=podman containerlab deploy`
 
-#### CLAB_VERSION_CHECK
+#### `CLAB_VERSION_CHECK`
 
 Can be set to "disable" value to prevent deploy command making a network request to check new version to report if one is available.
 
@@ -135,7 +150,7 @@ Useful when running in an automated environments with restricted network access.
 
 Example command-line usage: `CLAB_VERSION_CHECK=disable containerlab deploy`
 
-#### CLAB_LABDIR_BASE
+#### `CLAB_LABDIR_BASE`
 
 To change the [lab directory](../manual/conf-artifacts.md#identifying-a-lab-directory) location, set `CLAB_LABDIR_BASE` environment variable accordingly. It denotes the base directory in which the lab directory will be created.
 

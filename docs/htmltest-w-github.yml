@@ -16,6 +16,7 @@ IgnoreURLs:
   - https://linkedin.com/in
   - https://www.linkedin.com/in
   - mysocket.io # remove mysocket.io links until we rework to border0.com
+  - https://gist.githubusercontent.com/hellt/abc/raw/def/linux.clab.yml # test link used in docs
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true

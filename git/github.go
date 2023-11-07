@@ -94,3 +94,20 @@ func IsGitHubURL(url *neturl.URL) bool {
 type GitHubRepo struct {
 	GitRepoStruct
 }
+
+// IsGitHubShortURL returns true for github-friendly short urls
+// such as srl-labs/containerlab.
+func IsGitHubShortURL(s string) bool {
+	split := strings.Split(s, "/")
+	// only 2 elements are allowed
+	if len(split) != 2 {
+		return false
+	}
+
+	// dot is not allowed in the project owner
+	if strings.Contains(split[0], ".") {
+		return false
+	}
+
+	return true
+}

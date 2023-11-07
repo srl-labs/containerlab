@@ -85,34 +85,55 @@ func TestFileLines(t *testing.T) {
 	}
 }
 
-func TestIsGitHubShortURL(t *testing.T) {
+func TestIsHttpURL(t *testing.T) {
 	tests := []struct {
-		name string
-		url  string
-		want bool
+		name            string
+		url             string
+		allowSchemaless bool
+		want            bool
 	}{
 		{
-			name: "Valid Short URL",
-			url:  "user/repo",
-			want: true,
+			name:            "Valid HTTP URL",
+			url:             "http://example.com",
+			allowSchemaless: false,
+			want:            true,
 		},
 		{
-			name: "Invalid Short URL - More than one slash",
-			url:  "user/repo/extra",
-			want: false,
+			name:            "Valid HTTPS URL",
+			url:             "https://example.com",
+			allowSchemaless: false,
+			want:            true,
 		},
 		{
-			name: "Invalid Short URL - Starts with http",
-			url:  "http://user/repo",
-			want: false,
+			name:            "Valid URL without scheme",
+			url:             "srlinux.dev/clab-srl",
+			allowSchemaless: true,
+			want:            true,
 		},
-		// Add more test cases as needed
+		{
+			name:            "Valid URL without scheme and schemaless not allowed",
+			url:             "srlinux.dev/clab-srl",
+			allowSchemaless: false,
+			want:            false,
+		},
+		{
+			name:            "Invalid URL",
+			url:             "/foo/bar",
+			allowSchemaless: false,
+			want:            false,
+		},
+		{
+			name:            "stdin symbol '-'",
+			url:             "-",
+			allowSchemaless: false,
+			want:            false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsGitHubShortURL(tt.url); got != tt.want {
-				t.Errorf("IsGitHubShortURL() = %v, want %v", got, tt.want)
+			if got := IsHttpURL(tt.url, tt.allowSchemaless); got != tt.want {
+				t.Errorf("IsHttpUri() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -37,12 +37,19 @@ func FileExists(filename string) bool {
 	return !f.IsDir()
 }
 
+// FileOrDirExists returns true if a file or dir referenced by path exists & accessible.
+func FileOrDirExists(filename string) bool {
+	f, err := os.Stat(filename)
+
+	return err == nil && f != nil
+}
+
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpUri(src) {
+	if !IsHttpURL(src, false) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -74,16 +81,29 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return CopyFileContents(src, dst, mode)
 }
 
-// IsHttpUri checks if the url is a downloadable uri.
-// It returns true for s containing http/https.
-func IsHttpUri(s string) bool {
-	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
-}
+// IsHttpURL checks if the url is a downloadable HTTP URL.
+// The allowSchemaless toggle when set to true will allow URLs without a schema
+// such as "srlinux.dev/clab-srl". This is shortened notion that is used with
+// "deploy -t <url>" only.
+// Other callers of IsHttpURL should set the toggle to false.
+func IsHttpURL(s string, allowSchemaless bool) bool {
+	// '-' denotes stdin and not the URL
+	if s == "-" {
+		return false
+	}
 
-// IsGitHubShortURL returns true for github-friendly short urls
-// such as srl-labs/containerlab.
-func IsGitHubShortURL(s string) bool {
-	return strings.Count(s, "/") == 1 && !strings.HasPrefix(s, "http")
+	//
+	if !allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		return false
+	}
+
+	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		s = "https://" + s
+	}
+
+	u, err := url.ParseRequestURI(s)
+
+	return err == nil && u.Host != ""
 }
 
 // CopyFileContents copies the contents of the file named src to the file named
@@ -94,17 +114,8 @@ func IsGitHubShortURL(s string) bool {
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if IsHttpUri(src) {
-		// set InsecureSkipVerify to true to allow fetching
-		// files form servers with self-signed certificates
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // skipcq: GSC-G402
-				MinVersion:         tls.VersionTLS12,
-			},
-		}
-
-		client := &http.Client{Transport: tr}
+	if IsHttpURL(src, false) {
+		client := NewHTTPClient()
 
 		// download using client
 		resp, err := client.Get(src)
@@ -283,7 +294,7 @@ func FilenameForURL(rawUrl string) string {
 	}
 
 	// try extracting the filename from "content-disposition" header
-	if IsHttpUri(rawUrl) {
+	if IsHttpURL(rawUrl, false) {
 		resp, err := http.Head(rawUrl)
 		if err != nil {
 			return filepath.Base(u.Path)
@@ -320,4 +331,42 @@ func FileLines(path, commentStr string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func NewHTTPClient() *http.Client {
+	// set InsecureSkipVerify to true to allow fetching
+	// files form servers with self-signed certificates
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, // skipcq: GSC-G402
+			MinVersion:         tls.VersionTLS12,
+		},
+	}
+
+	return &http.Client{Transport: tr}
+}
+
+// DownloadFile downloads a file from `src` url and saves it to `dst` path.
+// `dst` must exist.
+func DownloadFile(src, dst string) error {
+	client := NewHTTPClient()
+
+	resp, err := client.Get(src)
+	if err != nil || resp.StatusCode != 200 {
+		return fmt.Errorf("%w: %s", errHTTPFetch, src)
+	}
+
+	defer resp.Body.Close() // skipcq: GO-S2307
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(dst, body, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
