@@ -157,7 +157,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 	// adjust ACL for Labdir such that SUDO_UID Users will
 	// also have access to lab directory files
-	err = utils.AdjustACL(c.TopoPaths.TopologyLabDir())
+	err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
 	if err != nil {
 		log.Infof("unable to adjusting Labdir ACLs: %v", err)
 	}
