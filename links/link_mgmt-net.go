@@ -81,7 +81,10 @@ func (*LinkMgmtNetRaw) GetType() LinkType {
 }
 
 func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw, error) {
-	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
+	_, hostIf, node, nodeIf, err := extractHostNodeInterfaceData(lb, specialEPIndex)
+	if err != nil {
+		return nil, err
+	}
 
 	link := &LinkMgmtNetRaw{
 		LinkCommonParams: lb.LinkCommonParams,
