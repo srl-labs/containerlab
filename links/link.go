@@ -314,9 +314,14 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 	hostData := strings.SplitN(lb.Endpoints[specialEPIndex], ":", 2)
 	nodeData := strings.SplitN(lb.Endpoints[nodeindex], ":", 2)
 
-	if len(hostData) != 2 || len(nodeData) != 2 {
+	if len(hostData) != 2 {
 		return "", "", "", "",
 			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[specialEPIndex])
+	}
+
+	if len(nodeData) != 2 {
+		return "", "", "", "",
+			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[nodeindex])
 	}
 
 	host = hostData[0]
