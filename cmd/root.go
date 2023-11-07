@@ -113,7 +113,7 @@ func getTopoFilePath(cmd *cobra.Command) error {
 
 	var err error
 	// perform topology clone/fetch if the topo file is not available locally
-	if !utils.FileExists(topo) {
+	if !utils.FileOrDirExists(topo) {
 		switch {
 		case git.IsGitHubOrGitLabURL(topo) || git.IsGitHubShortURL(topo):
 			topo, err = processGitTopoFile(topo)

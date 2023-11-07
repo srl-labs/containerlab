@@ -37,6 +37,13 @@ func FileExists(filename string) bool {
 	return !f.IsDir()
 }
 
+// FileOrDirExists returns true if a file or dir referenced by path exists & accessible.
+func FileOrDirExists(filename string) bool {
+	f, err := os.Stat(filename)
+
+	return err == nil && f != nil
+}
+
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
