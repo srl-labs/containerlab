@@ -18,7 +18,10 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/steiler/acls"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -333,6 +336,8 @@ func FileLines(path, commentStr string) ([]string, error) {
 	return lines, nil
 }
 
+// NewHTTPClient creates a new HTTP client with
+// insecure skip verify set to true and min TLS version set to 1.2.
 func NewHTTPClient() *http.Client {
 	// set InsecureSkipVerify to true to allow fetching
 	// files form servers with self-signed certificates
@@ -344,4 +349,61 @@ func NewHTTPClient() *http.Client {
 	}
 
 	return &http.Client{Transport: tr}
+}
+
+// AdjustFileACLs takes the given fs path, tries to load
+// the access file acl of that path and adds ACL rules
+// rwx for the SUDO_UID and r-x for the SUDO_GID group.
+func AdjustFileACLs(fsPath string) error {
+	/// here we trust sudo to set up env variables
+	// a missing SUDO_UID env var indicates the root user
+	// runs clab without sudo
+	uid, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		// nothing to do, already running as root
+		return nil
+	}
+
+	gid, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
+	}
+
+	iUID, err := strconv.Atoi(uid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
+	}
+
+	iGID, err := strconv.Atoi(gid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
+	}
+
+	// create a new ACL instance
+	a := &acls.ACL{}
+	// load the existing ACL entries of the PosixACLAccess type
+	err = a.Load(fsPath, acls.PosixACLAccess)
+	if err != nil {
+		return err
+	}
+
+	// add an entry for the group
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(iGID), 5))
+	if err != nil {
+		return err
+	}
+
+	// add an entry for the User
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_USER, uint32(iUID), 7))
+	if err != nil {
+		return err
+	}
+
+	// apply the ACL and return the error result
+	err = a.Apply(fsPath, acls.PosixACLAccess)
+	if err != nil {
+		return err
+	}
+
+	return a.Apply(fsPath, acls.PosixACLDefault)
 }

@@ -2678,6 +2678,12 @@ github.com/spf13/viper v1.7.0/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5q
 github.com/spf13/viper v1.13.0/go.mod h1:Icm2xNL3/8uyh/wFuB1jI7TiTNKp8632Nwegu+zgdYw=
 github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980 h1:lIOOHPEbXzO3vnmx2gok1Tfs31Q8GQqKLc8vVqyQq/I=
 github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980/go.mod h1:AO3tvPzVZ/ayst6UlUKUv6rcPQInYe3IknH3jYhAKu8=
+github.com/steiler/acls v0.0.0-20231106135104-9c34ae82c793 h1:lY8SggLL0JyttzcNEIRzbywKiKcIlVlF7ZPwTthG9eA=
+github.com/steiler/acls v0.0.0-20231106135104-9c34ae82c793/go.mod h1:kS9/GuHDS4t2YmY2ijbaK3m1iU4+BgRZS7GoDTC9BfY=
+github.com/steiler/acls v0.0.0-20231106152733-bb3d5d7b05c8 h1:RqP82h2DREJxj7AJbT0k7z2Jye6lweij5s14PUHic1o=
+github.com/steiler/acls v0.0.0-20231106152733-bb3d5d7b05c8/go.mod h1:kS9/GuHDS4t2YmY2ijbaK3m1iU4+BgRZS7GoDTC9BfY=
+github.com/steiler/acls v0.1.0 h1:fKVnEJ7ebghq2Ed5N1cU9fZrCCRj4xVRPrP7OswaRX8=
+github.com/steiler/acls v0.1.0/go.mod h1:kS9/GuHDS4t2YmY2ijbaK3m1iU4+BgRZS7GoDTC9BfY=
 github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
 github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
 github.com/streadway/amqp v1.0.0/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
