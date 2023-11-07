@@ -214,8 +214,8 @@ Another option to run containerlab on ARM-based Macs is to use Docker in Docker 
 
         # install some basic tools inside the container
         # adjust this list based on your demands
-        RUN apt-get update \
-            && apt-get upgrade -y
+        RUN apt-get update && \
+            apt-get upgrade -y && \
             apt-get install -y --no-install-recommends \
             sshpass \
             curl \
