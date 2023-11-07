@@ -94,3 +94,9 @@ func IsGitHubURL(url *neturl.URL) bool {
 type GitHubRepo struct {
 	GitRepoStruct
 }
+
+// IsGitHubShortURL returns true for github-friendly short urls
+// such as srl-labs/containerlab.
+func IsGitHubShortURL(s string) bool {
+	return strings.Count(s, "/") == 1 && !strings.HasPrefix(s, "http")
+}

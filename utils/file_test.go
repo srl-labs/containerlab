@@ -85,25 +85,30 @@ func TestFileLines(t *testing.T) {
 	}
 }
 
-func TestIsGitHubShortURL(t *testing.T) {
+func TestIsHttpURL(t *testing.T) {
 	tests := []struct {
 		name string
 		url  string
 		want bool
 	}{
 		{
-			name: "Valid Short URL",
-			url:  "user/repo",
+			name: "Valid HTTP URL",
+			url:  "http://example.com",
 			want: true,
 		},
 		{
-			name: "Invalid Short URL - More than one slash",
-			url:  "user/repo/extra",
-			want: false,
+			name: "Valid HTTPS URL",
+			url:  "https://example.com",
+			want: true,
 		},
 		{
-			name: "Invalid Short URL - Starts with http",
-			url:  "http://user/repo",
+			name: "Valid URL without scheme",
+			url:  "srlinux.dev/clab-srl",
+			want: true,
+		},
+		{
+			name: "Invalid URL",
+			url:  "/foo/bar",
 			want: false,
 		},
 		// Add more test cases as needed
@@ -111,8 +116,8 @@ func TestIsGitHubShortURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsGitHubShortURL(tt.url); got != tt.want {
-				t.Errorf("IsGitHubShortURL() = %v, want %v", got, tt.want)
+			if got := IsHttpURL(tt.url); got != tt.want {
+				t.Errorf("IsHttpUri() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -42,7 +42,7 @@ func FileExists(filename string) bool {
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpUri(src) {
+	if !IsHttpURL(src) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -74,16 +74,15 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return CopyFileContents(src, dst, mode)
 }
 
-// IsHttpUri checks if the url is a downloadable uri.
-// It returns true for s containing http/https.
-func IsHttpUri(s string) bool {
-	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
-}
+// IsHttpURL checks if the url is a downloadable HTTP URL.
+func IsHttpURL(s string) bool {
+	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		s = "https://" + s
+	}
 
-// IsGitHubShortURL returns true for github-friendly short urls
-// such as srl-labs/containerlab.
-func IsGitHubShortURL(s string) bool {
-	return strings.Count(s, "/") == 1 && !strings.HasPrefix(s, "http")
+	u, err := url.ParseRequestURI(s)
+
+	return err == nil && u.Host != ""
 }
 
 // CopyFileContents copies the contents of the file named src to the file named
@@ -94,17 +93,8 @@ func IsGitHubShortURL(s string) bool {
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if IsHttpUri(src) {
-		// set InsecureSkipVerify to true to allow fetching
-		// files form servers with self-signed certificates
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // skipcq: GSC-G402
-				MinVersion:         tls.VersionTLS12,
-			},
-		}
-
-		client := &http.Client{Transport: tr}
+	if IsHttpURL(src) {
+		client := NewHTTPClient()
 
 		// download using client
 		resp, err := client.Get(src)
@@ -283,7 +273,7 @@ func FilenameForURL(rawUrl string) string {
 	}
 
 	// try extracting the filename from "content-disposition" header
-	if IsHttpUri(rawUrl) {
+	if IsHttpURL(rawUrl) {
 		resp, err := http.Head(rawUrl)
 		if err != nil {
 			return filepath.Base(u.Path)
@@ -320,4 +310,17 @@ func FileLines(path, commentStr string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func NewHTTPClient() *http.Client {
+	// set InsecureSkipVerify to true to allow fetching
+	// files form servers with self-signed certificates
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, // skipcq: GSC-G402
+			MinVersion:         tls.VersionTLS12,
+		},
+	}
+
+	return &http.Client{Transport: tr}
 }

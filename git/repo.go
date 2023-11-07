@@ -80,3 +80,13 @@ func NewRepo(urlPath string) (GitRepo, error) {
 
 	return r, err
 }
+
+// IsGitHubOrGitLabURL checks if the url is a github or gitlab url.
+func IsGitHubOrGitLabURL(u string) bool {
+	_url, err := url.ParseRequestURI(u)
+	if err != nil {
+		return false
+	}
+
+	return IsGitHubURL(_url) || IsGitLabURL(_url)
+}

@@ -230,3 +230,36 @@ func TestIsGitHubURL(t *testing.T) {
 		})
 	}
 }
+
+func TestIsGitHubShortURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "Valid Short URL",
+			url:  "user/repo",
+			want: true,
+		},
+		{
+			name: "Invalid Short URL - More than one slash",
+			url:  "user/repo/extra",
+			want: false,
+		},
+		{
+			name: "Invalid Short URL - Starts with http",
+			url:  "http://user/repo",
+			want: false,
+		},
+		// Add more test cases as needed
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsGitHubShortURL(tt.url); got != tt.want {
+				t.Errorf("IsGitHubShortURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

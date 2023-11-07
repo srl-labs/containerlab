@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -111,41 +112,21 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	}
 
 	var err error
-	if !utils.FileExists(topo) && (utils.IsHttpUri(topo) || utils.IsGitHubShortURL(topo)) {
-		// for short github urls, prepend https://github.com
-		// note that short notation only works for github links
-		if utils.IsGitHubShortURL(topo) {
-			topo = "https://github.com/" + topo
+	// perform topology clone/fetch if the topo file is not available locally
+	if !utils.FileExists(topo) {
+		switch {
+		case git.IsGitHubOrGitLabURL(topo) || git.IsGitHubShortURL(topo):
+			topo, err = processGitTopoFile(topo)
+			if err != nil {
+				return err
+			}
+		case utils.IsHttpURL(topo):
+			// canonize the passed topo as URL by adding https schema if it was missing
+			if !strings.HasPrefix(topo, "http://") && !strings.HasPrefix(topo, "https://") {
+				topo = "https://" + topo
+			}
 		}
 
-		repo, err := git.NewRepo(topo)
-		if err != nil {
-			return err
-		}
-
-		// Instantiate the git implementation to use.
-		gitImpl := git.NewGoGit(repo)
-
-		// clone the repo via the Git Implementation
-		err = gitImpl.Clone()
-		if err != nil {
-			return err
-		}
-
-		// prepare the path with the repo based path
-		path := filepath.Join(repo.GetPath()...)
-		// prepend that path with the repo base directory
-		path = filepath.Join(repo.GetName(), path)
-
-		// change dir to the
-		err = os.Chdir(path)
-		if err != nil {
-			return err
-		}
-
-		// once the repo is cloned the topo file is emptied
-		// to ensure that auto find functionality can kick in
-		topo = repo.GetFilename()
 	}
 
 	// if topo or name flags have been provided, don't try to derive the topo file
@@ -166,4 +147,41 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	log.Debugf("topology file found: %s", files[0])
 
 	return err
+}
+
+func processGitTopoFile(topo string) (string, error) {
+	// for short github urls, prepend https://github.com
+	// note that short notation only works for github links
+	if git.IsGitHubShortURL(topo) {
+		topo = "https://github.com/" + topo
+	}
+
+	repo, err := git.NewRepo(topo)
+	if err != nil {
+		return "", err
+	}
+
+	// Instantiate the git implementation to use.
+	gitImpl := git.NewGoGit(repo)
+
+	// clone the repo via the Git Implementation
+	err = gitImpl.Clone()
+	if err != nil {
+		return "", err
+	}
+
+	// prepare the path with the repo based path
+	path := filepath.Join(repo.GetPath()...)
+	// prepend that path with the repo base directory
+	path = filepath.Join(repo.GetName(), path)
+
+	// change dir to the
+	err = os.Chdir(path)
+	if err != nil {
+		return "", err
+	}
+
+	// once the repo is cloned the topo file is emptied
+	// to ensure that auto find functionality can kick in
+	return repo.GetFilename(), err
 }
