@@ -252,7 +252,11 @@ func TestIsGitHubShortURL(t *testing.T) {
 			url:  "http://user/repo",
 			want: false,
 		},
-		// Add more test cases as needed
+		{
+			name: "normal url in short form",
+			url:  "srlinux.dev/clab-srl",
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {

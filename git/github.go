@@ -98,5 +98,16 @@ type GitHubRepo struct {
 // IsGitHubShortURL returns true for github-friendly short urls
 // such as srl-labs/containerlab.
 func IsGitHubShortURL(s string) bool {
-	return strings.Count(s, "/") == 1 && !strings.HasPrefix(s, "http")
+	split := strings.Split(s, "/")
+	// only 2 elements are allowed
+	if len(split) != 2 {
+		return false
+	}
+
+	// dot is not allowed in the project owner
+	if strings.Contains(split[0], ".") {
+		return false
+	}
+
+	return true
 }

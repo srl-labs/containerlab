@@ -181,7 +181,5 @@ func processGitTopoFile(topo string) (string, error) {
 		return "", err
 	}
 
-	// once the repo is cloned the topo file is emptied
-	// to ensure that auto find functionality can kick in
 	return repo.GetFilename(), err
 }

@@ -324,3 +324,28 @@ func NewHTTPClient() *http.Client {
 
 	return &http.Client{Transport: tr}
 }
+
+// DownloadFile downloads a file from `src` url and saves it to `dst` path.
+// `dst` must exist.
+func DownloadFile(src, dst string) error {
+	client := NewHTTPClient()
+
+	resp, err := client.Get(src)
+	if err != nil || resp.StatusCode != 200 {
+		return fmt.Errorf("%w: %s", errHTTPFetch, src)
+	}
+
+	defer resp.Body.Close() // skipcq: GO-S2307
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(dst, body, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

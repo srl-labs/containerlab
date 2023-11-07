@@ -131,14 +131,20 @@ func WithTopoPath(path, varsFile string) ClabOption {
 		var file string
 		var err error
 
-		switch path {
-		case "-", "stdin":
+		switch {
+		case path == "-" || path == "stdin":
 			file, err = c.readFromStdin()
 			if err != nil {
 				return err
 			}
+		// if the path is not a local file and a URL, download the file and store it in the tmp dir
+		case !utils.FileExists(path) && utils.IsHttpURL(path):
+			file, err = c.downloadTopoFile(path)
+			if err != nil {
+				return err
+			}
 
-		case "":
+		case path == "":
 			return fmt.Errorf("provide a path to the clab topology file")
 
 		default:
@@ -214,6 +220,19 @@ func (c *CLab) readFromStdin() (string, error) {
 	}
 
 	return tmpFile.Name(), nil
+}
+
+func (c *CLab) downloadTopoFile(url string) (string, error) {
+	c.TopoPaths.CreateTmpDir()
+
+	tmpFile, err := os.CreateTemp(c.TopoPaths.ClabTmpDir(), "topo-*.clab.yml")
+	if err != nil {
+		return "", err
+	}
+
+	err = utils.DownloadFile(url, tmpFile.Name())
+
+	return tmpFile.Name(), err
 }
 
 // WithNodeFilter option sets a filter for nodes to be deployed.
