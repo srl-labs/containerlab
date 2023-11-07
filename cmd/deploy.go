@@ -159,7 +159,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// also have access to lab directory files
 	err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
 	if err != nil {
-		log.Infof("unable to adjusting Labdir ACLs: %v", err)
+		log.Infof("unable to adjust Labdir file ACLs: %v", err)
 	}
 
 	// create an empty ansible inventory file that will get populated later
