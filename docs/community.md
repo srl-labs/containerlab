@@ -25,6 +25,20 @@ For those who cherish IRC in their hearts, a community-led IRC channel `#contain
 
 We are always happy to showcase containerlab and demonstrate its powers. Luckily, the network engineering community has lots of events worldwide, and we participated in some. Below you will find recordings of containerlab talks in different formats and on various venues listed in reverse chronological order[^1].
 
+### NFD 33
+
+<small>:material-youtube: [Lab as Code with Containerlab](https://www.youtube.com/watch?v=rjZjerjTrSY) · :material-calendar: 2023-10-30</small>
+
+Three years in the making with monthly releases, containerlab has become a de-facto standard for network engineers to build and run containerized network labs. In this talk, Roman explains the motivation behind containerlab, the benefits of defining labs as code, and shows *containerlab workflow* in action by spinning up [SR Linux Telemetry Lab](https://github.com/srl-labs/srl-telemetry-lab).
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/rjZjerjTrSY" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+Participants:
+
+* [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+
 ### Telco podcast
 
 <small>:material-podcast: [Networking Topology As Code](https://anchor.fm/thetelcopodcast/episodes/Network-topology-as-code---interview-with-Roman-Dodin--PLM-in-Nokia-and-maintainer-of-Containerlabs-e1hfcdl) · :material-calendar: 2022-04-21</small>
