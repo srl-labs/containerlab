@@ -231,8 +231,10 @@ func (c *CLab) readFromStdin() (string, error) {
 	return tmpFile.Name(), nil
 }
 
-func downloadTopoFile(url, tempDir string) (string, error) {
-	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
+func (c *CLab) downloadTopoFile(url string) (string, error) {
+	utils.CreateDirectory(c.TopoPaths.ClabTmpDir(), 0755)
+
+	tmpFile, err := os.CreateTemp(c.TopoPaths.ClabTmpDir(), "topo-*.clab.yml")
 	if err != nil {
 		return "", err
 	}
