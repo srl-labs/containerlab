@@ -18,14 +18,16 @@ import (
 //go:embed ssh_keys.go.tpl
 var SROSSSHKeysTemplate string
 
-// filterSSHPubKeys returns rsa and ecdsa keys from the list of ssh keys stored at s.sshPubKeys.
-// Since SR OS supports only certain key types, we need to filter out the rest.
-func (s *vrSROS) filterSSHPubKeys(supportedSSHKeyAlgos map[string]struct{}) (rsaKeys []string, ecdsaKeys []string) {
-	rsaKeys = make([]string, 0, len(s.sshPubKeys))
-	ecdsaKeys = make([]string, 0, len(s.sshPubKeys))
-
+// mapSSHPubKeys goes over s.sshPubKeys and puts the supported keys to the corresponding
+// slices associated with the supported SSH key algorithms.
+// supportedSSHKeyAlgos key is a SSH key algorithm and the value is a pointer to the slice
+// that is used to store the keys of the corresponding algorithm family.
+// Two slices are used to store RSA and ECDSA keys separately.
+// The slices are modified in place by reference, so no return values are needed.
+func (s *vrSROS) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
 	for _, k := range s.sshPubKeys {
-		if _, ok := supportedSSHKeyAlgos[k.Type()]; !ok {
+		sshKeys, ok := supportedSSHKeyAlgos[k.Type()]
+		if !ok {
 			log.Debugf("unsupported SSH Key Algo %q, skipping key", k.Type())
 			continue
 		}
@@ -34,27 +36,8 @@ func (s *vrSROS) filterSSHPubKeys(supportedSSHKeyAlgos map[string]struct{}) (rsa
 		// <keytype> <key> <comment>
 		keyFields := strings.Fields(string(ssh.MarshalAuthorizedKey(k)))
 
-		switch {
-		case isRSAKey(k):
-			rsaKeys = append(rsaKeys, keyFields[1])
-		case isECDSAKey(k):
-			ecdsaKeys = append(ecdsaKeys, keyFields[1])
-		}
+		*sshKeys = append(*sshKeys, keyFields[1])
 	}
-
-	return rsaKeys, ecdsaKeys
-}
-
-func isRSAKey(key ssh.PublicKey) bool {
-	return key.Type() == ssh.KeyAlgoRSA
-}
-
-func isECDSAKey(key ssh.PublicKey) bool {
-	kType := key.Type()
-
-	return kType == ssh.KeyAlgoECDSA521 ||
-		kType == ssh.KeyAlgoECDSA384 ||
-		kType == ssh.KeyAlgoECDSA256
 }
 
 // SROSTemplateData holds ssh keys for template generation.
@@ -70,15 +53,17 @@ func (s *vrSROS) configureSSHPublicKeys(
 	username, password string, pubKeys []ssh.PublicKey) error {
 	tplData := SROSTemplateData{}
 
-	// a map of supported SSH key algorithms
-	supportedSSHKeyAlgos := map[string]struct{}{
-		ssh.KeyAlgoRSA:      {},
-		ssh.KeyAlgoECDSA521: {},
-		ssh.KeyAlgoECDSA384: {},
-		ssh.KeyAlgoECDSA256: {},
+	// a map of supported SSH key algorithms and the template slices
+	// the keys should be added to.
+	// In mapSSHPubKeys we map supported SSH key algorithms to the template slices.
+	supportedSSHKeyAlgos := map[string]*[]string{
+		ssh.KeyAlgoRSA:      &tplData.SSHPubKeysRSA,
+		ssh.KeyAlgoECDSA521: &tplData.SSHPubKeysECDSA,
+		ssh.KeyAlgoECDSA384: &tplData.SSHPubKeysECDSA,
+		ssh.KeyAlgoECDSA256: &tplData.SSHPubKeysECDSA,
 	}
 
-	tplData.SSHPubKeysRSA, tplData.SSHPubKeysECDSA = s.filterSSHPubKeys(supportedSSHKeyAlgos)
+	s.mapSSHPubKeys(supportedSSHKeyAlgos)
 
 	t, err := template.New("SSHKeys").Funcs(
 		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(SROSSSHKeysTemplate)
