@@ -29,10 +29,10 @@ import (
 	"github.com/steiler/acls"
 
 	"github.com/bramvdbogaerde/go-scp"
-	"github.com/bramvdbogaerde/go-scp/auth"
 	"github.com/jlaffaye/ftp"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
@@ -222,8 +222,22 @@ func processScpUri(src string) (io.ReadCloser, error) {
 
 	knownHostsPath := ResolvePath("~/.ssh/known_hosts", "")
 
-	// try loading ssh agent keys
-	clientConfig, _ := auth.SshAgent(u.User.Username(), getCustomHostKeyCallback(knownHostsPath)) // skipcq: GSC-G106
+	clientConfig := ssh.ClientConfig{
+		User:            u.User.Username(),
+		Auth:            []ssh.AuthMethod{},
+		HostKeyCallback: getCustomHostKeyCallback(knownHostsPath),
+	}
+
+	// if we have an ssh agent running use it.
+	if socket := os.Getenv("SSH_AUTH_SOCK"); socket != "" {
+		conn, err := net.Dial("unix", socket)
+		if err != nil {
+			log.Error(err)
+		} else {
+			agentClient := agent.NewClient(conn)
+			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeysCallback(agentClient.Signers))
+		}
+	}
 
 	// if CLAB_SSH_KEY is set we use the key referenced here
 	keyPath := os.Getenv("CLAB_SSH_KEY")
@@ -247,7 +261,7 @@ func processScpUri(src string) (io.ReadCloser, error) {
 		if err != nil {
 			return nil, err
 		}
-		clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
+		clientConfig.Auth = append([]ssh.AuthMethod{ssh.PublicKeys(signer)}, clientConfig.Auth...)
 	}
 
 	// if a password is set, use the password

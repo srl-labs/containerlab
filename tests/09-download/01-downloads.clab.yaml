@@ -1,0 +1,9 @@
+name: 01-downloads
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:edge
+      license: scp://root@${SERVER_IP}/root/lic.txt
+      cmd: sleep infinity
