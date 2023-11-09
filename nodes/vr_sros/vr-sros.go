@@ -109,12 +109,11 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 
 func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
-		log.Infof("Waiting for %s to boot and apply config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
+		log.Infof("%s: applying config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
 
-		// r, err := utils.OpenFileAsReader(s.Cfg.StartupConfig)
 		r, err := os.Open(s.Cfg.StartupConfig)
 		if err != nil {
 			return err
@@ -227,6 +226,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, use
 		return nil
 	}
 
+	log.Infof("Waiting for %[1]s to be ready. This may take a while. Monitor boot log with `sudo docker logs -f %[1]s`", s.Cfg.LongName)
 	for loop := true; loop; {
 		if !s.isHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
