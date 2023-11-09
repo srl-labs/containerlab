@@ -5,5 +5,15 @@ topology:
     l1:
       kind: linux
       image: alpine:edge
-      license: scp://root@${SERVER_IP}/root/lic.txt
+      license: scp://user@${SCP_SERVER_IP}:2222/config/lic.txt
+      cmd: sleep infinity
+    l2:
+      kind: linux
+      image: alpine:edge
+      license: ftp://user:pass@${FTP_SERVER_IP}/lic.txt
+      cmd: sleep infinity
+    l3:
+      kind: linux
+      image: alpine:edge
+      license: http://${HTTP_SERVER_IP}/lic.txt
       cmd: sleep infinity

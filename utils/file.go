@@ -160,17 +160,17 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	case IsFtpUri(src):
 		in, err = processFtpUri(src)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure retrieving file %s: %v", src, err)
 		}
 	case IsScpUri(src):
 		in, err = processScpUri(src)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure retrieving file %s: %v", src, err)
 		}
 	default:
 		in, err = os.Open(src)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure retrieving file %s: %v", src, err)
 		}
 	}
 	defer in.Close() // skipcq: GO-S2307
