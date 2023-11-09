@@ -19,6 +19,7 @@ type SSHConfigTmpl struct {
 type SSHConfigNodeTmpl struct {
 	Name     string
 	Username string
+	Kind     string
 }
 
 // tmplSshConfig is the SSH config template.
@@ -29,8 +30,11 @@ Host {{ .Name }}
 	{{-  if ne .Username ""}}
 	User {{ .Username }}
 	{{- end }}
-	StrictHostKeyChecking=no 
+	StrictHostKeyChecking=no
 	UserKnownHostsFile=/dev/null
+	{{- if eq .Kind "sros" }}
+	PubkeyAuthentication="unbound"
+	{{- end }}
 {{ end }}`
 
 // RemoveSSHConfig removes the lab specific ssh config file
@@ -58,6 +62,7 @@ func (c *CLab) AddSSHConfig(topoPaths *types.TopoPaths) error {
 		nodeData := SSHConfigNodeTmpl{
 			Name:     n.Config().LongName,
 			Username: NodeRegistryEntry.Credentials().GetUsername(),
+			Kind:     NodeRegistryEntry.GetMainKindName(),
 		}
 		tmpl.Nodes = append(tmpl.Nodes, nodeData)
 	}
