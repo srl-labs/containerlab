@@ -249,6 +249,20 @@ func (mr *MockNodeMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages), arg0)
 }
 
+// GetKindSpecifics mocks base method.
+func (m *MockNode) GetKindSpecifics() *types.KindSpecifics {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKindSpecifics")
+	ret0, _ := ret[0].(*types.KindSpecifics)
+	return ret0
+}
+
+// GetKindSpecifics indicates an expected call of GetKindSpecifics.
+func (mr *MockNodeMockRecorder) GetKindSpecifics() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKindSpecifics", reflect.TypeOf((*MockNode)(nil).GetKindSpecifics))
+}
+
 // GetLinkEndpointType mocks base method.
 func (m *MockNode) GetLinkEndpointType() links.LinkEndpointType {
 	m.ctrl.T.Helper()

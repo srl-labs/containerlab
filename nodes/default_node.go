@@ -35,6 +35,7 @@ type DefaultNode struct {
 	Mgmt             *types.MgmtNet
 	Runtime          runtime.ContainerRuntime
 	HostRequirements *types.HostRequirements
+	KindSpecifics    *types.KindSpecifics
 	// Indicates that the node should not start without no license file defined
 	LicensePolicy types.LicensePolicy
 	// OverwriteNode stores the interface used to overwrite methods defined
@@ -57,6 +58,7 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		HostRequirements: types.NewHostRequirements(),
 		OverwriteNode:    n,
 		LicensePolicy:    types.LicensePolicyNone,
+		KindSpecifics:    types.NewKindSpecifics(),
 	}
 
 	return dn
@@ -508,4 +510,8 @@ func (d *DefaultNode) SetState(s state.NodeState) {
 	d.statemutex.Lock()
 	defer d.statemutex.Unlock()
 	d.state = s
+}
+
+func (d *DefaultNode) GetKindSpecifics() *types.KindSpecifics {
+	return d.KindSpecifics
 }

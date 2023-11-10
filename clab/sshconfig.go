@@ -17,9 +17,9 @@ type SSHConfigTmpl struct {
 // SSHConfigNodeTmpl represents values for a single node
 // in the sshconfig template.
 type SSHConfigNodeTmpl struct {
-	Name     string
-	Username string
-	Kind     string
+	Name         string
+	Username     string
+	SSHSpecifics *types.SSHSpecifics
 }
 
 // tmplSshConfig is the SSH config template.
@@ -32,8 +32,8 @@ Host {{ .Name }}
 	{{- end }}
 	StrictHostKeyChecking=no
 	UserKnownHostsFile=/dev/null
-	{{- if eq .Kind "sros" }}
-	PubkeyAuthentication="unbound"
+	{{- if ne .SSHSpecifics.PubkeyAuthentication "" }}
+	PubkeyAuthentication={{ .SSHSpecifics.PubkeyAuthentication.String }}
 	{{- end }}
 {{ end }}`
 
@@ -60,9 +60,9 @@ func (c *CLab) AddSSHConfig(topoPaths *types.TopoPaths) error {
 		// the kind registered Username
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
-			Name:     n.Config().LongName,
-			Username: NodeRegistryEntry.Credentials().GetUsername(),
-			Kind:     NodeRegistryEntry.GetMainKindName(),
+			Name:         n.Config().LongName,
+			Username:     NodeRegistryEntry.Credentials().GetUsername(),
+			SSHSpecifics: n.GetKindSpecifics().SSHSpecifics,
 		}
 		tmpl.Nodes = append(tmpl.Nodes, nodeData)
 	}
