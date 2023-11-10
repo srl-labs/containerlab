@@ -602,6 +602,11 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	// so we add the keys to the template data for rendering.
 	if len(n.sshPubKeys) > 0 && (semver.Compare(n.swVersion.String(), "v23.10") >= 0 || n.swVersion.major == "0") {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
+	} else {
+		// prior to 23.10.1 only rsa keys are supported
+		// this function filters out non-rsa keys from the
+		// list of ssh public keys found on the system/agent
+		n.filterSSHPubKeys()
 	}
 
 	// set MgmtMTU to the MTU value of the runtime management network
