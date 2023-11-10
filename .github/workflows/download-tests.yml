@@ -1,10 +1,10 @@
-name: vxlan-test
+name: download-test
 
 "on":
   workflow_call:
 
 jobs:
-  vxlan-tests:
+  download-tests:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
