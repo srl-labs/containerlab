@@ -10,17 +10,30 @@ Suite Teardown      Run Keyword    Cleanup
 ${lab-name}         02-01-two-srls
 ${lab-file-name}    02-srl02.clab.yml
 ${runtime}          docker
-${key-name}         test
-
+${key-name}         clab-test-key
 
 *** Test Cases ***
-Create SSH keypair
-    ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
+Set key-path Variable
+    ${key-path} =   OperatingSystem.Normalize Path    ~/.ssh/${key-name}
+     Set Suite Variable    ${key-path}
+
+Create SSH keypair - RSA
     Log    ${key-path}
-    Set Suite Variable    ${key-path}
     # Using ed25519 algo because of paramiko https://github.com/paramiko/paramiko/issues/1915
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ssh-keygen -t ed25519 -N "" -f ${key-path}
+    ...    ssh-keygen -t rsa -N "" -f ${key-path}-rsa
+
+Create SSH keypair - ED25519
+    Log    ${key-path}
+    # Using ed25519 algo because of paramiko https://github.com/paramiko/paramiko/issues/1915
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ssh-keygen -t ed25519 -N "" -f ${key-path}-ed25519
+
+Create SSH keypair - ecdsa512
+    Log    ${key-path}
+    # Using ed25519 algo because of paramiko https://github.com/paramiko/paramiko/issues/1915
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ssh-keygen -t ecdsa -b 521 -N "" -f ${key-path}-ecdsa512
 
 Deploy ${lab-name} lab
     Log    ${CURDIR}
@@ -74,17 +87,31 @@ Ensure srl1 is reachable over ssh
     ...    password=NokiaSrl1!
     ...    try_for=10
 
-Ensure srl1 is reachable over ssh with public key auth
+Ensure srl1 is reachable over ssh with public key RSA auth
     Login via SSH with public key
     ...    address=clab-${lab-name}-srl1
     ...    username=admin
-    ...    keyfile=${key-path}
+    ...    keyfile=${key-path}-rsa
+    ...    try_for=10
+
+Ensure srl1 is reachable over ssh with public key ED25519 auth
+    Login via SSH with public key
+    ...    address=clab-${lab-name}-srl1
+    ...    username=admin
+    ...    keyfile=${key-path}-ed25519
+    ...    try_for=10
+
+Ensure srl1 is reachable over ssh with public key ECDSA512 auth
+    Login via SSH with public key
+    ...    address=clab-${lab-name}-srl1
+    ...    username=admin
+    ...    keyfile=${key-path}-ecdsa512
     ...    try_for=10
 
 Ensure srl1 can ping srl2 over ethernet-1/1 interface
     Sleep    5s    give some time for networking stack to settle
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip netns exec srbase-default ping 192.168.0.1 -c2 -w 3s"
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip netns exec srbase-default ping 192.168.0.1 -c2 -w 3"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
@@ -114,4 +141,4 @@ Verify TLS works with JSON-RPC, certificate check and IP address as SAN
 *** Keywords ***
 Cleanup
     Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
-    Run    rm -f ${key-path}
+    Run    rm -f ${key-path}*
