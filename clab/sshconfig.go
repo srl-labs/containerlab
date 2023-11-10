@@ -5,6 +5,7 @@ import (
 	"text/template"
 
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // SSHConfigTmpl is the top-level data structure for the
@@ -44,7 +45,7 @@ func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
 }
 
 // AddSSHConfig adds the lab specific ssh config file.
-func (c *CLab) AddSSHConfig(topoPaths *types.TopoPaths) error {
+func (c *CLab) AddSSHConfig() error {
 	tmpl := &SSHConfigTmpl{
 		TopologyName: c.Config.Name,
 		Nodes:        make([]SSHConfigNodeTmpl, 0, len(c.Nodes)),
@@ -67,7 +68,7 @@ func (c *CLab) AddSSHConfig(topoPaths *types.TopoPaths) error {
 		return err
 	}
 
-	f, err := os.Create(topoPaths.SSHConfigPath())
+	f, err := utils.CreateFileWithPath(c.TopoPaths.SSHConfigPath())
 	if err != nil {
 		return err
 	}

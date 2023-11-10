@@ -407,3 +407,16 @@ func AdjustFileACLs(fsPath string) error {
 
 	return a.Apply(fsPath, acls.PosixACLDefault)
 }
+
+// CreateFileWithPath creates a file by the given path
+// and creates the directories if needed.
+func CreateFileWithPath(path string) (*os.File, error) {
+	// create directories if needed, since we promise to create the file
+	// if it doesn't exist
+	err := os.MkdirAll(filepath.Dir(path), 0754)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.Create(path)
+}
