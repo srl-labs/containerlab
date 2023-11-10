@@ -12,26 +12,21 @@ ${lab-file-name}    02-srl02.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
 
+
 *** Test Cases ***
 Set key-path Variable
-    ${key-path} =   OperatingSystem.Normalize Path    ~/.ssh/${key-name}
-     Set Suite Variable    ${key-path}
+    ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
+    Set Suite Variable    ${key-path}
 
 Create SSH keypair - RSA
-    Log    ${key-path}
-    # Using ed25519 algo because of paramiko https://github.com/paramiko/paramiko/issues/1915
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ssh-keygen -t rsa -N "" -f ${key-path}-rsa
 
 Create SSH keypair - ED25519
-    Log    ${key-path}
-    # Using ed25519 algo because of paramiko https://github.com/paramiko/paramiko/issues/1915
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ssh-keygen -t ed25519 -N "" -f ${key-path}-ed25519
 
 Create SSH keypair - ecdsa512
-    Log    ${key-path}
-    # Using ed25519 algo because of paramiko https://github.com/paramiko/paramiko/issues/1915
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ssh-keygen -t ecdsa -b 521 -N "" -f ${key-path}-ecdsa512
 
@@ -94,12 +89,18 @@ Ensure srl1 is reachable over ssh with public key RSA auth
     ...    keyfile=${key-path}-rsa
     ...    try_for=10
 
+# This test is expected to fail on SR Linux < 23.10.1 since only RSA keys are supported
+# on older systems
+
 Ensure srl1 is reachable over ssh with public key ED25519 auth
     Login via SSH with public key
     ...    address=clab-${lab-name}-srl1
     ...    username=admin
     ...    keyfile=${key-path}-ed25519
     ...    try_for=10
+
+# This test is expected to fail on SR Linux < 23.10.1 since only RSA keys are supported
+# on older systems
 
 Ensure srl1 is reachable over ssh with public key ECDSA512 auth
     Login via SSH with public key
