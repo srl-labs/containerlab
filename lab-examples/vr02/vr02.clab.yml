@@ -3,10 +3,10 @@ name: vr02
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     vmx:
-      kind: vr-vmx
+      kind: juniper_vmx
       image: vrnetlab/vr-vmx:20.2R1.10
 
   links:

@@ -99,7 +99,7 @@ serve-docs:
 
 .PHONY: htmltest
 htmltest:
-	docker run --rm -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
+	docker run --rm -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER) build --clean --strict
 	docker run --rm -v $(CURDIR):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 

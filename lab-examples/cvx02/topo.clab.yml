@@ -3,7 +3,7 @@ name: cvx02
 topology:
   nodes:
     sw1:
-      kind: cvx
+      kind: cumulus_cvx
       image: networkop/cx:4.3.0
       runtime: docker
       binds:
@@ -14,7 +14,7 @@ topology:
       image: networkop/host:ifreload
       binds:
         - h1/interfaces:/etc/network/interfaces
-      cmd: 2 # wait for 2 interfaces to be connected: eth0 + eth1
+      cmd: "2" # wait for 2 interfaces to be connected: eth0 + eth1
 
   links:
     - endpoints: ["sw1:swp12", "h1:eth1"]

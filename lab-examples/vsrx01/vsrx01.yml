@@ -2,9 +2,9 @@ name: vsrx1
 topology:
   nodes:
     srx1:
-      kind: vr-vsrx
+      kind: juniper_vsrx
       image: vrnetlab/vr-vsrx:23.2R1.13
-      startup-config: srx1.txt 
+      startup-config: srx1.txt
     client1:
       kind: "linux"
       image: wbitt/network-multitool:alpine-extra

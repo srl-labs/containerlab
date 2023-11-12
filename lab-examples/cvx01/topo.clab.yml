@@ -3,7 +3,7 @@ name: cvx01
 topology:
   nodes:
     sw1:
-      kind: cvx
+      kind: cumulus_cvx
       image: networkop/cx:4.3.0
       binds:
         - sw1/interfaces:/etc/network/interfaces.d/host-mounts
@@ -11,7 +11,7 @@ topology:
       kind: linux
       image: frrouting/frr:v7.5.1
       binds:
-      - sw2/frr.conf:/etc/frr/frr.conf
+        - sw2/frr.conf:/etc/frr/frr.conf
 
   links:
     - endpoints: ["sw1:swp12", "sw2:eth21"]

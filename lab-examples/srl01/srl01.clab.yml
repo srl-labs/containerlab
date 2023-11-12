@@ -3,9 +3,9 @@ name: srl01
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd3
       image: ghcr.io/nokia/srlinux
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
