@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Initializer func() Node
@@ -82,16 +80,6 @@ func (e *NodeRegistryEntry) Credentials() *Credentials {
 	}
 
 	return e.credentials
-}
-
-// GetMainKindName returns kind's prime kind name, which is the first element in kind names list.
-func (e *NodeRegistryEntry) GetMainKindName() string {
-	if e == nil || len(e.nodeKindNames) == 0 {
-		log.Warn("here101")
-		return ""
-	}
-	log.Warn(e.nodeKindNames[0])
-	return e.nodeKindNames[0]
 }
 
 func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials) *NodeRegistryEntry {
