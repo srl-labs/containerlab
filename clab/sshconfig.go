@@ -2,9 +2,12 @@ package clab
 
 import (
 	"os"
+	"path"
 	"text/template"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // SSHConfigTmpl is the top-level data structure for the
@@ -44,7 +47,13 @@ func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
 }
 
 // AddSSHConfig adds the lab specific ssh config file.
-func (c *CLab) AddSSHConfig(topoPaths *types.TopoPaths) error {
+func (c *CLab) AddSSHConfig() error {
+	sshConfigDir := path.Dir(c.TopoPaths.SSHConfigPath())
+	if !utils.FileOrDirExists(sshConfigDir) {
+		log.Debugf("ssh config directory %s does not exist, skipping ssh config generation", sshConfigDir)
+		return nil
+	}
+
 	tmpl := &SSHConfigTmpl{
 		TopologyName: c.Config.Name,
 		Nodes:        make([]SSHConfigNodeTmpl, 0, len(c.Nodes)),
@@ -67,7 +76,7 @@ func (c *CLab) AddSSHConfig(topoPaths *types.TopoPaths) error {
 		return err
 	}
 
-	f, err := os.Create(topoPaths.SSHConfigPath())
+	f, err := os.Create(c.TopoPaths.SSHConfigPath())
 	if err != nil {
 		return err
 	}
