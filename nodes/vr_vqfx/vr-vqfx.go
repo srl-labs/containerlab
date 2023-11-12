@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"vr-vqfx", "vr-juniper_vqfx"}
+	kindnames          = []string{"juniper_vqfx", "vr-vqfx", "vr-juniper_vqfx"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 )
 

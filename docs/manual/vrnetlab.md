@@ -33,21 +33,28 @@ The following table provides a link between the version combinations:
 | ---------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl)     | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                           |
 | `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)           | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances |
-| --               | [`0.2.1`](https://github.com/hellt/vrnetlab/tree/v0.2.1)           | added timeout for SR OS images to allow eth interfaces to appear in the container namespace. Other images are not touched.                               |
-| --               | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)           | fixed serial (telnet) access to SR OS nodes                                                                                                              |
-| --               | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)           | set default cpu/ram for SR OS images                                                                                                                     |
-| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)           | added support for Cisco CSR1000v via [`vr-csr`](kinds/vr-csr.md) and MikroTik routeros via [`vr-ros`](kinds/vr-ros.md) kind                              |
-| --               | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)           | enhanced SR OS boot sequence                                                                                                                             |
-| --               | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)           | fixed SR OS CPU allocation and added Palo Alto PAN support [`vr-pan`](kinds/vr-pan.md)                                                                   |
-| `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)           | added support for Cisco Nexus 9000v via [`vr-n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                     |
-| `0.19.0`         | [`0.6.0`](https://github.com/hellt/vrnetlab/tree/v0.6.0)           | added experimental support for Juniper vQFX via [`vr-vqfx`](kinds/vr-vqfx.md) kind, added support Dell FTOS via [`vr-ftosv`](kinds/vr-ftosv.md)          |
+|                  | [`0.2.1`](https://github.com/hellt/vrnetlab/tree/v0.2.1)           | added timeout for SR OS images to allow eth interfaces to appear in the container namespace. Other images are not touched.                               |
+|                  | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)           | fixed serial (telnet) access to SR OS nodes                                                                                                              |
+|                  | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)           | set default cpu/ram for SR OS images                                                                                                                     |
+| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)           | added support for Cisco CSR1000v via [`cisco_csr`](kinds/vr-csr.md) and MikroTik routeros via [`mikrotik_ros`](kinds/vr-ros.md) kind                     |
+|                  | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)           | enhanced SR OS boot sequence                                                                                                                             |
+|                  | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)           | fixed SR OS CPU allocation and added Palo Alto PAN support [`paloaltp_pan`](kinds/vr-pan.md)                                                             |
+| `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)           | added support for Cisco Nexus 9000v via [`cisco_n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                  |
+| `0.19.0`         | [`0.6.0`](https://github.com/hellt/vrnetlab/tree/v0.6.0)           | added experimental support for Juniper vQFX via [`juniper_vqfx`](kinds/vr-vqfx.md) kind, added support Dell FTOS via [`dell_ftosv`](kinds/vr-ftosv.md)   |
 |                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.2)           | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                          |
 |                  | [`0.7.0`](https://github.com/hellt/vrnetlab/tree/v0.7.0)           | startup-config support for vqfx and vmx                                                                                                                  |
 | `0.32.2`         | [`0.8.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.0)   | startup-config support for the rest of the kinds, support for multi line card SR OS                                                                      |
 | `0.34.0`         | [`0.8.2`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.2)   | startup-config support for PANOS, ISA support for Nokia VSR-I and MGMT VRF for VMX                                                                       |
 |                  | [`0.9.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.9.0)   | Support for IPInfusion OcNOS with vrnetlab                                                                                                               |
-| `0.41.0`         | [`0.11.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.11.0) | Added support for Juniper vSRX3.0 via [`vr-vsrx`](kinds/vr-vsrx.md) kind                                                                                 |
-| `0.45.0`         | [`0.12.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.12.0) | Added support for Juniper vJunos-switch via [`vr-juniper_vjunosswitch`](kinds/vr-vjunosswitch.md) kind                                                   |
+| `0.41.0`         | [`0.11.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.11.0) | Added support for Juniper vSRX3.0 via [`juniper_vsrx`](kinds/vr-vsrx.md) kind                                                                            |
+| `0.45.0`         | [`0.12.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.12.0) | Added support for Juniper vJunos-switch via [`juniper_vjunosswitch`](kinds/vr-vjunosswitch.md) kind                                                      |
+
+???note "how to understand version inter-dependency between containerlab and vrnetlab?"
+    When new VM-based platform support is added to vrnetlab, it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.  
+    When vrnetlab adds new features that don't require containerlab changes, the table will have only vrnetlab version.  
+    When containerlab adds new features that don't require vrnetlab changes, the table will not list containerlab version.
+
+    It is worth noting, that you can use the latest containerlab version with a given vrnetlab version, even if the table doesn't list the latest containerlab version.
 
 ### Building vrnetlab images
 
@@ -76,20 +83,24 @@ To build a vrnetlab image compatible with containerlab, users first need to ensu
 
 The images that work with containerlab will appear in the supported list as we implement the necessary integration.
 
-| Product           | Kind                          | Demo lab                                   | Notes                                                                                                                                                                                                        |
-| ----------------- | ----------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Nokia SR OS       | [vr-sros](kinds/vr-sros.md)   | [SRL & SR OS](../lab-examples/vr-sros.md)  | When building SR OS vrnetlab image for use with containerlab, **do not** provide the license during the image build process. The license shall be provided in the containerlab topology definition file[^1]. |
-| Juniper vMX       | [vr-vmx](kinds/vr-vmx.md)     | [SRL & vMX](../lab-examples/vr-vmx.md)     |                                                                                                                                                                                                              |
-| Juniper vQFX      | [vr-vqfx](kinds/vr-vqfx.md)   | Coming soon                                |                                                                                                                                                                                                              |
-| Juniper vSRX      | [vr-vsrx](kinds/vr-vsrx.md)   | Coming soon                                |                                                                                                                                                                                                              |
-| Cisco XRv         | [vr-xrv](kinds/vr-xrv.md)     | [SRL & XRv](../lab-examples/vr-xrv.md)     |                                                                                                                                                                                                              |
-| Cisco XRv9k       | [vr-xrv9k](kinds/vr-xrv9k.md) | [SRL & XRv9k](../lab-examples/vr-xrv9k.md) |                                                                                                                                                                                                              |
-| Cisco CSR1000v    | [vr-csr](kinds/vr-csr.md)     |                                            |                                                                                                                                                                                                              |
-| Arista vEOS       | [vr-veos](kinds/vr-veos.md)   |                                            |                                                                                                                                                                                                              |
-| MikroTik RouterOS | [vr-ros](kinds/vr-ros.md)     |                                            |                                                                                                                                                                                                              |
-| Palo Alto PAN     | [vr-pan](kinds/vr-pan.md)     |                                            |                                                                                                                                                                                                              |
-| Cisco Nexus 9000v | [vr-n9kv](kinds/vr-n9kv.md)   |                                            |                                                                                                                                                                                                              |
-| Dell FTOS10v      | [vr-ftosv](kinds/vr-ftosv.md) |                                            |                                                                                                                                                                                                              |
+| Product           | Kind                             | Demo lab                                   | Notes                                                                                                                                                                                                        |
+| ----------------- | -------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Nokia SR OS       | [nokia_sros](kinds/vr-sros.md)   | [SRL & SR OS](../lab-examples/vr-sros.md)  | When building SR OS vrnetlab image for use with containerlab, **do not** provide the license during the image build process. The license shall be provided in the containerlab topology definition file[^1]. |
+| Juniper vMX       | [juniper_vmx](kinds/vr-vmx.md)   | [SRL & vMX](../lab-examples/vr-vmx.md)     |                                                                                                                                                                                                              |
+| Juniper vQFX      | [juniper_vqfx](kinds/vr-vqfx.md) |                                            |                                                                                                                                                                                                              |
+| Juniper vSRX      | [juniper_vsrx](kinds/vr-vsrx.md) |                                            |                                                                                                                                                                                                              |
+| Juniper vJunos-Switch      | [juniper_vjunosswitch](kinds/vr-vjunosswitch.md) |                                            |                                                                                                                                                                                                              |
+| Cisco XRv         | [cisco_xrv](kinds/vr-xrv.md)     | [SRL & XRv](../lab-examples/vr-xrv.md)     |                                                                                                                                                                                                              |
+| Cisco XRv9k       | [cisco_xrv9k](kinds/vr-xrv9k.md) | [SRL & XRv9k](../lab-examples/vr-xrv9k.md) |                                                                                                                                                                                                              |
+| Cisco CSR1000v    | [cisco_csr](kinds/vr-csr.md)     |                                            |                                                                                                                                                                                                              |
+| Cisco Nexus 9000v    | [cisco_nexus9kv](kinds/vr-n9kv.md)     |                                            |                                                                                                                                                                                                              |
+| Arista vEOS       | [arista_veos](kinds/vr-veos.md)  |                                            |                                                                                                                                                                                                              |
+| MikroTik RouterOS | [mikrotik_ros](kinds/vr-ros.md)  |                                            |                                                                                                                                                                                                              |
+| Palo Alto PAN     | [paloalto_pan](kinds/vr-pan.md)  |                                            |                                                                                                                                                                                                              |
+| Dell FTOS10v      | [dell_ftosv](kinds/vr-ftosv.md)  |                                            |                                                                                                                                                                                                              |
+| Aruba AOS-CX      | [aruba_aoscx](kinds/vr-aoscx.md)  |                                            |                                                                                                                                                                                                              |
+| IPInfusion OcNOS      | [ipinfusion_ocnos](kinds/ipinfusion-ocnos.md)  |                                            |                                                                                                                                                                                                              |
+| Checkpoint Cloudguard      | [checkpoint_cloudguard](kinds/checkpoint_cloudguard.md)  |                                            |                                                                                                                                                                                                              |
 
 ### Connection modes
 
@@ -107,8 +118,8 @@ Containerlab offers several ways of connecting VM-based routers with the rest of
     topology:
       nodes:
         sr1:
-          kind: vr-sros
-          image: vrnetlab/vr-sros:20.10.R1
+          kind: nokia_sros
+          image: vrnetlab/nokia_sros:20.10.R1
           env:
             CONNECTION_MODE: bridge # use `ovs` for openvswitch datapath
     ```
@@ -126,12 +137,12 @@ name: bootdelay
 topology:
   nodes:
     sr1:
-      kind: vr-sros
-      image: vr-sros:21.2.R1
+      kind: nokia_sros
+      image: nokia_sros:21.2.R1
       license: license-sros21.txt
     sr2:
-      kind: vr-sros
-      image: vr-sros:21.2.R1
+      kind: nokia_sros
+      image: nokia_sros:21.2.R1
       license: license-sros21.txt
       env:
         # boot delay in seconds

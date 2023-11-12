@@ -4,11 +4,11 @@ search:
 ---
 # Nokia SR OS
 
-[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `vr-sros` or `vr-nokia_sros` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `nokia_sros` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-sros nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
+Nokia SR OS nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
-## Managing vr-sros nodes
+## Managing Nokia SR OS nodes
 
 !!!note
     Containers with SR OS inside will take ~3min to fully boot.  
@@ -17,7 +17,7 @@ vr-sros nodes launched with containerlab come up pre-provisioned with SSH, SNMP,
 Nokia SR OS node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
-    to connect to a `bash` shell of a running vr-sros container:
+    to connect to a `bash` shell of a running Nokia SR OS container:
     ```bash
     docker exec -it <container-name/id> bash
     ```
@@ -51,7 +51,7 @@ Nokia SR OS node launched with containerlab can be managed via the following int
 
 ## Interfaces mapping
 
-vr-sros container uses the following mapping for its interfaces:
+Nokia SR OS container uses the following mapping for its interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1` - first data interface, mapped to the first data port of SR OS line card
@@ -65,7 +65,7 @@ Interfaces can be defined in a non-sequential way, for example:
     - endpoints: ["sr1:eth3", "sr2:eth5"]
 ```
 
-When containerlab launches vr-sros node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
+When containerlab launches Nokia SR OS node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
 
 Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
 
@@ -75,16 +75,16 @@ Data interfaces `eth1+` need to be configured with IP addressing manually using 
 
 Virtual SR OS simulator can be run in multiple HW variants as explained in [the vSIM installation guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE15836AAADTQZZA01_V1_vSIM%20Installation%20and%20Setup%20Guide%2020.10.R1.pdf).
 
-`vr-sros` container images come with [pre-packaged SR OS variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
+Nokia SR OS container images come with [pre-packaged SR OS variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
 
-To make vr-sros to boot in one of the packaged variants, set the type to one of the predefined variant values:
+To make Nokia SR OS to boot in one of the packaged variants, set the type to one of the predefined variant values:
 
 ```yaml
 topology:
   nodes:
     sros:
-      kind: vr-sros
-      image: vrnetlab/vr-sros:20.10.R1
+      kind: nokia_sros
+      image: vrnetlab/nokia_sros:20.10.R1
       type: sr-1s # if omitted, the default sr-1 variant will be used
       license: license-sros20.txt
 ```
@@ -129,15 +129,15 @@ type: >-
     topology:
       nodes:
         R1:
-          kind: vr-sros
-          image: vr-sros:22.7.R2
+          kind: nokia_sros
+          image: nokia_sros:22.7.R2
           type: >-
             cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
             lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
             lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
         R2:
-          kind: vr-sros
-          image: sros:22.7.R2
+          kind: nokia_sros
+          image: nokia_sros:22.7.R2
           type: >-
             cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
             lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
@@ -162,7 +162,7 @@ type: "cpu=2 ram=4 slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-2
 
 ### Node configuration
 
-vr-sros nodes come up with a basic "blank" configuration where only the card/mda are provisioned, as well as the management interfaces such as Netconf, SNMP, gNMI.
+Nokia SR OS nodes come up with a basic "blank" configuration where only the card/mda are provisioned, as well as the management interfaces such as Netconf, SNMP, gNMI.
 
 #### User-defined config
 
@@ -181,7 +181,7 @@ name: sros_lab
 topology:
   nodes:
     sros:
-      kind: vr-sros
+      kind: nokia_sros
       startup-config: myconfig.txt
 ```
 
@@ -199,7 +199,7 @@ name: sros_lab
 topology:
   nodes:
     sros:
-      kind: vr-sros
+      kind: nokia_sros
       startup-config: myconfig.partial.txt
 ```
 
@@ -236,7 +236,7 @@ name: sros_lab
 topology:
   nodes:
     sros:
-      kind: vr-sros
+      kind: nokia_sros
       startup-config: https://gist.com/<somehash>/staticroute.partial.cfg
 ```
 
@@ -249,7 +249,7 @@ name: sros_lab
 topology:
   nodes:
     sros:
-      kind: vr-sros
+      kind: nokia_sros
       startup-config: | #(1)!
         /configure system location "I am an embedded config"
 ```
@@ -260,7 +260,7 @@ Embedded partial configs will persist on containerlab's host and use the same di
 
 #### Configuration save
 
-Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for `vr-sros` nodes via Netconf. The configuration will be saved under `config.txt` file and can be found at the node's directory inside the lab parent directory:
+Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for `Nokia SR OS` nodes via Netconf. The configuration will be saved under `config.txt` file and can be found at the node's directory inside the lab parent directory:
 
 ```bash
 # assuming the lab name is "cert01"
@@ -270,7 +270,7 @@ cat clab-cert01/sr/tftpboot/config.txt
 
 #### Boot Options File
 
-By default `vr_nokia_sros` nodes boot up with a pre-defined "Boot Options File" (BOF). This file includes boot settings including:
+By default `nokia_sros` nodes boot up with a pre-defined "Boot Options File" (BOF). This file includes boot settings including:
 
 * license file location
 * config file location
@@ -307,13 +307,13 @@ commit
 exit all
 ```
 
-This script is then placed somewhere on the disk, for example in the containerlab's topology root directory, and mounted to `vr-nokia_sros` node tftpboot directory using [binds](../nodes.md#binds) property:
+This script is then placed somewhere on the disk, for example in the containerlab's topology root directory, and mounted to `nokia_sros` node tftpboot directory using [binds](../nodes.md#binds) property:
 
 ```yaml
   nodes:
     sros1:
       mgmt-ipv4: [mgmt-ip]
-      kind: vr-sros
+      kind: nokia_sros
       image: [container-image-repo]
       type: sr-1s
       license: license-sros.txt
@@ -337,7 +337,7 @@ By combining file bindings and the automatic script execution of SROS it is poss
 
 ### License
 
-Path to a valid license must be provided for all vr-sros nodes with a [`license`](../nodes.md#license) directive.
+Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive.
 
 If your SR OS license file is issued for a specific UUID, you can define it with custom type definition:
 
@@ -348,10 +348,10 @@ type: "cp: uuid=00001234-5678-9abc-def1-000012345678 cpu=4 ram=6 slot=A chassis=
 
 ### File mounts
 
-When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `vr-sros` kind containerlab creates `tftpboot` directory where the license file will be copied.
+When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For Nokia SR OS kind containerlab creates `tftpboot` directory where the license file will be copied.
 
 ## Lab examples
 
-The following labs feature vr-sros node:
+The following labs feature Nokia SR OS node:
 
 * [SR Linux and vr-sros](../../lab-examples/vr-sros.md)

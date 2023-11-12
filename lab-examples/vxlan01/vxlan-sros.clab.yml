@@ -3,7 +3,7 @@ name: vxlan
 topology:
   nodes:
     sros:
-      kind: vr-sros
+      kind: nokia_sros
       image: vr-sros:21.2.R1
       license: license-sros20.txt
     # vmx node is defined in a `vxlan-vmx.clab.yml` topo file

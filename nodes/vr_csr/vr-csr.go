@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"vr-csr", "vr-cisco_csr1000v"}
+	kindnames          = []string{"cisco_csr1000v", "vr-csr", "vr-cisco_csr1000v"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
