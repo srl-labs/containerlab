@@ -249,20 +249,6 @@ func (mr *MockNodeMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNode)(nil).GetImages), arg0)
 }
 
-// GetKindSpecifics mocks base method.
-func (m *MockNode) GetKindSpecifics() *types.KindSpecifics {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetKindSpecifics")
-	ret0, _ := ret[0].(*types.KindSpecifics)
-	return ret0
-}
-
-// GetKindSpecifics indicates an expected call of GetKindSpecifics.
-func (mr *MockNodeMockRecorder) GetKindSpecifics() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKindSpecifics", reflect.TypeOf((*MockNode)(nil).GetKindSpecifics))
-}
-
 // GetLinkEndpointType mocks base method.
 func (m *MockNode) GetLinkEndpointType() links.LinkEndpointType {
 	m.ctrl.T.Helper()
@@ -289,6 +275,20 @@ func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 func (mr *MockNodeMockRecorder) GetRuntime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockNode)(nil).GetRuntime))
+}
+
+// GetSSHConfig mocks base method.
+func (m *MockNode) GetSSHConfig() *types.SSHConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSSHConfig")
+	ret0, _ := ret[0].(*types.SSHConfig)
+	return ret0
+}
+
+// GetSSHConfig indicates an expected call of GetSSHConfig.
+func (mr *MockNodeMockRecorder) GetSSHConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSSHConfig", reflect.TypeOf((*MockNode)(nil).GetSSHConfig))
 }
 
 // GetShortName mocks base method.

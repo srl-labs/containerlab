@@ -13,20 +13,11 @@ func (p PubkeyAuthValue) String() string {
 	return string(p)
 }
 
-type KindSpecifics struct {
-	SSHSpecifics *SSHSpecifics
-}
-
-func NewKindSpecifics() *KindSpecifics {
-	return &KindSpecifics{
-		SSHSpecifics: NewSSHSpecifics(),
-	}
-}
-
-type SSHSpecifics struct {
+// SSHConfig is the SSH client configuration that a clab node requires.
+type SSHConfig struct {
 	PubkeyAuthentication PubkeyAuthValue
 }
 
-func NewSSHSpecifics() *SSHSpecifics {
-	return &SSHSpecifics{}
+func NewSSHConfig() *SSHConfig {
+	return &SSHConfig{}
 }

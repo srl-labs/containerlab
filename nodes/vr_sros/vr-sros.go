@@ -62,7 +62,9 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
 	s.LicensePolicy = types.LicensePolicyWarn
-	s.KindSpecifics.SSHSpecifics.PubkeyAuthentication = types.PubkeyAuthValueUnbound
+	// SR OS requires unbound pubkey authentication mode until this is
+	// gets fixed in later SR OS relase.
+	s.SSHConfig.PubkeyAuthentication = types.PubkeyAuthValueUnbound
 
 	s.Cfg = cfg
 	for _, o := range opts {

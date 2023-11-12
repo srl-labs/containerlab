@@ -107,8 +107,7 @@ type Node interface {
 	ExecFunction(func(ns.NetNS) error) error
 	GetState() state.NodeState
 	SetState(state.NodeState)
-	// return the kind specifics
-	GetKindSpecifics() *types.KindSpecifics
+	GetSSHConfig() *types.SSHConfig
 }
 
 type NodeOption func(Node)

@@ -35,7 +35,8 @@ type DefaultNode struct {
 	Mgmt             *types.MgmtNet
 	Runtime          runtime.ContainerRuntime
 	HostRequirements *types.HostRequirements
-	KindSpecifics    *types.KindSpecifics
+	// SSHConfig is the SSH client configuration that a clab node requires.
+	SSHConfig *types.SSHConfig
 	// Indicates that the node should not start without no license file defined
 	LicensePolicy types.LicensePolicy
 	// OverwriteNode stores the interface used to overwrite methods defined
@@ -58,7 +59,7 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		HostRequirements: types.NewHostRequirements(),
 		OverwriteNode:    n,
 		LicensePolicy:    types.LicensePolicyNone,
-		KindSpecifics:    types.NewKindSpecifics(),
+		SSHConfig:        types.NewSSHConfig(),
 	}
 
 	return dn
@@ -512,6 +513,6 @@ func (d *DefaultNode) SetState(s state.NodeState) {
 	d.state = s
 }
 
-func (d *DefaultNode) GetKindSpecifics() *types.KindSpecifics {
-	return d.KindSpecifics
+func (d *DefaultNode) GetSSHConfig() *types.SSHConfig {
+	return d.SSHConfig
 }
