@@ -3,12 +3,12 @@ name: srlvjunos01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:23.7.1
       startup-config: srl.cli
 
     vswitch:
-      kind: vr-juniper_vjunosswitch
+      kind: juniper_vjunosswitch
       image: vrnetlab/vr-vjunosswitch:23.2R1.14
       startup-config: vjunos.cfg
 

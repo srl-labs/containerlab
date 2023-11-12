@@ -2,20 +2,20 @@ name: srl03
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd3
       image: ghcr.io/nokia/srlinux
     linux:
       image: ghcr.io/hellt/network-multitool
   nodes:
     wan1:
-      kind: srl
+      kind: nokia_srlinux
     wan2:
-      kind: srl
+      kind: nokia_srlinux
     wan3:
-      kind: srl
+      kind: nokia_srlinux
     wan4:
-      kind: srl
+      kind: nokia_srlinux
     client1:
       kind: "linux"
     client2:

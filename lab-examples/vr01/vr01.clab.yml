@@ -3,7 +3,7 @@ name: vr01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     sros:
       kind: nokia_sros

@@ -3,11 +3,11 @@ name: vr04
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     xrv9k:
-      kind: vr-xrv9k
-      image: vr-xrv:7.2.1 # do not forget to re-tag the image if needed
+      kind: cisco_xrv9k
+      image: vr-xrv9k:7.2.1 # do not forget to re-tag the image if needed
 
   links:
     - endpoints: ["srl:e1-1", "xrv9k:eth1"]

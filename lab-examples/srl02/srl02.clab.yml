@@ -4,11 +4,11 @@ name: srl02
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
       startup-config: srl1.cfg
     srl2:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
       startup-config: srl2.cfg
 
