@@ -9,7 +9,7 @@ Cisco XRv virtualized router is identified with `cisco_xrv` kind in the [topolog
 Cisco XRv nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
 
 !!!warning
-    XRv image is discontinued by Cisco and superseded by XRv 9000 image. It was added to containerlab because the image is lightweight, compared to XRv9k. If recent features are needed, use [Cisco XRv9k](vr-xrv9k.md.md) kind.
+    XRv image is discontinued by Cisco and superseded by XRv 9000 image. It was added to containerlab because the image is lightweight, compared to XRv9k. If recent features are needed, use [Cisco XRv9k](vr-xrv9k.md) kind.
 
 ## Managing Cisco XRv nodes
 
