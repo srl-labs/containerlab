@@ -335,6 +335,12 @@ A:admin@sros1# info | match boot-goo
 
 By combining file bindings and the automatic script execution of SROS it is possible to create a workaround for persistent BOF settings.
 
+#### SSH keys
+
+Containerlab v0.48.0+ supports SSH key injection into the Nokia SR OS nodes. First containerlab retrieves all public keys from `~/.ssh` directory of a user running containerlab, then it retrieves public keys from the ssh agent if one is running.
+
+Next it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node. This will enable key-based authentication next time you connect to the node.
+
 ### License
 
 Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive.

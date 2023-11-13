@@ -1,6 +1,7 @@
 package clab
 
 import (
+	_ "embed"
 	"os"
 	"path"
 	"text/template"
@@ -8,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/mod/semver"
 )
 
 // SSHConfigTmpl is the top-level data structure for the
@@ -25,20 +27,10 @@ type SSHConfigNodeTmpl struct {
 	SSHConfig *types.SSHConfig
 }
 
-// tmplSshConfig is the SSH config template.
-const tmplSshConfig = `# Containerlab SSH Config for the {{ .TopologyName }} lab
-
-{{- range  .Nodes }}
-Host {{ .Name }}
-	{{-  if ne .Username ""}}
-	User {{ .Username }}
-	{{- end }}
-	StrictHostKeyChecking=no
-	UserKnownHostsFile=/dev/null
-	{{- if ne .SSHConfig.PubkeyAuthentication "" }}
-	PubkeyAuthentication={{ .SSHConfig.PubkeyAuthentication.String }}
-	{{- end }}
-{{ end }}`
+// sshConfigTemplate is the SSH config template.
+//
+//go:embed ssh_config.go.tpl
+var sshConfigTemplate string
 
 // RemoveSSHConfig removes the lab specific ssh config file
 func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
@@ -63,6 +55,12 @@ func (c *CLab) AddSSHConfig() error {
 		Nodes:        make([]SSHConfigNodeTmpl, 0, len(c.Nodes)),
 	}
 
+	// get the ssh client version to determine if are allowed
+	// to use the PubkeyAuthentication=unbound
+	// which is only available in OpenSSH 8.9+
+	// if we fail to parse the version the return value is going to be empty
+	sshVersion := utils.GetSSHVersion()
+
 	// add the data for all nodes to the template input
 	for _, n := range c.Nodes {
 		// get the Kind from the KindRegistry and and extract
@@ -73,10 +71,19 @@ func (c *CLab) AddSSHConfig() error {
 			Username:  NodeRegistryEntry.Credentials().GetUsername(),
 			SSHConfig: n.GetSSHConfig(),
 		}
+
+		// if we couldn't parse the ssh version we assume we can't use unbound option
+		// or if the version is lower than 8.9
+		// and the node has the PubkeyAuthentication set to unbound
+		// we set it to empty string since it is not supported by the SSH client
+		if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) && nodeData.SSHConfig.PubkeyAuthentication == types.PubkeyAuthValueUnbound {
+			nodeData.SSHConfig.PubkeyAuthentication = ""
+		}
+
 		tmpl.Nodes = append(tmpl.Nodes, nodeData)
 	}
 
-	t, err := template.New("sshconfig").Parse(tmplSshConfig)
+	t, err := template.New("sshconfig").Parse(sshConfigTemplate)
 	if err != nil {
 		return err
 	}
