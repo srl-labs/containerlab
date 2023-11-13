@@ -41,7 +41,7 @@ require (
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.14.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
-	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.14.0
 	golang.org/x/term v0.13.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -54,7 +54,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.12 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/cilium/ebpf v0.11.0 // indirect
+	github.com/cilium/ebpf v0.12.2 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/container-orchestrated-devices/container-device-interface v0.6.1 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
@@ -273,7 +273,7 @@ require (
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	go4.org/intern v0.0.0-20230205224052-192e9f60865c // indirect
-	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230204201903-c31fa085b70e // indirect
+	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
 	gocloud.dev v0.30.0 // indirect
 	golang.org/x/mod v0.14.0
 	golang.org/x/net v0.17.0
