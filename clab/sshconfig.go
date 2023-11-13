@@ -76,7 +76,7 @@ func (c *CLab) AddSSHConfig() error {
 		// or if the version is lower than 8.9
 		// and the node has the PubkeyAuthentication set to unbound
 		// we set it to empty string since it is not supported by the SSH client
-		if (sshVersion == "" || semver.Compare(sshVersion, "8.9") < 0) && nodeData.SSHConfig.PubkeyAuthentication == types.PubkeyAuthValueUnbound {
+		if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) && nodeData.SSHConfig.PubkeyAuthentication == types.PubkeyAuthValueUnbound {
 			nodeData.SSHConfig.PubkeyAuthentication = ""
 		}
 
