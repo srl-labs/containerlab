@@ -48,9 +48,9 @@ When the lab is deployed using the URL, the repository is cloned in the current 
 Subsequent lab operations (such as destroy) must use the filesystem path to the topology file and not the URL.
 
 ???note "Remote labs workflow in action"
-    <video width="100%" controls>
-        <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/5f0a7579f85c7d6af1fe05c254f42bb5/remote-labs2.mp4" type="video/mp4">
-    </video>
+    <div class="iframe-container">
+        <iframe width="100%" src="https://www.youtube.com/embed/0QlUZsJGQDo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
 
 ###### HTTP(S)
 
