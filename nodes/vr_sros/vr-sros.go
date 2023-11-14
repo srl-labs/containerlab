@@ -280,19 +280,16 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, use
 	// converting byte slice to newline delimited string slice
 	cfgs := strings.Split(string(configContent), "\n")
 
-	mr, err := d.SendConfigs(cfgs)
-	if err != nil || mr.Failed != nil {
-		return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
-	}
 	// condfig snippets should not have commit command, so we need to commit manually
-	r, err := d.SendConfig("commit")
-	if err != nil || r.Failed != nil {
-		return fmt.Errorf("failed to commit config; error: %+v %+v", err, mr.Failed)
-	}
+	cfgs = append(cfgs, "commit", "/admin save")
 
-	r, err = d.SendCommand("/admin save")
-	if err != nil || r.Failed != nil {
-		return fmt.Errorf("failed to persist config; error: %+v %+v", err, mr.Failed)
+	mr, err := d.SendConfigs(cfgs)
+	if err != nil || (mr != nil && mr.Failed != nil) {
+		if mr != nil {
+			return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
+		} else {
+			return fmt.Errorf("failed to apply config; error: %+v", err)
+		}
 	}
 
 	return nil
