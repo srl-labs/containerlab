@@ -18,6 +18,62 @@ import (
 //go:embed ssh_keys.go.tpl
 var SROSSSHKeysTemplate string
 
+// configureSSHPublicKeys cofigures public keys extracted from clab host
+// on SR OS node using SSH.
+func (s *vrSROS) configureSSHPublicKeys(
+	ctx context.Context, addr, platformName,
+	username, password string, pubKeys []ssh.PublicKey) error {
+	tplData := SROSTemplateData{}
+
+	s.prepareSSHPubKeys(&tplData)
+
+	t, err := template.New("SSHKeys").Funcs(
+		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(SROSSSHKeysTemplate)
+	if err != nil {
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	err = t.Execute(buf, tplData)
+	if err != nil {
+		return err
+	}
+
+	err = s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
+		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
+		buf,
+	)
+
+	return err
+}
+
+// prepareSSHPubKeys maps the ssh pub keys into the SSH key type based slice
+// and checks that not more then 32 keys per type a present, otherwise truncates
+// the slices since SROS allows a max of 32 public keys per algorithm
+func (s *vrSROS) prepareSSHPubKeys(tplData *SROSTemplateData) {
+	// a map of supported SSH key algorithms and the template slices
+	// the keys should be added to.
+	// In mapSSHPubKeys we map supported SSH key algorithms to the template slices.
+	supportedSSHKeyAlgos := map[string]*[]string{
+		ssh.KeyAlgoRSA:      &tplData.SSHPubKeysRSA,
+		ssh.KeyAlgoECDSA521: &tplData.SSHPubKeysECDSA,
+		ssh.KeyAlgoECDSA384: &tplData.SSHPubKeysECDSA,
+		ssh.KeyAlgoECDSA256: &tplData.SSHPubKeysECDSA,
+	}
+
+	s.mapSSHPubKeys(supportedSSHKeyAlgos)
+
+	if len(tplData.SSHPubKeysRSA) > 32 {
+		log.Warnf("more then 32 public RSA ssh keys found on system. Truncating since SROS supports max. 32 per key type")
+		tplData.SSHPubKeysRSA = tplData.SSHPubKeysRSA[:32]
+	}
+
+	if len(tplData.SSHPubKeysECDSA) > 32 {
+		log.Warnf("more then 32 public ECDSA ssh keys found on system. Truncating since SROS supports max. 32 per key type")
+		tplData.SSHPubKeysECDSA = tplData.SSHPubKeysECDSA[:32]
+	}
+}
+
 // mapSSHPubKeys goes over s.sshPubKeys and puts the supported keys to the corresponding
 // slices associated with the supported SSH key algorithms.
 // supportedSSHKeyAlgos key is a SSH key algorithm and the value is a pointer to the slice
@@ -38,49 +94,4 @@ func (s *vrSROS) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
 
 		*sshKeys = append(*sshKeys, keyFields[1])
 	}
-}
-
-// SROSTemplateData holds ssh keys for template generation.
-type SROSTemplateData struct {
-	SSHPubKeysRSA   []string
-	SSHPubKeysECDSA []string
-}
-
-// configureSSHPublicKeys cofigures public keys extracted from clab host
-// on SR OS node using SSH.
-func (s *vrSROS) configureSSHPublicKeys(
-	ctx context.Context, addr, platformName,
-	username, password string, pubKeys []ssh.PublicKey) error {
-	tplData := SROSTemplateData{}
-
-	// a map of supported SSH key algorithms and the template slices
-	// the keys should be added to.
-	// In mapSSHPubKeys we map supported SSH key algorithms to the template slices.
-	supportedSSHKeyAlgos := map[string]*[]string{
-		ssh.KeyAlgoRSA:      &tplData.SSHPubKeysRSA,
-		ssh.KeyAlgoECDSA521: &tplData.SSHPubKeysECDSA,
-		ssh.KeyAlgoECDSA384: &tplData.SSHPubKeysECDSA,
-		ssh.KeyAlgoECDSA256: &tplData.SSHPubKeysECDSA,
-	}
-
-	s.mapSSHPubKeys(supportedSSHKeyAlgos)
-
-	t, err := template.New("SSHKeys").Funcs(
-		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(SROSSSHKeysTemplate)
-	if err != nil {
-		return err
-	}
-
-	buf := new(bytes.Buffer)
-	err = t.Execute(buf, tplData)
-	if err != nil {
-		return err
-	}
-
-	err = s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-		buf,
-	)
-
-	return err
 }

@@ -43,6 +43,12 @@ const (
 	licenseFName        = "license.txt"
 )
 
+// SROSTemplateData holds ssh keys for template generation.
+type SROSTemplateData struct {
+	SSHPubKeysRSA   []string
+	SSHPubKeysECDSA []string
+}
+
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
