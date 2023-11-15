@@ -44,6 +44,7 @@ jobs:
               - 'errors/**'
               - 'cert/**'
               - 'virt/**'
+              - 'git/**'
               - 'border0_api/**'
               - '.github/workflows/cicd.yml'
               - 'go.mod'
