@@ -11,6 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 type GoGit struct {
@@ -215,6 +216,12 @@ func (g *GoGit) cloneNonExisting() error {
 			return err
 		}
 		co.ReferenceName = plumbing.NewBranchReferenceName(branchName)
+	}
+	// pre-create the repo directory and adjust the ACLs
+	utils.CreateDirectory(g.gitRepo.GetName(), 0755)
+	err = utils.AdjustFileACLs(g.gitRepo.GetName())
+	if err != nil {
+		log.Warnf("failed to adjust repository (%s) ACLs. continuin anyways", g.gitRepo.GetName())
 	}
 
 	// perform clone
