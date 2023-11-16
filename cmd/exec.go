@@ -73,11 +73,12 @@ func execFn(_ *cobra.Command, _ []string) error {
 	}
 
 	var filters []*types.GenericFilter
-	switch {
-	case len(labelsFilter) != 0:
+
+	if len(labelsFilter) != 0 {
 		filters = types.FilterFromLabelStrings(labelsFilter)
-	default:
-		// when user-defined labels are not provided we should filter the nodes of the lab
+	}
+
+	if topo != "" {
 		labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
 		filters = types.FilterFromLabelStrings(labFilter)
 	}
