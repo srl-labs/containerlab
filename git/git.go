@@ -1,10 +1,8 @@
 package git
 
 import (
-	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -228,48 +226,6 @@ func (g *GoGit) cloneNonExisting() error {
 	g.r, err = gogit.PlainClone(g.gitRepo.GetName(), false, co)
 
 	return err
-}
-
-type ExecGit struct {
-	gitRepo GitRepo
-}
-
-// make sure ExecGit satisfies the Git interface
-var _ Git = (*ExecGit)(nil)
-
-func NewExecGit(gitRepo GitRepo) *ExecGit {
-	return &ExecGit{
-		gitRepo: gitRepo,
-	}
-}
-
-// Clone takes the given GitRepo reference and clones the repo
-// with its internal implementation.
-func (g *ExecGit) Clone() error {
-	// build the URL with owner and repo name
-	repoUrl := g.gitRepo.GetCloneURL().String()
-	cloneArgs := []string{"clone", repoUrl, "--depth", "1"}
-	if g.gitRepo.GetBranch() != "" {
-		cloneArgs = append(cloneArgs, []string{"--branch", g.gitRepo.GetBranch()}...)
-	}
-
-	cmd := exec.Command("git", cloneArgs...)
-
-	log.Infof("cloning %q", repoUrl)
-
-	cmd.Stdout = log.New().Writer()
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		log.Errorf("failed to clone %q: %v", repoUrl, err)
-		log.Error(stderr.String())
-		return err
-	}
-
-	return nil
 }
 
 type Git interface {
