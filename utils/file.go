@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"mime"
 	"net/http"
 	"net/url"
@@ -399,6 +400,12 @@ func AdjustFileACLs(fsPath string) error {
 		return err
 	}
 
+	// set the mask entry
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_MASK, math.MaxUint32, 7))
+	if err != nil {
+		return err
+	}
+
 	// apply the ACL and return the error result
 	err = a.Apply(fsPath, acls.PosixACLAccess)
 	if err != nil {
@@ -406,4 +413,40 @@ func AdjustFileACLs(fsPath string) error {
 	}
 
 	return a.Apply(fsPath, acls.PosixACLDefault)
+}
+
+func RecursiveAdjustUIDAndGUID(fsPath string) error {
+	userId, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		return fmt.Errorf("unable to adjust UID and GUI for %q. SUDO_UID not set", fsPath)
+	}
+	groupId, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
+	}
+
+	intUserId, err := strconv.Atoi(userId)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", userId)
+	}
+	intGroupId, err := strconv.Atoi(groupId)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", groupId)
+	}
+
+	err = chownR(fsPath, intUserId, intGroupId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// chownR function to recursively change User and Group
+func chownR(path string, uid, gid int) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err == nil {
+			err = os.Chown(name, uid, gid)
+		}
+		return err
+	})
 }
