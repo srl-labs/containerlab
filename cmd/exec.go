@@ -80,7 +80,7 @@ func execFn(_ *cobra.Command, _ []string) error {
 
 	if topo != "" {
 		labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
-		filters = types.FilterFromLabelStrings(labFilter)
+		filters = append(filters, types.FilterFromLabelStrings(labFilter)...)
 	}
 
 	// list all containers using global runtime using provided filters
