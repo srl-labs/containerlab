@@ -48,8 +48,8 @@ func (s *vrSROS) configureSSHPublicKeys(
 }
 
 // prepareSSHPubKeys maps the ssh pub keys into the SSH key type based slice
-// and checks that not more then 32 keys per type a present, otherwise truncates
-// the slices since SROS allows a max of 32 public keys per algorithm
+// and checks that not more then 32 keys per type are present, otherwise truncates
+// the slices since SROS allows a max of 32 public keys per algorithm.
 func (s *vrSROS) prepareSSHPubKeys(tplData *SROSTemplateData) {
 	// a map of supported SSH key algorithms and the template slices
 	// the keys should be added to.
@@ -64,12 +64,12 @@ func (s *vrSROS) prepareSSHPubKeys(tplData *SROSTemplateData) {
 	s.mapSSHPubKeys(supportedSSHKeyAlgos)
 
 	if len(tplData.SSHPubKeysRSA) > 32 {
-		log.Warnf("more then 32 public RSA ssh keys found on system. Truncating since SROS supports max. 32 per key type")
+		log.Warnf("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
 		tplData.SSHPubKeysRSA = tplData.SSHPubKeysRSA[:32]
 	}
 
 	if len(tplData.SSHPubKeysECDSA) > 32 {
-		log.Warnf("more then 32 public ECDSA ssh keys found on system. Truncating since SROS supports max. 32 per key type")
+		log.Warnf("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
 		tplData.SSHPubKeysECDSA = tplData.SSHPubKeysECDSA[:32]
 	}
 }
