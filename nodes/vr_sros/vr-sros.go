@@ -43,6 +43,12 @@ const (
 	licenseFName        = "license.txt"
 )
 
+// SROSTemplateData holds ssh keys for template generation.
+type SROSTemplateData struct {
+	SSHPubKeysRSA   []string
+	SSHPubKeysECDSA []string
+}
+
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
@@ -215,7 +221,8 @@ func (s *vrSROS) isHealthy(ctx context.Context) bool {
 }
 
 // applyPartialConfig applies partial configuration to the SR OS.
-func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, username, password string, config io.Reader) error {
+func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
+	username, password string, config io.Reader) error { //skipcq: GO-R1005
 	var err error
 	var d *network.Driver
 

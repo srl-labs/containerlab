@@ -337,9 +337,9 @@ By combining file bindings and the automatic script execution of SROS it is poss
 
 #### SSH keys
 
-Containerlab v0.48.0+ supports SSH key injection into the Nokia SR OS nodes. First containerlab retrieves all public keys from `~/.ssh` directory of a user running containerlab, then it retrieves public keys from the ssh agent if one is running.
+Containerlab v0.48.0+ supports SSH key injection into the Nokia SR OS nodes. First containerlab retrieves all public keys from `~/.ssh`[^1] directory and `~/.ssh/authorizde_keys` file, then it retrieves public keys from the ssh agent if one is running.
 
-Next it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node. This will enable key-based authentication next time you connect to the node.
+Next it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^2]. This will enable key-based authentication next time you connect to the node.
 
 ### License
 
@@ -361,3 +361,6 @@ When a user starts a lab, containerlab creates a node directory for storing [con
 The following labs feature Nokia SR OS node:
 
 * [SR Linux and vr-sros](../../lab-examples/vr-sros.md)
+
+[^1]: `~` is the home directory of the user that runs containerlab.
+[^2]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
