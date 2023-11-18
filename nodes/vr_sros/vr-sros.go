@@ -140,10 +140,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	}
 
 	if len(s.sshPubKeys) > 0 {
-		err := s.configureSSHPublicKeys(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-			s.sshPubKeys,
-		)
+		err := s.configureSSHPublicKeys(ctx)
 		if err != nil {
 			return err
 		}
