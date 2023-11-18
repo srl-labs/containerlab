@@ -22,7 +22,8 @@ var SROSSSHKeysTemplate string
 // on SR OS node using SSH.
 func (s *vrSROS) configureSSHPublicKeys(
 	ctx context.Context, addr, platformName,
-	username, password string, pubKeys []ssh.PublicKey) error {
+	username, password string, pubKeys []ssh.PublicKey,
+) error {
 	tplData := SROSTemplateData{}
 
 	s.prepareSSHPubKeys(&tplData)
