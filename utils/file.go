@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"mime"
 	"net/http"
 	"net/url"
@@ -399,6 +400,12 @@ func AdjustFileACLs(fsPath string) error {
 		return err
 	}
 
+	// set the mask entry
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_MASK, math.MaxUint32, 7))
+	if err != nil {
+		return err
+	}
+
 	// apply the ACL and return the error result
 	err = a.Apply(fsPath, acls.PosixACLAccess)
 	if err != nil {
@@ -406,4 +413,52 @@ func AdjustFileACLs(fsPath string) error {
 	}
 
 	return a.Apply(fsPath, acls.PosixACLDefault)
+}
+
+// SetUIDAndGID changes the UID and GID
+// of the given path recursively to the values taken from
+// SUDO_UID and SUDO_GID. Which should reflect be the non-root
+// user that called clab via sudo.
+func SetUIDAndGID(fsPath string) error {
+	// here we trust sudo to set up env variables
+	// a missing SUDO_UID env var indicates the root user
+	// runs clab without sudo
+	uid, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		// nothing to do, already running as root
+		return nil
+	}
+
+	gid, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return errors.New("failed to lookup SUDO_GID env var")
+	}
+
+	iUID, err := strconv.Atoi(uid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
+	}
+
+	iGID, err := strconv.Atoi(gid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
+	}
+
+	err = recursiveChown(fsPath, iUID, iGID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// recursiveChown function recursively chowns a path.
+func recursiveChown(path string, uid, gid int) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err == nil {
+			err = os.Chown(name, uid, gid)
+		}
+
+		return err
+	})
 }
