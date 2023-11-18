@@ -553,7 +553,6 @@ func TestParseGitLabRepoUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			u, err := url.Parse(tt.input)
 			if err != nil {
 				t.Errorf("failed parsing url provided in test.")

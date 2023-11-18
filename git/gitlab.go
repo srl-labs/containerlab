@@ -24,7 +24,8 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 	r := &GitLabRepo{
 		GitRepoStruct: GitRepoStruct{
 			URL: url,
-		}}
+		},
+	}
 
 	// trimming the leading and trailing slashes
 	// so that splitPath will have the slashes between the elements only
@@ -67,7 +68,8 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 	switch {
 	// path points to a file at a specific git ref
 	case splitPath[3] == "blob":
-		if !(strings.HasSuffix(r.URL.Path, ".yml") || strings.HasSuffix(r.URL.Path, ".yaml")) {
+		if !(strings.HasSuffix(r.URL.Path, ".yml") ||
+			strings.HasSuffix(r.URL.Path, ".yaml")) {
 			return nil, fmt.Errorf("%w: topology file must have yml or yaml extension", errInvalidURL)
 		}
 

@@ -17,11 +17,10 @@ type GoGit struct {
 	r       *gogit.Repository
 }
 
-// make sure GoGit satisfies the Git interface
+// make sure GoGit satisfies the Git interface.
 var _ Git = (*GoGit)(nil)
 
 func NewGoGit(gitRepo GitRepo) *GoGit {
-
 	return &GoGit{
 		gitRepo: gitRepo,
 	}
@@ -40,7 +39,6 @@ func (g *GoGit) Clone() error {
 }
 
 func (g *GoGit) getDefaultBranch() (string, error) {
-
 	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{g.gitRepo.GetCloneURL().String()},
@@ -59,7 +57,6 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 	}
 
 	return "", fmt.Errorf("unable to determine default branch for %q", g.gitRepo.GetCloneURL().String())
-
 }
 
 func (g *GoGit) openRepo() error {

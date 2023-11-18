@@ -391,7 +391,8 @@ func Test_extractHostNodeInterfaceData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotHost, gotHostIf, gotNode, gotNodeIf, err := extractHostNodeInterfaceData(tt.args.lb, tt.args.specialEPIndex)
+			gotHost, gotHostIf, gotNode, gotNodeIf, err :=
+				extractHostNodeInterfaceData(tt.args.lb, tt.args.specialEPIndex)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("extractHostNodeInterfaceData() error = %v, wantErr %v", err, tt.wantErr)
 				return
