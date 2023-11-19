@@ -126,7 +126,6 @@ func getTopoFilePath(cmd *cobra.Command) error {
 				topo = "https://" + topo
 			}
 		}
-
 	}
 
 	// if topo or name flags have been provided, don't try to derive the topo file

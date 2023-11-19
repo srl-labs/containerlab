@@ -57,7 +57,6 @@ var vxlanCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create vxlan interface",
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		ctx := context.Background()
 
 		if _, err := utils.LinkByNameOrAlias(cntLink); err != nil {

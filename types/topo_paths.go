@@ -111,7 +111,7 @@ func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
 	return nil
 }
 
-// SSHConfigPath returns the topology dependent ssh config file name
+// SSHConfigPath returns the topology dependent ssh config file name.
 func (t *TopoPaths) SSHConfigPath() string {
 	return fmt.Sprintf(sshConfigFilePathTmpl, t.topoName)
 }

@@ -32,7 +32,7 @@ type SSHConfigNodeTmpl struct {
 //go:embed ssh_config.go.tpl
 var sshConfigTemplate string
 
-// RemoveSSHConfig removes the lab specific ssh config file
+// RemoveSSHConfig removes the lab specific ssh config file.
 func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
 	err := os.Remove(topoPaths.SSHConfigPath())
 	// if there is an error, thats not "Not Exists", then return it
@@ -76,7 +76,8 @@ func (c *CLab) AddSSHConfig() error {
 		// or if the version is lower than 8.9
 		// and the node has the PubkeyAuthentication set to unbound
 		// we set it to empty string since it is not supported by the SSH client
-		if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) && nodeData.SSHConfig.PubkeyAuthentication == types.PubkeyAuthValueUnbound {
+		if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) &&
+			nodeData.SSHConfig.PubkeyAuthentication == types.PubkeyAuthValueUnbound {
 			nodeData.SSHConfig.PubkeyAuthentication = ""
 		}
 

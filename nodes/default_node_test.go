@@ -9,33 +9,33 @@ import (
 )
 
 func TestGenerateConfigs(t *testing.T) {
-	tests := map[string]struct{
-		node *DefaultNode
-		err error
+	tests := map[string]struct {
+		node   *DefaultNode
+		err    error
 		exists bool
-		out string
+		out    string
 	}{
 		"suppress-true": {
 			node: &DefaultNode{
 				Cfg: &types.NodeConfig{
 					SuppressStartupConfig: true,
-					ShortName: "suppress",
+					ShortName:             "suppress",
 				},
 			},
-			err: nil,
+			err:    nil,
 			exists: false,
-			out: "",
+			out:    "",
 		},
 		"suppress-false": {
 			node: &DefaultNode{
 				Cfg: &types.NodeConfig{
 					SuppressStartupConfig: false,
-					ShortName: "configure",
+					ShortName:             "configure",
 				},
 			},
-			err: nil,
+			err:    nil,
 			exists: true,
-			out: "foo",
+			out:    "foo",
 		},
 	}
 	for name, tc := range tests {

@@ -140,10 +140,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	}
 
 	if len(s.sshPubKeys) > 0 {
-		err := s.configureSSHPublicKeys(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-			s.sshPubKeys,
-		)
+		err := s.configureSSHPublicKeys(ctx)
 		if err != nil {
 			return err
 		}
@@ -222,7 +219,8 @@ func (s *vrSROS) isHealthy(ctx context.Context) bool {
 
 // applyPartialConfig applies partial configuration to the SR OS.
 func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
-	username, password string, config io.Reader) error { //skipcq: GO-R1005
+	username, password string, config io.Reader,
+) error { // skipcq: GO-R1005
 	var err error
 	var d *network.Driver
 

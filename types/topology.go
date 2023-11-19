@@ -226,7 +226,6 @@ func (t *Topology) GetNodeSuppressStartupConfig(name string) bool {
 		}
 	}
 	return false
-
 }
 
 func (t *Topology) GetNodeAutoRemove(name string) bool {

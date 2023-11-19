@@ -46,7 +46,7 @@ func (u *GitRepoStruct) GetBranch() string {
 	return u.GitBranch
 }
 
-// GetCloneURL returns the CloneURL of the repository
+// GetCloneURL returns the CloneURL of the repository.
 func (u *GitRepoStruct) GetCloneURL() *url.URL {
 	return u.CloneURL
 }

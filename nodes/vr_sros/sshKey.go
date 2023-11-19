@@ -13,16 +13,14 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// importing Default Config template at compile time
+// SROSSSHKeysTemplate holds the template for the SSH keys configuration.
 //
 //go:embed ssh_keys.go.tpl
 var SROSSSHKeysTemplate string
 
-// configureSSHPublicKeys cofigures public keys extracted from clab host
+// configureSSHPublicKeys configures public keys extracted from clab host
 // on SR OS node using SSH.
-func (s *vrSROS) configureSSHPublicKeys(
-	ctx context.Context, addr, platformName,
-	username, password string, pubKeys []ssh.PublicKey) error {
+func (s *vrSROS) configureSSHPublicKeys(ctx context.Context) error {
 	tplData := SROSTemplateData{}
 
 	s.prepareSSHPubKeys(&tplData)

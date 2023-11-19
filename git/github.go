@@ -2,9 +2,9 @@ package git
 
 import (
 	"fmt"
+	"strings"
 
 	neturl "net/url"
-	"strings"
 )
 
 // NewGitHubRepoFromURL parses the given url and returns a GitHubRepo.
@@ -12,7 +12,8 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 	r := &GitHubRepo{
 		GitRepoStruct: GitRepoStruct{
 			URL: url,
-		}}
+		},
+	}
 
 	// trimming the leading and trailing slashes
 	// so that splitPath will have the slashes between the elements only
@@ -56,7 +57,8 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 	switch {
 	// path points to a file at a specific git ref
 	case splitPath[2] == "blob":
-		if !(strings.HasSuffix(r.URL.Path, ".yml") || strings.HasSuffix(r.URL.Path, ".yaml")) {
+		if !(strings.HasSuffix(r.URL.Path, ".yml") ||
+			strings.HasSuffix(r.URL.Path, ".yaml")) {
 			return nil, fmt.Errorf("%w: topology file must have yml or yaml extension", errInvalidURL)
 		}
 
