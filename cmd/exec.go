@@ -42,9 +42,17 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	opts := []clab.ClabOption{
+	opts := make([]clab.ClabOption, 0, 5)
+
+	// exec can work with or without a topology file
+	// when topology file is provided we need to parse it
+	// when topo file is not provided, we rely on labels to perform the filtering
+	if topo != "" {
+		opts = append(opts, clab.WithTopoPath(topo, varsFile))
+	}
+
+	opts = append(opts,
 		clab.WithTimeout(timeout),
-		clab.WithTopoPath(topo, varsFile),
 		clab.WithNodeFilter(nodeFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
@@ -54,7 +62,8 @@ func execFn(_ *cobra.Command, _ []string) error {
 			},
 		),
 		clab.WithDebug(debug),
-	}
+	)
+
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return err

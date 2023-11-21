@@ -101,7 +101,7 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 func getTopoFilePath(cmd *cobra.Command) error {
 	// set commands which may use topo file find functionality, the rest don't need it
 	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" ||
-		cmd.Name() == "save" || cmd.Name() == "graph" || cmd.Name() == "exec") {
+		cmd.Name() == "save" || cmd.Name() == "graph") {
 		return nil
 	}
 
