@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -17,6 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -54,21 +56,59 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	topos := map[string]struct{}{}
+	// topo will hold the reference to the topology file
+	// as the key and the respective lab directory as the referenced value
+	topos := map[string]string{}
+
+	runtimeConfig := &runtime.RuntimeConfig{
+		Debug:            debug,
+		Timeout:          timeout,
+		GracefulShutdown: graceful,
+	}
 
 	switch {
 	case !all:
-		topos[topo] = struct{}{}
+		_, init, err := clab.RuntimeInitializer(rt)
+		if err != nil {
+			return err
+		}
+		rt := init()
+
+		rt.Init(runtime.WithConfig(runtimeConfig))
+
+		configBytes, err := os.ReadFile(topo)
+		if err != nil {
+			return err
+		}
+
+		config := &clab.Config{}
+
+		err = yaml.Unmarshal(configBytes, config)
+		if err != nil {
+			return fmt.Errorf("%w\nConsult with release notes to see if any fields were changed/removed", err)
+		}
+
+		genericContainers, err := rt.ListContainers(ctx,
+			[]*types.GenericFilter{{
+				FilterType: "label", Match: config.Name,
+				Field: labels.Containerlab, Operator: "=",
+			}},
+		)
+		if err != nil {
+			return err
+		}
+
+		if len(genericContainers) == 0 {
+			log.Info("no containers found, existing")
+			return nil
+		}
+
+		topos[topo] = filepath.Dir(genericContainers[0].Labels[labels.NodeLabDir])
+
 	case all:
 		// only WithRuntime option is needed to list all containers of a lab
 		inspectAllOpts := []clab.ClabOption{
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
+			clab.WithRuntime(rt, runtimeConfig),
 			clab.WithTimeout(timeout),
 		}
 
@@ -91,12 +131,12 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 		// get unique topo files from all labs
 		for i := range containers {
-			topos[containers[i].Labels[labels.TopoFile]] = struct{}{}
+			topos[containers[i].Labels[labels.TopoFile]] = filepath.Dir(containers[i].Labels[labels.NodeLabDir])
 		}
 	}
 
 	log.Debugf("We got the following topos struct for destroy: %+v", topos)
-	for topo := range topos {
+	for topo, labdir := range topos {
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
 			clab.WithTopoPath(topo, varsFile),
@@ -119,6 +159,15 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		nc, err := clab.NewContainerLab(opts...)
 		if err != nil {
 			return err
+		}
+
+		if labdir != "" {
+			// adjust the labdir. Usually we take the PWD. but now on destroy time,
+			// we might be in a different Dir.
+			err = nc.TopoPaths.SetLabDir(labdir)
+			if err != nil {
+				return err
+			}
 		}
 
 		err = links.SetMgmtNetUnderlayingBridge(nc.Config.Mgmt.Bridge)

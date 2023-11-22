@@ -53,7 +53,7 @@ type Config struct {
 func (c *CLab) parseTopology() error {
 	log.Infof("Parsing & checking topology file: %s", c.TopoPaths.TopologyFilenameBase())
 
-	err := c.TopoPaths.SetLabDir(c.Config.Name)
+	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
 	if err != nil {
 		return err
 	}

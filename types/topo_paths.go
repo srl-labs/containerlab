@@ -74,8 +74,16 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-// SetLabDir sets the labDir foldername (no abs path, but the last element) usually the topology name.
-func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
+func (t *TopoPaths) SetLabDir(p string) (err error) {
+	if !utils.DirExists(p) {
+		return fmt.Errorf("folder %s does not exist or is not accessible", p)
+	}
+	t.labDir = p
+	return nil
+}
+
+// SetLabDirByPrefix sets the labDir foldername (no abs path, but the last element) usually the topology name.
+func (t *TopoPaths) SetLabDirByPrefix(topologyName string) (err error) {
 	t.topoName = topologyName
 	// if "CLAB_LABDIR_BASE" Env Var is set, use that dir as a base
 	// for the labDir, otherwise use PWD.
