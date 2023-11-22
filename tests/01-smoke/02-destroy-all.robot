@@ -7,6 +7,7 @@ This suite tests:
 
 *** Settings ***
 Library             OperatingSystem
+Library             Process
 Resource            ../common.robot
 
 Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
@@ -18,16 +19,21 @@ ${runtime}      docker
 
 *** Test Cases ***
 Deploy first lab
-    ${rc}    ${output} =    Run And Return Rc And Output
+    ${result} =    Run Process
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-nodes.clab.yml
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    ...    shell=True
+    Log    ${result.stdout}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Exist    %{PWD}/clab-2-linux-nodes
 
 Deploy second lab
-    ${rc}    ${output} =    Run And Return Rc And Output
+     ${result} =    Run Process
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-single-node.clab.yml
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    ...    cwd=/tmp    # using a different cwd to check lab resolution via container labels
+    ...    shell=True
+    Log    ${result.stdout}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Exist    /tmp/clab-single-node
 
 Verify host mode networking for node l3
     # l3 node is launched with host mode networking
@@ -57,3 +63,5 @@ Check all labs have been removed
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Contain    ${output}    no containers found
+    Should Not Exist    /tmp/single-node
+    Should Not Exist    %{PWD}/clab-2-linux-nodes
