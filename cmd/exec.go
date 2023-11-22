@@ -42,9 +42,17 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	opts := []clab.ClabOption{
+	opts := make([]clab.ClabOption, 0, 5)
+
+	// exec can work with or without a topology file
+	// when topology file is provided we need to parse it
+	// when topo file is not provided, we rely on labels to perform the filtering
+	if topo != "" {
+		opts = append(opts, clab.WithTopoPath(topo, varsFile))
+	}
+
+	opts = append(opts,
 		clab.WithTimeout(timeout),
-		clab.WithTopoPath(topo, varsFile),
 		clab.WithNodeFilter(nodeFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
@@ -54,7 +62,8 @@ func execFn(_ *cobra.Command, _ []string) error {
 			},
 		),
 		clab.WithDebug(debug),
-	}
+	)
+
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return err
@@ -73,13 +82,14 @@ func execFn(_ *cobra.Command, _ []string) error {
 	}
 
 	var filters []*types.GenericFilter
-	switch {
-	case len(labelsFilter) != 0:
+
+	if len(labelsFilter) != 0 {
 		filters = types.FilterFromLabelStrings(labelsFilter)
-	default:
-		// when user-defined labels are not provided we should filter the nodes of the lab
+	}
+
+	if topo != "" {
 		labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
-		filters = types.FilterFromLabelStrings(labFilter)
+		filters = append(filters, types.FilterFromLabelStrings(labFilter)...)
 	}
 
 	// list all containers using global runtime using provided filters
