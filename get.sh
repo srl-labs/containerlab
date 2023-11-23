@@ -99,17 +99,26 @@ verifyOpenssl() {
 # setDesiredVersion sets the desired version either to an explicit version provided by a user
 # or to the latest release available on github releases
 setDesiredVersion() {
+    auth_header="Authorization: Bearer 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"
     if [ "x$DESIRED_VERSION" == "x" ]; then
         # when desired version is not provided
         # get latest tag from the gh releases
         if type "curl" &>/dev/null; then
-            local latest_release_url=$(curl -s https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
+            local latest_release_url=$(curl -s --header "${auth_header}" https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
+            if [ -z "$latest_release_url" ]; then
+                echo "Failed to retrieve latest release URL due to rate limiting. Please try again later."
+                exit 1
+            fi
             TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
             # tag with stripped `v` prefix
             TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
         elif type "wget" &>/dev/null; then
             # get latest release info and get 5th line out of the response to get the URL
-            local latest_release_url=$(wget -q https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
+            local latest_release_url=$(wget -q --header="${auth_header}" https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
+            if [ -z "$latest_release_url" ]; then
+                echo "Failed to retrieve latest release URL due to rate limiting. Please try again later."
+                exit 1
+            fi
             TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
             TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
         fi
