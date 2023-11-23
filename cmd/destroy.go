@@ -60,74 +60,28 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	// as the key and the respective lab directory as the referenced value
 	topos := map[string]string{}
 
-	runtimeConfig := &runtime.RuntimeConfig{
-		Debug:            debug,
-		Timeout:          timeout,
-		GracefulShutdown: graceful,
-	}
-
 	switch {
 	case !all:
-		_, init, err := clab.RuntimeInitializer(rt)
-		if err != nil {
-			return err
-		}
-		rt := init()
-
-		rt.Init(runtime.WithConfig(runtimeConfig))
-
-		configBytes, err := os.ReadFile(topo)
+		cnts, err := listContainers(ctx, topo)
 		if err != nil {
 			return err
 		}
 
-		config := &clab.Config{}
-
-		err = yaml.Unmarshal(configBytes, config)
-		if err != nil {
-			return fmt.Errorf("%w\nConsult with release notes to see if any fields were changed/removed", err)
-		}
-
-		genericContainers, err := rt.ListContainers(ctx,
-			[]*types.GenericFilter{{
-				FilterType: "label", Match: config.Name,
-				Field: labels.Containerlab, Operator: "=",
-			}},
-		)
-		if err != nil {
-			return err
-		}
-
-		if len(genericContainers) == 0 {
-			log.Info("no containers found, existing")
+		if len(cnts) == 0 {
+			log.Info("no containerlab containers found")
 			return nil
 		}
 
-		topos[topo] = filepath.Dir(genericContainers[0].Labels[labels.NodeLabDir])
+		topos[topo] = filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
 
 	case all:
-		// only WithRuntime option is needed to list all containers of a lab
-		inspectAllOpts := []clab.ClabOption{
-			clab.WithRuntime(rt, runtimeConfig),
-			clab.WithTimeout(timeout),
-		}
-
-		c, err := clab.NewContainerLab(inspectAllOpts...)
-		if err != nil {
-			return err
-		}
-		// list all containerlab containers
-		filter := []*types.GenericFilter{{
-			FilterType: "label", Match: c.Config.Name,
-			Field: labels.Containerlab, Operator: "exists",
-		}}
-		containers, err := c.ListContainers(ctx, filter)
+		containers, err := listContainers(ctx, topo)
 		if err != nil {
 			return err
 		}
 
 		if len(containers) == 0 {
-			return fmt.Errorf("no containerlab labs were found")
+			return fmt.Errorf("no containerlab labs found")
 		}
 		// get unique topo files from all labs
 		for i := range containers {
@@ -286,4 +240,62 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	}
 
 	return err
+}
+
+// listContainers lists containers belonging to a certain topo if topo file path is specified
+// otherwise lists all containerlab containers.
+func listContainers(ctx context.Context, topo string) ([]runtime.GenericContainer, error) {
+	runtimeConfig := &runtime.RuntimeConfig{
+		Debug:            debug,
+		Timeout:          timeout,
+		GracefulShutdown: graceful,
+	}
+
+	opts := []clab.ClabOption{
+		clab.WithRuntime(rt, runtimeConfig),
+		clab.WithTimeout(timeout),
+	}
+
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// filter to list all containerlab containers
+	// it is overwritten if topo file is provided
+	filter := []*types.GenericFilter{{
+		FilterType: "label",
+		Field:      labels.Containerlab,
+		Operator:   "exists",
+	}}
+
+	// when topo file is provided, filter containers by lab name
+	if topo != "" {
+		// read topo yaml file to get the lab name
+		topo, err := os.ReadFile(topo)
+		if err != nil {
+			return nil, err
+		}
+
+		config := &clab.Config{}
+
+		err = yaml.Unmarshal(topo, config)
+		if err != nil {
+			return nil, fmt.Errorf("%w, failed to parse topology file", err)
+		}
+
+		filter = []*types.GenericFilter{{
+			FilterType: "label",
+			Field:      labels.Containerlab,
+			Operator:   "=",
+			Match:      config.Name,
+		}}
+	}
+
+	containers, err := c.ListContainers(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return containers, nil
 }
