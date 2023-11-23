@@ -350,8 +350,7 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
-	dm dependency_manager.DependencyManager,
-) (*sync.WaitGroup, error) {
+	dm dependency_manager.DependencyManager, skipPostDeploy bool) (*sync.WaitGroup, error) {
 	for nodeName := range c.Nodes {
 		dm.AddNode(nodeName)
 	}
@@ -386,7 +385,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint,
 	}
 
 	// start scheduling
-	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm)
+	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), c.Nodes, dm, skipPostDeploy)
 
 	return NodesWg, nil
 }
@@ -482,8 +481,7 @@ func createWaitForDependency(n map[string]nodes.Node, dm dependency_manager.Depe
 }
 
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
-	scheduledNodes map[string]nodes.Node, dm dependency_manager.DependencyManager,
-) *sync.WaitGroup {
+	scheduledNodes map[string]nodes.Node, dm dependency_manager.DependencyManager, skipPostDeploy bool) *sync.WaitGroup {
 	concurrentChan := make(chan nodes.Node)
 
 	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup,
@@ -531,6 +529,14 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				if err != nil {
 					log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
 					continue
+				}
+
+				// if postdeploy should be skipped we do not call it
+				if !skipPostDeploy {
+					err = node.PostDeploy(ctx, &nodes.PostDeployParams{Nodes: c.Nodes})
+					if err != nil {
+						log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
+					}
 				}
 
 				// signal to dependency manager that this node is done with creation
