@@ -58,4 +58,3 @@ set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
 set / system aaa authentication admin-user ssh-key [ {{ .SSHPubKeys }} ]
 {{- end }}
 set / system banner login-banner "{{ .Banner }}"
-commit save
