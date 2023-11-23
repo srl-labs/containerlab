@@ -525,6 +525,10 @@ type srlTemplateData struct {
 	// EnableGNMIUnixSockServices enables GNMI unix socket services
 	// for the node. This is needed for "23.10 <= ver < 24.3" versions
 	EnableGNMIUnixSockServices bool
+	// EnableCustomPrompt enables custom prompt with added newline
+	// before the prompt.
+	EnableCustomPrompt bool
+	CustomPrompt       string
 }
 
 // tplIFace template interface struct.
@@ -555,6 +559,8 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	}
 
 	n.setVersionSpecificParams(&tplData, n.swVersion)
+
+	n.setCustomPrompt(&tplData)
 
 	// set MgmtMTU to the MTU value of the runtime management network
 	// so that the two MTUs match.
