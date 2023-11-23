@@ -554,7 +554,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		DNSServers: n.Config().DNS.Servers,
 	}
 
-	n.addVersionSpecificConfig(&tplData, n.swVersion)
+	n.setVersionSpecificParams(&tplData, n.swVersion)
 
 	// set MgmtMTU to the MTU value of the runtime management network
 	// so that the two MTUs match.
@@ -809,8 +809,10 @@ gpgcheck=0`
 	return nil
 }
 
-// addVersionSpecificConfig adds version specific config to the template data.
-func (n *srl) addVersionSpecificConfig(tplData *srlTemplateData, swVersion *SrlVersion) {
+// setVersionSpecificParams sets version specific parameters in the template data struct
+// to enable/disable version-specific configuration blocks in the config template
+// or prepares data to conform to the expected format per specific version.
+func (n *srl) setVersionSpecificParams(tplData *srlTemplateData, swVersion *SrlVersion) {
 	v := n.swVersion.String()
 
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
