@@ -44,61 +44,14 @@ const (
 	// overlayCfgPath is a path to a file with additional config that clab adds on top of the default config.
 	// Partial config provided via startup-config parameter is an overlay config.
 	overlayCfgPath = "/tmp/clab-overlay-config"
-
-	// additional config that clab adds on top of the factory config.
-	srlConfigCmdsTpl = `set / system tls server-profile clab-profile
-set / system tls server-profile clab-profile key "{{ .TLSKey }}"
-set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
-{{- if .TLSAnchor }}
-set / system tls server-profile clab-profile authenticate-client true
-set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
-{{- else }}
-set / system tls server-profile clab-profile authenticate-client false
-{{- end }}
-set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
-set / system gnmi-server rate-limit 65000
-set / system gnmi-server trace-options [ request response common ]
-set / system gnmi-server unix-socket admin-state enable
-{{- if .DNSServers }}
-set / system dns network-instance mgmt
-set / system dns server-list [ {{ range $dnsserver := .DNSServers}}{{$dnsserver}} {{ end }}]
-{{- end }}
-set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
-set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
-set / system snmp community public
-set / system snmp network-instance mgmt
-set / system snmp network-instance mgmt admin-state enable
-set / system lldp admin-state enable
-set / system aaa authentication idle-timeout 7200
-{{- /* if e.g. node is run with none mgmt networking but a macvlan interface is attached as mgmt0, we need to adjust the mtu */}}
-{{- if ne .MgmtMTU 0 }}
-set / interface mgmt0 mtu {{ .MgmtMTU }}
-{{- end }}
-{{- if ne .MgmtIPMTU 0 }}
-set / interface mgmt0 subinterface 0 ip-mtu {{ .MgmtIPMTU }}
-{{- end }}
-{{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
-{{- range $epName, $ep := .IFaces }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
-  {{- if ne $ep.Mtu 0 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
-  {{- end }}
-
-  {{- if ne $ep.BreakoutNo  "" }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
-  {{- end }}
-
-{{ end -}}
-{{- if .SSHPubKeys }}
-set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
-set / system aaa authentication admin-user ssh-key [ {{ .SSHPubKeys }} ]
-{{- end }}
-set / system banner login-banner "{{ .Banner }}"
-commit save`
 )
 
 var (
+
+	// additional config that clab adds on top of the factory config.
+	//go:embed srl_default_config.go.tpl
+	srlConfigCmdsTpl string
+
 	KindNames = []string{"srl", "nokia_srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
@@ -140,7 +93,7 @@ var (
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
-	srlCfgTpl, _ = template.New("srl-tls-profile").
+	srlCfgTpl, _ = template.New("clab-srl-default-config").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 			Parse(srlConfigCmdsTpl)
 
@@ -173,67 +126,67 @@ type srl struct {
 	swVersion *SrlVersion
 }
 
-func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
-	s.HostRequirements.SSSE3 = true
-	s.HostRequirements.MinVCPU = 2
-	s.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
-	s.HostRequirements.MinAvailMemoryGb = 2
-	s.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
+	n.HostRequirements.SSSE3 = true
+	n.HostRequirements.MinVCPU = 2
+	n.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
+	n.HostRequirements.MinAvailMemoryGb = 2
+	n.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
 
-	s.Cfg = cfg
+	n.Cfg = cfg
 
 	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
-	s.Cfg.Certificate.Issue = utils.BoolPointer(true)
+	n.Cfg.Certificate.Issue = utils.BoolPointer(true)
 
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
 
-	if s.Cfg.NodeType == "" {
-		s.Cfg.NodeType = srlDefaultType
+	if n.Cfg.NodeType == "" {
+		n.Cfg.NodeType = srlDefaultType
 	}
 
-	if _, found := srlTypes[s.Cfg.NodeType]; !found {
+	if _, found := srlTypes[n.Cfg.NodeType]; !found {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
-			s.Cfg.NodeType, strings.Join(keys, ", "))
+			n.Cfg.NodeType, strings.Join(keys, ", "))
 	}
 
-	if s.Cfg.Cmd == "" {
+	if n.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
 		// the additional touch is needed to support non docker runtimes
-		s.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+		n.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
-	s.Cfg.Env = utils.MergeStringMaps(srlEnv, s.Cfg.Env)
+	n.Cfg.Env = utils.MergeStringMaps(srlEnv, n.Cfg.Env)
 
 	// if user was not initialized to a value, use root
-	if s.Cfg.User == "" {
-		s.Cfg.User = "0:0"
+	if n.Cfg.User == "" {
+		n.Cfg.User = "0:0"
 	}
 	for k, v := range srlSysctl {
-		s.Cfg.Sysctls[k] = v
+		n.Cfg.Sysctls[k] = v
 	}
 
-	if s.Cfg.License != "" {
+	if n.Cfg.License != "" {
 		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-		s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(
-			filepath.Join(s.Cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
+			filepath.Join(n.Cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 	}
 
 	// mount config directory
-	cfgPath := filepath.Join(s.Cfg.LabDir, "config")
-	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
+	cfgPath := filepath.Join(n.Cfg.LabDir, "config")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
 	// mount srlinux topology
-	topoPath := filepath.Join(s.Cfg.LabDir, "topology.yml")
-	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+	topoPath := filepath.Join(n.Cfg.LabDir, "topology.yml")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	return nil
 }
@@ -569,6 +522,13 @@ type srlTemplateData struct {
 	MgmtMTU    int
 	MgmtIPMTU  int
 	DNSServers []string
+	// EnableGNMIUnixSockServices enables GNMI unix socket services
+	// for the node. This is needed for "23.10 <= ver < 24.3" versions
+	EnableGNMIUnixSockServices bool
+	// EnableCustomPrompt enables custom prompt with added newline
+	// before the prompt.
+	EnableCustomPrompt bool
+	CustomPrompt       string
 }
 
 // tplIFace template interface struct.
@@ -598,11 +558,9 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		DNSServers: n.Config().DNS.Servers,
 	}
 
-	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
-	// so we add the keys to the template data for rendering.
-	if len(n.sshPubKeys) > 0 && (semver.Compare(n.swVersion.String(), "v23.10") >= 0 || n.swVersion.major == "0") {
-		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
-	}
+	n.setVersionSpecificParams(&tplData, n.swVersion)
+
+	n.setCustomPrompt(&tplData)
 
 	// set MgmtMTU to the MTU value of the runtime management network
 	// so that the two MTUs match.
@@ -855,4 +813,23 @@ gpgcheck=0`
 	s.Cfg.Binds = append(s.Cfg.Binds, aptPath+":/etc/apt/sources.list.d/srlinux.list:ro")
 
 	return nil
+}
+
+// setVersionSpecificParams sets version specific parameters in the template data struct
+// to enable/disable version-specific configuration blocks in the config template
+// or prepares data to conform to the expected format per specific version.
+func (n *srl) setVersionSpecificParams(tplData *srlTemplateData, swVersion *SrlVersion) {
+	v := n.swVersion.String()
+
+	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
+	// so we add the keys to the template data for rendering.
+	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.major == "0") {
+		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
+	}
+
+	// in srlinux v23.10+ till 24.3 we need to enable GNMI unix socket services to enable
+	// communications over unix socket (e.g. NDK agents)
+	if semver.Compare(v, "v23.10") >= 0 && semver.Compare(v, "v24.3") < 0 {
+		tplData.EnableGNMIUnixSockServices = true
+	}
 }
