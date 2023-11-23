@@ -1,11 +1,13 @@
 package links
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 type LinkMgmtNetRaw struct {
@@ -110,6 +112,29 @@ type mgmtBridgeLinkNode struct {
 
 func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
+}
+
+func (b *mgmtBridgeLinkNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	// retrieve the namespace handle
+	ns, err := ns.GetCurrentNS()
+	if err != nil {
+		return err
+	}
+
+	// get the bridge as netlink.Link
+	br, err := utils.LinkByNameOrAlias(b.shortname)
+	if err != nil {
+		return err
+	}
+
+	// assign the bridge to the link as master
+	err = netlink.LinkSetMaster(link, br)
+	if err != nil {
+		return err
+	}
+
+	// execute the given function
+	return ns.Do(f)
 }
 
 func getMgmtBrLinkNode() *mgmtBridgeLinkNode {

@@ -1,0 +1,10 @@
+name: mgmtnetif
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:latest
+      cmd: sleep infinity
+  links:
+    - endpoints: [l1:eth1, mgmt-net:l1eth1]
