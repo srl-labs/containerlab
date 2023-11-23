@@ -100,12 +100,18 @@ verifyOpenssl() {
 # or to the latest release available on github releases
 setDesiredVersion() {
     if [ "x$DESIRED_VERSION" == "x" ]; then
+        # check if GITHUB_TOKEN env var is set and use it for API calls
+        local gh_token=${GITHUB_TOKEN:-}
+        if [ ! -z "$gh_token" ]; then
+            local curl_auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+            local wget_auth_header=(--header="Authorization: Bearer ${GITHUB_TOKEN}")
+        fi
         # when desired version is not provided
         # get latest tag from the gh releases
         if type "curl" &>/dev/null; then
-            local latest_release_url=$(curl -s https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
+            local latest_release_url=$(curl -s "${curl_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
             if [ -z "$latest_release_url" ]; then
-                echo "Failed to retrieve latest release URL due to rate limiting. Please try again later."
+                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
                 exit 1
             fi
             TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
@@ -113,9 +119,9 @@ setDesiredVersion() {
             TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
         elif type "wget" &>/dev/null; then
             # get latest release info and get 5th line out of the response to get the URL
-            local latest_release_url=$(wget -q https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
+            local latest_release_url=$(wget -q "${wget_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
             if [ -z "$latest_release_url" ]; then
-                echo "Failed to retrieve latest release URL due to rate limiting. Please try again later."
+                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
                 exit 1
             fi
             TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')

@@ -30,7 +30,10 @@ var upgradeCmd = &cobra.Command{
 		_ = downloadFile(downloadURL, f)
 
 		c := exec.Command("bash", f.Name())
-		// c.Stdin = os.Stdin
+		// pass the environment variables to the upgrade script
+		// so that GITHUB_TOKEN is available
+		c.Env = os.Environ()
+
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		err = c.Run()
