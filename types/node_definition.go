@@ -67,7 +67,7 @@ type NodeDefinition struct {
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
 	// List of node names to wait for before satarting this particular node
-	WaitFor []string `yaml:"wait-for,omitempty"`
+	WaitFor []*WaitFor `yaml:"wait-for,omitempty"`
 	// DNS configuration
 	DNS *DNSConfig `yaml:"dns,omitempty"`
 	// Certificate configuration
@@ -352,9 +352,9 @@ func (n *NodeDefinition) GetExtras() *Extras {
 	return n.Extras
 }
 
-func (n *NodeDefinition) GetWaitFor() []string {
+func (n *NodeDefinition) GetWaitFor() []*WaitFor {
 	if n == nil {
-		return []string{}
+		return []*WaitFor{}
 	}
 	return n.WaitFor
 }

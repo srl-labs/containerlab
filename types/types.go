@@ -182,7 +182,7 @@ type NodeConfig struct {
 
 	// Extra node parameters
 	Extras  *Extras    `json:"extras,omitempty"`
-	WaitFor []string   `json:"wait-for,omitempty"`
+	WaitFor []*WaitFor `json:"wait-for,omitempty"`
 	DNS     *DNSConfig `json:"dns,omitempty"`
 
 	// Kind parameters
@@ -389,6 +389,40 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 
 	// default to IfNotPresent
 	return PullPolicyIfNotPresent
+}
+
+type WaitFor struct {
+	Node  string       `json:"node"`            // the node that is to be waited for
+	Phase WaitForPhase `json:"phase,omitempty"` // the phase that the node must have completed
+}
+
+// constructor for new WaitFor structs
+func NewWaitFor(name string, phase WaitForPhase) *WaitFor {
+	return &WaitFor{Node: name, Phase: phase}
+}
+
+type WaitForPhase string
+
+const (
+	WaitForPreDeployed  WaitForPhase = "predeployed"
+	WaitForCreated      WaitForPhase = "created"
+	WaitForLinksCreated WaitForPhase = "links-created"
+	WaitForConfigured   WaitForPhase = "configured"
+	WaitForHealthy      WaitForPhase = "healthy"
+)
+
+var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForPreDeployed, WaitForCreated, WaitForLinksCreated, WaitForConfigured, WaitForHealthy}
+
+// ParseWaitFor parses a WaitFor entry as string and return the WaitFor struct
+func ParseWaitFor(s string) *WaitFor {
+	wf := &WaitFor{}
+	err := yaml.Unmarshal([]byte(s), wf)
+	if err != nil {
+		// if Unmarshal fails we expect it to be the initial format, a simple plain slice of node names
+		wf.Node = s
+		wf.Phase = WaitForCreated
+	}
+	return wf
 }
 
 // HealthcheckConfig represents healthcheck parameters set for a container.

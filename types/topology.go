@@ -473,13 +473,11 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 }
 
 // GetWaitFor return the wait-for configuration for the given node.
-func (t *Topology) GetWaitFor(name string) []string {
+func (t *Topology) GetWaitFor(name string) []*WaitFor {
 	if ndef, ok := t.Nodes[name]; ok {
-		return utils.MergeStringSlices(
-			t.GetKind(t.GetNodeKind(name)).GetWaitFor(),
-			ndef.GetWaitFor())
+		return append(t.GetKind(t.GetNodeKind(name)).GetWaitFor(), ndef.GetWaitFor()...)
 	}
-	return nil
+	return []*WaitFor{}
 }
 
 func (t *Topology) ImportEnvs() {
