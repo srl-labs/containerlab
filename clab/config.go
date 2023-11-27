@@ -267,9 +267,6 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	isDownloadableConfig := utils.IsHttpURL(p, false)
 
 	if isEmbeddedConfig || isDownloadableConfig {
-		// both embedded and downloadable configs are require clab tmp dir to be created
-		c.TopoPaths.CreateTmpDir()
-
 		switch {
 		case isEmbeddedConfig:
 			log.Debugf("Node %q startup-config is an embedded config: %q", nodeCfg.ShortName, p)

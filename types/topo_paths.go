@@ -175,13 +175,11 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 }
 
 // ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
-func (*TopoPaths) ClabTmpDir() string {
+func (t *TopoPaths) ClabTmpDir() string {
+	if !utils.DirExists(clabTmpDir) {
+		utils.CreateDirectory(t.ClabTmpDir(), 0755)
+	}
 	return clabTmpDir
-}
-
-// CreateTmpDir creates a clab temp directory.
-func (t *TopoPaths) CreateTmpDir() {
-	utils.CreateDirectory(t.ClabTmpDir(), 0755)
 }
 
 // StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file
