@@ -177,7 +177,7 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 // ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
 func (t *TopoPaths) ClabTmpDir() string {
 	if !utils.DirExists(clabTmpDir) {
-		utils.CreateDirectory(t.ClabTmpDir(), 0755)
+		utils.CreateDirectory(clabTmpDir, 0755)
 	}
 	return clabTmpDir
 }
