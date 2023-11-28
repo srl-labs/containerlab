@@ -142,7 +142,7 @@ Test deploy referencing folder as topo
 
     ## double check deletion via runtime ps 
     ${output_post2} =    Process.Run Process
-    ...     ${runtime} ps
+    ...    sudo -E ${runtime} ps
     ...    shell=True
 
     Should Contain    ${output_post2.stdout}    clab-lab1-node1
@@ -155,7 +155,7 @@ Test deploy referencing folder as topo
 
     ## double check deletion via runtime ps 
     ${output_post2} =    Process.Run Process
-    ...     ${runtime} ps
+    ...    sudo -E ${runtime} ps
     ...    shell=True
 
     Should Not Contain    ${output_post2.stdout}    clab-lab1-node1
