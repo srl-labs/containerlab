@@ -9,7 +9,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/mocks"
@@ -19,6 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/exp/slices"
 )
 

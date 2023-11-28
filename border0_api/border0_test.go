@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/h2non/gock"
 	"github.com/srl-labs/containerlab/mocks/mocknodes"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 )
 
 func TestLogin(t *testing.T) {
