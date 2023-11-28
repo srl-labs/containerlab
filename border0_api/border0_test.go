@@ -226,7 +226,11 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 		&types.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node2",
-			WaitFor:   []string{"node1"},
+			WaitFor: []*types.WaitFor{
+				{
+					Node: "node1",
+				},
+			},
 			Publish: []string{
 				"tls/22",
 				"tls/23/myfunnypolicy",
@@ -242,8 +246,15 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:       "alpine:3",
 			NetworkMode: "container:node2",
 			ShortName:   "node3",
-			WaitFor:     []string{"node1", "node2"},
-			LongName:    "clab-TestTopo-node3",
+			WaitFor: []*types.WaitFor{
+				{
+					Node: "node1",
+				},
+				{
+					Node: "node2",
+				},
+			},
+			LongName: "clab-TestTopo-node3",
 		},
 	).AnyTimes()
 
@@ -265,7 +276,14 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:           "alpine:3",
 			MgmtIPv4Address: "172.10.10.2",
 			ShortName:       "node5",
-			WaitFor:         []string{"node3", "node4"},
+			WaitFor: []*types.WaitFor{
+				{
+					Node: "node3",
+				},
+				{
+					Node: "node4",
+				},
+			},
 			Publish: []string{
 				"tls/22",
 				"tls/25/test,additionalpolicy",

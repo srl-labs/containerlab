@@ -35,17 +35,17 @@ func (m *MockDependencyManager) EXPECT() *MockDependencyManagerMockRecorder {
 }
 
 // AddDependency mocks base method.
-func (m *MockDependencyManager) AddDependency(dependee, depender string) error {
+func (m *MockDependencyManager) AddDependency(depender, dependee string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddDependency", dependee, depender)
+	ret := m.ctrl.Call(m, "AddDependency", depender, dependee)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddDependency indicates an expected call of AddDependency.
-func (mr *MockDependencyManagerMockRecorder) AddDependency(dependee, depender interface{}) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) AddDependency(depender, dependee interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), dependee, depender)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), depender, dependee)
 }
 
 // AddNode mocks base method.
@@ -112,18 +112,4 @@ func (m *MockDependencyManager) WaitForNodeDependencies(nodeName string) error {
 func (mr *MockDependencyManagerMockRecorder) WaitForNodeDependencies(nodeName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNodeDependencies", reflect.TypeOf((*MockDependencyManager)(nil).WaitForNodeDependencies), nodeName)
-}
-
-// WaitForNodes mocks base method.
-func (m *MockDependencyManager) WaitForNodes(nodeNames []string, status dependency_manager.NodeState) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForNodes", nodeNames, status)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// WaitForNodes indicates an expected call of WaitForNodes.
-func (mr *MockDependencyManagerMockRecorder) WaitForNodes(nodeNames, status interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNodes", reflect.TypeOf((*MockDependencyManager)(nil).WaitForNodes), nodeNames, status)
 }

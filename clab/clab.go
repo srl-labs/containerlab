@@ -399,7 +399,7 @@ func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm dependency_m
 		if n.GetRuntime().GetName() == ignite.RuntimeName {
 			if prevIgniteNode != nil {
 				// add a dependency to the previously found ignite node
-				dm.AddDependency(n.Config().ShortName, prevIgniteNode.Config().ShortName)
+				dm.AddDependency(prevIgniteNode.Config().ShortName, n.Config().ShortName)
 			}
 			prevIgniteNode = n
 		}
@@ -433,7 +433,7 @@ func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm dependen
 		}
 
 		// since the referenced container is clab-managed node, we create a dependency between the nodes
-		dm.AddDependency(referencedNode, nodeName)
+		dm.AddDependency(nodeName, referencedNode)
 	}
 }
 
@@ -456,7 +456,7 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm dependency_manage
 	for dynNodeName := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
 		for staticNodeName := range staticIPNodes {
-			err := dm.AddDependency(staticNodeName, dynNodeName)
+			err := dm.AddDependency(dynNodeName, staticNodeName)
 			if err != nil {
 				return err
 			}
@@ -470,7 +470,8 @@ func createWaitForDependency(n map[string]nodes.Node, dm dependency_manager.Depe
 	for waiterNode, node := range n {
 		// add node's waitFor nodes to the dependency manager
 		for _, waitForNode := range node.Config().WaitFor {
-			err := dm.AddDependency(waitForNode, waiterNode)
+			fmt.Printf("%s - %s\n", waiterNode, waitForNode.Node)
+			err := dm.AddDependency(waiterNode, waitForNode.Node)
 			if err != nil {
 				return err
 			}
