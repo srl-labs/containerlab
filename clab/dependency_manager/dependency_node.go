@@ -80,9 +80,11 @@ func (d *dependencyNode) addDepender(depender *dependencyNode, state types.WaitF
 	return nil
 }
 
+// dependerNodeState is used to keep track of waitgroups that should be decreased (unblocked)
+// as soon as a certain delpoy stage is reached.
 type dependerNodeState struct {
-	depender *dependencyNode
-	state    types.WaitForPhase
+	depender *dependencyNode    // reference to the node
+	state    types.WaitForPhase // reference to the nodes wg that is to be decremented
 }
 
 func NewDependerNodeState(node *dependencyNode, state types.WaitForPhase) *dependerNodeState {
