@@ -399,7 +399,7 @@ func createIgniteSerialDependency(nodeMap map[string]nodes.Node, dm dependency_m
 		if n.GetRuntime().GetName() == ignite.RuntimeName {
 			if prevIgniteNode != nil {
 				// add a dependency to the previously found ignite node
-				dm.AddDependency(prevIgniteNode.Config().ShortName, n.Config().ShortName)
+				dm.AddDependency(prevIgniteNode.Config().ShortName, n.Config().ShortName, types.WaitForCreate)
 			}
 			prevIgniteNode = n
 		}
@@ -433,7 +433,7 @@ func createNamespaceSharingDependency(nodeMap map[string]nodes.Node, dm dependen
 		}
 
 		// since the referenced container is clab-managed node, we create a dependency between the nodes
-		dm.AddDependency(nodeName, referencedNode)
+		dm.AddDependency(nodeName, referencedNode, types.WaitForCreate)
 	}
 }
 
@@ -456,7 +456,7 @@ func createStaticDynamicDependency(n map[string]nodes.Node, dm dependency_manage
 	for dynNodeName := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
 		for staticNodeName := range staticIPNodes {
-			err := dm.AddDependency(dynNodeName, staticNodeName)
+			err := dm.AddDependency(dynNodeName, staticNodeName, types.WaitForCreate)
 			if err != nil {
 				return err
 			}
@@ -470,8 +470,7 @@ func createWaitForDependency(n map[string]nodes.Node, dm dependency_manager.Depe
 	for waiterNode, node := range n {
 		// add node's waitFor nodes to the dependency manager
 		for _, waitForNode := range node.Config().WaitFor {
-			fmt.Printf("%s - %s\n", waiterNode, waitForNode.Node)
-			err := dm.AddDependency(waiterNode, waitForNode.Node)
+			err := dm.AddDependency(waiterNode, waitForNode.Node, waitForNode.Phase)
 			if err != nil {
 				return err
 			}
@@ -505,6 +504,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
+				// No Need to issue
+				//
+				// dm.Enter(node.GetShortName(), types.WaitForCreate)
+				//
+				// here, since it is called externally already.
+
 				// PreDeploy
 				err := node.PreDeploy(
 					ctx,
@@ -526,10 +531,24 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					continue
 				}
 
+				dm.SignalDone(node.GetShortName(), types.WaitForCreate)
+
+				err = dm.Enter(node.GetShortName(), types.WaitForCreateLinks)
+				if err != nil {
+					log.Error(err)
+				}
+
 				err = node.DeployLinks(ctx)
 				if err != nil {
 					log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
 					continue
+				}
+
+				dm.SignalDone(node.GetShortName(), types.WaitForCreateLinks)
+
+				err = dm.Enter(node.GetShortName(), types.WaitForConfigure)
+				if err != nil {
+					log.Error(err)
 				}
 
 				// if postdeploy should be skipped we do not call it
@@ -540,8 +559,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					}
 				}
 
-				// signal to dependency manager that this node is done with creation
-				dm.SignalDone(node.Config().ShortName, dependency_manager.NodeStateCreated)
+				dm.SignalDone(node.GetShortName(), types.WaitForConfigure)
 
 			case <-ctx.Done():
 				return
@@ -576,7 +594,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup,
 			) {
 				// wait for all the nodes that node depends on
-				err := dm.WaitForNodeDependencies(node.Config().ShortName)
+				err := dm.Enter(node.Config().ShortName, types.WaitForCreate)
 				if err != nil {
 					log.Error(err)
 				}

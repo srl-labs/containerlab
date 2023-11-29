@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/types"
 )
 
 type DependencyManager interface {
@@ -12,28 +13,18 @@ type DependencyManager interface {
 	AddNode(name string)
 	// AddDependency adds a dependency between depender and dependee.
 	// The depender will effectively wait for the dependee to finish.
-	AddDependency(depender, dependee string) error
+	AddDependency(depender, dependee string, state types.WaitForPhase) error
 	// WaitForNodeDependencies is called by a node that is meant to be created.
 	// This call will bock until all the nodes that this node depends on are created.
-	WaitForNodeDependencies(nodeName string) error
+	Enter(nodeName string, state types.WaitForPhase) error
 	// SignalDone is called by a node that has finished all tasks for the provided State.
 	// internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-	SignalDone(nodeName string, state NodeState)
+	SignalDone(nodeName string, state types.WaitForPhase)
 	// CheckAcyclicity checks if dependencies contain cycles.
 	CheckAcyclicity() error
 	// String returns a string representation of dependencies recorded with dependency manager.
 	String() string
 }
-
-type NodeState int
-
-const (
-	NodeStateCreated NodeState = iota
-	// dependency is a special state that is used to indicate that a node depends on other node.
-	dependency = 99
-)
-
-var RegularNodeStates = []NodeState{NodeStateCreated}
 
 // defaultDependencyManager is the default implementation of the DependencyManager.
 type defaultDependencyManager struct {
@@ -54,7 +45,7 @@ func (dm *defaultDependencyManager) AddNode(name string) {
 
 // AddDependency adds a dependency between depender and dependee.
 // The depender will effectively wait for the dependee to finish.
-func (dm *defaultDependencyManager) AddDependency(depender, dependee string) error {
+func (dm *defaultDependencyManager) AddDependency(depender, dependee string, state types.WaitForPhase) error {
 	// first check if the referenced nodes are known to the dm
 	err := dm.checkNodesExist([]string{dependee})
 	if err != nil {
@@ -65,25 +56,23 @@ func (dm *defaultDependencyManager) AddDependency(depender, dependee string) err
 		return err
 	}
 
-	dm.nodes[dependee].addDepender(dm.nodes[depender])
+	dm.nodes[dependee].addDepender(dm.nodes[depender], state)
 	return nil
 }
 
-// WaitForNodeDependencies is called by a node that is meant to be created.
-// This call will bock until all the nodes that this node depends on are created.
-func (dm *defaultDependencyManager) WaitForNodeDependencies(nodeName string) error {
+func (dm *defaultDependencyManager) Enter(nodeName string, state types.WaitForPhase) error {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {
 		return err
 	}
-	dm.nodes[nodeName].WaitFor(dependency)
+	dm.nodes[nodeName].Enter(state)
 	return nil
 }
 
 // SignalDone is called by a node that has finished the indicated NodeState process and reached the desired state.
 // Internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *defaultDependencyManager) SignalDone(nodeName string, state NodeState) {
+func (dm *defaultDependencyManager) SignalDone(nodeName string, state types.WaitForPhase) {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {
@@ -109,24 +98,7 @@ func (dm *defaultDependencyManager) checkNodesExist(nodeNames []string) error {
 
 // String returns a string representation of dependencies recorded with dependency manager.
 func (dm *defaultDependencyManager) String() string {
-	// since dm.nodeDependers contains a map of dependee->[dependers] it is not
-	// particularly suitable for displaying the dependency graph
-	// this function reverses the order so that it becomes depender->[dependees]
-
-	// map to record the dependencies in string based representation
-	dependencies := map[string][]string{}
-
-	// prepare dependencies table
-	for name := range dm.nodes {
-		dependencies[name] = []string{}
-	}
-
-	// build the dependency datastruct
-	for nodeName, node := range dm.nodes {
-		for _, depender := range node.nodeDependers {
-			dependencies[nodeName] = append(dependencies[nodeName], depender.name)
-		}
-	}
+	dependencies := dm.generateDependencyMap()
 
 	var result []string
 	// print dependencies
@@ -136,18 +108,27 @@ func (dm *defaultDependencyManager) String() string {
 	return strings.Join(result, "\n")
 }
 
+func (dm *defaultDependencyManager) generateDependencyMap() map[string][]string {
+	// map to record the dependencies in string based representation
+	dependencies := map[string][]string{}
+
+	// build the dependency datastruct
+	for nodeName, node := range dm.nodes {
+		dependencies[nodeName] = []string{}
+		for _, perStateDependerNSSlice := range node.depender {
+			for _, dependerNS := range perStateDependerNSSlice {
+				dependencies[nodeName] = append(dependencies[nodeName], dependerNS.depender.name)
+			}
+		}
+	}
+	return dependencies
+}
+
 // CheckAcyclicity checks if dependencies contain cycles.
 func (dm *defaultDependencyManager) CheckAcyclicity() error {
 	log.Debugf("Dependencies:\n%s", dm.String())
 
-	nodeDependers := map[string][]string{}
-
-	for _, n := range dm.nodes {
-		nodeDependers[n.name] = []string{}
-		for _, dep := range n.nodeDependers {
-			nodeDependers[n.name] = append(nodeDependers[n.name], dep.name)
-		}
-	}
+	nodeDependers := dm.generateDependencyMap()
 
 	if !isAcyclic(nodeDependers, 1) {
 		return fmt.Errorf("cyclic dependencies found!\n%s", dm.String())
@@ -162,7 +143,6 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	// no more nodes then the graph is acyclic
 	if len(nodeDependers) == 0 {
 		log.Debugf("node creation graph is successfully validated as being acyclic")
-
 		return true
 	}
 

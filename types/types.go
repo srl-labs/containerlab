@@ -404,26 +404,13 @@ func NewWaitFor(name string, phase WaitForPhase) *WaitFor {
 type WaitForPhase string
 
 const (
-	WaitForPreDeployed  WaitForPhase = "predeployed"
-	WaitForCreated      WaitForPhase = "created"
-	WaitForLinksCreated WaitForPhase = "links-created"
-	WaitForConfigured   WaitForPhase = "configured"
-	WaitForHealthy      WaitForPhase = "healthy"
+	WaitForCreate      WaitForPhase = "create"
+	WaitForCreateLinks WaitForPhase = "create-links"
+	WaitForConfigure   WaitForPhase = "configure"
+	WaitForHealthy     WaitForPhase = "healthy"
 )
 
-var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForPreDeployed, WaitForCreated, WaitForLinksCreated, WaitForConfigured, WaitForHealthy}
-
-// ParseWaitFor parses a WaitFor entry as string and return the WaitFor struct
-func ParseWaitFor(s string) *WaitFor {
-	wf := &WaitFor{}
-	err := yaml.Unmarshal([]byte(s), wf)
-	if err != nil {
-		// if Unmarshal fails we expect it to be the initial format, a simple plain slice of node names
-		wf.Node = s
-		wf.Phase = WaitForCreated
-	}
-	return wf
-}
+var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForCreate, WaitForCreateLinks, WaitForConfigure, WaitForHealthy}
 
 // HealthcheckConfig represents healthcheck parameters set for a container.
 type HealthcheckConfig struct {

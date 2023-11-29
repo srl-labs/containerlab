@@ -32,7 +32,7 @@ func Test_createNamespaceSharingDependencyOne(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node3", "node2")
+	dm.EXPECT().AddDependency("node3", "node2", types.WaitForCreate)
 	createNamespaceSharingDependency(nodeMap, dm)
 }
 
@@ -46,12 +46,12 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node1", "node4")
-	dm.EXPECT().AddDependency("node2", "node4")
-	dm.EXPECT().AddDependency("node3", "node4")
-	dm.EXPECT().AddDependency("node1", "node5")
-	dm.EXPECT().AddDependency("node2", "node5")
-	dm.EXPECT().AddDependency("node3", "node5")
+	dm.EXPECT().AddDependency("node1", "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node2", "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node1", "node5", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node2", "node5", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", "node5", types.WaitForCreate)
 
 	createStaticDynamicDependency(nodeMap, dm)
 }
@@ -151,11 +151,11 @@ func Test_createWaitForDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node2", "node1")
-	dm.EXPECT().AddDependency("node3", "node2")
-	dm.EXPECT().AddDependency("node3", "node1")
-	dm.EXPECT().AddDependency("node5", "node3")
-	dm.EXPECT().AddDependency("node5", "node4")
+	dm.EXPECT().AddDependency("node2", "node1", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", "node2", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", "node1", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node5", "node3", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node5", "node4", types.WaitForCreate)
 
 	err := createWaitForDependency(nodeMap, dm)
 	if err != nil {
