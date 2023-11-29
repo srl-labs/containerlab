@@ -139,7 +139,13 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 		log.Infof("%s: configuration applied", s.Cfg.LongName)
 	}
 
-	if len(s.sshPubKeys) > 0 {
+	// skip ssh key configuration if CLAB_SKIP_SROS_SSH_KEY_CONFIG env var is set
+	// which is needed for SR OS nodes running in classic CLI mode, because our key
+	// injection mechanism assumes MD-CLI mode.
+	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
+
+	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
+		log.Warn("here1")
 		err := s.configureSSHPublicKeys(ctx)
 		if err != nil {
 			return err
