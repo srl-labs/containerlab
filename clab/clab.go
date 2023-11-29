@@ -128,7 +128,7 @@ func WithKeepMgmtNet() ClabOption {
 
 func WithTopoPath(path, varsFile string) ClabOption {
 	return func(c *CLab) error {
-		file, err := ProcessTopoPath(path, c.TopoPaths.ClabTmpDir())
+		file, err := c.ProcessTopoPath(path)
 		if err != nil {
 			return err
 		}
@@ -140,19 +140,21 @@ func WithTopoPath(path, varsFile string) ClabOption {
 	}
 }
 
-func ProcessTopoPath(path string, tmpDir string) (string, error) {
+// ProcessTopoPath takes a topology path, which might be the path to a directory or a file
+// or stdin or a URL and returns the topology file name if found.
+func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	var file string
 	var err error
 
 	switch {
 	case path == "-" || path == "stdin":
-		file, err = readFromStdin(tmpDir)
+		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
 		}
 	// if the path is not a local file and a URL, download the file and store it in the tmp dir
 	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
-		file, err = downloadTopoFile(path, tmpDir)
+		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
 		}

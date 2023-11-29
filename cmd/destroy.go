@@ -271,7 +271,7 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 
 	// when topo file is provided, filter containers by lab name
 	if topo != "" {
-		topo, err = clab.ProcessTopoPath(topo, c.TopoPaths.ClabTmpDir())
+		topo, err = c.ProcessTopoPath(topo)
 		if err != nil {
 			return nil, err
 		}
