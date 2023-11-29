@@ -128,32 +128,10 @@ func WithKeepMgmtNet() ClabOption {
 
 func WithTopoPath(path, varsFile string) ClabOption {
 	return func(c *CLab) error {
-		var file string
-		var err error
-
-		switch {
-		case path == "-" || path == "stdin":
-			file, err = c.readFromStdin()
-			if err != nil {
-				return err
-			}
-		// if the path is not a local file and a URL, download the file and store it in the tmp dir
-		case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
-			file, err = c.downloadTopoFile(path)
-			if err != nil {
-				return err
-			}
-
-		case path == "":
-			return fmt.Errorf("provide a path to the clab topology file")
-
-		default:
-			file, err = findTopoFileByPath(path)
-			if err != nil {
-				return err
-			}
+		file, err := c.ProcessTopoPath(path)
+		if err != nil {
+			return err
 		}
-
 		if err := c.GetTopology(file, varsFile); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
@@ -162,9 +140,40 @@ func WithTopoPath(path, varsFile string) ClabOption {
 	}
 }
 
+// ProcessTopoPath takes a topology path, which might be the path to a directory or a file
+// or stdin or a URL and returns the topology file name if found.
+func (c *CLab) ProcessTopoPath(path string) (string, error) {
+	var file string
+	var err error
+
+	switch {
+	case path == "-" || path == "stdin":
+		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
+		if err != nil {
+			return "", err
+		}
+	// if the path is not a local file and a URL, download the file and store it in the tmp dir
+	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
+		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
+		if err != nil {
+			return "", err
+		}
+
+	case path == "":
+		return "", fmt.Errorf("provide a path to the clab topology file")
+
+	default:
+		file, err = FindTopoFileByPath(path)
+		if err != nil {
+			return "", err
+		}
+	}
+	return file, nil
+}
+
 // findTopoFileByPath takes a topology path, which might be the path to a directory
 // and returns the topology file name if found.
-func findTopoFileByPath(path string) (string, error) {
+func FindTopoFileByPath(path string) (string, error) {
 	finfo, err := os.Stat(path)
 	if err != nil {
 		return "", err
@@ -206,10 +215,8 @@ func findTopoFileByPath(path string) (string, error) {
 // readFromStdin reads the topology file from stdin
 // creates a temp file with topology contents
 // and returns a path to the temp file.
-func (c *CLab) readFromStdin() (string, error) {
-	c.TopoPaths.CreateTmpDir()
-
-	tmpFile, err := os.CreateTemp(c.TopoPaths.ClabTmpDir(), "topo-*.clab.yml")
+func readFromStdin(tempDir string) (string, error) {
+	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
 	if err != nil {
 		return "", err
 	}
@@ -222,10 +229,8 @@ func (c *CLab) readFromStdin() (string, error) {
 	return tmpFile.Name(), nil
 }
 
-func (c *CLab) downloadTopoFile(url string) (string, error) {
-	c.TopoPaths.CreateTmpDir()
-
-	tmpFile, err := os.CreateTemp(c.TopoPaths.ClabTmpDir(), "topo-*.clab.yml")
+func downloadTopoFile(url, tempDir string) (string, error) {
+	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
 	if err != nil {
 		return "", err
 	}
