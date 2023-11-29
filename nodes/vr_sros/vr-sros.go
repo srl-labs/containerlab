@@ -285,8 +285,9 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	// converting byte slice to newline delimited string slice
 	cfgs := strings.Split(string(configContent), "\n")
 
-	// condfig snippets should not have commit command, so we need to commit manually
-	cfgs = append(cfgs, "commit", "/admin save")
+	// config snippets should not have commit command, so we need to commit manually
+	// and quit from the config mode
+	cfgs = append(cfgs, "commit", "/admin save", "quit-config")
 
 	mr, err := d.SendConfigs(cfgs)
 	if err != nil || (mr != nil && mr.Failed != nil) {
