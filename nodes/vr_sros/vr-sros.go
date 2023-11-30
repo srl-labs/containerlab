@@ -145,7 +145,6 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
 
 	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
-		log.Warn("here1")
 		err := s.configureSSHPublicKeys(ctx)
 		if err != nil {
 			return err
@@ -293,7 +292,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 
 	// config snippets should not have commit command, so we need to commit manually
 	// and quit from the config mode
-	cfgs = append(cfgs, "commit", "/admin save", "quit-config")
+	cfgs = append(cfgs, "commit", "/admin save", "/exit all", "quit-config")
 
 	mr, err := d.SendConfigs(cfgs)
 	if err != nil || (mr != nil && mr.Failed != nil) {
