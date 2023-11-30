@@ -227,15 +227,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		nodesWg.Wait()
 	}
 
-	log.Debug("containers created, retrieving state and IP addresses...")
-	// updating nodes with runtime information such as IP addresses assigned by the runtime dynamically
-	for _, n := range c.Nodes {
-		err = n.UpdateConfigWithRuntimeInfo(ctx)
-		if err != nil {
-			log.Errorf("failed to update node runtime information for node %s: %v", n.Config().ShortName, err)
-		}
-	}
-
 	if err := c.GenerateInventories(); err != nil {
 		return err
 	}

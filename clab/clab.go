@@ -533,6 +533,13 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					continue
 				}
 
+				// we meed to populate e.g. the mgmt net ip addresses before continuing with the
+				// post-deploy phase (for e.g. certificate creation)
+				err = node.UpdateConfigWithRuntimeInfo(ctx)
+				if err != nil {
+					log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
+				}
+
 				dm.SignalDone(node.GetShortName(), types.WaitForCreate)
 
 				err = dm.Enter(node.GetShortName(), types.WaitForCreateLinks)
