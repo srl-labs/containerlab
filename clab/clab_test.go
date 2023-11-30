@@ -74,7 +74,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:     "alpine:3",
 			ShortName: "node2",
 			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
-				"configure": {
+				"create": {
 					{
 						Node: "node1",
 					},
@@ -91,7 +91,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			NetworkMode: "container:node2",
 			ShortName:   "node3",
 			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
-				"configure": {
+				"create": {
 					{
 						Node: "node1",
 					},
@@ -122,7 +122,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			MgmtIPv4Address: "172.10.10.2",
 			ShortName:       "node5",
 			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
-				"configure": {
+				"create": {
 					{
 						Node: "node3",
 					},
@@ -158,8 +158,8 @@ func Test_createWaitForDependency(t *testing.T) {
 	nodeMap := getNodeMap(mockCtrl)
 
 	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node1", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node1", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node3", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node4", types.WaitForCreate)
 
