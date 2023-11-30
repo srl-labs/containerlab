@@ -408,9 +408,8 @@ const (
 	WaitForCreateLinks WaitForPhase = "create-links"
 	WaitForConfigure   WaitForPhase = "configure"
 	WaitForHealthy     WaitForPhase = "healthy"
+	WaitForExit        WaitForPhase = "exit"
 )
-
-var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForCreate, WaitForCreateLinks, WaitForConfigure, WaitForHealthy}
 
 // HealthcheckConfig represents healthcheck parameters set for a container.
 type HealthcheckConfig struct {
@@ -441,3 +440,5 @@ func (h *HealthcheckConfig) GetTimeoutDuration() time.Duration {
 func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 	return time.Duration(h.StartPeriod) * time.Second
 }
+
+var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForCreate, WaitForCreateLinks, WaitForConfigure, WaitForHealthy, WaitForExit}

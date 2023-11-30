@@ -563,6 +563,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 
 				dm.SignalDone(node.GetShortName(), types.WaitForConfigure)
 
+				// health state processing
 				count, err := dm.GetDependerCount(node.GetShortName(), types.WaitForHealthy)
 				if err != nil {
 					log.Error(err)
@@ -583,6 +584,25 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 						time.Sleep(time.Second)
 					}
 				}
+
+				// exite state processing
+				count, err = dm.GetDependerCount(node.GetShortName(), types.WaitForExit)
+				if err != nil {
+					log.Error(err)
+				}
+				if count > 0 {
+					// if there is a dependecy on the healthy state of this node, enter the checking procedure
+					for {
+						status := node.GetRuntime().GetContainerStatus(ctx, node.Config().LongName)
+						if status == runtime.Stopped {
+							log.Infof("node %q stopped", node.GetShortName())
+							dm.SignalDone(node.GetShortName(), types.WaitForExit)
+							break
+						}
+						time.Sleep(time.Second)
+					}
+				}
+
 			case <-ctx.Done():
 				return
 			}
