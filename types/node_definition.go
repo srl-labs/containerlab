@@ -66,14 +66,22 @@ type NodeDefinition struct {
 	Sysctls map[string]string `yaml:"sysctls,omitempty"`
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
-	// List of node names to wait for before satarting this particular node
-	WaitFor map[WaitForPhase][]*WaitFor `yaml:"wait-for,omitempty"`
+	// stage based dependency definition
+	Stages Stages `yaml:"stages,omitempty"`
 	// DNS configuration
 	DNS *DNSConfig `yaml:"dns,omitempty"`
 	// Certificate configuration
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
+}
+
+type Stages struct {
+	Stage map[string]*WaitForEnvelop `yaml:",inline"`
+}
+
+type WaitForEnvelop struct {
+	WaitFor []*WaitFor `yaml:"wait-for,omitempty"`
 }
 
 // Interface compliance.
@@ -352,11 +360,21 @@ func (n *NodeDefinition) GetExtras() *Extras {
 	return n.Extras
 }
 
-func (n *NodeDefinition) GetWaitFor() map[WaitForPhase][]*WaitFor {
+func (n *NodeDefinition) GetWaitFor() (map[WaitForPhase][]*WaitFor, error) {
+	result := map[WaitForPhase][]*WaitFor{}
 	if n == nil {
-		return map[WaitForPhase][]*WaitFor{}
+		return result, nil
 	}
-	return n.WaitFor
+
+	for stage, dependency := range n.Stages.Stage {
+		p, err := WaitForPhaseFromString(stage)
+		if err != nil {
+			return nil, err
+		}
+		result[p] = append(result[p], dependency.WaitFor...)
+	}
+
+	return result, nil
 }
 
 func (n *NodeDefinition) GetDns() *DNSConfig {

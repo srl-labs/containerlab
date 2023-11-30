@@ -471,7 +471,7 @@ func createWaitForDependency(n map[string]nodes.Node, dm dependency_manager.Depe
 		// add node's waitFor nodes to the dependency manager
 		for phase, waitForNodes := range node.Config().WaitFor {
 			for _, waitForNode := range waitForNodes {
-				err := dm.AddDependency(waiterNode, phase, waitForNode.Node, waitForNode.Phase)
+				err := dm.AddDependency(waiterNode, phase, waitForNode.Node, waitForNode.State)
 				if err != nil {
 					return err
 				}

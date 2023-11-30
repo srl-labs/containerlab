@@ -184,7 +184,6 @@ type NodeConfig struct {
 	Extras  *Extras                     `json:"extras,omitempty"`
 	WaitFor map[WaitForPhase][]*WaitFor `json:"wait-for,omitempty"`
 	DNS     *DNSConfig                  `json:"dns,omitempty"`
-
 	// Kind parameters
 	//
 	// IsRootNamespaceBased flag indicates that a certain nodes network
@@ -393,14 +392,17 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 
 type WaitFor struct {
 	Node  string       `json:"node"`            // the node that is to be waited for
-	Phase WaitForPhase `json:"phase,omitempty"` // the phase that the node must have completed
+	State WaitForPhase `json:"state,omitempty"` // the state that the node must have completed
 }
 
-// constructor for new WaitFor structs
-func NewWaitFor(name string, phase WaitForPhase) *WaitFor {
-	return &WaitFor{Node: name, Phase: phase}
+func (w *WaitFor) IsValid() error {
+	_, err := WaitForPhaseFromString(string(w.State))
+	return err
 }
 
+// WaitForPhase defines the phases that nodes pass
+// on deployment. They are used to define and enforce
+// dependencies between nodes
 type WaitForPhase string
 
 const (
@@ -441,4 +443,16 @@ func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 	return time.Duration(h.StartPeriod) * time.Second
 }
 
+// we need to init Waitgroups for all the states,
+// this is a helper var listing all the states for
+// initialization.
 var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForCreate, WaitForCreateLinks, WaitForConfigure, WaitForHealthy, WaitForExit}
+
+func WaitForPhaseFromString(s string) (WaitForPhase, error) {
+	for _, val := range WaitForPhases {
+		if s == string(val) {
+			return val, nil
+		}
+	}
+	return "", fmt.Errorf("unknown phase %q", s)
+}

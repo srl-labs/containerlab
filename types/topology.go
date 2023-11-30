@@ -473,31 +473,57 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 }
 
 // GetWaitFor return the wait-for configuration for the given node.
-func (t *Topology) GetWaitFor(name string) map[WaitForPhase][]*WaitFor {
+func (t *Topology) GetWaitFor(name string) (map[WaitForPhase][]*WaitFor, error) {
 	if ndef, ok := t.Nodes[name]; ok {
 
 		result := map[WaitForPhase][]*WaitFor{}
 
-		for phase, waitfor := range t.GetKind(t.GetNodeKind(name)).GetWaitFor() {
-			if _, exists := result[phase]; !exists {
-				result[phase] = []*WaitFor{}
-			}
-			result[phase] = append(result[phase], waitfor...)
+		// kind wait fors
+		kindWaitFor, err := t.GetKind(t.GetNodeKind(name)).GetWaitFor()
+		if err != nil {
+			return nil, err
 		}
 
-		for phase, waitfor := range ndef.GetWaitFor() {
+		for phase, waitfor := range kindWaitFor {
 			if _, exists := result[phase]; !exists {
 				result[phase] = []*WaitFor{}
 			}
-			result[phase] = append(result[phase], waitfor...)
+			for _, w := range waitfor {
+				// make sure the Waitfor holds a valid
+				// wait for state
+				if err = w.IsValid(); err != nil {
+					return nil, err
+				}
+				result[phase] = append(result[phase], w)
+			}
+		}
+
+		// node wait fors
+		nodeWaitFor, err := ndef.GetWaitFor()
+		if err != nil {
+			return nil, err
+		}
+
+		for phase, waitfor := range nodeWaitFor {
+			if _, exists := result[phase]; !exists {
+				result[phase] = []*WaitFor{}
+			}
+			for _, w := range waitfor {
+				// make sure the Waitfor holds a valid
+				// wait for state
+				if err = w.IsValid(); err != nil {
+					return nil, err
+				}
+				result[phase] = append(result[phase], w)
+			}
 		}
 
 		// TODO: we sitill need to do a de-dup on the slices,
 		// otherwise we will run into deadlocks.
 
-		return result
+		return result, nil
 	}
-	return map[WaitForPhase][]*WaitFor{}
+	return map[WaitForPhase][]*WaitFor{}, nil
 }
 
 func (t *Topology) ImportEnvs() {
