@@ -49,6 +49,8 @@ type DefaultNode struct {
 	// State of the node
 	state      state.NodeState
 	statemutex sync.RWMutex
+	// links created wg
+	linksCreated *sync.WaitGroup
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -60,6 +62,7 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		OverwriteNode:    n,
 		LicensePolicy:    types.LicensePolicyNone,
 		SSHConfig:        types.NewSSHConfig(),
+		linksCreated:     &sync.WaitGroup{},
 	}
 
 	return dn
@@ -70,6 +73,10 @@ func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d
 func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
 func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
+
+func (d *DefaultNode) WaitForAllLinksCreated() {
+	d.linksCreated.Wait()
+}
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
@@ -448,7 +455,13 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 		return err
 	}
 	// execute the given function
-	return netns.Do(f)
+	err = netns.Do(f)
+	if err != nil {
+		return err
+	}
+	// indicate this link is created
+	d.linksCreated.Done()
+	return nil
 }
 
 // ExecFunction executes the given function in the nodes network namespace.
@@ -478,6 +491,7 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 
 func (d *DefaultNode) AddLink(l links.Link) {
 	d.Links = append(d.Links, l)
+	d.linksCreated.Add(1)
 }
 
 func (d *DefaultNode) AddEndpoint(e links.Endpoint) {

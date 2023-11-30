@@ -108,6 +108,7 @@ type Node interface {
 	GetState() state.NodeState
 	SetState(state.NodeState)
 	GetSSHConfig() *types.SSHConfig
+	WaitForAllLinksCreated()
 }
 
 type NodeOption func(Node)

@@ -546,8 +546,21 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 					continue
 				}
 
+				// DeployLinks does not necessarily create all the links already.
+				// veth links might be created by the peer node, if it was not already
+				// deployed properly. Hence we need to wait for all the links to be created.
+				// we just wait if there is actually a dependency on this state, otherwise
+				// we head on.
+				count, err := dm.GetDependerCount(node.GetShortName(), types.WaitForCreateLinks)
+				if err != nil {
+					log.Error(err)
+				}
+				if count > 0 {
+					node.WaitForAllLinksCreated()
+				}
 				dm.SignalDone(node.GetShortName(), types.WaitForCreateLinks)
 
+				// start config phase
 				err = dm.Enter(node.GetShortName(), types.WaitForConfigure)
 				if err != nil {
 					log.Error(err)
@@ -564,7 +577,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int,
 				dm.SignalDone(node.GetShortName(), types.WaitForConfigure)
 
 				// health state processing
-				count, err := dm.GetDependerCount(node.GetShortName(), types.WaitForHealthy)
+				count, err = dm.GetDependerCount(node.GetShortName(), types.WaitForHealthy)
 				if err != nil {
 					log.Error(err)
 				}
