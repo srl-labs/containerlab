@@ -1,8 +1,6 @@
 package dependency_manager
 
 import (
-	"sort"
-	"strings"
 	"testing"
 
 	"github.com/srl-labs/containerlab/types"
@@ -182,12 +180,9 @@ node4 -> [ node3 ]`,
 			for _, deps := range tt.fields.dependencies {
 				dm.AddDependency(deps.depender, types.WaitForCreate, deps.dependee, types.WaitForCreate)
 			}
-			lines := strings.Split(dm.String(), "\n")
-			sort.Strings(lines)
-			sorted_result := strings.Join(lines, "\n")
 
-			if sorted_result != tt.want {
-				t.Errorf("defaultDependencyManager.String() = %v, want %v", sorted_result, tt.want)
+			if got := dm.String(); got != tt.want {
+				t.Errorf("defaultDependencyManager.String() = %v, want %v", got, tt.want)
 			}
 		})
 	}

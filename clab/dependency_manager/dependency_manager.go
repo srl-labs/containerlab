@@ -2,6 +2,7 @@ package dependency_manager
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -111,9 +112,16 @@ func (dm *defaultDependencyManager) String() string {
 	dependencies := dm.generateDependencyMap()
 
 	var result []string
+
+	keys := make([]string, 0, len(dependencies))
+	for k := range dependencies {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	// print dependencies
-	for nodename, deps := range dependencies {
-		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(deps, ", ")))
+	for _, nodename := range keys {
+		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(dependencies[nodename], ", ")))
 	}
 	return strings.Join(result, "\n")
 }
