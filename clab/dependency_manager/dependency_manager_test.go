@@ -1,6 +1,8 @@
 package dependency_manager
 
 import (
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/srl-labs/containerlab/types"
@@ -136,7 +138,7 @@ func Test_defaultDependencyManager_String(t *testing.T) {
 node2 -> [ node1 ]`,
 		},
 		{
-			name: "test one",
+			name: "test two",
 			fields: fields{
 				nodes: map[string]*dependencyNode{
 					"node1": newDependencyNode("node1"),
@@ -180,9 +182,12 @@ node4 -> [ node3 ]`,
 			for _, deps := range tt.fields.dependencies {
 				dm.AddDependency(deps.depender, types.WaitForCreate, deps.dependee, types.WaitForCreate)
 			}
+			lines := strings.Split(dm.String(), "\n")
+			sort.Strings(lines)
+			sorted_result := strings.Join(lines, "\n")
 
-			if got := dm.String(); got != tt.want {
-				t.Errorf("defaultDependencyManager.String() = %v, want %v", got, tt.want)
+			if sorted_result != tt.want {
+				t.Errorf("defaultDependencyManager.String() = %v, want %v", sorted_result, tt.want)
 			}
 		})
 	}
