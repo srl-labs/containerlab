@@ -473,11 +473,31 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 }
 
 // GetWaitFor return the wait-for configuration for the given node.
-func (t *Topology) GetWaitFor(name string) []*WaitFor {
+func (t *Topology) GetWaitFor(name string) map[WaitForPhase][]*WaitFor {
 	if ndef, ok := t.Nodes[name]; ok {
-		return append(t.GetKind(t.GetNodeKind(name)).GetWaitFor(), ndef.GetWaitFor()...)
+
+		result := map[WaitForPhase][]*WaitFor{}
+
+		for phase, waitfor := range t.GetKind(t.GetNodeKind(name)).GetWaitFor() {
+			if _, exists := result[phase]; !exists {
+				result[phase] = []*WaitFor{}
+			}
+			result[phase] = append(result[phase], waitfor...)
+		}
+
+		for phase, waitfor := range ndef.GetWaitFor() {
+			if _, exists := result[phase]; !exists {
+				result[phase] = []*WaitFor{}
+			}
+			result[phase] = append(result[phase], waitfor...)
+		}
+
+		// TODO: we sitill need to do a de-dup on the slices,
+		// otherwise we will run into deadlocks.
+
+		return result
 	}
-	return []*WaitFor{}
+	return map[WaitForPhase][]*WaitFor{}
 }
 
 func (t *Topology) ImportEnvs() {

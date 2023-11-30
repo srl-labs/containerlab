@@ -178,7 +178,7 @@ node4 -> [ node3 ]`,
 				nodes: tt.fields.nodes,
 			}
 			for _, deps := range tt.fields.dependencies {
-				dm.AddDependency(deps.depender, deps.dependee, types.WaitForCreate)
+				dm.AddDependency(deps.depender, types.WaitForCreate, deps.dependee, types.WaitForCreate)
 			}
 
 			if got := dm.String(); got != tt.want {

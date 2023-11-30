@@ -1010,5 +1010,5 @@ func (d *DockerRuntime) GetContainerHealth(ctx context.Context, cID string) (boo
 	if err != nil {
 		return false, err
 	}
-	return inspect.State.Health.Status == "Healthy", nil
+	return inspect.State.Health.Status == "healthy", nil
 }

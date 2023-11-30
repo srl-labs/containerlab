@@ -39,17 +39,17 @@ func (m *MockDependencyManager) EXPECT() *MockDependencyManagerMockRecorder {
 }
 
 // AddDependency mocks base method.
-func (m *MockDependencyManager) AddDependency(depender, dependee string, state types.WaitForPhase) error {
+func (m *MockDependencyManager) AddDependency(depender string, dependerState types.WaitForPhase, dependee string, dependeeState types.WaitForPhase) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddDependency", depender, dependee, state)
+	ret := m.ctrl.Call(m, "AddDependency", depender, dependerState, dependee, dependeeState)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddDependency indicates an expected call of AddDependency.
-func (mr *MockDependencyManagerMockRecorder) AddDependency(depender, dependee, state any) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) AddDependency(depender, dependerState, dependee, dependeeState any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), depender, dependee, state)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), depender, dependerState, dependee, dependeeState)
 }
 
 // AddNode mocks base method.
@@ -90,6 +90,21 @@ func (m *MockDependencyManager) Enter(nodeName string, state types.WaitForPhase)
 func (mr *MockDependencyManagerMockRecorder) Enter(nodeName, state any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enter", reflect.TypeOf((*MockDependencyManager)(nil).Enter), nodeName, state)
+}
+
+// GetDependerCount mocks base method.
+func (m *MockDependencyManager) GetDependerCount(nodeName string, state types.WaitForPhase) (uint8, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDependerCount", nodeName, state)
+	ret0, _ := ret[0].(uint8)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDependerCount indicates an expected call of GetDependerCount.
+func (mr *MockDependencyManagerMockRecorder) GetDependerCount(nodeName, state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDependerCount", reflect.TypeOf((*MockDependencyManager)(nil).GetDependerCount), nodeName, state)
 }
 
 // SignalDone mocks base method.

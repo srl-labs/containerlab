@@ -32,7 +32,7 @@ func Test_createNamespaceSharingDependencyOne(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node3", "node2", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
 	createNamespaceSharingDependency(nodeMap, dm)
 }
 
@@ -46,12 +46,12 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node1", "node4", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node2", "node4", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", "node4", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node1", "node5", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node2", "node5", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", "node5", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node1", types.WaitForCreate, "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node1", types.WaitForCreate, "node5", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node5", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node5", types.WaitForCreate)
 
 	createStaticDynamicDependency(nodeMap, dm)
 }
@@ -73,9 +73,11 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 		&types.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node2",
-			WaitFor: []*types.WaitFor{
-				{
-					Node: "node1",
+			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
+				"configure": {
+					{
+						Node: "node1",
+					},
 				},
 			},
 		},
@@ -88,12 +90,14 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:       "alpine:3",
 			NetworkMode: "container:node2",
 			ShortName:   "node3",
-			WaitFor: []*types.WaitFor{
-				{
-					Node: "node1",
-				},
-				{
-					Node: "node2",
+			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
+				"configure": {
+					{
+						Node: "node1",
+					},
+					{
+						Node: "node2",
+					},
 				},
 			},
 		},
@@ -117,12 +121,14 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:           "alpine:3",
 			MgmtIPv4Address: "172.10.10.2",
 			ShortName:       "node5",
-			WaitFor: []*types.WaitFor{
-				{
-					Node: "node3",
-				},
-				{
-					Node: "node4",
+			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
+				"configure": {
+					{
+						Node: "node3",
+					},
+					{
+						Node: "node4",
+					},
 				},
 			},
 		},
@@ -151,11 +157,11 @@ func Test_createWaitForDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node2", "node1", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", "node2", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", "node1", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node5", "node3", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node5", "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node1", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node1", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node3", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node4", types.WaitForCreate)
 
 	err := createWaitForDependency(nodeMap, dm)
 	if err != nil {

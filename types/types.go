@@ -181,9 +181,9 @@ type NodeConfig struct {
 	Memory string  `json:"memory,omitempty"`
 
 	// Extra node parameters
-	Extras  *Extras    `json:"extras,omitempty"`
-	WaitFor []*WaitFor `json:"wait-for,omitempty"`
-	DNS     *DNSConfig `json:"dns,omitempty"`
+	Extras  *Extras                     `json:"extras,omitempty"`
+	WaitFor map[WaitForPhase][]*WaitFor `json:"wait-for,omitempty"`
+	DNS     *DNSConfig                  `json:"dns,omitempty"`
 
 	// Kind parameters
 	//
