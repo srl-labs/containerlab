@@ -32,8 +32,17 @@ func Test_createNamespaceSharingDependencyOne(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
+	clab := &CLab{
+		Nodes: nodeMap,
+	}
+
+	err := WithDependencyManager(dm)(clab)
+	if err != nil {
+		t.Error(err)
+	}
+
 	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
-	createNamespaceSharingDependency(nodeMap, dm)
+	clab.createNamespaceSharingDependency()
 }
 
 func Test_createStaticDynamicDependency(t *testing.T) {
@@ -46,6 +55,15 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
+	clab := &CLab{
+		Nodes: nodeMap,
+	}
+
+	err := WithDependencyManager(dm)(clab)
+	if err != nil {
+		t.Error(err)
+	}
+
 	dm.EXPECT().AddDependency("node1", types.WaitForCreate, "node4", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node4", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node4", types.WaitForCreate)
@@ -53,7 +71,7 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node5", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node5", types.WaitForCreate)
 
-	createStaticDynamicDependency(nodeMap, dm)
+	clab.createStaticDynamicDependency()
 }
 
 // getNodeMap return a map of nodes for testing purpose.
@@ -162,13 +180,22 @@ func Test_createWaitForDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
+	clab := &CLab{
+		Nodes: nodeMap,
+	}
+
+	err := WithDependencyManager(dm)(clab)
+	if err != nil {
+		t.Error(err)
+	}
+
 	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node1", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node1", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node3", types.WaitForCreate)
 	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node4", types.WaitForCreate)
 
-	err := createWaitForDependency(nodeMap, dm)
+	err = clab.createWaitForDependency()
 	if err != nil {
 		t.Error(err)
 	}

@@ -104,6 +104,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithDependencyManager(dependency_manager.NewDependencyManager()),
 		clab.WithDebug(debug),
 	}
 
@@ -216,9 +217,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	dm := dependency_manager.NewDependencyManager()
-
-	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, dm, skipPostDeploy)
+	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, skipPostDeploy)
 	if err != nil {
 		return err
 	}
@@ -235,16 +234,16 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	containers, err := c.ListNodesContainers(ctx)
-	if err != nil {
-		return err
-	}
-
 	// generate graph of the lab topology
 	if graph {
 		if err = c.GenerateDotGraph(); err != nil {
 			log.Error(err)
 		}
+	}
+
+	containers, err := c.ListNodesContainers(ctx)
+	if err != nil {
+		return err
 	}
 
 	log.Info("Adding containerlab host entries to /etc/hosts file")
