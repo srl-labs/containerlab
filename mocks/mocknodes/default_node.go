@@ -12,6 +12,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	exec "github.com/srl-labs/containerlab/clab/exec"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -108,6 +109,21 @@ func (m *MockNodeOverwrites) PullImage(ctx context.Context) error {
 func (mr *MockNodeOverwritesMockRecorder) PullImage(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockNodeOverwrites)(nil).PullImage), ctx)
+}
+
+// RunExec mocks base method.
+func (m *MockNodeOverwrites) RunExec(arg0 context.Context, arg1 *exec.ExecCmd) (*exec.ExecResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunExec", arg0, arg1)
+	ret0, _ := ret[0].(*exec.ExecResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunExec indicates an expected call of RunExec.
+func (mr *MockNodeOverwritesMockRecorder) RunExec(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNodeOverwrites)(nil).RunExec), arg0, arg1)
 }
 
 // VerifyHostRequirements mocks base method.

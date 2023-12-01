@@ -187,6 +187,24 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericConta
 	return cnts, err
 }
 
+func (d *DefaultNode) RunExecFromConfig(ctx context.Context, ec *exec.ExecCollection) error {
+	for _, e := range d.Config().Exec {
+		exec, err := exec.NewExecCmdFromString(e)
+		if err != nil {
+			log.Warnf("Failed to parse the command string: %s, %v", e, err)
+		}
+
+		res, err := d.OverwriteNode.RunExec(ctx, exec)
+		if err != nil {
+			// kinds which do not support exec functionality are skipped
+			continue
+		}
+
+		ec.Add(d.GetShortName(), res)
+	}
+	return nil
+}
+
 func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 	cnts, err := d.OverwriteNode.GetContainers(ctx)
 	if err != nil {
@@ -305,6 +323,7 @@ type NodeOverwrites interface {
 	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	GetContainerName() string
 	VerifyLicenseFileExists(context.Context) error
+	RunExec(context.Context, *exec.ExecCmd) (*exec.ExecResult, error)
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo

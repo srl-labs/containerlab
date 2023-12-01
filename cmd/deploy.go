@@ -17,7 +17,6 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
-	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
@@ -217,7 +216,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, skipPostDeploy)
+	nodesWg, execCollection, err := c.CreateNodes(ctx, nodeWorkers, skipPostDeploy)
 	if err != nil {
 		return err
 	}
@@ -225,6 +224,9 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if nodesWg != nil {
 		nodesWg.Wait()
 	}
+
+	// write to log
+	execCollection.Log()
 
 	if err := c.GenerateInventories(); err != nil {
 		return err
@@ -257,28 +259,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
 	}
-
-	// execute commands specified for nodes with `exec` node parameter
-	execCollection := exec.NewExecCollection()
-	for _, n := range c.Nodes {
-		for _, e := range n.Config().Exec {
-			exec, err := exec.NewExecCmdFromString(e)
-			if err != nil {
-				log.Warnf("Failed to parse the command string: %s, %v", e, err)
-			}
-
-			res, err := n.RunExec(ctx, exec)
-			if err != nil {
-				// kinds which do not support exec functionality are skipped
-				continue
-			}
-
-			execCollection.Add(n.Config().ShortName, res)
-		}
-	}
-
-	// write to log
-	execCollection.Log()
 
 	// log new version availability info if ready
 	newVerNotification(vCh)

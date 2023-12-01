@@ -133,7 +133,7 @@ Verify TLS works with JSON-RPC and certificate check
 
 Verify TLS works with JSON-RPC, certificate check and IP address as SAN
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    curl --cacert ./clab-${lab-name}/.tls/ca/ca.pem 'https://admin:NokiaSrl1!@172.20.20.2/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
+    ...    curl --cacert ./clab-${lab-name}/.tls/ca/ca.pem 'https://admin:NokiaSrl1!@172.20.20.200/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    error

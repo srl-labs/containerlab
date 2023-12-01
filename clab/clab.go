@@ -18,6 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
+	"github.com/srl-labs/containerlab/clab/exec"
 	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -303,6 +304,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 
 	// init a new NodeRegistry
 	c.Reg = nodes.NewNodeRegistry()
+	c.RegisterNodes()
 
 	for _, opt := range opts {
 		err := opt(c)
@@ -355,7 +357,7 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, error) {
+func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
 
 	for nodeName := range c.Nodes {
 		c.dependencyManager.AddNode(nodeName)
@@ -364,19 +366,19 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy 
 	// nodes with static mgmt IP should be scheduled before the dynamic ones
 	err := c.createStaticDynamicDependency()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// create user-defined node dependencies done with `wait-for` node property
 	err = c.createWaitForDependency()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// create a set of dependencies, that makes the ignite nodes start one after the other
 	err = c.createIgniteSerialDependency()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// make network namespace shared containers start in the right order
@@ -387,13 +389,13 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy 
 	// make sure that there are no unresolvable dependencies, which would deadlock.
 	err = c.dependencyManager.CheckAcyclicity()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// start scheduling
-	NodesWg := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy)
+	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy)
 
-	return NodesWg, nil
+	return NodesWg, execCollection, nil
 }
 
 // create a set of dependencies, that makes the ignite nodes start one after the other.
@@ -489,8 +491,10 @@ func (c *CLab) createWaitForDependency() error {
 	return nil
 }
 
-func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy bool) *sync.WaitGroup {
+func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection) {
 	concurrentChan := make(chan nodes.Node)
+
+	execCollection := exec.NewExecCollection()
 
 	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup,
 		dm dependency_manager.DependencyManager,
@@ -589,6 +593,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				dm.SignalDone(node.GetShortName(), types.WaitForConfigure)
 
+				// run execs
+				err = node.RunExecFromConfig(ctx, execCollection)
+				if err != nil {
+					log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
+				}
+
 				// health state processing
 				count, err = dm.GetDependerCount(node.GetShortName(), types.WaitForHealthy)
 				if err != nil {
@@ -680,7 +690,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 		// close the channel and thereby terminate the workerFuncs
 		close(concurrentChan)
 	}()
-	return wg
+	return wg, execCollection
 }
 
 // WaitForExternalNodeDependencies makes nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>)

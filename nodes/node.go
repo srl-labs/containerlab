@@ -108,7 +108,10 @@ type Node interface {
 	GetState() state.NodeState
 	SetState(state.NodeState)
 	GetSSHConfig() *types.SSHConfig
+	// WaitForAllLinksCreated will block until all the nodes links are created
 	WaitForAllLinksCreated()
+	// RunExecFromConfig executes the topologyfile defined exec commands
+	RunExecFromConfig(context.Context, *exec.ExecCollection) error
 }
 
 type NodeOption func(Node)

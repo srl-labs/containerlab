@@ -75,9 +75,6 @@ func TestLicenseInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// fmt.Println(c.Config.Topology.Defaults)
-			// fmt.Println(c.Config.Topology.Kinds)
-			// fmt.Println(c.Config.Topology.Nodes)
 			if filepath.Base(c.Nodes["node1"].Config().License) != tc.want {
 				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].Config().License)
 			}
