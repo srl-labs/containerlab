@@ -84,7 +84,7 @@ To access the vSRX web interface point a browsers at the vSRX management IP addr
   
 [vsrx]: https://www.juniper.net/us/en/products/security/srx-series/vsrx-virtual-firewall-datasheet.html
 [client]: https://github.com/wbitt/Network-MultiTool
-[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/vsrx1/vsrx01.yml
+[topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/vsrx01/vsrx01.yml
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
