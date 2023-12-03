@@ -39,7 +39,7 @@ var interfaceFormat = map[string]string{
 
 var supportedKinds = []string{
 	"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-vsrx",
-	"vr-vqfx", "vr-vjunosswitch", "vr-xrv9k", "vr-veos", "xrd", "rare",
+	"vr-vqfx", "vr-vjunosswitch", "vr-xrv9k", "vr-veos", "xrd", "rare", "vr-openbsd",
 }
 
 const (

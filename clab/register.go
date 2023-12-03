@@ -25,6 +25,7 @@ import (
 	vr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
 	vr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
 	vr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
+	vr_openbsd "github.com/srl-labs/containerlab/nodes/vr_openbsd"
 	vr_pan "github.com/srl-labs/containerlab/nodes/vr_pan"
 	vr_ros "github.com/srl-labs/containerlab/nodes/vr_ros"
 	vr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
@@ -58,6 +59,7 @@ func (c *CLab) RegisterNodes() {
 	vr_ftosv.Register(c.Reg)
 	vr_n9kv.Register(c.Reg)
 	vr_pan.Register(c.Reg)
+	vr_openbsd.Register(c.Reg)
 	vr_ros.Register(c.Reg)
 	vr_sros.Register(c.Reg)
 	vr_veos.Register(c.Reg)

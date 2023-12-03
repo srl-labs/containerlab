@@ -35,6 +35,7 @@ nav:
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
+          - OpenBSD: manual/kinds/vr-openbsd.md
           - RARE/freeRtr: manual/kinds/rare-freertr.md
           - Openvswitch bridge: manual/kinds/ovs-bridge.md
           - External container: manual/kinds/ext-container.md
@@ -104,6 +105,7 @@ nav:
       - Multi-node labs: lab-examples/multinode.md
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
+      - OpenBSD: lab-examples/openbsd01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
