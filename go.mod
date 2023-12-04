@@ -36,7 +36,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/steiler/acls v0.1.1
 	github.com/stretchr/testify v1.8.4
-	github.com/tklauser/numcpus v0.6.1
+	github.com/tklauser/numcpus v0.7.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.16.0
