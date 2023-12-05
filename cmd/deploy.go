@@ -385,7 +385,7 @@ func setupCTRLCHandler(cancel context.CancelFunc) {
 		log.Errorf("Caught CTRL-C. Stopping deployment!")
 		cancel()
 
-		// when interrupted, destroy the interrupted lab deployment with cleanup
+		// when interrupted, destroy the interrupted lab deployment
 		cleanup = false
 		if err := destroyFn(destroyCmd, []string{}); err != nil {
 			log.Errorf("Failed to destroy lab: %v", err)
