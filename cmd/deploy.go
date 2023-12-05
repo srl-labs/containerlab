@@ -386,7 +386,7 @@ func setupCTRLCHandler(cancel context.CancelFunc) {
 		cancel()
 
 		// when interrupted, destroy the interrupted lab deployment with cleanup
-		cleanup = true
+		cleanup = false
 		if err := destroyFn(destroyCmd, []string{}); err != nil {
 			log.Errorf("Failed to destroy lab: %v", err)
 		}
