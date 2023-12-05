@@ -6,6 +6,12 @@ search:
 
 [OpenBSD](https://www.openbsd.org/) is identified with `vr-openbsd` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
+## Getting OpenBSD image
+
+To build OpenBSD docker container image you will need to download a custom-built `qcow2` VM image with pre-installed [cloud-init](https://cloudinit.readthedocs.io/en/latest/) from https://bsd-cloud-image.org/.
+
+If, for some reason, you're unable to obtain an image from https://bsd-cloud-image.org/, you can build it yourself with the script from [this repository](https://github.com/goneri/pcib).
+
 ## Managing OpenBSD nodes
 
 !!!note
