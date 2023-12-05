@@ -1,11 +1,11 @@
-|                               |                                                                                    |
-| ----------------------------- | ---------------------------------------------------------------------------------- |
-| **Description**               | A OpenBSD connected to two Alpine Linux Hosts                                 |
-| **Components**                | [OpenBSD][openbsd], [Multitool Alpine Linux][client]                             |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 512 MB               |
-| **Topology file**             | [openbsd01.yml][topofile]                                                             |
-| **Name**                      | openbsd01                                                                             |
-| **Version information**[^2]   | `containerlab:0.49.0`, `openbsd-7.3-2023-04-22.qcow2`, `docker:24.0.6`       |
+|                               |                                                                        |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| **Description**               | A OpenBSD connected to two Alpine Linux Hosts                          |
+| **Components**                | [OpenBSD][openbsd], [Multitool Alpine Linux][client]                   |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 512 MB |
+| **Topology file**             | [openbsd01.yml][topofile]                                              |
+| **Name**                      | openbsd01                                                              |
+| **Version information**[^2]   | `containerlab:0.49.0`, `openbsd-7.3-2023-04-22.qcow2`, `docker:24.0.6` |
 
 ## Description
 
@@ -15,7 +15,7 @@ This lab consists of one OpenBSD router connected to two Alpine Linux nodes.
 client1<---->OpenBSD<---->client2
 ```
 
-### Configuration
+## Configuration
 
 The OpenBSD node takes about 1 minute to complete its start up. Check using "docker container ls" until the OpenBSD container shows up as "healthy".
 
@@ -27,7 +27,7 @@ CONTAINER ID   IMAGE                                  COMMAND                  C
 ce53649d8741   wbitt/network-multitool:alpine-extra   "/bin/sh /docker-ent…"   About a minute ago   Up About a minute             80/tcp, 443/tcp, 1180/tcp, 11443/tcp        clab-openbsd01-client2
 ```
 
-#### obsd01
+### obsd01
 
 Log into the OpenBSD node using SSH with `ssh admin@clab-openbsd01-obsd1` and add the following configuration. Password is `admin`.
 
@@ -37,7 +37,7 @@ sudo ifconfig vio1 192.168.1.1/30
 sudo ifconfig vio2 192.168.2.1/30
 ```
 
-#### client1
+### client1
 
 The two clients should be configured with the correct IP addresses and a route to the other client via the OpenBSD node.
 First attach to the container process `docker exec -it clab-openbsd01-client1 ash`
@@ -55,11 +55,11 @@ default via 172.20.20.1 dev eth0
 192.168.2.0/30 via 192.168.1.1 dev eth1
 ```
 
-### Verification
+## Verification
 
 Traceroute from client1 to client2 to verify the data-plane via the OpenBSD node.
 
-#### client1
+### client1
 
 ```
 # traceroute 192.168.2.2

@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"openbsd", "vr-openbsd"}
+	kindnames          = []string{"openbsd"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 	saveCmd            = "sh -c \"/backup.sh -u $USERNAME -p $PASSWORD backup\""
 )
@@ -71,12 +71,13 @@ func (n *vrOpenBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	return nil
 }
 
-func (s *vrOpenBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
-	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+func (n *vrOpenBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
 	}
+
 	return err
 }
 
