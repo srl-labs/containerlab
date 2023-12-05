@@ -11,12 +11,19 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cenkalti/backoff"
+	"github.com/golang-jwt/jwt"
 	log "github.com/sirupsen/logrus"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
@@ -24,8 +31,10 @@ import (
 
 const (
 	apiUrl                       = "https://api.border0.com/api/v1"
+	portalUrl                    = "https://portal.border0.com"
 	ENV_NAME_BORDER0_ADMIN_TOKEN = "BORDER0_ADMIN_TOKEN"
 	ENV_NAME_BORDER0_API         = "BORDER0_API"
+	ENV_NAME_BORDER0_PORTAL      = "BORDER0_PORTAL"
 )
 
 var supportedSockTypes = []string{"ssh", "tls", "http", "https"}
@@ -33,32 +42,144 @@ var supportedSockTypes = []string{"ssh", "tls", "http", "https"}
 // to avoid multiple token lookups etc. we'll cache the token.
 var tokenCache = ""
 
-// Login performs a login to border0.com and stores the retrieved the access-token in the cwd.
-func Login(ctx context.Context, email, password string) error {
-	// if password not set read from terminal
-	if password == "" {
+type deviceAuthorization struct {
+	Token string `json:"token,omitempty"`
+}
+
+type deviceAuthorizationStatus struct {
+	Token string `json:"token,omitempty"`
+	State string `json:"state,omitempty"`
+}
+
+func createDeviceAuthorization(ctx context.Context) (string, error) {
+	deviceAuthResp := &deviceAuthorization{}
+	err := Request(ctx, http.MethodPost, "device_authorizations", deviceAuthResp, nil, false, "")
+	if err != nil {
+		return "", err
+	}
+
+	return deviceAuthResp.Token, nil
+}
+
+func getDeviceAuthorizationStatus(ctx context.Context, deviceAuthToken string) (*deviceAuthorizationStatus, error) {
+	deviceAuthStatusResp := &deviceAuthorizationStatus{}
+
+	err := Request(ctx, http.MethodGet, "device_authorizations", deviceAuthStatusResp, nil, false, deviceAuthToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve Border0 device authorization status: %v", err)
+	}
+
+	return deviceAuthStatusResp, nil
+}
+
+func handleDeviceAuthorization(ctx context.Context, deviceAuthToken string, disableBrowser bool) (string, error) {
+	deviceAuthJWT, _ := jwt.Parse(deviceAuthToken, nil)
+	if deviceAuthJWT == nil {
+		return "", fmt.Errorf("failed to decode Border0 device authorization token")
+	}
+	claims := deviceAuthJWT.Claims.(jwt.MapClaims)
+	deviceIdentifier := fmt.Sprint(claims["identifier"])
+
+	// Try opening the system's browser automatically. The error is ignored because the desired behavior of the
+	// handler is the same regardless of whether opening the browser fails or succeeds -- we still print the URL.
+	// This is desirable because in the event opening the browser succeeds, the customer may still accidentally
+	// close the new tab / browser session, or may want to authenticate in a different browser / session. In the
+	// event that opening the browser fails, the customer may still complete authenticating by navigating to the
+	// URL in a different device.
+
+	url := fmt.Sprintf("%s/login?device_identifier=%v", getPortalUrl(), url.QueryEscape(deviceIdentifier))
+
+	fmt.Printf("Please navigate to the URL below in order to complete the login process:\n%s\n", url)
+
+	// check if the disableBrowser flag is set
+	if !disableBrowser {
+		// check if we're on DARWIN and if we're running as sudo, if so, make sure we open the browser as the user
+		// this prevents folks from not having access to credentials , sessions, etc
+		sudoUsername := os.Getenv("SUDO_USER")
+		sudoAttempt := false
+		if runtime.GOOS == "darwin" && sudoUsername != "" {
+			err := exec.Command("sudo", "-u", sudoUsername, "open", url).Run()
+			if err == nil {
+				// If for some reason this failed, we'll try again to standard way
+				sudoAttempt = true
+			}
+		}
+		if !sudoAttempt {
+			_ = open.Run(url)
+		}
+	}
+
+	exponentialBackoff := backoff.NewExponentialBackOff()
+	exponentialBackoff.InitialInterval = 1 * time.Second
+	exponentialBackoff.MaxInterval = 5 * time.Second
+	exponentialBackoff.Multiplier = 1.3
+	exponentialBackoff.MaxElapsedTime = 3 * time.Minute
+
+	var token *deviceAuthorizationStatus
+
+	retryFn := func() error {
 		var err error
-		password, err = utils.ReadPasswordFromTerminal()
+		token, err = getDeviceAuthorizationStatus(ctx, deviceAuthToken)
 		if err != nil {
 			return err
 		}
-	}
-	// prepare a LoginRequest
-	loginReq := &LoginRequest{
-		Email:    email,
-		Password: password,
-	}
-	// init a LoginResponse
-	loginResp := &LoginResponse{}
-
-	// execute the request
-	err := Request(ctx, http.MethodPost, "login", loginResp, loginReq, false)
-	if err != nil {
-		return err
+		if token.Token == "" || token.State == "not_authorized" {
+			return fmt.Errorf("device authorization code is not authorized")
+		}
+		return nil
 	}
 
-	err = writeToken(loginResp.Token)
+	err := backoff.Retry(retryFn, exponentialBackoff)
 	if err != nil {
+		return "", fmt.Errorf("failed to log you in, make sure that you have authenticated using the link above: %v", err)
+	}
+
+	fmt.Println("Login successful!\n")
+	return token.Token, nil
+}
+
+// Login performs a login to border0.com and stores the retrieved the access-token in the cwd.
+func Login(ctx context.Context, email, password string, disableBrowser bool) error {
+	var token string
+
+	// if email is not set, we default to Border0's OAuth2 Device Authorization Flow.
+	if email == "" {
+		deviceAuthToken, err := createDeviceAuthorization(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to initiate Border0 device authorization flow: %v", err)
+		}
+
+		token, err = handleDeviceAuthorization(ctx, deviceAuthToken, disableBrowser)
+		if err != nil {
+			return fmt.Errorf("failed to authenticate you against Border0: %v", err)
+		}
+	} else {
+		// if password not set read from terminal
+		if password == "" {
+			var err error
+			password, err = utils.ReadPasswordFromTerminal()
+			if err != nil {
+				return err
+			}
+		}
+		// prepare a LoginRequest
+		loginReq := &LoginRequest{
+			Email:    email,
+			Password: password,
+		}
+		// init a LoginResponse
+		loginResp := &LoginResponse{}
+
+		// execute the request
+		err := Request(ctx, http.MethodPost, "login", loginResp, loginReq, false, "")
+		if err != nil {
+			return err
+		}
+
+		token = loginResp.Token
+	}
+
+	if err := writeToken(token); err != nil {
 		return err
 	}
 	return nil
@@ -69,6 +190,14 @@ func getApiUrl() string {
 		return os.Getenv(ENV_NAME_BORDER0_API)
 	} else {
 		return apiUrl
+	}
+}
+
+func getPortalUrl() string {
+	if os.Getenv(ENV_NAME_BORDER0_PORTAL) != "" {
+		return os.Getenv(ENV_NAME_BORDER0_PORTAL)
+	} else {
+		return portalUrl
 	}
 }
 
@@ -154,7 +283,7 @@ func tokenfile() (string, error) {
 		}
 	}
 	// no valid file found, return error
-	return "", fmt.Errorf("no access-token found, please login to border0.com first e.g use `containerlab tools border0 login --email <BORDER0-USER-MAIL-ADDRESS>`")
+	return "", fmt.Errorf("no access-token found, please login to border0.com first e.g use `containerlab tools border0 login`")
 }
 
 // cwdTokenFilePath get the abspath of the token file in the current working directory.
@@ -169,7 +298,7 @@ func cwdTokenFilePath() string {
 // GetExistingPolicies retrieved the existing policies from border0.com.
 func GetExistingPolicies(ctx context.Context) ([]Policy, error) {
 	var policies []Policy
-	err := Request(ctx, http.MethodGet, "policies", &policies, nil, true)
+	err := Request(ctx, http.MethodGet, "policies", &policies, nil, true, "")
 	if err != nil {
 		return nil, err
 	}
@@ -177,13 +306,16 @@ func GetExistingPolicies(ctx context.Context) ([]Policy, error) {
 }
 
 // Request is the helper function that handels the http requests, as well as the marshalling of request structs and unmarshalling of responses.
-func Request(ctx context.Context, method string, url string, targetStruct interface{}, data interface{}, requireAccessToken bool) error {
+func Request(ctx context.Context, method string, url string, targetStruct interface{}, data interface{}, requireAccessToken bool, token string) error {
 	jv, _ := json.Marshal(data)
 	body := bytes.NewBuffer(jv)
 
 	req, _ := http.NewRequestWithContext(ctx, method, fmt.Sprintf("%s/%s", getApiUrl(), url), body)
 
-	token := ""
+	if token != "" {
+		req.Header.Add("x-access-token", strings.TrimSpace(token))
+	}
+
 	// try to find the token in the environment
 	if requireAccessToken {
 		var err error
@@ -243,7 +375,7 @@ func Request(ctx context.Context, method string, url string, targetStruct interf
 func RefreshLogin(ctx context.Context) error {
 	t := &LoginRefreshResponse{}
 	log.Debug("Validating and refreshing border0.com token")
-	err := Request(ctx, http.MethodPost, "login/refresh", t, nil, true)
+	err := Request(ctx, http.MethodPost, "login/refresh", t, nil, true, "")
 	if err != nil {
 		return err
 	}
