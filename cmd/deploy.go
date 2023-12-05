@@ -382,11 +382,11 @@ func setupCTRLCHandler(cancel context.CancelFunc) {
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sig
-		log.Errorf("Caught CTRL-C. Stopping deployment and cleaning up!")
+		log.Errorf("Caught CTRL-C. Stopping deployment!")
 		cancel()
 
-		// when interrupted, destroy the interrupted lab deployment with cleanup
-		cleanup = true
+		// when interrupted, destroy the interrupted lab deployment
+		cleanup = false
 		if err := destroyFn(destroyCmd, []string{}); err != nil {
 			log.Errorf("Failed to destroy lab: %v", err)
 		}
