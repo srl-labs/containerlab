@@ -105,7 +105,6 @@
                         "cisco_c8000",
                         "cvx",
                         "cumulus_cvx",
-                        "vr-openbsd",
                         "openbsd"
                     ]
                 },
@@ -805,9 +804,6 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cumulus_cvx": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-openbsd": {
                             "$ref": "#/definitions/node-config"
                         },
                         "openbsd": {

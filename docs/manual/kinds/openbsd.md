@@ -4,7 +4,7 @@ search:
 ---
 # OpenBSD
 
-[OpenBSD](https://www.openbsd.org/) is identified with `vr-openbsd` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[OpenBSD](https://www.openbsd.org/) is identified with `openbsd` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 ## Getting OpenBSD image
 
