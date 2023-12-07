@@ -29,10 +29,11 @@ nav:
           - SONiC: manual/kinds/sonic-vs.md
           - Dell FTOS10v: manual/kinds/vr-ftosv.md
           - MikroTik RouterOS: manual/kinds/vr-ros.md
-          - Palo Alto PAN: manual/kinds/vr-pan.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
+          - OpenBSD: manual/kinds/openbsd.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
+          - Palo Alto PAN: manual/kinds/vr-pan.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
           - RARE/freeRtr: manual/kinds/rare-freertr.md
@@ -104,6 +105,7 @@ nav:
       - Multi-node labs: lab-examples/multinode.md
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
+      - OpenBSD: lab-examples/openbsd01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md

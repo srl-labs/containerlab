@@ -104,7 +104,8 @@
                         "c8000",
                         "cisco_c8000",
                         "cvx",
-                        "cumulus_cvx"
+                        "cumulus_cvx",
+                        "openbsd"
                     ]
                 },
                 "license": {
@@ -803,6 +804,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cumulus_cvx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "openbsd": {
                             "$ref": "#/definitions/node-config"
                         }
                     }
