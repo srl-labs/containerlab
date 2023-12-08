@@ -592,6 +592,7 @@ func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *
 	return err
 }
 
+// CheckFilterLength checks the length of the GenericFilter slice and returns an error if its length is 0
 func (d *DockerRuntime)CheckFilterLength(containerSlice []runtime.GenericContainer) error {
 	if len(containerSlice) == 0 {
 		return errors.New("filter did not match any containers")

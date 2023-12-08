@@ -300,6 +300,7 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 	return nil
 }
 
+// CheckFilterLength checks the length of the GenericFilter slice and returns an error if its length is 0
 func (c *IgniteRuntime)CheckFilterLength(containerSlice []runtime.GenericContainer) error {
 	if len(containerSlice) == 0 {
 		return fmt.Errorf("filter did not match any containers")
