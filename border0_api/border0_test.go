@@ -55,7 +55,7 @@ func TestLogin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.TODO()
-			if err := Login(ctx, tt.args.email, tt.args.password); (err != nil) != tt.wantErr {
+			if err := Login(ctx, tt.args.email, tt.args.password, false); (err != nil) != tt.wantErr {
 				t.Errorf("Login() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
