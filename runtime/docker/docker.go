@@ -592,6 +592,13 @@ func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *
 	return err
 }
 
+func (d *DockerRuntime)CheckFilterLength(containerSlice []runtime.GenericContainer) error {
+	if len(containerSlice) == 0 {
+		return errors.New("filter did not match any containers")
+	}
+	return nil
+}
+
 // ListContainers lists all containers using the provided filters.
 func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)

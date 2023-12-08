@@ -97,7 +97,10 @@ func execFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
+	err = c.GlobalRuntime().CheckFilterLength(cnts)
+	if err != nil {
+		return err
+	}
 	// prepare the exec collection and the exec command
 	resultCollection := exec.NewExecCollection()
 

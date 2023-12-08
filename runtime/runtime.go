@@ -60,6 +60,8 @@ type ContainerRuntime interface {
 	GetHostsPath(context.Context, string) (string, error)
 	// GetContainerStatus retrieves the ContainerStatus of the named container
 	GetContainerStatus(ctx context.Context, cID string) ContainerStatus
+	// CheckFilterLength checks the length of the GenericFilter slice and returns an error if its length is 0
+	CheckFilterLength([]GenericContainer) error
 }
 
 type ContainerStatus string

@@ -300,6 +300,13 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 	return nil
 }
 
+func (c *IgniteRuntime)CheckFilterLength(containerSlice []runtime.GenericContainer) error {
+	if len(containerSlice) == 0 {
+		return fmt.Errorf("filter did not match any containers")
+	}
+	return nil
+}
+
 func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	var result []runtime.GenericContainer
 

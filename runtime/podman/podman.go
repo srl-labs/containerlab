@@ -238,6 +238,13 @@ func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
 	return nil
 }
 
+func (r *PodmanRuntime)CheckFilterLength(containerSlice []runtime.GenericContainer) error {
+	if len(containerSlice) == 0 {
+		return fmt.Errorf("filter did not match any containers")
+	}
+	return nil
+}
+
 // ListContainers returns a list of all available containers in the system in a containerlab-specific struct.
 func (r *PodmanRuntime) ListContainers(ctx context.Context, filters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	ctx, err := r.connect(ctx)
