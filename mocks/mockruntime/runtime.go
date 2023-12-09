@@ -7,7 +7,7 @@ package mockruntime
 import (
 	context "context"
 	reflect "reflect"
-
+	"errors"
 	gomock "github.com/golang/mock/gomock"
 	exec "github.com/srl-labs/containerlab/clab/exec"
 	links "github.com/srl-labs/containerlab/links"
@@ -176,6 +176,13 @@ func (m *MockContainerRuntime) GetNSPath(arg0 context.Context, arg1 string) (str
 	return ret0, ret1
 }
 
+// CheckFilterLength checks the length of the GenericFilter slice and returns an error if its length is 0
+func (m *MockContainerRuntime)CheckFilterLength(containerSlice []runtime.GenericContainer) error {
+	if len(containerSlice) == 0 {
+		return errors.New("filter did not match any containers")
+	}
+	return nil
+}
 // GetNSPath indicates an expected call of GetNSPath.
 func (mr *MockContainerRuntimeMockRecorder) GetNSPath(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
