@@ -58,5 +58,6 @@ Within each predefined kind, we store the necessary information that is used to 
 | **mysocketio node**       | [`mysocketio`](../published-ports.md)               | supported |    N/A    |
 | **RARE/freeRtr node**     | [`rare`](rare-freertr.md)                           | supported | container |
 | **Aruba ArubaOS-CX**      | [`vr-aoscx/vr-aruba_aoscx`](vr-aoscx.md)            | supported |    VM     |
+| **OpenBSD**               | [`openbsd`](openbsd.md)                             | supported |    VM     |
 
 Refer to a specific kind documentation article for kind-specific details.

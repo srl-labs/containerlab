@@ -12,23 +12,19 @@ The token is saved as `$PWD/.mysocketio_token` file.
 
 ### Flags
 
-#### email
-With mandatory `--email | -e` flag user sets an email address used to register with mysocketio service
-
-#### password
-The `--password | -p` sets the password for a user. If flag is not set, the prompt will appear on the terminal to allow for safe enter of the password.
+#### disable-browser
+The `--disable-browser | -b` prevents the command from attempting to open the browser in order to complete authentication with Border0. If the flag is set, the command will simply print the URL which you must navigate to, whether in the same device or a different device, in order to complete authentication.
 
 ### Examples
 
 ```bash
-# Login with password entered from the prompt
-containerlab tools mysocketio login -e myemail@dot.com
-Password:
-INFO[0000] Written mysocketio token to a file /root/containerlab/.mysocketio_token
+containerlab tools mysocketio login
 
-# Login with password passed as a flag
-containerlab tools mysocketio login -e myemail@dot.com -p Pa$$word
-Password:
+Please navigate to the URL below in order to complete the login process:
+https://portal.border0.com/login?device_identifier=IjM1OTJkZGVmLTgzNTMtNDU4Yy04NjNkLTk1OTdhYjY0ZjFiOSI.ZW6BRw.Z9XlL0CtL7HkKTDX7GSp28d9mG0
+
+Login successful
+
 INFO[0000] Written mysocketio token to a file /root/containerlab/.mysocketio_token
 ```
 
