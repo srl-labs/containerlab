@@ -134,7 +134,8 @@ func handleDeviceAuthorization(ctx context.Context, deviceAuthToken string, disa
 		return "", fmt.Errorf("failed to log you in, make sure that you have authenticated using the link above: %v", err)
 	}
 
-	fmt.Println("Login successful!\n")
+	fmt.Println("Login successful!")
+
 	return token.Token, nil
 }
 
