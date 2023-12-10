@@ -18,6 +18,7 @@ nav:
           - Juniper vQFX: manual/kinds/vr-vqfx.md
           - Juniper vSRX: manual/kinds/vr-vsrx.md
           - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
+          - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
           - Cisco XRd: manual/kinds/xrd.md
           - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - Cisco XRv: manual/kinds/vr-xrv.md
@@ -97,6 +98,7 @@ nav:
       - Nokia SR Linux and Cisco XRv: lab-examples/vr-xrv.md
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - Nokia SR Linux and Juniper vJunos-switch: lab-examples/srl-vjunos-switch.md
+      - Nokia SR Linux and Juniper vJunosEvolved: lab-examples/srl-vjunosevolved.md
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
