@@ -7,7 +7,7 @@ require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/containernetworking/plugins v1.4.0
-	github.com/containers/common v0.57.0
+	github.com/containers/common v0.57.1
 	github.com/containers/podman/v4 v4.8.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.5.0
