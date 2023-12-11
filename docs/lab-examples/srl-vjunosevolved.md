@@ -5,7 +5,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 6 <br/>:fontawesome-solid-memory: 12 GB                     |
 | **Topology file**             | [srlvjunos02.clab.yml][topofile]                                                            |
 | **Name**                      | srlvjunos02                                                                                 |
-| **Version information**[^2]   | `containerlab:0.48.6`, `srlinux:23.7.1`, `vJunosEvolved-23.2R1-S1.8`, `docker-ce:24.0.7,` |
+| **Version information**[^2]   | `containerlab:0.49.0`, `srlinux:23.7.1`, `vJunosEvolved-23.2R1-S1.8`, `docker-ce:24.0.7,` |
 
 ## Description
 

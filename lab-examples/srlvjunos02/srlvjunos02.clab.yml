@@ -8,7 +8,7 @@ topology:
       startup-config: srl.cli
 
     vevo:
-      kind: vr-juniper_vjunosevolved
+      kind: juniper_vjunosevolved
       image: vrnetlab/vr-vjunosevolved:23.2R1-S1.8-EVO
       startup-config: vjunos.cfg
 
