@@ -24,6 +24,7 @@ nav:
           - Cisco CSR1000v: manual/kinds/vr-csr.md
           - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - Cisco 8000: manual/kinds/c8000.md
+          - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC: manual/kinds/sonic-vs.md
@@ -106,6 +107,7 @@ nav:
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
       - OpenBSD: lab-examples/openbsd01.md
+      - Cisco FTDv: lab-examples/ftdv01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
