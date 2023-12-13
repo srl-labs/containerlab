@@ -2,7 +2,7 @@ name: ftdv01
 topology:
   nodes:
     ftdv1:
-      kind: vr-ftdv
+      kind: cisco_ftdv
       image: vrnetlab/vr-ftdv:7.2.5
     client1:
       kind: "linux"

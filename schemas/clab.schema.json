@@ -83,8 +83,6 @@
                         "vr-n9kv",
                         "vr-cisco_n9kv",
                         "cisco_n9kv",
-                        "vr-ftdv",
-                        "vr-cisco_ftdv",
                         "cisco_ftdv",
                         "vr-ftosv",
                         "vr-dell_ftosv",
@@ -767,10 +765,7 @@
                         "vr-csr": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-cisco_ftdv": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-ftdv": {
+                        "cisco_ftdv": {
                             "$ref": "#/definitions/node-config"
                         },
                         "linux": {

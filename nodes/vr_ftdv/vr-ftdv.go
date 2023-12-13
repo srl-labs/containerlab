@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"cisco_ftdv", "vr-ftdv", "vr-cisco_ftdv"}
+	kindnames          = []string{"cisco_ftdv"}
 	defaultCredentials = nodes.NewCredentials("admin", "Admin@123")
 )
 
