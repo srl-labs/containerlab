@@ -345,7 +345,7 @@ Next it will filter out public keys that are not of RSA/ECDSA type. The remainin
 If you want to disable this feature (e.g. when using classic CLI mode), you can do so by setting the `CLAB_SKIP_SROS_SSH_KEY_CONFIG=true` env variable:
 
 ```bash
-CLAB_SKIP_SROS_SSH_KEY=true sudo -E clab deploy -t <topo-file>
+CLAB_SKIP_SROS_SSH_KEY_CONFIG=true sudo -E clab deploy -t <topo-file>
 ```
 
 ///
