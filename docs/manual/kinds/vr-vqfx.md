@@ -6,8 +6,8 @@ search:
 
 [Juniper vQFX](https://www.juniper.net/us/en/dm/free-vqfx10000-software.html) virtualized router is identified with `juniper_vqfx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-!!!note
-    vQFX images built with [hellt/vrnetlab](https://github.com/hellt/vrnetlab/tree/master/vqfx) have experimental support for vQFX version v18 and newer.
+!!!warning
+    The public vQFX image that is downloadable from the Juniper portal mentions version 20.2, but in fact, it is a 19.4 system. Until this issue is fixed (and it seems no one cares), rename the downloaded qcow2 file to mention the 19.4 version before building the container image.
 
 ## Managing Juniper vQFX nodes
 
