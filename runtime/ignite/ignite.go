@@ -140,7 +140,7 @@ func (c *IgniteRuntime) DeleteNet(ctx context.Context) error {
 
 // PullImage pulls the provided image name if it does not exist.
 // Ignite does ignore the pullPolicy though.
-func (*IgniteRuntime) PullImage(_ context.Context, imageName string, pullPolicy types.PullPolicyValue) error {
+func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ types.PullPolicyValue) error {
 	ociRef, err := meta.NewOCIImageRef(imageName)
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI image ref %q: %s", imageName, err)
@@ -301,7 +301,7 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 }
 
 // CheckFilterLength checks the length of the GenericFilter slice and returns an error if its length is 0
-func (c *IgniteRuntime)CheckFilterLength(containerSlice []runtime.GenericContainer) error {
+func (c *IgniteRuntime) CheckFilterLength(containerSlice []runtime.GenericContainer) error {
 	if len(containerSlice) == 0 {
 		return fmt.Errorf("filter did not match any containers")
 	}
