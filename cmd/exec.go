@@ -53,7 +53,6 @@ func execFn(_ *cobra.Command, _ []string) error {
 
 	opts = append(opts,
 		clab.WithTimeout(timeout),
-		clab.WithNodeFilter(nodeFilter),
 		clab.WithRuntime(rt,
 			&runtime.RuntimeConfig{
 				Debug:            debug,
@@ -96,6 +95,11 @@ func execFn(_ *cobra.Command, _ []string) error {
 	cnts, err := c.GlobalRuntime().ListContainers(ctx, filters)
 	if err != nil {
 		return err
+	}
+
+	// make sure filter returned containers
+	if len(cnts) == 0 {
+		return fmt.Errorf("filter did not match any containers")
 	}
 
 	// prepare the exec collection and the exec command

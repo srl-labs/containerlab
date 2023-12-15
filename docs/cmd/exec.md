@@ -30,15 +30,11 @@ Defaults to `plain` output format.
 
 ### label
 
-Using `--laber` it is possible to filter the nodes to execute the command on using labels attached to the nodes. The label is provided as a string in the form of `key=value`. The `key` is the label name, and the `value` is the label value.
+Using `--label` it is possible to filter the nodes to execute the command on using labels attached to the nodes. The label is provided as a string in the form of `key=value`. The `key` is the label name, and the `value` is the label value.
 
 Exec command should either be provided with a topology file, or labels, or both.
 
 Recall that you can check the labels attached to the nodes with `docker inspect -f '{{.Config.Labels | json}}' <container-name>` command.
-
-### node-filter
-
-The local `--node-filter` flag allows a user to specify a subset of nodes from the topology to exec the command(s) on, instead of all (default). Applies to executions where the topology file is provided.
 
 ## Examples
 
