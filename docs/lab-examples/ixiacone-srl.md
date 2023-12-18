@@ -25,8 +25,8 @@ This lab allows users to validate an IPv4 traffic forwarding scenario between Ke
 
 This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
-- One Keysight ixia-c-one port acts as a transmit port (IP `1.1.1.1`) and the other as receive port (IP `2.2.2.2`)
-- Nokia SR Linux is configured to forward the traffic destined for `20.20.20.0/24` to `2.2.2.2` using static route configuration in the default network instance
+- One Keysight ixia-c-one port acts as a transmit port (IP `1.1.1.1`) and the other as receive port (IP `2.2.2.1`)
+- Nokia SR Linux is configured to forward the traffic destined for `20.20.20.0/24` to `2.2.2.1` using static route configuration in the default network instance
 
 #### Configuration
 
@@ -35,7 +35,7 @@ Once the lab is deployed with containerlab, users need to configure the lab node
 === "SR Linux"
     SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces and install a static route to route the traffic coming from ixia-c.
 === "Keysight ixia-c-one"
-    IPv4 addresses for data ports eth1/2 of ixia-c node are configured with `./ifcfg` scripts executed by containerlab on successful deployment[^3]. These commands are listed in the topology file under `exec` node property.
+    IPv4 addresses for ixia-c node interfaces are configured via the OTG API as part of the `ipv4_forwarding.go` script and can changed between the test runs by applying a different OTG configuration.
 
 #### Execution
 
@@ -43,13 +43,13 @@ The test case is written in Go language hence [Go >= 1.21](https://go.dev/doc/in
 
 Once installed, change into the lab directory:
 
-```
+```Shell
 cd /etc/containerlab/lab-examples/ixiac01
 ```
 
 Run the test:
 
-```
+```Shell
 go run ipv4_forwarding.go
 ```
 
@@ -57,17 +57,17 @@ The test is configured to send 100 IPv4 packets with a rate 10pps from `10.10.10
 
 During the test run you will see flow metrics reported each second with the current flow data such as:
 
-```
-2022/04/12 16:28:10 Metrics Response:
+```yaml
+2023/12/18 11:14:12 Metrics Response:
 choice: flow_metrics
 flow_metrics:
 - bytes_rx: "44032"
-  bytes_tx: "0"
+  bytes_tx: "44032"
   frames_rx: "86"
-  frames_rx_rate: 10
+  frames_rx_rate: 9
   frames_tx: "86"
   frames_tx_rate: 9
-  name: p1.v4.p2
+  name: r1.v4.r2
   transmit: started
 ```
 
@@ -79,16 +79,16 @@ If the condition is not met in 10 seconds, the test will timeout, hence indicati
 Upon success, last flow metrics output will indicate the latest status with `transmit` set to `stopped`.
 
 ```yaml
-2022/04/12 16:28:11 Metrics Response:
+2023/12/18 11:14:13 Metrics Response:
 choice: flow_metrics
 flow_metrics:
 - bytes_rx: "51200"
-  bytes_tx: "0"
+  bytes_tx: "51200"
   frames_rx: "100"
   frames_rx_rate: 9
   frames_tx: "100"
   frames_tx_rate: 10
-  name: p1.v4.p2
+  name: r1.v4.r2
   transmit: stopped
 ```
 
@@ -101,7 +101,5 @@ flow_metrics:
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
-[^3]: Replace `add` with `del` to undo.
-[^4]: The docker commands above shall not be required for upcoming releases of ixia-c-one with added ARP/ND capability.
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

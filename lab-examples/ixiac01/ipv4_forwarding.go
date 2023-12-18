@@ -1,6 +1,6 @@
 /*
 Test IPv4 Forwarding with
-- Endpoints: OTG 1.1.1.1 -----> 1.1.1.2 DUT 2.2.2.1 ------> OTG 2.2.2.2
+- Endpoints: OTG 1.1.1.1 -----> 1.1.1.2 DUT 2.2.2.2 ------> OTG 2.2.2.1
 - Static Route on DUT: 20.20.20.0/24 -> 2.2.2.2
 - TCP flow from OTG: 10.10.10.1 -> 20.20.20.1+
 
@@ -27,11 +27,11 @@ var (
 	r1Mac      = "02:00:00:00:01:aa"
 	r2Mac      = "02:00:00:00:02:aa"
 	r1Ip       = "1.1.1.1"
-	r2Ip       = "2.2.2.2"
+	r2Ip       = "2.2.2.1"
 	r1IpPrefix = uint32(24)
 	r2IpPrefix = uint32(24)
 	r1IpGw     = "1.1.1.2"
-	r2IpGw     = "2.2.2.1"
+	r2IpGw     = "2.2.2.2"
 	pktCount   = 100
 )
 
