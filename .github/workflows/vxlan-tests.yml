@@ -2,6 +2,10 @@ name: vxlan-test
 
 "on":
   workflow_call:
+    inputs:
+      py_ver:
+        required: true
+        type: string
 
 jobs:
   vxlan-tests:
@@ -29,7 +33,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PY_VER }}
+          python-version: ${{ inputs.py_ver }}
           cache: pip
           cache-dependency-path: "tests/requirements.txt"
 

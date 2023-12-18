@@ -23,6 +23,8 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       docs: ${{ steps.filter.outputs.docs }}
+      # exporting env vars to be used in invoked workflows
+      py_ver: ${{ env.PY_VER }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
@@ -434,6 +436,8 @@ jobs:
 
   vxlan-tests:
     uses: ./.github/workflows/vxlan-tests.yml
+    with:
+      py_ver: ${{ jobs.file-changes.outputs.py_ver }}
     needs:
       - unit-test
       - staticcheck
