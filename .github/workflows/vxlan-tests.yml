@@ -48,15 +48,15 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/08-vxlan/${{ matrix.test-suite }}
 
+      - name: Sanitize test-suite name
+        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 08-${{ matrix.runtime }}-vxlan-log
+          name: 08-vxlan-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
-
-      - name: Sanitize test-suite name
-        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
@@ -64,6 +64,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-vxlan-tests-${{ matrix.runtime }}-${{ env.TEST_SUITE }}
+          name: coverage-vxlan-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
