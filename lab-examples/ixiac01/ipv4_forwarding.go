@@ -4,13 +4,12 @@ Test IPv4 Forwarding with
 - Static Route on DUT: 20.20.20.0/24 -> 2.2.2.2
 - TCP flow from OTG: 10.10.10.1 -> 20.20.20.1+
 
-To run: go run ipv4_forwarding.go -dstMac=<MAC of 1.1.1.2>
+To run: go run ipv4_forwarding.go
 */
 
 package main
 
 import (
-	"flag"
 	"log"
 	"time"
 
@@ -25,16 +24,18 @@ const (
 )
 
 var (
-	dstMac   = "ff:ff:ff:ff:ff:ff"
-	srcMac   = "00:00:00:00:00:aa"
-	pktCount = 100
+	r1Mac      = "02:00:00:00:01:aa"
+	r2Mac      = "02:00:00:00:02:aa"
+	r1Ip       = "1.1.1.1"
+	r2Ip       = "2.2.2.2"
+	r1IpPrefix = uint32(24)
+	r2IpPrefix = uint32(24)
+	r1IpGw     = "1.1.1.2"
+	r2IpGw     = "2.2.2.1"
+	pktCount   = 100
 )
 
 func main() {
-	// replace value of dstMac with actual MAC of DUT interface connected to otgPort1
-	flag.StringVar(&dstMac, "dstMac", dstMac, "Destination MAC address to be used for all packets")
-	flag.Parse()
-
 	api, config := newConfig()
 
 	// push traffic configuration to otgHost
@@ -88,9 +89,36 @@ func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
 	// create traffic endpoints
 	p1 := config.Ports().Add().SetName("p1").SetLocation(otgPort1)
 	p2 := config.Ports().Add().SetName("p2").SetLocation(otgPort2)
-	// create a flow and set the endpoints
-	f1 := config.Flows().Add().SetName("p1.v4.p2")
-	f1.TxRx().Port().SetTxName(p1.Name()).SetRxName(p2.Name())
+
+	// create emulated devices (routers) – needed for ARP protocol to work
+	r1 := config.Devices().Add().SetName("r1")
+	r2 := config.Devices().Add().SetName("r2")
+
+	// device ethernets
+	r1Eth := r1.Ethernets().Add().SetName("r1Eth").SetMac(r1Mac)
+	r2Eth := r2.Ethernets().Add().SetName("r2Eth").SetMac(r2Mac)
+
+	// connections to test ports
+	r1Eth.Connection().SetPortName(p1.Name())
+	r2Eth.Connection().SetPortName(p2.Name())
+
+	// device IP configuration
+	r1Ip := r1Eth.Ipv4Addresses().Add().
+		SetName("r1Ip").
+		SetAddress(r1Ip).
+		SetPrefix(r1IpPrefix).
+		SetGateway(r1IpGw)
+
+	r2Ip := r2Eth.Ipv4Addresses().Add().
+		SetName("r2Ip").
+		SetAddress(r2Ip).
+		SetPrefix(r2IpPrefix).
+		SetGateway(r2IpGw)
+
+	// create a flow between r1 and r2
+	f1 := config.Flows().Add().SetName("r1.v4.r2")
+	f1.TxRx().Device().SetTxNames([]string{r1Ip.Name()})
+	f1.TxRx().Device().SetRxNames([]string{r2Ip.Name()})
 
 	// enable per flow metrics tracking
 	f1.Metrics().SetEnable(true)
@@ -104,8 +132,8 @@ func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
 	ip := f1.Packet().Add().Ipv4()
 	tcp := f1.Packet().Add().Tcp()
 
-	eth.Src().SetValue(srcMac)
-	eth.Dst().SetValue(dstMac)
+	eth.Src().SetValue(r1Mac)
+	eth.Dst().SetChoice("auto")
 
 	ip.Src().SetValue("10.10.10.1")
 	ip.Dst().Increment().SetStart("20.20.20.1").SetStep("0.0.0.1").SetCount(5)

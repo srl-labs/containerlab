@@ -5,7 +5,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                   |
 | **Topology file**             | [ixiacone-srl.clab.yaml][topofile]                                                     |
 | **Name**                      | ixiac01                                                                                |
-| **Version information**[^2]   | `containerlab:0.26.0`, `ixia-c-one:0.0.1-2738`, `srlinux:21.11.2`, `docker-ce:20.10.2` |
+| **Version information**[^2]   | `containerlab:0.46.2`, `ixia-c-one:0.1.0-84`, `srlinux:21.11.2`, `docker-ce:20.10.2`   |
 
 ## Description
 
@@ -37,17 +37,9 @@ Once the lab is deployed with containerlab, users need to configure the lab node
 === "Keysight ixia-c-one"
     IPv4 addresses for data ports eth1/2 of ixia-c node are configured with `./ifcfg` scripts executed by containerlab on successful deployment[^3]. These commands are listed in the topology file under `exec` node property.
 
-When a lab boots up, containerlab will also execute a command on SR Linux node to fetch MAC address of its `e1-1` interface which is connected to tx port of ixia-c-one. Write down this MAC address[^4] as it will serve as an argument in the test script we will run afterwards.
-
-```bash
-# partial output of `containerlab deploy` cmd that lists fetched MAC address
-INFO[0019] Executed command 'bash -c "ip l show e1-1 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | head -1"' on clab-ixiac01-srl. stdout:
-1a:b0:01:ff:00:01 
-```
-
 #### Execution
 
-The test case is written in Go language hence [Go >= 1.17](https://go.dev/doc/install) needs to be installed first.
+The test case is written in Go language hence [Go >= 1.21](https://go.dev/doc/install) needs to be installed first.
 
 Once installed, change into the lab directory:
 
@@ -55,10 +47,10 @@ Once installed, change into the lab directory:
 cd /etc/containerlab/lab-examples/ixiac01
 ```
 
-Run the test with MAC address obtained in previous step:
+Run the test:
 
 ```
-go run ipv4_forwarding.go -dstMac="<MAC address>"
+go run ipv4_forwarding.go
 ```
 
 The test is configured to send 100 IPv4 packets with a rate 10pps from `10.10.10.1` to `10.20.20.x`, where `x` is changed from 1 to 5. Once 100 packets are sent, the test script checks that we received all the sent packets.

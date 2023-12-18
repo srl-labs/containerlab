@@ -12,8 +12,6 @@ topology:
       kind: srl
       image: ghcr.io/nokia/srlinux
       startup-config: srl.cfg
-      exec:
-        - bash -c "ip l show e1-1 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | head -1"
 
   links:
     - endpoints: ["ixia-c:eth1", "srl:e1-1"]
