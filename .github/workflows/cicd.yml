@@ -436,12 +436,13 @@ jobs:
 
   vxlan-tests:
     uses: ./.github/workflows/vxlan-tests.yml
-    with:
-      py_ver: ${{ jobs.file-changes.outputs.py_ver }}
     needs:
+      - file-changes
       - unit-test
       - staticcheck
       - build-containerlab
+    with:
+      py_ver: ${{ needs.file-changes.outputs.py_ver }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
