@@ -1,7 +1,7 @@
 |                               |                                                                                        |
 | ----------------------------- | -------------------------------------------------------------------------------------- |
-| **Description**               | A Keysight ixia-c-one node connected with Nokia SR Linux                               |
-| **Components**                | [Keysight ixia-c-one][ixia-c], [Nokia SR Linux][srl]                                   |
+| **Description**               | Keysight Ixia-c-one node connected with Nokia SR Linux                               |
+| **Components**                | [Keysight Ixia-c-one][ixia-c], [Nokia SR Linux][srl]                                   |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                   |
 | **Topology file**             | [ixiacone-srl.clab.yaml][topofile]                                                     |
 | **Name**                      | ixiac01                                                                                |
@@ -9,15 +9,29 @@
 
 ## Description
 
-This lab consists of a [Keysight ixia-c-one](../manual/kinds/keysight_ixia-c-one.md) node with 2 ports connected to 2 ports on a Nokia SR Linux node via two point-to-point ethernet links. Both nodes are also connected with their management interfaces to the `containerlab` docker network.
+This lab consists of a [Keysight Ixia-c-one](../manual/kinds/keysight_ixia-c-one.md) node with 2 ports connected to 2 ports on a Nokia SR Linux node via two point-to-point ethernet links. Both nodes are also connected with their management interfaces to the `containerlab` docker network.
 
-Keysight ixia-c-one is a single-container distribution of [ixia-c][ixia-c], which in turn is Keysight's reference implementation of [Open Traffic Generator API][otg]. This example will demonstrate how test case designers can leverage Go SDK client [gosnappi][gosnappi] to configure ixia-c traffic generator and execute a test verifying IPv4 forwarding.
+Keysight Ixia-c-one is a single-container distribution of [Ixia-c][ixia-c], a software traffic generator and protocol emulator with [Open Traffic Generator (OTG) API][otg]. This example will demonstrate how test case designers can leverage Go SDK client [gosnappi][gosnappi] to create an OTG configuration and execute a test verifying IPv4 forwarding.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ixiac&quot;}"></div>
 
+## Deployment
+
+Change into the lab directory:
+
+```Shell
+cd /etc/containerlab/lab-examples/ixiac01
+```
+
+Deploy the lab:
+
+```Shell
+sudo containerlab deploy
+```
+
 ## Use cases
 
-This lab allows users to validate an IPv4 traffic forwarding scenario between Keysight ixia-c-one and Nokia SR Linux.
+This lab allows users to validate an IPv4 traffic forwarding scenario between Keysight Ixia-c-one and Nokia SR Linux.
 
 ### IPv4 Traffic forwarding
 
@@ -25,8 +39,10 @@ This lab allows users to validate an IPv4 traffic forwarding scenario between Ke
 
 This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
-- One Keysight ixia-c-one port acts as a transmit port (IP `1.1.1.1`) and the other as receive port (IP `2.2.2.1`)
-- Nokia SR Linux is configured to forward the traffic destined for `20.20.20.0/24` to `2.2.2.1` using static route configuration in the default network instance
+- Keysight Ixia-c-one with two test ports `eth1` and `eth2` connected to Nokia SR Linux with ports `e1-1` and `e1-2` respectively.
+- An OTG configuration applied to Ixia-c-one that emulates a router behind each test port: `r1` with IP `1.1.1.1/24` behind `eth1`, and `r2` with IP `2.2.2.1/24` behind `eth2`.
+- SR Linux interfaces are configured with `1.1.1.2/24` and `2.2.2.1/24` IPv4 addresses.
+- SR Linux is configured to forward the traffic destined for `20.20.20.0/24` to `2.2.2.1` using a static route in the default network instance.
 
 #### Configuration
 
@@ -41,19 +57,7 @@ During the lab deployment and test execution the following configuration is appl
 
 The test case is written in Go language. To run it, [Go >= 1.21](https://go.dev/doc/install) needs to be installed first.
 
-Once installed, change into the lab directory:
-
-```Shell
-cd /etc/containerlab/lab-examples/ixiac01
-```
-
-Deploy the lab:
-
-```Shell
-sudo containerlab deploy
-```
-
-Run the test:
+Once installed, run the test:
 
 ```Shell
 go run ipv4_forwarding.go
@@ -98,7 +102,7 @@ flow_metrics:
   transmit: stopped
 ```
 
-#### Cleanup
+## Cleanup
 
 To stop the lab, use:
 
@@ -107,8 +111,8 @@ sudo containerlab destroy --cleanup
 ```
 
 
-[ixia-c]: https://github.com/open-traffic-generator/ixia-c
-[otg]: https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/open-traffic-generator/models/master/artifacts/openapi.yaml
+[ixia-c]: https://ixia-c.dev/
+[otg]: https://otg.dev/
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ixiac01.clab.yml
