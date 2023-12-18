@@ -82,7 +82,7 @@ jobs:
       - name: Build containerlab
         run: make build-with-podman-debug BINARY=containerlab
       # store clab binary as artifact
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: containerlab
           path: containerlab
@@ -129,7 +129,7 @@ jobs:
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage
@@ -152,7 +152,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
@@ -178,7 +178,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: 01-smoke-log
@@ -186,7 +186,7 @@ jobs:
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage
@@ -208,7 +208,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
@@ -231,7 +231,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/06-ext-container
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: 06-ext-container-log
@@ -239,7 +239,7 @@ jobs:
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage
@@ -261,7 +261,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
@@ -286,7 +286,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/03-basic-ceos
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: 03-basic-ceos-log
@@ -294,7 +294,7 @@ jobs:
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage
@@ -317,7 +317,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
@@ -347,7 +347,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: 02-basic-srl-log
@@ -355,7 +355,7 @@ jobs:
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage
@@ -377,7 +377,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
@@ -394,7 +394,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/04-basic-ixiacone
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: 04-basic-ixiacone-log
@@ -402,7 +402,7 @@ jobs:
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage
@@ -435,7 +435,7 @@ jobs:
       - uses: WillAbides/setup-go-faster@v1.13.0
         with:
           go-version: ${{ env.GOVER }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: coverage
           path: /tmp/clab-tests/coverage
