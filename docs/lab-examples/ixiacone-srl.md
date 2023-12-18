@@ -47,6 +47,12 @@ Once installed, change into the lab directory:
 cd /etc/containerlab/lab-examples/ixiac01
 ```
 
+Deploy the lab:
+
+```Shell
+sudo containerlab deploy
+```
+
 Run the test:
 
 ```Shell
@@ -91,6 +97,15 @@ flow_metrics:
   name: r1.v4.r2
   transmit: stopped
 ```
+
+#### Cleanup
+
+To stop the lab, use:
+
+```Shell
+sudo containerlab destroy --cleanup
+```
+
 
 [ixia-c]: https://github.com/open-traffic-generator/ixia-c
 [otg]: https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/open-traffic-generator/models/master/artifacts/openapi.yaml
