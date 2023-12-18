@@ -15,6 +15,7 @@ env:
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.1.4-insiders-4.32.4-hellt
   GORELEASER_VER: v1.11.4
+  PY_VER: 3.10
 
 jobs:
   file-changes:
@@ -176,7 +177,7 @@ jobs:
           sudo systemctl start podman
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.10"
           cache: pip
           cache-dependency-path: "tests/requirements.txt"
       - name: Install robotframework
@@ -225,7 +226,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: ${{ env.PY_VER }}
           cache: pip
           cache-dependency-path: "tests/requirements.txt"
       - name: Install robotframework
@@ -280,7 +281,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: ${{ env.PY_VER }}
           cache: pip
           cache-dependency-path: "tests/requirements.txt"
       - name: Install robotframework
@@ -342,15 +343,21 @@ jobs:
         # for available podman releases
         run: |
           sudo apt purge -y podman
-          echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list
-          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
-          sudo apt update
-          sudo apt install -y podman
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL "https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/Release.key" \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
+              https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/ /" \
+            | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get -qq -y install podman
           sudo systemctl start podman
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: ${{ env.PY_VER }}
           cache: pip
           cache-dependency-path: "tests/requirements.txt"
       - name: Install robotframework
@@ -398,7 +405,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: ${{ env.PY_VER }}
           cache: pip
           cache-dependency-path: "tests/requirements.txt"
       - name: Install robotframework
