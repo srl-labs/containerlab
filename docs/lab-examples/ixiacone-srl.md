@@ -41,7 +41,8 @@ This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
 - Keysight Ixia-c-one with two test ports `eth1` and `eth2` connected to Nokia SR Linux with ports `e1-1` and `e1-2` respectively.
 - An OTG configuration applied to Ixia-c-one that emulates a router behind each test port: `r1` with IP `1.1.1.1/24` behind `eth1`, and `r2` with IP `2.2.2.1/24` behind `eth2`.
-- SR Linux interfaces are configured with `1.1.1.2/24` and `2.2.2.1/24` IPv4 addresses.
+- The test is configured to send 100 IPv4 packets with a rate 10pps from `10.10.10.1` behind `r1` to `10.20.20.x`, where `x` is changed from 1 to 5.
+- SR Linux interfaces are configured with `1.1.1.2/24` and `2.2.2.2/24` IPv4 addresses.
 - SR Linux is configured to forward the traffic destined for `20.20.20.0/24` to `2.2.2.1` using a static route in the default network instance.
 
 #### Configuration
@@ -63,7 +64,7 @@ Once installed, run the test:
 go run ipv4_forwarding.go
 ```
 
-The test is configured to send 100 IPv4 packets with a rate 10pps from `10.10.10.1` to `10.20.20.x`, where `x` is changed from 1 to 5. Once 100 packets are sent, the test script checks that we received all the sent packets.
+Once 100 packets are sent, the test script checks that we received all the sent packets.
 
 During the test run you will see flow metrics reported each second with the current flow data such as:
 
