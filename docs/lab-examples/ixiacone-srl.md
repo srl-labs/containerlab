@@ -1,7 +1,7 @@
 |                               |                                                                                        |
 | ----------------------------- | -------------------------------------------------------------------------------------- |
-| **Description**               | Keysight Ixia-c-one node connected with Nokia SR Linux                               |
-| **Components**                | [Keysight Ixia-c-one][ixia-c], [Nokia SR Linux][srl]                                   |
+| **Description**               | Keysight Ixia-c-one node connected with Nokia SR Linux                                 |
+| **Components**                | [Keysight Ixia-c-one][ixia-c-one], [Nokia SR Linux][srl]                               |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                   |
 | **Topology file**             | [ixiacone-srl.clab.yaml][topofile]                                                     |
 | **Name**                      | ixiac01                                                                                |
@@ -112,12 +112,13 @@ sudo containerlab destroy --cleanup
 
 
 [ixia-c]: https://ixia-c.dev/
+[ixia-c-one]: https://ixia-c.dev/deployments-containerlab/
 [otg]: https://otg.dev/
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ixiac01.clab.yml
-[srlcfg]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/srl.cfg
-[ipv4_forwarding]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ipv4_forwarding.go
+[topofile]: ../../lab-examples/ixiac01/ixiac01.clab.yml
+[srlcfg]: ../../lab-examples/ixiac01/srl.cfg
+[ipv4_forwarding]: ../../lab-examples/ixiac01/ipv4_forwarding.go
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
