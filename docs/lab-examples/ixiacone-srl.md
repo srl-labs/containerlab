@@ -52,7 +52,7 @@ During the lab deployment and test execution the following configuration is appl
 === "SR Linux"
     SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces and install a static route to forward the traffic coming from ixia-c.
 === "Keysight ixia-c-one"
-    IPv4 addresses for `ixia-c-one` node interfaces are configured via the OTG API as part of the [`ipv4_forwarding.go`](ipv4_forwarding) script.
+    IPv4 addresses for `ixia-c-one` node interfaces are configured via the OTG API as part of the [`ipv4_forwarding.go`][ipv4_forwarding] script.
 
 #### Execution
 
