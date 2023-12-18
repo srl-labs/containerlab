@@ -19,7 +19,7 @@ import (
 
 // hostname and interfaces of ixia-c-one node from containerlab topology.
 const (
-	otgHost  = "https://clab-ixiac01-ixia-c"
+	otgHost  = "https://clab-ixiac01-ixia-c:8443"
 	otgPort1 = "eth1"
 	otgPort2 = "eth2"
 )
@@ -42,8 +42,9 @@ func main() {
 	checkResponse(res, err)
 
 	// start transmitting configured flows
-	ts := api.NewTransmitState().SetState(gosnappi.TransmitStateState.START)
-	res, err = api.SetTransmitState(ts)
+	ts := api.NewControlState()
+	ts.Traffic().FlowTransmit().SetState(gosnappi.StateTrafficFlowTransmitState.START)
+	res, err = api.SetControlState(ts)
 	checkResponse(res, err)
 
 	// fetch flow metrics and wait for received frame count to be correct
@@ -55,7 +56,7 @@ func main() {
 			checkResponse(res, err)
 
 			fm := res.FlowMetrics().Items()[0]
-			return fm.Transmit() == gosnappi.FlowMetricTransmit.STOPPED && fm.FramesRx() == int64(pktCount)
+			return fm.Transmit() == gosnappi.FlowMetricTransmit.STOPPED && fm.FramesRx() == uint64(pktCount)
 		},
 		10*time.Second,
 	)
@@ -68,7 +69,7 @@ func checkResponse(res interface{}, err error) {
 	switch v := res.(type) {
 	case gosnappi.MetricsResponse:
 		log.Printf("Metrics Response:\n%s\n", v)
-	case gosnappi.ResponseWarning:
+	case gosnappi.Warning:
 		for _, w := range v.Warnings() {
 			log.Println("WARNING:", w)
 		}
@@ -96,7 +97,7 @@ func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
 	// set size, count and transmit rate for all packets in the flow
 	f1.Size().SetFixed(512)
 	f1.Rate().SetPps(10)
-	f1.Duration().FixedPackets().SetPackets(int32(pktCount))
+	f1.Duration().FixedPackets().SetPackets(uint32(pktCount))
 
 	// configure headers for all packets in the flow
 	eth := f1.Packet().Add().Ethernet()
