@@ -17,11 +17,11 @@ The corresponding node in containerlab is identified with `keysight_ixia-c-one` 
 
 - management interface `eth0` configured with IPv4/6 addresses as assigned by the container runtime
 - hostname assigned to the node name
-- HTTPS service enabled on port 443 (for client SDK to push configuration and fetch metrics)
+- HTTPS service enabled on port TCP/8443 (for client SDK to push configuration and fetch metrics)
 
 ## Managing Ixia-c-one nodes
 
-Ixia-c-one provides an API endpoint that manages configuration across multiple test ports. Requests and responses to the API endpoint are driven by [Open Traffic Generator API][otg] and can be exercised in the following two ways:
+Ixia-c-one provides an API endpoint that manages configuration across multiple test ports. Requests and responses to the API endpoint are defined by the [Open Traffic Generator API][otg] and can be exercised in the following two ways:
 
 === "Using SDK"
     Using SDK is the preferred way of interacting with OTG devices. Implementations listed in the [SDK](#sdk) chapter below provide references to SDK clients in different languages along with examples.
@@ -40,7 +40,7 @@ Ixia-c-one provides an API endpoint that manages configuration across multiple t
     ```
 
 ## SDK
-Client SDK for Open Traffic Generator API is available in various languages, most prevalent being [gosnappi][gosnappi] and [snappi][snappi].
+Client SDK for Open Traffic Generator API is available in various languages, most prevalent being [gosnappi][gosnappi] for Go and [snappi][snappi] for Python.
 
 ## Lab examples
 The following labs feature Keysight ixia-c-one node:
