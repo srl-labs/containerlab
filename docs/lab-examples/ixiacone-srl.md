@@ -30,16 +30,16 @@ This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
 #### Configuration
 
-Once the lab is deployed with containerlab, users need to configure the lab nodes to forward and receive traffic.
+During the lab deployment and test execution the following configuration is applied to the lab nodes to forward and receive traffic.
 
 === "SR Linux"
-    SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces and install a static route to route the traffic coming from ixia-c.
+    SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces and install a static route to forward the traffic coming from ixia-c.
 === "Keysight ixia-c-one"
-    IPv4 addresses for ixia-c node interfaces are configured via the OTG API as part of the `ipv4_forwarding.go` script and can changed between the test runs by applying a different OTG configuration.
+    IPv4 addresses for `ixia-c-one` node interfaces are configured via the OTG API as part of the [`ipv4_forwarding.go`](ipv4_forwarding) script.
 
 #### Execution
 
-The test case is written in Go language hence [Go >= 1.21](https://go.dev/doc/install) needs to be installed first.
+The test case is written in Go language. To run it, [Go >= 1.21](https://go.dev/doc/install) needs to be installed first.
 
 Once installed, change into the lab directory:
 
@@ -98,6 +98,7 @@ flow_metrics:
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ixiac01.clab.yml
 [srlcfg]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/srl.cfg
+[ipv4_forwarding]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ipv4_forwarding.go
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
