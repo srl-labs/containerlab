@@ -57,9 +57,10 @@ jobs:
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - uses: actions/upload-artifact@v4
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage
+          name: coverage-vxlan-tests
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
