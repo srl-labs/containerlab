@@ -61,6 +61,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-vxlan-tests-${{ matrix.runtime }}-${{ replace(matrix.test-suite, '*', '') }}
+          name: coverage-vxlan-tests-${{ matrix.runtime }}-${{ matrix.test-suite }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
