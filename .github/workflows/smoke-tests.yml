@@ -1,4 +1,4 @@
-name: vxlan-test
+name: smoke-tests
 
 "on":
   workflow_call:
@@ -8,16 +8,16 @@ name: vxlan-test
         type: string
 
 jobs:
-  vxlan-tests:
+  smoke-tests:
     runs-on: ubuntu-22.04
+    timeout-minutes: 5
     strategy:
       matrix:
         runtime:
           - "docker"
-        test-suite:
-          - "01*.robot"
-          - "02*.robot"
-          - "03*.robot"
+          - "podman"
+    # allow podman job to fail, since it started to fail on github actions
+    continue-on-error: ${{ matrix.runtime == 'podman' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +31,10 @@ jobs:
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
 
+      - name: Setup Podman
+        if: matrix.runtime == 'podman'
+        run: sudo bash ./.github/workflows/install-podman.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.py_ver }}
@@ -41,33 +45,24 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run tests
+      - name: Run smoke tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/08-vxlan/${{ matrix.test-suite }}
-
-      - name: Sanitize test-suite name
-        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke
 
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v4
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 08-vxlan-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 01-smoke-log-${{ matrix.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - name: Upload coverage report
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-vxlan-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-smoke-tests-${{ matrix.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
