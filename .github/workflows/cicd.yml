@@ -321,15 +321,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: WillAbides/setup-go-faster@v1.13.0
         with:
           go-version: ${{ env.GO_VER }}
+
       - uses: actions/download-artifact@v4
         with:
-          name: coverage*
+          pattern: coverage*
           path: /tmp/clab-tests/coverage
-      - name: convert Go's binary coverage to text coverage
+          merge-multiple: true
+      - run: ls -R /tmp/clab-tests/coverage
+
+      - name: Convert Go's binary coverage to text coverage
         run: make convert-coverage
+
       - name: Upload coverage to codecov
         uses: codecov/codecov-action@v3
 
