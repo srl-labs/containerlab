@@ -1,4 +1,4 @@
-name: smoke-tests
+name: srlinux-tests
 
 "on":
   workflow_call:
@@ -8,9 +8,8 @@ name: smoke-tests
         type: string
 
 jobs:
-  smoke-tests:
+  srlinux-tests:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
     strategy:
       matrix:
         runtime:
@@ -33,6 +32,8 @@ jobs:
 
       - name: Setup Podman
         if: matrix.runtime == 'podman'
+        # check http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/amd64/
+        # for available podman releases
         run: sudo bash ./.github/workflows/install-podman.sh
 
       - uses: actions/setup-python@v5
@@ -45,16 +46,16 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
-      - name: Run smoke tests
+      - name: Run srlinux tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl
 
       # upload test reports as a zip file
-      - name: Upload test report
+      - name: Upload test logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 01-smoke-log-${{ matrix.runtime }}
+          name: 02-basic-srl-log-${{ matrix.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -63,6 +64,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-smoke-tests-${{ matrix.runtime }}
+          name: coverage-srlinux-tests-${{ matrix.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

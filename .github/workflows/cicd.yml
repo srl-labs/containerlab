@@ -237,72 +237,13 @@ jobs:
           retention-days: 7
 
   srlinux-basic-tests:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        runtime:
-          - "docker"
-          - "podman"
+    uses: ./.github/workflows/srlinux-tests.yml
+    with:
+      py_ver: ${{ needs.file-changes.outputs.py_ver }}
     needs:
       - unit-test
       - staticcheck
       - build-containerlab
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/download-artifact@v4
-        with:
-          name: containerlab
-      - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
-
-      - name: Setup Podman
-        if: matrix.runtime == 'podman'
-        # check http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/amd64/
-        # for available podman releases
-        run: |
-          sudo apt purge -y podman
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL "https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/Release.key" \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
-              https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/ /" \
-            | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
-          sudo apt-get update -qq
-          sudo apt-get -qq -y install podman
-          sudo systemctl start podman
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PY_VER }}
-          cache: pip
-          cache-dependency-path: "tests/requirements.txt"
-      - name: Install robotframework
-        run: |
-          pip install -r tests/requirements.txt
-      - name: Run srlinux tests
-        run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl
-      # upload test reports as a zip file
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: 02-basic-srl-log-${{ matrix.runtime }}
-          path: ./tests/out/*.html
-
-      # upload coverage report from unit tests, as they are then
-      # merged with e2e tests coverage
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-srlinux-tests-${{ matrix.runtime }}
-          path: /tmp/clab-tests/coverage/*
-          retention-days: 7
 
   ixiac-one-basic-tests:
     runs-on: ubuntu-22.04
