@@ -117,9 +117,9 @@ sudo containerlab destroy --cleanup
 [otg]: https://otg.dev/
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[topofile]: ../../lab-examples/ixiac01/ixiac01.clab.yml
-[srlcfg]: ../../lab-examples/ixiac01/srl.cfg
-[ipv4_forwarding]: ../../lab-examples/ixiac01/ipv4_forwarding.go
+[topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ixiac01.clab.yml
+[srlcfg]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/srl.cfg
+[ipv4_forwarding]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/ixiac01/ipv4_forwarding.go
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
