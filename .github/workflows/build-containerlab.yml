@@ -1,0 +1,40 @@
+name: build-clab
+
+"on":
+  workflow_call:
+    inputs:
+      go_ver:
+        required: true
+        type: string
+
+jobs:
+  build-clab:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: WillAbides/setup-go-faster@v1.13.0
+        with:
+          go-version: ${{ inputs.go_ver }}
+
+      - name: Cache go modules
+        uses: actions/cache@v3
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build containerlab
+        run: make build-with-podman-debug BINARY=containerlab
+      # store clab binary as artifact
+      - name: Upload containerlab binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: containerlab
+          path: containerlab
+          compression-level: 0
