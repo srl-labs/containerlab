@@ -5,7 +5,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                   |
 | **Topology file**             | [ixiacone-srl.clab.yaml][topofile]                                                     |
 | **Name**                      | ixiac01                                                                                |
-| **Version information**[^2]   | `containerlab:0.46.2`, `ixia-c-one:0.1.0-84`, `srlinux:21.11.2`, `docker-ce:20.10.2`   |
+| **Version information**[^2]   | `containerlab:0.46.2`, `ixia-c-one:0.1.0-84`, `srlinux:23.10.1`, `docker-ce:20.10.2`   |
 
 ## Description
 
@@ -35,7 +35,7 @@ This lab allows users to validate an IPv4 traffic forwarding scenario between Ke
 
 ### IPv4 Traffic forwarding
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ixiac&quot;}"></div>
+<div class='mxgraph' style='max-width:100%;border:1px solid transparent;margin:0 auto; display:block;' data-mxgraph='{"page":1,"zoom":2,"highlight":"#0000ff","nav":true,"resize":true,"edit":"_blank","url":"https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ixiac"}'></div>
 
 This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
@@ -49,9 +49,10 @@ This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
 During the lab deployment and test execution the following configuration is applied to the lab nodes to forward and receive traffic.
 
-=== "SR Linux"
+- **SR Linux**  
     SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces and install a static route to forward the traffic coming from ixia-c.
-=== "Keysight ixia-c-one"
+
+- **Keysight ixia-c-one**  
     IPv4 addresses for `ixia-c-one` node interfaces are configured via the OTG API as part of the [`ipv4_forwarding.go`][ipv4_forwarding] script.
 
 #### Execution
@@ -110,7 +111,6 @@ To stop the lab, use:
 ```Shell
 sudo containerlab destroy --cleanup
 ```
-
 
 [ixia-c]: https://ixia-c.dev/
 [ixia-c-one]: https://ixia-c.dev/deployments-containerlab/
