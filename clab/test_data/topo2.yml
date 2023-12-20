@@ -1,7 +1,7 @@
 name: topo2
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       license: kind.lic
       type: ixrd2
       env:

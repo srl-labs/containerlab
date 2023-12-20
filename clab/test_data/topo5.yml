@@ -1,7 +1,7 @@
 name: topo5
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       binds:
         - kind.lic:/dst
   nodes:

@@ -10,7 +10,7 @@ topology:
       env3: global
     user: customglobal
   kinds:
-    srl:
+    nokia_srlinux:
       license: kind.lic
       binds:
         - kind.lic:/dst2
