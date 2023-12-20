@@ -72,9 +72,9 @@ type NodeDefinition struct {
 	WaitFor []string `yaml:"wait-for,omitempty"`
 	// DNS configuration
 	DNS *DNSConfig `yaml:"dns,omitempty"`
-	// Certificate Configuration
+	// Certificate configuration
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
-	// Healthchecks
+	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
 }
 

@@ -544,14 +544,14 @@ func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 
 func (t *Topology) GetHealthCheckConfig(name string) *HealthcheckConfig {
 	if ndef, ok := t.Nodes[name]; ok {
-		nodeCertConf := ndef.GetHealthcheckConfig()
-		if nodeCertConf != nil {
-			return nodeCertConf
+		nodeHealthcheckConf := ndef.GetHealthcheckConfig()
+		if nodeHealthcheckConf != nil {
+			return nodeHealthcheckConf
 		}
 
-		kindCertConf := t.GetKind(t.GetNodeKind(name)).GetHealthcheckConfig()
-		if kindCertConf != nil {
-			return kindCertConf
+		kindHealthcheckConf := t.GetKind(t.GetNodeKind(name)).GetHealthcheckConfig()
+		if kindHealthcheckConf != nil {
+			return kindHealthcheckConf
 		}
 
 		return t.GetDefaults().GetHealthcheckConfig()
