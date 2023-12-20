@@ -321,6 +321,10 @@
                 "certificate": {
                     "type": "object",
                     "$ref": "#/definitions/certificate-config"
+                },
+                "healthcheck": {
+                    "type": "object",
+                    "$ref": "#/definitions/healthcheck-config"
                 }
             },
             "allOf": [
@@ -483,7 +487,7 @@
                 }
             }
         },
-        "healthcheck":{
+        "healthcheck-config": {
             "type": "object",
             "description": "Node's Healthcheck configuration option",
             "markdownDescription": "Node's [Healthcheck configuration options](https://containerlab.dev/manual/nodes/#healthcheck)",
@@ -498,7 +502,7 @@
                 "interval": {
                     "type": "integer",
                     "description": "test execution interval",
-                    "markdownDescription":"test execution interval"
+                    "markdownDescription": "test execution interval"
                 },
                 "retries": {
                     "type": "integer",
@@ -509,6 +513,10 @@
                     "type": "integer",
                     "description": "test execution timeout in seconds",
                     "markdownDescription": "test execution timeout in seconds"
+                },
+                "start-period": {
+                    "type": "integer",
+                    "description": "time in seconds to wait before starting the healthcheck"
                 }
             }
         },
