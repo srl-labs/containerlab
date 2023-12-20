@@ -3,7 +3,7 @@ name: vr01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
       config:
         vars:
@@ -11,7 +11,7 @@ topology:
           isis_iid: 1
           sid_idx: 11
     sros:
-      kind: vr-sros
+      kind: nokia_sros
       image: vrnetlab/vr-sros:21.2.R1
       type: sr-1
       license: ~/license/sros.txt

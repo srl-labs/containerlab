@@ -277,7 +277,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 	return bridgeName, nil
 }
 
-// getMgmtBridgeIPs gets the management bridge v4/6 addresses
+// getMgmtBridgeIPs gets the management bridge v4/6 addresses.
 func getMgmtBridgeIPs(bridgeName string, netResource dockerTypes.NetworkResource) (string, string, error) {
 	var err error
 	var v4, v6 string

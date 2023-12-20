@@ -25,7 +25,7 @@ func TestGenerateAnsibleInventory(t *testing.T) {
     # module does not attempt using any global http proxy.
     ansible_httpapi_use_proxy: false
   children:
-    srl:
+    nokia_srlinux:
       hosts:
         clab-topo1-node1:
           ansible_host: 172.100.100.11
@@ -45,7 +45,7 @@ func TestGenerateAnsibleInventory(t *testing.T) {
     linux:
       hosts:
         clab-topo8_ansible_groups-node4:
-    srl:
+    nokia_srlinux:
       hosts:
         clab-topo8_ansible_groups-node1:
           ansible_host: 172.100.100.11

@@ -1,0 +1,69 @@
+name: srlinux-tests
+
+"on":
+  workflow_call:
+    inputs:
+      py_ver:
+        required: true
+        type: string
+
+jobs:
+  srlinux-tests:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        runtime:
+          - "docker"
+          - "podman"
+    # allow podman job to fail, since it started to fail on github actions
+    continue-on-error: ${{ matrix.runtime == 'podman' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: containerlab
+
+      - name: Move containerlab to usr/bin
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - name: Setup Podman
+        if: matrix.runtime == 'podman'
+        # check http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/amd64/
+        # for available podman releases
+        run: sudo bash ./.github/workflows/install-podman.sh
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.py_ver }}
+          cache: pip
+          cache-dependency-path: "tests/requirements.txt"
+
+      - name: Install robotframework
+        run: |
+          pip install -r tests/requirements.txt
+
+      - name: Run srlinux tests
+        run: |
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl
+
+      # upload test reports as a zip file
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 02-basic-srl-log-${{ matrix.runtime }}
+          path: ./tests/out/*.html
+
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-srlinux-tests-${{ matrix.runtime }}
+          path: /tmp/clab-tests/coverage/*
+          retention-days: 7

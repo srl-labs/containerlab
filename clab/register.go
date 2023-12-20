@@ -23,17 +23,19 @@ import (
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
+	vr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
 	vr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
 	vr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
-	vr_nxos "github.com/srl-labs/containerlab/nodes/vr_nxos"
+	vr_openbsd "github.com/srl-labs/containerlab/nodes/vr_openbsd"
 	vr_pan "github.com/srl-labs/containerlab/nodes/vr_pan"
 	vr_ros "github.com/srl-labs/containerlab/nodes/vr_ros"
 	vr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
 	vr_veos "github.com/srl-labs/containerlab/nodes/vr_veos"
+	vr_vjunosswitch "github.com/srl-labs/containerlab/nodes/vr_vjunosswitch"
+	vr_vjunosevolved "github.com/srl-labs/containerlab/nodes/vr_vjunosevolved"
 	vr_vmx "github.com/srl-labs/containerlab/nodes/vr_vmx"
 	vr_vqfx "github.com/srl-labs/containerlab/nodes/vr_vqfx"
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
-	vr_vjunosswitch "github.com/srl-labs/containerlab/nodes/vr_vjunosswitch"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
@@ -58,8 +60,9 @@ func (c *CLab) RegisterNodes() {
 	vr_csr.Register(c.Reg)
 	vr_ftosv.Register(c.Reg)
 	vr_n9kv.Register(c.Reg)
-	vr_nxos.Register(c.Reg)
 	vr_pan.Register(c.Reg)
+	vr_openbsd.Register(c.Reg)
+	vr_ftdv.Register(c.Reg)
 	vr_ros.Register(c.Reg)
 	vr_sros.Register(c.Reg)
 	vr_veos.Register(c.Reg)
@@ -67,6 +70,7 @@ func (c *CLab) RegisterNodes() {
 	vr_vsrx.Register(c.Reg)
 	vr_vqfx.Register(c.Reg)
 	vr_vjunosswitch.Register(c.Reg)
+	vr_vjunosevolved.Register(c.Reg)
 	vr_xrv.Register(c.Reg)
 	vr_xrv9k.Register(c.Reg)
 	xrd.Register(c.Reg)

@@ -4,11 +4,11 @@ search:
 ---
 # Juniper vMX
 
-[Juniper vMX](https://www.juniper.net/us/en/products/routers/mx-series/vmx-virtual-router-software.html) virtualized router is identified with `vr-vmx` or `vr-juniper_vmx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vMX](https://www.juniper.net/us/en/products/routers/mx-series/vmx-virtual-router-software.html) virtualized router is identified with `juniper_vmx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-vr-vmx nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
+Juniper vMX nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
-## Managing vr-vmx nodes
+## Managing Juniper vMX nodes
 
 !!!note
     Containers with vMX inside will take ~7min to fully boot.  
@@ -17,7 +17,7 @@ vr-vmx nodes launched with containerlab come up pre-provisioned with SSH, SNMP, 
 Juniper vMX node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
-    to connect to a `bash` shell of a running vr-vmx container:
+    to connect to a `bash` shell of a running Juniper vMX container:
     ```bash
     docker exec -it <container-name/id> bash
     ```
@@ -44,13 +44,13 @@ Juniper vMX node launched with containerlab can be managed via the following int
 
 ## Interfaces mapping
 
-vr-vmx container can have up to 90 interfaces and uses the following mapping rules:
+Juniper vMX container can have up to 90 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1` - first data interface, mapped to a first data port of vMX line card
 * `eth2+` - second and subsequent data interface
 
-When containerlab launches vr-vmx node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach the management plane of the router.
+When containerlab launches Juniper vMX node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach the management plane of the router.
 
 Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
 
@@ -58,7 +58,7 @@ Data interfaces `eth1+` need to be configured with IP addressing manually using 
 
 ### Node configuration
 
-vr-vmx nodes come up with a basic configuration where only the control plane and line cards are provisioned, as well as the `admin` users and management interfaces such as NETCONF, SNMP, gNMI.
+Juniper vMX nodes come up with a basic configuration where only the control plane and line cards are provisioned, as well as the `admin` users and management interfaces such as NETCONF, SNMP, gNMI.
 
 Starting with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) v0.8.2 VMX will make use of the management VRF[^1].
 
@@ -70,7 +70,7 @@ It is possible to make vMX nodes boot up with a user-defined startup-config inst
 topology:
   nodes:
     node:
-      kind: vr-vmx
+      kind: juniper_vmx
       startup-config: myconfig.txt
 ```
 
@@ -80,13 +80,13 @@ Configuration is applied after the node is started, thus it can contain partial 
 
 ## Lab examples
 
-The following labs feature vr-vmx node:
+The following labs feature Juniper vMX node:
 
 * [SR Linux and Juniper vMX](../../lab-examples/vr-vmx.md)
 
 ## Known issues and limitations
 
-* when listing docker containers, vr-vmx containers will always report unhealthy status. Do not rely on this status.
+* when listing docker containers, Juniper vMX containers will always report unhealthy status. Do not rely on this status.
 * vMX requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.
 

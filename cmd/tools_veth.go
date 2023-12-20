@@ -85,8 +85,10 @@ var vethCreateCmd = &cobra.Command{
 
 		// now create link brief as if the link was passed via topology file
 		linkBrief := &links.LinkBriefRaw{
-			Endpoints: []string{fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
-				fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface)},
+			Endpoints: []string{
+				fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
+				fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface),
+			},
 			LinkCommonParams: links.LinkCommonParams{
 				MTU: MTU,
 			},

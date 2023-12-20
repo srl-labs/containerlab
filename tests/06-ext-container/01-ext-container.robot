@@ -29,28 +29,28 @@ Deploy ${lab-name} lab
 
 Verify links in node ext1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext1 --cmd "ip link show dev eth1"
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext1 --cmd "ip link show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify ip and thereby exec on ext1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext1 --cmd "ip address show dev eth1"
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext1 --cmd "ip address show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.0.1/24
 
 Verify links in node ext2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext2 --cmd "ip link show dev eth1"
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext2 --cmd "ip link show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify ip and thereby exec on ext2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=ext2 --cmd "ip address show dev eth1"
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext2 --cmd "ip address show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.0.2/24

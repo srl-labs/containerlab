@@ -44,7 +44,7 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 }
 
 // resolveStitchedVEthComponent creates the veth link and return it, the endpoint that is
-// supposed to be stitched is returned seperately for further processing
+// supposed to be stitched is returned seperately for further processing.
 func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
 	var err error
 
@@ -224,11 +224,12 @@ func (l *LinkVxlan) Deploy(ctx context.Context) error {
 	}
 
 	// add the link to the Node Namespace
-	err = l.localEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface, SetNameMACAndUpInterface(mvInterface, l.localEndpoint))
+	err = l.localEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
+		SetNameMACAndUpInterface(mvInterface, l.localEndpoint))
 	return err
 }
 
-// deployVxlanInterface internal function to create the vxlan interface in the host namespace
+// deployVxlanInterface internal function to create the vxlan interface in the host namespace.
 func (l *LinkVxlan) deployVxlanInterface() error {
 	// retrieve the parent interface netlink handle
 	parentIface, err := utils.LinkByNameOrAlias(l.remoteEndpoint.parentIface)

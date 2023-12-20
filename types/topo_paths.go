@@ -74,8 +74,16 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-// SetLabDir sets the labDir foldername (no abs path, but the last element) usually the topology name.
-func (t *TopoPaths) SetLabDir(topologyName string) (err error) {
+func (t *TopoPaths) SetLabDir(p string) (err error) {
+	if !utils.DirExists(p) {
+		return fmt.Errorf("folder %s does not exist or is not accessible", p)
+	}
+	t.labDir = p
+	return nil
+}
+
+// SetLabDirByPrefix sets the labDir foldername (no abs path, but the last element) usually the topology name.
+func (t *TopoPaths) SetLabDirByPrefix(topologyName string) (err error) {
 	t.topoName = topologyName
 	// if "CLAB_LABDIR_BASE" Env Var is set, use that dir as a base
 	// for the labDir, otherwise use PWD.
@@ -111,7 +119,7 @@ func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
 	return nil
 }
 
-// SSHConfigPath returns the topology dependent ssh config file name
+// SSHConfigPath returns the topology dependent ssh config file name.
 func (t *TopoPaths) SSHConfigPath() string {
 	return fmt.Sprintf(sshConfigFilePathTmpl, t.topoName)
 }
@@ -167,13 +175,12 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 }
 
 // ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
+// Creates the directory if it does not exist.
 func (*TopoPaths) ClabTmpDir() string {
+	if !utils.DirExists(clabTmpDir) {
+		utils.CreateDirectory(clabTmpDir, 0755)
+	}
 	return clabTmpDir
-}
-
-// CreateTmpDir creates a clab temp directory.
-func (t *TopoPaths) CreateTmpDir() {
-	utils.CreateDirectory(t.ClabTmpDir(), 0755)
 }
 
 // StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file

@@ -300,3 +300,115 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 		})
 	}
 }
+
+func Test_extractHostNodeInterfaceData(t *testing.T) {
+	type args struct {
+		lb             *LinkBriefRaw
+		specialEPIndex int
+	}
+	tests := []struct {
+		name       string
+		args       args
+		wantHost   string
+		wantHostIf string
+		wantNode   string
+		wantNodeIf string
+		wantErr    bool
+	}{
+		{
+			name: "Valid input",
+			args: args{
+				lb: &LinkBriefRaw{
+					Endpoints: []string{
+						"node1:eth1",
+						"node2:eth2",
+					},
+				},
+				specialEPIndex: 0,
+			},
+			wantHost:   "node1",
+			wantHostIf: "eth1",
+			wantNode:   "node2",
+			wantNodeIf: "eth2",
+			wantErr:    false,
+		},
+		{
+			name: "Valid input other specialindex",
+			args: args{
+				lb: &LinkBriefRaw{
+					Endpoints: []string{
+						"node1:eth1",
+						"node2:eth2",
+					},
+				},
+				specialEPIndex: 1,
+			},
+			wantHost:   "node2",
+			wantHostIf: "eth2",
+			wantNode:   "node1",
+			wantNodeIf: "eth1",
+			wantErr:    false,
+		},
+		{
+			name: "Invalid specialNode",
+			args: args{
+				lb: &LinkBriefRaw{
+					Endpoints: []string{
+						"node1:eth1",
+						"node2eth2",
+					},
+				},
+				specialEPIndex: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid Node",
+			args: args{
+				lb: &LinkBriefRaw{
+					Endpoints: []string{
+						"node1eth1",
+						"node2:eth2",
+					},
+				},
+				specialEPIndex: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid Node too many colons",
+			args: args{
+				lb: &LinkBriefRaw{
+					Endpoints: []string{
+						"node1eth1",
+						"node2:et:h2",
+					},
+				},
+				specialEPIndex: 1,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotHost, gotHostIf, gotNode, gotNodeIf, err :=
+				extractHostNodeInterfaceData(tt.args.lb, tt.args.specialEPIndex)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractHostNodeInterfaceData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotHost != tt.wantHost {
+				t.Errorf("extractHostNodeInterfaceData() gotHost = %v, want %v", gotHost, tt.wantHost)
+			}
+			if gotHostIf != tt.wantHostIf {
+				t.Errorf("extractHostNodeInterfaceData() gotHostIf = %v, want %v", gotHostIf, tt.wantHostIf)
+			}
+			if gotNode != tt.wantNode {
+				t.Errorf("extractHostNodeInterfaceData() gotNode = %v, want %v", gotNode, tt.wantNode)
+			}
+			if gotNodeIf != tt.wantNodeIf {
+				t.Errorf("extractHostNodeInterfaceData() gotNodeIf = %v, want %v", gotNodeIf, tt.wantNodeIf)
+			}
+		})
+	}
+}

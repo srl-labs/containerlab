@@ -4,9 +4,9 @@ search:
 ---
 # Juniper vSRX
 
-[Juniper vSRX](https://www.juniper.net/us/en/dm/download-next-gen-vsrx-firewall-trial.html) virtualized firewall is identified with `vr-vsrx` or `vr-juniper_vsrx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vSRX](https://www.juniper.net/us/en/dm/download-next-gen-vsrx-firewall-trial.html) virtualized firewall is identified with `juniper_vsrx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-## Managing vr-vsrx nodes
+## Managing Juniper vSRX nodes
 
 !!!note
     Containers with vSRX inside will take ~7min to fully boot.  
@@ -15,7 +15,7 @@ search:
 Juniper vSRX node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
-    to connect to a `bash` shell of a running vr-vsrx container:
+    to connect to a `bash` shell of a running Juniper vSRX container:
     ```bash
     docker exec -it <container-name/id> bash
     ```
@@ -35,7 +35,7 @@ Juniper vSRX node launched with containerlab can be managed via the following in
 * `eth0` - management interface (fxp0) connected to the containerlab management network
 * `eth1+` - second and subsequent data interface
 
-When containerlab launches vr-vsrx node, it will assign IPv4/6 address to the `eth0` interface. These addresses are used to reach the management plane of the router.
+When containerlab launches Juniper vSRX node, it will assign IPv4/6 address to the `eth0` interface. These addresses are used to reach the management plane of the router.
 
 Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
 
@@ -43,7 +43,7 @@ Data interfaces `eth1+` need to be configured with IP addressing manually using 
 
 ### Node configuration
 
-`vr-vsrx` nodes come up with a basic configuration where only the control plane and line cards are provisioned and the `admin` user with the provided password.
+Juniper vSRX nodes come up with a basic configuration where only the control plane and line cards are provisioned and the `admin` user with the provided password.
 
 #### Startup configuration
 
@@ -53,7 +53,7 @@ It is possible to make vSRX nodes boot up with a user-defined startup-config ins
 topology:
   nodes:
     node:
-      kind: vr-vsrx
+      kind: juniper_vsrx
       startup-config: myconfig.txt
 ```
 
@@ -63,4 +63,6 @@ Configuration is applied after the node is started. Thus it can contain partial 
 
 ## Lab examples
 
-Coming soon.
+The following simple lab consists of two Linux hosts connected via one vSRX:
+
+* [SR Linux and cRPD](../../lab-examples/vsrx01.md)

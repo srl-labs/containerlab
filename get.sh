@@ -47,6 +47,9 @@ detectOS() {
             PKG_FORMAT="rpm"
         ;;
 
+        alpine)
+            PKG_FORMAT="apk"
+        ;;
         *)
             if type "rpm" &>/dev/null; then
                 PKG_FORMAT="rpm"
@@ -97,16 +100,30 @@ verifyOpenssl() {
 # or to the latest release available on github releases
 setDesiredVersion() {
     if [ "x$DESIRED_VERSION" == "x" ]; then
+        # check if GITHUB_TOKEN env var is set and use it for API calls
+        local gh_token=${GITHUB_TOKEN:-}
+        if [ ! -z "$gh_token" ]; then
+            local curl_auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+            local wget_auth_header=(--header="Authorization: Bearer ${GITHUB_TOKEN}")
+        fi
         # when desired version is not provided
         # get latest tag from the gh releases
         if type "curl" &>/dev/null; then
-            local latest_release_url=$(curl -s https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
+            local latest_release_url=$(curl -s "${curl_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
+            if [ -z "$latest_release_url" ]; then
+                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
+                exit 1
+            fi
             TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
             # tag with stripped `v` prefix
             TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
         elif type "wget" &>/dev/null; then
             # get latest release info and get 5th line out of the response to get the URL
-            local latest_release_url=$(wget -q https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
+            local latest_release_url=$(wget -q "${wget_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
+            if [ -z "$latest_release_url" ]; then
+                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
+                exit 1
+            fi
             TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
             TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
         fi
@@ -128,6 +145,24 @@ setDesiredVersion() {
     fi
 }
 
+# docsLinkFromVer returns the url portion for release notes
+# based on the Go docsLinkFromVer() function in version.go
+docsLinkFromVer() {
+  ver=$1
+  IFS='.' read -ra segments <<< "$ver"
+  maj=${segments[0]}
+  min=${segments[1]}
+  patch=${segments[2]}
+
+  relSlug="$maj.$min/"
+  if [ -n "$patch" ]; then
+    if [ "$patch" -ne 0 ]; then
+      relSlug="$relSlug#$maj$min$patch"
+    fi
+  fi
+  echo "$relSlug"
+}
+
 # checkInstalledVersion checks which version is installed and
 # if it needs to be changed.
 checkInstalledVersion() {
@@ -138,10 +173,11 @@ checkInstalledVersion() {
             return 0
         else
             if [ "$(printf '%s\n' "$TAG_WO_VER" "$version" | sort -V | head -n1)" = "$TAG_WO_VER" ]; then
+                RN_VER=$(docsLinkFromVer $TAG_WO_VER)
                 echo "A newer ${BINARY_NAME} version $version is already installed"
                 echo "You are running ${BINARY_NAME} version $version"
                 echo "You are trying to downgrade to ${BINARY_NAME} version ${TAG_WO_VER}"
-                echo "Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
+                echo "Release notes: https://containerlab.dev/rn/${RN_VER}"
                 UPGR_NEEDED="Y"
                 # check if stdin is open (i.e. capable of getting users input)
                 if [ -t 0 ]; then
@@ -152,7 +188,8 @@ checkInstalledVersion() {
                 fi
                 return 0
             else
-                echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${TAG_WO_VER}"
+                RN_VER=$(docsLinkFromVer $TAG_WO_VER)
+                echo "A newer ${BINARY_NAME} ${TAG_WO_VER} is available. Release notes: https://containerlab.dev/rn/${RN_VER}"
                 echo "You are running containerlab $version version"
                 UPGR_NEEDED="Y"
                 # check if stdin is open (i.e. capable of getting users input)
@@ -227,6 +264,8 @@ installPkg() {
 setPkgInstaller() {
     if [ $PKG_FORMAT == "deb" ]; then
         PKG_INSTALLER="dpkg -i"
+    elif [ $PKG_FORMAT == "apk" ]; then
+        PKG_INSTALLER="apk add --allow-untrusted"
     elif [ $PKG_FORMAT == "rpm" ]; then
         if [ -f /etc/os-release ]; then
             VARIANT_ID="$(. /etc/os-release && echo "$VARIANT_ID")"

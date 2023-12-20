@@ -2,7 +2,7 @@ name: topo8_ansible_groups
 topology:
   nodes:
     node1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       license: node1.lic
       binds:
@@ -14,7 +14,7 @@ topology:
       labels:
         ansible-group: spine
     node2:
-      kind: srl
+      kind: nokia_srlinux
       license: node1.lic
       user: custom
       mgmt-ipv4: 172.100.100.12
@@ -23,7 +23,7 @@ topology:
         ansible-group: extra_group
 
     node3:
-      kind: srl
+      kind: nokia_srlinux
       license: node1.lic
       user: custom
       mgmt-ipv4: 172.100.100.13

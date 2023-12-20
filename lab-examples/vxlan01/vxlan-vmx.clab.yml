@@ -3,7 +3,7 @@ name: vxlan
 topology:
   nodes:
     vmx:
-      kind: vr-sros
+      kind: juniper_vmx
       image: vrnetlab/vr-vmx:20.4R1.12
     # sros node is defined in a `vxlan-sros.clab.yml` topo file
     # that is launched on another VM

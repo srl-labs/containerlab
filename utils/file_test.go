@@ -84,3 +84,57 @@ func TestFileLines(t *testing.T) {
 		})
 	}
 }
+
+func TestIsHttpURL(t *testing.T) {
+	tests := []struct {
+		name            string
+		url             string
+		allowSchemaless bool
+		want            bool
+	}{
+		{
+			name:            "Valid HTTP URL",
+			url:             "http://example.com",
+			allowSchemaless: false,
+			want:            true,
+		},
+		{
+			name:            "Valid HTTPS URL",
+			url:             "https://example.com",
+			allowSchemaless: false,
+			want:            true,
+		},
+		{
+			name:            "Valid URL without scheme",
+			url:             "srlinux.dev/clab-srl",
+			allowSchemaless: true,
+			want:            true,
+		},
+		{
+			name:            "Valid URL without scheme and schemaless not allowed",
+			url:             "srlinux.dev/clab-srl",
+			allowSchemaless: false,
+			want:            false,
+		},
+		{
+			name:            "Invalid URL",
+			url:             "/foo/bar",
+			allowSchemaless: false,
+			want:            false,
+		},
+		{
+			name:            "stdin symbol '-'",
+			url:             "-",
+			allowSchemaless: false,
+			want:            false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsHttpURL(tt.url, tt.allowSchemaless); got != tt.want {
+				t.Errorf("IsHttpUri() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

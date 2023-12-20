@@ -18,21 +18,24 @@ nav:
           - Juniper vQFX: manual/kinds/vr-vqfx.md
           - Juniper vSRX: manual/kinds/vr-vsrx.md
           - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
+          - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
           - Cisco XRd: manual/kinds/xrd.md
           - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - Cisco XRv: manual/kinds/vr-xrv.md
           - Cisco CSR1000v: manual/kinds/vr-csr.md
           - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - Cisco 8000: manual/kinds/c8000.md
+          - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC: manual/kinds/sonic-vs.md
           - Dell FTOS10v: manual/kinds/vr-ftosv.md
           - MikroTik RouterOS: manual/kinds/vr-ros.md
-          - Palo Alto PAN: manual/kinds/vr-pan.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
+          - OpenBSD: manual/kinds/openbsd.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
+          - Palo Alto PAN: manual/kinds/vr-pan.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
           - RARE/freeRtr: manual/kinds/rare-freertr.md
@@ -96,17 +99,22 @@ nav:
       - Nokia SR Linux and Cisco XRv: lab-examples/vr-xrv.md
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - Nokia SR Linux and Juniper vJunos-switch: lab-examples/srl-vjunos-switch.md
+      - Nokia SR Linux and Juniper vJunosEvolved: lab-examples/srl-vjunosevolved.md
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Keysight IXIA-C and Nokia SR Linux: lab-examples/ixiacone-srl.md
       - Multi-node labs: lab-examples/multinode.md
+      - RARE/freeRtr: lab-examples/rare-freertr.md
+      - Juniper vSRX: lab-examples/vsrx01.md
+      - OpenBSD: lab-examples/openbsd01.md
+      - Cisco FTDv: lab-examples/ftdv01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
-      - RARE/freeRtr: lab-examples/rare-freertr.md
   - Release notes:
+      - "0.48": rn/0.48.md
       - "0.47": rn/0.47.md
       - "0.46": rn/0.46.md
       - "0.45": rn/0.45.md
@@ -283,6 +291,11 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.blocks.tab:
+      alternate_style: true
+  - pymdownx.blocks.admonition
+  - pymdownx.blocks.definition
+  - pymdownx.blocks.details
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde

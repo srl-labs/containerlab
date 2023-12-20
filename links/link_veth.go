@@ -71,7 +71,10 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 // linkVEthRawFromLinkBriefRaw creates a raw veth link from a LinkBriefRaw.
 func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
-	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, 0)
+	host, hostIf, node, nodeIf, err := extractHostNodeInterfaceData(lb, 0)
+	if err != nil {
+		return nil, err
+	}
 
 	link := &LinkVEthRaw{
 		LinkCommonParams: lb.LinkCommonParams,

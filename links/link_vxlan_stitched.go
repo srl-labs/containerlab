@@ -21,7 +21,7 @@ type VxlanStitched struct {
 	vethStitchEp Endpoint
 }
 
-// NewVxlanStitched constructs a new VxlanStitched object
+// NewVxlanStitched constructs a new VxlanStitched object.
 func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *VxlanStitched {
 	// init the VxlanStitched struct
 	vxlanStitched := &VxlanStitched{
@@ -36,12 +36,12 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 
 // DeployWithExistingVeth provisons the stitched vxlan link whilst the
 // veth interface does already exist, hence it is not created as part of this
-// deployment
+// deployment.
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
 	return l.internalDeploy(ctx, true)
 }
 
-// Deploy provisions the stitched vxlan link with all its underlaying sub-links
+// Deploy provisions the stitched vxlan link with all its underlaying sub-links.
 func (l *VxlanStitched) Deploy(ctx context.Context) error {
 	return l.internalDeploy(ctx, false)
 }
@@ -76,7 +76,7 @@ func (l *VxlanStitched) internalDeploy(ctx context.Context, skipVethCreation boo
 	return nil
 }
 
-// Remove deprovisions the stitched vxlan link
+// Remove deprovisions the stitched vxlan link.
 func (l *VxlanStitched) Remove(ctx context.Context) error {
 	// remove the veth link piece
 	err := l.vethLink.Remove(ctx)
@@ -93,18 +93,18 @@ func (l *VxlanStitched) Remove(ctx context.Context) error {
 	return nil
 }
 
-// GetEndpoints returns the endpoints that are part of the link
+// GetEndpoints returns the endpoints that are part of the link.
 func (l *VxlanStitched) GetEndpoints() []Endpoint {
 	return []Endpoint{l.vxlanLink.localEndpoint, l.vxlanLink.remoteEndpoint}
 }
 
-// GetType returns the LinkType enum
+// GetType returns the LinkType enum.
 func (*VxlanStitched) GetType() LinkType {
 	return LinkTypeVxlanStitch
 }
 
 // stitch provisions the tc rules to stitch two endpoints together in a unidirectional fashion
-// it should take the veth and the vxlan endpoints of the root namespace
+// it should take the veth and the vxlan endpoints of the root namespace.
 func stitch(ep1, ep2 Endpoint) error {
 	var err error
 	// collection of netlink links for the given endpoints

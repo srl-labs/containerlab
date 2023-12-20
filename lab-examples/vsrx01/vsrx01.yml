@@ -1,0 +1,22 @@
+name: vsrx1
+topology:
+  nodes:
+    srx1:
+      kind: juniper_vsrx
+      image: vrnetlab/vr-vsrx:23.2R1.13
+      startup-config: srx1.txt
+    client1:
+      kind: "linux"
+      image: wbitt/network-multitool:alpine-extra
+      exec:
+        - ip addr add 192.168.1.2/30 dev eth1
+        - ip route add 192.168.2.0/30 via 192.168.1.1
+    client2:
+      kind: "linux"
+      image: wbitt/network-multitool:alpine-extra
+      exec:
+        - ip addr add 192.168.2.2/30 dev eth1
+        - ip route add 192.168.1.0/30 via 192.168.2.1
+  links:
+    - endpoints: ["srx1:eth1", "client1:eth1"]
+    - endpoints: ["srx1:eth2", "client2:eth1"]

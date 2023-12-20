@@ -40,7 +40,7 @@ name: srlceos01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos
@@ -98,6 +98,9 @@ containerlab deploy # (1)!
 
 1. `deploy` command will automatically lookup a file matching the `*.clab.y*ml` patter to select it.  
   If you have several files and want to pick a specific one, use `--topo <path>` flag.
+
+!!!tip "Remote topology files"
+    Containerlab allows to deploy labs from files located in remote Git repositories and/or HTTP URLs. Check out deploy command [documentation](cmd/deploy.md#remote-topology-files) for more details.
 
 After a couple of seconds you will see the summary of the deployed nodes:
 

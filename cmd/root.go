@@ -6,13 +6,14 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/git"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -100,7 +101,7 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 func getTopoFilePath(cmd *cobra.Command) error {
 	// set commands which may use topo file find functionality, the rest don't need it
 	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" ||
-		cmd.Name() == "save" || cmd.Name() == "graph" || cmd.Name() == "exec") {
+		cmd.Name() == "save" || cmd.Name() == "graph") {
 		return nil
 	}
 
@@ -111,37 +112,19 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	}
 
 	var err error
-	if utils.IsHttpUri(topo) {
+	// perform topology clone/fetch if the topo file is not available locally
+	if !utils.FileOrDirExists(topo) {
 		switch {
-		case utils.IsGitHubURL(topo):
-			githubURL := utils.NewGithubURL()
-
-			err := githubURL.Parse(topo)
+		case git.IsGitHubOrGitLabURL(topo) || git.IsGitHubShortURL(topo):
+			topo, err = processGitTopoFile(topo)
 			if err != nil {
 				return err
 			}
-
-			err = utils.CloneGithubRepo(githubURL)
-			if err != nil {
-				return err
+		case utils.IsHttpURL(topo, true):
+			// canonize the passed topo as URL by adding https schema if it was missing
+			if !strings.HasPrefix(topo, "http://") && !strings.HasPrefix(topo, "https://") {
+				topo = "https://" + topo
 			}
-
-			err = os.Chdir(githubURL.RepositoryName)
-			if err != nil {
-				return err
-			}
-
-			// once the repo is cloned the topo file is emptied
-			// to ensure that auto find functionality can kick in
-			topo = ""
-
-			// unless the file name is provided in the github url
-			if githubURL.FileName != "" {
-				topo = githubURL.FileName
-			}
-
-		default:
-			return fmt.Errorf("unsupported git repository: %s", topo)
 		}
 	}
 
@@ -163,4 +146,46 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	log.Debugf("topology file found: %s", files[0])
 
 	return err
+}
+
+func processGitTopoFile(topo string) (string, error) {
+	// for short github urls, prepend https://github.com
+	// note that short notation only works for github links
+	if git.IsGitHubShortURL(topo) {
+		topo = "https://github.com/" + topo
+	}
+
+	repo, err := git.NewRepo(topo)
+	if err != nil {
+		return "", err
+	}
+
+	// Instantiate the git implementation to use.
+	gitImpl := git.NewGoGit(repo)
+
+	// clone the repo via the Git Implementation
+	err = gitImpl.Clone()
+	if err != nil {
+		return "", err
+	}
+
+	// adjust permissions for the checked out repo
+	// it would belong to root/root otherwise
+	err = utils.SetUIDAndGID(repo.GetName())
+	if err != nil {
+		log.Errorf("error adjusting repository permissions %v. Continuing anyways", err)
+	}
+
+	// prepare the path with the repo based path
+	path := filepath.Join(repo.GetPath()...)
+	// prepend that path with the repo base directory
+	path = filepath.Join(repo.GetName(), path)
+
+	// change dir to the
+	err = os.Chdir(path)
+	if err != nil {
+		return "", err
+	}
+
+	return repo.GetFilename(), err
 }

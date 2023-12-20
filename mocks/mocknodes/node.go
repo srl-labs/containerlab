@@ -277,6 +277,20 @@ func (mr *MockNodeMockRecorder) GetRuntime() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockNode)(nil).GetRuntime))
 }
 
+// GetSSHConfig mocks base method.
+func (m *MockNode) GetSSHConfig() *types.SSHConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSSHConfig")
+	ret0, _ := ret[0].(*types.SSHConfig)
+	return ret0
+}
+
+// GetSSHConfig indicates an expected call of GetSSHConfig.
+func (mr *MockNodeMockRecorder) GetSSHConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSSHConfig", reflect.TypeOf((*MockNode)(nil).GetSSHConfig))
+}
+
 // GetShortName mocks base method.
 func (m *MockNode) GetShortName() string {
 	m.ctrl.T.Helper()

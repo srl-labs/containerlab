@@ -14,62 +14,99 @@ The following requirements must be satisfied to let containerlab tool run succes
 
 ### Install script
 
-Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) which detects the operating system type and installs the relevant package:
+Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) that detects the operating system type and installs the relevant package:
 
-!!! note
-    Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.  
-    Other systems can follow the [manual installation](#manual-installation) procedure.
+/// note
+Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.  
+Other systems can follow the [manual installation](#manual-installation) procedure.
+///
+
+/// tab | Latest release
+
+Download and install the latest release (may require `sudo`):
 
 ```bash
-# download and install the latest release (may require sudo)
 bash -c "$(curl -sL https://get.containerlab.dev)"
+```
 
-# download a specific version - 0.10.3 (may require sudo)
+///
+
+/// tab | Specific version
+
+Download a specific version. Versions can be found on the [Releases](https://github.com/srl-labs/containerlab/releases) page.
+
+```bash
 bash -c "$(curl -sL https://get.containerlab.dev)" -- -v 0.10.3
+```
 
+///
+
+/// tab | with `wget`
+
+```bash
 # with wget
 bash -c "$(wget -qO - https://get.containerlab.dev)"
+```
+
+///
+
+Since the installation script uses GitHub API, users may hit the rate limit imposed by GitHub. To avoid this, users can pass their personal GitHub token as an env var to the installation script:
+
+```bash
+GITHUB_TOKEN=<your token> bash -c "$(curl -sL https://get.containerlab.dev)"
 ```
 
 ### Package managers
 
 It is possible to install official containerlab releases via public APT/YUM repository.
 
-=== "APT"
-    ```bash
-    echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
-    sudo tee -a /etc/apt/sources.list.d/netdevops.list
+/// tab | APT
 
-    sudo apt update && sudo apt install containerlab
-    ```
-=== "YUM"
-    ```
-    yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
-    echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
+```bash
+echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
+sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
-    sudo yum install containerlab
-    ```
-=== "APK"
-    Download `.apk` package from [Github releases](https://github.com/srl-labs/containerlab/releases).
-=== "AUR"
-    Arch Linux users can download a package from this [AUR repository](https://aur.archlinux.org/packages/containerlab-bin).
+sudo apt update && sudo apt install containerlab
+```
 
-??? "Manual package installation"
-    Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-labs/containerlab/releases) page.
+///
+/// tab | YUM
 
-    example:
-    ```bash
-    # manually install latest release with package managers
-    LATEST=$(curl -s https://github.com/srl-labs/containerlab/releases/latest | sed -e 's/.*tag\/v\(.*\)\".*/\1/')
-    # with yum
-    yum install "https://github.com/srl-labs/containerlab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.rpm"
-    # with dpkg
-    curl -sL -o /tmp/clab.deb "https://github.com/srl-labs/containerlab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.deb" && dpkg -i /tmp/clab.deb
+```
+yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
+echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
-    # install specific release with yum
-    yum install https://github.com/srl-labs/containerlab/releases/download/v0.7.0/containerlab_0.7.0_linux_386.rpm
-    ```
+sudo yum install containerlab
+```
 
+///
+
+/// tab | APK
+Download `.apk` package from [Github releases](https://github.com/srl-labs/containerlab/releases).
+///
+
+/// tab | AUR
+Arch Linux users can download a package from this [AUR repository](https://aur.archlinux.org/packages/containerlab-bin).
+///
+
+/// details | Manual package installation
+Alternatively, users can manually download the deb/rpm package from the [Github releases](https://github.com/srl-labs/containerlab/releases) page.
+
+example:
+
+```bash
+# manually install latest release with package managers
+LATEST=$(curl -s https://github.com/srl-labs/containerlab/releases/latest | sed -e 's/.*tag\/v\(.*\)\".*/\1/')
+# with yum
+yum install "https://github.com/srl-labs/containerlab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.rpm"
+# with dpkg
+curl -sL -o /tmp/clab.deb "https://github.com/srl-labs/containerlab/releases/download/v${LATEST}/containerlab_${LATEST}_linux_amd64.deb" && dpkg -i /tmp/clab.deb
+
+# install specific release with yum
+yum install https://github.com/srl-labs/containerlab/releases/download/v0.7.0/containerlab_0.7.0_linux_386.rpm
+```
+
+///
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
 
 ### Container
@@ -101,14 +138,17 @@ docker run --rm -it --privileged \
 
 Within the started container you can use the same `containerlab deploy/destroy/inspect` commands to manage your labs.
 
-!!!note
-    Containerlab' container command is itself `containerlab`, so you can deploy a lab without invoking a shell, for example:
-    ```bash
-    docker run --rm -it --privileged \
-    # <run options omitted>
-    -w $(pwd) \
-    ghcr.io/srl-labs/clab deploy -t somelab.clab.yml
-    ```
+/// note
+Containerlab' container command is itself `containerlab`, so you can deploy a lab without invoking a shell, for example:
+
+```bash
+docker run --rm -it --privileged \
+# <run options omitted>
+-w $(pwd) \
+ghcr.io/srl-labs/clab deploy -t somelab.clab.yml
+```
+
+///
 
 ### Manual installation
 
@@ -145,12 +185,13 @@ bash
 
 Once installed, issue `sudo service docker start` to start the docker service inside WSL2 machine.
 
-??? "Running VM-based routers inside WSL"
-    In Windows 11 with WSL2 it is now possible to [enable KVM support](https://serverfault.com/a/1115773/351978). Let us know if that worked for you in our [Discord](community.md).
+/// details | Running VM-based routers inside WSL
+In Windows 11 with WSL2 it is now possible to [enable KVM support](https://serverfault.com/a/1115773/351978). Let us know if that worked for you in our [Discord](community.md).
+///
 
 ### Apple macOS
 
-Running containerlab on Mac OS is possible both on ARM (M1/M2) and Intel chipsets with certain limitations and caveats rooted in different architectures and underlying OS.
+Running containerlab on macOS is possible both on ARM (M1/M2) and Intel chipsets with certain limitations and caveats rooted in different architectures and underlying OS.
 
 #### ARM
 
@@ -184,84 +225,109 @@ and start downloading the labs you want to run.
 
 ##### Docker in Docker
 
-Another option to run containerlab on ARM-based Macs is to use Docker in Docker approach. With this approach, a docker-in-docker container is launched on the Mac OS inside the VM providing a docker environment. Below is a step-by-step guide on how to set it up.
+Another option to run containerlab on ARM-based Macs is to use Docker in Docker approach. With this approach, a docker-in-docker container is launched on the macOS inside the VM providing a docker environment. This setup also works on other operating systems where Docker is available. Below is a step-by-step guide on how to set it up.
 
-???tip "Docker in docker guide"
-    We'll provide an example of a custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
+//// details | "Docker in docker guide"
+We'll provide an example of a custom [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) that can be opened in [VSCode](https://code.visualstudio.com) with [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) installed.
 
-    Create `.devcontainer` directory in the root of the Containerlab repository with the following content:
+Create `.devcontainer` directory in the root of the Containerlab repository with the following content:
 
-    ```text
-    .devcontainer
-    |- devcontainer.json
-    |- Dockerfile
-    ```
+```text
+.devcontainer
+|- devcontainer.json
+|- Dockerfile
+```
 
-    === "Dockerfile"
+/// tab | Dockerfile
 
-        ```Dockerfile
-        # The devcontainer will be based on Python 3.9
-        # The base container already has entrypoint, vscode user account, etc. out of the box
-        FROM mcr.microsoft.com/devcontainers/python:0-3.9-bullseye
+```Dockerfile
+# The devcontainer will be based on debian bullseye
+# The base container already has entrypoint, vscode user account, etc. out of the box
+FROM mcr.microsoft.com/vscode/devcontainers/base:bullseye
 
-        # containelab version will be set in devcontainer.json
-        ARG _CLAB_VERSION
+# containelab version will be set in devcontainer.json
+ARG _CLAB_VERSION
 
-        # install some basic tools inside the container
-        # adjust this list based on your demands
-        RUN apt-get update \
-            && apt-get install -y --no-install-recommends \
-            sshpass \
-            curl \
-            iputils-ping \
-            htop \
-            && rm -rf /var/lib/apt/lists/* \
-            && rm -Rf /usr/share/doc && rm -Rf /usr/share/man \
-            && apt-get clean
+# Set permissions for mounts in devcontainer.json
+RUN mkdir -p /home/vscode/.vscode-server/bin
+RUN chown -R vscode:vscode /home/vscode/.vscode-server
 
-        # install preferred version of the containerlab
-        RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION} \
-            && pip3 install --user yamllint
-        ```
-    === "devcontainer.json"
+# install some basic tools inside the container
+# adjust this list based on your demands
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    sshpass \
+    curl \
+    iputils-ping \
+    htop \
+    yamllint \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -Rf /usr/share/doc && rm -Rf /usr/share/man \
+    && apt-get clean
 
-        ```json
-        // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-        // README at: https://github.com/devcontainers/templates/tree/main/src/python
-        {
-            "name": "clab-for-arm",
-            "build": {
-                "dockerfile": "Dockerfile",
-                "args": {
-                    "_CLAB_VERSION": "0.43.0"
-                }
-            },
-            "features": {
-                // Containerlab will run in a docker-in-docker container
-                // it is also possible to use docker-outside-docker feature
-                "ghcr.io/devcontainers/features/docker-in-docker:2.2.0": {
-                    "version": "latest"
-                }
-            },
-            // add any required extensions that must be pre-installed in the devcontainer
-            "customizations": {
-                "vscode": {
-                    "extensions": [
-                        // various tools
-                        "tuxtina.json2yaml",
-                        "vscode-icons-team.vscode-icons",
-                        "mutantdino.resourcemonitor"
-                    ]
-                }
-            }
+# install preferred version of the containerlab
+RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${_CLAB_VERSION}
+```
+
+///
+
+/// tab | devcontainer.json
+
+```json
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+    "name": "clab-dev-container",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "_CLAB_VERSION": "0.47.2"
         }
-        ```
+    },
+    "features": {
+        // Containerlab will run in a docker-in-docker container
+        // it is also possible to use docker-outside-docker feature
+        "ghcr.io/devcontainers/features/docker-in-docker:latest": {
+            "version": "latest"
+        }
+        // You can add other features from this list: https://github.com/orgs/devcontainers/packages?repo_name=features
+        // For example:
+        //"ghcr.io/devcontainers/features/go:latest": {
+        //    "version": "1.21"
+        //}
 
-    Once the devcontainer is defined as described above:
+    },
+    // add any required extensions that must be pre-installed in the devcontainer
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // various tools
+                "ms-azuretools.vscode-docker",
+                "tuxtina.json2yaml",
+                "vscode-icons-team.vscode-icons",
+                "mutantdino.resourcemonitor"
+            ]
+        }
+    },
+    // This adds persistent mounts, so some configuration like docker credentials are saved for the vscode user and root (for sudo).
+    // Furthermore, your bash history and other configurations you made in your container users 'vscode' home are saved.
+    // .vscode-server is an anonymous volume. Gets destroyed on rebuild, which allows vscode to reinstall the extensions and dotfiles.
+    "mounts": [
+    "source=clab-vscode-home-dir,target=/home/vscode,type=volume",
+    "source=clab-docker-root-config,target=/root/.docker,type=volume",
+    "target=/home/vscode/.vscode-server,type=volume"
+]
+}
+```
 
-    * Open the devcontainer in VSCode
-    * Import the required images for your cLab inside the container (if you are using Docker-in-Docker option)
-    * Start you Containerlab
+///
+Once the devcontainer is defined as described above:
+
+* Open the devcontainer in VSCode
+* Import the required images for your cLab inside the container (if you are using Docker-in-Docker option)
+* Start your Containerlab
+////
 
 #### Intel
 
@@ -280,127 +346,146 @@ docker run --rm -it --privileged \
     ghcr.io/srl-labs/clab bash
 ```
 
-The first command in the snippet above sets the working directory which you intend to use on your Mac OS. The `~/clab` in the example above expands to `/Users/<username>/clab` and means that we intent to have our containerlab labs to be stored in this directory.
+The first command in the snippet above sets the working directory which you intend to use on your macOS. The `~/clab` in the example above expands to `/Users/<username>/clab` and means that we intend to have our containerlab labs to be stored in this directory.
 
-!!!note
-    1. It is best to create a directory under the `~/some/path` unless you know what to do[^5]
-    2. vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.
-    3. Docker Desktop for Mac introduced cgroups v2 support in 4.3.0 version; to support the images that require cgroups v1 follow [these instructions](https://github.com/docker/for-mac/issues/6073).
-    4. Docker Desktop relies on a LinuxKit based HyperKit VM. Unfortunately, it is shipped with a minimalist kernel, and some modules such as VRF are disabled by default. Follow [these instructions](https://medium.com/@notsinge/making-your-own-linuxkit-with-docker-for-mac-5c1234170fb1) to rebuild it with more modules.
+/// note
 
-When the container is started, you will have a bash shell opened with the directory contents mounted from the Mac OS. There you can use `containerlab` commands right away.
+1. It is best to create a directory under the `~/some/path` unless you know what to do[^5]
+2. vrnetlab based nodes will not be able to start, since Docker VM does not support virtualization.
+3. Docker Desktop for Mac introduced cgroups v2 support in 4.3.0 version; to support the images that require cgroups v1 follow [these instructions](https://github.com/docker/for-mac/issues/6073).
+4. Docker Desktop relies on a LinuxKit based HyperKit VM. Unfortunately, it is shipped with a minimalist kernel, and some modules such as VRF are disabled by default. Follow [these instructions](https://medium.com/@notsinge/making-your-own-linuxkit-with-docker-for-mac-5c1234170fb1) to rebuild it with more modules.
+///
 
-???tip "Step by step example"
-    Let's imagine I want to run a lab with two SR Linux containers running directly on a Mac OS.
+When the container is started, you will have a bash shell opened with the directory contents mounted from the macOS. There you can use `containerlab` commands right away.
 
-    First, I need to have Docker Desktop for Mac installed and running.
+/// details | Step-by-step example
+Let's imagine I want to run a lab with two SR Linux containers running directly on a macOS.
 
-    Then I will create a directory under the `$HOME` path on my mac:
+First, I need to have Docker Desktop for Mac installed and running.
 
-    ```
-    mkdir -p ~/clab
-    ```
+Then I will create a directory under the `$HOME` path on my mac:
 
-    Then I will create a clab file defining my lab in the newly created directory:
+```
+mkdir -p ~/clab
+```
 
-    ```bash
-    cat <<EOF > ~/clab/2srl.clab.yml
-    name: 2srl
+Then I will create a clab file defining my lab in the newly created directory:
 
-    topology:
-      nodes:
-        srl1:
-          kind: srl
-          image: ghcr.io/nokia/srlinux
-        srl2:
-          kind: srl
-          image: ghcr.io/nokia/srlinux
+```bash
+cat <<EOF > ~/clab/2srl.clab.yml
+name: 2srl
 
-      links:
-        - endpoints: ["srl1:e1-1", "srl2:e1-1"]
-    EOF
-    ```
+topology:
+    nodes:
+    srl1:
+        kind: nokia_srlinux
+        image: ghcr.io/nokia/srlinux
+    srl2:
+        kind: nokia_srlinux
+        image: ghcr.io/nokia/srlinux
 
-    Now when the clab file is there, launch the container and don't forget to use path to the directory you created:
+    links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+EOF
+```
 
-    ```bash
-    CLAB_WORKDIR=~/clab
+Now when the clab file is there, launch the container and don't forget to use path to the directory you created:
 
-    docker run --rm -it --privileged \
-        --network host \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v /run/netns:/run/netns \
-        --pid="host" \
-        -w $CLAB_WORKDIR \
-        -v $CLAB_WORKDIR:$CLAB_WORKDIR \
-        ghcr.io/srl-labs/clab bash
-    ```
+```bash
+CLAB_WORKDIR=~/clab
 
-    Immediately you will get into the directory inside the container with your lab file available:
+docker run --rm -it --privileged \
+    --network host \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v /run/netns:/run/netns \
+    --pid="host" \
+    -w $CLAB_WORKDIR \
+    -v $CLAB_WORKDIR:$CLAB_WORKDIR \
+    ghcr.io/srl-labs/clab bash
+```
 
-    ```
-    root@docker-desktop:/Users/romandodin/clab# ls
-    2srl.clab.yml
-    ```
+Immediately you will get into the directory inside the container with your lab file available:
 
-    Now you can launch the lab, as containerlab is already part of the image:
-    ```
-    root@docker-desktop:/Users/romandodin/clab# clab dep -t 2srl.clab.yml
-    INFO[0000] Parsing & checking topology file: 2srl.clab.yml 
-    INFO[0000] Creating lab directory: /Users/romandodin/clab/clab-2srl 
-    INFO[0000] Creating root CA                             
-    INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500' 
-    INFO[0000] Creating container: srl1                     
-    INFO[0000] Creating container: srl2                     
-    INFO[0001] Creating virtual wire: srl1:e1-1 <--> srl2:e1-1 
-    INFO[0001] Adding containerlab host entries to /etc/hosts file 
-    +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
-    | # |      Name      | Container ID |         Image         | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-    +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
-    | 1 | clab-2srl-srl1 | 574bf836fb40 | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-    | 2 | clab-2srl-srl2 | f88531a74ffb | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
-    +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
-    ```
+```
+root@docker-desktop:/Users/romandodin/clab# ls
+2srl.clab.yml
+```
+
+Now you can launch the lab, as containerlab is already part of the image:
+
+```
+root@docker-desktop:/Users/romandodin/clab# clab dep -t 2srl.clab.yml
+INFO[0000] Parsing & checking topology file: 2srl.clab.yml 
+INFO[0000] Creating lab directory: /Users/romandodin/clab/clab-2srl 
+INFO[0000] Creating root CA                             
+INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500' 
+INFO[0000] Creating container: srl1                     
+INFO[0000] Creating container: srl2                     
+INFO[0001] Creating virtual wire: srl1:e1-1 <--> srl2:e1-1 
+INFO[0001] Adding containerlab host entries to /etc/hosts file 
++---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+| # |      Name      | Container ID |         Image         | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
++---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+| 1 | clab-2srl-srl1 | 574bf836fb40 | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 2 | clab-2srl-srl2 | f88531a74ffb | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
++---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
+```
+
+///
 
 ### Upgrade
 
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
 
 ```
-containerlab version upgrade
+sudo -E containerlab version upgrade
 ```
 
-This command will fetch the installation script and will upgrade the tool to its most recent version.
+This command will fetch the installation script and will upgrade the tool to its most recent version. In case of GitHub rate limit, provide `GITHUB_TOKEN` env var with your personal GitHub token to the upgrade command.
 
-or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
+Or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
 
 ### From source
 
 To build containerlab from source:
 
-=== "with go build"
-    To build containerlab from source, clone the repository and issue `go build` at its root.
-=== "with goreleaser"
-    When we release containerlab we use [goreleaser](https://goreleaser.com/) project to build binaries for all supported platforms as well as the deb/rpm packages.  
-    Users can install `goreleaser` and do the same locally by issuing the following command:
-    ```
-    goreleaser --snapshot --skip-publish --rm-dist
-    ```
+/// tab | with `go build`
+To build containerlab from source, clone the repository and issue `go build` at its root.
+///
+
+/// tab | with goreleaser
+When we release containerlab we use [goreleaser](https://goreleaser.com/) project to build binaries for all supported platforms as well as the deb/rpm packages.  
+Users can install `goreleaser` and do the same locally by issuing the following command:
+
+```
+goreleaser --snapshot --skip-publish --rm-dist
+```
+
+///
 
 ### Uninstall
 
 To uninstall containerlab when it was installed via installation script or packages:
 
-=== "Debian-based system"
-    ```
-    apt remove containerlab
-    ```
-=== "RPM-based systems"
-    ```
-    yum remove containerlab
-    ```
-=== "Manual removal"
-    Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
+/// tab | Debian-based system
+
+```
+apt remove containerlab
+```
+
+///
+
+/// tab | RPM-based systems
+
+```
+yum remove containerlab
+```
+
+///
+
+/// tab | Manual removal
+Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
+///
 
 ### SELinux
 
@@ -426,6 +511,6 @@ sudo setsebool -P selinuxuser_execmod 1
 [^5]: otherwise make sure to add a custom shared directory to the docker on mac.
 [^6]: FRR is a good example of arm64-capable network OS. Nokia SR Linux is going to be available for arm64 in the 2024.
 [^7]: There are two options to install UTM: via [downloadable dmg](https://github.com/utmapp/UTM/releases/latest/download/UTM.dmg) file (free) or App Store (paid). The App Store version is exactly the same, it is just a way to support the project.
-[^8]: This command requires docker to be installed on your Mac OS. You can use Docker Desktop, Rancher or [colima](https://github.com/abiosoft/colima) to run docker on your Mac OS.
+[^8]: This command requires docker to be installed on your macOS. You can use Docker Desktop, Rancher or [colima](https://github.com/abiosoft/colima) to run docker on your macOS.
 [^9]: If you want to install these tools on an existing Debian machine, you can run `wget -qO- containerlab.dev/setup-debian | bash -s -- all` command.
 [^10]: The UTM image has a pre-installed ssh key for the `debian` user. You can download the shared private key from [here](https://github.com/srl-labs/clabernetes/blob/main/launcher/assets/default_id_rsa).

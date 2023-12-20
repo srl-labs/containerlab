@@ -141,9 +141,9 @@ Example of exported data when using default `auto.tmpl` template:
           image: ghcr.io/nokia/srlinux
       nodes:
         srl1:
-          kind: srl
+          kind: nokia_srlinux
         srl2:
-          kind: srl
+          kind: nokia_srlinux
 
       links:
         - endpoints: ["srl1:e1-1", "srl2:e1-1"]
@@ -246,11 +246,12 @@ Example of exported data when using default `auto.tmpl` template:
 
 To simplify SSH access to the nodes started by Containerlab an SSH config file is generated per each deployed lab. The config file instructs SSH clients to not warn users about the changed host keys and also sets the username to the one known by Containerlab:
 
-```title="/etc/ssh/ssh_config.d/clab-<lab-name>.conf"
+```title="<code>/etc/ssh/ssh_config.d/clab-[lab-name].conf</code>"
 # Containerlab SSH Config for the srl lab
+
 Host clab-srl-srl
   User admin
-  StrictHostKeyChecking=no 
+  StrictHostKeyChecking=no
   UserKnownHostsFile=/dev/null
 ```
 

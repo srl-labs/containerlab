@@ -1,0 +1,7 @@
+name: lab1
+
+topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3

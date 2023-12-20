@@ -130,7 +130,7 @@ SR Linux uses a `/etc/opt/srlinux/config.json` file to persist its configuration
 
 #### Default node configuration
 
-When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/main/nodes/srl/srl.go#L38) on top of the factory config:
+When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/srl-template-in-a-file/nodes/srl/srl_default_config.go.tpl) on top of the factory config:
 
 ```yaml
 # example of a topo file that does not define a custom startup-config
@@ -140,17 +140,17 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
 ```
 
-The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
+The rendered config can be found at `/tmp/clab-default-config` path on SR Linux filesystem and will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
 
 Additional configurations that containerlab adds on top of the factory config:
 
 * enabling interfaces (`admin-state enable`) referenced in the topology's `links` section
 * enabling LLDP
-* enabling gNMI/JSON-RPC
+* enabling gNMI/gNOI/JSON-RPC as well as enabling unix-socket access for gRPC services
 * creating tls server certificate
 * setting `mgmt0 subinterface 0 ip-mtu` to the MTU value of the underlying container runtime network
 
@@ -215,7 +215,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       image: ghcr.io/nokia/srlinux
       # a path to the partial config in CLI format relative to the current working directory
@@ -233,7 +233,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       image: ghcr.io/nokia/srlinux
       # a path to the full config in JSON format relative to the current working directory
@@ -271,7 +271,7 @@ name: srl_lab_with_custom_agents
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       ...
       extras:
         srl-agents:

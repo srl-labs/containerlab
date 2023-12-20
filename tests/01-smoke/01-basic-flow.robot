@@ -302,6 +302,24 @@ Verify DNS-Options Config
     Log    ${output}
     Should Contain    ${output}    rotate
 
+Verify Exec rc == 0 on containers match
+    [Documentation]    Checking that the return code is != 0 if on the exce call not containers match
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd "echo test"
+    Log    ${output}
+    Should Contain    ${output}    test
+    Should Not Contain    ${output}    Error: filter did not match any containers
+    Should Be Equal As Integers    ${rc}    0
+
+Verify Exec rc != 0 on no containers match
+    [Documentation]    Checking that the return code is != 0 if on the exce call not containers match
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
+    Log    ${output}
+    Should Not Contain    ${output}    test
+    Should Contain    ${output}    Error: filter did not match any containers
+    Should Not Be Equal As Integers    ${rc}    0
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
@@ -329,7 +347,6 @@ Verify iptables allow rule are gone
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${MgmtBr}
-
 
 *** Keywords ***
 Setup
