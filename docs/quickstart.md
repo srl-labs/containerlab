@@ -40,7 +40,7 @@ name: srlceos01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos

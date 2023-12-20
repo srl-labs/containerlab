@@ -9,7 +9,7 @@ topology:
         overlay_as: 65555
   #----------------------------------------------------#
   kinds:
-    srl:
+    nokia_srlinux:
       image: ghcr.io/nokia/srlinux:21.6.2-67
     vr-sros:
       image: vrnetlab/vr-sros:21.7.R1 # internal image, external users should build/use their own image
@@ -35,7 +35,7 @@ topology:
           as: 65030
     #-----------------------------------------------------#
     spine1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       config:
         vars:
@@ -44,7 +44,7 @@ topology:
           cluster_id: 10.10.10.10
     #-----------------------------------------------------#
     spine2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       config:
         vars:
@@ -53,7 +53,7 @@ topology:
           cluster_id: 10.10.10.10
     #-----------------------------------------------------#
     leaf1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       config:
         vars:
@@ -61,7 +61,7 @@ topology:
           as: 65011
     #-----------------------------------------------------#
     leaf2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       config:
         vars:
@@ -69,7 +69,7 @@ topology:
           as: 65012
     #-----------------------------------------------------#
     leaf3:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       config:
         vars:
@@ -77,7 +77,7 @@ topology:
           as: 65013
     #-----------------------------------------------------#
     leaf4:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       config:
         vars:

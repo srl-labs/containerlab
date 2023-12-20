@@ -10,7 +10,7 @@ topology:
       env3: global
     user: customglobal
   kinds:
-    srl:
+    nokia_srlinux:
       license: kind.lic
       binds:
         - kind.lic:/dst
@@ -20,7 +20,7 @@ topology:
       user: customkind
   nodes:
     node1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       license: node1.lic
       binds:

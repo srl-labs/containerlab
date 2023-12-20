@@ -7,56 +7,56 @@ mgmt:
 
 topology:
   kinds:
-    srl:
-      image: ghcr.io/nokia/srlinux:23.3.3 
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:23.3.3
     linux:
       image: ghcr.io/hellt/network-multitool
   nodes:
     leaf1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.2
       mgmt-ipv6: 2001:172:100:100::2
     leaf2:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.3
       mgmt-ipv6: 2001:172:100:100::3
     leaf3:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.4
       mgmt-ipv6: 2001:172:100:100::4
     leaf4:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.5
       mgmt-ipv6: 2001:172:100:100::5
 
     spine1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.6
       mgmt-ipv6: 2001:172:100:100::6
     spine2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.7
       mgmt-ipv6: 2001:172:100:100::7
     spine3:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.8
       mgmt-ipv6: 2001:172:100:100::8
     spine4:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.9
       mgmt-ipv6: 2001:172:100:100::9
 
     superspine1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.10
       mgmt-ipv6: 2001:172:100:100::10
     superspine2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.11
       mgmt-ipv6: 2001:172:100:100::11

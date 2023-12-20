@@ -3,38 +3,38 @@ name: clos02
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       image: ghcr.io/nokia/srlinux
     linux:
       image: ghcr.io/hellt/network-multitool
   nodes:
     leaf1:
-      kind: srl
+      kind: nokia_srlinux
     leaf2:
-      kind: srl
+      kind: nokia_srlinux
     leaf3:
-      kind: srl
+      kind: nokia_srlinux
     leaf4:
-      kind: srl
+      kind: nokia_srlinux
 
     spine1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
     spine2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
     spine3:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
     spine4:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
 
     superspine1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
     superspine2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
 
     client1:
