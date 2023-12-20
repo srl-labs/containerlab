@@ -3,7 +3,7 @@ name: clos02
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       image: ghcr.io/nokia/srlinux
     linux:
       image: ghcr.io/hellt/network-multitool

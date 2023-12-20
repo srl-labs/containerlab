@@ -285,7 +285,7 @@ Kinds define the behavior and the nature of a node, it says if the node is a spe
 ```yaml
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd2
       image: ghcr.io/nokia/srlinux
   nodes:
