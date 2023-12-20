@@ -7,7 +7,7 @@ The node configuration is part of the [topology definition file](topo-def-file.m
 topology:
   nodes:
     node1:  # node name
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
       startup-config: /root/mylab/node1.cfg
@@ -33,7 +33,7 @@ The `kind` property selects which kind this node is of. Kinds are essentially a 
     ```yaml
     topology:
       defaults:
-        kind: srl
+        kind: nokia_srlinux
       nodes:
         node1:
         # kind value of `srl` is inherited from defaults section
@@ -103,7 +103,7 @@ topology:
 
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       SANs:
         - "test.com"
 ```
@@ -455,7 +455,7 @@ Read more about user-defined management addresses [here](network.md#user-defined
 ```yaml
 nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.20.20.100
 ```
 
@@ -468,7 +468,7 @@ Read more about user-defined management addresses [here](network.md#user-defined
 ```yaml
 nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt_ipv6: 2001:172:20:20::100
 ```
 
@@ -503,7 +503,7 @@ name: demo
 topology:
   nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       publish:
         - tcp/22     # tcp port 22 will be published
         - tcp/57400  # tcp port 57400 will be published
@@ -688,11 +688,11 @@ topology:
 
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
       wait-for:
         - srl1
         - srl2

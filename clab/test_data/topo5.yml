@@ -6,7 +6,7 @@ topology:
         - kind.lic:/dst
   nodes:
     node1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       license: node1.lic
       binds:

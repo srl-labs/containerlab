@@ -14,7 +14,7 @@ name: srlceos01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos
@@ -99,7 +99,7 @@ Let's zoom into the two nodes we have defined in our topology:
 topology:
   nodes:
     srl:                    # this is a name of the 1st node
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
     ceos:                   # this is a name of the 2nd node
@@ -113,7 +113,7 @@ Each node can have multiple configuration properties which make containerlab qui
 
 ```yaml
 srl:
-  kind: srl
+  kind: nokia_srlinux
   type: ixrd2
   image: ghcr.io/nokia/srlinux
 ```
@@ -290,11 +290,11 @@ topology:
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
 ```
 
 In the example above the `topology.kinds` element has `srl` kind referenced. With this, we set some values for the properties of the `srl` kind. A configuration like that says that nodes of `srl` kind will also inherit the properties (type, image) defined on the _kind level_.
@@ -307,15 +307,15 @@ Consider how the topology would have looked like without setting the `kinds` obj
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
 ```

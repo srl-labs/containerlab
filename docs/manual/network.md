@@ -24,9 +24,9 @@ topology:
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
 
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
@@ -143,7 +143,7 @@ mgmt:
 topology:
   nodes:
     n1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.11       # set ipv4 address on management network
       mgmt-ipv6: 2001:172:100:100::11 # set ipv6 address on management network
 ```
@@ -329,7 +329,7 @@ name: host
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
       startup-config: test-srl-config.json
   links:
@@ -358,7 +358,7 @@ name: mgmt
 topology:
   nodes:
     n1:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
   links:
     - endpoints:

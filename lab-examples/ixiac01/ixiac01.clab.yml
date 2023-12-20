@@ -9,7 +9,7 @@ topology:
         - "./ifcfg add eth1 10.1.1.1 24"
         - "./ifcfg add eth2 10.2.2.1 24"
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
       startup-config: srl.cfg
       exec:

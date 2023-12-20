@@ -141,9 +141,9 @@ Example of exported data when using default `auto.tmpl` template:
           image: ghcr.io/nokia/srlinux
       nodes:
         srl1:
-          kind: srl
+          kind: nokia_srlinux
         srl2:
-          kind: srl
+          kind: nokia_srlinux
 
       links:
         - endpoints: ["srl1:e1-1", "srl2:e1-1"]

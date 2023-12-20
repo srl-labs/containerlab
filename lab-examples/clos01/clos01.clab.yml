@@ -9,13 +9,13 @@ topology:
       image: ghcr.io/hellt/network-multitool
   nodes:
     leaf1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
     leaf2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
     spine:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
     client1:
       kind: linux
