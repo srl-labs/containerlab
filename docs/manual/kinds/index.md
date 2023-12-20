@@ -16,7 +16,7 @@ name: srlceos01
 topology:
   nodes:
     node1:
-      kind: srl              # node1 is of srl kind
+      kind: nokia_srlinux              # node1 is of srl kind
       type: ixrd2
       image: ghcr.io/nokia/srlinux
     node2:
@@ -44,6 +44,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Cisco XRv9k**           | [`vr-xrv9k/vr-cisco_xrv9k`](vr-xrv9k.md)            | supported |    VM     |
 | **Cisco XRv**             | [`vr-xrv/vr-cisco_xrv`](vr-xrv.md)                  | supported |    VM     |
 | **Cisco Nexus 9000v**     | [`vr-n9kv/vr-cisco_n9kv`](vr-n9kv.md)               | supported |    VM     |
+| **Cisco FTDv**            | [`cisco_ftdv`](vr-ftdv.md)                          | supported |    VM     |
 | **Cumulus VX**            | [`cvx/cumulus_cvx`](cvx.md)                         | supported | container |
 | **SONiC**                 | [`sonic`](sonic-vs.md)                              | supported | container |
 | **Dell FTOS**             | [`vr-ftosv/vr-dell_ftos`](vr-ftosv.md)              | supported |    VM     |

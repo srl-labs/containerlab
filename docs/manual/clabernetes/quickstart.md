@@ -169,11 +169,11 @@ kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
         topology:
           nodes:
             srl1:
-              kind: srl
+              kind: nokia_srlinux
               image: ghcr.io/nokia/srlinux
               startup-config: srl1.cfg
             srl2:
-              kind: srl
+              kind: nokia_srlinux
               image: ghcr.io/nokia/srlinux
               startup-config: srl2.cfg
 
@@ -195,7 +195,7 @@ kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
                         # here goes a list of exposed ports
                 nodes:
                     srl1:
-                        kind: srl
+                        kind: nokia_srlinux
                         startup-config: srl1.cfg
                         image: ghcr.io/nokia/srlinux
                 links:
@@ -213,7 +213,7 @@ kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
                         # here goes a list of exposed ports
                 nodes:
                     srl2:
-                        kind: srl
+                        kind: nokia_srlinux
                         startup-config: srl2.cfg
                         image: ghcr.io/nokia/srlinux
                 links:

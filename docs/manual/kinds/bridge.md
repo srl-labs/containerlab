@@ -3,7 +3,9 @@ search:
   boost: 4
 ---
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
+
 # Linux bridge
+
 Containerlab can connect its nodes to a Linux bridge instead of interconnecting the nodes directly. This connectivity option is enabled with `bridge` kind and opens a variety of integrations that containerlab labs can have with workloads of other types.
 
 For example, by connecting a lab node to a bridge we can:
@@ -13,10 +15,10 @@ For example, by connecting a lab node to a bridge we can:
 3. scale out containerlab labs by running separate labs in different hosts and get network reachability between them
 4. wiring nodes' data interfaces via a broadcast domain (linux bridge) and use vlans to making dynamic connections
 
-
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:8,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
 ## Using bridge kind
+
 Containerlab doesn't create bridges on users behalf, that means that in order to use a bridge in the [topology definition file](../topo-def-file.md), the bridge needs to be created and enabled first.
 
 Once the bridge is created, it needs to be referenced as a node inside the topology file:
@@ -27,16 +29,16 @@ name: br01
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd2
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
     # note, that the bridge br-clab must be created manually
     br-clab:
       kind: bridge

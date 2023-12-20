@@ -1,12 +1,12 @@
 name: topo5
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       binds:
         - kind.lic:/dst
   nodes:
     node1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       license: node1.lic
       binds:

@@ -140,7 +140,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
 ```
 
@@ -215,7 +215,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       image: ghcr.io/nokia/srlinux
       # a path to the partial config in CLI format relative to the current working directory
@@ -233,7 +233,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
       image: ghcr.io/nokia/srlinux
       # a path to the full config in JSON format relative to the current working directory
@@ -271,7 +271,7 @@ name: srl_lab_with_custom_agents
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       ...
       extras:
         srl-agents:

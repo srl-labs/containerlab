@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package vr_vjunosswitch
+package vr_vjunosevolved
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"juniper_vjunosswitch"}
+	kindnames          = []string{"juniper_vjunosevolved"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 )
 
@@ -31,15 +31,15 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
-		return new(vrVJUNOSSWITCH)
+		return new(vrVJUNOSEVOLVED)
 	}, defaultCredentials)
 }
 
-type vrVJUNOSSWITCH struct {
+type vrVJUNOSEVOLVED struct {
 	nodes.DefaultNode
 }
 
-func (n *vrVJUNOSSWITCH) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrVJUNOSEVOLVED) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
@@ -73,7 +73,7 @@ func (n *vrVJUNOSSWITCH) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) e
 	return nil
 }
 
-func (n *vrVJUNOSSWITCH) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *vrVJUNOSEVOLVED) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -82,7 +82,7 @@ func (n *vrVJUNOSSWITCH) PreDeploy(_ context.Context, params *nodes.PreDeployPar
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
-func (n *vrVJUNOSSWITCH) SaveConfig(_ context.Context) error {
+func (n *vrVJUNOSEVOLVED) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
@@ -97,6 +97,7 @@ func (n *vrVJUNOSSWITCH) SaveConfig(_ context.Context) error {
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrVJUNOSSWITCH) CheckInterfaceName() error {
+func (n *vrVJUNOSEVOLVED) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }
+

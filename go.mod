@@ -8,7 +8,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/containernetworking/plugins v1.4.0
 	github.com/containers/common v0.57.1
-	github.com/containers/podman/v4 v4.8.1
+	github.com/containers/podman/v4 v4.8.2
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.5.0
 	github.com/docker/docker v24.0.7+incompatible
@@ -19,7 +19,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/go-cmp v0.6.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/h2non/gock v1.2.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.6
 	github.com/hashicorp/go-version v1.6.0

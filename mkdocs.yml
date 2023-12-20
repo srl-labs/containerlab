@@ -18,12 +18,14 @@ nav:
           - Juniper vQFX: manual/kinds/vr-vqfx.md
           - Juniper vSRX: manual/kinds/vr-vsrx.md
           - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
+          - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
           - Cisco XRd: manual/kinds/xrd.md
           - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - Cisco XRv: manual/kinds/vr-xrv.md
           - Cisco CSR1000v: manual/kinds/vr-csr.md
           - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - Cisco 8000: manual/kinds/c8000.md
+          - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC: manual/kinds/sonic-vs.md
@@ -97,6 +99,7 @@ nav:
       - Nokia SR Linux and Cisco XRv: lab-examples/vr-xrv.md
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - Nokia SR Linux and Juniper vJunos-switch: lab-examples/srl-vjunos-switch.md
+      - Nokia SR Linux and Juniper vJunosEvolved: lab-examples/srl-vjunosevolved.md
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
@@ -106,6 +109,7 @@ nav:
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
       - OpenBSD: lab-examples/openbsd01.md
+      - Cisco FTDv: lab-examples/ftdv01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md

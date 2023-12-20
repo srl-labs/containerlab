@@ -3,16 +3,16 @@ name: br01
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd2
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
     # note, that the bridge br-clab must be created manually
     br-clab:
       kind: bridge

@@ -21,7 +21,7 @@ name: ext-cont
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     external-node1: #(1)!
       kind: ext-container
@@ -44,7 +44,7 @@ For example, when deploying containerlab topology, users can execute commands in
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     external-node1: #(1)!
       kind: ext-container

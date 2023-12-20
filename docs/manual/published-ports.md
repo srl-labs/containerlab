@@ -26,7 +26,7 @@ name: demo
 topology:
   nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       publish:
         # tcp port 22 will be published and accessible to anyone
         - tcp/22
@@ -70,7 +70,7 @@ name: demo
 topology:
   nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       publish:
         - tls/22     # tcp port 22 will be exposed
         - tls/57400  # tcp port 57400 will be exposed
@@ -99,7 +99,7 @@ name: publish
 topology:
   nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
       publish:
         - tls/22     # tcp port 22 will be exposed

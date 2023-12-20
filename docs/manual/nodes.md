@@ -7,7 +7,7 @@ The node configuration is part of the [topology definition file](topo-def-file.m
 topology:
   nodes:
     node1:  # node name
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
       startup-config: /root/mylab/node1.cfg
@@ -33,7 +33,7 @@ The `kind` property selects which kind this node is of. Kinds are essentially a 
     ```yaml
     topology:
       defaults:
-        kind: srl
+        kind: nokia_srlinux
       nodes:
         node1:
         # kind value of `srl` is inherited from defaults section
@@ -97,13 +97,13 @@ name: srl01
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd3
       image: ghcr.io/nokia/srlinux
 
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       SANs:
         - "test.com"
 ```
@@ -154,7 +154,7 @@ It is possible to specify a remote `http(s)` location for a startup-config file.
 ```yaml
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd3
       image: ghcr.io/nokia/srlinux
       startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
@@ -321,7 +321,7 @@ topology:
       ENV1: 3 # ENV1=3 will be set if it's not set on kind or node level
       ENV2: glob # ENV2=glob will be set for all nodes
   kinds:
-    srl:
+    nokia_srlinux:
       env:
         ENV1: 2 # ENV1=2 will be set to if it's not set on node level
         ENV3: kind # ENV3=kind will be set for all nodes of srl kind
@@ -352,7 +352,7 @@ topology:
       - envfiles/defaults
       - /home/user/clab/default-env
   kinds:
-    srl:
+    nokia_srlinux:
       env-files:
         - envfiles/common
         - ~/spines
@@ -371,7 +371,7 @@ topology:
   defaults:
     user: alice # alice user will be used for all nodes unless set on kind or node levels
   kinds:
-    srl:
+    nokia_srlinux:
       user: bob # bob user will be used for nodes of kind srl unless it is set on node level
   nodes:
     node1:
@@ -387,7 +387,7 @@ topology:
   defaults:
     entrypoint: entrypoint.sh
   kinds:
-    srl:
+    nokia_srlinux:
       entrypoint: entrypoint.sh
   nodes:
     node1:
@@ -403,7 +403,7 @@ topology:
   defaults:
     cmd: bash cmd.sh
   kinds:
-    srl:
+    nokia_srlinux:
       cmd: bash cmd2.sh
   nodes:
     node1:
@@ -425,7 +425,7 @@ topology:
       label1: value1
       label2: value2
   kinds:
-    srl:
+    nokia_srlinux:
       labels:
         label1: kind_value1
         label3: value3
@@ -455,7 +455,7 @@ Read more about user-defined management addresses [here](network.md#user-defined
 ```yaml
 nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.20.20.100
 ```
 
@@ -468,7 +468,7 @@ Read more about user-defined management addresses [here](network.md#user-defined
 ```yaml
 nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt_ipv6: 2001:172:20:20::100
 ```
 
@@ -503,7 +503,7 @@ name: demo
 topology:
   nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       publish:
         - tcp/22     # tcp port 22 will be published
         - tcp/57400  # tcp port 57400 will be published
@@ -657,7 +657,7 @@ topology:
       net.ipv4.ip_forward: 1
       net.ipv6.icmp.ratelimi: 100
   kinds:
-    srl:
+    nokia_srlinux:
       sysctls:
         net.ipv4.ip_forward: 0
         
@@ -677,7 +677,7 @@ In the example below node _srl3_ will wait until _srl1_ and _srl2_ are in runnin
 name: waitfor
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       image: ghcr.io/nokia/srlinux
     linux:
       image: alpine:3
@@ -688,11 +688,11 @@ topology:
 
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
       wait-for:
         - srl1
         - srl2

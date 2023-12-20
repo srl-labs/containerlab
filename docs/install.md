@@ -378,10 +378,10 @@ name: 2srl
 topology:
     nodes:
     srl1:
-        kind: srl
+        kind: nokia_srlinux
         image: ghcr.io/nokia/srlinux
     srl2:
-        kind: srl
+        kind: nokia_srlinux
         image: ghcr.io/nokia/srlinux
 
     links:

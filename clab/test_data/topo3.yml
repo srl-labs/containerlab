@@ -12,7 +12,7 @@ topology:
       default-label: value
   nodes:
     node1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd3
     node2:
-      kind: srl
+      kind: nokia_srlinux
