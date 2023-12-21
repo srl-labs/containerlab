@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2023-12-21T11:08:48.219Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" etag="QbO7tYcanob5Yo7BMa66" version="22.1.11" type="github" pages="3">
+<mxfile host="app.diagrams.net" modified="2023-12-21T11:09:46.139Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" etag="nK5aHvftWLg-a0CpdPSr" version="22.1.11" type="github" pages="3">
   <diagram id="3_zKztBFhm4ZAykGLBfE" name="[0] ixiac-srl">
     <mxGraphModel dx="2074" dy="1121" grid="1" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
@@ -424,7 +424,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="[2] logical" id="JgmpDVv5FKwYG1uvAMNM">
-    <mxGraphModel dx="2555" dy="934" grid="0" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
+    <mxGraphModel dx="1625" dy="431" grid="0" gridSize="1" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4D5766" math="0" shadow="0">
       <root>
         <mxCell id="RsWET3iln7PJOfDM5pqH-0" />
         <mxCell id="RsWET3iln7PJOfDM5pqH-1" parent="RsWET3iln7PJOfDM5pqH-0" />
@@ -522,13 +522,13 @@
           <mxGeometry x="17.5" y="479" width="60" height="30" as="geometry" />
         </mxCell>
         <mxCell id="zQ6JXIBBLnoGGiPw5z6D-24" value="1.1.1.1/24" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontSize=11;rotation=-45;fontColor=#EDF3F5;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;" vertex="1" parent="RsWET3iln7PJOfDM5pqH-1">
-          <mxGeometry x="-213" y="610" width="90" height="30" as="geometry" />
+          <mxGeometry x="-208" y="608" width="90" height="30" as="geometry" />
         </mxCell>
         <mxCell id="zQ6JXIBBLnoGGiPw5z6D-25" value="1.1.1.2/24" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontSize=11;rotation=-45;fontColor=#EDF3F5;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;" vertex="1" parent="RsWET3iln7PJOfDM5pqH-1">
-          <mxGeometry x="-87" y="523" width="90" height="30" as="geometry" />
+          <mxGeometry x="-90" y="520" width="90" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="zQ6JXIBBLnoGGiPw5z6D-26" value="2.2.2.1/24" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontSize=11;rotation=45;fontColor=#EDF3F5;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;" vertex="1" parent="RsWET3iln7PJOfDM5pqH-1">
-          <mxGeometry x="122" y="600" width="90" height="30" as="geometry" />
+        <mxCell id="zQ6JXIBBLnoGGiPw5z6D-26" value="2.2.2.1/24" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontSize=11;rotation=44;fontColor=#EDF3F5;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;" vertex="1" parent="RsWET3iln7PJOfDM5pqH-1">
+          <mxGeometry x="122" y="610" width="90" height="30" as="geometry" />
         </mxCell>
         <mxCell id="zQ6JXIBBLnoGGiPw5z6D-27" value="2.2.2.2/24" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontSize=11;rotation=45;fontColor=#EDF3F5;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;" vertex="1" parent="RsWET3iln7PJOfDM5pqH-1">
           <mxGeometry x="5" y="520" width="90" height="30" as="geometry" />
