@@ -45,14 +45,18 @@ This lab demonstrates a simple IPv4 traffic forwarding scenario where
 - SR Linux interfaces are configured with `1.1.1.2/24` and `2.2.2.2/24` IPv4 addresses.
 - SR Linux is configured to forward the traffic destined for `20.20.20.0/24` to `2.2.2.1` using a static route in the default network instance.
 
+Logical IP topology of the lab is shown below:
+
+![Logical IP topology](../images/ixiac01-ip-diagram.drawio.svg)
+
 #### Configuration
 
 During the lab deployment and test execution the following configuration is applied to the lab nodes to forward and receive traffic.
 
-- **SR Linux**  
+- **SR Linux**
     SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces and install a static route to forward the traffic coming from ixia-c.
 
-- **Keysight ixia-c-one**  
+- **Keysight ixia-c-one**
     IPv4 addresses for `ixia-c-one` node interfaces are configured via the OTG API as part of the [`ipv4_forwarding.go`][ipv4_forwarding] script.
 
 #### Execution
