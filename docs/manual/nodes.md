@@ -751,5 +751,38 @@ To configure key size and certificate validity duration use the following option
     validity-duration: 1h
 ```
 
+### healthcheck
+
+Containerlab supports the [docker healthcheck](https://docs.docker.com/engine/reference/builder/#healthcheck) configuration for the nodes. The healthcheck instruction can be set on the `defaults`, `kind` or `node` level, with the node level likely being the most used one.
+
+Healtcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
+
+```yaml
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - cat /etc/os-release
+        start-period: 3
+        retries: 1
+        interval: 5
+        timeout: 2
+```
+
+The healthcheck instruction is a dictionary that can contain the following keys:
+
+- `test` - the command to run to check the health of the container. The command is provided as a list of strings. The first element of the list is the type of the command - either `CMD` or `CMD-SHELL`, the rest are the arguments.  
+    When `CMD` type is used, the command and its arguments should be provided as a separate list elements. The `CMD-SHELL` allows you to specify the command that will be evaluated by the container's shell.
+- `start-period` - the time in seconds to wait for the container to bootstrap before running the first health check. The default value is 0 seconds.
+- `interval` - the time interval between the health checks. The default value is 30 seconds.
+- `timeout` - the time to wait for a single health check operation to complete. The default value is 30 seconds.
+- `retries` - the number of consecutive healthcheck failures needed to report the container as unhealthy. The default value is 3.
+
+When the node is configured with a healthcheck the health status is visible in the `docker inspect` and `docker ps` outputs.
+
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.
