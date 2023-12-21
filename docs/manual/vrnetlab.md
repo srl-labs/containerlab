@@ -48,6 +48,7 @@ The following table provides a link between the version combinations:
 |                  | [`0.9.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.9.0)   | Support for IPInfusion OcNOS with vrnetlab                                                                                                               |
 | `0.41.0`         | [`0.11.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.11.0) | Added support for Juniper vSRX3.0 via [`juniper_vsrx`](kinds/vr-vsrx.md) kind                                                                            |
 | `0.45.0`         | [`0.12.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.12.0) | Added support for Juniper vJunos-switch via [`juniper_vjunosswitch`](kinds/vr-vjunosswitch.md) kind                                                      |
+| `0.49.0`         | [`0.14.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.14.0) | Added support for [Juniper vJunos-Evolved](kinds/vr-vjunosevolved.md), [Cisco FTDv](kinds/vr-ftdv.md), [OpenBSD](kinds/openbsd.md)                       |
 
 ???note "how to understand version inter-dependency between containerlab and vrnetlab?"
     When new VM-based platform support is added to vrnetlab, it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.  
