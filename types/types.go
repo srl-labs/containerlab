@@ -95,7 +95,7 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// NodeConfig is a struct that contains the information of a container element.
+// NodeConfig contains information of a container element.
 type NodeConfig struct {
 	// name of the Node inside topology YAML
 	ShortName string `json:"shortname,omitempty"`
@@ -162,6 +162,8 @@ type NodeConfig struct {
 	TLSAnchor            string `json:"tls-anchor,omitempty"`
 	// TLS Certificate configuration
 	Certificate *CertificateConfig
+	// Healthcheck configuration parameters
+	Healthcheck *HealthcheckConfig
 	NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
 	// list of ports to publish with mysocketctl
 	Publish []string `json:"publish,omitempty"`
@@ -186,7 +188,7 @@ type NodeConfig struct {
 	DNS     *DNSConfig `json:"dns,omitempty"`
 
 	// Kind parameters
-	////////////////////
+	//
 	// IsRootNamespaceBased flag indicates that a certain nodes network
 	// namespace (usually based on the kind) is the root network namespace
 	IsRootNamespaceBased bool
@@ -383,4 +385,34 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 
 	// default to IfNotPresent
 	return PullPolicyIfNotPresent
+}
+
+// HealthcheckConfig represents healthcheck parameters set for a container.
+type HealthcheckConfig struct {
+	// Test is the command to run to check the health of the container
+	Test []string `yaml:"test,omitempty"`
+	// Interval is the time to wait between checks in seconds
+	Interval int `yaml:"interval,omitempty"`
+	// Timeout is the time in seconds to wait before considering the check to have hung
+	Timeout int `yaml:"timeout,omitempty"`
+	// Retries is the number of consecutive failures needed to consider a container as unhealthy
+	Retries int `yaml:"retries,omitempty"`
+	// StartPeriod is the time to wait for the container to initialize
+	// before starting health-retries countdown in seconds
+	StartPeriod int `yaml:"start-period,omitempty"`
+}
+
+// GetIntervalDuration returns the interval as time.Duration.
+func (h *HealthcheckConfig) GetIntervalDuration() time.Duration {
+	return time.Duration(h.Interval) * time.Second
+}
+
+// GetTimeoutDuration returns the timeout as time.Duration.
+func (h *HealthcheckConfig) GetTimeoutDuration() time.Duration {
+	return time.Duration(h.Timeout) * time.Second
+}
+
+// GetStartPeriodDuration returns the start period as time.Duration.
+func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
+	return time.Duration(h.StartPeriod) * time.Second
 }

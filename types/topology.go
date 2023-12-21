@@ -541,3 +541,21 @@ func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 
 	return cc
 }
+
+func (t *Topology) GetHealthCheckConfig(name string) *HealthcheckConfig {
+	if ndef, ok := t.Nodes[name]; ok {
+		nodeHealthcheckConf := ndef.GetHealthcheckConfig()
+		if nodeHealthcheckConf != nil {
+			return nodeHealthcheckConf
+		}
+
+		kindHealthcheckConf := t.GetKind(t.GetNodeKind(name)).GetHealthcheckConfig()
+		if kindHealthcheckConf != nil {
+			return kindHealthcheckConf
+		}
+
+		return t.GetDefaults().GetHealthcheckConfig()
+	}
+
+	return nil
+}

@@ -419,6 +419,17 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		ExposedPorts: node.PortSet,
 		MacAddress:   node.MacAddress,
 	}
+
+	if node.Healthcheck != nil {
+		containerConfig.Healthcheck = &container.HealthConfig{
+			Test:        node.Healthcheck.Test,
+			Interval:    node.Healthcheck.GetIntervalDuration(),
+			Timeout:     node.Healthcheck.GetTimeoutDuration(),
+			StartPeriod: node.Healthcheck.GetStartPeriodDuration(),
+			Retries:     node.Healthcheck.Retries,
+		}
+	}
+
 	var resources container.Resources
 	if node.Memory != "" {
 		mem, err := humanize.ParseBytes(node.Memory)

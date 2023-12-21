@@ -321,6 +321,10 @@
                 "certificate": {
                     "type": "object",
                     "$ref": "#/definitions/certificate-config"
+                },
+                "healthcheck": {
+                    "type": "object",
+                    "$ref": "#/definitions/healthcheck-config"
                 }
             },
             "allOf": [
@@ -480,6 +484,39 @@
                 "issue": {
                     "description": "Set to `true` to generate a TLS certificate for the node",
                     "markdownDescription": "Set to `true` to [generate a TLS certificate for the node](https://containerlab.dev/manual/nodes/#certificate)"
+                }
+            }
+        },
+        "healthcheck-config": {
+            "type": "object",
+            "description": "Node's Healthcheck configuration option",
+            "markdownDescription": "Node's [Healthcheck configuration options](https://containerlab.dev/manual/nodes/#healthcheck)",
+            "properties": {
+                "test": {
+                    "type": "array",
+                    "description": "test command",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "interval": {
+                    "type": "integer",
+                    "description": "test execution interval",
+                    "markdownDescription": "test execution interval"
+                },
+                "retries": {
+                    "type": "integer",
+                    "description": "test execution retries",
+                    "markdownDescription": "test execution retries"
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "test execution timeout in seconds",
+                    "markdownDescription": "test execution timeout in seconds"
+                },
+                "start-period": {
+                    "type": "integer",
+                    "description": "time in seconds to wait before starting the healthcheck"
                 }
             }
         },

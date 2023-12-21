@@ -147,6 +147,15 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	}
 	// Defaults for health checks
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{}
+
+	if cfg.Healthcheck != nil {
+		specHCheckConfig.HealthConfig.Test = cfg.Healthcheck.Test
+		specHCheckConfig.HealthConfig.Retries = cfg.Healthcheck.Retries
+		specHCheckConfig.HealthConfig.Interval = cfg.Healthcheck.GetIntervalDuration()
+		specHCheckConfig.HealthConfig.StartPeriod = cfg.Healthcheck.GetStartPeriodDuration()
+		specHCheckConfig.HealthConfig.Timeout = cfg.Healthcheck.GetTimeoutDuration()
+	}
+
 	// Everything below is related to network spec of a container
 	specNetConfig := specgen.ContainerNetworkConfig{}
 

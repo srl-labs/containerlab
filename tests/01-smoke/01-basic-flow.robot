@@ -320,6 +320,21 @@ Verify Exec rc != 0 on no containers match
     Should Contain    ${output}    Error: filter did not match any containers
     Should Not Be Equal As Integers    ${rc}    0
 
+Verify l1 node is healthy
+    [Documentation]    Checking if l1 node is healthy after the lab is deployed
+
+    Sleep    3s
+
+    ${output} =    Process.Run Process
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f ''{{.State.Health.Status}}''
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    # check if output contains the healthy status
+    Should Not Contain    ${output.stdout}    unhealthy
+    Should Contain    ${output.stdout}    healthy
+
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
@@ -347,6 +362,7 @@ Verify iptables allow rule are gone
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${MgmtBr}
+
 
 *** Keywords ***
 Setup
