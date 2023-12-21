@@ -47,16 +47,16 @@ This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
 Logical IP topology of the lab is shown below:
 
-![Logical IP topology](../images/ixiac01-ip-diagram.drawio.svg)
+<div class='mxgraph' style='max-width:100%;border:1px solid transparent;margin:0 auto; display:block;' data-mxgraph='{"page":2,"zoom":2,"highlight":"#0000ff","nav":true,"resize":true,"edit":"_blank","url":"https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ixiac"}'></div>
 
 #### Configuration
 
 During the lab deployment and test execution the following configuration is applied to the lab nodes to forward and receive traffic.
 
-- **SR Linux**
+- **SR Linux**  
     SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces and install a static route to forward the traffic coming from ixia-c.
 
-- **Keysight ixia-c-one**
+- **Keysight ixia-c-one**  
     IPv4 addresses for `ixia-c-one` node interfaces are configured via the OTG API as part of the [`ipv4_forwarding.go`][ipv4_forwarding] script.
 
 #### Execution
