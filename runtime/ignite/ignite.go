@@ -140,7 +140,7 @@ func (c *IgniteRuntime) DeleteNet(ctx context.Context) error {
 
 // PullImage pulls the provided image name if it does not exist.
 // Ignite does ignore the pullPolicy though.
-func (*IgniteRuntime) PullImage(_ context.Context, imageName string, pullPolicy types.PullPolicyValue) error {
+func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ types.PullPolicyValue) error {
 	ociRef, err := meta.NewOCIImageRef(imageName)
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI image ref %q: %s", imageName, err)
@@ -198,7 +198,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runti
 	vm.Labels = nodecfg.Labels
 	metadata.SetNameAndUID(vm, providers.Client)
 
-	copyFiles := []api.FileMapping{}
+	var copyFiles []api.FileMapping
 	for _, bind := range nodecfg.Binds {
 		parts := strings.Split(bind, ":")
 		if len(parts) < 2 {
@@ -277,7 +277,7 @@ func (*IgniteRuntime) CreateContainer(_ context.Context, node *types.NodeConfig)
 	return node.LongName, nil
 }
 
-func (i *IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
+func (*IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
 	pid, err := utils.ContainerNSToPID(cID)
 	if err != nil {
 		return err
@@ -286,7 +286,7 @@ func (i *IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
 	return utils.PauseProcessGroup(pid)
 }
 
-func (i *IgniteRuntime) UnpauseContainer(_ context.Context, cID string) error {
+func (*IgniteRuntime) UnpauseContainer(_ context.Context, cID string) error {
 	pid, err := utils.ContainerNSToPID(cID)
 	if err != nil {
 		return err
@@ -303,11 +303,13 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	var result []runtime.GenericContainer
 
-	var labelStrings []string
+	var metaFilters []string
 	for _, gf := range gfilters {
 		if gf.FilterType == "label" && gf.Operator == "=" {
-			labelStrings = append(labelStrings, fmt.Sprintf(
+			metaFilters = append(metaFilters, fmt.Sprintf(
 				"{{.ObjectMeta.Labels.%s}}=%s", gf.Field, gf.Match))
+		} else if gf.FilterType == "name" {
+			metaFilters = append(metaFilters, fmt.Sprintf("{{.ObjectMeta.Name}}=%s", gf.Match))
 		}
 	}
 
@@ -316,17 +318,17 @@ func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.Gene
 		return result, fmt.Errorf("failed to list all VMs: %s", err)
 	}
 
-	if len(labelStrings) < 1 {
+	if len(metaFilters) < 1 {
 		return c.produceGenericContainerList(allVMs)
 	}
 
-	metaFilter := strings.Join(labelStrings, ",")
+	metaFilter := strings.Join(metaFilters, ",")
 	filters, err := filter.GenerateMultipleMetadataFiltering(metaFilter)
 	if err != nil {
 		return result, fmt.Errorf("failed to generate filters: %s", err)
 	}
 
-	filteredVMs := []*api.VM{}
+	var filteredVMs []*api.VM
 	for _, vm := range allVMs {
 		isExpected, err := filters.AreExpected(vm)
 		if err != nil {
@@ -446,12 +448,12 @@ func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string)
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container
 // no-op for ignite.
-func (c *IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
+func (*IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
 	return "", nil
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container.
-func (c *IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) runtime.ContainerStatus {
+func (*IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) runtime.ContainerStatus {
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {
 		return runtime.NotFound

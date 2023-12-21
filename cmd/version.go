@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -30,28 +31,29 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
-var slug = `
-                           _                   _       _     
-                 _        (_)                 | |     | |    
- ____ ___  ____ | |_  ____ _ ____   ____  ____| | ____| | _  
-/ ___) _ \|  _ \|  _)/ _  | |  _ \ / _  )/ ___) |/ _  | || \ 
-( (__| |_|| | | | |_( ( | | | | | ( (/ /| |   | ( ( | | |_) )
-\____)___/|_| |_|\___)_||_|_|_| |_|\____)_|   |_|\_||_|____/ 
-`
+// this a note to self how color codes work
+// https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
+// https://patorjk.com/software/taag/#p=display&f=Ivrit&t=CONTAINERlab
+//
+//go:embed logo.txt
+var projASCIILogo string
 
 // versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "show containerlab version or upgrade",
 
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(slug)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println(projASCIILogo)
+
 		verSlug := docsLinkFromVer(version)
 		fmt.Printf("    version: %s\n", version)
 		fmt.Printf("     commit: %s\n", commit)
 		fmt.Printf("       date: %s\n", date)
 		fmt.Printf("     source: %s\n", repoUrl)
 		fmt.Printf(" rel. notes: https://containerlab.dev/rn/%s\n", verSlug)
+
+		return nil
 	},
 }
 

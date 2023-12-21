@@ -1,7 +1,7 @@
 name: topo2
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       license: kind.lic
       type: ixrd2
       env:
@@ -11,11 +11,11 @@ topology:
         kind-label: value
   nodes:
     node1:
-      kind: srl
+      kind: nokia_srlinux
       binds:
         - node1.lic:/dst1
         - kind.lic:/dst2
         - __clabNodeDir__/somefile:/somefile
     node2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixr10

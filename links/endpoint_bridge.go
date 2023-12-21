@@ -5,11 +5,18 @@ import (
 	"fmt"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 type EndpointBridge struct {
 	EndpointGeneric
+}
+
+func NewEndpointBridge(eg *EndpointGeneric) *EndpointBridge {
+	return &EndpointBridge{
+		EndpointGeneric: *eg,
+	}
 }
 
 func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
@@ -38,7 +45,7 @@ func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
 // network namespace referenced via the provided nspath handle.
 func CheckBridgeExists(n Node) error {
 	return n.ExecFunction(func(_ ns.NetNS) error {
-		br, err := netlink.LinkByName(n.GetShortName())
+		br, err := utils.LinkByNameOrAlias(n.GetShortName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 		switch {
 		case notfound:

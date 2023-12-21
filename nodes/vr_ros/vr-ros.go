@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"vr-ros", "vr-mikrotik_ros"}
+	kindnames          = []string{"mikrotik_ros", "vr-ros", "vr-mikrotik_ros"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 

@@ -169,11 +169,11 @@ kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
         topology:
           nodes:
             srl1:
-              kind: srl
+              kind: nokia_srlinux
               image: ghcr.io/nokia/srlinux
               startup-config: srl1.cfg
             srl2:
-              kind: srl
+              kind: nokia_srlinux
               image: ghcr.io/nokia/srlinux
               startup-config: srl2.cfg
 
@@ -195,7 +195,7 @@ kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
                         # here goes a list of exposed ports
                 nodes:
                     srl1:
-                        kind: srl
+                        kind: nokia_srlinux
                         startup-config: srl1.cfg
                         image: ghcr.io/nokia/srlinux
                 links:
@@ -213,7 +213,7 @@ kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
                         # here goes a list of exposed ports
                 nodes:
                     srl2:
-                        kind: srl
+                        kind: nokia_srlinux
                         startup-config: srl2.cfg
                         image: ghcr.io/nokia/srlinux
                 links:
@@ -399,7 +399,7 @@ We essentially execute `ssh admin@srl1` command inside the pod, as you'd normall
 
 ## Datapath stitching
 
-One of the challanges associated with distributed labs is to enable connectivity between the nodes as per user's intent.
+One of the challenges associated with distributed labs is to enable connectivity between the nodes as per user's intent.
 
 Thanks to k8s and accompanying Load Balancer service, the management network access is taken care of. You get access to the management interfaces of each pod out of the box. But what about the non-management links we defined in the original topology file?
 
@@ -474,7 +474,7 @@ rtt min/avg/max/mdev = 8.823/41.798/74.773/32.975 ms
 
 ## VM-based nodes?
 
-In this quickstart we used native containerized Network OS - SR Linux - as it is lightweigt and publicly available. But what if you want to use a VM-based Network OS like Nokia SR OS, Cisco IOS-XRv or Juniper vMX? Can you do that with clabernetes?
+In this quickstart we used native containerized Network OS - SR Linux - as it is lightweight and publicly available. But what if you want to use a VM-based Network OS like Nokia SR OS, Cisco IOS-XRv or Juniper vMX? Can you do that with clabernetes?
 
 Short answer is yes. Clabernetes should be able to run VM-based nodes as well, but your cluster nodes must support nested virtualization, same as you would need to run VM-based nodes in containerlab.
 

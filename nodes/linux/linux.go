@@ -34,7 +34,6 @@ type linux struct {
 func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
-
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
@@ -42,7 +41,7 @@ func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// make ipv6 enabled on all linux node interfaces
 	// but not for the nodes with host network mode, as this is not supported on gh action runners
-	if n.Config().NetworkMode != "host" {
+	if cfg.Sysctls != nil && n.Config().NetworkMode != "host" {
 		cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "0"
 	}
 

@@ -1,0 +1,73 @@
+name: vxlan-test
+
+"on":
+  workflow_call:
+    inputs:
+      py_ver:
+        required: true
+        type: string
+
+jobs:
+  vxlan-tests:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        runtime:
+          - "docker"
+        test-suite:
+          - "01*.robot"
+          - "02*.robot"
+          - "03*.robot"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: containerlab
+
+      - name: Move containerlab to usr/bin
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.py_ver }}
+          cache: pip
+          cache-dependency-path: "tests/requirements.txt"
+
+      - name: Install robotframework
+        run: |
+          pip install -r tests/requirements.txt
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests
+        run: |
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/08-vxlan/${{ matrix.test-suite }}
+
+      - name: Sanitize test-suite name
+        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 08-vxlan-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          path: ./tests/out/*.html
+
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-vxlan-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          path: /tmp/clab-tests/coverage/*
+          retention-days: 7

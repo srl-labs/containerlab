@@ -21,13 +21,20 @@ const (
 
 	LinkDeploymentStateNotDeployed = iota
 	LinkDeploymentStateDeployed
+	LinkDeploymentStateRemoved
 )
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
-	MTU    int                    `yaml:"mtu,omitempty"`
-	Labels map[string]string      `yaml:"labels,omitempty"`
-	Vars   map[string]interface{} `yaml:"vars,omitempty"`
+	MTU             int                    `yaml:"mtu,omitempty"`
+	Labels          map[string]string      `yaml:"labels,omitempty"`
+	Vars            map[string]interface{} `yaml:"vars,omitempty"`
+	DeploymentState LinkDeploymentState
+}
+
+// GetMTU returns the MTU of the link.
+func (l *LinkCommonParams) GetMTU() int {
+	return l.MTU
 }
 
 // LinkDefinition represents a link definition in the topology file.
@@ -40,10 +47,12 @@ type LinkDefinition struct {
 type LinkType string
 
 const (
-	LinkTypeVEth    LinkType = "veth"
-	LinkTypeMgmtNet LinkType = "mgmt-net"
-	LinkTypeMacVLan LinkType = "macvlan"
-	LinkTypeHost    LinkType = "host"
+	LinkTypeVEth        LinkType = "veth"
+	LinkTypeMgmtNet     LinkType = "mgmt-net"
+	LinkTypeMacVLan     LinkType = "macvlan"
+	LinkTypeHost        LinkType = "host"
+	LinkTypeVxlan       LinkType = "vxlan"
+	LinkTypeVxlanStitch LinkType = "vxlan-stitch"
 
 	// LinkTypeBrief is a link definition where link types
 	// are encoded in the endpoint definition as string and allow users
@@ -56,14 +65,25 @@ func parseLinkType(s string) (LinkType, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
 	case string(LinkTypeMacVLan):
 		return LinkTypeMacVLan, nil
+
 	case string(LinkTypeVEth):
 		return LinkTypeVEth, nil
+
 	case string(LinkTypeMgmtNet):
 		return LinkTypeMgmtNet, nil
+
 	case string(LinkTypeHost):
 		return LinkTypeHost, nil
+
 	case string(LinkTypeBrief):
 		return LinkTypeBrief, nil
+
+	case string(LinkTypeVxlan):
+		return LinkTypeVxlan, nil
+
+	case string(LinkTypeVxlanStitch):
+		return LinkTypeVxlanStitch, nil
+
 	default:
 		return "", fmt.Errorf("unable to parse %q as LinkType", s)
 	}
@@ -73,7 +93,7 @@ var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
 
 // UnmarshalYAML deserializes links passed via topology file into LinkDefinition struct.
 // It supports both the brief and specific link type notations.
-func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error { // skipcq: GO-R1005
 	// struct to avoid recursion when unmarshalling
 	// used only to unmarshal the type field.
 	var a struct {
@@ -119,6 +139,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkVEthRaw
+
 	case LinkTypeMgmtNet:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -129,6 +150,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkMgmtNetRaw
+
 	case LinkTypeHost:
 		var l struct {
 			Type        string `yaml:"type"`
@@ -139,6 +161,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkHostRaw
+
 	case LinkTypeMacVLan:
 		var l struct {
 			Type           string `yaml:"type"`
@@ -149,6 +172,31 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 			return err
 		}
 		ld.Link = &l.LinkMacVlanRaw
+
+	case LinkTypeVxlan:
+		var l struct {
+			Type         string `yaml:"type"`
+			LinkVxlanRaw `yaml:",inline"`
+		}
+		err := unmarshal(&l)
+		if err != nil {
+			return err
+		}
+		l.LinkVxlanRaw.LinkType = LinkTypeVxlan
+		ld.Link = &l.LinkVxlanRaw
+
+	case LinkTypeVxlanStitch:
+		var l struct {
+			Type         string `yaml:"type"`
+			LinkVxlanRaw `yaml:",inline"`
+		}
+		err := unmarshal(&l)
+		if err != nil {
+			return err
+		}
+		l.LinkVxlanRaw.LinkType = LinkTypeVxlanStitch
+		ld.Link = &l.LinkVxlanRaw
+
 	case LinkTypeBrief:
 		// brief link's endpoint format
 		var l struct {
@@ -167,6 +215,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 		if err != nil {
 			return err
 		}
+
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
 	}
@@ -218,6 +267,15 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 			Type:           string(LinkTypeMacVLan),
 		}
 		return x, nil
+	case LinkTypeVxlan:
+		x := struct {
+			Type         string `yaml:"type"`
+			LinkVxlanRaw `yaml:",inline"`
+		}{
+			LinkVxlanRaw: *r.Link.(*LinkVxlanRaw),
+			Type:         string(LinkTypeMacVLan),
+		}
+		return x, nil
 	case LinkTypeBrief:
 		return r.Link, nil
 	}
@@ -245,26 +303,42 @@ type Link interface {
 	GetType() LinkType
 	// GetEndpoints returns the endpoints of the link.
 	GetEndpoints() []Endpoint
+	// GetMTU returns the Link MTU.
+	GetMTU() int
 }
 
-func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string) {
+func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string, err error) {
 	// the index of the node is the specialEndpointIndex +1  modulo 2
 	nodeindex := (specialEPIndex + 1) % 2
 
 	hostData := strings.SplitN(lb.Endpoints[specialEPIndex], ":", 2)
 	nodeData := strings.SplitN(lb.Endpoints[nodeindex], ":", 2)
 
+	if len(hostData) != 2 {
+		return "", "", "", "",
+			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[specialEPIndex])
+	}
+
+	if len(nodeData) != 2 {
+		return "", "", "", "",
+			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[nodeindex])
+	}
+
 	host = hostData[0]
 	hostIf = hostData[1]
 	node = nodeData[0]
 	nodeIf = nodeData[1]
 
-	return host, hostIf, node, nodeIf
+	return host, hostIf, node, nodeIf, nil
 }
 
 func genRandomIfName() string {
+	return "clab-" + genRandomString(8)
+}
+
+func genRandomString(length int) string {
 	s, _ := uuid.New().MarshalText() // .MarshalText() always return a nil error
-	return "clab-" + string(s[:8])
+	return string(s[:length])
 }
 
 // Node interface is an interface that is satisfied by all nodes.
@@ -287,6 +361,7 @@ type Node interface {
 	GetEndpoints() []Endpoint
 	ExecFunction(func(ns.NetNS) error) error
 	GetState() state.NodeState
+	Delete(ctx context.Context) error
 }
 
 type LinkEndpointType string
@@ -301,26 +376,38 @@ const (
 // and return a function that can run in the netns.Do() call for execution in a network namespace.
 func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
-		// rename the given link
-		err := netlink.LinkSetName(l, endpt.GetIfaceName())
-		if err != nil {
-			return fmt.Errorf(
-				"failed to rename link: %v", err)
+		// rename the link created with random name if its length is acceptable by linux
+		if len(endpt.GetIfaceName()) < 16 {
+			err := netlink.LinkSetName(l, endpt.GetIfaceName())
+			if err != nil {
+				return fmt.Errorf(
+					"failed to rename link: %v", err)
+			}
+		} else {
+			// else we set the desired long name as alias
+			// in future we need to set it as an alternative name,
+			// pending https://github.com/vishvananda/netlink/pull/862
+			err := netlink.LinkSetAlias(l, endpt.GetIfaceName())
+			if err != nil {
+				return fmt.Errorf(
+					"failed to add alias: %v", err)
+			}
 		}
 
 		// lets set the MAC address if provided
 		if len(endpt.GetMac()) == 6 {
-			err = netlink.LinkSetHardwareAddr(l, endpt.GetMac())
+			err := netlink.LinkSetHardwareAddr(l, endpt.GetMac())
 			if err != nil {
 				return err
 			}
 		}
 
 		// bring the given link up
-		if err = netlink.LinkSetUp(l); err != nil {
+		if err := netlink.LinkSetUp(l); err != nil {
 			return fmt.Errorf("failed to set %q up: %v",
 				endpt.GetIfaceName(), err)
 		}
+
 		return nil
 	}
 }
@@ -334,6 +421,11 @@ type ResolveParams struct {
 	// list of node shortnames that user
 	// passed as a node filter
 	NodesFilter []string
+	// for the tools command we need to overwrite the
+	// veth interface name on the host side. So this can
+	// be set and will thereby overwrite the general interface
+	// name generation.
+	VxlanIfaceNameOverwrite string
 }
 
 type VerifyLinkParams struct {

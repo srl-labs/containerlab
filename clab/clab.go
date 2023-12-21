@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/exp/slices"
 )
@@ -126,15 +128,10 @@ func WithKeepMgmtNet() ClabOption {
 
 func WithTopoPath(path, varsFile string) ClabOption {
 	return func(c *CLab) error {
-		if path == "" {
-			return fmt.Errorf("provide a path to the clab topology file")
-		}
-
-		file, err := findTopoFileByPath(path)
+		file, err := c.ProcessTopoPath(path)
 		if err != nil {
 			return err
 		}
-
 		if err := c.GetTopology(file, varsFile); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
@@ -143,9 +140,40 @@ func WithTopoPath(path, varsFile string) ClabOption {
 	}
 }
 
+// ProcessTopoPath takes a topology path, which might be the path to a directory or a file
+// or stdin or a URL and returns the topology file name if found.
+func (c *CLab) ProcessTopoPath(path string) (string, error) {
+	var file string
+	var err error
+
+	switch {
+	case path == "-" || path == "stdin":
+		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
+		if err != nil {
+			return "", err
+		}
+	// if the path is not a local file and a URL, download the file and store it in the tmp dir
+	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
+		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
+		if err != nil {
+			return "", err
+		}
+
+	case path == "":
+		return "", fmt.Errorf("provide a path to the clab topology file")
+
+	default:
+		file, err = FindTopoFileByPath(path)
+		if err != nil {
+			return "", err
+		}
+	}
+	return file, nil
+}
+
 // findTopoFileByPath takes a topology path, which might be the path to a directory
 // and returns the topology file name if found.
-func findTopoFileByPath(path string) (string, error) {
+func FindTopoFileByPath(path string) (string, error) {
 	finfo, err := os.Stat(path)
 	if err != nil {
 		return "", err
@@ -155,9 +183,9 @@ func findTopoFileByPath(path string) (string, error) {
 	file := path
 
 	// we might have gotten a dirname
-	// lets try to find a single *.clab.yml
+	// lets try to find a single *.clab.y*ml
 	if finfo.IsDir() {
-		matches, err := filepath.Glob(filepath.Join(path, "*.clab.yml"))
+		matches, err := filepath.Glob(filepath.Join(path, "*.clab.y*ml"))
 		if err != nil {
 			return "", err
 		}
@@ -182,6 +210,34 @@ func findTopoFileByPath(path string) (string, error) {
 	}
 
 	return file, nil
+}
+
+// readFromStdin reads the topology file from stdin
+// creates a temp file with topology contents
+// and returns a path to the temp file.
+func readFromStdin(tempDir string) (string, error) {
+	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tmpFile.ReadFrom(os.Stdin)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
+}
+
+func downloadTopoFile(url, tempDir string) (string, error) {
+	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
+	if err != nil {
+		return "", err
+	}
+
+	err = utils.CopyFile(url, tmpFile.Name(), 0644)
+
+	return tmpFile.Name(), err
 }
 
 // WithNodeFilter option sets a filter for nodes to be deployed.
@@ -253,6 +309,14 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	if c.TopoPaths.TopologyFileIsSet() {
 		err = c.parseTopology()
 	}
+
+	// Extract the host systems DNS servers and populate the
+	// Nodes DNS Config with these if not specifically provided
+	fileSystem := os.DirFS("/")
+	if err := c.ExtractDNSServers(fileSystem); err != nil {
+		return nil, err
+	}
+
 	return c, err
 }
 
@@ -602,6 +666,14 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	close(concurrentChan)
 	close(serialChan)
 
+	// also call delete on the special nodes
+	for _, n := range c.GetSpecialLinkNodes() {
+		err := n.Delete(ctx)
+		if err != nil {
+			log.Warn(err)
+		}
+	}
+
 	wg.Wait()
 }
 
@@ -663,38 +735,9 @@ func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error)
 	return nil, fmt.Errorf("could not find a container matching name %q", contName)
 }
 
-// VethCleanup iterates over links found in clab topology to initiate removal of dangling veths
-// in host networking namespace or attached to linux bridge.
-// See https://github.com/srl-labs/containerlab/issues/842 for the reference.
-func (c *CLab) VethCleanup(ctx context.Context) error {
-	hostBasedEndpoints := []links.Endpoint{}
-
-	// collect the endpoints of regular nodes
-	for _, n := range c.Nodes {
-		if n.Config().IsRootNamespaceBased || n.Config().NetworkMode == "host" {
-			hostBasedEndpoints = append(hostBasedEndpoints, n.GetEndpoints()...)
-		}
-	}
-
-	// collect the endpoints of the fake nodes
-	hostBasedEndpoints = append(hostBasedEndpoints, links.GetHostLinkNode().GetEndpoints()...)
-	hostBasedEndpoints = append(hostBasedEndpoints, links.GetMgmtBrLinkNode().GetEndpoints()...)
-
-	var joinedErr error
-	for _, ep := range hostBasedEndpoints {
-		// finally remove all the collected endpoints
-		log.Debugf("removing endpoint %s", ep.String())
-		err := ep.Remove()
-		if err != nil {
-			joinedErr = errors.Join(joinedErr, err)
-		}
-	}
-
-	return joinedErr
-}
-
-// ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
-func (c *CLab) ResolveLinks() error {
+// GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes - host and mgmt-net.
+// The CLab nodes are copied to a new map and thus clab.Node interface is converted to link.Node.
+func (c *CLab) GetLinkNodes() map[string]links.Node {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
 	// If no circ deps were in place we could've used c.Nodes map instead.
@@ -705,16 +748,31 @@ func (c *CLab) ResolveLinks() error {
 	}
 
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
-	specialNodes := map[string]links.Node{
-		"host":     links.GetHostLinkNode(),
-		"mgmt-net": links.GetMgmtBrLinkNode(),
-	}
+	specialNodes := c.GetSpecialLinkNodes()
 	for _, n := range specialNodes {
 		resolveNodes[n.GetShortName()] = n
 	}
 
+	return resolveNodes
+}
+
+// GetSpecialLinkNodes returns a map of special nodes that are used to resolve links.
+// Special nodes are host and mgmt-bridge nodes that are not typically present in the topology file
+// but are required to resolve links.
+func (c *CLab) GetSpecialLinkNodes() map[string]links.Node {
+	// add the virtual host and mgmt-bridge nodes to the resolve nodes
+	specialNodes := map[string]links.Node{
+		"host":     links.GetHostLinkNode(),
+		"mgmt-net": links.GetMgmtBrLinkNode(),
+	}
+
+	return specialNodes
+}
+
+// ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
+func (c *CLab) ResolveLinks() error {
 	resolveParams := &links.ResolveParams{
-		Nodes:          resolveNodes,
+		Nodes:          c.GetLinkNodes(),
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
 		NodesFilter:    c.nodeFilter,
 	}
@@ -732,6 +790,44 @@ func (c *CLab) ResolveLinks() error {
 
 		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
 		c.Links[i] = l
+	}
+
+	return nil
+}
+
+// ExtractDNSServers extracts DNS servers from the resolv.conf files
+// and populates the Nodes DNS Config with these if not specifically provided.
+func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
+	// extract DNS servers from the relevant resolv.conf files
+	DNSServers, err := utils.ExtractDNSServersFromResolvConf(filesys,
+		[]string{"etc/resolv.conf", "run/systemd/resolve/resolv.conf"})
+	if err != nil {
+		return err
+	}
+
+	// no DNS Servers found, return
+	if len(DNSServers) == 0 {
+		return nil
+	}
+
+	// if no dns servers are explicitly configured,
+	// we set the DNS servers that we've extracted.
+	for _, n := range c.Nodes {
+		config := n.Config()
+		// skip nodes in container network mode since docker doesn't allow
+		// setting dns config for them
+		if strings.HasPrefix(config.NetworkMode, "container") {
+			log.Debugf("Skipping DNS config for node %s as it is in container network mode", config.ShortName)
+			continue
+		}
+
+		if config.DNS == nil {
+			config.DNS = &types.DNSConfig{}
+		}
+
+		if n.Config().DNS.Servers == nil {
+			n.Config().DNS.Servers = DNSServers
+		}
 	}
 
 	return nil

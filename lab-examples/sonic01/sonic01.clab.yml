@@ -3,7 +3,7 @@ name: sonic01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     sonic:
       kind: sonic-vs

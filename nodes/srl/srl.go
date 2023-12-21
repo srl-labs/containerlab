@@ -33,53 +33,25 @@ import (
 )
 
 const (
-	srlDefaultType = "ixrd2"
+	srlDefaultType = "ixrd2" // default srl node type
 
-	readyTimeout = time.Minute * 2 // max wait time for node to boot
+	readyTimeout = time.Minute * 5 // max wait time for node to boot
 	retryTimer   = time.Second
-	// additional config that clab adds on top of the factory config.
-	srlConfigCmdsTpl = `set / system tls server-profile clab-profile
-set / system tls server-profile clab-profile key "{{ .TLSKey }}"
-set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
-{{- if .TLSAnchor }}
-set / system tls server-profile clab-profile authenticate-client true
-set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
-{{- else }}
-set / system tls server-profile clab-profile authenticate-client false
-{{- end }}
-set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
-set / system gnmi-server rate-limit 65000
-set / system gnmi-server trace-options [ request response common ]
-set / system gnmi-server unix-socket admin-state enable
-set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
-set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
-set / system snmp community public
-set / system snmp network-instance mgmt
-set / system snmp network-instance mgmt admin-state enable
-set / system lldp admin-state enable
-set / system aaa authentication idle-timeout 7200
-{{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
-{{- range $epName, $ep := .IFaces }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
-  {{- if ne $ep.Mtu 0 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
-  {{- end }}
 
-  {{- if ne $ep.BreakoutNo  "" }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
-  {{- end }}
-
-{{ end -}}
-{{- if .SSHPubKeys }}
-set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
-set / system aaa authentication admin-user ssh-key [ {{ .SSHPubKeys }} ]
-{{- end }}
-set / system banner login-banner "{{ .Banner }}"
-commit save`
+	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory config.
+	// Default config is a config that adds some basic configuration to the node, such as tls certs, gnmi/json-rpc, login-banner.
+	defaultCfgPath = "/tmp/clab-default-config"
+	// overlayCfgPath is a path to a file with additional config that clab adds on top of the default config.
+	// Partial config provided via startup-config parameter is an overlay config.
+	overlayCfgPath = "/tmp/clab-overlay-config"
 )
 
 var (
+
+	// additional config that clab adds on top of the factory config.
+	//go:embed srl_default_config.go.tpl
+	srlConfigCmdsTpl string
+
 	KindNames = []string{"srl", "nokia_srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
@@ -92,22 +64,23 @@ var (
 	defaultCredentials = nodes.NewCredentials("admin", "NokiaSrl1!")
 
 	srlTypes = map[string]string{
-		"ixrd1":  "7220IXRD1.yml",
-		"ixrd2":  "7220IXRD2.yml",
-		"ixrd3":  "7220IXRD3.yml",
-		"ixrd2l": "7220IXRD2L.yml",
-		"ixrd3l": "7220IXRD3L.yml",
-		"ixrd4":  "7220IXRD4.yml",
-		"ixrd5":  "7220IXRD5.yml",
-		"ixrd5t": "7220IXRD5T.yml",
-		"ixrh2":  "7220IXRH2.yml",
-		"ixrh3":  "7220IXRH3.yml",
-		"ixrh4":  "7220IXRH4.yml",
-		"ixr6":   "7250IXR6.yml",
-		"ixr6e":  "7250IXR6e.yml",
-		"ixr10":  "7250IXR10.yml",
-		"ixr10e": "7250IXR10e.yml",
-		"fiji":   "fiji.yml",
+		"ixrd1":    "7220IXRD1.yml",
+		"ixrd2":    "7220IXRD2.yml",
+		"ixrd3":    "7220IXRD3.yml",
+		"ixrd2l":   "7220IXRD2L.yml",
+		"ixrd3l":   "7220IXRD3L.yml",
+		"ixrd4":    "7220IXRD4.yml",
+		"ixrd5":    "7220IXRD5.yml",
+		"ixrd5t":   "7220IXRD5T.yml",
+		"ixrh2":    "7220IXRH2.yml",
+		"ixrh3":    "7220IXRH3.yml",
+		"ixrh4":    "7220IXRH4.yml",
+		"ixr6":     "7250IXR6.yml",
+		"ixr6e":    "7250IXR6e.yml",
+		"ixr10":    "7250IXR10.yml",
+		"ixr10e":   "7250IXR10e.yml",
+		"sxr1x44s": "7730SXR-1x-44s.yml",
+		"sxr1d32d": "7730SXR-1d-32d.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -120,7 +93,7 @@ var (
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
-	srlCfgTpl, _ = template.New("srl-tls-profile").
+	srlCfgTpl, _ = template.New("clab-srl-default-config").
 			Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 			Parse(srlConfigCmdsTpl)
 
@@ -153,67 +126,67 @@ type srl struct {
 	swVersion *SrlVersion
 }
 
-func (s *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
-	s.HostRequirements.SSSE3 = true
-	s.HostRequirements.MinVCPU = 2
-	s.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
-	s.HostRequirements.MinAvailMemoryGb = 2
-	s.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
+	n.HostRequirements.SSSE3 = true
+	n.HostRequirements.MinVCPU = 2
+	n.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
+	n.HostRequirements.MinAvailMemoryGb = 2
+	n.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
 
-	s.Cfg = cfg
+	n.Cfg = cfg
 
 	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
-	s.Cfg.Certificate.Issue = utils.BoolPointer(true)
+	n.Cfg.Certificate.Issue = utils.BoolPointer(true)
 
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
 
-	if s.Cfg.NodeType == "" {
-		s.Cfg.NodeType = srlDefaultType
+	if n.Cfg.NodeType == "" {
+		n.Cfg.NodeType = srlDefaultType
 	}
 
-	if _, found := srlTypes[s.Cfg.NodeType]; !found {
+	if _, found := srlTypes[n.Cfg.NodeType]; !found {
 		keys := make([]string, 0, len(srlTypes))
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
-			s.Cfg.NodeType, strings.Join(keys, ", "))
+			n.Cfg.NodeType, strings.Join(keys, ", "))
 	}
 
-	if s.Cfg.Cmd == "" {
+	if n.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
 		// the additional touch is needed to support non docker runtimes
-		s.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+		n.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
-	s.Cfg.Env = utils.MergeStringMaps(srlEnv, s.Cfg.Env)
+	n.Cfg.Env = utils.MergeStringMaps(srlEnv, n.Cfg.Env)
 
 	// if user was not initialized to a value, use root
-	if s.Cfg.User == "" {
-		s.Cfg.User = "0:0"
+	if n.Cfg.User == "" {
+		n.Cfg.User = "0:0"
 	}
 	for k, v := range srlSysctl {
-		s.Cfg.Sysctls[k] = v
+		n.Cfg.Sysctls[k] = v
 	}
 
-	if s.Cfg.License != "" {
+	if n.Cfg.License != "" {
 		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-		s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(
-			filepath.Join(s.Cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
+			filepath.Join(n.Cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 	}
 
 	// mount config directory
-	cfgPath := filepath.Join(s.Cfg.LabDir, "config")
-	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
+	cfgPath := filepath.Join(n.Cfg.LabDir, "config")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
 	// mount srlinux topology
-	topoPath := filepath.Join(s.Cfg.LabDir, "topology.yml")
-	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+	topoPath := filepath.Join(n.Cfg.LabDir, "topology.yml")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	return nil
 }
@@ -232,7 +205,7 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		for _, fullpath := range agents {
 			basename := filepath.Base(fullpath)
 			// if it is a url extract filename from url or content-disposition header
-			if utils.IsHttpUri(fullpath) {
+			if utils.IsHttpURL(fullpath, false) {
 				basename = utils.FilenameForURL(fullpath)
 			}
 			// enforce yml extension
@@ -315,6 +288,11 @@ func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 	}
 
 	if err := s.addOverlayCLIConfig(ctx); err != nil {
+		return err
+	}
+
+	// once default and overlay config is added, we can commit the config
+	if err := s.commitConfig(ctx); err != nil {
 		return err
 	}
 
@@ -457,6 +435,13 @@ func (s *srl) createSRLFiles() error {
 
 	utils.CreateDirectory(path.Join(s.Cfg.LabDir, "config"), 0777)
 
+	// create repository files (for yum/apt) that
+	// are mounted to srl container during the init phase
+	err = s.createRepoFiles()
+	if err != nil {
+		return err
+	}
+
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
@@ -534,6 +519,16 @@ type srlTemplateData struct {
 	Banner     string
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
+	MgmtMTU    int
+	MgmtIPMTU  int
+	DNSServers []string
+	// EnableGNMIUnixSockServices enables GNMI unix socket services
+	// for the node. This is needed for "23.10 <= ver < 24.3" versions
+	EnableGNMIUnixSockServices bool
+	// EnableCustomPrompt enables custom prompt with added newline
+	// before the prompt.
+	EnableCustomPrompt bool
+	CustomPrompt       string
 }
 
 // tplIFace template interface struct.
@@ -551,27 +546,43 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	// struct that holds data used in templating of the default config snippet
-
+	// tplData holds data used in templating of the default config snippet
 	tplData := srlTemplateData{
-		TLSKey:    n.Cfg.TLSKey,
-		TLSCert:   n.Cfg.TLSCert,
-		TLSAnchor: n.Cfg.TLSAnchor,
-		Banner:    b,
-		IFaces:    map[string]tplIFace{},
+		TLSKey:     n.Cfg.TLSKey,
+		TLSCert:    n.Cfg.TLSCert,
+		TLSAnchor:  n.Cfg.TLSAnchor,
+		Banner:     b,
+		IFaces:     map[string]tplIFace{},
+		MgmtMTU:    0,
+		MgmtIPMTU:  0,
+		DNSServers: n.Config().DNS.Servers,
 	}
 
-	n.filterSSHPubKeys()
+	n.setVersionSpecificParams(&tplData, n.swVersion)
 
-	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
-	// so we add the keys to the template data for rendering.
-	if semver.Compare(n.swVersion.String(), "v23.10") >= 0 || n.swVersion.major == "0" {
-		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
-	}
+	n.setCustomPrompt(&tplData)
+
+	// set MgmtMTU to the MTU value of the runtime management network
+	// so that the two MTUs match.
+	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 
 	// prepare the endpoints
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
+		if ifName == "mgmt0" {
+			// if the endpoint has a custom MTU set, use it in the template logic
+			// otherwise we don't set the mtu as srlinux will use the default max value 9232
+			if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+				tplData.MgmtMTU = m
+				// MgmtMTU seems to be only set when we use macvlan interface
+				// with network-mode: none. For this super narrow use case
+				// we setup mgmt port mtu to match the mtu of the macvlan parnet interface
+				// but then we need to make sure that IP MTU is smaller by 14B
+				tplData.MgmtIPMTU = m - 14
+			}
+			// the rest is just for traffic carrying interfaces
+			continue
+		}
 		// split the interface identifier into their parts
 		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
 
@@ -585,17 +596,10 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 			iface.BreakoutNo = ifNameParts[2]
 		}
 
-		// for MACVlan interfaces we need to figure out the parent interface MTU
-		// and specifically define it in the config
-		//
-		// via the endpoint we acquire the link, and check if the link is of type LinkMacVlan
-		// if so cast it and get the parent Interface MTU and finally set that for the interface
-		if link, ok := e.GetLink().(*links.LinkMacVlan); ok {
-			mtu, err := link.GetParentInterfaceMtu()
-			if err != nil {
-				return err
-			}
-			iface.Mtu = mtu
+		// if the endpoint has a custom MTU set, use it in the template logic
+		// otherwise we don't set the mtu as srlinux will use the default max value 9232
+		if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+			iface.Mtu = m
 		}
 
 		// add the template interface definition to the template data
@@ -612,17 +616,17 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	execCmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
-		fmt.Sprintf("echo '%s' > /tmp/clab-config", buf.String()),
+		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
 	})
 	_, err = n.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
 	}
 
-	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed < /tmp/clab-config"`)
-	if err != nil {
-		return err
-	}
+	cmd := exec.NewExecCmdFromSlice([]string{
+		"bash", "-c",
+		fmt.Sprintf("/opt/srlinux/bin/sr_cli -ed < %s", defaultCfgPath),
+	})
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -636,20 +640,51 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 // addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive.
 func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
+	if len(s.startupCliCfg) == 0 {
+		log.Debugf("node %q: startup-config empty, committing existing candidate", s.Config().ShortName)
+
+		return nil
+	}
+
 	cfgStr := string(s.startupCliCfg)
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", s.Cfg.ShortName, s.Cfg.StartupConfig, cfgStr)
 
 	cmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
-		fmt.Sprintf("echo '%s' > /tmp/clab-config", cfgStr),
+		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
 	})
 	_, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	cmd, _ = exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed --post 'commit save' < tmp/clab-config"`)
+	cmd = exec.NewExecCmdFromSlice([]string{
+		"bash", "-c",
+		fmt.Sprintf("/opt/srlinux/bin/sr_cli -ed < %s", overlayCfgPath),
+	})
+	execResult, err := s.RunExec(ctx, cmd)
+	if err != nil {
+		return err
+	}
+
+	if len(execResult.GetStdErrString()) != 0 {
+		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", s.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return nil
+}
+
+// commitConfig commits and saves default+overlay config to the startup-config file.
+func (s *srl) commitConfig(ctx context.Context) error {
+	log.Debugf("Node %q: commiting configuration", s.Cfg.ShortName)
+
+	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
+	if err != nil {
+		return err
+	}
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -748,4 +783,53 @@ func (s *srl) CheckInterfaceName() error {
 	}
 
 	return nil
+}
+
+// createRepoFiles creates apt/ym repository files
+// to enable srl nodes to install ndk apps.
+func (s *srl) createRepoFiles() error {
+	yumRepo := `[srlinux]
+name=SR Linux NDK apps
+baseurl=https://yum.fury.io/srlinux/
+enabled=1
+gpgcheck=0`
+
+	aptRepo := `deb [trusted=yes] https://apt.fury.io/srlinux/ /`
+
+	yumPath := s.Cfg.LabDir + "/yum.repo"
+	err := utils.CreateFile(yumPath, yumRepo)
+	if err != nil {
+		return err
+	}
+
+	aptPath := s.Cfg.LabDir + "/apt.list"
+	err = utils.CreateFile(aptPath, aptRepo)
+	if err != nil {
+		return err
+	}
+
+	// mount srlinux repository files
+	s.Cfg.Binds = append(s.Cfg.Binds, yumPath+":/etc/yum.repos.d/srlinux.repo:ro")
+	s.Cfg.Binds = append(s.Cfg.Binds, aptPath+":/etc/apt/sources.list.d/srlinux.list:ro")
+
+	return nil
+}
+
+// setVersionSpecificParams sets version specific parameters in the template data struct
+// to enable/disable version-specific configuration blocks in the config template
+// or prepares data to conform to the expected format per specific version.
+func (n *srl) setVersionSpecificParams(tplData *srlTemplateData, swVersion *SrlVersion) {
+	v := n.swVersion.String()
+
+	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
+	// so we add the keys to the template data for rendering.
+	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.major == "0") {
+		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
+	}
+
+	// in srlinux v23.10+ till 24.3 we need to enable GNMI unix socket services to enable
+	// communications over unix socket (e.g. NDK agents)
+	if semver.Compare(v, "v23.10") >= 0 && semver.Compare(v, "v24.3") < 0 {
+		tplData.EnableGNMIUnixSockServices = true
+	}
 }

@@ -1,0 +1,10 @@
+name: srl
+# node name will be srl unless overridden by CLAB_PREFIX
+prefix: ${CLAB_PREFIX:=""}
+
+topology:
+  nodes:
+    srl:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:${SRL_VERSION:=latest}
+      type: ${SRL_TYPE:=ixrd3l}

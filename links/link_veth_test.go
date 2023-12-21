@@ -242,3 +242,7 @@ func (*fakeNode) ExecFunction(_ func(ns.NetNS) error) error {
 func (f *fakeNode) GetState() state.NodeState {
 	return f.State
 }
+
+func (*fakeNode) Delete(context.Context) error {
+	return nil
+}

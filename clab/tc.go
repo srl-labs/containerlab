@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -34,12 +35,12 @@ func SetIngressMirror(src, dst string) (err error) {
 	var linkSrc, linkDest netlink.Link
 	log.Infof("configuring ingress mirroring with tc in the direction of %s -> %s", src, dst)
 
-	if linkSrc, err = netlink.LinkByName(src); err != nil {
+	if linkSrc, err = utils.LinkByNameOrAlias(src); err != nil {
 		return fmt.Errorf("failed to lookup %q: %v",
 			src, err)
 	}
 
-	if linkDest, err = netlink.LinkByName(dst); err != nil {
+	if linkDest, err = utils.LinkByNameOrAlias(dst); err != nil {
 		return fmt.Errorf("failed to lookup %q: %v",
 			dst, err)
 	}

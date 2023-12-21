@@ -1,0 +1,19 @@
+name: srl2
+# node names will be srl1 and srl2 unless overridden by CLAB_PREFIX
+prefix: ${CLAB_PREFIX:=""}
+
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:${SRL_VERSION:=latest}
+      type: ${SRL_TYPE:=ixrd3l}
+
+    srl2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:${SRL_VERSION:=latest}
+      type: ${SRL_TYPE:=ixrd3l}
+
+  links:
+    - endpoints: [srl1:e1-1, srl2:e1-1]
+    - endpoints: [srl1:e1-2, srl2:e1-2]

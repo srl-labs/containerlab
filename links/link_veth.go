@@ -46,10 +46,8 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 
 	// create LinkVEth struct
-	l := &LinkVEth{
-		LinkCommonParams: r.LinkCommonParams,
-		Endpoints:        make([]Endpoint, 0, 2),
-	}
+	l := NewLinkVEth()
+	l.LinkCommonParams = r.LinkCommonParams
 
 	// resolve raw endpoints (epr) to endpoints (ep)
 	for _, epr := range r.Endpoints {
@@ -73,7 +71,10 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 // linkVEthRawFromLinkBriefRaw creates a raw veth link from a LinkBriefRaw.
 func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
-	host, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, 0)
+	host, hostIf, node, nodeIf, err := extractHostNodeInterfaceData(lb, 0)
+	if err != nil {
+		return nil, err
+	}
 
 	link := &LinkVEthRaw{
 		LinkCommonParams: lb.LinkCommonParams,
@@ -95,15 +96,17 @@ type LinkVEth struct {
 	LinkCommonParams
 	Endpoints []Endpoint
 
-	deploymentState LinkDeploymentState
-	deployMutex     sync.Mutex
+	deployMutex sync.Mutex
+}
+
+func NewLinkVEth() *LinkVEth {
+	return &LinkVEth{
+		Endpoints: make([]Endpoint, 0, 2),
+	}
 }
 
 func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
-}
-
-func (*LinkVEth) Verify() {
 }
 
 func (l *LinkVEth) Deploy(ctx context.Context) error {
@@ -111,7 +114,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// the link once, even if multiple nodes call deploy on the same link.
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()
-	if l.deploymentState == LinkDeploymentStateDeployed {
+	if l.DeploymentState == LinkDeploymentStateDeployed {
 		return nil
 	}
 
@@ -141,7 +144,7 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the netlink.Link for the B / Peer side of the link
-	linkB, err := netlink.LinkByName(l.Endpoints[1].GetRandIfaceName())
+	linkB, err := utils.LinkByNameOrAlias(l.Endpoints[1].GetRandIfaceName())
 	if err != nil {
 		return err
 	}
@@ -167,13 +170,24 @@ func (l *LinkVEth) Deploy(ctx context.Context) error {
 		}
 	}
 
-	l.deploymentState = LinkDeploymentStateDeployed
+	l.DeploymentState = LinkDeploymentStateDeployed
 
 	return nil
 }
 
-func (*LinkVEth) Remove(_ context.Context) error {
-	// TODO
+func (l *LinkVEth) Remove(_ context.Context) error {
+	l.deployMutex.Lock()
+	defer l.deployMutex.Unlock()
+	if l.DeploymentState == LinkDeploymentStateRemoved {
+		return nil
+	}
+	for _, ep := range l.GetEndpoints() {
+		err := ep.Remove()
+		if err != nil {
+			log.Debug(err)
+		}
+	}
+	l.DeploymentState = LinkDeploymentStateRemoved
 	return nil
 }
 

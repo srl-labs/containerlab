@@ -277,6 +277,20 @@ func (mr *MockNodeMockRecorder) GetRuntime() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntime", reflect.TypeOf((*MockNode)(nil).GetRuntime))
 }
 
+// GetSSHConfig mocks base method.
+func (m *MockNode) GetSSHConfig() *types.SSHConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSSHConfig")
+	ret0, _ := ret[0].(*types.SSHConfig)
+	return ret0
+}
+
+// GetSSHConfig indicates an expected call of GetSSHConfig.
+func (mr *MockNodeMockRecorder) GetSSHConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSSHConfig", reflect.TypeOf((*MockNode)(nil).GetSSHConfig))
+}
+
 // GetShortName mocks base method.
 func (m *MockNode) GetShortName() string {
 	m.ctrl.T.Helper()
@@ -379,6 +393,18 @@ func (m *MockNode) SaveConfig(arg0 context.Context) error {
 func (mr *MockNodeMockRecorder) SaveConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockNode)(nil).SaveConfig), arg0)
+}
+
+// SetState mocks base method.
+func (m *MockNode) SetState(arg0 state.NodeState) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetState", arg0)
+}
+
+// SetState indicates an expected call of SetState.
+func (mr *MockNodeMockRecorder) SetState(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockNode)(nil).SetState), arg0)
 }
 
 // UpdateConfigWithRuntimeInfo mocks base method.

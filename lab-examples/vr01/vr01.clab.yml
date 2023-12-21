@@ -3,13 +3,13 @@ name: vr01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     sros:
-      kind: vr-sros
-      image: vr-sros:20.10.R1
+      kind: nokia_sros
+      image: nokia_sros:20.10.R1
       type: sr-1
-      license: license-sros20.txt
+      license: /opt/nokia/sros/license-sros20.txt # Not included in the lab, ask your Nokia representative
 
   links:
     - endpoints: ["srl:e1-1", "sros:eth1"]

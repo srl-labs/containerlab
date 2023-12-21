@@ -29,8 +29,10 @@ func (r *LinkHostRaw) ToLinkBriefRaw() *LinkBriefRaw {
 }
 
 func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, error) {
-	_, hostIf, node, nodeIf := extractHostNodeInterfaceData(lb, specialEPIndex)
-
+	_, hostIf, node, nodeIf, err := extractHostNodeInterfaceData(lb, specialEPIndex)
+	if err != nil {
+		return nil, err
+	}
 	link := &LinkHostRaw{
 		LinkCommonParams: lb.LinkCommonParams,
 		HostInterface:    hostIf,
@@ -66,9 +68,8 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 	hostEp := &EndpointHost{
-		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface),
+		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
 	}
-	hostEp.Link = link
 
 	hostEp.MAC, err = utils.GenMac(ClabOUI)
 	if err != nil {

@@ -4,16 +4,11 @@ topology:
   nodes:
     ixia-c:
       kind: keysight_ixia-c-one
-      image: ghcr.io/open-traffic-generator/ixia-c-one:0.0.1-2755
-      exec:
-        - "./ifcfg add eth1 10.1.1.1 24"
-        - "./ifcfg add eth2 10.2.2.1 24"
+      image: ghcr.io/open-traffic-generator/ixia-c-one:0.1.0-84
     srl:
-      kind: srl
-      image: ghcr.io/nokia/srlinux
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:23.10.1
       startup-config: srl.cfg
-      exec:
-        - bash -c "ip l show e1-1 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | head -1"
 
   links:
     - endpoints: ["ixia-c:eth1", "srl:e1-1"]

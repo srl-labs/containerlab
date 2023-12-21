@@ -6,10 +6,12 @@ package utils
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"mime"
 	"net/http"
 	"net/url"
@@ -17,7 +19,10 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/steiler/acls"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -36,12 +41,26 @@ func FileExists(filename string) bool {
 	return !f.IsDir()
 }
 
+// FileOrDirExists returns true if a file or dir referenced by path exists & accessible.
+func FileOrDirExists(filename string) bool {
+	f, err := os.Stat(filename)
+
+	return err == nil && f != nil
+}
+
+// DirExists returns true if a dir referenced by path exists & accessible.
+func DirExists(filename string) bool {
+	f, err := os.Stat(filename)
+
+	return err == nil && f != nil && f.IsDir()
+}
+
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpUri(src) {
+	if !IsHttpURL(src, false) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -73,9 +92,29 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return CopyFileContents(src, dst, mode)
 }
 
-// IsHttpUri check if the url is a downloadable uri.
-func IsHttpUri(s string) bool {
-	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+// IsHttpURL checks if the url is a downloadable HTTP URL.
+// The allowSchemaless toggle when set to true will allow URLs without a schema
+// such as "srlinux.dev/clab-srl". This is shortened notion that is used with
+// "deploy -t <url>" only.
+// Other callers of IsHttpURL should set the toggle to false.
+func IsHttpURL(s string, allowSchemaless bool) bool {
+	// '-' denotes stdin and not the URL
+	if s == "-" {
+		return false
+	}
+
+	//
+	if !allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		return false
+	}
+
+	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		s = "https://" + s
+	}
+
+	u, err := url.ParseRequestURI(s)
+
+	return err == nil && u.Host != ""
 }
 
 // CopyFileContents copies the contents of the file named src to the file named
@@ -86,8 +125,11 @@ func IsHttpUri(s string) bool {
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if IsHttpUri(src) {
-		resp, err := http.Get(src)
+	if IsHttpURL(src, false) {
+		client := NewHTTPClient()
+
+		// download using client
+		resp, err := client.Get(src)
 		if err != nil || resp.StatusCode != 200 {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
@@ -263,7 +305,7 @@ func FilenameForURL(rawUrl string) string {
 	}
 
 	// try extracting the filename from "content-disposition" header
-	if IsHttpUri(rawUrl) {
+	if IsHttpURL(rawUrl, false) {
 		resp, err := http.Head(rawUrl)
 		if err != nil {
 			return filepath.Base(u.Path)
@@ -300,4 +342,130 @@ func FileLines(path, commentStr string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+// NewHTTPClient creates a new HTTP client with
+// insecure skip verify set to true and min TLS version set to 1.2.
+func NewHTTPClient() *http.Client {
+	// set InsecureSkipVerify to true to allow fetching
+	// files form servers with self-signed certificates
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, // skipcq: GSC-G402
+			MinVersion:         tls.VersionTLS12,
+		},
+	}
+
+	return &http.Client{Transport: tr}
+}
+
+// AdjustFileACLs takes the given fs path, tries to load
+// the access file acl of that path and adds ACL rules
+// rwx for the SUDO_UID and r-x for the SUDO_GID group.
+func AdjustFileACLs(fsPath string) error {
+	/// here we trust sudo to set up env variables
+	// a missing SUDO_UID env var indicates the root user
+	// runs clab without sudo
+	uid, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		// nothing to do, already running as root
+		return nil
+	}
+
+	gid, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
+	}
+
+	iUID, err := strconv.Atoi(uid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
+	}
+
+	iGID, err := strconv.Atoi(gid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
+	}
+
+	// create a new ACL instance
+	a := &acls.ACL{}
+	// load the existing ACL entries of the PosixACLAccess type
+	err = a.Load(fsPath, acls.PosixACLAccess)
+	if err != nil {
+		return err
+	}
+
+	// add an entry for the group
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(iGID), 5))
+	if err != nil {
+		return err
+	}
+
+	// add an entry for the User
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_USER, uint32(iUID), 7))
+	if err != nil {
+		return err
+	}
+
+	// set the mask entry
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_MASK, math.MaxUint32, 7))
+	if err != nil {
+		return err
+	}
+
+	// apply the ACL and return the error result
+	err = a.Apply(fsPath, acls.PosixACLAccess)
+	if err != nil {
+		return err
+	}
+
+	return a.Apply(fsPath, acls.PosixACLDefault)
+}
+
+// SetUIDAndGID changes the UID and GID
+// of the given path recursively to the values taken from
+// SUDO_UID and SUDO_GID. Which should reflect be the non-root
+// user that called clab via sudo.
+func SetUIDAndGID(fsPath string) error {
+	// here we trust sudo to set up env variables
+	// a missing SUDO_UID env var indicates the root user
+	// runs clab without sudo
+	uid, isSet := os.LookupEnv("SUDO_UID")
+	if !isSet {
+		// nothing to do, already running as root
+		return nil
+	}
+
+	gid, isSet := os.LookupEnv("SUDO_GID")
+	if !isSet {
+		return errors.New("failed to lookup SUDO_GID env var")
+	}
+
+	iUID, err := strconv.Atoi(uid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
+	}
+
+	iGID, err := strconv.Atoi(gid)
+	if err != nil {
+		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
+	}
+
+	err = recursiveChown(fsPath, iUID, iGID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// recursiveChown function recursively chowns a path.
+func recursiveChown(path string, uid, gid int) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err == nil {
+			err = os.Chown(name, uid, gid)
+		}
+
+		return err
+	})
 }

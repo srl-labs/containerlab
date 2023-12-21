@@ -14,7 +14,7 @@ name: srlceos01
 topology:
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos
@@ -29,7 +29,7 @@ topology:
 
     Additionally, the [auto-generated schema documentation](https://json-schema.app/view/%23?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsrl-labs%2Fcontainerlab%2Fmain%2Fschemas%2Fclab.schema.json) can be explored to understand the full scope of the configuration options containerlab provides. 
 
-This topology results in the two nodes being started up and interconnected with each other using a single point-po-point interface:
+This topology results in the two nodes being started up and interconnected with each other using a single point-to-point interface:
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlceos01.drawio&quot;}"></div>
 
 Let's touch on the key components of the topology definition file used in this example.
@@ -99,7 +99,7 @@ Let's zoom into the two nodes we have defined in our topology:
 topology:
   nodes:
     srl:                    # this is a name of the 1st node
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
     ceos:                   # this is a name of the 2nd node
@@ -113,7 +113,7 @@ Each node can have multiple configuration properties which make containerlab qui
 
 ```yaml
 srl:
-  kind: srl
+  kind: nokia_srlinux
   type: ixrd2
   image: ghcr.io/nokia/srlinux
 ```
@@ -187,9 +187,9 @@ The mgmt-net link type represents a veth pair that is connected to a container n
   links:
   - type: mgmt-net
     endpoint:
-      - node: <NodeA-Name>                  # mandatory
-        interface: <NodeA-Interface-Name>   # mandatory
-        mac: <NodeA-Interface-Mac>          # optional
+      node: <NodeA-Name>                  # mandatory
+      interface: <NodeA-Interface-Name>   # mandatory
+      mac: <NodeA-Interface-Mac>          # optional
     host-interface: <interface-name         # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
@@ -206,9 +206,9 @@ The macvlan link type creates a MACVlan interface with the `host-interface` as i
   links:
   - type: macvlan
     endpoint:
-      - node: <NodeA-Name>                  # mandatory
-        interface: <NodeA-Interface-Name>   # mandatory
-        mac: <NodeA-Interface-Mac>          # optional
+      node: <NodeA-Name>                  # mandatory
+      interface: <NodeA-Interface-Name>   # mandatory
+      mac: <NodeA-Interface-Mac>          # optional
     host-interface: <interface-name>        # mandatory
     mode: <macvlan-mode>                    # optional ("bridge" by default)
     vars: <link-variables>                  # optional (used in templating)
@@ -228,16 +228,55 @@ In comparison to the veth type, no bridge or other namespace is required to be r
   links:
   - type: host
     endpoint:
-      - node: <NodeA-Name>                  # mandatory
-        interface: <NodeA-Interface-Name>   # mandatory
-        mac: <NodeA-Interface-Mac>          # optional
-    host-interface: <interface-name         # mandatory
+      node: <NodeA-Name>                  # mandatory
+      interface: <NodeA-Interface-Name>   # mandatory
+      mac: <NodeA-Interface-Mac>          # optional
+    host-interface: <interface-name>        # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
 ```
 
 The `host-interface` parameter defines the name of the veth interface in the host's network namespace.
+
+###### vxlan
+
+The vxlan type results in a vxlan tunnel interface that is created in the host namespace and subsequently pushed into the nodes network namespace.
+
+```yaml
+  links:
+    - type: vxlan                       
+      endpoint:                              # mandatory
+        node: <Node-Name>                    # mandatory
+        interface: <Node-Interface-Name>     # mandatory
+        mac: <Node-Interface-Mac>            # optional
+      remote: <Remote-VTEP-IP>               # mandatory
+      vni: <VNI>                             # mandatory
+      udp-port: <VTEP-UDP-Port>              # mandatory
+      mtu: <link-mtu>                        # optional
+      vars: <link-variables>                 # optional (used in templating)
+      labels: <link-labels>                  # optional (used in templating)
+```
+
+###### vxlan-stitched
+
+The vxlan-stitched type results in a veth pair linking the host namespace and the nodes namespace and a vxlan tunnel that also terminates in the host namespace.
+In addition to these interfaces, tc rules are being provisioned to stitch the vxlan tunnel and the host based veth interface together.
+
+```yaml
+  links:
+    - type: vxlan-stitch
+      endpoint:                              # mandatory
+        node: <Node-Name>                    # mandatory
+        interface: <Node-Interface-Name>     # mandatory
+        mac: <Node-Interface-Mac>            # optional
+      remote: <Remote-VTEP-IP>               # mandatory
+      vni: <VNI>                             # mandatory
+      udp-port: <VTEP-UDP-Port>              # mandatory
+      mtu: <link-mtu>                        # optional
+      vars: <link-variables>                 # optional (used in templating)
+      labels: <link-labels>                  # optional (used in templating)
+```
 
 #### Kinds
 
@@ -246,16 +285,16 @@ Kinds define the behavior and the nature of a node, it says if the node is a spe
 ```yaml
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd2
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
 ```
 
 In the example above the `topology.kinds` element has `srl` kind referenced. With this, we set some values for the properties of the `srl` kind. A configuration like that says that nodes of `srl` kind will also inherit the properties (type, image) defined on the _kind level_.
@@ -268,15 +307,15 @@ Consider how the topology would have looked like without setting the `kinds` obj
 topology:
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
 ```

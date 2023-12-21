@@ -1,0 +1,10 @@
+name: container-mode
+topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3
+    node2:
+      kind: linux
+      image: alpine:3
+      network-mode: container:node1

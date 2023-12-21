@@ -7,7 +7,7 @@ The node configuration is part of the [topology definition file](topo-def-file.m
 topology:
   nodes:
     node1:  # node name
-      kind: srl
+      kind: nokia_srlinux
       type: ixrd2
       image: ghcr.io/nokia/srlinux
       startup-config: /root/mylab/node1.cfg
@@ -33,7 +33,7 @@ The `kind` property selects which kind this node is of. Kinds are essentially a 
     ```yaml
     topology:
       defaults:
-        kind: srl
+        kind: nokia_srlinux
       nodes:
         node1:
         # kind value of `srl` is inherited from defaults section
@@ -97,13 +97,13 @@ name: srl01
 
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd3
       image: ghcr.io/nokia/srlinux
 
   nodes:
     srl:
-      kind: srl
+      kind: nokia_srlinux
       SANs:
         - "test.com"
 ```
@@ -154,7 +154,7 @@ It is possible to specify a remote `http(s)` location for a startup-config file.
 ```yaml
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       type: ixrd3
       image: ghcr.io/nokia/srlinux
       startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
@@ -166,6 +166,7 @@ The remote file will be downloaded to the containerlab's temp directory at `$TMP
 
     * Upon deletion of a lab, the downloaded startup-config files will not be removed. A manual cleanup should be performed if required.
     * If a lab is redeployed with the lab name and startup-config paths unchanged, the local file will be overwritten.
+    * For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
 
 ### enforce-startup-config
 
@@ -173,7 +174,7 @@ By default, containerlab will use the config file that is available in the lab d
 
 ### suppress-startup-config
 
-By default, containerlab will create a startup-config when intially creating a lab.  To prevent a startup-config file from being created (in a Zero-Touch Provisioning lab, for example), set the `suppress-startup-config` to `true`.
+By default, containerlab will create a startup-config when initially creating a lab.  To prevent a startup-config file from being created (in a Zero-Touch Provisioning lab, for example), set the `suppress-startup-config` to `true`.
 
 ### auto-remove
 
@@ -320,7 +321,7 @@ topology:
       ENV1: 3 # ENV1=3 will be set if it's not set on kind or node level
       ENV2: glob # ENV2=glob will be set for all nodes
   kinds:
-    srl:
+    nokia_srlinux:
       env:
         ENV1: 2 # ENV1=2 will be set to if it's not set on node level
         ENV3: kind # ENV3=kind will be set for all nodes of srl kind
@@ -351,7 +352,7 @@ topology:
       - envfiles/defaults
       - /home/user/clab/default-env
   kinds:
-    srl:
+    nokia_srlinux:
       env-files:
         - envfiles/common
         - ~/spines
@@ -370,7 +371,7 @@ topology:
   defaults:
     user: alice # alice user will be used for all nodes unless set on kind or node levels
   kinds:
-    srl:
+    nokia_srlinux:
       user: bob # bob user will be used for nodes of kind srl unless it is set on node level
   nodes:
     node1:
@@ -386,7 +387,7 @@ topology:
   defaults:
     entrypoint: entrypoint.sh
   kinds:
-    srl:
+    nokia_srlinux:
       entrypoint: entrypoint.sh
   nodes:
     node1:
@@ -402,7 +403,7 @@ topology:
   defaults:
     cmd: bash cmd.sh
   kinds:
-    srl:
+    nokia_srlinux:
       cmd: bash cmd2.sh
   nodes:
     node1:
@@ -424,7 +425,7 @@ topology:
       label1: value1
       label2: value2
   kinds:
-    srl:
+    nokia_srlinux:
       labels:
         label1: kind_value1
         label3: value3
@@ -454,7 +455,7 @@ Read more about user-defined management addresses [here](network.md#user-defined
 ```yaml
 nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt-ipv4: 172.20.20.100
 ```
 
@@ -467,7 +468,7 @@ Read more about user-defined management addresses [here](network.md#user-defined
 ```yaml
 nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       mgmt_ipv6: 2001:172:20:20::100
 ```
 
@@ -502,7 +503,7 @@ name: demo
 topology:
   nodes:
     r1:
-      kind: srl
+      kind: nokia_srlinux
       publish:
         - tcp/22     # tcp port 22 will be published
         - tcp/57400  # tcp port 57400 will be published
@@ -656,7 +657,7 @@ topology:
       net.ipv4.ip_forward: 1
       net.ipv6.icmp.ratelimi: 100
   kinds:
-    srl:
+    nokia_srlinux:
       sysctls:
         net.ipv4.ip_forward: 0
         
@@ -676,7 +677,7 @@ In the example below node _srl3_ will wait until _srl1_ and _srl2_ are in runnin
 name: waitfor
 topology:
   kinds:
-    srl:
+    nokia_srlinux:
       image: ghcr.io/nokia/srlinux
     linux:
       image: alpine:3
@@ -687,11 +688,11 @@ topology:
 
   nodes:
     srl1:
-      kind: srl
+      kind: nokia_srlinux
     srl2:
-      kind: srl
+      kind: nokia_srlinux
     srl3:
-      kind: srl
+      kind: nokia_srlinux
       wait-for:
         - srl1
         - srl2
@@ -749,6 +750,39 @@ To configure key size and certificate validity duration use the following option
     key-size: 4096
     validity-duration: 1h
 ```
+
+### healthcheck
+
+Containerlab supports the [docker healthcheck](https://docs.docker.com/engine/reference/builder/#healthcheck) configuration for the nodes. The healthcheck instruction can be set on the `defaults`, `kind` or `node` level, with the node level likely being the most used one.
+
+Healtcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
+
+```yaml
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - cat /etc/os-release
+        start-period: 3
+        retries: 1
+        interval: 5
+        timeout: 2
+```
+
+The healthcheck instruction is a dictionary that can contain the following keys:
+
+- `test` - the command to run to check the health of the container. The command is provided as a list of strings. The first element of the list is the type of the command - either `CMD` or `CMD-SHELL`, the rest are the arguments.  
+    When `CMD` type is used, the command and its arguments should be provided as a separate list elements. The `CMD-SHELL` allows you to specify the command that will be evaluated by the container's shell.
+- `start-period` - the time in seconds to wait for the container to bootstrap before running the first health check. The default value is 0 seconds.
+- `interval` - the time interval between the health checks. The default value is 30 seconds.
+- `timeout` - the time to wait for a single health check operation to complete. The default value is 30 seconds.
+- `retries` - the number of consecutive healthcheck failures needed to report the container as unhealthy. The default value is 3.
+
+When the node is configured with a healthcheck the health status is visible in the `docker inspect` and `docker ps` outputs.
 
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.

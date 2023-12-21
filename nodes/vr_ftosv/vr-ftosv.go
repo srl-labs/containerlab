@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"vr-ftosv", "vr-dell_ftosv"}
+	kindnames          = []string{"dell_ftosv", "vr-ftosv", "vr-dell_ftosv"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 

@@ -34,6 +34,8 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vMX](https://containerlab.dev/manual/kinds/vr-vmx/)
 * [Juniper vQFX](https://containerlab.dev/manual/kinds/vr-vqfx/)
 * [Juniper vSRX](https://containerlab.dev/manual/kinds/vr-vsrx/)
+* [Juniper vJunos-switch](https://containerlab.dev/manual/kinds/vr-vjunosswitch/)
+* [Juniper vJunosEvolved](https://containerlab.dev/manual/kinds/vr-vjunosevolved/)
 * [Cisco IOS XRv9k](https://containerlab.dev/manual/kinds/vr-xrv9k/)
 * [Cisco Nexus 9000v](https://containerlab.dev/manual/kinds/vr-n9kv)
 * [Cisco CSR 1000v](https://containerlab.dev/manual/kinds/vr-csr)
@@ -43,6 +45,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [IPInfusion OcNOS](https://containerlab.dev/manual/kinds/ipinfusion-ocnos)
 * [Check Point Cloudguard](https://containerlab.dev/manual/kinds/checkpoint_cloudguard/)
 * [Aruba AOS-CX](https://containerlab.dev/manual/kinds/vr-aoscx)
+* [OpenBSD](https://containerlab.dev/manual/kinds/openbsd)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 

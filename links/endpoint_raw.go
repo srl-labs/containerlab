@@ -36,8 +36,7 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		return nil, fmt.Errorf("unable to find node %s", er.Node)
 	}
 
-	genericEndpoint := NewEndpointGeneric(node, er.Iface)
-	genericEndpoint.Link = l
+	genericEndpoint := NewEndpointGeneric(node, er.Iface, l)
 
 	var err error
 	if er.MAC == "" {
@@ -59,17 +58,13 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 
 	switch node.GetLinkEndpointType() {
 	case LinkEndpointTypeBridge:
-		e = &EndpointBridge{
-			EndpointGeneric: *genericEndpoint,
-		}
+		e = NewEndpointBridge(genericEndpoint)
+
 	case LinkEndpointTypeHost:
-		e = &EndpointHost{
-			EndpointGeneric: *genericEndpoint,
-		}
+		e = NewEndpointHost(genericEndpoint)
+
 	case LinkEndpointTypeVeth:
-		e = &EndpointVeth{
-			EndpointGeneric: *genericEndpoint,
-		}
+		e = NewEndpointVeth(genericEndpoint)
 	}
 
 	// also add the endpoint to the node

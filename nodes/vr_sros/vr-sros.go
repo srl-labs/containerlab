@@ -7,6 +7,8 @@ package vr_sros
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -25,10 +27,11 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/crypto/ssh"
 )
 
 var (
-	kindnames          = []string{"vr-sros", "vr-nokia_sros"}
+	kindnames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
@@ -40,6 +43,12 @@ const (
 	licenseFName        = "license.txt"
 )
 
+// SROSTemplateData holds ssh keys for template generation.
+type SROSTemplateData struct {
+	SSHPubKeysRSA   []string
+	SSHPubKeysECDSA []string
+}
+
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
@@ -49,6 +58,8 @@ func Register(r *nodes.NodeRegistry) {
 
 type vrSROS struct {
 	nodes.DefaultNode
+	// SSH public keys extracted from the clab host
+	sshPubKeys []ssh.PublicKey
 }
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -57,6 +68,9 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
 	s.LicensePolicy = types.LicensePolicyWarn
+	// SR OS requires unbound pubkey authentication mode until this is
+	// gets fixed in later SR OS relase.
+	s.SSHConfig.PubkeyAuthentication = types.PubkeyAuthValueUnbound
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -95,25 +109,46 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 	if err != nil {
 		return nil
 	}
+
+	// store public keys extracted from clab host
+	s.sshPubKeys = params.SSHPubKeys
+
 	return createVrSROSFiles(s)
 }
 
 func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
-		log.Infof("Waiting for %s to boot and apply config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
+		log.Infof("%s: applying config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
 
-		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
+		r, err := os.Open(s.Cfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		err = s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
 			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-			s.Cfg.StartupConfig,
+			r,
 		)
 		if err != nil {
 			return err
 		}
 
 		log.Infof("%s: configuration applied", s.Cfg.LongName)
+	}
+
+	// skip ssh key configuration if CLAB_SKIP_SROS_SSH_KEY_CONFIG env var is set
+	// which is needed for SR OS nodes running in classic CLI mode, because our key
+	// injection mechanism assumes MD-CLI mode.
+	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
+
+	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
+		err := s.configureSSHPublicKeys(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -188,11 +223,13 @@ func (s *vrSROS) isHealthy(ctx context.Context) bool {
 }
 
 // applyPartialConfig applies partial configuration to the SR OS.
-func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, username, password string, configFile string) error {
+func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
+	username, password string, config io.Reader,
+) error { // skipcq: GO-R1005
 	var err error
 	var d *network.Driver
 
-	configContent, err := utils.ReadFileContent(configFile)
+	configContent, err := io.ReadAll(config)
 	if err != nil {
 		return err
 	}
@@ -202,6 +239,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, use
 		return nil
 	}
 
+	log.Infof("Waiting for %[1]s to be ready. This may take a while. Monitor boot log with `sudo docker logs -f %[1]s`", s.Cfg.LongName)
 	for loop := true; loop; {
 		if !s.isHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
@@ -249,20 +287,20 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName, use
 			}
 		}
 	}
+	// converting byte slice to newline delimited string slice
+	cfgs := strings.Split(string(configContent), "\n")
 
-	mr, err := d.SendConfigsFromFile(configFile)
-	if err != nil || mr.Failed != nil {
-		return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
-	}
-	// condfig snippets should not have commit command, so we need to commit manually
-	r, err := d.SendConfig("commit")
-	if err != nil || r.Failed != nil {
-		return fmt.Errorf("failed to commit config; error: %+v %+v", err, mr.Failed)
-	}
+	// config snippets should not have commit command, so we need to commit manually
+	// and quit from the config mode
+	cfgs = append(cfgs, "commit", "/admin save", "/exit all", "quit-config")
 
-	r, err = d.SendCommand("/admin save")
-	if err != nil || r.Failed != nil {
-		return fmt.Errorf("failed to persist config; error: %+v %+v", err, mr.Failed)
+	mr, err := d.SendConfigs(cfgs)
+	if err != nil || (mr != nil && mr.Failed != nil) {
+		if mr != nil {
+			return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
+		} else {
+			return fmt.Errorf("failed to apply config; error: %+v", err)
+		}
 	}
 
 	return nil

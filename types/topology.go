@@ -226,7 +226,6 @@ func (t *Topology) GetNodeSuppressStartupConfig(name string) bool {
 		}
 	}
 	return false
-
 }
 
 func (t *Topology) GetNodeAutoRemove(name string) bool {
@@ -516,7 +515,15 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 			return kindDNS
 		}
 	}
-	return t.GetDefaults().GetDns()
+
+	defaultDNS := t.GetDefaults().GetDns()
+	if defaultDNS == nil {
+		// initialize defaultDNS to an empty DNSConfig struct
+		// so that we don't have to check for nil in the caller
+		defaultDNS = &DNSConfig{}
+	}
+
+	return defaultDNS
 }
 
 // GetCertificateConfig returns the certificate configuration for the given node.
@@ -533,4 +540,22 @@ func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 		t.Nodes[name].GetCertificateConfig())
 
 	return cc
+}
+
+func (t *Topology) GetHealthCheckConfig(name string) *HealthcheckConfig {
+	if ndef, ok := t.Nodes[name]; ok {
+		nodeHealthcheckConf := ndef.GetHealthcheckConfig()
+		if nodeHealthcheckConf != nil {
+			return nodeHealthcheckConf
+		}
+
+		kindHealthcheckConf := t.GetKind(t.GetNodeKind(name)).GetHealthcheckConfig()
+		if kindHealthcheckConf != nil {
+			return kindHealthcheckConf
+		}
+
+		return t.GetDefaults().GetHealthcheckConfig()
+	}
+
+	return nil
 }
