@@ -61,3 +61,4 @@ The following labs feature Keysight ixia-c-one node:
 [otg]: https://otg.dev
 [gosnappi]: https://github.com/open-traffic-generator/snappi/tree/main/gosnappi
 [snappi]: https://pypi.org/project/snappi/
+[ixia-c-licensing]: https://ixia-c.dev/licensing/
