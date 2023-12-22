@@ -27,6 +27,7 @@ If in the example above, the image named `myregistry.local/private/alpine:custom
 Container images offer a great flexibility and reproducibility of lab builds, to embrace it fully, we wanted to capture some basic image management operations and workflows in this article.
 
 ## Tagging images
+
 A container image name can appear in various forms. A short form of `alpine` will be expanded by docker daemon to `docker.io/alpine:latest`. At the same time an image named `myregistry.local/private/alpine:custom` is already a fully qualified name and indicates the container registry (`myregistry.local`) image repository name (`private/alpine`) and its tag (`custom`).
 
 With a [`docker tag`](https://docs.docker.com/engine/reference/commandline/tag/) command it is possible to "rename" an image to something else. This can be needed for various purposes, but most common needs are:
@@ -44,6 +45,7 @@ docker tag registry.srlinux.dev/pub/vr-sros:20.10.R3 sros:20.10.R3
 With that we make a new image named `sros:20.10.R3` that references the same original image. Now we can use the short name in our clab files.
 
 ### Pushing to a new registry
+
 Same `docker tag` command can be used to rename the image so it can be pushed to another registry. For example consider the newly built SR OS 21.2.R1 [vrnetlab](vrnetlab.md) image that by default will have a name of `vrnetlab/vr-sros:21.2.R1`. This container image can't be pushed anywhere in its current form, but retagging will help us out.
 
 If we wanted to push this image to a public registry like Github Container Registry, we could do the following:
@@ -51,22 +53,24 @@ If we wanted to push this image to a public registry like Github Container Regis
 ```bash
 # retag the image to a fully qualified name that is suitable for
 # push to github container registry
-docker tag vrnetlab/vr-sros:21.2.R1 ghcr.io/srl-labs/vr-sros:21.2.R1
+sudo docker tag vrnetlab/vr-sros:21.2.R1 ghcr.io/srl-labs/vr-sros:21.2.R1
 
 # and now we can push it
-docker push ghcr.io/srl-labs/vr-sros:21.2.R1
+sudo docker push ghcr.io/srl-labs/vr-sros:21.2.R1
 ```
 
 ## Exchanging images
+
 Container images are a perfect fit for sharing. Once anyone built an image with a certain NOS inside it can share it with anyone via container registry. Sensitive and proprietary images are typically pushed to private registries and internal users pull it from there.
 
 But sometimes you need to share an image with a colleague or your own setup that doesn't have access to a private registry. There are couple of ways to achieve that.
 
-### As tgz archive
+### As zipped tar archive
+
 A container image can be saved as `tar.gz` file that you can then share via various channels:
 
 ```
-docker save vrnetlab/vr-sros:21.2.R1 | gzip > sros.tar.gz
+sudo docker save vrnetlab/vr-sros:21.2.R1 | xz -T 0 > sros.tar.gz
 ```
 
 Now you can push the tar.gz file to Google Drive, Dropbox, etc.
@@ -74,10 +78,11 @@ Now you can push the tar.gz file to Google Drive, Dropbox, etc.
 On the receiving end you can load the container image:
 
 ```
-docker load -i sros.tar.gz
+sudo docker load -i sros.tar.gz
 ```
 
 ### Via temp registry
+
 Another cool way of sharing a container image is via [ttl.sh](https://ttl.sh) registry which offers a way to push an image to their public registry but the image will expire with a timeout you set.
 
 For example, let's push our image to the ttl.sh registry under a random name and make it expire in 15 minutes.
@@ -89,8 +94,8 @@ IMAGE=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 6 | head -n 1)
 TTL=15m
 
 # tag and push
-docker tag vrnetlab/vr-sros:21.2.R1 ttl.sh/$IMAGE:$TTL
-docker push ttl.sh/$IMAGE:$TTL
+sudo docker tag vrnetlab/vr-sros:21.2.R1 ttl.sh/$IMAGE:$TTL
+sudo docker push ttl.sh/$IMAGE:$TTL
 echo "pull the image with \"docker pull ttl.sh/$IMAGE:$TTL\" in the next $TTL"
 ```
 
