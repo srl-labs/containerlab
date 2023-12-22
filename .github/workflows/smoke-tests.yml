@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     strategy:
+      fail-fast: false
       matrix:
         runtime:
           - "docker"
@@ -77,6 +78,7 @@ jobs:
         with:
           name: 01-smoke-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
+          compression-level: 0
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
