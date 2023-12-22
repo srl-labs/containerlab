@@ -64,12 +64,12 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
+      - name: Sanitize test-suite name
+        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+
       - name: Run smoke tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
-
-      - name: Sanitize test-suite name
-        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
       # upload test reports as a zip file
       - name: Upload test report
@@ -78,7 +78,6 @@ jobs:
         with:
           name: 01-smoke-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
-          compression-level: 0
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
