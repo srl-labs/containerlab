@@ -23,15 +23,17 @@ Deploy first lab
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-nodes.clab.yml
     ...    shell=True
     Log    ${result.stdout}
+    Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
     Should Exist    %{PWD}/clab-2-linux-nodes
 
 Deploy second lab
-     ${result} =    Run Process
+    ${result} =    Run Process
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-single-node.clab.yml
     ...    cwd=/tmp    # using a different cwd to check lab resolution via container labels
     ...    shell=True
     Log    ${result.stdout}
+    Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
     Should Exist    /tmp/clab-single-node
 

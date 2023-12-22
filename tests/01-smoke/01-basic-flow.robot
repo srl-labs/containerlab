@@ -4,7 +4,6 @@ Library             String
 Library             Process
 Resource            ../common.robot
 
-Suite Setup         Setup
 Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 
@@ -15,7 +14,6 @@ ${runtime}                  docker
 # runtime command to execute tasks in a container
 # defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
 ${runtime-cli-exec-cmd}     sudo docker exec
-${bind-orig-path}           /tmp/clab-01-test.txt
 ${n2-ipv4}                  172.20.20.100/24
 ${n2-ipv6}                  2001:172:20:20::100/64
 
@@ -365,10 +363,6 @@ Verify iptables allow rule are gone
 
 
 *** Keywords ***
-Setup
-    Run    sudo rm -rf ${bind-orig-path}
-    OperatingSystem.Create File    ${bind-orig-path}    Hello, containerlab
-
 Match IPv6 Address
     [Arguments]
     ...    ${address}=${None}
