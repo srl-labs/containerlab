@@ -77,7 +77,7 @@ Configuration is applied after the node is started, thus it can contain partial 
 
 The following labs feature the Juniper vJunosEvolved node:
 
-* [SR Linux and Juniper vJunosEvolved](../../../lab-examples/srlvjunos02/srlvjunos02.yml
+* [SR Linux and Juniper vJunosEvolved](../../../lab-examples/srlvjunos02/srlvjunos02.yml)
 
 ## Known issues and limitations
 * To check the boot log, use `docker logs -f <node-name>`.
