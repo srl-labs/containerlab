@@ -72,7 +72,7 @@ func (d *dependencyNode) Done(p types.WaitForPhase) {
 // to increase the waitgroup count for the depender.
 func (d *dependencyNode) addDepender(dependerState types.WaitForPhase, depender *dependencyNode, state types.WaitForPhase) error {
 	// Create a new DependerNodeState
-	dependerNS := NewDependerNodeState(depender, dependerState)
+	dependerNS := newDependerNodeState(depender, dependerState)
 
 	// adding the dependerNodeState entity to the specific state of d
 	// this will result in a .Done() call when d finishes state
@@ -99,7 +99,7 @@ type dependerNodeState struct {
 	state    types.WaitForPhase // reference to the nodes wg that is to be decremented
 }
 
-func NewDependerNodeState(node *dependencyNode, state types.WaitForPhase) *dependerNodeState {
+func newDependerNodeState(node *dependencyNode, state types.WaitForPhase) *dependerNodeState {
 	return &dependerNodeState{
 		depender: node,
 		state:    state,

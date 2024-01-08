@@ -1010,5 +1010,9 @@ func (d *DockerRuntime) GetContainerHealth(ctx context.Context, cID string) (boo
 	if err != nil {
 		return false, err
 	}
+	// catch no healtchecks defined
+	if inspect.State.Health == nil {
+		return false, fmt.Errorf("no health information available for container: %s", cID)
+	}
 	return inspect.State.Health.Status == "healthy", nil
 }

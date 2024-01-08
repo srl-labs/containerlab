@@ -181,7 +181,7 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	return file, nil
 }
 
-// findTopoFileByPath takes a topology path, which might be the path to a directory
+// FindTopoFileByPath takes a topology path, which might be the path to a directory
 // and returns the topology file name if found.
 func FindTopoFileByPath(path string) (string, error) {
 	finfo, err := os.Stat(path)

@@ -443,9 +443,8 @@ func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 	return time.Duration(h.StartPeriod) * time.Second
 }
 
-// we need to init Waitgroups for all the states,
-// this is a helper var listing all the states for
-// initialization.
+// WaitForPhases we need to init Waitgroups for all the states,
+// this is a helper var listing all the states for initialization.
 var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForCreate, WaitForCreateLinks, WaitForConfigure, WaitForHealthy, WaitForExit}
 
 func WaitForPhaseFromString(s string) (WaitForPhase, error) {
