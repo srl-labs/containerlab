@@ -1313,8 +1313,8 @@ github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSw
 github.com/felixge/httpsnoop v1.0.2/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/firecracker-microvm/firecracker-go-sdk v0.22.0/go.mod h1:lr7w/zmzIi72h+dDMQsRmmKS63EKvnFPEpg2KrjX2X0=
-github.com/florianl/go-tc v0.4.2 h1:jan5zcOWCLhA9SRBHZhQ0SSAq7cmDUagiRPngAi5AOQ=
-github.com/florianl/go-tc v0.4.2/go.mod h1:2W1jSMFryiYlpQigr4ZpSSpE9XNze+bW7cTsCXWbMwo=
+github.com/florianl/go-tc v0.4.3 h1:xpobG2gFNvEqbclU07zjddALSjqTQTWJkxg5/kRYDpw=
+github.com/florianl/go-tc v0.4.3/go.mod h1:uvp6pIlOw7Z8hhfnT5M4+V1hHVgZWRZwwMS8Z0JsRxc=
 github.com/flowstack/go-jsonschema v0.1.1/go.mod h1:yL7fNggx1o8rm9RlgXv7hTBWxdBM0rVwpMwimd3F3N0=
 github.com/fluxcd/kustomize-controller v0.0.1-beta.2/go.mod h1:mLeipvpQkyof6b5IHNtqeA8CmbjfVIf92UyKkpeBY98=
 github.com/fluxcd/source-controller v0.0.1-beta.2/go.mod h1:tmscNdCxEt7+Xt2g1+bI38hMPw2leYMFAaCn4UlMGuw=
