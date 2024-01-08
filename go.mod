@@ -44,8 +44,8 @@ require (
 	github.com/weaveworks/ignite v0.10.0
 	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
-	golang.org/x/sys v0.15.0
-	golang.org/x/term v0.15.0
+	golang.org/x/sys v0.16.0
+	golang.org/x/term v0.16.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
