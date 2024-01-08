@@ -15,7 +15,7 @@ require (
 	github.com/docker/go-connections v0.4.1-0.20231031175723-0b8c1f4e07a0
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/florianl/go-tc v0.4.2
+	github.com/florianl/go-tc v0.4.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/go-cmp v0.6.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
