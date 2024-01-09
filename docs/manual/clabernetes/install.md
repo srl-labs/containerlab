@@ -1,10 +1,12 @@
 # Installation
 
-## Controller
+## Clabernetes Manager
 
-Clabernetes controller (a.k.a. manager) is installed via Helm; this means if you don't have Helm - [install it](https://helm.sh/docs/intro/install/), it's easy.
+Clabernetes manager (a.k.a. controller) is installed via Helm; this means if you don't have Helm - [install it](https://helm.sh/docs/intro/install/) or use it in a container:
 
-With Helm installed, to install the latest released Clabernetes to an existing k8s cluster[^1] do:
+--8<-- "docs/manual/clabernetes/quickstart.md:helm-alias"
+
+To install the latest release of Clabernetes with Helm to an existing k8s cluster[^1] do:
 <!-- --8<-- [start:chart-install] -->
 ```bash
 helm upgrade --install --create-namespace --namespace clabernetes \

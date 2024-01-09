@@ -39,6 +39,7 @@ Clabernetes is [installed](install.md) into a kubernetes cluster using [helm](ht
 
 We use `alpine/helm` container image here instead of installing the tool locally; you can skip this step if you already have `helm` installed.
 
+<!-- --8<-- [start:helm-alias] -->
 ```bash
 alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     -v ~/.kube:/root/.kube -v ~/.helm:/root/.helm \
@@ -46,6 +47,7 @@ alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     -v ~/.cache/helm:/root/.cache/helm \
     alpine/helm:3.12.3"
 ```
+<!-- --8<-- [end:helm-alias] -->
 
 --8<-- "docs/manual/clabernetes/install.md:chart-install"
 
