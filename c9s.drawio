@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2024-01-10T09:50:39.365Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" etag="zjezkkthFamEbbBNlw0P" version="22.1.18" type="github">
+<mxfile host="app.diagrams.net" modified="2024-01-10T19:58:10.833Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" etag="paQ1q4P5zk2IiX2TB_NM" version="22.1.18" type="github">
   <diagram name="[0] bms" id="xj_hUvdLybhZtWC5sHic">
     <mxGraphModel dx="1185" dy="641" grid="0" gridSize="5" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4d5766" math="0" shadow="0">
       <root>
@@ -61,8 +61,8 @@
             <mxPoint x="378" y="684" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Hvadh7sFhpXeqMrMuhxV-31" value="&lt;font color=&quot;#ffffff&quot;&gt;&lt;span style=&quot;font-size: 12px;&quot;&gt;k8s-net&lt;br&gt;&lt;/span&gt;&lt;/font&gt;&lt;font color=&quot;#ffffff&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Google+Sans&quot;&gt;10.10.0.0/24&lt;/font&gt;" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Google Sans;fontColor=#001135;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DGoogle%2BSans;" parent="Hvadh7sFhpXeqMrMuhxV-1" vertex="1">
-          <mxGeometry x="104" y="647" width="72" height="38" as="geometry" />
+        <mxCell id="Hvadh7sFhpXeqMrMuhxV-31" value="&lt;font color=&quot;#ffffff&quot;&gt;&lt;span style=&quot;font-size: 12px;&quot;&gt;k8s-net&lt;br&gt;&lt;/span&gt;&lt;/font&gt;&lt;font color=&quot;#ffffff&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Google+Sans&quot;&gt;10.10.0.0/24&lt;br&gt;(internal to openstack)&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=right;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontFamily=Google Sans;fontColor=#001135;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DGoogle%2BSans;" parent="Hvadh7sFhpXeqMrMuhxV-1" vertex="1">
+          <mxGeometry x="57" y="636" width="119" height="50" as="geometry" />
         </mxCell>
         <mxCell id="Hvadh7sFhpXeqMrMuhxV-44" value="" style="group" parent="Hvadh7sFhpXeqMrMuhxV-1" vertex="1" connectable="0">
           <mxGeometry x="1249.8899999999999" y="319" width="50" height="50" as="geometry" />
