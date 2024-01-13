@@ -75,7 +75,7 @@ We will also need `clabverter` CLI to convert containerlab topology files to cla
 
 ## Installing Load Balancer
 
-To get access to the nodes deployed by clabernetes from outside of the k8s cluster we will install need a load balancer. Any load balancer will do, we will use up [kube-vip](https://kube-vip.io/) in this quickstart. Moreover, if no external access to the nodes is required, load balancer installation can be skipped altogether.
+To get access to the nodes deployed by clabernetes from outside of the k8s cluster we need a load balancer. Any load balancer will do, we will use [kube-vip](https://kube-vip.io/) in this quickstart. Moreover, if no external access to the nodes is required, load balancer installation can be skipped altogether.
 
 Following [kube-vip + kind](https://kube-vip.io/docs/usage/kind/) installation instructions we execute the following commands:
 

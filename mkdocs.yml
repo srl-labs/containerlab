@@ -50,6 +50,8 @@ nav:
           - manual/clabernetes/index.md
           - Install: manual/clabernetes/install.md
           - Quickstart: manual/clabernetes/quickstart.md
+          - How To:
+              - Installation on Bare Metal: manual/clabernetes/bare-metal-install.md
       - Node filtering: manual/node-filtering.md
       - Publish ports: manual/published-ports.md
       - Multi-node labs: manual/multi-node.md
