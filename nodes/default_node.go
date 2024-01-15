@@ -402,7 +402,8 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 			nodeConfig.LongName,
 			nodeConfig.ShortName + "." + topoName + ".io",
 		}
-		hosts = append(hosts, nodeConfig.SANs...)
+		// add the SANs provided via config
+		hosts = append(hosts, nodeConfig.Certificate.SANs...)
 
 		certInput := &cert.NodeCSRInput{
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",

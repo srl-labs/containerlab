@@ -98,6 +98,11 @@ Verify l1 Certificate Validity
     ...    openssl x509 -in ${l1-cert} -text
     Check Certificat Validity Duration    ${certificate_output}    ${l1-validity-duration}
 
+Verify l2 extra SANs
+    ${rc}    ${certificate_output} =    Run And Return Rc And Output
+    ...    openssl x509 -in ${l2-cert} -text
+    Should Contain    ${certificate_output}    DNS:my.text.fqdn
+    Should Contain    ${certificate_output}    IP Address:192.168.33.44
 
 *** Keywords ***
 Teardown
