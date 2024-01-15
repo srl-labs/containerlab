@@ -405,6 +405,13 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 		// add the SANs provided via config
 		hosts = append(hosts, nodeConfig.Certificate.SANs...)
 
+		// add mgmt IPs as SANs to CSR
+		for _, ip := range []string{d.Cfg.MgmtIPv4Address, d.Cfg.MgmtIPv6Address} {
+			if ip != "" {
+				hosts = append(hosts, ip)
+			}
+		}
+
 		certInput := &cert.NodeCSRInput{
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
