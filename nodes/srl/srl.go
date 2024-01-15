@@ -244,13 +244,6 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
-	// // add the ips as SANs
-	// for _, ip := range []string{s.Cfg.MgmtIPv4Address, s.Cfg.MgmtIPv6Address} {
-	// 	if ip != "" {
-	// s.Cfg.Certificate.SANs = append(s.Cfg.Certificate.SANs, ip)
-	// 	}
-	// }
-
 	// generate the certificate
 	certificate, err := s.LoadOrGenerateCertificate(s.cert, s.topologyName)
 	if err != nil {
