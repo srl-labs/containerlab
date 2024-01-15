@@ -42,7 +42,7 @@ require (
 	github.com/tklauser/numcpus v0.7.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/weaveworks/ignite v0.10.0
-	golang.org/x/crypto v0.17.0
+	golang.org/x/crypto v0.18.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sys v0.16.0
 	golang.org/x/term v0.16.0
