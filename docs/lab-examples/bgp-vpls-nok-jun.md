@@ -11,7 +11,7 @@
 
 This lab demonstrates how containerlab can be used in a classical networking labs where the prime focus is not on the containerized NOS, but on a classic VM-based routers.
 
-The topology created in this lab matches the network used in the [BGP VPLS Deep Dive](https://netdevops.me/2016/bgp-vpls-deep-dive-nokia-sr-os-juniper/) article:
+The topology created in this lab matches the network used in the [BGP VPLS Deep Dive](https://netdevops.me/2016/bgp-vpls-deep-dive-nokia-sr-os--juniper/) article:
 
 ![topo](https://img-fotki.yandex.ru/get/194989/21639405.11d/0_8b222_20c181b9_orig.png)
 

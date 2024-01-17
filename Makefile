@@ -16,7 +16,7 @@ all: build
 
 build:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
 
 build-linux-arm64:
 	mkdir -p $(BIN_DIR)
