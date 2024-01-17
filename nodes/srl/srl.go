@@ -244,13 +244,6 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
 
-	// add the ips as SANs
-	for _, ip := range []string{s.Cfg.MgmtIPv4Address, s.Cfg.MgmtIPv6Address} {
-		if ip != "" {
-			s.Cfg.SANs = append(s.Cfg.SANs, ip)
-		}
-	}
-
 	// generate the certificate
 	certificate, err := s.LoadOrGenerateCertificate(s.cert, s.topologyName)
 	if err != nil {
@@ -558,7 +551,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		DNSServers: n.Config().DNS.Servers,
 	}
 
-	n.setVersionSpecificParams(&tplData, n.swVersion)
+	n.setVersionSpecificParams(&tplData)
 
 	n.setCustomPrompt(&tplData)
 
@@ -818,7 +811,7 @@ gpgcheck=0`
 // setVersionSpecificParams sets version specific parameters in the template data struct
 // to enable/disable version-specific configuration blocks in the config template
 // or prepares data to conform to the expected format per specific version.
-func (n *srl) setVersionSpecificParams(tplData *srlTemplateData, swVersion *SrlVersion) {
+func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 	v := n.swVersion.String()
 
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli

@@ -26,15 +26,6 @@
                         "IfNotPresent"
                     ]
                 },
-                "SANs": {
-                    "type": "array",
-                    "description": "list of subject alternative names (SAN) to use for this node",
-                    "markdownDescription": "list of [subject alternative names](https://containerlab.dev/manual/nodes/#subject-alternative-names) to use for this node",
-                    "items": {
-                        "type": "string"
-                    },
-                    "uniqueItems": true
-                },
                 "kind": {
                     "type": "string",
                     "description": "kind of this node",
@@ -484,6 +475,25 @@
                 "issue": {
                     "description": "Set to `true` to generate a TLS certificate for the node",
                     "markdownDescription": "Set to `true` to [generate a TLS certificate for the node](https://containerlab.dev/manual/nodes/#certificate)"
+                },
+                "sans": {
+                    "type": "array",
+                    "description": "list of subject alternative names (SAN) to use for this node",
+                    "markdownDescription": "list of [subject alternative names](https://containerlab.dev/manual/nodes/#subject-alternative-names) to use for this node",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "key-size": {
+                    "type": "integer",
+                    "description": "size of the to be generated key",
+                    "markdownDescription": "size of the to be generated key"
+                },
+                "validity-duration": {
+                    "type": "string",
+                    "description": "Duration for how long the certificate issued by the CA will be valid.",
+                    "markdownDescription": "Duration for how long the certificate issued by the CA will be valid."
                 }
             }
         },

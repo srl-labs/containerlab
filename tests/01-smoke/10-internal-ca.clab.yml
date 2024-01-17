@@ -27,6 +27,9 @@ topology:
       certificate:
         issue: true
         key-size: 1024
+        sans:
+          - 192.168.33.44
+          - my.text.fqdn
     l3:
       kind: linux
       image: alpine:3
