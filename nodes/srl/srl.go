@@ -811,7 +811,7 @@ gpgcheck=0`
 // setVersionSpecificParams sets version specific parameters in the template data struct
 // to enable/disable version-specific configuration blocks in the config template
 // or prepares data to conform to the expected format per specific version.
-func (n *srl) setVersionSpecificParams(tplData *srlTemplateData, swVersion *SrlVersion) {
+func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 	v := n.swVersion.String()
 
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
