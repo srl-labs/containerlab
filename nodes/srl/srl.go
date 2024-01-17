@@ -551,7 +551,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		DNSServers: n.Config().DNS.Servers,
 	}
 
-	n.setVersionSpecificParams(&tplData, n.swVersion)
+	n.setVersionSpecificParams(&tplData)
 
 	n.setCustomPrompt(&tplData)
 
