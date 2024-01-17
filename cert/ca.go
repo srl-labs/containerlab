@@ -134,7 +134,7 @@ func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error)
 		NotAfter:     time.Now().Add(expiry),
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 	}
 
 	newPrivKey, err := rsa.GenerateKey(rand.Reader, keysize)
