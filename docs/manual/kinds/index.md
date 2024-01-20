@@ -31,34 +31,40 @@ Containerlab supports a fixed number of platforms. Most platforms are identified
 
 Within each predefined kind, we store the necessary information that is used to successfully launch the container. The following kinds are supported by containerlab:
 
-| Name                      | Short/Long kind name                                | Status    | Packaging |
-| ------------------------- | --------------------------------------------------- | --------- | :-------: |
-| **Nokia SR Linux**        | [`srl/nokia_srlinux`](srl.md)                       | supported | container |
-| **Nokia SR OS**           | [`vr-sros/nokia_sros`](vr-sros.md)                  | supported |    VM     |
-| **Arista cEOS**           | [`ceos/arista_ceos`](ceos.md)                       | supported | container |
-| **Arista vEOS**           | [`vr-veos/vr-arista_veos`](vr-veos.md)              | supported |    VM     |
-| **Juniper cRPD**          | [`crpd/juniper_crpd`](crpd.md)                      | supported | container |
-| **Juniper vMX**           | [`vr-vmx/vr-juniper_vmx`](vr-vmx.md)                | supported |    VM     |
-| **Juniper vQFX**          | [`vr-vqfx/vr-juniper_vqfx`](vr-vqfx.md)             | supported |    VM     |
-| **Juniper vSRX**          | [`vr-vsrx/vr-juniper_vsrx`](vr-vsrx.md)             | supported |    VM     |
-| **Cisco XRv9k**           | [`vr-xrv9k/vr-cisco_xrv9k`](vr-xrv9k.md)            | supported |    VM     |
-| **Cisco XRv**             | [`vr-xrv/vr-cisco_xrv`](vr-xrv.md)                  | supported |    VM     |
-| **Cisco Nexus 9000v**     | [`vr-n9kv/vr-cisco_n9kv`](vr-n9kv.md)               | supported |    VM     |
-| **Cisco FTDv**            | [`cisco_ftdv`](vr-ftdv.md)                          | supported |    VM     |
-| **Cumulus VX**            | [`cvx/cumulus_cvx`](cvx.md)                         | supported | container |
-| **SONiC**                 | [`sonic`](sonic-vs.md)                              | supported | container |
-| **Dell FTOS**             | [`vr-ftosv/vr-dell_ftos`](vr-ftosv.md)              | supported |    VM     |
-| **Mikrotik Router OS**    | [`vr-ros/vr-mikrotik_ros`](vr-ros.md)               | supported |    VM     |
-| **Palo Alto PAN OS**      | [`vr-panos/vr-paloalto_panos`](vr-pan.md)           | supported |    VM     |
-| **IPInfusion OcNOS**      | [`ipinfusion_ocnos`](ipinfusion-ocnos.md)           | supported |    VM     |
-| **Keysight ixia-c-one**   | [`keysight_ixia-c-one`](keysight_ixia-c-one.md)     | supported | container |
-| **Checkpoint Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md) | supported |    VM     |
-| **Linux container**       | [`linux`](linux.md)                                 | supported | container |
-| **Linux bridge**          | [`bridge`](bridge.md)                               | supported |    N/A    |
-| **OvS bridge**            | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
-| **mysocketio node**       | [`mysocketio`](../published-ports.md)               | supported |    N/A    |
-| **RARE/freeRtr node**     | [`rare`](rare-freertr.md)                           | supported | container |
-| **Aruba ArubaOS-CX**      | [`vr-aoscx/vr-aruba_aoscx`](vr-aoscx.md)            | supported |    VM     |
-| **OpenBSD**               | [`openbsd`](openbsd.md)                             | supported |    VM     |
+| Name                       | Short/Long kind name                                            | Status    | Packaging |
+| -------------------------- | --------------------------------------------------------------- | --------- | :-------: |
+| **Nokia SR Linux**         | [`srl/nokia_srlinux`](srl.md)                                   | supported | container |
+| **Nokia SR OS**            | [`vr-sros/nokia_sros`](vr-sros.md)                              | supported |    VM     |
+| **Arista cEOS**            | [`ceos/arista_ceos`](ceos.md)                                   | supported | container |
+| **Arista vEOS**            | [`vr-veos/vr-arista_veos`](vr-veos.md)                          | supported |    VM     |
+| **Juniper cRPD**           | [`crpd/juniper_crpd`](crpd.md)                                  | supported | container |
+| **Juniper vMX**            | [`vr-vmx/vr-juniper_vmx`](vr-vmx.md)                            | supported |    VM     |
+| **Juniper vQFX**           | [`vr-vqfx/vr-juniper_vqfx`](vr-vqfx.md)                         | supported |    VM     |
+| **Juniper vSRX**           | [`vr-vsrx/vr-juniper_vsrx`](vr-vsrx.md)                         | supported |    VM     |
+| **Juniper vJunos-switch**  | [`vr-vjunosswitch/juniper_vjunosswitch`](vr-vjunosswitch.md)    | supported |    VM     |
+| **Juniper vJunosEvolved**  | [`vr-vjunosevolved/juniper_vjunosevolved`](vr-vjunosevolved.md) | supported |    VM     |
+| **Cisco XRd**              | [`xrd/cisco_xrd'](xrd.md)                                       | supported | container |
+| **Cisco XRv9k**            | [`vr-xrv9k/vr-cisco_xrv9k`](vr-xrv9k.md)                        | supported |    VM     |
+| **Cisco XRv**              | [`vr-xrv/vr-cisco_xrv`](vr-xrv.md)                              | supported |    VM     |
+| **Cisco CSR1000v**         | [`vr-csr/vr-cisco_csr1000v`](vr-csr.md)                         | supported |    VM     |
+| **Cisco Nexus 9000v**      | [`vr-n9kv/vr-cisco_n9kv`](vr-n9kv.md)                           | supported |    VM     |
+| **Cisco 8000**             | [`c8000/cisco_c8000`](c8000.md)                                 | supported |    VM+    |
+| **Cisco FTDv**             | [`cisco_ftdv`](vr-ftdv.md)                                      | supported |    VM     |
+| **Cumulus VX**             | [`cvx/cumulus_cvx`](cvx.md)                                     | supported | container |
+| **Aruba ArubaOS-CX**       | [`vr-aoscx/vr-aruba_aoscx`](vr-aoscx.md)                        | supported |    VM     |
+| **SONiC**                  | [`sonic`](sonic-vs.md)                                          | supported | container |
+| **Dell FTOS10v**           | [`vr-ftosv/vr-dell_ftos`](vr-ftosv.md)                          | supported |    VM     |
+| **Mikrotik RouterOS**      | [`vr-ros/vr-mikrotik_ros`](vr-ros.md)                           | supported |    VM     |
+| **IPInfusion OcNOS**       | [`ipinfusion_ocnos`](ipinfusion-ocnos.md)                       | supported |    VM     |
+| **OpenBSD**                | [`openbsd`](openbsd.md)                                         | supported |    VM     |
+| **Keysight ixia-c-one**    | [`keysight_ixia-c-one`](keysight_ixia-c-one.md)                 | supported | container |
+| **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md)             | supported |    VM     |
+| **Palo Alto PAN**          | [`vr-panos/vr-paloalto_panos`](vr-pan.md)                       | supported |    VM     |
+| **Linux bridge**           | [`bridge`](bridge.md)                                           | supported |    N/A    |
+| **Linux container**        | [`linux`](linux.md)                                             | supported | container |
+| **RARE/freeRtr**           | [`rare`](rare-freertr.md)                                       | supported | container |
+| **Openvswitch bridge**     | [`ovs-bridge`](ovs-bridge.md)                                   | supported |    N/A    |
+| **External container**     | [`ext-container`](ext-container.md)                             | supported | container |
+| **Host**                   | [`host`](host.md)                                               | supported |    N/A    |
 
 Refer to a specific kind documentation article for kind-specific details.
