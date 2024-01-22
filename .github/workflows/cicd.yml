@@ -306,6 +306,14 @@ jobs:
     with:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
 
+  kind-tests:
+    uses: ./.github/workflows/kind-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+    with:
+      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-22.04
@@ -317,6 +325,7 @@ jobs:
       - srlinux-basic-tests
       - ixiac-one-basic-tests
       - vxlan-tests
+      - kind-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -385,6 +394,7 @@ jobs:
       - ixiac-one-basic-tests
       - ext-container-tests
       - vxlan-tests
+      - kind-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
