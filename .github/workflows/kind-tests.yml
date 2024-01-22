@@ -48,7 +48,7 @@ jobs:
 
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/05-kind/${{ matrix.test-suite }}
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/05-k8s-kind/${{ matrix.test-suite }}
 
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 05-kind-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 05-k8s-kind-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -66,6 +66,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-kind-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-k8s-kind-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
