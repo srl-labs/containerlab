@@ -12,35 +12,36 @@ import (
 )
 
 const (
-	DOCKER_FW_USER_CHAIN = "DOCKER-USER"
-	DOCKER_FW_TABLE      = "filter"
+	DockerFWUserChain = "DOCKER-USER"
+	DockerFWTable     = "filter"
 
-	COMMENT = "set by containerlab"
+	IPTablesRuleComment = "set by containerlab"
 
-	XT_MAX_COMMENT_LEN = 256
+	IPTablesCommentMaxSize = 256
 )
 
-type nftablesHelper struct {
+type nftablesClient struct {
 	nftConn *nftables.Conn
 }
 
-func newNftablesHelper() (*nftablesHelper, error) {
-	// setup an nft connection
+func newNftablesClient() (*nftablesClient, error) {
+	// setup netlink connection with nftables
 	nftConn, err := nftables.New(nftables.AsLasting())
 	if err != nil {
 		return nil, err
 	}
-	// build the nftablesHelper
-	nfth := &nftablesHelper{
+
+	nftC := &nftablesClient{
 		nftConn: nftConn,
 	}
-	return nfth, nil
+
+	return nftC, nil
 }
 
-func (nfth *nftablesHelper) GetChains(name string) ([]*nftables.Chain, error) {
+func (nftC *nftablesClient) GetChains(name string) ([]*nftables.Chain, error) {
 	var result []*nftables.Chain
 
-	chains, err := nfth.nftConn.ListChains()
+	chains, err := nftC.nftConn.ListChains()
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +54,8 @@ func (nfth *nftablesHelper) GetChains(name string) ([]*nftables.Chain, error) {
 	return result, nil
 }
 
-func (nfth *nftablesHelper) GetTable(family nftables.TableFamily, name string) (*nftables.Table, error) {
-	tables, err := nfth.nftConn.ListTablesOfFamily(family)
+func (nftC *nftablesClient) GetTable(family nftables.TableFamily, name string) (*nftables.Table, error) {
+	tables, err := nftC.nftConn.ListTablesOfFamily(family)
 	if err != nil {
 		return nil, err
 	}
@@ -66,39 +67,34 @@ func (nfth *nftablesHelper) GetTable(family nftables.TableFamily, name string) (
 	return nil, fmt.Errorf("table %q not found", name)
 }
 
-func (nfth *nftablesHelper) DeleteRule(r *nftables.Rule) {
-	nfth.nftConn.DelRule(r)
+func (nftC *nftablesClient) DeleteRule(r *nftables.Rule) {
+	nftC.nftConn.DelRule(r)
 }
 
-func (nfth *nftablesHelper) GetRules(chainName, tableName string, family nftables.TableFamily) ([]*nftables.Rule, error) {
+// GetRules returns all rules for the provided chain name, table name and family.
+func (nftC *nftablesClient) GetRules(chainName, tableName string, family nftables.TableFamily) ([]*nftables.Rule, error) {
 	// get chain reference
-	chains, err := nfth.GetChains(chainName)
+	chains, err := nftC.GetChains(chainName)
 	if err != nil {
 		return nil, err
 	}
 
-	// // get rules
-	// rules, err := nfth.nftConn.GetRules(c.Table, c)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	for _, c := range chains {
 		if c.Table.Name == tableName && c.Table.Family == family {
-			return nfth.nftConn.GetRules(c.Table, c)
+			return nftC.nftConn.GetRules(c.Table, c)
 		}
 	}
 
-	return nil, fmt.Errorf("no match searching for chain %q under table %q with family %q", chainName, tableName, family)
+	return nil, fmt.Errorf("no match for chain %q, table %q with family %q found", chainName, tableName, family)
 }
 
 type clabNftablesRule struct {
-	rule *nftables.Rule
-	nfth *nftablesHelper
+	rule      *nftables.Rule
+	nftClient *nftablesClient
 }
 
-func (nfth *nftablesHelper) newClabNftablesRule(chainName, tableName string, family nftables.TableFamily, position uint64) (*clabNftablesRule, error) {
-	chains, err := nfth.GetChains(chainName)
+func (nftC *nftablesClient) newClabNftablesRule(chainName, tableName string, family nftables.TableFamily, position uint64) (*clabNftablesRule, error) {
+	chains, err := nftC.GetChains(chainName)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +120,7 @@ func (nfth *nftablesHelper) newClabNftablesRule(chainName, tableName string, fam
 		Exprs:    []expr.Any{},
 	}
 
-	return &clabNftablesRule{rule: r, nfth: nfth}, nil
+	return &clabNftablesRule{rule: r, nftClient: nftC}, nil
 }
 
 func (cnr *clabNftablesRule) AddOutputInterfaceFilter(oif string) error {
@@ -168,16 +164,17 @@ func (cnr *clabNftablesRule) AddVerdictDrop() error {
 	return nil
 }
 
+// AddComment adds a comment to the rule.
 func (cnr *clabNftablesRule) AddComment(comment string) error {
 	// convert comment to byte
 	actualCommentByte := []byte(comment)
 	// check comment length not exceded
-	if len(actualCommentByte) > XT_MAX_COMMENT_LEN {
-		return fmt.Errorf("comment max length is %d you've provided %d bytes", XT_MAX_COMMENT_LEN, len(actualCommentByte))
+	if len(actualCommentByte) > IPTablesCommentMaxSize {
+		return fmt.Errorf("comment max length is %d you've provided %d bytes", IPTablesCommentMaxSize, len(actualCommentByte))
 	}
 
 	// copy into byte alice of XT_MAX_COMMENT_LEN length
-	commentBytes := make([]byte, XT_MAX_COMMENT_LEN)
+	commentBytes := make([]byte, IPTablesCommentMaxSize)
 	copy(commentBytes, []byte(comment))
 
 	// create extension Info parameter as Unknown extension
@@ -193,21 +190,24 @@ func (cnr *clabNftablesRule) AddComment(comment string) error {
 	return nil
 }
 
+// Install installs the rule using nftables client.
 func (cnr *clabNftablesRule) Install() {
-	cnr.nfth.nftConn.InsertRule(cnr.rule)
+	cnr.nftClient.nftConn.InsertRule(cnr.rule)
 }
 
 // Flush sends all buffered commands in a single batch to nftables.
-func (nfth *nftablesHelper) Flush() error {
-	return nfth.nftConn.Flush()
+func (nftC *nftablesClient) Flush() error {
+	return nftC.nftConn.Flush()
 }
 
-// Close
-func (nfth *nftablesHelper) Close() {
-	nfth.nftConn.CloseLasting()
+// Close closes connection to nftables.
+func (nftC *nftablesClient) Close() {
+	nftC.nftConn.CloseLasting()
 }
 
-// installIPTablesFwdRule calls iptables to install `allow` rule for traffic destined nodes on the clab management network.
+// installIPTablesFwdRule installs the `allow` rule for traffic destined to the nodes
+// on the clab management network.
+// This rule is required for external access to the nodes.
 func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
 		return
@@ -219,18 +219,18 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	}
 
 	// first check if a rule already exists to not create duplicates
-	nfth, err := newNftablesHelper()
+	nftC, err := newNftablesClient()
 	if err != nil {
 		return err
 	}
-	defer nfth.Close()
+	defer nftC.Close()
 
-	rules, err := nfth.GetRules(DOCKER_FW_USER_CHAIN, DOCKER_FW_TABLE, nftables.TableFamilyIPv4)
+	rules, err := nftC.GetRules(DockerFWUserChain, DockerFWTable, nftables.TableFamilyIPv4)
 	if err != nil {
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
 
-	if ruleForMgmtBrExists(d.mgmt.Bridge, rules) {
+	if allowRuleForMgmtBrExists(d.mgmt.Bridge, rules) {
 		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", d.mgmt.Bridge)
 		return nil
 	}
@@ -238,7 +238,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	log.Debugf("Installing iptables rules for bridge %q", d.mgmt.Bridge)
 
 	// create a new rule
-	clnftr, err := nfth.newClabNftablesRule(DOCKER_FW_USER_CHAIN, DOCKER_FW_TABLE, nftables.TableFamilyIPv4, 0)
+	clnftr, err := nftC.newClabNftablesRule(DockerFWUserChain, DockerFWTable, nftables.TableFamilyIPv4, 0)
 	if err != nil {
 		return err
 	}
@@ -248,7 +248,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 		return err
 	}
 	// add a comment
-	err = clnftr.AddComment(COMMENT)
+	err = clnftr.AddComment(IPTablesRuleComment)
 	if err != nil {
 		return err
 	}
@@ -265,14 +265,16 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	// mark and note for installation
 	clnftr.Install()
 	// flush changes out to nftables
-	nfth.Flush()
+	nftC.Flush()
 
 	return nil
 }
 
-// ruleForMgmtBrExists checks if in the provided rules, there is a
-// rule, that contains the provided brName
-func ruleForMgmtBrExists(brName string, rules []*nftables.Rule) bool {
+// allowRuleForMgmtBrExists checks if an allow rule for the provided bridge name exists.
+// The actual check doesn't verify that `allow` is set, it just checks if the rule
+// has the provided bridge name in the output interface match and has a comment that is setup
+// by containerlab.
+func allowRuleForMgmtBrExists(brName string, rules []*nftables.Rule) bool {
 	return len(getRulesForMgmtBr(brName, rules)) > 0
 }
 
@@ -295,7 +297,7 @@ func getRulesForMgmtBr(brName string, rules []*nftables.Rule) []*nftables.Rule {
 			case *expr.Match:
 				if e.Name == "comment" {
 					if val, ok := e.Info.(*xt.Unknown); ok {
-						if bytes.HasPrefix(*val, []byte(COMMENT)) {
+						if bytes.HasPrefix(*val, []byte(IPTablesRuleComment)) {
 							commentFound = true
 						}
 					}
@@ -325,13 +327,13 @@ func (d *DockerRuntime) deleteIPTablesFwdRule() (err error) {
 	}
 
 	// first check if a rule already exists to not create duplicates
-	nfth, err := newNftablesHelper()
+	nftC, err := newNftablesClient()
 	if err != nil {
 		return err
 	}
-	defer nfth.Close()
+	defer nftC.Close()
 
-	rules, err := nfth.GetRules(DOCKER_FW_USER_CHAIN, DOCKER_FW_TABLE, nftables.TableFamilyIPv4)
+	rules, err := nftC.GetRules(DockerFWUserChain, DockerFWTable, nftables.TableFamilyIPv4)
 	if err != nil {
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
@@ -352,10 +354,10 @@ func (d *DockerRuntime) deleteIPTablesFwdRule() (err error) {
 
 	log.Debugf("removing clab iptables rules for bridge %q", br)
 	for _, r := range mgmtBrRules {
-		nfth.DeleteRule(r)
+		nftC.DeleteRule(r)
 	}
 
-	nfth.Flush()
+	nftC.Flush()
 
 	return nil
 }
