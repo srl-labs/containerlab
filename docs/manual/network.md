@@ -232,19 +232,19 @@ With this approach, users can prevent IP address overlap with nodes deployed on 
 
 #### external access
 
-Starting with `0.24.0` release containerlab will enable external access to the nodes by default. This means that external systems/hosts will be able to communicate with the nodes of your topology without requiring any manual configuration.
+Containerlab will attempt to enable external access to the nodes by default. This means that external systems/hosts will be able to communicate with the nodes of your topology without requiring any manual iptables/nftables rules to be installed.
 
-To allow external communications containerlab installs a rule in the `DOCKER-USER` iptables chain, allowing all packets targeting containerlab's management network. The rule looks like follows:
+To allow external communications containerlab installs a rule in the `DOCKER-USER` chain, allowing all packets targeting containerlab's management network. The rule looks like follows:
 
 ```shell
 ❯ sudo iptables -vnL DOCKER-USER
 Chain DOCKER-USER (1 references)
  pkts bytes target     prot opt in     out     source               destination         
-    0     0 ACCEPT     all  --  *      br-03d953ed46df  0.0.0.0/0            0.0.0.0/0 # (1)
- 768K 4728M RETURN     all  --  *      *       0.0.0.0/0            0.0.0.0/0          
+    0     0 ACCEPT     all  --  *      br-a8b9fc8b33a2  0.0.0.0/0            0.0.0.0/0            /* set by containerlab */
+12719   79M RETURN     all  --  *      *       0.0.0.0/0            0.0.0.0/0      
 ```
 
-1. The `br-03d953ed46df` bridge interface is the interface that backs up the containerlab's management network.
+1. The `br-a8b9fc8b33a2` bridge interface is the interface that backs up the containerlab's management network (`clab` docker network).
 
 The rule will be removed together with the management network.
 
@@ -253,20 +253,31 @@ Should you not want to enable external access to your nodes you can set `externa
 ```yaml
 name: no-ext-access
 mgmt:
-  external-access: false # (1)
+  external-access: false #(1)!
 topology:
 # your regular topology definition
 ```
 
 1. When set to `false`, containerlab will not touch iptables rules. On most docker installations this will result in restricted external access.
 
-???error "'missing DOCKER-USER iptables chain' error"
-    Containerlab will throw an error "missing DOCKER-USER iptables chain" when this chain is not found. This error is typically caused by two factors
+///details | Errors and warnings
+External access feature requires nftables kernel API to be present. Kernels newer than v4 typically have this API enabled by default. To understand which API is in use one can issue the following command:
 
-    1. Old docker version installed. Typically seen on Centos systems. Minimum required docker version is 17.06.
-    2. Docker is installed incorrectly. It is recommended to follow the [official installation procedures](https://docs.docker.com/engine/install/) by selecting "Installation per distro" menu option.
+```bash
+iptables -V
+iptables v1.8.5 (nf_tables)
+```
 
-    When docker is correctly installed, additional iptables chains will become available and the error will not appear.
+If the outputs contains `nf_tables` you are all set. If it contains `legacy` or doesn't say anything about `nf_tables` then nf_tables API is not available and containerlab will not be able to setup external access. You will have to enable it manually (or better yet - upgrade the kernel).  
+Older distros, like Centos 7, are known to use the legacy iptables backend and therefore will emit a warning when containerlab will attempt to launch a lab. The warning will not prevent the lab from starting and running, but you will need to setup iptables rules manually if you want your nodes to be accessible from the outside of your containerlab host.
+
+Containerlab will throw an error "missing DOCKER-USER iptables chain" when this chain is not found. This error is typically caused by two factors
+
+1. Old docker version installed. Typically seen on Centos systems. Minimum required docker version is 17.06.
+2. Docker is installed incorrectly. It is recommended to follow the [official installation procedures](https://docs.docker.com/engine/install/) by selecting "Installation per distro" menu option.
+
+When docker is correctly installed, additional iptables chains will become available and the error will not appear.
+///
 
 ### connection details
 
