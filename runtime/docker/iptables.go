@@ -117,7 +117,7 @@ func (nftC *nftablesClient) newClabNftablesRule(chainName, tableName string, fam
 
 }
 
-func (cnr *clabNftablesRule) AddOutputInterfaceFilter(oif string) error {
+func (cnr *clabNftablesRule) AddOutputInterfaceFilter(oif string) {
 	// define the metadata to evaluate
 	metaOifName := &expr.Meta{
 		Key:            expr.MetaKeyOIFNAME,
@@ -133,7 +133,6 @@ func (cnr *clabNftablesRule) AddOutputInterfaceFilter(oif string) error {
 
 	// add expr to rule
 	cnr.rule.Exprs = append(cnr.rule.Exprs, metaOifName, comp)
-	return nil
 }
 
 func (cnr *clabNftablesRule) AddCounter() error {
@@ -169,7 +168,7 @@ func (cnr *clabNftablesRule) AddComment(comment string) error {
 
 	// copy into byte alice of XT_MAX_COMMENT_LEN length
 	commentBytes := make([]byte, IPTablesCommentMaxSize)
-	copy(commentBytes, []byte(comment))
+	copy(commentBytes, actualCommentByte)
 
 	// create extension Info parameter as Unknown extension
 	commentXTInfo := xt.Unknown(commentBytes)
@@ -232,32 +231,30 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 	log.Debugf("Installing iptables rules for bridge %q", d.mgmt.Bridge)
 
 	// create a new rule
-	clnftr, err := nftC.newClabNftablesRule(DockerFWUserChain, DockerFWTable, nftables.TableFamilyIPv4, 0)
+	rule, err := nftC.newClabNftablesRule(DockerFWUserChain, DockerFWTable, nftables.TableFamilyIPv4, 0)
 	if err != nil {
 		return err
 	}
 	// set Output interface match
-	err = clnftr.AddOutputInterfaceFilter(d.mgmt.Bridge)
-	if err != nil {
-		return err
-	}
+	rule.AddOutputInterfaceFilter(d.mgmt.Bridge)
+
 	// add a comment
-	err = clnftr.AddComment(IPTablesRuleComment)
+	err = rule.AddComment(IPTablesRuleComment)
 	if err != nil {
 		return err
 	}
 	// add a counter
-	err = clnftr.AddCounter()
+	err = rule.AddCounter()
 	if err != nil {
 		return err
 	}
 	// make it an ACCEPT rule
-	err = clnftr.AddVerdictAccept()
+	err = rule.AddVerdictAccept()
 	if err != nil {
 		return err
 	}
 	// mark and note for installation
-	nftC.InsertRule(clnftr.rule)
+	nftC.InsertRule(rule.rule)
 	// flush changes out to nftables
 	nftC.Flush()
 
