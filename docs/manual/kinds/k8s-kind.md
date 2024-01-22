@@ -2,77 +2,114 @@
 search:
   boost: 4
 ---
+
+# Kubernetes in docker (kind) cluster
+
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
-# k8s-kind container
-kind is a tool for running local Kubernetes clusters using Docker container “nodes”.
-kind was primarily designed for testing Kubernetes itself, but may be used for local development or CI.
+Since more and more applications (including network management systems and network functions) are being deployed in the k8s clusters, it is important to be able to test the network connectivity between the k8s workloads and the underlay network.
 
-The containerlab k8s-kind node kind allow for kind clusters to be deployed via containerlab.
+[Kind][kind-url] is a tool for running local Kubernetes clusters using Docker container “nodes”. By integrating kind clusters via a new kind `k8s-kind` with containerlab, it is possible to spin-up kind clusters as part of the containerlab topology.
 
+This deployment model unlocks the possibility to integrate network underlay created by containerlab with the workloads running in the kind clusters in a single YAML file. The integration between kind clusters and containerlab topology makes it easy to deploy and interconnect k8s clusters and the underlay network.
 
-## Using k8s-kind containers
-As with any other node, the linux container is a node of a specific kind, `k8s-kind` in this case.
+## Using `k8s-kind`
+
+Integration between Kind and Containerlab is a mix of two kinds:
+
+1. `k8s-kind` - to manage the creation of the kind clusters
+2. `ext-container` - to allow for the interconnection between the nodes of a kind cluster and the network nodes that are part of the same containerlab topology
+
+The lab depicted below incorporates two kind clusters, one with a control plane and a worker node, and the other with an all-in-one node.
+
+By defining the clusters with `k8s-kind` nodes we let containerlab manage the lifecycle (deployment/destroy) of the kind clusters. But this is not all. We can use the `ext-container` nodes to define actual kind cluster containers that run the control plane and worker nodes.
+
+The name of the `ext-container` node is known upfront as it is computed as `<k8s-kind-node-name>-control-plane` for the control plane node and `<k8s-kind-node-name>-worker[worker-node-index]` for the worker nodes.
+
+By defining the `ext-container` nodes we unlock the possibility to define the links between the kind cluster nodes and the network nodes that are part of the same containerlab topology.
 
 ```yaml
-# a simple topo of two alpine containers connected with each other
-name: k8s_kind_demo
+--8<-- "lab-examples/k8s_kind01/k8s_kind01.clab.yml"
+```
 
-topology:
-  kinds:
-    srl:
-     type: ixrd3
-     image: ghcr.io/nokia/srlinux
-  nodes:
-    srl01:
-      kind: srl
-    k01:
-      kind: k8s-kind
-      startup-config: k01-config.yaml
-    k02:
-      kind: k8s-kind
+This is exactly how you use the integration between containerlab and kind to create a topology that includes kind clusters and network nodes.
 
-    # k01 -> resulting nodes due to startup-config assigned config `k01-config.yaml`
-    k01-control-plane:
-      kind: ext-container
-    k01-worker:
-      kind: ext-container
-    k01-worker2:
-      kind: ext-container
+Once the lab pictured above is deployed, we can see the two clusters created:
 
-    # k02 -> default kind cluster with just single node 
-    k02-control-plane:
-      kind: ext-container
-  links: 
-    - endpoints: ["srl01:e1-1", "k01-control-plane:eth1"]
-    - endpoints: ["srl01:e1-2", "k01-worker:eth1"]
-    - endpoints: ["srl01:e1-3", "k01-worker2:eth1"]
-    - endpoints: ["srl01:e1-4", "k02-control-plane:eth1"]
+///tab | get clusters
 
-    - endpoints: ["srl01:e1-10", "k01-control-plane:eth2"]
-    - endpoints: ["srl01:e1-11", "k02-control-plane:eth2"]
+```bash
+❯ kind get clusters
+k01
+k02
+```
+
+///
+
+///tab | k01 nodes
 
 ```
+❯ kind get nodes --name k01
+k01-worker
+k01-control-plane
+```
+
+///
+
+///tab | k02 nodes
+
+```
+❯ kind get nodes --name k02
+k02-control-plane
+```
+
+///
+
+## Cluster config
+
+It is possible to provide original kind cluster configuration via `startup-configuration` parameter of the `k8s-kind` node. Due to the kind cluster config provided to `k01` node above, kind will spin up 2 containers, one control-plane and one worker node. `k02` cluster that doesn't have a `startup-configuration` defined will spin up a single container with an all-in-one control-plane and a worker node.
 
 Contents of `k01-config.yaml`:
+
 ```yaml
-apiVersion: kind.x-k8s.io/v1alpha4
-kind: Cluster
-nodes:
-- role: control-plane
-- role: worker
-- role: worker
+--8<-- "lab-examples/k8s_kind01/k01-config.yaml"
 ```
 
-The example topology will spin-up two k8s-kind cluster and an srlinux (srl) node.
-Due to the kind cluster config provided to k01, kind will spin up 3 containers, one control-plane and two worker nodes. k02 which is not specifically provided a configuration file, will fallback to kind defaults, which is a single control-plane node.
-Since kind will spin-up these different nodes, the k01 and k02 nodes are solely there to configure the kind cluster creation.
+## Cluster interfaces
 
-For the definition of the wiring / linking the ext-container is being used. As said, the k01 and k02 nodes are just placeholders to define the cluster, which results in a single or multiple control-plane and worker nodes. To allow for the definition of the connectivity then, the `ext-container` kind needs to be defined and can then be utilized in the links -> endpoints section. 
+When containerlab orchestrates the kind clusters creation it relies on kind API to handle the actual deployment process. When kind creates a cluster it uses a docker network to connect the kind cluster nodes together.
 
+In order to connect cluster nodes to the network underlay created by containerlab, we use `ext-container` kind of nodes per each control-plane and worker node of a cluster and connect them with their `eth1+` interfaces to the network nodes.
 
-## Enabled node parameters
-With k8s-kind nodes it is possible to use the following configuration parameters:
+Since the `eth1+` interfaces come up unconfigured, we may configure them using the `exec` property and set the IP addresses.
 
-* [image](../nodes.md#image) - to define the kind container image to use for the kind cluster
-* [startup-config](../nodes.md#startup-config) - to provide a kind cluster configuration [optional, _kind defaults apply otherwise_]
+Given the lab above, we configure `eth1` interface on all nodes. For example, we can check that worker node of cluster `k01` got its `eth1` inteface configured with the IP address:
+
+```bash
+❯ docker exec -it k01-worker ip a show eth1
+12229: eth1@if12230: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9500 qdisc noqueue state UP group default 
+    link/ether aa:c1:ab:7e:22:6f brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet 192.168.11.1/24 scope global eth1
+       valid_lft forever preferred_lft forever
+```
+
+## Node parameters
+
+With `k8s-kind`` nodes it is possible to use the following configuration parameters:
+
+- [image](../nodes.md#image) - to define the kind container image to use for the kind cluster
+- [startup-config](../nodes.md#startup-config) - to provide a kind cluster configuration (optional, kind defaults apply otherwise)
+
+## Known issues
+
+### Duplication of nodes in the output
+
+When you deploy a lab with `k8s-kind` nodes you may notice that the output of the `deploy` command contains more nodes than you have defined in the topology file. This is a known visual issue that is caused by the fact that `k8s-kind` nodes are merely a placeholder for a kind cluster configuration, and the actual nodes of the kind cluster are defined by the `ext-container` nodes.
+
+### `inspect --all` command output
+
+When you run `clab inspect --all` command you may notice that the output doesn't list the `k8s-kind` nodes nor the `ext-container` nodes.
+
+For now, use `clab inspect -t <topology-file>` to see the full topology output.
+
+[kind-url]: https://kind.sigs.k8s.io/
