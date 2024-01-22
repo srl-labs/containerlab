@@ -15,6 +15,7 @@ import (
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
 	host "github.com/srl-labs/containerlab/nodes/host"
 	ipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
+	k8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
 	keysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	linux "github.com/srl-labs/containerlab/nodes/linux"
 	ovs "github.com/srl-labs/containerlab/nodes/ovs"
@@ -77,4 +78,5 @@ func (c *CLab) RegisterNodes() {
 	rare.Register(c.Reg)
 	c8000.Register(c.Reg)
 	border0.Register(c.Reg)
+	k8s_kind.Register(c.Reg)
 }
