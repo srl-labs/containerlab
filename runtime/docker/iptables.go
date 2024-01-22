@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/google/nftables"
@@ -89,8 +90,7 @@ func (nftC *nftablesClient) GetRules(chainName, tableName string, family nftable
 }
 
 type clabNftablesRule struct {
-	rule      *nftables.Rule
-	nftClient *nftablesClient
+	rule *nftables.Rule
 }
 
 func (nftC *nftablesClient) newClabNftablesRule(chainName, tableName string, family nftables.TableFamily, position uint64) (*clabNftablesRule, error) {
@@ -99,28 +99,22 @@ func (nftC *nftablesClient) newClabNftablesRule(chainName, tableName string, fam
 		return nil, err
 	}
 
-	var chain *nftables.Chain
-
 	for _, c := range chains {
 		if c.Table.Name == tableName && c.Table.Family == family {
-			chain = c
-			break
+			r := &nftables.Rule{
+				Handle:   0,
+				Position: position,
+				Table:    c.Table,
+				Chain:    c,
+				Exprs:    []expr.Any{},
+			}
+
+			return &clabNftablesRule{rule: r}, nil
 		}
 	}
 
-	if chain == nil {
-		return nil, fmt.Errorf("chain %q not found in table %q with family %q", chainName, tableName, family)
-	}
+	return nil, errors.New("chain " + chainName + " not found in table " + tableName + " with family " + string(family))
 
-	r := &nftables.Rule{
-		Handle:   0,
-		Position: position,
-		Table:    chain.Table,
-		Chain:    chain,
-		Exprs:    []expr.Any{},
-	}
-
-	return &clabNftablesRule{rule: r, nftClient: nftC}, nil
 }
 
 func (cnr *clabNftablesRule) AddOutputInterfaceFilter(oif string) error {
@@ -190,9 +184,9 @@ func (cnr *clabNftablesRule) AddComment(comment string) error {
 	return nil
 }
 
-// Install installs the rule using nftables client.
-func (cnr *clabNftablesRule) Install() {
-	cnr.nftClient.nftConn.InsertRule(cnr.rule)
+// InsertRule inserts a rule.
+func (nftC *nftablesClient) InsertRule(r *nftables.Rule) {
+	nftC.nftConn.InsertRule(r)
 }
 
 // Flush sends all buffered commands in a single batch to nftables.
@@ -263,7 +257,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 		return err
 	}
 	// mark and note for installation
-	clnftr.Install()
+	nftC.InsertRule(clnftr.rule)
 	// flush changes out to nftables
 	nftC.Flush()
 
@@ -278,25 +272,29 @@ func allowRuleForMgmtBrExists(brName string, rules []*nftables.Rule) bool {
 	return len(getRulesForMgmtBr(brName, rules)) > 0
 }
 
+// getRulesForMgmtBr returns all rules that have the provided bridge name in the output interface match
+// and have a comment that is setup by containerlab.
 func getRulesForMgmtBr(brName string, rules []*nftables.Rule) []*nftables.Rule {
-	// contains all Matching rules
 	var result []*nftables.Rule
 
-	// iterate through rules
 	for _, r := range rules {
 		oifNameFound := false
 		commentFound := false
-		// iterate through rule expressions
+
 		for _, e := range r.Exprs {
-			switch e := e.(type) {
+			switch v := e.(type) {
+			// Cmp is a comparison expression
+			// in the case of the rule we are looking for, it should be a comparison of the output interface name
 			case *expr.Cmp:
-				// check if it contains the mgmt bridge name
-				if bytes.Equal(e.Data, []byte(brName+"\x00")) {
+				if bytes.Equal(v.Data, []byte(brName+"\x00")) {
 					oifNameFound = true
 				}
+			// Match is a match expression
+			// in the case of the rule we are looking for, it should contain
+			// a comment extension with the comment set by containerlab
 			case *expr.Match:
-				if e.Name == "comment" {
-					if val, ok := e.Info.(*xt.Unknown); ok {
+				if v.Name == "comment" {
+					if val, ok := v.Info.(*xt.Unknown); ok {
 						if bytes.HasPrefix(*val, []byte(IPTablesRuleComment)) {
 							commentFound = true
 						}
@@ -306,10 +304,12 @@ func getRulesForMgmtBr(brName string, rules []*nftables.Rule) []*nftables.Rule {
 				continue
 			}
 		}
+
 		if oifNameFound && commentFound {
 			result = append(result, r)
 		}
 	}
+
 	return result
 }
 
