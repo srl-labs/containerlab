@@ -34,27 +34,27 @@ type k8s_kind struct {
 	nodes.DefaultNode
 }
 
-func (k *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	k.DefaultNode = *nodes.NewDefaultNode(k)
-	k.Cfg = cfg
+func (n *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.Cfg = cfg
 	for _, o := range opts {
-		o(k)
+		o(n)
 	}
 
 	return nil
 }
 
 // GetImages is not required, kind will download the images itself
-func (d *k8s_kind) GetImages(_ context.Context) map[string]string { return map[string]string{} }
-func (d *k8s_kind) PullImage(_ context.Context) error             { return nil }
+func (n *k8s_kind) GetImages(_ context.Context) map[string]string { return map[string]string{} }
+func (n *k8s_kind) PullImage(_ context.Context) error             { return nil }
 
 // DeleteNetnsSymlink kind takes care of the Netlinks itself
-func (d *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
+func (n *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
 
-func (k *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
+func (n *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 
 	// create the Provider with the above runtime based options
-	kindProvider, err := k.getProvider()
+	kindProvider, err := n.getProvider()
 	if err != nil {
 		return err
 	}
@@ -63,12 +63,12 @@ func (k *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 	clusterCreateOptions := []cluster.CreateOption{}
 
 	// set the kind image, if provided
-	if k.Cfg.Image != "" {
-		clusterCreateOptions = append(clusterCreateOptions, cluster.CreateWithNodeImage(k.Cfg.Image))
+	if n.Cfg.Image != "" {
+		clusterCreateOptions = append(clusterCreateOptions, cluster.CreateWithNodeImage(n.Cfg.Image))
 	}
 
 	// Read the kind cluster config
-	conf, err := readClusterConfig(k.Cfg.StartupConfig)
+	conf, err := readClusterConfig(n.Cfg.StartupConfig)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (k *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 	)
 
 	// create the kind cluster
-	err = kindProvider.Create(k.Cfg.ShortName, clusterCreateOptions...)
+	err = kindProvider.Create(n.Cfg.ShortName, clusterCreateOptions...)
 	if err != nil {
 		return err
 	}
@@ -89,13 +89,13 @@ func (k *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 	return err
 }
 
-func (k *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-	containeList, err := k.Runtime.ListContainers(ctx, []*types.GenericFilter{
+func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+	containeList, err := n.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "label",
 			Field:      "io.x-k8s.kind.cluster",
 			Operator:   "=",
-			Match:      k.Cfg.ShortName, // this regexp ensure we have an exact match for name
+			Match:      n.Cfg.ShortName, // this regexp ensure we have an exact match for name
 		},
 	})
 	if err != nil {
@@ -104,7 +104,7 @@ func (k *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContaine
 	for _, cnt := range containeList {
 		// fake fill the returned labels with the configured once.
 		// Some of the displayed information is read from labels (e.g Kind)
-		for key, v := range k.Cfg.Labels {
+		for key, v := range n.Cfg.Labels {
 			cnt.Labels[key] = v
 		}
 		// we need to overwrite the nodename label
@@ -113,27 +113,27 @@ func (k *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContaine
 	return containeList, nil
 }
 
-func (k *k8s_kind) Delete(_ context.Context) error {
+func (n *k8s_kind) Delete(_ context.Context) error {
 	// create the Provider with the above runtime based options
-	kindProvider, err := k.getProvider()
+	kindProvider, err := n.getProvider()
 	if err != nil {
 		return err
 	}
-	log.Infof("Deleting kind cluster %q", k.Cfg.ShortName)
-	return kindProvider.Delete(k.Cfg.ShortName, "")
+	log.Infof("Deleting kind cluster %q", n.Cfg.ShortName)
+	return kindProvider.Delete(n.Cfg.ShortName, "")
 }
 
 // getProvider returns the kind provider (runtime for kind)
-func (k *k8s_kind) getProvider() (*cluster.Provider, error) {
+func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	var kindProviderOptions cluster.ProviderOption
 	// instantiate the Provider which is runtime dependent
-	switch k.Runtime.GetName() {
+	switch n.Runtime.GetName() {
 	case docker.RuntimeName:
 		kindProviderOptions = cluster.ProviderWithDocker()
 	case "podman": // this is an ugly workaround because podman is generally excluded via golang tags ... should be "podman.RuntimeName"
 		kindProviderOptions = cluster.ProviderWithPodman()
 	default:
-		return nil, fmt.Errorf("runtime %s not supported by the k8s_kind node kind", k.Runtime.GetName())
+		return nil, fmt.Errorf("runtime %s not supported by the k8s_kind node kind", n.Runtime.GetName())
 	}
 
 	// create the Provider with the above runtime based options
@@ -170,13 +170,13 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 }
 
 // RunExec is not implemented for this kind.
-func (k *k8s_kind) RunExec(_ context.Context, _ *exec.ExecCmd) (*exec.ExecResult, error) {
-	log.Warnf("Exec operation is not implemented for kind %q", k.Config().Kind)
+func (n *k8s_kind) RunExec(_ context.Context, _ *exec.ExecCmd) (*exec.ExecResult, error) {
+	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 	return nil, exec.ErrRunExecNotSupported
 }
 
 // RunExecNotWait is not implemented for this kind.
-func (k *k8s_kind) RunExecNotWait(_ context.Context, _ *exec.ExecCmd) error {
-	log.Warnf("RunExecNotWait operation is not implemented for kind %q", k.Config().Kind)
+func (n *k8s_kind) RunExecNotWait(_ context.Context, _ *exec.ExecCmd) error {
+	log.Warnf("RunExecNotWait operation is not implemented for kind %q", n.Config().Kind)
 	return exec.ErrRunExecNotSupported
 }
