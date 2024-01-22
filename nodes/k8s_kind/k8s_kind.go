@@ -44,15 +44,14 @@ func (n *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-// GetImages is not required, kind will download the images itself
+// GetImages is not required, kind will download the images.
 func (n *k8s_kind) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (n *k8s_kind) PullImage(_ context.Context) error             { return nil }
 
-// DeleteNetnsSymlink kind takes care of the Netlinks itself
+// DeleteNetnsSymlink is a noop since kind takes care of the Netlinks.
 func (n *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
 
 func (n *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-
 	// create the Provider with the above runtime based options
 	kindProvider, err := n.getProvider()
 	if err != nil {
@@ -95,7 +94,7 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContaine
 			FilterType: "label",
 			Field:      "io.x-k8s.kind.cluster",
 			Operator:   "=",
-			Match:      n.Cfg.ShortName, // this regexp ensure we have an exact match for name
+			Match:      n.Cfg.ShortName, // this regexp ensures we have an exact match for name
 		},
 	})
 	if err != nil {
@@ -110,6 +109,7 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContaine
 		// we need to overwrite the nodename label
 		cnt.Labels["clab-node-name"] = cnt.Names[0]
 	}
+
 	return containeList, nil
 }
 
@@ -120,10 +120,11 @@ func (n *k8s_kind) Delete(_ context.Context) error {
 		return err
 	}
 	log.Infof("Deleting kind cluster %q", n.Cfg.ShortName)
+
 	return kindProvider.Delete(n.Cfg.ShortName, "")
 }
 
-// getProvider returns the kind provider (runtime for kind)
+// getProvider returns the kind provider (runtime for kind).
 func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	var kindProviderOptions cluster.ProviderOption
 	// instantiate the Provider which is runtime dependent
@@ -140,10 +141,8 @@ func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	return cluster.NewProvider(kindProviderOptions), nil
 }
 
-// readClusterConfig reads the kind clusterconfig from a file and returns the
-// parsed struct
+// readClusterConfig reads the kind clusterconfig from a file.
 func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
-
 	// unmarshal the clusterconfig
 	clusterConfig := &v1alpha4.Cluster{}
 
@@ -166,17 +165,20 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 		// if no config was provided, generate the default
 		v1alpha4.SetDefaultsCluster(clusterConfig)
 	}
+
 	return clusterConfig, nil
 }
 
 // RunExec is not implemented for this kind.
 func (n *k8s_kind) RunExec(_ context.Context, _ *exec.ExecCmd) (*exec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
+
 	return nil, exec.ErrRunExecNotSupported
 }
 
 // RunExecNotWait is not implemented for this kind.
 func (n *k8s_kind) RunExecNotWait(_ context.Context, _ *exec.ExecCmd) error {
 	log.Warnf("RunExecNotWait operation is not implemented for kind %q", n.Config().Kind)
+
 	return exec.ErrRunExecNotSupported
 }
