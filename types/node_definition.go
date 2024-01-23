@@ -67,7 +67,7 @@ type NodeDefinition struct {
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
 	// stage based dependency definition
-	Stages Stages `yaml:"stages,omitempty"`
+	Stages *Stages `yaml:"stages,omitempty"`
 	// DNS configuration
 	DNS *DNSConfig `yaml:"dns,omitempty"`
 	// Certificate configuration
@@ -77,10 +77,35 @@ type NodeDefinition struct {
 }
 
 type Stages struct {
-	Stage map[string]*WaitForEnvelop `yaml:",inline"`
+	Create      *StageCreate      `yaml:"create"`
+	CreateLinks *StageCreateLinks `yaml:"create-links"`
+	Configure   *StageConfigure   `yaml:"configure"`
+	Healthy     *StageHealthy     `yaml:"healthy"`
+	Exit        *StageExit        `yaml:"exit"`
 }
 
-type WaitForEnvelop struct {
+type StageCreate struct {
+	StageConfig `yaml:",inline"`
+}
+
+type StageCreateLinks struct {
+	StageConfig `yaml:",inline"`
+}
+
+type StageConfigure struct {
+	StageConfig `yaml:",inline"`
+}
+
+type StageHealthy struct {
+	StageConfig `yaml:",inline"`
+}
+
+type StageExit struct {
+	StageConfig `yaml:",inline"`
+}
+
+// StageConfig represents a configuration of a given stage.
+type StageConfig struct {
 	WaitFor []*WaitFor `yaml:"wait-for,omitempty"`
 }
 
@@ -366,12 +391,28 @@ func (n *NodeDefinition) GetWaitFor() (map[WaitForPhase][]*WaitFor, error) {
 		return result, nil
 	}
 
-	for stage, dependency := range n.Stages.Stage {
-		p, err := WaitForPhaseFromString(stage)
-		if err != nil {
-			return nil, err
+	data := map[WaitForPhase][]*WaitFor{}
+
+	if n.Stages != nil {
+		if n.Stages.Create != nil {
+			data[WaitForCreate] = n.Stages.Create.WaitFor
 		}
-		result[p] = append(result[p], dependency.WaitFor...)
+		if n.Stages.CreateLinks != nil {
+			data[WaitForCreateLinks] = n.Stages.CreateLinks.WaitFor
+		}
+		if n.Stages.Configure != nil {
+			data[WaitForConfigure] = n.Stages.Configure.WaitFor
+		}
+		if n.Stages.Healthy != nil {
+			data[WaitForHealthy] = n.Stages.Healthy.WaitFor
+		}
+		if n.Stages.Exit != nil {
+			data[WaitForExit] = n.Stages.Exit.WaitFor
+		}
+
+		for stage, dependency := range data {
+			result[stage] = append(result[stage], dependency...)
+		}
 	}
 
 	return result, nil
