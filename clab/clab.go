@@ -154,7 +154,7 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 		}
 	// if the path is not a local file and a URL, download the file and store it in the tmp dir
 	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
-		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
+		file, err = c.downloadTopoFile(path)
 		if err != nil {
 			return "", err
 		}
