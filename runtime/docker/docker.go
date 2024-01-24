@@ -801,7 +801,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 		return nil, err
 	}
 	execID, err := d.Client.ContainerExecCreate(ctx, cID, dockerTypes.ExecConfig{
-		User:         "root",
+		User:         "0", // root
 		AttachStderr: true,
 		AttachStdout: true,
 		Cmd:          execCmd.GetCmd(),

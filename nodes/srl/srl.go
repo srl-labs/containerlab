@@ -628,6 +628,20 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
+	rcPermCmd := "chown -R admin:ntwkadmin /home/admin"
+
+	cmd, err = exec.NewExecCmdFromString(rcPermCmd)
+	if err != nil {
+		return err
+	}
+
+	execResult, err = n.RunExec(ctx, cmd)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
 	return nil
 }
 
