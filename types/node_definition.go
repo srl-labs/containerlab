@@ -66,7 +66,7 @@ type NodeDefinition struct {
 	Sysctls map[string]string `yaml:"sysctls,omitempty"`
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
-	// stage based dependency definition
+	// Deployment stages
 	Stages *Stages `yaml:"stages,omitempty"`
 	// DNS configuration
 	DNS *DNSConfig `yaml:"dns,omitempty"`
@@ -76,6 +76,7 @@ type NodeDefinition struct {
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
 }
 
+// Stages represents a configuration of a given node deployment stage.
 type Stages struct {
 	Create      *StageCreate      `yaml:"create"`
 	CreateLinks *StageCreateLinks `yaml:"create-links"`
@@ -84,28 +85,33 @@ type Stages struct {
 	Exit        *StageExit        `yaml:"exit"`
 }
 
+// StageCreate represents a creation stage of a given node.
 type StageCreate struct {
-	StageConfig `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
+// StageCreateLinks represents a stage of a given node when links are getting added to it.
 type StageCreateLinks struct {
-	StageConfig `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
+// StageConfigure represents a stage of a given node when it enters configuration workflow.
 type StageConfigure struct {
-	StageConfig `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
+// StageHealthy represents a stage of a given node when it reaches healthy status.
 type StageHealthy struct {
-	StageConfig `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
+// StageExit represents a stage of a given node when the node reaches exit state.
 type StageExit struct {
-	StageConfig `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
-// StageConfig represents a configuration of a given stage.
-type StageConfig struct {
+// StageBase is a common base stage that all stages embed.
+type StageBase struct {
 	WaitFor []*WaitFor `yaml:"wait-for,omitempty"`
 }
 
