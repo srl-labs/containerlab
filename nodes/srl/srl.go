@@ -616,9 +616,12 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
+	// su to admin user to apply the default config
+	// to make sure that the 'environment save' command will create
+	// files with correct permissions
 	cmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
-		fmt.Sprintf("/opt/srlinux/bin/sr_cli -ed < %s", defaultCfgPath),
+		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", defaultCfgPath),
 	})
 
 	execResult, err := n.RunExec(ctx, cmd)
@@ -654,7 +657,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	cmd = exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
-		fmt.Sprintf("/opt/srlinux/bin/sr_cli -ed < %s", overlayCfgPath),
+		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", overlayCfgPath),
 	})
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
