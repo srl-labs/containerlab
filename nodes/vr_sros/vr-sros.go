@@ -120,7 +120,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
 		log.Infof("%s: applying config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
 
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 		defer cancel()
 
 		r, err := os.Open(s.Cfg.StartupConfig)
