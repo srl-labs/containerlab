@@ -22,7 +22,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.5.0
 	github.com/h2non/gock v1.2.0
-	github.com/hairyhenderson/gomplate/v3 v3.11.6
+	github.com/hairyhenderson/gomplate/v3 v3.11.7
 	github.com/hashicorp/go-version v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.0
