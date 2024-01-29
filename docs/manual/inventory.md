@@ -6,74 +6,93 @@ Ansible inventory is generated automatically for every lab. The inventory file c
 
 Lab nodes are grouped under their kinds in the inventory so that the users can selectively choose the right group of nodes in the playbooks.
 
-=== "topology file"
-    ```yaml
-    name: ansible
-    topology:
-      nodes:
-        r1:
-          kind: crpd
-          image: crpd:latest
+///tab | topology file
 
-        r2:
-          kind: ceos
-          image: ceos:latest
+```yaml
+name: ansible
+topology:
+  nodes:
+    r1:
+      kind: crpd
+      image: crpd:latest
 
-        r3:
-          kind: ceos
-          image: ceos:latest
+    r2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
 
-        grafana:
-          kind: linux
-          image: grafana/grafana:7.4.3
-    ```
-=== "generated ansible inventory"
-    ```yaml
-    all:
-      children:
-        crpd:
-          hosts:
-            clab-ansible-r1:
-              ansible_host: <mgmt-ipv4-address>
-        ceos:
-          hosts:
-            clab-ansible-r2:
-              ansible_host: <mgmt-ipv4-address>
-            clab-ansible-r3:
-              ansible_host: <mgmt-ipv4-address>
-        linux:
-          hosts:
-            clab-ansible-grafana:
-              ansible_host: <mgmt-ipv4-address>
-    ```
+    r3:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
 
-## Removing `ansible_host` var
+    grafana:
+      kind: linux
+      image: grafana/grafana:7.4.3
+```
+
+///
+///tab | generated Ansible inventory
+
+```yaml
+all:
+  children:
+    crpd:
+      hosts:
+        clab-ansible-r1:
+          ansible_host: <mgmt-ipv4-address>
+    nokia_srlinux:
+      vars:
+        ansible_network_os: nokia.srlinux.srlinux
+        ansible_connection: ansible.netcommon.httpapi
+      hosts:
+        clab-ansible-r2:
+          ansible_host: <mgmt-ipv4-address>
+          ansible_user: admin
+          ansible_password: NokiaSrl1!
+        clab-ansible-r3:
+          ansible_host: <mgmt-ipv4-address>
+    linux:
+      hosts:
+        clab-ansible-grafana:
+          ansible_host: <mgmt-ipv4-address>
+```
+
+///
+
+For certain node kinds containerlab sets default `ansible_network_os` and `ansible_connection` variables to enable plug-and-play experience with Ansible. As well as adding username and password known to containerlab as default credentials.
+
+### Removing `ansible_host` var
 
 If you want to use a plugin[^1] that doesn't play well with the `ansible_host` variable injected by containerlab in the inventory file, you can leverage the `ansible-no-host-var` label. The label can be set on per-node, kind, or default levels; if set, containerlab will not generate the `ansible_host` variable in the inventory for the nodes with that label.  
 Note that without the `ansible_host` variable, the connection plugin will use the `inventory_hostname` and resolve the name accordingly if network reachability is needed.
 
-=== "topology file"
-    ```yaml
-    name: ansible
-      topology:
-        defaults:
-          labels:
-            ansible-no-host-var: "true"
-        nodes:
-          node1:
-          node2:
-    ```
-=== "generated ansible inventory"
-    ```yaml
-    all:
-      children:
-        linux:
-          hosts:
-            clab-ansible-node1:
-            clab-ansible-node2:
-    ```
+///tab | topology file
 
-## User-defined groups
+```yaml
+name: ansible
+  topology:
+    defaults:
+      labels:
+        ansible-no-host-var: "true"
+    nodes:
+      node1:
+      node2:
+```
+
+///
+///tab | generated Ansible inventory
+
+```yaml
+all:
+  children:
+    linux:
+      hosts:
+        clab-ansible-node1:
+        clab-ansible-node2:
+```
+
+///
+
+### User-defined groups
 
 Users can enforce custom grouping of nodes in the inventory by adding the `ansible-inventory` label to the node definition:
 

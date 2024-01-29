@@ -26,12 +26,18 @@ func TestGenerateAnsibleInventory(t *testing.T) {
     ansible_httpapi_use_proxy: false
   children:
     nokia_srlinux:
+      vars:
+        ansible_network_os: nokia.srlinux.srlinux
+        # default connection type for nodes of this kind
+        # feel free to override this in your inventory
+        ansible_connection: ansible.netcommon.httpapi
+        ansible_user: admin
+        ansible_password: NokiaSrl1!
       hosts:
         clab-topo1-node1:
           ansible_host: 172.100.100.11
         clab-topo1-node2:
-          ansible_host: 172.100.100.12
-`,
+          ansible_host: 172.100.100.12`,
 		},
 		"case2": {
 			got: "test_data/topo8_ansible_groups.yml",
@@ -43,9 +49,18 @@ func TestGenerateAnsibleInventory(t *testing.T) {
     ansible_httpapi_use_proxy: false
   children:
     linux:
+      vars:
+        # ansible_connection: set ansible_connection variable if required
       hosts:
         clab-topo8_ansible_groups-node4:
     nokia_srlinux:
+      vars:
+        ansible_network_os: nokia.srlinux.srlinux
+        # default connection type for nodes of this kind
+        # feel free to override this in your inventory
+        ansible_connection: ansible.netcommon.httpapi
+        ansible_user: admin
+        ansible_password: NokiaSrl1!
       hosts:
         clab-topo8_ansible_groups-node1:
           ansible_host: 172.100.100.11
@@ -62,8 +77,7 @@ func TestGenerateAnsibleInventory(t *testing.T) {
     spine:
       hosts:
         clab-topo8_ansible_groups-node1:
-          ansible_host: 172.100.100.11
-`,
+          ansible_host: 172.100.100.11`,
 		},
 	}
 
@@ -83,8 +97,8 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !cmp.Equal(s.String(), tc.want) {
-				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, s.String())
+			if diff := cmp.Diff(tc.want, s.String()); diff != "" {
+				t.Errorf("failed at '%s', diff: (-want +got)\n%s", name, diff)
 			}
 		})
 	}
