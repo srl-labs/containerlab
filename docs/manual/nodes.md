@@ -742,8 +742,9 @@ topology:
     srl:
       kind: nokia_srlinux
       certificate:
-        SANs:
+        sans:
           - "test.com"
+          - 192.168.96.155
 ```
 
 ### healthcheck
