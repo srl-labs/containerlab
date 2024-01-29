@@ -5,6 +5,7 @@
 package clab
 
 import (
+	_ "embed"
 	"io"
 	"os"
 	"sort"
@@ -13,6 +14,17 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+//go:embed inventory_ansible.go.tpl
+var ansibleInvT string
+
+// AnsibleInventory represents the data structure used to generate the ansible inventory file.
+type AnsibleInventory struct {
+	// clab nodes aggregated by their kind
+	Nodes map[string][]*types.NodeConfig
+	// clab nodes aggregated by user-defined groups
+	Groups map[string][]*types.NodeConfig
+}
+
 // GenerateInventories generate various inventory files and writes it to a lab location.
 func (c *CLab) GenerateInventories() error {
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
@@ -20,48 +32,14 @@ func (c *CLab) GenerateInventories() error {
 	if err != nil {
 		return err
 	}
+
 	return c.generateAnsibleInventory(f)
 }
 
 // generateAnsibleInventory generates and writes ansible inventory file to w.
 func (c *CLab) generateAnsibleInventory(w io.Writer) error {
-	invT := `all:
-  vars:
-    # The generated inventory is assumed to be used from the clab host.
-    # Hence no http proxy should be used. Therefore we make sure the http
-    # module does not attempt using any global http proxy.
-    ansible_httpapi_use_proxy: false
-  children:
-{{- range $kind, $nodes := .Nodes}}
-    {{$kind}}:
-      hosts:
-{{- range $nodes}}
-        {{.LongName}}:
-		{{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
-          ansible_host: {{.MgmtIPv4Address}}
-		{{- end -}}
-{{- end}}
-{{- end}}
-{{- range $name, $nodes := .Groups}}
-    {{$name}}:
-      hosts:
-{{- range $nodes}}
-        {{.LongName}}:
-		{{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
-          ansible_host: {{.MgmtIPv4Address}}
-	    {{- end -}}
-{{- end}}
-{{- end}}
-`
 
-	type inv struct {
-		// clab nodes aggregated by their kind
-		Nodes map[string][]*types.NodeConfig
-		// clab nodes aggregated by user-defined groups
-		Groups map[string][]*types.NodeConfig
-	}
-
-	i := inv{
+	i := AnsibleInventory{
 		Nodes:  make(map[string][]*types.NodeConfig),
 		Groups: make(map[string][]*types.NodeConfig),
 	}
@@ -88,7 +66,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 		})
 	}
 
-	t, err := template.New("ansible").Parse(invT)
+	t, err := template.New("ansible").Parse(ansibleInvT)
 	if err != nil {
 		return err
 	}
