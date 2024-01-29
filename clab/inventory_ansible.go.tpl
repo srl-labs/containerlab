@@ -5,10 +5,11 @@ all:
     # module does not attempt using any global http proxy.
     ansible_httpapi_use_proxy: false
   children:
+{{- $root := . }}
 {{- range $kind, $nodes := .Nodes}}
     {{$kind}}:
       vars:
-        {{- with index $nodes 0 }}
+        {{- with index $root.Kinds $kind }}
         {{- if .NetworkOS }}
         ansible_network_os: {{ .NetworkOS }}
         {{- end }}
@@ -19,18 +20,18 @@ all:
         {{- else}}
         # ansible_connection: set ansible_connection variable if required
         {{- end }}
+        {{- if .Username }}
+        ansible_user: {{.Username}}
+        {{- end}}
+        {{- if .Password }}
+        ansible_password: {{.Password}}
+        {{- end }}
         {{- end }}
       hosts:
       {{- range $nodes}}
         {{.LongName}}:
         {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
-          {{- if .Username }}
-          ansible_user: {{.Username}}
-          {{- end}}
-          {{- if .Username }}
-          ansible_password: {{.Password}}
-          {{- end}}
         {{- end -}}
       {{- end}}
 {{- end}}

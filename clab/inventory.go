@@ -22,16 +22,20 @@ var ansibleInvT string
 // the node registry.
 type AnsibleInventoryNode struct {
 	*types.NodeConfig
+}
 
-	Username string
-	Password string
-
+// KindProps is the kind properties structure used to generate the ansible inventory file.
+type KindProps struct {
+	Username    string
+	Password    string
 	NetworkOS   string
 	AnsibleConn string
 }
 
 // AnsibleInventory represents the data structure used to generate the ansible inventory file.
 type AnsibleInventory struct {
+	// clab node kinds
+	Kinds map[string]*KindProps
 	// clab nodes aggregated by their kind
 	Nodes map[string][]*AnsibleInventoryNode
 	// clab nodes aggregated by user-defined groups
@@ -52,7 +56,8 @@ func (c *CLab) GenerateInventories() error {
 // generateAnsibleInventory generates and writes ansible inventory file to w.
 func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
-	i := AnsibleInventory{
+	inv := AnsibleInventory{
+		Kinds:  make(map[string]*KindProps),
 		Nodes:  make(map[string][]*AnsibleInventoryNode),
 		Groups: make(map[string][]*AnsibleInventoryNode),
 	}
@@ -62,34 +67,42 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 			NodeConfig: n.Config(),
 		}
 
-		// add username and password to the node
+		// add kindprops to the inventory struct
+		// the kindProps is passed as a ref and is populated
+		// down below
+		kindProps := &KindProps{}
+		inv.Kinds[n.Config().Kind] = kindProps
+
+		// add username and password to kind properties
+		// assumption is that all nodes of the same kind have the same credentials
 		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
 		if nodeRegEntry != nil {
-			ansibleNode.Username = nodeRegEntry.Credentials().GetUsername()
-			ansibleNode.Password = nodeRegEntry.Credentials().GetPassword()
+			kindProps.Username = nodeRegEntry.Credentials().GetUsername()
+			kindProps.Password = nodeRegEntry.Credentials().GetPassword()
 		}
 
 		// add network_os to the node
-		ansibleNode.setNetworkOS()
+		kindProps.setNetworkOS(n.Config().Kind)
 		// add ansible_connection to the node
-		ansibleNode.setAnsibleConnection()
+		kindProps.setAnsibleConnection(n.Config().Kind)
 
-		i.Nodes[n.Config().Kind] = append(i.Nodes[n.Config().Kind], ansibleNode)
+		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], ansibleNode)
+
 		if n.Config().Labels["ansible-group"] != "" {
-			i.Groups[n.Config().Labels["ansible-group"]] =
-				append(i.Groups[n.Config().Labels["ansible-group"]], ansibleNode)
+			inv.Groups[n.Config().Labels["ansible-group"]] =
+				append(inv.Groups[n.Config().Labels["ansible-group"]], ansibleNode)
 		}
 	}
 
 	// sort nodes by name as they are not sorted originally
-	for _, nodes := range i.Nodes {
+	for _, nodes := range inv.Nodes {
 		sort.Slice(nodes, func(i, j int) bool {
 			return nodes[i].ShortName < nodes[j].ShortName
 		})
 	}
 
 	// sort nodes-per-group by name as they are not sorted originally
-	for _, nodes := range i.Groups {
+	for _, nodes := range inv.Groups {
 		sort.Slice(nodes, func(i, j int) bool {
 			return nodes[i].ShortName < nodes[j].ShortName
 		})
@@ -99,7 +112,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	err = t.Execute(w, i)
+	err = t.Execute(w, inv)
 	if err != nil {
 		return err
 	}
@@ -108,8 +121,8 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 }
 
 // setNetworkOS sets the network_os variable for the kind.
-func (n *AnsibleInventoryNode) setNetworkOS() {
-	switch n.Kind {
+func (n *KindProps) setNetworkOS(kind string) {
+	switch kind {
 	case "nokia_srlinux", "srl":
 		n.NetworkOS = "nokia.srlinux.srlinux"
 	case "nokia_sros", "vr-sros":
@@ -118,8 +131,8 @@ func (n *AnsibleInventoryNode) setNetworkOS() {
 }
 
 // setAnsibleConnection sets the ansible_connection variable for the kind.
-func (n *AnsibleInventoryNode) setAnsibleConnection() {
-	switch n.Kind {
+func (n *KindProps) setAnsibleConnection(kind string) {
+	switch kind {
 	case "nokia_srlinux", "srl":
 		n.AnsibleConn = "ansible.netcommon.httpapi"
 	case "nokia_sros", "vr-sros":
