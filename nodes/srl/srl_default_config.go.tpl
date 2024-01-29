@@ -25,9 +25,9 @@ set / system dns server-list [ {{ range $dnsserver := .DNSServers}}{{$dnsserver}
 
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
-set / system snmp community public
-set / system snmp network-instance mgmt
-set / system snmp network-instance mgmt admin-state enable
+
+{{ .SNMPConfig }}
+
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 
