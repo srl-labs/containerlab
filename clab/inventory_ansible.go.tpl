@@ -7,11 +7,30 @@ all:
   children:
 {{- range $kind, $nodes := .Nodes}}
     {{$kind}}:
+      vars:
+        {{- with index $nodes 0 }}
+        {{- if .NetworkOS }}
+        ansible_network_os: {{ .NetworkOS }}
+        {{- end }}
+        {{- if .AnsibleConn }}
+        # default connection type for nodes of this kind
+        # feel free to override this in your inventory
+        ansible_connection: {{ .AnsibleConn }}
+        {{- else}}
+        # ansible_connection: set ansible_connection variable if required
+        {{- end }}
+        {{- end }}
       hosts:
       {{- range $nodes}}
         {{.LongName}}:
         {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
+          {{- if .Username }}
+          ansible_user: {{.Username}}
+          {{- end}}
+          {{- if .Username }}
+          ansible_password: {{.Password}}
+          {{- end}}
         {{- end -}}
       {{- end}}
 {{- end}}
