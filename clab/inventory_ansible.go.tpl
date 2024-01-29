@@ -8,20 +8,20 @@ all:
 {{- range $kind, $nodes := .Nodes}}
     {{$kind}}:
       hosts:
-{{- range $nodes}}
+      {{- range $nodes}}
         {{.LongName}}:
-    {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
+        {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
-    {{- end -}}
-{{- end}}
+        {{- end -}}
+      {{- end}}
 {{- end}}
 {{- range $name, $nodes := .Groups}}
     {{$name}}:
       hosts:
-{{- range $nodes}}
+      {{- range $nodes}}
         {{.LongName}}:
-    {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
+        {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
-    {{- end -}}
-{{- end}}
+        {{- end -}}
+      {{- end}}
 {{- end}}
