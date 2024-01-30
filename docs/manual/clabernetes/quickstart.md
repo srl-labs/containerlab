@@ -1,14 +1,15 @@
 # Clabernetes Quickstart
 
-The best way to understand how clabernetes works is to walk through a short example where we create a three-node k8s
-cluster and deploy a lab there.
+The best way to understand how clabernetes works is to walk through a short example where we deploy a familiar [Two SR Linux Nodes lab](../../lab-examples/two-srls.md) using clabernetes.
 
-This quickstart uses [kind](https://kind.sigs.k8s.io/) to create a local kubernetes cluster and
-then deploys clabernetes into. Once clabernetes is installed we deploy a small
+Do you already have a kubernetes cluster? Great! You can skip the cluster creation step and jump straight to [Installing Clabernetes](install.md) part.
+
+But if you don't have a cluster yet, don't panic, we'll create one together. We are going to use [kind](https://kind.sigs.k8s.io/) to create a local kubernetes cluster and
+then install clabernetes into it. Once clabernetes is installed we deploy a small
 [topology with two SR Linux nodes](../../lab-examples/two-srls.md) connected back to back together.
 
-Once the lab is deployed, we explain how clabverter & clabernetes work in unison to to make the original topology files deployable onto the cluster
-with tunnels stitching lab nodes together to form point to point connections between the nodes.  
+If all goes to plan, the lab will be successfully deployed! Then, we start explaining how clabverter & clabernetes work in unison to make the original topology files deployable onto the cluster
+with tunnels stitching lab nodes together to form point to point connections between the nodes.
 
 Buckle up!
 
@@ -51,11 +52,13 @@ alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
 
 --8<-- "docs/manual/clabernetes/install.md:chart-install"
 
+Note, that we install clabernetes in a `c9s` namespace. This is not a requirement, but it is a good practice to keep clabernetes manager deployment in a separate namespace.
+
 A successful installation will result in a `clabernetes-manager` deployment of three pods running in
 the cluster:
 
 ```{.bash .no-select}
-kubectl get pods -o wide #(1)!
+kubectl get -n c9s pods -o wide #(1)!
 ```
 
 1. Note, that `clabernetes-manager` is installed as a 3-node deployment, and you can see that two pods might be in Init stay for a little while until the leader election is completed.
@@ -69,33 +72,45 @@ clabernetes-manager-7d8d9b4785-z47dr   1/1     Running    0          27s   10.24
 ```
 </div>
 
-We will also need `clabverter` CLI to convert containerlab topology files to clabernetes manifests. As per clabverter [installation instructions](install.md#clabverter) we will setup an alias for its latest version:
+## Setting up clabverter
+
+We will also make use of the `clabverter` CLI to convert containerlab topology files to clabernetes manifests and apply them on our behalf. Clabverter is not a requirement to run clabernetes, but it is a helper tool to convert containerlab topologies to clabernetes resources and kubernetes objects.
+
+As per clabverter's [installation instructions](install.md#clabverter) we will setup an alias that uses the latest available clabverter container image:
 
 --8<-- "docs/manual/clabernetes/install.md:cv-install"
 
 ## Installing Load Balancer
 
-To get access to the nodes deployed by clabernetes from outside of the k8s cluster we need a load balancer. Any load balancer will do, we will use [kube-vip](https://kube-vip.io/) in this quickstart. Moreover, if no external access to the nodes is required, load balancer installation can be skipped altogether.
+To get access to the nodes deployed by clabernetes from outside the k8s cluster we need a load balancer. Any load balancer will do, but we will use [kube-vip](https://kube-vip.io/) in this quickstart.
+
+/// note
+Load Balancer installation can be skipped if you don't need external access to the lab nodes. You can still access the nodes from inside the cluster by entering the pod's shell and then logging into the node.
+///
 
 Following [kube-vip + kind](https://kube-vip.io/docs/usage/kind/) installation instructions we execute the following commands:
 
 ```bash
 kubectl apply -f https://kube-vip.io/manifests/rbac.yaml
 kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/main/manifest/kube-vip-cloud-controller.yaml
-kubectl create configmap --namespace kube-system kubevip --from-literal range-global=172.18.1.10-172.18.1.250
+kubectl create configmap --namespace kube-system kubevip \
+  --from-literal range-global=172.18.1.10-172.18.1.250
 ```
 
-Next we setup kube-vip's CLI tool:
+Next we set up the kube-vip CLI:
 
 ```bash
-KVVERSION=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
-alias kube-vip="docker run --network host --rm ghcr.io/kube-vip/kube-vip:$KVVERSION"
+KVVERSION=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | \
+  jq -r ".[0].name")
+alias kube-vip="docker run --network host \
+  --rm ghcr.io/kube-vip/kube-vip:$KVVERSION"
 ```
 
 And install kube-vip load balancer daemonset in ARP mode:
 
 ```bash
-kube-vip manifest daemonset --services --inCluster --arp --interface eth0 | kubectl apply -f -
+kube-vip manifest daemonset --services --inCluster --arp --interface eth0 | \
+kubectl apply -f -
 ```
 
 We can check kube-vip daemonset pods are running on both worker nodes:
@@ -109,8 +124,8 @@ kube-system          kube-vip-ds-z8q67                           1/1     Running
 
 ## Deploying a topology
 
-Clabernetes biggest advantage is that it uses the same topology file format as containerlab; as much as possible. Understandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on k8s as is.  
-We've created a converter tool called `clabverter` that takes containerlab topology file and converts it to kubernetes manifests. The manifests can then be deployed on a k8s cluster.
+Clabernetes motto is "containerlab at scale" and therefore you may expect it to work with the same topology definition file format as containerlab does. Understandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on Kubernetes cluster as is.  
+To make sure you have a smooth sailing in the clabernetes waters we've created a clabernetes companion tool called `clabverter`; it that takes a containerlab topology file and converts it to several manifests native to Kubernetes and clabernetes. Clabverter then can also apply those manifests to the cluster on your behalf.
 
 So how do we do that? Just enter the directory where original `clab.yml` file is located; for the [Two SR Linux nodes](../../lab-examples/two-srls.md) lab this would look like this:
 
