@@ -43,7 +43,7 @@ func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
 	return nftC, nil
 }
 
-func (c *NftablesClient) Name() string {
+func (_ *NftablesClient) Name() string {
 	return "nf_tables"
 }
 
@@ -216,7 +216,7 @@ func (nftC *NftablesClient) allowRuleForMgmtBrExists(brName string, rules []*nft
 
 // getRulesForMgmtBr returns all rules that have the provided bridge name in the output interface match
 // and have a comment that is setup by containerlab.
-func (nftC *NftablesClient) getRulesForMgmtBr(brName string, rules []*nftables.Rule) []*nftables.Rule {
+func (_ *NftablesClient) getRulesForMgmtBr(brName string, rules []*nftables.Rule) []*nftables.Rule {
 	var result []*nftables.Rule
 
 	for _, r := range rules {

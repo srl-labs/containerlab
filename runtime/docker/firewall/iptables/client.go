@@ -37,7 +37,7 @@ func NewIpTablesClient(bridgeName string) (*IpTablesClient, error) {
 	}, nil
 }
 
-func (c *IpTablesClient) Name() string {
+func (_ *IpTablesClient) Name() string {
 	return "ip_tables"
 }
 
