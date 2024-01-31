@@ -147,19 +147,6 @@ func (nftC *NftablesClient) getChains(name string) ([]*nftables.Chain, error) {
 	return result, nil
 }
 
-func (nftC *NftablesClient) getTable(family nftables.TableFamily, name string) (*nftables.Table, error) {
-	tables, err := nftC.nftConn.ListTablesOfFamily(family)
-	if err != nil {
-		return nil, err
-	}
-	for _, t := range tables {
-		if t.Name == name {
-			return t, nil
-		}
-	}
-	return nil, fmt.Errorf("table %q not found", name)
-}
-
 func (nftC *NftablesClient) deleteRule(r *nftables.Rule) {
 	nftC.nftConn.DelRule(r)
 }
