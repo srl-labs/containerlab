@@ -1,12 +1,12 @@
 # Clabernetes Quickstart
 
-The best way to understand how clabernetes works is to walk through a short example where we deploy a familiar [Two SR Linux Nodes lab](../../lab-examples/two-srls.md) using clabernetes.
+The best way to understand how clabernetes works is to walk through a short example where we deploy a simple but representative [lab](https://learn.srlinux.dev/blog/2024/vlans-on-sr-linux/#the-lab) using clabernetes.
 
 Do you already have a kubernetes cluster? Great! You can skip the cluster creation step and jump straight to [Installing Clabernetes](install.md) part.
 
 But if you don't have a cluster yet, don't panic, we'll create one together. We are going to use [kind](https://kind.sigs.k8s.io/) to create a local kubernetes cluster and
 then install clabernetes into it. Once clabernetes is installed we deploy a small
-[topology with two SR Linux nodes](../../lab-examples/two-srls.md) connected back to back together.
+[topology with two SR Linux nodes and two linux clients](https://learn.srlinux.dev/blog/2024/vlans-on-sr-linux/#the-lab) connected back to back together.
 
 If all goes to plan, the lab will be successfully deployed! Then, we start explaining how clabverter & clabernetes work in unison to make the original topology files deployable onto the cluster
 with tunnels stitching lab nodes together to form point to point connections between the nodes.
@@ -127,16 +127,16 @@ kube-system          kube-vip-ds-z8q67                           1/1     Running
 Clabernetes motto is "containerlab at scale" and therefore you may expect it to work with the same topology definition file format as containerlab does. Understandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on Kubernetes cluster as is.  
 To make sure you have a smooth sailing in the clabernetes waters we've created a clabernetes companion tool called `clabverter`; it that takes a containerlab topology file and converts it to several manifests native to Kubernetes and clabernetes. Clabverter then can also apply those manifests to the cluster on your behalf.
 
-So how do we do that? Just enter the directory where original `clab.yml` file is located; for the [Two SR Linux nodes](../../lab-examples/two-srls.md) lab this would look like this:
+So how do we do that? First we need to clone the lab repository:
 
-```bash title="Entering the lab directory"
-❯ cd lab-examples/srl02/ #(1)!
-
-❯ ls
-srl02.clab.yml  srl1.cfg  srl2.cfg
+```bash title="Cloning the lab"
+git clone --depth 1 https://github.com/srl-labs/srlinux-vlan-handling-lab.git \
+  && cd srlinux-vlan-handling-lab
 ```
 
-1. The path is relative to containerlab repository root.
+```
+kubectl create ns c9s-vlan
+```
 
 And let `clabverter` do its job:
 

@@ -33,11 +33,26 @@ helm upgrade --version 0.0.22 --install \
 ```
 
 ///
+/// tab | latest dev version
+Clabernetes iterates fast, and you might want to try the latest development version until we cut a release. To do so, use the `0.0.0` version:
+
+```bash
+helm upgrade --install --version 0.0.0 --create-namespace --namespace c9s \
+    --set manager.managerLogLevel=debug \
+    --set manager.controllerLogLevel=debug \
+    --set manager.imagePullPolicy=Always \
+    --set globalConfig.deployment.launcherImagePullPolicy=Always \
+    --set globalConfig.deployment.launcherLogLevel=debug \
+    clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
+```
+
+We also set the log level to `debug` for all the components to see more verbose logs. Trust us, you might need it :smile:
+///
 /// tab | uninstall
 To uninstall clabernetes from the cluster:
 
 ```bash
-helm uninstall clabernetes
+helm uninstall --namespace c9s clabernetes
 ```
 
 ///
