@@ -1,6 +1,8 @@
 module github.com/srl-labs/containerlab
 
-go 1.20
+go 1.21
+
+toolchain go1.21.2
 
 require (
 	github.com/a8m/envsubst v1.4.2
