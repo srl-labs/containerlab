@@ -9,7 +9,8 @@ name: sros-test
 
 jobs:
   sros-tests:
-    runs-on: srl-labs-runners
+    runs-on:
+      group: Default
     strategy:
       matrix:
         runtime:
