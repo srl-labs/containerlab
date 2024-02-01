@@ -134,14 +134,16 @@ git clone --depth 1 https://github.com/srl-labs/srlinux-vlan-handling-lab.git \
   && cd srlinux-vlan-handling-lab
 ```
 
+Then we create a namespace for our lab nodes. To make things easily identifiable we will name the namespace after the lab name with a c9s prefix:
+
 ```
 kubectl create ns c9s-vlan
 ```
 
-And let `clabverter` do its job:
+And then, while standing in the lab directory, let `clabverter` do its job:
 
 ```{.bash .no-select title="Converting the containerlab topology to clabernetes manifests and applying it"}
-clabverter --stdout | kubectl apply -f - #(1)!
+clabverter --stdout --destinationNamespace c9s-vlan | kubectl apply -f - #(1)!
 ```
 
 1. `clabverter` converts the original containerlab topology to a set of k8s manifests and applies them to the cluster.
