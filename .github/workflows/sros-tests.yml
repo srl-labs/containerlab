@@ -9,8 +9,7 @@ name: sros-test
 
 jobs:
   sros-tests:
-    runs-on:
-      labels: srl-labs-runners
+    runs-on: [self-hosted, srl-labs-runners]
     strategy:
       matrix:
         runtime:
