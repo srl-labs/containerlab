@@ -12,9 +12,9 @@ int_calc() {
 
 int_calc
 
-echo "Waiting for all $CLAB_INTFS interfaces to be connected"
-while [ "$MYINT" -lt "$CLAB_INTFS" ]; do
-	echo "Connected $MYINT interfaces out of $CLAB_INTFS"
+echo "Waiting for all $CLAB_INTFS_WITH_MGMT interfaces to be connected"
+while [ "$MYINT" -lt "$CLAB_INTFS_WITH_MGMT" ]; do
+	echo "Connected $MYINT interfaces out of $CLAB_INTFS_WITH_MGMT"
 	sleep 1
 	int_calc
 done

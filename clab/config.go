@@ -524,24 +524,29 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	return nil
 }
 
-// SetClabIntfsEnvVar sets CLAB_INTFS env var for each node
-// which holds the number of interfaces a node expects to have (without mgmt interfaces).
+// SetClabIntfsEnvVar sets CLAB_INTFS and CLAB_INTFS_WITH_MGMT env vars for each node
+// which holds the number of interfaces a node expects to have (with and without mgmt interfaces).
 func (c *CLab) SetClabIntfsEnvVar() {
 	for _, n := range c.Nodes {
 		// Injecting the env var with expected number of links
 		// also adding one interface for the implicit management interface (eth0)
-		clabIntfs := len(n.GetEndpoints()) + 1
+		clabIntfs := len(n.GetEndpoints())
+
+		// by default the eth0 interface is automatically added by the container runtime
+		// so we add 1 to the number of interfaces to account for the management interface
+		clabIntfsWithMgmt := clabIntfs + 1
 
 		// when network mode is set to none, the eth0 is explicitly added
 		// so we need to substract it from the number of interfaces
 		// in vrnetlab the provisioned interfaces are matched as eth* glob
 		// so all dataplane + management interfaces are counted
 		if n.Config().NetworkMode == "none" {
-			clabIntfs -= 1
+			clabIntfsWithMgmt -= 1
 		}
 
 		numIntfs := map[string]string{
-			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", clabIntfs),
+			types.CLAB_ENV_INTFS:           fmt.Sprintf("%d", clabIntfs),
+			types.CLAB_ENV_INTFS_WITH_MGMT: fmt.Sprintf("%d", clabIntfsWithMgmt),
 		}
 		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numIntfs)
 	}

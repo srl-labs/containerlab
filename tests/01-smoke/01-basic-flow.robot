@@ -83,21 +83,20 @@ Exec command with json output and filtering
 
 Ensure CLAB_INTFS env var is set
     [Documentation]
-    ...    This test ensures that the CLAB_INTFS environment variable is set in the container
-    ...    and that it contains the correct number of interfaces which is all datapath interfaces
-    ...    as present in the links section of the lab file + 1 for the management interface.
+    ...    This test ensures that the CLAB_INTFS and CLAB_INTFS_WITH_MGMT environment variables are set in the container
+    ...    and that it contains the correct number of interfaces
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS"'
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS $CLAB_INTFS_WITH_MGMT"'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
     Should Be Equal As Integers    ${output.rc}    0
     # l1 node has 3 interfaces defined in the lab topology
-    # log outputs to stderr, and thus we check for 3 interfaces there
+    # log outputs to stderr, and thus we check for 3 and 4 interfaces there
     # may be worth to change this to stdout in the future
     # we literally check if the string stdout:\n3 is present in the output, as this is how
     # the result is printed today.
-    Should Contain    ${output.stderr}    stdout:\\n4
+    Should Contain    ${output.stderr}    stdout:\\n3 4
 
 Inspect ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
