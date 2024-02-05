@@ -169,20 +169,20 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (s *vrSROS) CheckInterfaceName() error {
+func (n *vrSROS) CheckInterfaceName() error {
+	// vsim doesn't seem to support >20 interfaces, yet we allow to set max if number 32 just in case.
+	// https://regex101.com/r/bx6kzM/1
 	pattern := `eth([1-9]|[12][0-9]|3[0-2])$`
 
-	if s.Config().NetworkMode == "none" {
+	if n.Config().NetworkMode == "none" {
 		pattern = `eth([0-9]|[12][0-9]|3[0-2])$`
 	}
 
 	ifRe := regexp.MustCompile(pattern)
 
-	// vsim doesn't seem to support >20 interfaces, yet we allow to set max if number 32 just in case.
-	// https://regex101.com/r/bx6kzM/1
-	for _, e := range s.Endpoints {
+	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is <= 32", e.GetIfaceName())
+			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern %s. SR OS interfaces should be named as ethX, where X is <= 32", e.GetIfaceName(), pattern)
 		}
 	}
 
