@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/nftables v0.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/h2non/gock v1.2.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.7
 	github.com/hashicorp/go-version v1.6.0
