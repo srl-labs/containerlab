@@ -3,6 +3,7 @@ Library             OperatingSystem
 Resource            ../ssh.robot
 Resource            ../common.robot
 
+Suite Setup         Run Keyword    Setup
 Suite Teardown      Run Keyword    Cleanup
 
 
@@ -32,6 +33,13 @@ SR OS is running
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0 running
+
+Setup
+    Run
+    ...    sudo -E ${runtime} pull run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull registry.srlinux.dev/pub/sros-lic:23
+    ${output} =    Run
+    ...    ls -la ./
+    Log    ${output}
 
 Cleanup
     Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

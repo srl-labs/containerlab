@@ -40,10 +40,6 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
-      - name: Add SR OS license
-        run: |
-          echo "${{ secrets.SROS_R23 }}" > /tmp/sros.lic
-
       - name: Run tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/07-sros/${{ matrix.test-suite }}
