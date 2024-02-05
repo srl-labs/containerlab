@@ -8,8 +8,9 @@ all:
 {{- $root := . }}
 {{- range $kind, $nodes := .Nodes}}
     {{$kind}}:
+      {{- with index $root.Kinds $kind }}
+      {{- if or .NetworkOS .AnsibleConn .Username .Password }}
       vars:
-        {{- with index $root.Kinds $kind }}
         {{- if .NetworkOS }}
         ansible_network_os: {{ .NetworkOS }}
         {{- end }}
@@ -27,6 +28,7 @@ all:
         ansible_password: {{.Password}}
         {{- end }}
         {{- end }}
+      {{- end }}
       hosts:
       {{- range $nodes}}
         {{.LongName}}:
