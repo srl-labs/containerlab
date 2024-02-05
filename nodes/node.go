@@ -129,12 +129,20 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 }
 
 // GenericVMInterfaceCheck checks interface names for generic VM-based nodes.
-// These nodes could only have interfaces named ethX, where X is >0.
-func GenericVMInterfaceCheck(nodeName string, eps []links.Endpoint) error {
-	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
+// These nodes could only have interfaces named ethX, where X is >0
+// unless network mode is set to 'none' in which case any interface name is allowed.
+func GenericVMInterfaceCheck(nodeName, netMode string, eps []links.Endpoint) error {
+	pattern := `eth[1-9][0-9]*$`
+
+	if netMode == "none" {
+		pattern = `eth*$`
+	}
+
+	ifRe := regexp.MustCompile(pattern)
+
 	for _, e := range eps {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >0", nodeName, e.GetIfaceName())
+			return fmt.Errorf("%q interface name %q doesn't match the required pattern: %s", nodeName, e.GetIfaceName(), pattern)
 		}
 	}
 

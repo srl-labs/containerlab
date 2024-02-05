@@ -529,8 +529,19 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 func (c *CLab) SetClabIntfsEnvVar() {
 	for _, n := range c.Nodes {
 		// Injecting the env var with expected number of links
+		// also adding one interface for the implicit management interface (eth0)
+		clabIntfs := len(n.GetEndpoints()) + 1
+
+		// when network mode is set to none, the eth0 is explicitly added
+		// so we need to substract it from the number of interfaces
+		// in vrnetlab the provisioned interfaces are matched as eth* glob
+		// so all dataplane + management interfaces are counted
+		if n.Config().NetworkMode == "none" {
+			clabIntfs -= 1
+		}
+
 		numIntfs := map[string]string{
-			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", len(n.GetEndpoints())),
+			types.CLAB_ENV_INTFS: fmt.Sprintf("%d", clabIntfs),
 		}
 		n.Config().Env = utils.MergeStringMaps(n.Config().Env, numIntfs)
 	}
