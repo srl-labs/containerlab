@@ -13,6 +13,7 @@ const (
 	IPTablesCommentMaxSize = 256
 )
 
+// ClabFirewall is the interface that all firewall clients must implement.
 type ClabFirewall interface {
 	DeleteForwardingRules() error
 	InstallForwardingRules() error

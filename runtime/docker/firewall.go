@@ -5,23 +5,24 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker/firewall"
 )
 
-// deleteIPTablesFwdRule deletes `allow` rule installed with InstallIPTablesFwdRule when the bridge interface doesn't exist anymore.
-func (d *DockerRuntime) deleteIPTablesFwdRule() (err error) {
+// deleteFwdRule deletes `allow` rule installed with installFwdRule when the bridge interface doesn't exist anymore.
+func (d *DockerRuntime) deleteFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
 		return
 	}
 
-	f, err := firewall.GetFirewallImplementation(d.mgmt.Bridge)
+	f, err := firewall.NewFirewallClient(d.mgmt.Bridge)
 	if err != nil {
 		return err
 	}
+
 	return f.DeleteForwardingRules()
 }
 
-// installIPTablesFwdRule installs the `allow` rule for traffic destined to the nodes
+// installFwdRule installs the `allow` rule for traffic destined to the nodes
 // on the clab management network.
 // This rule is required for external access to the nodes.
-func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
+func (d *DockerRuntime) installFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
 		return
 	}
@@ -31,7 +32,7 @@ func (d *DockerRuntime) installIPTablesFwdRule() (err error) {
 		return
 	}
 
-	f, err := firewall.GetFirewallImplementation(d.mgmt.Bridge)
+	f, err := firewall.NewFirewallClient(d.mgmt.Bridge)
 	if err != nil {
 		return err
 	}
