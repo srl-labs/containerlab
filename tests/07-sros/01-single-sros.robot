@@ -20,6 +20,7 @@ Deploy ${lab-name} lab
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    IF    ${rc} != 0    Fatal Error    Failed to deploy ${lab-name} lab
 
 Wait for SR OS to reach running state
     Sleep    1m
@@ -36,9 +37,8 @@ SR OS is running
 
 Setup
     Run
-    ...    sudo -E ${runtime} run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull registry.srlinux.dev/pub/sros-lic:23
-    ${output} =    Run
-    ...    ls -la ./
+    ...    cd ${CURDIR} && sudo -E ${runtime} run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull registry.srlinux.dev/pub/sros-lic:23
+    ${output} =    Run    ls -la ./
     Log    ${output}
 
 Cleanup
