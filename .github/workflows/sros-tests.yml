@@ -40,12 +40,12 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
+      - name: Sanitize test-suite name
+        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+
       - name: Run tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/07-sros/${{ matrix.test-suite }}
-
-      - name: Sanitize test-suite name
-        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
