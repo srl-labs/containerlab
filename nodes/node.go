@@ -135,7 +135,7 @@ func GenericVMInterfaceCheck(nodeName, netMode string, eps []links.Endpoint) err
 	pattern := `eth[1-9][0-9]*$`
 
 	if netMode == "none" {
-		pattern = `eth*$`
+		pattern = `.*`
 	}
 
 	ifRe := regexp.MustCompile(pattern)
