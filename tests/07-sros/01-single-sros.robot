@@ -36,7 +36,7 @@ SR OS is running
 
 Setup
     Run
-    ...    sudo -E ${runtime} pull run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull registry.srlinux.dev/pub/sros-lic:23
+    ...    sudo -E ${runtime} run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull registry.srlinux.dev/pub/sros-lic:23
     ${output} =    Run
     ...    ls -la ./
     Log    ${output}
