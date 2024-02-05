@@ -86,6 +86,7 @@ alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
 To use the latest development version of clabverter:
 
 ```bash
+sudo docker pull ghcr.io/srl-labs/clabernetes/clabverter:dev-latest && \
 alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
     sudo docker run -v $(pwd):/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter:dev-latest"

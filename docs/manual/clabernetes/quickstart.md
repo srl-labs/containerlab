@@ -143,7 +143,8 @@ kubectl create ns c9s-vlan
 And then, while standing in the lab directory, let `clabverter` do its job:
 
 ```{.bash .no-select title="Converting the containerlab topology to clabernetes manifests and applying it"}
-clabverter --stdout --destinationNamespace c9s-vlan | kubectl apply -f - #(1)!
+clabverter --stdout --destinationNamespace c9s-vlan | \
+kubectl apply -f - #(1)!
 ```
 
 1. `clabverter` converts the original containerlab topology to a set of k8s manifests and applies them to the cluster.
