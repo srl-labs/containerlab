@@ -85,6 +85,76 @@ type Stages struct {
 	Exit        *StageExit        `yaml:"exit"`
 }
 
+func NewStages() *Stages {
+	return &Stages{
+		Create: &StageCreate{
+			StageBase: StageBase{},
+		},
+		CreateLinks: &StageCreateLinks{
+			StageBase: StageBase{},
+		},
+		Configure: &StageConfigure{
+			StageBase: StageBase{},
+		},
+		Healthy: &StageHealthy{
+			StageBase: StageBase{},
+		},
+		Exit: &StageExit{
+			StageBase: StageBase{},
+		},
+	}
+}
+
+// GetWaitFor returns lists of nodes that need to be waited for in a map
+// that is indexed by the state for which this dependency is to be evaluated
+func (s *Stages) GetWaitFor() map[WaitForPhase]WaitForList {
+	result := map[WaitForPhase]WaitForList{}
+
+	result[WaitForConfigure] = s.Configure.WaitFor
+	result[WaitForCreate] = s.Create.WaitFor
+	result[WaitForCreateLinks] = s.CreateLinks.WaitFor
+	result[WaitForHealthy] = s.Healthy.WaitFor
+	result[WaitForExit] = s.Exit.WaitFor
+
+	return result
+}
+
+// Merge merges the Stages configuration of other into s
+func (s *Stages) Merge(other *Stages) error {
+	var err error
+	if other.Configure != nil {
+		err = s.Configure.Merge(&other.Configure.StageBase)
+		if err != nil {
+			return err
+		}
+	}
+	if other.Create != nil {
+		err = s.Create.Merge(&other.Create.StageBase)
+		if err != nil {
+			return err
+		}
+	}
+	if other.CreateLinks != nil {
+		err = s.CreateLinks.Merge(&other.CreateLinks.StageBase)
+		if err != nil {
+			return err
+		}
+	}
+	if other.Healthy != nil {
+		err = s.Healthy.Merge(&other.Healthy.StageBase)
+		if err != nil {
+			return err
+		}
+	}
+	if other.Exit != nil {
+		err = s.Exit.Merge(&other.Exit.StageBase)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
 // StageCreate represents a creation stage of a given node.
 type StageCreate struct {
 	StageBase `yaml:",inline"`
@@ -110,9 +180,34 @@ type StageExit struct {
 	StageBase `yaml:",inline"`
 }
 
-// StageBase is a common base stage that all stages embed.
+// StageBase represents a configuration of a given stage.
 type StageBase struct {
-	WaitFor []*WaitFor `yaml:"wait-for,omitempty"`
+	WaitFor WaitForList `yaml:"wait-for,omitempty"`
+}
+
+type WaitForList []*WaitFor
+
+func (w WaitForList) contains(newWf *WaitFor) bool {
+	for _, entry := range w {
+		if entry.Equals(newWf) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *StageBase) Merge(sc *StageBase) error {
+	if sc == nil {
+		return nil
+	}
+	for _, wf := range sc.WaitFor {
+		// prevent adding the same dependency twice
+		if s.WaitFor.contains(wf) {
+			continue
+		}
+		s.WaitFor = append(s.WaitFor, wf)
+	}
+	return nil
 }
 
 // Interface compliance.
@@ -391,37 +486,11 @@ func (n *NodeDefinition) GetExtras() *Extras {
 	return n.Extras
 }
 
-func (n *NodeDefinition) GetWaitFor() (map[WaitForPhase][]*WaitFor, error) {
-	result := map[WaitForPhase][]*WaitFor{}
+func (n *NodeDefinition) GetStages() *Stages {
 	if n == nil {
-		return result, nil
+		return nil
 	}
-
-	data := map[WaitForPhase][]*WaitFor{}
-
-	if n.Stages != nil {
-		if n.Stages.Create != nil {
-			data[WaitForCreate] = n.Stages.Create.WaitFor
-		}
-		if n.Stages.CreateLinks != nil {
-			data[WaitForCreateLinks] = n.Stages.CreateLinks.WaitFor
-		}
-		if n.Stages.Configure != nil {
-			data[WaitForConfigure] = n.Stages.Configure.WaitFor
-		}
-		if n.Stages.Healthy != nil {
-			data[WaitForHealthy] = n.Stages.Healthy.WaitFor
-		}
-		if n.Stages.Exit != nil {
-			data[WaitForExit] = n.Stages.Exit.WaitFor
-		}
-
-		for stage, dependency := range data {
-			result[stage] = append(result[stage], dependency...)
-		}
-	}
-
-	return result, nil
+	return n.Stages
 }
 
 func (n *NodeDefinition) GetDns() *DNSConfig {

@@ -204,7 +204,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 	var err error
 
-	nodeCfg.WaitFor, err = c.Config.Topology.GetWaitFor(nodeName)
+	nodeCfg.Stages, err = c.Config.Topology.GetStages(nodeName)
 	if err != nil {
 		return nil, err
 	}

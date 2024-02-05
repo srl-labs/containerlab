@@ -477,8 +477,9 @@ func (c *CLab) createStaticDynamicDependency() error {
 // createWaitForDependency reflects the dependencies defined in the configuration via the wait-for field.
 func (c *CLab) createWaitForDependency() error {
 	for waiterNode, node := range c.Nodes {
+
 		// add node's waitFor nodes to the dependency manager
-		for phase, waitForNodes := range node.Config().WaitFor {
+		for phase, waitForNodes := range node.Config().Stages.GetWaitFor() {
 			for _, waitForNode := range waitForNodes {
 				err := c.dependencyManager.AddDependency(waiterNode, phase, waitForNode.Node, waitForNode.State)
 				if err != nil {

@@ -181,9 +181,9 @@ type NodeConfig struct {
 	Memory string  `json:"memory,omitempty"`
 
 	// Extra node parameters
-	Extras  *Extras                     `json:"extras,omitempty"`
-	WaitFor map[WaitForPhase][]*WaitFor `json:"wait-for,omitempty"`
-	DNS     *DNSConfig                  `json:"dns,omitempty"`
+	Extras *Extras    `json:"extras,omitempty"`
+	Stages *Stages    `json:"stages,omitempty"`
+	DNS    *DNSConfig `json:"dns,omitempty"`
 	// Kind parameters
 	//
 	// IsRootNamespaceBased flag indicates that a certain nodes network
@@ -399,6 +399,14 @@ type WaitFor struct {
 func (w *WaitFor) IsValid() error {
 	_, err := WaitForPhaseFromString(string(w.State))
 	return err
+}
+
+// Equals returns true if the Node and the State of the WaitFor structs are value equal
+func (w *WaitFor) Equals(other *WaitFor) bool {
+	if w.Node == other.Node && w.State == other.State {
+		return true
+	}
+	return false
 }
 
 // WaitForPhase defines the phases that nodes go through
