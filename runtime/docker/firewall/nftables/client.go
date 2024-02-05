@@ -13,16 +13,21 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const nfTables = "nf_tables"
+
+// NftablesClient is a client for nftables.
 type NftablesClient struct {
 	nftConn    *nftables.Conn
 	bridgeName string
 }
 
+// NewNftablesClient returns a new NftablesClient.
 func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
 	loaded, err := utils.IsKernelModuleLoaded("nf_tables")
 	if err != nil {
 		return nil, err
 	}
+
 	if !loaded {
 		log.Debug("nf_tables kernel module not available")
 		// module is not loaded
@@ -43,10 +48,12 @@ func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
 	return nftC, nil
 }
 
+// Name returns the name of the firewall client.
 func (*NftablesClient) Name() string {
-	return "nf_tables"
+	return nfTables
 }
 
+// DeleteForwardingRules deletes the forwarding rules.
 func (c *NftablesClient) DeleteForwardingRules() error {
 	if c.bridgeName == "docker0" {
 		log.Debug("skipping deletion of iptables forwarding rule for non-bridged or default management network")
@@ -84,6 +91,8 @@ func (c *NftablesClient) DeleteForwardingRules() error {
 	c.flush()
 	return nil
 }
+
+// InstallForwardingRules installs the forwarding rules.
 func (c *NftablesClient) InstallForwardingRules() error {
 
 	defer c.close()
