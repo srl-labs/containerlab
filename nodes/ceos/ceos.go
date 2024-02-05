@@ -288,10 +288,17 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 func (n *ceos) CheckInterfaceName() error {
 	// allow eth and et interfaces
 	// https://regex101.com/r/umQW5Z/2
-	ifRe := regexp.MustCompile(`eth[1-9][\w\.]*$|et[1-9][\w\.]*$`)
+	pattern := `eth[1-9][\w\.]*$|et[1-9][\w\.]*$`
+
+	if n.Config().NetworkMode == "none" {
+		pattern = `eth[0-9][\w\.]*$|et[0-9][\w\.]*$`
+	}
+
+	ifRe := regexp.MustCompile(pattern)
+
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern %s. Interfaces should be named as ethX or etX, where X consists of numerical characters", n.Cfg.ShortName, e.GetIfaceName(), pattern)
 		}
 	}
 
