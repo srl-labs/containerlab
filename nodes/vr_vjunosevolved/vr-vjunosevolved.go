@@ -100,4 +100,3 @@ func (n *vrVJUNOSEVOLVED) SaveConfig(_ context.Context) error {
 func (n *vrVJUNOSEVOLVED) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }
-
