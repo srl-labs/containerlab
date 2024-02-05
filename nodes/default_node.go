@@ -377,8 +377,9 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 	// if license is provided check path exists
 	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
 	if !utils.FileExists(rlic) {
-		return fmt.Errorf("license file of node %q not found by the path %s", d.Config().ShortName, rlic)
+		return fmt.Errorf("license file for node %q is not found by the path %s", d.Config().ShortName, rlic)
 	}
+
 	return nil
 }
 

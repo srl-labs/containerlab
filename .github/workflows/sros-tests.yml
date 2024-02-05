@@ -42,7 +42,7 @@ jobs:
 
       - name: Add SR OS license
         run: |
-          echo "${{ secrets.SROS_R23 }}" > sros.lic
+          echo "${{ secrets.SROS_R23 }}" > /tmp/sros.lic
 
       - name: Run tests
         run: |
