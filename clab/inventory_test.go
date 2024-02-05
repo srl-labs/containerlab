@@ -49,8 +49,6 @@ func TestGenerateAnsibleInventory(t *testing.T) {
     ansible_httpapi_use_proxy: false
   children:
     linux:
-      vars:
-        # ansible_connection: set ansible_connection variable if required
       hosts:
         clab-topo8_ansible_groups-node4:
     nokia_srlinux:
