@@ -30,7 +30,7 @@ Wait for SR OS to reach running state
 *** Keywords ***
 SR OS is running
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${runtime} exec clab-${lab-name}-sros1 cat /healthy
+    ...    sudo -E ${runtime} exec clab-${lab-name}-sros1 cat /health
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0 running
@@ -38,7 +38,7 @@ SR OS is running
 Setup
     Run
     ...    cd ${CURDIR} && sudo -E ${runtime} run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull registry.srlinux.dev/pub/sros-lic:23
-    ${output} =    Run    ls -la ./
+    ${output} =    Run    cd ${CURDIR} && ls -la ./
     Log    ${output}
 
 Cleanup
