@@ -40,12 +40,9 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Add SR OS license
+        run: |
+          echo "${{ secrets.SROS_R23 }}" > sros.lic
 
       - name: Run tests
         run: |

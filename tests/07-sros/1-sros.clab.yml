@@ -5,4 +5,4 @@ topology:
     sros1:
       kind: nokia_sros
       image: registry.srlinux.dev/pub/vr-sros:23.10.R2
-      license: sros23.lic
+      license: sros.lic

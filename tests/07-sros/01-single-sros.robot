@@ -16,7 +16,7 @@ ${runtime}          docker
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -28,10 +28,10 @@ Wait for SR OS to reach running state
 *** Keywords ***
 SR OS is running
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} exec clab-${lab-name}-sros1 cat /healthy
+    ...    sudo -E ${runtime} exec clab-${lab-name}-sros1 cat /healthy
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0 running
 
 Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
