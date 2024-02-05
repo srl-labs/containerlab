@@ -16,31 +16,38 @@ const (
 	iptCheckCmd = "-vL DOCKER-USER"
 	iptAllowCmd = "-I DOCKER-USER -o %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
 	iptDelCmd   = "-D DOCKER-USER -o %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	ipTables    = "ip_tables"
 )
 
+// IpTablesClient is a client for iptables.
 type IpTablesClient struct {
 	bridgeName string
 }
 
+// NewIpTablesClient returns a new IpTablesClient.
 func NewIpTablesClient(bridgeName string) (*IpTablesClient, error) {
 	loaded, err := utils.IsKernelModuleLoaded("ip_tables")
 	if err != nil {
 		return nil, err
 	}
+
 	if !loaded {
 		log.Debug("ip_tables kernel module not available")
 		// module is not loaded
 		return nil, definitions.ErrNotAvailabel
 	}
+
 	return &IpTablesClient{
 		bridgeName: bridgeName,
 	}, nil
 }
 
+// Name returns the name of the firewall client.
 func (*IpTablesClient) Name() string {
-	return "ip_tables"
+	return ipTables
 }
 
+// InstallForwardingRules installs the forwarding rules.
 func (c *IpTablesClient) InstallForwardingRules() error {
 	// first check if a rule already exists to not create duplicates
 	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
@@ -66,9 +73,11 @@ func (c *IpTablesClient) InstallForwardingRules() error {
 		log.Warnf("Iptables install stdout/stderr result is: %s", stdOutErr)
 		return fmt.Errorf("unable to install iptables rule using '%s' command: %w", cmd, err)
 	}
+
 	return nil
 }
 
+// DeleteForwardingRules deletes the forwarding rules.
 func (c *IpTablesClient) DeleteForwardingRules() error {
 	// first check if a rule exists before trying to delete it
 	res, err := exec.Command("iptables", strings.Split(iptCheckCmd, " ")...).Output()
