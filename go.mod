@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/a8m/envsubst v1.4.2
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
+	github.com/bramvdbogaerde/go-scp v1.2.1
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/containernetworking/plugins v1.4.0
 	github.com/containers/common v0.57.4
@@ -24,6 +25,7 @@ require (
 	github.com/h2non/gock v1.2.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.7
 	github.com/hashicorp/go-version v1.6.0
+	github.com/jlaffaye/ftp v0.2.0
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.1
 	github.com/kellerza/template v0.0.6

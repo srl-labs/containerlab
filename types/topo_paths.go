@@ -189,6 +189,12 @@ func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node, postfix string) strin
 	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
 }
 
+// DownloadFileTmpAbsPath returns the absolute path to a file
+// when it is downloaded from a remote location to the clab temp directory.
+func (t *TopoPaths) DownloadFileTmpAbsPath(node string, postfix string) string {
+	return filepath.Join(t.ClabTmpDir(), fmt.Sprintf("%s-%s-%s", t.topoName, node, postfix))
+}
+
 // TopologyFilenameBase returns the full filename of the topology file
 // without any additional paths.
 func (t *TopoPaths) TopologyFilenameBase() string {

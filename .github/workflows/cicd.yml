@@ -314,6 +314,13 @@ jobs:
     with:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
 
+  download-tests:
+    uses: ./.github/workflows/download-tests.yml
+    needs:
+      - unit-test
+      - staticcheck
+      - build-containerlab
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-22.04

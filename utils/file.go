@@ -6,6 +6,8 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -13,6 +15,7 @@ import (
 	"io/fs"
 	"math"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,10 +24,16 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/steiler/acls"
 
+	"github.com/bramvdbogaerde/go-scp"
+	"github.com/jlaffaye/ftp"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 var (
@@ -60,7 +69,7 @@ func DirExists(filename string) bool {
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpURL(src, false) {
+	if !IsDownloadableUri(src) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -117,6 +126,18 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 	return err == nil && u.Host != ""
 }
 
+func IsFtpUri(s string) bool {
+	return strings.HasPrefix(s, "ftp://")
+}
+
+func IsScpUri(s string) bool {
+	return strings.HasPrefix(s, "scp://")
+}
+
+func IsDownloadableUri(s string) bool {
+	return IsHttpURL(s, false) || IsFtpUri(s) || IsScpUri(s)
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
@@ -125,7 +146,8 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if IsHttpURL(src, false) {
+	switch {
+	case IsHttpURL(src, false):
 		client := NewHTTPClient()
 
 		// download using client
@@ -135,10 +157,20 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		}
 
 		in = resp.Body
-	} else {
+	case IsFtpUri(src):
+		in, err = processFtpUri(src)
+		if err != nil {
+			return fmt.Errorf("failure retrieving file %s: %v", src, err)
+		}
+	case IsScpUri(src):
+		in, err = processScpUri(src)
+		if err != nil {
+			return fmt.Errorf("failure retrieving file %s: %v", src, err)
+		}
+	default:
 		in, err = os.Open(src)
 		if err != nil {
-			return err
+			return fmt.Errorf("failure retrieving file %s: %v", src, err)
 		}
 	}
 	defer in.Close() // skipcq: GO-S2307
@@ -174,6 +206,159 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	err = out.Sync()
 
 	return err
+}
+
+func processScpUri(src string) (io.ReadCloser, error) {
+	// parse the scp url
+	u, err := url.Parse(src)
+	if err != nil {
+		return nil, err
+	}
+
+	// check username provided
+	if u.User == nil {
+		return nil, fmt.Errorf("no username provided for scp connection")
+	}
+
+	knownHostsPath := ResolvePath("~/.ssh/known_hosts", "")
+
+	clientConfig := ssh.ClientConfig{
+		User:            u.User.Username(),
+		Auth:            []ssh.AuthMethod{},
+		HostKeyCallback: getCustomHostKeyCallback(knownHostsPath),
+	}
+
+	// if we have an ssh agent running use it.
+	if socket := os.Getenv("SSH_AUTH_SOCK"); socket != "" {
+		conn, err := net.Dial("unix", socket)
+		if err != nil {
+			log.Error(err)
+		} else {
+			agentClient := agent.NewClient(conn)
+			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeysCallback(agentClient.Signers))
+		}
+	}
+
+	// if CLAB_SSH_KEY is set we use the key referenced here
+	keyPath := os.Getenv("CLAB_SSH_KEY")
+	keyPassphrase := os.Getenv("CLAB_SSH_KEY_PASSPHRASE")
+	if keyPath != "" {
+		if !FileExists(keyPath) {
+			return nil, fmt.Errorf("keyfile %q does not exist", keyPath)
+		}
+		privateKey, err := os.ReadFile(keyPath)
+		if err != nil {
+			return nil, err
+		}
+		var signer ssh.Signer
+		if keyPassphrase != "" {
+			// if keyPassphrase is set, use the withPassphrase method
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(privateKey, []byte(keyPassphrase))
+		} else {
+			// otherwise use the basic ParsePrivateKey
+			signer, err = ssh.ParsePrivateKey(privateKey)
+		}
+		if err != nil {
+			return nil, err
+		}
+		clientConfig.Auth = append([]ssh.AuthMethod{ssh.PublicKeys(signer)}, clientConfig.Auth...)
+	}
+
+	// if a password is set, use the password
+	// and make it the first item in the AuthMethods
+	pw, hasPW := u.User.Password()
+	if hasPW {
+		clientConfig.Auth = append([]ssh.AuthMethod{ssh.Password(pw)}, clientConfig.Auth...)
+	}
+
+	// set username in scp client config
+	clientConfig.User = u.User.Username()
+
+	// normalize host[host and port] portion
+	u.Host, _ = strings.CutSuffix(u.Host, ":")
+
+	// set port if not set
+	hostname := u.Hostname()
+	port := "22"
+	if u.Port() != "" {
+		port = u.Port()
+	}
+
+	// Create a new SCP client
+	client := scp.NewClient(net.JoinHostPort(hostname, port), &clientConfig)
+
+	// Connect to the remote server
+	err = client.Connect()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't establish a connection to the remote server %w", err)
+	}
+	// create a temp file to store the downloaded content in
+	f, err := os.CreateTemp(os.TempDir(), "scp-")
+	if err != nil {
+		return nil, err
+	}
+	// copy the file content from remote to local
+	err = client.CopyFromRemote(context.Background(), f, u.Path)
+	if err != nil {
+		return nil, err
+	}
+	// reset the read/write pointer to the beginning of the file
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return f, nil
+}
+
+func processFtpUri(src string) (io.ReadCloser, error) {
+	// parse the ftp url
+	u, err := url.Parse(src)
+	if err != nil {
+		return nil, err
+	}
+
+	// set port if not set
+	hostname := u.Hostname()
+	port := "21"
+	if u.Port() != "" {
+		port = u.Port()
+	}
+
+	// establish connection
+	c, err := ftp.Dial(net.JoinHostPort(hostname, port), ftp.DialWithTimeout(5*time.Second))
+	if err != nil {
+		return nil, err
+	}
+
+	// is user is provided perform a login
+	if u.User != nil {
+		pw, _ := u.User.Password()
+		err = c.Login(u.User.Username(), pw)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// retrieve the file
+	r, err := c.Retr(u.Path)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	// read the data
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.Quit(); err != nil {
+		return nil, err
+	}
+
+	// return the data
+	return io.NopCloser(bytes.NewBuffer(buf)), nil
 }
 
 // CreateFile writes content to a file by path `file`.
@@ -468,4 +653,99 @@ func recursiveChown(path string, uid, gid int) error {
 
 		return err
 	})
+}
+
+type DownloadFilesInterface interface {
+	ClabTmpDir() string
+	DownloadFileTmpAbsPath(nodeName string, filenamePostfix string) string
+}
+
+func ProcessDownloadableAndEmbeddedFile(nodename string, fileRef string, filenamePostfix string, paths DownloadFilesInterface) (string, error) {
+	var result string
+	// embedded config is a config that is defined as a multi-line string in the topology file
+	// it contains at least one newline
+	isEmbeddedConfig := strings.Count(fileRef, "\n") >= 1
+	// downloadable config starts with http(s)://
+	isDownloadableConfig := IsDownloadableUri(fileRef)
+
+	if isEmbeddedConfig || isDownloadableConfig {
+		// both embedded and downloadable configs are require clab tmp dir to be created
+		tmpLoc := paths.ClabTmpDir()
+		CreateDirectory(tmpLoc, 0755)
+
+		switch {
+		case isEmbeddedConfig:
+			log.Debugf("%q of node %q is an embedded blob", fileRef, nodename)
+			// for embedded config we create a file with the name embedded.partial.cfg
+			// as embedded configs are meant to be partial configs
+			absDestFile := paths.DownloadFileTmpAbsPath(
+				nodename, filenamePostfix)
+
+			err := CreateFile(absDestFile, fileRef)
+			if err != nil {
+				return "", err
+			}
+
+			result = absDestFile
+
+		case isDownloadableConfig:
+			log.Debugf("Node %q startup-config is a downloadable config %q", nodename, fileRef)
+			// get file name from an URL
+			fname := FilenameForURL(fileRef)
+
+			// Deduce the absolute destination filename for the downloaded content
+			absDestFile := paths.DownloadFileTmpAbsPath(nodename, fname)
+
+			log.Debugf("Fetching %q for node %q storing at %q", fileRef, nodename, absDestFile)
+			// download the file to tmp location
+			err := CopyFileContents(fileRef, absDestFile, 0755)
+			if err != nil {
+				return "", err
+			}
+
+			// adjust the nodeconfig by pointing startup-config to the local downloaded file
+			result = absDestFile
+		}
+		return result, nil
+	}
+	return fileRef, nil
+}
+
+// getCustomHostKeyCallback returns a custom ssh.HostKeyCallback.
+// it will never block the connection, but issue a log.Warn if the
+// host_key cannot be found (due to absense of the entry or
+// the file being missing)
+func getCustomHostKeyCallback(knownHostsFiles ...string) ssh.HostKeyCallback {
+	var usefiles []string
+	// check
+	for _, file := range knownHostsFiles {
+		if !FileExists(file) {
+			log.Debugf("known_hosts file %s does not exist.", file)
+			continue
+		}
+		usefiles = append(usefiles, file)
+	}
+
+	// load the known_hosts file retrieving an ssh.HostKeyCallback
+	knownHostsFileCallback, err := knownhosts.New(usefiles...)
+	if err != nil {
+		log.Debugf("error loading known_hosts files %q", strings.Join(knownHostsFiles, ", "))
+		// this is an always failing knownHosts checker.
+		// it will make sure that the log message of the custom function further down
+		// is consistently logged. Meaning if file can't be loaded or entry does not exist.
+		knownHostsFileCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			return fmt.Errorf("error loading known_hosts files %v", err)
+		}
+	}
+
+	// defien the custom ssh.HostKeyCallback function.
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		// delegate the call
+		err = knownHostsFileCallback(hostname, remote, key)
+		if err != nil {
+			// But if an error crops up, make it a warning and continue
+			log.Warnf("error performing host key validation based on %q for hostname %q (%v). continuing anyways", strings.Join(knownHostsFiles, ", "), hostname, err)
+		}
+		return nil
+	}
 }
