@@ -307,7 +307,9 @@ func GetExistingPolicies(ctx context.Context) ([]Policy, error) {
 }
 
 // Request is the helper function that handels the http requests, as well as the marshalling of request structs and unmarshalling of responses.
-func Request(ctx context.Context, method string, url string, targetStruct interface{}, data interface{}, requireAccessToken bool, token string) error {
+func Request(ctx context.Context, method string, url string, targetStruct interface{},
+	data interface{}, requireAccessToken bool, token string,
+) error {
 	jv, _ := json.Marshal(data)
 	body := bytes.NewBuffer(jv)
 

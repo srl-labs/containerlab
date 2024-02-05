@@ -59,7 +59,8 @@ func (cnr *clabNftablesRule) AddComment(comment string) error {
 	actualCommentByte := []byte(comment)
 	// check comment length not exceded
 	if len(actualCommentByte) > definitions.IPTablesCommentMaxSize {
-		return fmt.Errorf("comment max length is %d you've provided %d bytes", definitions.IPTablesCommentMaxSize, len(actualCommentByte))
+		return fmt.Errorf("comment max length is %d you've provided %d bytes",
+			definitions.IPTablesCommentMaxSize, len(actualCommentByte))
 	}
 
 	// copy into byte alice of XT_MAX_COMMENT_LEN length

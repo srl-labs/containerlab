@@ -155,7 +155,8 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		specHCheckConfig.HealthConfig.Test = cfg.Healthcheck.Test
 		specHCheckConfig.HealthConfig.Retries = cfg.Healthcheck.Retries
 		specHCheckConfig.HealthConfig.Interval = cfg.Healthcheck.GetIntervalDuration()
-		specHCheckConfig.HealthConfig.StartPeriod = cfg.Healthcheck.GetStartPeriodDuration()
+		specHCheckConfig.HealthConfig.StartPeriod =
+			cfg.Healthcheck.GetStartPeriodDuration()
 		specHCheckConfig.HealthConfig.Timeout = cfg.Healthcheck.GetTimeoutDuration()
 	}
 

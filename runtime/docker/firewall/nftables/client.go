@@ -94,7 +94,6 @@ func (c *NftablesClient) DeleteForwardingRules() error {
 
 // InstallForwardingRules installs the forwarding rules.
 func (c *NftablesClient) InstallForwardingRules() error {
-
 	defer c.close()
 
 	rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4)
@@ -177,7 +176,9 @@ func (nftC *NftablesClient) getRules(chainName, tableName string, family nftable
 	return nil, fmt.Errorf("no match for chain %q, table %q with family %q found", chainName, tableName, family)
 }
 
-func (nftC *NftablesClient) newClabNftablesRule(chainName, tableName string, family nftables.TableFamily, position uint64) (*clabNftablesRule, error) {
+func (nftC *NftablesClient) newClabNftablesRule(chainName, tableName string,
+	family nftables.TableFamily, position uint64,
+) (*clabNftablesRule, error) {
 	chains, err := nftC.getChains(chainName)
 	if err != nil {
 		return nil, err

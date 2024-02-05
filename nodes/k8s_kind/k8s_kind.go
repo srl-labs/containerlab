@@ -63,7 +63,8 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 
 	// set the kind image, if provided
 	if n.Cfg.Image != "" {
-		clusterCreateOptions = append(clusterCreateOptions, cluster.CreateWithNodeImage(n.Cfg.Image))
+		clusterCreateOptions = append(clusterCreateOptions,
+			cluster.CreateWithNodeImage(n.Cfg.Image))
 	}
 
 	// Read the kind cluster config

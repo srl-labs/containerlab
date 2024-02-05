@@ -387,7 +387,7 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 }
 
 // CreateContainer creates a docker container (but does not start it).
-func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { //skipcq: GO-R1005
+func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { // skipcq: GO-R1005
 	log.Infof("Creating container: %q", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()

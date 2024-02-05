@@ -29,7 +29,6 @@ func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
 
 	// adding newline to the prompt for better visual separation
 	tplData.CustomPrompt = "\\n" + prompt
-
 }
 
 // currentPrompt returns the current prompt extracted from the environment.
@@ -41,7 +40,8 @@ func (n *srl) currentPrompt(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	log.Debugf("fetching prompt for node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf("fetching prompt for node %s. stdout: %s, stderr: %s", n.Cfg.ShortName,
+		execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return getPrompt(execResult.GetStdOutString())
 }
