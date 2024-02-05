@@ -62,42 +62,42 @@ type vrSROS struct {
 	sshPubKeys []ssh.PublicKey
 }
 
-func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
-	s.HostRequirements.VirtRequired = true
-	s.LicensePolicy = types.LicensePolicyWarn
+	n.HostRequirements.VirtRequired = true
+	n.LicensePolicy = types.LicensePolicyWarn
 	// SR OS requires unbound pubkey authentication mode until this is
 	// gets fixed in later SR OS relase.
-	s.SSHConfig.PubkeyAuthentication = types.PubkeyAuthValueUnbound
+	n.SSHConfig.PubkeyAuthentication = types.PubkeyAuthValueUnbound
 
-	s.Cfg = cfg
+	n.Cfg = cfg
 	for _, o := range opts {
-		o(s)
+		o(n)
 	}
 	// vr-sros type sets the vrnetlab/sros variant (https://github.com/hellt/vrnetlab/sros)
-	if s.Cfg.NodeType == "" {
-		s.Cfg.NodeType = vrsrosDefaultType
+	if n.Cfg.NodeType == "" {
+		n.Cfg.NodeType = vrsrosDefaultType
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    nodes.VrDefConnMode,
-		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
-		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
+		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
+		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
+	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount tftpboot dir
-	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, "tftpboot"), ":/tftpboot"))
-	if s.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, "tftpboot"), ":/tftpboot"))
+	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
-		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
+		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.Cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", s.Cfg.Env["CONNECTION_MODE"],
-		s.Cfg.ShortName,
-		s.Cfg.NodeType,
+	n.Cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", n.Cfg.Env["CONNECTION_MODE"],
+		n.Cfg.ShortName,
+		n.Cfg.NodeType,
 	)
 
 	return nil
@@ -170,12 +170,19 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (s *vrSROS) CheckInterfaceName() error {
+	pattern := `eth([1-9]|[12][0-9]|3[0-2])$`
+
+	if s.Config().NetworkMode == "none" {
+		pattern = `eth([0-9]|[12][0-9]|3[0-2])$`
+	}
+
+	ifRe := regexp.MustCompile(pattern)
+
 	// vsim doesn't seem to support >20 interfaces, yet we allow to set max if number 32 just in case.
 	// https://regex101.com/r/bx6kzM/1
-	ifRe := regexp.MustCompile(`eth([1-9]|[12][0-9]|3[0-2])$`)
 	for _, e := range s.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is from 1 to 32", e.GetIfaceName())
+			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is <= 32", e.GetIfaceName())
 		}
 	}
 
