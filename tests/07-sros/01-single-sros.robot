@@ -44,7 +44,7 @@ Setup
 Cleanup
     # dump logs from sros1
     Run    sudo -E ${runtime} logs clab-${lab-name}-sros1 &> /tmp/${lab-name}-sros1.log
-    ${contents} =    Get File    /tmp/${lab-name}-sros1.log
+    ${contents} =    OperatingSystem.Get File    /tmp/${lab-name}-sros1.log
     Log    ${contents}
 
     Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
