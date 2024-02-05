@@ -84,7 +84,8 @@ Exec command with json output and filtering
 Ensure CLAB_INTFS env var is set
     [Documentation]
     ...    This test ensures that the CLAB_INTFS environment variable is set in the container
-    ...    and that it contains the correct number of interfaces.
+    ...    and that it contains the correct number of interfaces which is all datapath interfaces
+    ...    as present in the links section of the lab file + 1 for the management interface.
     ${output} =    Process.Run Process
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS"'
     ...    shell=True
@@ -96,7 +97,7 @@ Ensure CLAB_INTFS env var is set
     # may be worth to change this to stdout in the future
     # we literally check if the string stdout:\n3 is present in the output, as this is how
     # the result is printed today.
-    Should Contain    ${output.stderr}    stdout:\\n3
+    Should Contain    ${output.stderr}    stdout:\\n4
 
 Inspect ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
