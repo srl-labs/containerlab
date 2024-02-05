@@ -5,6 +5,7 @@
 //
 //	mockgen -package=mockruntime -source=runtime/runtime.go -destination=./mocks/mockruntime/runtime.go
 //
+
 // Package mockruntime is a generated GoMock package.
 package mockruntime
 

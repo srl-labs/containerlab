@@ -226,10 +226,15 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 		&types.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node2",
-			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
-				"configure": {
-					{
-						Node: "node1",
+			Stages: &types.Stages{
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node1",
+								State: types.WaitForCreate,
+							},
+						},
 					},
 				},
 			},
@@ -248,13 +253,19 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:       "alpine:3",
 			NetworkMode: "container:node2",
 			ShortName:   "node3",
-			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
-				"configure": {
-					{
-						Node: "node1",
-					},
-					{
-						Node: "node2",
+			Stages: &types.Stages{
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node1",
+								State: types.WaitForCreate,
+							},
+							&types.WaitFor{
+								Node:  "node2",
+								State: types.WaitForCreate,
+							},
+						},
 					},
 				},
 			},
@@ -280,13 +291,19 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:           "alpine:3",
 			MgmtIPv4Address: "172.10.10.2",
 			ShortName:       "node5",
-			WaitFor: map[types.WaitForPhase][]*types.WaitFor{
-				"configure": {
-					{
-						Node: "node3",
-					},
-					{
-						Node: "node4",
+			Stages: &types.Stages{
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node3",
+								State: types.WaitForCreate,
+							},
+							&types.WaitFor{
+								Node:  "node4",
+								State: types.WaitForCreate,
+							},
+						},
 					},
 				},
 			},

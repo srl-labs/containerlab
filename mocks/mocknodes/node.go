@@ -5,6 +5,7 @@
 //
 //	mockgen -package=mocknodes -source=nodes/node.go -destination=./mocks/mocknodes/node.go
 //
+
 // Package mocknodes is a generated GoMock package.
 package mocknodes
 

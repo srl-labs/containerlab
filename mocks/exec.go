@@ -5,5 +5,6 @@
 //
 //	mockgen -package=mocks -source=clab/exec/exec.go -destination=./mocks/exec.go
 //
+
 // Package mocks is a generated GoMock package.
 package mocks

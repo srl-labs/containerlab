@@ -5,6 +5,7 @@
 //
 //	mockgen -package=mocks -source=clab/dependency_manager/dependency_manager.go -destination=./mocks/dependency_manager.go
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
