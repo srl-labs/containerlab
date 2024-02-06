@@ -377,8 +377,9 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 	// if license is provided check path exists
 	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
 	if !utils.FileExists(rlic) {
-		return fmt.Errorf("license file of node %q not found by the path %s", d.Config().ShortName, rlic)
+		return fmt.Errorf("license file for node %q is not found by the path %s", d.Config().ShortName, rlic)
 	}
+
 	return nil
 }
 
@@ -489,7 +490,7 @@ func (d *DefaultNode) GetEndpoints() []links.Endpoint {
 
 // GetLinkEndpointType returns a veth link endpoint type for default nodes.
 // The LinkEndpointTypeVeth indicates a veth endpoint which doesn't require special handling.
-func (d *DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
+func (*DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
 	return links.LinkEndpointTypeVeth
 }
 
