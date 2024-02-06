@@ -132,6 +132,14 @@ The script uses the `tshark` CLI tool instead of `tcpdump` to be able to capture
 
 Note, that the script uses the Mac OS version of the Wireshark. If you are on Linux, you can simply replace the last line with `wireshark -k -i -`.
 
+## Demo
+
+Here is a short demo of how the script works and how to use it based on the lab topology with linux nodes and SR Linux NOS:
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/qojiQ38troc" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
 ## Examples
 
 Lets take the first diagram of this article and see which commands are used to sniff from the highlighted interfaces.
