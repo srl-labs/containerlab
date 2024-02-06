@@ -490,7 +490,7 @@ func (d *DefaultNode) GetEndpoints() []links.Endpoint {
 
 // GetLinkEndpointType returns a veth link endpoint type for default nodes.
 // The LinkEndpointTypeVeth indicates a veth endpoint which doesn't require special handling.
-func (d *DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
+func (*DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
 	return links.LinkEndpointTypeVeth
 }
 
