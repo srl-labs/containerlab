@@ -9,7 +9,7 @@ IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind i
 ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
 
 !!!warning
-    OcNOS VM disk images need to be altered to support telnet serial access and ethX interfaces name style. This can be done by modifying the grub config file, as [shown](https://github.com/hellt/vrnetlab/pull/99) here](https://github.com/hellt/vrnetlab/pull/99).
+    OcNOS VM disk images need to be altered to support telnet serial access and ethX interfaces name style. This can be done by modifying the grub config file, as shown [here](https://github.com/hellt/vrnetlab/pull/99).
 
 ## Managing ipinfusion_ocnos nodes
 

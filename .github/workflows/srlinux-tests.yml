@@ -15,6 +15,9 @@ jobs:
         runtime:
           - "docker"
           - "podman"
+        test-suite:
+          - "01*.robot"
+          - "03*.robot"
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ matrix.runtime == 'podman' }}
     steps:
@@ -46,16 +49,19 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
+      - name: Sanitize test-suite name
+        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+
       - name: Run srlinux tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 02-basic-srl-log-${{ matrix.runtime }}
+          name: 02-basic-srl-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -64,6 +70,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-srlinux-tests-${{ matrix.runtime }}
+          name: coverage-srlinux-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

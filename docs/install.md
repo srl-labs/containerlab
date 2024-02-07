@@ -505,7 +505,7 @@ sudo setsebool -P selinuxuser_execmod 1
 ```
 
 [^1]: only available if installed from packages
-[^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64.
+[^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64. IPv6 should not be disabled in the kernel.
 [^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
 [^4]: kudos to Michael Kashin who [shared](https://github.com/srl-labs/containerlab/issues/577#issuecomment-895847387) this approach with us
 [^5]: otherwise make sure to add a custom shared directory to the docker on mac.

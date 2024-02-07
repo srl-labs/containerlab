@@ -28,7 +28,7 @@ jobs:
       go_ver: ${{ env.GO_VER }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
@@ -72,12 +72,12 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
-      - uses: WillAbides/setup-go-faster@v1.13.0
+      - uses: WillAbides/setup-go-faster@v1.14.0
         with:
           go-version: ${{ env.GO_VER }}
 
       - name: Cache go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           # In order:
           # * Module download cache
@@ -100,12 +100,12 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
-      - uses: WillAbides/setup-go-faster@v1.13.0
+      - uses: WillAbides/setup-go-faster@v1.14.0
         with:
           go-version: ${{ env.GO_VER }}
 
       - name: Cache go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           # In order:
           # * Module download cache
@@ -135,8 +135,6 @@ jobs:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
     needs:
       - file-changes
-      - unit-test
-      - staticcheck
       - build-containerlab
 
   ext-container-tests:
@@ -146,8 +144,6 @@ jobs:
         runtime:
           - "docker"
     needs:
-      - unit-test
-      - staticcheck
       - build-containerlab
     steps:
       - name: Checkout
@@ -201,8 +197,6 @@ jobs:
         runtime:
           - "docker"
     needs:
-      - unit-test
-      - staticcheck
       - build-containerlab
     steps:
       - name: Checkout
@@ -256,8 +250,6 @@ jobs:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
     needs:
       - file-changes
-      - unit-test
-      - staticcheck
       - build-containerlab
 
   ixiac-one-basic-tests:
@@ -267,8 +259,6 @@ jobs:
         runtime:
           - "docker"
     needs:
-      - unit-test
-      - staticcheck
       - build-containerlab
     steps:
       - name: Checkout
@@ -312,8 +302,14 @@ jobs:
     uses: ./.github/workflows/vxlan-tests.yml
     needs:
       - file-changes
-      - unit-test
-      - staticcheck
+      - build-containerlab
+    with:
+      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+
+  kind-tests:
+    uses: ./.github/workflows/kind-tests.yml
+    needs:
+      - file-changes
       - build-containerlab
     with:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
@@ -329,13 +325,14 @@ jobs:
       - srlinux-basic-tests
       - ixiac-one-basic-tests
       - vxlan-tests
+      - kind-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: WillAbides/setup-go-faster@v1.13.0
+      - uses: WillAbides/setup-go-faster@v1.14.0
         with:
           go-version: ${{ env.GO_VER }}
 
@@ -369,7 +366,7 @@ jobs:
       - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER build --clean --strict
 
       - name: Cache htmltest external links
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: tmp/.htmltest
           # key will contain hash of all md files to check if files have changed
@@ -397,6 +394,7 @@ jobs:
       - ixiac-one-basic-tests
       - ext-container-tests
       - vxlan-tests
+      - kind-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -404,12 +402,12 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: WillAbides/setup-go-faster@v1.13.0
+        uses: WillAbides/setup-go-faster@v1.14.0
         with:
           go-version: ${{ env.GO_VER }}
 
       - name: Cache go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           # In order:
           # * Module download cache

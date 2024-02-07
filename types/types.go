@@ -170,8 +170,6 @@ type NodeConfig struct {
 	// Extra /etc/hosts entries for all nodes.
 	ExtraHosts []string          `json:"extra-hosts,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"` // container labels
-	// List of Subject Alternative Names (SAN) to be added to the node's TLS certificate
-	SANs []string `json:"SANs,omitempty"`
 	// Ignite sandbox and kernel imageNames
 	Sandbox string `json:"sandbox,omitempty"`
 	Kernel  string `json:"kernel,omitempty"`
@@ -337,6 +335,8 @@ type CertificateConfig struct {
 	KeySize int `yaml:"key-size,omitempty"`
 	// ValidityDuration is the duration of the certificate validity
 	ValidityDuration time.Duration `yaml:"validity-duration"`
+	// list of subject Alternative Names (SAN) to be added to the node's certificate
+	SANs []string `yaml:"sans,omitempty"`
 }
 
 // Merge merges the given CertificateConfig into the current one.
@@ -355,6 +355,10 @@ func (c *CertificateConfig) Merge(x *CertificateConfig) *CertificateConfig {
 
 	if x.KeySize > 0 {
 		c.KeySize = x.KeySize
+	}
+
+	if len(x.SANs) > 0 {
+		c.SANs = x.SANs
 	}
 
 	return c

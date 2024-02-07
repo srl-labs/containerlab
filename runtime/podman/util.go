@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	netTypes "github.com/containers/common/libnetwork/types"
+	"github.com/containers/image/v5/manifest"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/podman/v4/pkg/specgen"
@@ -146,7 +147,9 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		// CPUQuota:                0,
 	}
 	// Defaults for health checks
-	specHCheckConfig := specgen.ContainerHealthCheckConfig{}
+	specHCheckConfig := specgen.ContainerHealthCheckConfig{
+		HealthConfig: &manifest.Schema2HealthConfig{},
+	}
 
 	if cfg.Healthcheck != nil {
 		specHCheckConfig.HealthConfig.Test = cfg.Healthcheck.Test

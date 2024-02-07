@@ -1,0 +1,37 @@
+name: kind01
+
+topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:23.10.1
+  nodes:
+    srl01:
+      kind: nokia_srlinux
+    k01:
+      kind: k8s-kind
+      startup-config: k01-config.yaml
+    k02:
+      kind: k8s-kind
+
+    # k01 cluster contains 2 nodes: a control-plane and a worker
+    # the cluster config is defined in k01-config.yaml
+    k01-control-plane:
+      kind: ext-container
+      exec:
+        - "ip addr add dev eth1 192.168.10.1/24"
+    k01-worker:
+      kind: ext-container
+      exec:
+        - "ip addr add dev eth1 192.168.11.1/24"
+
+    # k02 cluster has an all-in-one node
+    k02-control-plane:
+      kind: ext-container
+      exec:
+        - "ip addr add dev eth1 192.168.20.1/24"
+
+  links:
+    - endpoints: ["srl01:e1-1", "k01-control-plane:eth1"]
+    - endpoints: ["srl01:e1-2", "k01-worker:eth1"]
+
+    - endpoints: ["srl01:e1-4", "k02-control-plane:eth1"]

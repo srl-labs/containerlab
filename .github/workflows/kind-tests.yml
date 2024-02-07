@@ -1,4 +1,4 @@
-name: smoke-tests
+name: vxlan-test
 
 "on":
   workflow_call:
@@ -8,35 +8,14 @@ name: smoke-tests
         type: string
 
 jobs:
-  smoke-tests:
+  vxlan-tests:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
     strategy:
-      fail-fast: false
       matrix:
         runtime:
           - "docker"
-          - "podman"
         test-suite:
           - "01*.robot"
-          - "02*.robot"
-          - "03*.robot"
-          - "04*.robot"
-          - "05*.robot"
-          - "06*.robot"
-          - "07*.robot"
-          - "08*.robot"
-          - "09*.robot"
-          - "10*.robot"
-          - "11*.robot"
-          - "12*.robot"
-          - "13*.robot"
-          - "14*.robot"
-          - "15*.robot"
-          - "16*.robot"
-          - "17*.robot"
-    # allow podman job to fail, since it started to fail on github actions
-    continue-on-error: ${{ matrix.runtime == 'podman' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,10 +29,6 @@ jobs:
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
 
-      - name: Setup Podman
-        if: matrix.runtime == 'podman'
-        run: sudo bash ./.github/workflows/install-podman.sh
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.py_ver }}
@@ -64,27 +39,33 @@ jobs:
         run: |
           pip install -r tests/requirements.txt
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests
+        run: |
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/05-k8s-kind/${{ matrix.test-suite }}
+
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
-      - name: Run smoke tests
-        run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
-
       # upload test reports as a zip file
-      - name: Upload test report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 01-smoke-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 05-k8s-kind-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
-      - name: Upload coverage
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-smoke-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-k8s-kind-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
