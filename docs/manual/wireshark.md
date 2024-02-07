@@ -8,6 +8,10 @@ Every lab emulation software must provide its users with the packet capturing ab
 
 Containerlab offers a simple way to capture the packets from any interface of any node in the lab. This article will explain how to do that.
 
+///tip
+If you are looking for a free Web UI for packet capture with Wireshark, checkout out our [Edgeshark integration](#edgeshark-integration).
+///
+
 Consider the following lab topology which highlights the typical points of packet capture.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:13,&quot;zoom&quot;:2,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
@@ -132,6 +136,65 @@ The script uses the `tshark` CLI tool instead of `tcpdump` to be able to capture
 
 Note, that the script uses the Mac OS version of the Wireshark. If you are on Linux, you can simply replace the last line with `wireshark -k -i -`.
 
+## Edgeshark integration
+
+The [capture script](#capture-script) already makes it easy to dump packets off of an interface and piping it to a Wireshark UI. Is there anything that can make it even easier?
+
+How about a Web UI that displays every interface of every container and can start a wireshark session by a click of a button? Let us introduce you to the [Edgeshark][edgeshark-docs].
+
+<video autoplay loop width="100%" controls>
+  <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/fbffd718f7f64a7920f75b6363b98002/2024-02-07_20-07-47.mp4" type="video/mp4">
+</video>
+
+///admonition
+    type: quote
+[Edgeshark][edgeshark-docs] visualizes the communication of containers and thus helps in diagnosing it, both in-between containers as well as with the "outside world". It can be deployed to Linux stand-alone container hosts, including KinD deployments. Edgeshark also supports capturing container traffic using Wireshark.
+///
+
+Yep, you got it right, edgeshark is a Web UI for Wireshark[^1] that is capable of capturing traffic from any interface of any container (and physical interface) in your lab. Moreover, it plugs into containerlab natively, and is free and open-source.
+
+This diagram shows a typical integration of edgeshark with containerlab:
+
+<div class='mxgraph' style='max-width:100%;border:1px solid transparent;margin:0 auto; display:block;' data-mxgraph='{"page":0,"zoom":2,"highlight":"#0000ff","nav":true,"resize":true,"edit":"_blank","url":"https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/pcap.drawio"}'></div>
+
+From a user's perspective, the integration is as simple as running the following command on the containerlab host:
+
+```bash
+curl -sL \
+https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml \
+| docker compose -f - up -d
+```
+
+This will deploy the edgeshark containers and expose the Web UI on the containerlab host's port 5001. If you have a network reachability to the containerlab host, you can open the Web UI (`https://<containerlab-host-address>:5001`) in your browser and see the Edgeshark UI.
+
+/// details | SSH port forwarding in case you don't have direct reachability
+If you don't have direct reachability, you can use SSH port forwarding to access the Web UI:
+
+```bash title="ssh port forwarding"
+ssh -L 5001:localhost:5001 $containerlab_host
+```
+
+Then open your browser and navigate to `http://localhost:5001` to see the Edgeshark UI.
+///
+
+### Wireshark and system configuration
+
+There is a small price one needs to pay to make integrate Edgeshark with Wireshark, it consists of two steps:
+
+1. Configuring the system to handle the `packetflix://` URL schema and open it with the Wireshark.
+2. Installing the external capture plugin for Wireshark.
+
+Luckily, you only need to do it once and it will work for all the future captures on any system you install EdgeShark on.
+
+[Edgeshark documentation](https://edgeshark.siemens.io/#/getting-started?id=optional-capture-plugin) provides a detailed guide on how to perform these two steps for Windows and Linux systems.
+
+There was a tiny gap in MacOS support, but we contributed the necessary piece[^2] and here is how you configure your MacOS system to work with Edgeshark:
+
+1. Download the zip file with the AppleScript that enables the `packetflix://` URL schema handling, unarchive it and move the EdgeShark-handler script to the Applications folder.
+2. Download the [external capture plugin](https://discord.com/channels/@me/839743608013193236/1204822102109192242) and copy it to the `/Applications/Wireshark.app/Contents/MacOS/extcap/` directory.
+
+With these steps done, you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
+
 ## Examples
 
 Lets take the first diagram of this article and see which commands are used to sniff from the highlighted interfaces.
@@ -205,3 +268,9 @@ To list the interfaces (links) of a given container leverage the `ip` utility:
 # where $netns_name is the container name of a node
 ip netns exec $netns_name ip link
 ```
+
+[edgeshark-docs]: https://edgeshark.siemens.io/#/
+
+[^1]: It is more than just a UI for Wireshark, but in the context of pcap capture we focus on this feature solely.
+[^2]: https://github.com/siemens/cshargextcap/issues/14#issuecomment-1932267889
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
