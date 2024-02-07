@@ -1,3 +1,7 @@
+---
+comments: true
+---
+
 # Packet capture & Wireshark
 
 Every lab emulation software must provide its users with the packet capturing abilities. Looking at the frames as they traverse the network links is not only educational, but also helps to troubleshoot the issues that might arise during the lab development.
@@ -134,7 +138,15 @@ where
 
 The script uses the `tshark` CLI tool instead of `tcpdump` to be able to capture from multiple interfaces at once. This is achieved by splitting the interface names by comma and passing them to the `tshark` command as `-i <interface1> -i <interface2> -i <interface3>`.
 
-Note, that the script uses the Mac OS version of the Wireshark. If you are on Linux, you can simply replace the last line with `wireshark -k -i -`.
+Here is a short demo of how the script works and how to use it based on the lab topology with linux nodes and SR Linux NOS:
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/qojiQ38troc" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+///note
+The script uses the Mac OS version of the Wireshark. If you are on Linux, you can simply replace the last line with `wireshark -k -i -`.
+///
 
 ## Edgeshark integration
 
