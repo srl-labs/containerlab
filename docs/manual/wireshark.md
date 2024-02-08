@@ -171,11 +171,24 @@ This diagram shows a typical integration of edgeshark with containerlab:
 
 From a user's perspective, the integration is as simple as running the following command on the containerlab host:
 
+/// tab | Install
+
 ```bash
 curl -sL \
 https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml \
 | docker compose -f - up -d
 ```
+
+///
+/// tab | Uninstall
+
+```bash
+curl -sL \
+https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml \
+| docker compose -f - down
+```
+
+///
 
 This will deploy the edgeshark containers and expose the Web UI on the containerlab host's port 5001. If you have a network reachability to the containerlab host, you can open the Web UI (`https://<containerlab-host-address>:5001`) in your browser and see the Edgeshark UI.
 
