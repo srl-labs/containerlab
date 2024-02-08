@@ -472,7 +472,7 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 	return t.GetDefaults().GetExtras()
 }
 
-// GetWaitFor return the wait-for configuration for the given node.
+// GetStages return the configuration stages set for the given node.
 func (t *Topology) GetStages(name string) (*Stages, error) {
 	s := NewStages()
 
