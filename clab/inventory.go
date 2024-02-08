@@ -55,7 +55,6 @@ func (c *CLab) GenerateInventories() error {
 
 // generateAnsibleInventory generates and writes ansible inventory file to w.
 func (c *CLab) generateAnsibleInventory(w io.Writer) error {
-
 	inv := AnsibleInventory{
 		Kinds:  make(map[string]*KindProps),
 		Nodes:  make(map[string][]*AnsibleInventoryNode),

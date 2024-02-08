@@ -7,8 +7,8 @@ require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/containernetworking/plugins v1.4.0
-	github.com/containers/common v0.57.2
-	github.com/containers/podman/v4 v4.8.3
+	github.com/containers/common v0.57.4
+	github.com/containers/podman/v4 v4.9.2
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.5.0
 	github.com/docker/docker v24.0.7+incompatible
@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/nftables v0.1.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/h2non/gock v1.2.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.7
 	github.com/hashicorp/go-version v1.6.0
@@ -48,7 +48,7 @@ require (
 	golang.org/x/sys v0.16.0
 	golang.org/x/term v0.16.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/kind v0.20.0
+	sigs.k8s.io/kind v0.21.0
 )
 
 require (
@@ -164,9 +164,9 @@ require (
 	github.com/containerd/go-runc v1.0.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.15.1 // indirect
 	github.com/containerd/ttrpc v1.2.2 // indirect
-	github.com/containers/buildah v1.33.2 // indirect
+	github.com/containers/buildah v1.33.5 // indirect
 	github.com/containers/image v3.0.2+incompatible // indirect
-	github.com/containers/image/v5 v5.29.1
+	github.com/containers/image/v5 v5.29.2
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.1.9 // indirect
 	github.com/containers/psgo v1.8.0 // indirect
@@ -287,7 +287,7 @@ require (
 	golang.org/x/mod v0.14.0
 	golang.org/x/net v0.20.0
 	golang.org/x/oauth2 v0.14.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect

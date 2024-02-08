@@ -178,12 +178,14 @@ topology:
         - /root/files:/root/files:ro # (2)!
         - somefile:/somefile # (3)!
         - ~/.ssh/id_rsa:/root/.ssh/id_rsa # (4)!
+        - /var/run/somedir # (5)!
 ```
 
 1. mount a host file found by the path `/usr/local/bin/gobgp` to a container under `/root/gobgp` (implicit RW mode)
 2. mount a `/root/files` directory from a host to a container in RO mode
 3. when a host path is given in a relative format, the path is considered relative to the topology file and not a current working directory.
 4. The `~` char will be expanded to a user's home directory.
+5. mount an anonymous volume to a container under `/var/run/somedir` (implicit RW mode)
 
 ???info "Bind variables"
     By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
@@ -742,8 +744,9 @@ topology:
     srl:
       kind: nokia_srlinux
       certificate:
-        SANs:
+        sans:
           - "test.com"
+          - 192.168.96.155
 ```
 
 ### healthcheck

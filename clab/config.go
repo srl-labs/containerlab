@@ -497,6 +497,11 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
 
+		if len(elems) == 1 {
+			// if there is only one element, it means that we have an anonymous
+			// volume, in this case we don't need to resolve the path
+			continue
+		}
 		// replace special variable
 		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyLabDir(), nodeDirVar, nodedir)
 		hp := r.Replace(elems[0])

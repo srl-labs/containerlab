@@ -378,7 +378,7 @@ topology:
 
 ```
 
-In the above example the node `n1` connects with its `e1-1` interface to the management network. This is done by specifying the endpoint with a reserved name `mgmt-net` and defining the name of the interface that should be used in that bridge (`nq-e1-1`).
+In the above example the node `n1` connects with its `e1-1` interface to the management network. This is done by specifying the endpoint with a reserved name `mgmt-net` and defining the name of the interface that should be used in that bridge (`n1-e1-1`).
 
 By specifying `mgmt-net` name of the node in the endpoint definition we tell containerlab to find out which bridge is used by the management network of our lab and use this bridge as the attachment point for our veth pair.
 

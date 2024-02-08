@@ -331,7 +331,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
 	}
-	err = d.installIPTablesFwdRule()
+	err = d.installFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules install: %v", err)
 	}
@@ -368,7 +368,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		return err
 	}
 
-	err = d.deleteIPTablesFwdRule()
+	err = d.deleteFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules removal: %v", err)
 	}
@@ -387,7 +387,7 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 }
 
 // CreateContainer creates a docker container (but does not start it).
-func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { //skipcq: GO-R1005
+func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { // skipcq: GO-R1005
 	log.Infof("Creating container: %q", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
