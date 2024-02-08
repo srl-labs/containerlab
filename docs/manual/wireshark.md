@@ -171,11 +171,24 @@ This diagram shows a typical integration of edgeshark with containerlab:
 
 From a user's perspective, the integration is as simple as running the following command on the containerlab host:
 
+/// tab | Install
+
 ```bash
 curl -sL \
 https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml \
 | docker compose -f - up -d
 ```
+
+///
+/// tab | Uninstall
+
+```bash
+curl -sL \
+https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml \
+| docker compose -f - down
+```
+
+///
 
 This will deploy the edgeshark containers and expose the Web UI on the containerlab host's port 5001. If you have a network reachability to the containerlab host, you can open the Web UI (`https://<containerlab-host-address>:5001`) in your browser and see the Edgeshark UI.
 
@@ -206,14 +219,6 @@ There was a tiny gap in MacOS support, but we contributed the necessary piece[^2
 2. Download the [external capture plugin](https://discord.com/channels/@me/839743608013193236/1204822102109192242) and copy it to the `/Applications/Wireshark.app/Contents/MacOS/extcap/` directory.
 
 With these steps done, you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
-
-## Demo
-
-Here is a short demo of how the script works and how to use it based on the lab topology with linux nodes and SR Linux NOS:
-
-<div class="iframe-container">
-<iframe width="100%" src="https://www.youtube.com/embed/qojiQ38troc" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>
 
 ## Examples
 
