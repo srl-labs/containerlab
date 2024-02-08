@@ -112,14 +112,17 @@ type StageBase struct {
 	WaitFor WaitForList `yaml:"wait-for,omitempty"`
 }
 
+// WaitForList is a list of WaitFor configurations.
 type WaitForList []*WaitFor
 
-func (w WaitForList) contains(newWf *WaitFor) bool {
-	for _, entry := range w {
-		if entry.Equals(newWf) {
+// contains returns true if the WaitForList contains the given WaitFor.
+func (wfl WaitForList) contains(wf *WaitFor) bool {
+	for _, entry := range wfl {
+		if entry.Equals(wf) {
 			return true
 		}
 	}
+
 	return false
 }
 
