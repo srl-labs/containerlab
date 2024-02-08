@@ -93,7 +93,7 @@ func (dm *defaultDependencyManager) SignalDone(nodeName string, state types.Wait
 	dm.nodes[nodeName].Done(state)
 }
 
-// checkNodesExist returns an error if any of the provided node names is unknown to the depenedency manager
+// checkNodesExist returns an error if any of the provided node names is unknown to the depenedency manager.
 func (dm *defaultDependencyManager) checkNodesExist(nodeNames []string) error {
 	var missing []string
 	for _, nodeName := range nodeNames {
@@ -121,7 +121,8 @@ func (dm *defaultDependencyManager) String() string {
 
 	// print dependencies
 	for _, nodename := range keys {
-		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename, strings.Join(dependencies[nodename], ", ")))
+		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename,
+			strings.Join(dependencies[nodename], ", ")))
 	}
 	return strings.Join(result, "\n")
 }

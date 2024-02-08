@@ -68,7 +68,7 @@ func WithTimeout(dur time.Duration) ClabOption {
 	}
 }
 
-// WithDependencyManager injects the DependencyManager
+// WithDependencyManager injects the DependencyManager.
 func WithDependencyManager(dm dependency_manager.DependencyManager) ClabOption {
 	return func(c *CLab) error {
 		c.dependencyManager = dm
@@ -358,7 +358,6 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
 // Nodes interdependencies are created in this function.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
-
 	for nodeName := range c.Nodes {
 		c.dependencyManager.AddNode(nodeName)
 	}
@@ -407,7 +406,8 @@ func (c *CLab) createIgniteSerialDependency() error {
 		if n.GetRuntime().GetName() == ignite.RuntimeName {
 			if prevIgniteNode != nil {
 				// add a dependency to the previously found ignite node
-				c.dependencyManager.AddDependency(prevIgniteNode.Config().ShortName, types.WaitForCreate, n.Config().ShortName, types.WaitForCreate)
+				c.dependencyManager.AddDependency(prevIgniteNode.Config().ShortName,
+					types.WaitForCreate, n.Config().ShortName, types.WaitForCreate)
 			}
 			prevIgniteNode = n
 		}
@@ -448,7 +448,6 @@ func (c *CLab) createNamespaceSharingDependency() {
 // createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
 // are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
 func (c *CLab) createStaticDynamicDependency() error {
-
 	staticIPNodes := make(map[string]nodes.Node)
 	dynIPNodes := make(map[string]nodes.Node)
 
@@ -477,7 +476,6 @@ func (c *CLab) createStaticDynamicDependency() error {
 // createWaitForDependency reflects the dependencies defined in the configuration via the wait-for field.
 func (c *CLab) createWaitForDependency() error {
 	for waiterNode, node := range c.Nodes {
-
 		// add node's waitFor nodes to the dependency manager
 		for phase, waitForNodes := range node.Config().Stages.GetWaitFor() {
 			for _, waitForNode := range waitForNodes {

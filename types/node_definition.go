@@ -106,7 +106,7 @@ func NewStages() *Stages {
 }
 
 // GetWaitFor returns lists of nodes that need to be waited for in a map
-// that is indexed by the state for which this dependency is to be evaluated
+// that is indexed by the state for which this dependency is to be evaluated.
 func (s *Stages) GetWaitFor() map[WaitForPhase]WaitForList {
 	result := map[WaitForPhase]WaitForList{}
 
@@ -119,7 +119,7 @@ func (s *Stages) GetWaitFor() map[WaitForPhase]WaitForList {
 	return result
 }
 
-// Merge merges the Stages configuration of other into s
+// Merge merges the Stages configuration of other into s.
 func (s *Stages) Merge(other *Stages) error {
 	var err error
 	if other.Configure != nil {

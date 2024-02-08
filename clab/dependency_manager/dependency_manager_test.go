@@ -125,11 +125,12 @@ func Test_defaultDependencyManager_String(t *testing.T) {
 					depender string
 					dependee string
 					waitFor  types.WaitForPhase
-				}{{
-					depender: "node1",
-					dependee: "node2",
-					waitFor:  types.WaitForCreate,
-				},
+				}{
+					{
+						depender: "node1",
+						dependee: "node2",
+						waitFor:  types.WaitForCreate,
+					},
 				},
 			},
 			want: `node1 -> [  ]

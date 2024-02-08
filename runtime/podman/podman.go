@@ -394,7 +394,7 @@ func (r *PodmanRuntime) GetContainerStatus(ctx context.Context, cID string) runt
 	return runtime.Stopped
 }
 
-// GetContainerHealth returns true is the container is reported as being healthy, false otherwise
+// GetContainerHealth returns true is the container is reported as being healthy, false otherwise.
 func (r *PodmanRuntime) GetContainerHealth(ctx context.Context, cID string) (bool, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {

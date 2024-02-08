@@ -474,7 +474,6 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 
 // GetWaitFor return the wait-for configuration for the given node.
 func (t *Topology) GetStages(name string) (*Stages, error) {
-
 	s := NewStages()
 
 	// default Stages

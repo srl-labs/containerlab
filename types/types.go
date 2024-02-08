@@ -401,7 +401,7 @@ func (w *WaitFor) IsValid() error {
 	return err
 }
 
-// Equals returns true if the Node and the State of the WaitFor structs are value equal
+// Equals returns true if the Node and the State of the WaitFor structs are value equal.
 func (w *WaitFor) Equals(other *WaitFor) bool {
 	if w.Node == other.Node && w.State == other.State {
 		return true
@@ -454,7 +454,10 @@ func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 
 // WaitForPhases we need to init Waitgroups for all the states,
 // this is a helper var listing all the states for initialization.
-var WaitForPhases []WaitForPhase = []WaitForPhase{WaitForCreate, WaitForCreateLinks, WaitForConfigure, WaitForHealthy, WaitForExit}
+var WaitForPhases []WaitForPhase = []WaitForPhase{
+	WaitForCreate, WaitForCreateLinks,
+	WaitForConfigure, WaitForHealthy, WaitForExit,
+}
 
 func WaitForPhaseFromString(s string) (WaitForPhase, error) {
 	for _, val := range WaitForPhases {

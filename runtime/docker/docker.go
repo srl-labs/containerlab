@@ -1004,7 +1004,7 @@ func (d *DockerRuntime) containerPid(ctx context.Context, cID string) (int, erro
 	return inspect.State.Pid, nil
 }
 
-// GetContainerHealth returns true is the container is reported as being healthy, false otherwise
+// GetContainerHealth returns true is the container is reported as being healthy, false otherwise.
 func (d *DockerRuntime) GetContainerHealth(ctx context.Context, cID string) (bool, error) {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
