@@ -390,30 +390,6 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 	return PullPolicyIfNotPresent
 }
 
-// WaitFor represents the wait-for configuration for a node deployment stage.
-type WaitFor struct {
-	Node  string       `json:"node"`            // the node that is to be waited for
-	State WaitForPhase `json:"state,omitempty"` // the state that the node must have completed
-}
-
-func (w *WaitFor) IsValid() error {
-	_, err := WaitForPhaseFromString(string(w.State))
-	return err
-}
-
-// Equals returns true if the Node and the State of the WaitFor structs are value equal.
-func (w *WaitFor) Equals(other *WaitFor) bool {
-	if w.Node == other.Node && w.State == other.State {
-		return true
-	}
-	return false
-}
-
-// WaitForPhase defines the phases that nodes go through
-// during the deployment process. They are used to define and enforce
-// dependencies between nodes.
-type WaitForPhase string
-
 const (
 	WaitForCreate      WaitForPhase = "create"
 	WaitForCreateLinks WaitForPhase = "create-links"

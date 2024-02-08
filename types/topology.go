@@ -473,6 +473,8 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 }
 
 // GetStages return the configuration stages set for the given node.
+// It merges the default, kind and node stages into a single Stages struct
+// with node stages taking precedence over kind stages and default stages.
 func (t *Topology) GetStages(name string) (*Stages, error) {
 	s := NewStages()
 
