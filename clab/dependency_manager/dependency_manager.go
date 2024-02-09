@@ -12,9 +12,10 @@ import (
 type DependencyManager interface {
 	// AddNode adds a node to the dependency manager.
 	AddNode(name string)
-	// AddDependency adds a dependency between depender and dependee.
-	// The depender will effectively wait for the dependee to finish.
-	AddDependency(depender string, dependerState types.WaitForPhase, dependee string, dependeeState types.WaitForPhase) error
+	// AddDependency adds a dependency between a depender and and a dependee.
+	// The depender will hold off the dependerPhase until the dependee completes dependeePhase.
+	// This effectively makes the dependerPhase to wait for dependeePhase to finish.
+	AddDependency(depender string, dependerPhase types.WaitForPhase, dependee string, dependeePhase types.WaitForPhase) error
 	// Enter is called by a node (nodename) that is meant to enter the specified phase.
 	// The call will be blocked until all dependencies for the node to enter the phase are met.
 	Enter(nodeName string, state types.WaitForPhase) error
@@ -45,9 +46,10 @@ func (dm *defaultDependencyManager) AddNode(name string) {
 	dm.nodes[name] = newDependencyNode(name)
 }
 
-// AddDependency adds a dependency between depender and dependee.
-// The depender will effectively wait for the dependee to finish.
-func (dm *defaultDependencyManager) AddDependency(depender string, dependerState types.WaitForPhase, dependee string, dependeeState types.WaitForPhase) error {
+// AddDependency adds a dependency between a depender and and a dependee.
+// The depender will hold off its dependerPhase until the dependee completes dependeePhase.
+// This effectively makes the dependerPhase to wait for dependeePhase to finish.
+func (dm *defaultDependencyManager) AddDependency(depender string, dependerPhase types.WaitForPhase, dependee string, dependeePhase types.WaitForPhase) error {
 	// first check if the referenced nodes are known to the dm
 	err := dm.checkNodesExist([]string{dependee})
 	if err != nil {
@@ -58,7 +60,7 @@ func (dm *defaultDependencyManager) AddDependency(depender string, dependerState
 		return err
 	}
 
-	dm.nodes[dependee].addDepender(dependerState, dm.nodes[depender], dependeeState)
+	dm.nodes[dependee].addDepender(dependerPhase, dm.nodes[depender], dependeePhase)
 	return nil
 }
 

@@ -355,7 +355,10 @@ func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntime]
 }
 
-// CreateNodes schedules nodes creation and returns a waitgroup for all nodes.
+// CreateNodes schedules nodes creation and returns a waitgroup for all nodes
+// with the exec collection created from the exec config of each node.
+// The exec collection is returned to the caller to ensure that the execution log
+// is printed after the nodes are created.
 // Nodes interdependencies are created in this function.
 func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
 	for nodeName := range c.Nodes {
