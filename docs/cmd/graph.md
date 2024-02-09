@@ -62,7 +62,7 @@ The `group` property set to the predefined value will automatically auto-align t
 
 #### Graphviz
 
-When `graph` command is called without the `--srv` flag, containerlab will generate a [graph description file in dot format](https://en.wikipedia.org/wiki/DOT_(graph_description_language)).
+When `graph` command is called with the `--dot` flag, containerlab will generate a [graph description file in dot format](https://en.wikipedia.org/wiki/DOT_(graph_description_language)).
 
 The dot file can be used to view the graphical representation of the topology either by rendering the dot file into a PNG file or using [online dot viewer](https://dreampuf.github.io/GraphvizOnline/).
 
