@@ -390,14 +390,6 @@ func ParsePullPolicyValue(s string) PullPolicyValue {
 	return PullPolicyIfNotPresent
 }
 
-const (
-	WaitForCreate      WaitForPhase = "create"
-	WaitForCreateLinks WaitForPhase = "create-links"
-	WaitForConfigure   WaitForPhase = "configure"
-	WaitForHealthy     WaitForPhase = "healthy"
-	WaitForExit        WaitForPhase = "exit"
-)
-
 // HealthcheckConfig represents healthcheck parameters set for a container.
 type HealthcheckConfig struct {
 	// Test is the command to run to check the health of the container

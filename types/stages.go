@@ -1,5 +1,18 @@
 package types
 
+const (
+	// WaitForCreate is the wait phase name for a node creation stage.
+	WaitForCreate WaitForPhase = "create"
+	// WaitForCreateLinks is the wait phase name for a node create-links stage.
+	WaitForCreateLinks WaitForPhase = "create-links"
+	// WaitForConfigure is the wait phase name for a node configure stage.
+	WaitForConfigure WaitForPhase = "configure"
+	// WaitForHealthy is the wait phase name for a node healthy stage.
+	WaitForHealthy WaitForPhase = "healthy"
+	// WaitForExit is the wait phase name for a node exit stage.
+	WaitForExit WaitForPhase = "exit"
+)
+
 // Stages represents a configuration of a given node deployment stage.
 type Stages struct {
 	Create      *StageCreate      `yaml:"create"`

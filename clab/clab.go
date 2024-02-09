@@ -368,7 +368,7 @@ func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy 
 		return nil, nil, err
 	}
 
-	// create user-defined node dependencies done with `wait-for` node property
+	// create user-defined node dependencies done with `wait-for` property of the deployment stage
 	err = c.createWaitForDependency()
 	if err != nil {
 		return nil, nil, err
