@@ -4,7 +4,7 @@ status: new
 
 # Clabernetes
 
-<small>Clabernetes is in [:material-alpha: state](#whats-in-release) at the moment. We are trying (& breaking) things.</small>
+<small>pronounciation: *Kla-ber-net-ees*</small>
 
 Love containerlab? Want containerlab, just distributed in a kubernetes cluster? Enter [**clabernetes**](https://github.com/srl-labs/clabernetes/) or simply **c9s**.
 
@@ -26,3 +26,9 @@ We are sharing Clabernetes β version to allow people to see what we're working 
 
 In the beta release we focus on the core topology constructs working our way towards full feature parity with Containerlab (and even more).
 ///
+
+## Quick Links
+
+* [Helm chart on ArtifactHub](https://artifacthub.io/packages/helm/clabernetes/clabernetes)
+* [CRD reference](https://doc.crds.dev/github.com/srl-labs/clabernetes)
+* Source code on [GitHub](https://github.com/srl-labs/clabernetes)
