@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 const (
 	// WaitForCreate is the wait phase name for a node creation stage.
 	WaitForCreate WaitForPhase = "create"
@@ -171,11 +173,6 @@ type WaitFor struct {
 	State WaitForPhase `json:"state,omitempty"` // the state that the node must have completed
 }
 
-func (w *WaitFor) IsValid() error {
-	_, err := WaitForPhaseFromString(string(w.State))
-	return err
-}
-
 // Equals returns true if the Node and the State of the WaitFor structs are value equal.
 func (w *WaitFor) Equals(other *WaitFor) bool {
 	if w.Node == other.Node && w.State == other.State {
@@ -183,4 +180,23 @@ func (w *WaitFor) Equals(other *WaitFor) bool {
 	}
 
 	return false
+}
+
+// GetWaitForPhases returns list of wait for phases that are used to init Waitgroups
+// for all the states.
+func GetWaitForPhases() []WaitForPhase {
+	return []WaitForPhase{
+		WaitForCreate, WaitForCreateLinks,
+		WaitForConfigure, WaitForHealthy, WaitForExit,
+	}
+}
+
+func WaitForPhaseFromString(s string) (WaitForPhase, error) {
+	for _, val := range GetWaitForPhases() {
+		if s == string(val) {
+			return val, nil
+		}
+	}
+
+	return "", fmt.Errorf("unknown phase %q", s)
 }

@@ -28,7 +28,7 @@ func newDependencyNode(name string) *dependencyNode {
 		depender:            map[types.WaitForPhase][]*dependerNodeState{},
 	}
 
-	for _, p := range types.WaitForPhases {
+	for _, p := range types.GetWaitForPhases() {
 		d.stateBarrier[p] = &sync.WaitGroup{}
 		d.stateBarrierCounter[p] = 0
 		d.depender[p] = nil
