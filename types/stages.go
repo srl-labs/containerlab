@@ -129,10 +129,13 @@ func (wfl WaitForList) contains(wf *WaitFor) bool {
 	return false
 }
 
+// Merge merges base stage from sc into s by
+// appending WaitFor from sc to s.
 func (s *StageBase) Merge(sc *StageBase) error {
 	if sc == nil {
 		return nil
 	}
+
 	for _, wf := range sc.WaitFor {
 		// prevent adding the same dependency twice
 		if s.WaitFor.contains(wf) {
@@ -140,6 +143,7 @@ func (s *StageBase) Merge(sc *StageBase) error {
 		}
 		s.WaitFor = append(s.WaitFor, wf)
 	}
+
 	return nil
 }
 
