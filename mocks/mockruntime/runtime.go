@@ -143,21 +143,6 @@ func (mr *MockContainerRuntimeMockRecorder) ExecNotWait(ctx, cID, execCmd any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecNotWait", reflect.TypeOf((*MockContainerRuntime)(nil).ExecNotWait), ctx, cID, execCmd)
 }
 
-// GetContainerHealth mocks base method.
-func (m *MockContainerRuntime) GetContainerHealth(ctx context.Context, cID string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetContainerHealth", ctx, cID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetContainerHealth indicates an expected call of GetContainerHealth.
-func (mr *MockContainerRuntimeMockRecorder) GetContainerHealth(ctx, cID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerHealth", reflect.TypeOf((*MockContainerRuntime)(nil).GetContainerHealth), ctx, cID)
-}
-
 // GetContainerStatus mocks base method.
 func (m *MockContainerRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
 	m.ctrl.T.Helper()
@@ -232,6 +217,21 @@ func (m *MockContainerRuntime) Init(arg0 ...runtime.RuntimeOption) error {
 func (mr *MockContainerRuntimeMockRecorder) Init(arg0 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockContainerRuntime)(nil).Init), arg0...)
+}
+
+// IsHealthy mocks base method.
+func (m *MockContainerRuntime) IsHealthy(ctx context.Context, cID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsHealthy", ctx, cID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsHealthy indicates an expected call of IsHealthy.
+func (mr *MockContainerRuntimeMockRecorder) IsHealthy(ctx, cID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHealthy", reflect.TypeOf((*MockContainerRuntime)(nil).IsHealthy), ctx, cID)
 }
 
 // ListContainers mocks base method.

@@ -12,7 +12,7 @@ import (
 type dependencyNode struct {
 	name                string
 	stateBarrier        map[types.WaitForPhase]*sync.WaitGroup
-	stateBarrierCounter map[types.WaitForPhase]uint8
+	stateBarrierCounter map[types.WaitForPhase]uint
 	depender            map[types.WaitForPhase][]*dependerNodeState
 	m                   sync.Mutex
 }
@@ -24,7 +24,7 @@ func newDependencyNode(name string) *dependencyNode {
 		// WaitState is initialized with a wait group for each node state.
 		// WaitState is used to for a dependee to wait for a depender to reach a certain state.
 		stateBarrier:        map[types.WaitForPhase]*sync.WaitGroup{},
-		stateBarrierCounter: map[types.WaitForPhase]uint8{},
+		stateBarrierCounter: map[types.WaitForPhase]uint{},
 		depender:            map[types.WaitForPhase][]*dependerNodeState{},
 	}
 
@@ -85,7 +85,7 @@ func (d *dependencyNode) addDepender(dependerState types.WaitForPhase, depender 
 	return nil
 }
 
-func (d *dependencyNode) GetDependerCount(state types.WaitForPhase) (uint8, error) {
+func (d *dependencyNode) GetDependerCount(state types.WaitForPhase) (uint, error) {
 	if count, exists := d.stateBarrierCounter[state]; exists {
 		return count, nil
 	}

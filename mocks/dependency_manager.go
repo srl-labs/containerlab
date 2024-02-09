@@ -94,10 +94,10 @@ func (mr *MockDependencyManagerMockRecorder) Enter(nodeName, state any) *gomock.
 }
 
 // GetDependerCount mocks base method.
-func (m *MockDependencyManager) GetDependerCount(nodeName string, state types.WaitForPhase) (uint8, error) {
+func (m *MockDependencyManager) GetDependerCount(nodeName string, state types.WaitForPhase) (uint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDependerCount", nodeName, state)
-	ret0, _ := ret[0].(uint8)
+	ret0, _ := ret[0].(uint)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

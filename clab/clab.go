@@ -606,7 +606,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				if count > 0 {
 					// if there is a dependecy on the healthy state of this node, enter the checking procedure
 					for {
-						healthy, err := node.GetRuntime().GetContainerHealth(ctx, node.Config().LongName)
+						healthy, err := node.GetRuntime().IsHealthy(ctx, node.Config().LongName)
 						if err != nil {
 							log.Errorf("error checking for node health %v. Continuing deployment anyways", err)
 							break

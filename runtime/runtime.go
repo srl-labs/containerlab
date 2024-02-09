@@ -60,8 +60,8 @@ type ContainerRuntime interface {
 	GetHostsPath(context.Context, string) (string, error)
 	// GetContainerStatus retrieves the ContainerStatus of the named container
 	GetContainerStatus(ctx context.Context, cID string) ContainerStatus
-	// GetContainerHealth returns true is the container is reported as being healthy, false otherwise
-	GetContainerHealth(ctx context.Context, cID string) (bool, error)
+	// IsHealthy returns true is the container is reported as being healthy, false otherwise
+	IsHealthy(ctx context.Context, cID string) (bool, error)
 }
 
 type ContainerStatus string
