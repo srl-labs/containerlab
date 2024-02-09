@@ -17,7 +17,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/clab/dependency_manager"
+	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
 	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/links"
@@ -33,13 +33,12 @@ import (
 )
 
 type CLab struct {
-	Config            *Config `json:"config,omitempty"`
-	TopoPaths         *types.TopoPaths
-	Nodes             map[string]nodes.Node `json:"nodes,omitempty"`
-	Links             map[int]links.Link    `json:"links,omitempty"`
-	Endpoints         []links.Endpoint
-	Runtimes          map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
-	dependencyManager dependency_manager.DependencyManager
+	Config    *Config `json:"config,omitempty"`
+	TopoPaths *types.TopoPaths
+	Nodes     map[string]nodes.Node `json:"nodes,omitempty"`
+	Links     map[int]links.Link    `json:"links,omitempty"`
+	Endpoints []links.Endpoint
+	Runtimes  map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	// reg is a registry of node kinds
 	Reg  *nodes.NodeRegistry
 	Cert *cert.Cert
@@ -48,9 +47,10 @@ type CLab struct {
 	// The keys are used to enable key-based SSH access for the nodes.
 	SSHPubKeys []ssh.PublicKey
 
-	m             *sync.RWMutex
-	timeout       time.Duration
-	globalRuntime string
+	dependencyManager depMgr.DependencyManager
+	m                 *sync.RWMutex
+	timeout           time.Duration
+	globalRuntime     string
 	// nodeFilter is a list of node names to be deployed,
 	// names are provided exactly as they are listed in the topology file.
 	nodeFilter []string
@@ -68,8 +68,8 @@ func WithTimeout(dur time.Duration) ClabOption {
 	}
 }
 
-// WithDependencyManager injects the DependencyManager.
-func WithDependencyManager(dm dependency_manager.DependencyManager) ClabOption {
+// WithDependencyManager adds Dependency Manager.
+func WithDependencyManager(dm depMgr.DependencyManager) ClabOption {
 	return func(c *CLab) error {
 		c.dependencyManager = dm
 		return nil
@@ -496,7 +496,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	execCollection := exec.NewExecCollection()
 
 	workerFunc := func(i int, input chan nodes.Node, wg *sync.WaitGroup,
-		dm dependency_manager.DependencyManager,
+		dm depMgr.DependencyManager,
 	) {
 		defer wg.Done()
 		for {
@@ -667,7 +667,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 			workerFuncChWG.Add(1)
 			// start a func for all the containers, then will wait for their own waitgroups
 			// to be set to zero by their depending containers, then enqueue to the creation channel
-			go func(node nodes.Node, dm dependency_manager.DependencyManager,
+			go func(node nodes.Node, dm depMgr.DependencyManager,
 				workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup,
 			) {
 				// wait for all the nodes that node depends on
