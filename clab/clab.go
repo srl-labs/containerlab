@@ -520,9 +520,6 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
-				// No need to EnterPhase for WaitForCreate
-				// since it is called externally already.
-
 				// Pre-deploy stage
 				err := node.PreDeploy(
 					ctx,
@@ -536,6 +533,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				if err != nil {
 					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
+				}
+
+				// enter the create phase
+				err = dm.EnterPhase(node.Config().ShortName, types.WaitForCreate)
+				if err != nil {
+					log.Error(err)
 				}
 
 				// Deploy
@@ -661,7 +664,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 		go workerFunc(i, concurrentChan, wg, c.dependencyManager)
 	}
 
-	// Waitgroup used to protect the channel towards the workers of being closed to early
+	// Waitgroup protects the channel towards the workers of being closed too early
 	workerFuncChWG := new(sync.WaitGroup)
 
 	// schedule nodes via a go func to create links in parallel
@@ -673,11 +676,6 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 			go func(node nodes.Node, dm depMgr.DependencyManager,
 				workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup,
 			) {
-				// wait for all the nodes that node depends on
-				err := dm.EnterPhase(node.Config().ShortName, types.WaitForCreate)
-				if err != nil {
-					log.Error(err)
-				}
 				// wait for possible external dependencies
 				c.WaitForExternalNodeDependencies(ctx, node.Config().ShortName)
 				// when all nodes that this node depends on are created, push it into the channel
