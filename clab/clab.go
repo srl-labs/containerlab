@@ -520,13 +520,10 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					time.Sleep(time.Duration(delay) * time.Second)
 				}
 
-				// No Need to issue
-				//
-				// dm.Enter(node.GetShortName(), types.WaitForCreate)
-				//
-				// here, since it is called externally already.
+				// No need to EnterPhase for WaitForCreate
+				// since it is called externally already.
 
-				// PreDeploy
+				// Pre-deploy stage
 				err := node.PreDeploy(
 					ctx,
 					&nodes.PreDeployParams{
@@ -540,6 +537,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
+
 				// Deploy
 				err = node.Deploy(ctx, &nodes.DeployParams{})
 				if err != nil {
@@ -547,8 +545,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					continue
 				}
 
-				// we meed to populate e.g. the mgmt net ip addresses before continuing with the
-				// post-deploy phase (for e.g. certificate creation)
+				// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
+				// before continuing with the post-deploy phase (for e.g. certificate creation)
 				err = node.UpdateConfigWithRuntimeInfo(ctx)
 				if err != nil {
 					log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
@@ -556,7 +554,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				dm.SignalDone(node.GetShortName(), types.WaitForCreate)
 
-				err = dm.Enter(node.GetShortName(), types.WaitForCreateLinks)
+				err = dm.EnterPhase(node.GetShortName(), types.WaitForCreateLinks)
 				if err != nil {
 					log.Error(err)
 				}
@@ -582,7 +580,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				dm.SignalDone(node.GetShortName(), types.WaitForCreateLinks)
 
 				// start config phase
-				err = dm.Enter(node.GetShortName(), types.WaitForConfigure)
+				err = dm.EnterPhase(node.GetShortName(), types.WaitForConfigure)
 				if err != nil {
 					log.Error(err)
 				}
@@ -625,7 +623,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					}
 				}
 
-				// exite state processing
+				// exit state processing
 				count, err = dm.GetDependerCount(node.GetShortName(), types.WaitForExit)
 				if err != nil {
 					log.Error(err)
@@ -676,7 +674,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup,
 			) {
 				// wait for all the nodes that node depends on
-				err := dm.Enter(node.Config().ShortName, types.WaitForCreate)
+				err := dm.EnterPhase(node.Config().ShortName, types.WaitForCreate)
 				if err != nil {
 					log.Error(err)
 				}
@@ -694,6 +692,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 		// close the channel and thereby terminate the workerFuncs
 		close(concurrentChan)
 	}()
+
 	return wg, execCollection
 }
 

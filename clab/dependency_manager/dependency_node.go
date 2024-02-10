@@ -48,10 +48,10 @@ func (d *dependencyNode) getPhaseWG(n types.WaitForPhase) *sync.WaitGroup {
 	return d.phaseBarrier[n]
 }
 
-func (d *dependencyNode) Enter(p types.WaitForPhase) {
-	log.Debugf("StateChange: Enter Wait -> %s - %s", d.name, p)
+func (d *dependencyNode) EnterPhase(p types.WaitForPhase) {
+	log.Debugf("Phase Change: Enter Wait -> %s - %s", d.name, p)
 	d.phaseBarrier[p].Wait()
-	log.Debugf("StateChange: Enter Go -> %s - %s", d.name, p)
+	log.Debugf("Phase Change: Enter Go -> %s - %s", d.name, p)
 }
 
 // Done indicates that the node has reached the given state.
