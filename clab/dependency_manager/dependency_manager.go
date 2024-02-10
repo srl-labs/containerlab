@@ -14,7 +14,7 @@ type DependencyManager interface {
 	AddNode(name string)
 	// AddDependency adds a dependency between a depender and and a dependee.
 	// The depender will hold off the dependerPhase until the dependee completes dependeePhase.
-	// This effectively makes the dependerPhase to wait for dependeePhase to finish.
+	// This effectively makes the dependerPhase to be start only after the dependeePhase finishes.
 	AddDependency(depender string, dependerPhase types.WaitForPhase, dependee string, dependeePhase types.WaitForPhase) error
 	// Enter is called by a node (nodename) that is meant to enter the specified phase.
 	// The call will be blocked until all dependencies for the node to enter the phase are met.
@@ -48,7 +48,7 @@ func (dm *defaultDependencyManager) AddNode(name string) {
 
 // AddDependency adds a dependency between a depender and and a dependee.
 // The depender will hold off its dependerPhase until the dependee completes dependeePhase.
-// This effectively makes the dependerPhase to wait for dependeePhase to finish.
+// This effectively makes the dependerPhase to be start only after the dependeePhase finishes.
 func (dm *defaultDependencyManager) AddDependency(depender string, dependerPhase types.WaitForPhase, dependee string, dependeePhase types.WaitForPhase) error {
 	// first check if the referenced nodes are known to the dm
 	err := dm.checkNodesExist([]string{dependee})

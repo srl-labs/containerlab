@@ -17,11 +17,11 @@ func TestEquals(t *testing.T) {
 			name: "Equal nodes and states",
 			w1: &WaitFor{
 				Node:  "node1",
-				State: "state1",
+				Phase: "state1",
 			},
 			w2: &WaitFor{
 				Node:  "node1",
-				State: "state1",
+				Phase: "state1",
 			},
 			want: true,
 		},
@@ -29,11 +29,11 @@ func TestEquals(t *testing.T) {
 			name: "Different nodes and states",
 			w1: &WaitFor{
 				Node:  "node1",
-				State: "state1",
+				Phase: "state1",
 			},
 			w2: &WaitFor{
 				Node:  "node2",
-				State: "state2",
+				Phase: "state2",
 			},
 			want: false,
 		},
@@ -61,7 +61,7 @@ func TestMerge(t *testing.T) {
 			s: &Stages{
 				Configure: &StageConfigure{StageBase: StageBase{
 					WaitFor: WaitForList{
-						&WaitFor{Node: "node1", State: "state1"},
+						&WaitFor{Node: "node1", Phase: "state1"},
 					},
 				}},
 				// Create:      &StageCreate{StageBase: StageBase{Name: "Create1"}},
@@ -72,14 +72,14 @@ func TestMerge(t *testing.T) {
 			other: &Stages{
 				Configure: &StageConfigure{StageBase: StageBase{
 					WaitFor: WaitForList{
-						&WaitFor{Node: "node2", State: "state2"},
+						&WaitFor{Node: "node2", Phase: "state2"},
 					},
 				}},
 				// Create:      &StageCreate{StageBase: StageBase{Name: "Create1"}},
 				// CreateLinks: &StageCreateLinks{StageBase: StageBase{Name: "CreateLinks1"}},
 				Healthy: &StageHealthy{StageBase: StageBase{
 					WaitFor: WaitForList{
-						&WaitFor{Node: "node1", State: "state1"},
+						&WaitFor{Node: "node1", Phase: "state1"},
 					},
 				}},
 				// Exit:        &StageExit{StageBase: StageBase{Name: "Exit1"}},
@@ -87,15 +87,15 @@ func TestMerge(t *testing.T) {
 			want: &Stages{
 				Configure: &StageConfigure{StageBase: StageBase{
 					WaitFor: WaitForList{
-						&WaitFor{Node: "node1", State: "state1"},
-						&WaitFor{Node: "node2", State: "state2"},
+						&WaitFor{Node: "node1", Phase: "state1"},
+						&WaitFor{Node: "node2", Phase: "state2"},
 					},
 				}},
 				// Create:      &Stage{StageBase: StageBase{Name: "Create1Create2"}},
 				// CreateLinks: &Stage{StageBase: StageBase{Name: "CreateLinks1CreateLinks2"}},
 				Healthy: &StageHealthy{StageBase: StageBase{
 					WaitFor: WaitForList{
-						&WaitFor{Node: "node1", State: "state1"},
+						&WaitFor{Node: "node1", Phase: "state1"},
 					},
 				}},
 				// Exit:        &Stage{StageBase: StageBase{Name: "Exit1Exit2"}},
