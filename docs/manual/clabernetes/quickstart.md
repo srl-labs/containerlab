@@ -6,16 +6,16 @@ Do you already have a kubernetes cluster? Great! You can skip the cluster creati
 
 But if you don't have a cluster yet, don't panic, we'll create one together. We are going to use [kind](https://kind.sigs.k8s.io/) to create a local kubernetes cluster and
 then install clabernetes into it. Once clabernetes is installed we deploy a small
-[topology with two SR Linux nodes and two linux clients](https://learn.srlinux.dev/blog/2024/vlans-on-sr-linux/#the-lab) connected back to back together.
+[topology with two SR Linux nodes and two client nodes](https://learn.srlinux.dev/blog/2024/vlans-on-sr-linux/#the-lab).
 
-If all goes to plan, the lab will be successfully deployed! Then, we start explaining how clabverter & clabernetes work in unison to make the original topology files deployable onto the cluster
+If all goes to plan, the lab will be successfully deployed! Clabverter & clabernetes work in unison to make the original topology files deployable onto the cluster
 with tunnels stitching lab nodes together to form point to point connections between the nodes.
 
-Buckle up!
+Let's see how it all works, buckle up!
 
 ## Creating a cluster
 
-Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use, but with the scaling powers of kubernetes. To simulate the scaling aspect, we'll use [`kind`](https://kind.sigs.k8s.io/) to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead -- clabernetes can run in any kubernetes cluster[^1]!
+Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use, but with the scaling powers of kubernetes. Surely, it is best to have a real deal available to you, but for demo purposes we'll use [`kind`](https://kind.sigs.k8s.io/) to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead -- clabernetes can run in any kubernetes cluster[^1]!
 
 With the following command we instruct kind to set up a three node k8s cluster with two worker and one control plane nodes.
 
