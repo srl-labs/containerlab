@@ -83,16 +83,16 @@ func (dm *defaultDependencyManager) EnterStage(nodeName string, state types.Wait
 	return nil
 }
 
-// SignalDone is called by a node that has finished the indicated NodeState process and reached the desired state.
+// SignalDone is called by a node that has finished the indicated stage.
 // Internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *defaultDependencyManager) SignalDone(nodeName string, state types.WaitForStage) {
+func (dm *defaultDependencyManager) SignalDone(nodeName string, stage types.WaitForStage) {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	dm.nodes[nodeName].Done(state)
+	dm.nodes[nodeName].Done(stage)
 }
 
 // checkNodesExist returns an error if any of the provided node names is unknown to the depenedency manager.

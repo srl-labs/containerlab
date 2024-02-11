@@ -10,10 +10,12 @@ import (
 
 // dependencyNode is the representation of a node in the dependency concept.
 type dependencyNode struct {
-	name                string
-	stageBarrier        map[types.WaitForStage]*sync.WaitGroup
-	stageBarrierCounter map[types.WaitForStage]uint
-	depender            map[types.WaitForStage][]*dependerNodeStage
+	name string
+	// stageWG is a map of waitgroup per a given stage.
+	// When the waitgroup associated with the stage is Done, the node is considered to have reached the stage.
+	stageWG        map[types.WaitForStage]*sync.WaitGroup
+	stageWGCounter map[types.WaitForStage]uint
+	depender       map[types.WaitForStage][]*dependerNodeStage
 
 	m sync.Mutex
 }
@@ -21,15 +23,15 @@ type dependencyNode struct {
 // newDependencyNode initializes a dependencyNode with the given name.
 func newDependencyNode(name string) *dependencyNode {
 	d := &dependencyNode{
-		name:                name,
-		stageBarrier:        map[types.WaitForStage]*sync.WaitGroup{},
-		stageBarrierCounter: map[types.WaitForStage]uint{},
-		depender:            map[types.WaitForStage][]*dependerNodeStage{},
+		name:           name,
+		stageWG:        map[types.WaitForStage]*sync.WaitGroup{},
+		stageWGCounter: map[types.WaitForStage]uint{},
+		depender:       map[types.WaitForStage][]*dependerNodeStage{},
 	}
 
 	for _, p := range types.GetWaitForStages() {
-		d.stageBarrier[p] = &sync.WaitGroup{}
-		d.stageBarrierCounter[p] = 0
+		d.stageWG[p] = &sync.WaitGroup{}
+		d.stageWGCounter[p] = 0
 		d.depender[p] = nil
 	}
 
@@ -42,19 +44,19 @@ func (d *dependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 	d.m.Lock()
 	defer d.m.Unlock()
 
-	if _, exists := d.stageBarrier[n]; !exists {
-		d.stageBarrier[n] = &sync.WaitGroup{}
+	if _, exists := d.stageWG[n]; !exists {
+		d.stageWG[n] = &sync.WaitGroup{}
 	}
-	return d.stageBarrier[n]
+	return d.stageWG[n]
 }
 
 func (d *dependencyNode) EnterStage(p types.WaitForStage) {
 	log.Debugf("Stage Change: Enter Wait -> %s - %s", d.name, p)
-	d.stageBarrier[p].Wait()
+	d.stageWG[p].Wait()
 	log.Debugf("Stage Change: Enter Go -> %s - %s", d.name, p)
 }
 
-// Done indicates that the node has reached the given state.
+// Done indicates that the node has reached the given stage.
 // The waitgroup associated with this state will be Done as well.
 func (d *dependencyNode) Done(p types.WaitForStage) {
 	// iterate through all the dependers, that wait for the specific stage
@@ -63,7 +65,7 @@ func (d *dependencyNode) Done(p types.WaitForStage) {
 	for _, depender := range d.depender[p] {
 		log.Debugf("StateChange: Node %s unblocking %s", d.name, depender.String())
 		depender.SignalDone()
-		d.stageBarrierCounter[p]--
+		d.stageWGCounter[p]--
 	}
 }
 
@@ -79,13 +81,13 @@ func (d *dependencyNode) addDepender(dependerStage types.WaitForStage, depender 
 	// for the depender to know how many dependencies to wait for,
 	// the waitgroup need to be increaded by 1 as well
 	dependerNS.IncreaseDependencyWG()
-	d.stageBarrierCounter[stage]++
+	d.stageWGCounter[stage]++
 
 	return nil
 }
 
 func (d *dependencyNode) GetDependerCount(state types.WaitForStage) (uint, error) {
-	if count, exists := d.stageBarrierCounter[state]; exists {
+	if count, exists := d.stageWGCounter[state]; exists {
 		return count, nil
 	}
 	return 0, fmt.Errorf("state %q not found", d.name)
@@ -110,7 +112,7 @@ func (d *dependerNodeStage) SignalDone() {
 }
 
 func (d *dependerNodeStage) IncreaseDependencyWG() {
-	d.depender.stageBarrier[d.stage].Add(1)
+	d.depender.stageWG[d.stage].Add(1)
 }
 
 func (d *dependerNodeStage) String() string {
