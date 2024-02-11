@@ -170,7 +170,7 @@ type WaitForPhase string
 // WaitFor represents the wait-for configuration for a node deployment stage.
 type WaitFor struct {
 	Node  string       `json:"node"`            // the node that is to be waited for
-	Phase WaitForPhase `json:"state,omitempty"` // the state that the node must have completed
+	Phase WaitForPhase `json:"phase,omitempty"` // the state that the node must have completed
 }
 
 // Equals returns true if the Node and the State of the WaitFor structs are value equal.
