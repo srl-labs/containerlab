@@ -12,16 +12,12 @@ import (
 type DependencyManager interface {
 	// AddNode adds a node to the dependency manager.
 	AddNode(name string)
+	// GetNode gets a dependency node registered with the dependency manager.
+	GetNode(name string) (*DependencyNode, error)
 	// AddDependency adds a dependency between a depender and and a dependee.
 	// The depender will hold off the dependerStage until the dependee completes dependeeStage.
 	// This effectively makes the dependerStage to be start only after the dependeeStage finishes.
 	AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error
-	// EnterStage is called by a node that is meant to enter the specified stage.
-	// The call will be blocked until all dependencies for the node to enter the stage are met.
-	EnterStage(nodeName string, state types.WaitForStage) error
-	// SignalDone is called by a node that has finished all tasks for the provided stage.
-	// The dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-	SignalDone(nodeName string, stage types.WaitForStage)
 	GetDependerCount(nodeName string, stage types.WaitForStage) (uint, error)
 	// CheckAcyclicity checks if dependencies contain cycles.
 	CheckAcyclicity() error
@@ -31,13 +27,13 @@ type DependencyManager interface {
 
 // defaultDependencyManager is the default implementation of the DependencyManager.
 type defaultDependencyManager struct {
-	nodes map[string]*dependencyNode
+	nodes map[string]*DependencyNode
 }
 
 // NewDependencyManager constructor.
 func NewDependencyManager() DependencyManager {
 	return &defaultDependencyManager{
-		nodes: map[string]*dependencyNode{},
+		nodes: map[string]*DependencyNode{},
 	}
 }
 
@@ -73,26 +69,14 @@ func (dm *defaultDependencyManager) GetDependerCount(nodeName string, state type
 	return dm.nodes[nodeName].GetDependerCount(state)
 }
 
-func (dm *defaultDependencyManager) EnterStage(nodeName string, state types.WaitForStage) error {
+func (dm *defaultDependencyManager) GetNode(nodeName string) (*DependencyNode, error) {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	dm.nodes[nodeName].EnterStage(state)
-	return nil
-}
 
-// SignalDone is called by a node that has finished the indicated stage.
-// Internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *defaultDependencyManager) SignalDone(nodeName string, stage types.WaitForStage) {
-	// first check if the referenced node is known to the dm
-	err := dm.checkNodesExist([]string{nodeName})
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	dm.nodes[nodeName].Done(stage)
+	return dm.nodes[nodeName], err
 }
 
 // checkNodesExist returns an error if any of the provided node names is unknown to the depenedency manager.

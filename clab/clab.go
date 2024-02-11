@@ -511,6 +511,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					log.Debugf("Worker %d terminating...", i)
 					return
 				}
+
+				dn, err := c.dependencyManager.GetNode(node.GetShortName())
+				if err != nil {
+					log.Error(err)
+				}
+
 				log.Debugf("Worker %d received node: %+v", i, node.Config())
 
 				// Apply startup delay
@@ -521,7 +527,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// Pre-deploy stage
-				err := node.PreDeploy(
+				err = node.PreDeploy(
 					ctx,
 					&nodes.PreDeployParams{
 						Cert:         c.Cert,
@@ -536,10 +542,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// enter the create stage
-				err = dm.EnterStage(node.Config().ShortName, types.WaitForCreate)
-				if err != nil {
-					log.Error(err)
-				}
+				dn.EnterStage(types.WaitForCreate)
 
 				// Deploy
 				err = node.Deploy(ctx, &nodes.DeployParams{})
@@ -555,12 +558,9 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
 				}
 
-				dm.SignalDone(node.GetShortName(), types.WaitForCreate)
+				dn.Done(types.WaitForCreate)
 
-				err = dm.EnterStage(node.GetShortName(), types.WaitForCreateLinks)
-				if err != nil {
-					log.Error(err)
-				}
+				dn.EnterStage(types.WaitForCreateLinks)
 
 				err = node.DeployLinks(ctx)
 				if err != nil {
@@ -580,13 +580,10 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				if count > 0 {
 					node.WaitForAllLinksCreated()
 				}
-				dm.SignalDone(node.GetShortName(), types.WaitForCreateLinks)
+				dn.Done(types.WaitForCreateLinks)
 
 				// start config stage
-				err = dm.EnterStage(node.GetShortName(), types.WaitForConfigure)
-				if err != nil {
-					log.Error(err)
-				}
+				dn.EnterStage(types.WaitForConfigure)
 
 				// if postdeploy should be skipped we do not call it
 				if !skipPostDeploy {
@@ -596,7 +593,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					}
 				}
 
-				dm.SignalDone(node.GetShortName(), types.WaitForConfigure)
+				dn.Done(types.WaitForConfigure)
 
 				// run execs
 				err = node.RunExecFromConfig(ctx, execCollection)
@@ -619,7 +616,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 						}
 						if healthy {
 							log.Infof("node %q turned healthy, continuing", node.GetShortName())
-							dm.SignalDone(node.GetShortName(), types.WaitForHealthy)
+							dn.Done(types.WaitForHealthy)
 							break
 						}
 						time.Sleep(time.Second)
@@ -637,7 +634,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 						status := node.GetRuntime().GetContainerStatus(ctx, node.Config().LongName)
 						if status == runtime.Stopped {
 							log.Infof("node %q stopped", node.GetShortName())
-							dm.SignalDone(node.GetShortName(), types.WaitForExit)
+							dn.Done(types.WaitForExit)
 							break
 						}
 						time.Sleep(time.Second)

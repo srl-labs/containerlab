@@ -102,7 +102,7 @@ func Test_recursiveAcyclicityCheck(t *testing.T) {
 
 func Test_defaultDependencyManager_String(t *testing.T) {
 	type fields struct {
-		nodes        map[string]*dependencyNode
+		nodes        map[string]*DependencyNode
 		dependencies []struct {
 			depender string
 			dependee string
@@ -117,7 +117,7 @@ func Test_defaultDependencyManager_String(t *testing.T) {
 		{
 			name: "test one",
 			fields: fields{
-				nodes: map[string]*dependencyNode{
+				nodes: map[string]*DependencyNode{
 					"node1": newDependencyNode("node1"),
 					"node2": newDependencyNode("node2"),
 				},
@@ -139,7 +139,7 @@ node2 -> [ node1 ]`,
 		{
 			name: "test two",
 			fields: fields{
-				nodes: map[string]*dependencyNode{
+				nodes: map[string]*DependencyNode{
 					"node1": newDependencyNode("node1"),
 					"node2": newDependencyNode("node2"),
 					"node3": newDependencyNode("node3"),

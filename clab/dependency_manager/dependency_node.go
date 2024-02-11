@@ -8,8 +8,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-// dependencyNode is the representation of a node in the dependency concept.
-type dependencyNode struct {
+// DependencyNode is the representation of a node in the dependency concept.
+type DependencyNode struct {
 	name string
 	// stageWG is a map of waitgroup per a given stage.
 	// When the waitgroup associated with the stage is Done, the node is considered to have reached the stage.
@@ -21,8 +21,8 @@ type dependencyNode struct {
 }
 
 // newDependencyNode initializes a dependencyNode with the given name.
-func newDependencyNode(name string) *dependencyNode {
-	d := &dependencyNode{
+func newDependencyNode(name string) *DependencyNode {
+	d := &DependencyNode{
 		name:           name,
 		stageWG:        map[types.WaitForStage]*sync.WaitGroup{},
 		stageWGCounter: map[types.WaitForStage]uint{},
@@ -40,7 +40,7 @@ func newDependencyNode(name string) *dependencyNode {
 
 // getStageWG retrieves the provided node state waitgroup if it exists
 // otherwise initializes it.
-func (d *dependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
+func (d *DependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 	d.m.Lock()
 	defer d.m.Unlock()
 
@@ -50,15 +50,17 @@ func (d *dependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 	return d.stageWG[n]
 }
 
-func (d *dependencyNode) EnterStage(p types.WaitForStage) {
+// EnterStage is called by a node that is meant to enter the specified stage.
+// The call will be blocked until all dependencies for the node to enter the stage are met.
+func (d *DependencyNode) EnterStage(p types.WaitForStage) {
 	log.Debugf("Stage Change: Enter Wait -> %s - %s", d.name, p)
 	d.stageWG[p].Wait()
 	log.Debugf("Stage Change: Enter Go -> %s - %s", d.name, p)
 }
 
-// Done indicates that the node has reached the given stage.
-// The waitgroup associated with this state will be Done as well.
-func (d *dependencyNode) Done(p types.WaitForStage) {
+// SignalDone is called by a node that has finished all tasks for the provided stage.
+// The dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
+func (d *DependencyNode) Done(p types.WaitForStage) {
 	// iterate through all the dependers, that wait for the specific stage
 	// and reduce the waitgroup
 	log.Debugf("StateChange: Done -> %s - %s", d.name, p)
@@ -71,7 +73,7 @@ func (d *dependencyNode) Done(p types.WaitForStage) {
 
 // addDepender adds a depender to the dependencyNode. This will also add the dependee to the depender.
 // to increase the waitgroup count for the depender.
-func (d *dependencyNode) addDepender(dependerStage types.WaitForStage, depender *dependencyNode, stage types.WaitForStage) error {
+func (d *DependencyNode) addDepender(dependerStage types.WaitForStage, depender *DependencyNode, stage types.WaitForStage) error {
 	// Create a new DependerNodeStage
 	dependerNS := newDependerNodeStage(depender, dependerStage)
 
@@ -86,7 +88,7 @@ func (d *dependencyNode) addDepender(dependerStage types.WaitForStage, depender 
 	return nil
 }
 
-func (d *dependencyNode) GetDependerCount(state types.WaitForStage) (uint, error) {
+func (d *DependencyNode) GetDependerCount(state types.WaitForStage) (uint, error) {
 	if count, exists := d.stageWGCounter[state]; exists {
 		return count, nil
 	}
@@ -96,11 +98,11 @@ func (d *dependencyNode) GetDependerCount(state types.WaitForStage) (uint, error
 // dependerNodeStage is used to keep track of waitgroups that should be decreased (unblocked)
 // as soon as a certain delpoy stage is reached.
 type dependerNodeStage struct {
-	depender *dependencyNode    // reference to the node
+	depender *DependencyNode    // reference to the node
 	stage    types.WaitForStage // reference to the nodes wg that is to be decremented
 }
 
-func newDependerNodeStage(node *dependencyNode, stage types.WaitForStage) *dependerNodeStage {
+func newDependerNodeStage(node *DependencyNode, stage types.WaitForStage) *dependerNodeStage {
 	return &dependerNodeStage{
 		depender: node,
 		stage:    stage,
