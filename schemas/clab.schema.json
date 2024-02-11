@@ -696,7 +696,7 @@
                         "type": "string",
                         "description": "node name to wait for"
                     },
-                    "phase": {
+                    "stage": {
                         "type": "string",
                         "description": "phase to wait for",
                         "$ref": "#/definitions/stages-enum"

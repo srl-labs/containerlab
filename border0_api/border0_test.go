@@ -232,7 +232,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 						WaitFor: types.WaitForList{
 							&types.WaitFor{
 								Node:  "node1",
-								Phase: types.WaitForCreate,
+								Stage: types.WaitForCreate,
 							},
 						},
 					},
@@ -259,11 +259,11 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 						WaitFor: types.WaitForList{
 							&types.WaitFor{
 								Node:  "node1",
-								Phase: types.WaitForCreate,
+								Stage: types.WaitForCreate,
 							},
 							&types.WaitFor{
 								Node:  "node2",
-								Phase: types.WaitForCreate,
+								Stage: types.WaitForCreate,
 							},
 						},
 					},
@@ -297,11 +297,11 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 						WaitFor: types.WaitForList{
 							&types.WaitFor{
 								Node:  "node3",
-								Phase: types.WaitForCreate,
+								Stage: types.WaitForCreate,
 							},
 							&types.WaitFor{
 								Node:  "node4",
-								Phase: types.WaitForCreate,
+								Stage: types.WaitForCreate,
 							},
 						},
 					},

@@ -3,16 +3,16 @@ package types
 import "fmt"
 
 const (
-	// WaitForCreate is the wait phase name for a node creation stage.
-	WaitForCreate WaitForPhase = "create"
-	// WaitForCreateLinks is the wait phase name for a node create-links stage.
-	WaitForCreateLinks WaitForPhase = "create-links"
-	// WaitForConfigure is the wait phase name for a node configure stage.
-	WaitForConfigure WaitForPhase = "configure"
-	// WaitForHealthy is the wait phase name for a node healthy stage.
-	WaitForHealthy WaitForPhase = "healthy"
-	// WaitForExit is the wait phase name for a node exit stage.
-	WaitForExit WaitForPhase = "exit"
+	// WaitForCreate is the wait stage name for a node creation stage.
+	WaitForCreate WaitForStage = "create"
+	// WaitForCreateLinks is the wait stage name for a node create-links stage.
+	WaitForCreateLinks WaitForStage = "create-links"
+	// WaitForConfigure is the wait stage name for a node configure stage.
+	WaitForConfigure WaitForStage = "configure"
+	// WaitForHealthy is the wait stage name for a node healthy stage.
+	WaitForHealthy WaitForStage = "healthy"
+	// WaitForExit is the wait stage name for a node exit stage.
+	WaitForExit WaitForStage = "exit"
 )
 
 // Stages represents a configuration of a given node deployment stage.
@@ -47,8 +47,8 @@ func NewStages() *Stages {
 
 // GetWaitFor returns lists of nodes that need to be waited for in a map
 // that is indexed by the state for which this dependency is to be evaluated.
-func (s *Stages) GetWaitFor() map[WaitForPhase]WaitForList {
-	result := map[WaitForPhase]WaitForList{}
+func (s *Stages) GetWaitFor() map[WaitForStage]WaitForList {
+	result := map[WaitForStage]WaitForList{}
 
 	result[WaitForConfigure] = s.Configure.WaitFor
 	result[WaitForCreate] = s.Create.WaitFor
@@ -162,41 +162,41 @@ func (s *StageBase) Merge(sc *StageBase) error {
 	return nil
 }
 
-// WaitForPhase defines the phases that nodes go through
+// WaitForStage defines the stages that nodes go through
 // during the deployment process. They are used to define and enforce
 // dependencies between nodes.
-type WaitForPhase string
+type WaitForStage string
 
 // WaitFor represents the wait-for configuration for a node deployment stage.
 type WaitFor struct {
 	Node  string       `json:"node"`            // the node that is to be waited for
-	Phase WaitForPhase `json:"phase,omitempty"` // the state that the node must have completed
+	Stage WaitForStage `json:"stage,omitempty"` // the stage that the node must have completed
 }
 
 // Equals returns true if the Node and the State of the WaitFor structs are value equal.
 func (w *WaitFor) Equals(other *WaitFor) bool {
-	if w.Node == other.Node && w.Phase == other.Phase {
+	if w.Node == other.Node && w.Stage == other.Stage {
 		return true
 	}
 
 	return false
 }
 
-// GetWaitForPhases returns list of wait for phases that are used to init Waitgroups
+// GetWaitForStages returns list of wait for stages that are used to init Waitgroups
 // for all the states.
-func GetWaitForPhases() []WaitForPhase {
-	return []WaitForPhase{
+func GetWaitForStages() []WaitForStage {
+	return []WaitForStage{
 		WaitForCreate, WaitForCreateLinks,
 		WaitForConfigure, WaitForHealthy, WaitForExit,
 	}
 }
 
-func WaitForPhaseFromString(s string) (WaitForPhase, error) {
-	for _, val := range GetWaitForPhases() {
+func WaitForStageFromString(s string) (WaitForStage, error) {
+	for _, val := range GetWaitForStages() {
 		if s == string(val) {
 			return val, nil
 		}
 	}
 
-	return "", fmt.Errorf("unknown phase %q", s)
+	return "", fmt.Errorf("unknown stage %q", s)
 }

@@ -16,7 +16,7 @@ topology:
         create:
           wait-for:
             - node: node2
-              phase: create
+              stage: create
 
     node2:
       exec:
@@ -25,7 +25,7 @@ topology:
         create:
           wait-for:
             - node: node3
-              phase: create-links
+              stage: create-links
 
     node3:
       exec:
@@ -34,7 +34,7 @@ topology:
         create:
           wait-for:
             - node: node4
-              phase: healthy
+              stage: healthy
 
     node4:
       exec:

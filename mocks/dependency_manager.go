@@ -40,17 +40,17 @@ func (m *MockDependencyManager) EXPECT() *MockDependencyManagerMockRecorder {
 }
 
 // AddDependency mocks base method.
-func (m *MockDependencyManager) AddDependency(depender string, dependerPhase types.WaitForPhase, dependee string, dependeePhase types.WaitForPhase) error {
+func (m *MockDependencyManager) AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddDependency", depender, dependerPhase, dependee, dependeePhase)
+	ret := m.ctrl.Call(m, "AddDependency", depender, dependerStage, dependee, dependeeStage)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddDependency indicates an expected call of AddDependency.
-func (mr *MockDependencyManagerMockRecorder) AddDependency(depender, dependerPhase, dependee, dependeePhase any) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) AddDependency(depender, dependerStage, dependee, dependeeStage any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), depender, dependerPhase, dependee, dependeePhase)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), depender, dependerStage, dependee, dependeeStage)
 }
 
 // AddNode mocks base method.
@@ -79,45 +79,45 @@ func (mr *MockDependencyManagerMockRecorder) CheckAcyclicity() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAcyclicity", reflect.TypeOf((*MockDependencyManager)(nil).CheckAcyclicity))
 }
 
-// EnterPhase mocks base method.
-func (m *MockDependencyManager) EnterPhase(nodeName string, state types.WaitForPhase) error {
+// EnterStage mocks base method.
+func (m *MockDependencyManager) EnterStage(nodeName string, state types.WaitForStage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnterPhase", nodeName, state)
+	ret := m.ctrl.Call(m, "EnterStage", nodeName, state)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// EnterPhase indicates an expected call of EnterPhase.
-func (mr *MockDependencyManagerMockRecorder) EnterPhase(nodeName, state any) *gomock.Call {
+// EnterStage indicates an expected call of EnterStage.
+func (mr *MockDependencyManagerMockRecorder) EnterStage(nodeName, state any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnterPhase", reflect.TypeOf((*MockDependencyManager)(nil).EnterPhase), nodeName, state)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnterStage", reflect.TypeOf((*MockDependencyManager)(nil).EnterStage), nodeName, state)
 }
 
 // GetDependerCount mocks base method.
-func (m *MockDependencyManager) GetDependerCount(nodeName string, phase types.WaitForPhase) (uint, error) {
+func (m *MockDependencyManager) GetDependerCount(nodeName string, stage types.WaitForStage) (uint, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDependerCount", nodeName, phase)
+	ret := m.ctrl.Call(m, "GetDependerCount", nodeName, stage)
 	ret0, _ := ret[0].(uint)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetDependerCount indicates an expected call of GetDependerCount.
-func (mr *MockDependencyManagerMockRecorder) GetDependerCount(nodeName, phase any) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) GetDependerCount(nodeName, stage any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDependerCount", reflect.TypeOf((*MockDependencyManager)(nil).GetDependerCount), nodeName, phase)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDependerCount", reflect.TypeOf((*MockDependencyManager)(nil).GetDependerCount), nodeName, stage)
 }
 
 // SignalDone mocks base method.
-func (m *MockDependencyManager) SignalDone(nodeName string, phase types.WaitForPhase) {
+func (m *MockDependencyManager) SignalDone(nodeName string, stage types.WaitForStage) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SignalDone", nodeName, phase)
+	m.ctrl.Call(m, "SignalDone", nodeName, stage)
 }
 
 // SignalDone indicates an expected call of SignalDone.
-func (mr *MockDependencyManagerMockRecorder) SignalDone(nodeName, phase any) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) SignalDone(nodeName, stage any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignalDone", reflect.TypeOf((*MockDependencyManager)(nil).SignalDone), nodeName, phase)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignalDone", reflect.TypeOf((*MockDependencyManager)(nil).SignalDone), nodeName, stage)
 }
 
 // String mocks base method.

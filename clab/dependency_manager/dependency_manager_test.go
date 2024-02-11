@@ -106,7 +106,7 @@ func Test_defaultDependencyManager_String(t *testing.T) {
 		dependencies []struct {
 			depender string
 			dependee string
-			waitFor  types.WaitForPhase
+			waitFor  types.WaitForStage
 		}
 	}
 	tests := []struct {
@@ -124,7 +124,7 @@ func Test_defaultDependencyManager_String(t *testing.T) {
 				dependencies: []struct {
 					depender string
 					dependee string
-					waitFor  types.WaitForPhase
+					waitFor  types.WaitForStage
 				}{
 					{
 						depender: "node1",
@@ -148,7 +148,7 @@ node2 -> [ node1 ]`,
 				dependencies: []struct {
 					depender string
 					dependee string
-					waitFor  types.WaitForPhase
+					waitFor  types.WaitForStage
 				}{
 					{
 						depender: "node1",

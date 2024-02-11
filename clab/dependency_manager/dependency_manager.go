@@ -13,16 +13,16 @@ type DependencyManager interface {
 	// AddNode adds a node to the dependency manager.
 	AddNode(name string)
 	// AddDependency adds a dependency between a depender and and a dependee.
-	// The depender will hold off the dependerPhase until the dependee completes dependeePhase.
-	// This effectively makes the dependerPhase to be start only after the dependeePhase finishes.
-	AddDependency(depender string, dependerPhase types.WaitForPhase, dependee string, dependeePhase types.WaitForPhase) error
-	// EnterPhase is called by a node that is meant to enter the specified phase.
-	// The call will be blocked until all dependencies for the node to enter the phase are met.
-	EnterPhase(nodeName string, state types.WaitForPhase) error
-	// SignalDone is called by a node that has finished all tasks for the provided phase.
+	// The depender will hold off the dependerStage until the dependee completes dependeeStage.
+	// This effectively makes the dependerStage to be start only after the dependeeStage finishes.
+	AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error
+	// EnterStage is called by a node that is meant to enter the specified stage.
+	// The call will be blocked until all dependencies for the node to enter the stage are met.
+	EnterStage(nodeName string, state types.WaitForStage) error
+	// SignalDone is called by a node that has finished all tasks for the provided stage.
 	// The dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-	SignalDone(nodeName string, phase types.WaitForPhase)
-	GetDependerCount(nodeName string, phase types.WaitForPhase) (uint, error)
+	SignalDone(nodeName string, stage types.WaitForStage)
+	GetDependerCount(nodeName string, stage types.WaitForStage) (uint, error)
 	// CheckAcyclicity checks if dependencies contain cycles.
 	CheckAcyclicity() error
 	// String returns a string representation of dependencies recorded with dependency manager.
@@ -47,9 +47,9 @@ func (dm *defaultDependencyManager) AddNode(name string) {
 }
 
 // AddDependency adds a dependency between a depender and and a dependee.
-// The depender will hold off its dependerPhase until the dependee completes dependeePhase.
-// This effectively makes the dependerPhase to be start only after the dependeePhase finishes.
-func (dm *defaultDependencyManager) AddDependency(depender string, dependerPhase types.WaitForPhase, dependee string, dependeePhase types.WaitForPhase) error {
+// The depender will hold off its dependerStage until the dependee completes dependeeStage.
+// This effectively makes the dependerStage to be start only after the dependeeStage finishes.
+func (dm *defaultDependencyManager) AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error {
 	// first check if the referenced nodes are known to the dm
 	err := dm.checkNodesExist([]string{dependee})
 	if err != nil {
@@ -60,11 +60,11 @@ func (dm *defaultDependencyManager) AddDependency(depender string, dependerPhase
 		return err
 	}
 
-	dm.nodes[dependee].addDepender(dependerPhase, dm.nodes[depender], dependeePhase)
+	dm.nodes[dependee].addDepender(dependerStage, dm.nodes[depender], dependeeStage)
 	return nil
 }
 
-func (dm *defaultDependencyManager) GetDependerCount(nodeName string, state types.WaitForPhase) (uint, error) {
+func (dm *defaultDependencyManager) GetDependerCount(nodeName string, state types.WaitForStage) (uint, error) {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {
@@ -73,19 +73,19 @@ func (dm *defaultDependencyManager) GetDependerCount(nodeName string, state type
 	return dm.nodes[nodeName].GetDependerCount(state)
 }
 
-func (dm *defaultDependencyManager) EnterPhase(nodeName string, state types.WaitForPhase) error {
+func (dm *defaultDependencyManager) EnterStage(nodeName string, state types.WaitForStage) error {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {
 		return err
 	}
-	dm.nodes[nodeName].EnterPhase(state)
+	dm.nodes[nodeName].EnterStage(state)
 	return nil
 }
 
 // SignalDone is called by a node that has finished the indicated NodeState process and reached the desired state.
 // Internally the dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (dm *defaultDependencyManager) SignalDone(nodeName string, state types.WaitForPhase) {
+func (dm *defaultDependencyManager) SignalDone(nodeName string, state types.WaitForStage) {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {

@@ -481,10 +481,10 @@ func (c *CLab) createStaticDynamicDependency() error {
 func (c *CLab) createWaitForDependency() error {
 	for dependerNode, node := range c.Nodes {
 		// add node's waitFor nodes to the dependency manager
-		for dependerPhase, waitForNodes := range node.Config().Stages.GetWaitFor() {
+		for dependerStage, waitForNodes := range node.Config().Stages.GetWaitFor() {
 			for _, dependee := range waitForNodes {
 				err := c.dependencyManager.AddDependency(dependerNode,
-					dependerPhase, dependee.Node, dependee.Phase)
+					dependerStage, dependee.Node, dependee.Stage)
 				if err != nil {
 					return err
 				}
@@ -531,12 +531,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					},
 				)
 				if err != nil {
-					log.Errorf("failed pre-deploy phase for node %q: %v", node.Config().ShortName, err)
+					log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
 
-				// enter the create phase
-				err = dm.EnterPhase(node.Config().ShortName, types.WaitForCreate)
+				// enter the create stage
+				err = dm.EnterStage(node.Config().ShortName, types.WaitForCreate)
 				if err != nil {
 					log.Error(err)
 				}
@@ -544,12 +544,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				// Deploy
 				err = node.Deploy(ctx, &nodes.DeployParams{})
 				if err != nil {
-					log.Errorf("failed deploy phase for node %q: %v", node.Config().ShortName, err)
+					log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
 					continue
 				}
 
 				// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
-				// before continuing with the post-deploy phase (for e.g. certificate creation)
+				// before continuing with the post-deploy stage (for e.g. certificate creation)
 				err = node.UpdateConfigWithRuntimeInfo(ctx)
 				if err != nil {
 					log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
@@ -557,7 +557,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				dm.SignalDone(node.GetShortName(), types.WaitForCreate)
 
-				err = dm.EnterPhase(node.GetShortName(), types.WaitForCreateLinks)
+				err = dm.EnterStage(node.GetShortName(), types.WaitForCreateLinks)
 				if err != nil {
 					log.Error(err)
 				}
@@ -582,8 +582,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 				dm.SignalDone(node.GetShortName(), types.WaitForCreateLinks)
 
-				// start config phase
-				err = dm.EnterPhase(node.GetShortName(), types.WaitForConfigure)
+				// start config stage
+				err = dm.EnterStage(node.GetShortName(), types.WaitForConfigure)
 				if err != nil {
 					log.Error(err)
 				}
