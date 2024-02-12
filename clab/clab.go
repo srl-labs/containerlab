@@ -570,11 +570,11 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				// deployed properly. Hence we need to wait for all the links to be created.
 				// we just wait if there is actually a dependency on this state, otherwise
 				// we head on.
-				count, err := dm.GetDependerCount(node.GetShortName(), types.WaitForCreateLinks)
+				mustWait, err := dm.MustWait(node.GetShortName(), types.WaitForCreateLinks)
 				if err != nil {
 					log.Error(err)
 				}
-				if count > 0 {
+				if mustWait {
 					node.WaitForAllLinksCreated()
 				}
 				dn.Done(types.WaitForCreateLinks)
@@ -599,11 +599,11 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// health state processing
-				count, err = dm.GetDependerCount(node.GetShortName(), types.WaitForHealthy)
+				mustWait, err = dm.MustWait(node.GetShortName(), types.WaitForHealthy)
 				if err != nil {
 					log.Error(err)
 				}
-				if count > 0 {
+				if mustWait {
 					// if there is a dependecy on the healthy state of this node, enter the checking procedure
 					for {
 						healthy, err := node.GetRuntime().IsHealthy(ctx, node.Config().LongName)
@@ -621,12 +621,12 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// exit state processing
-				count, err = dm.GetDependerCount(node.GetShortName(), types.WaitForExit)
+				mustWait, err = dm.MustWait(node.GetShortName(), types.WaitForExit)
 				if err != nil {
 					log.Error(err)
 				}
-				if count > 0 {
-					// if there is a dependecy on the healthy state of this node, enter the checking procedure
+				if mustWait {
+					// if there is a dependency on the healthy state of this node, enter the checking procedure
 					for {
 						status := node.GetRuntime().GetContainerStatus(ctx, node.Config().LongName)
 						if status == runtime.Stopped {

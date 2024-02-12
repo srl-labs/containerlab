@@ -13,9 +13,10 @@ type DependencyNode struct {
 	name string
 	// stageWG is a map of waitgroup per a given stage.
 	// When the waitgroup associated with the stage is Done, the node is considered to have reached the stage.
-	stageWG        map[types.WaitForStage]*sync.WaitGroup
-	stageWGCounter map[types.WaitForStage]uint
-	depender       map[types.WaitForStage][]*dependerNodeStage
+	stageWG map[types.WaitForStage]*sync.WaitGroup
+	// mustWait determines if dependers exist for the given stages.
+	mustWait map[types.WaitForStage]bool
+	depender map[types.WaitForStage][]*dependerNodeStage
 
 	m sync.Mutex
 }
@@ -23,15 +24,14 @@ type DependencyNode struct {
 // newDependencyNode initializes a dependencyNode with the given name.
 func newDependencyNode(name string) *DependencyNode {
 	d := &DependencyNode{
-		name:           name,
-		stageWG:        map[types.WaitForStage]*sync.WaitGroup{},
-		stageWGCounter: map[types.WaitForStage]uint{},
-		depender:       map[types.WaitForStage][]*dependerNodeStage{},
+		name:     name,
+		stageWG:  map[types.WaitForStage]*sync.WaitGroup{},
+		mustWait: map[types.WaitForStage]bool{},
+		depender: map[types.WaitForStage][]*dependerNodeStage{},
 	}
 
 	for _, p := range types.GetWaitForStages() {
 		d.stageWG[p] = &sync.WaitGroup{}
-		d.stageWGCounter[p] = 0
 		d.depender[p] = nil
 	}
 
@@ -67,7 +67,6 @@ func (d *DependencyNode) Done(p types.WaitForStage) {
 	for _, depender := range d.depender[p] {
 		log.Debugf("StateChange: Node %s unblocking %s", d.name, depender.String())
 		depender.SignalDone()
-		d.stageWGCounter[p]--
 	}
 }
 
@@ -83,16 +82,16 @@ func (d *DependencyNode) addDepender(dependerStage types.WaitForStage, depender 
 	// for the depender to know how many dependencies to wait for,
 	// the waitgroup need to be increaded by 1 as well
 	dependerNS.IncreaseDependencyWG()
-	d.stageWGCounter[stage]++
+	d.mustWait[stage] = true
 
 	return nil
 }
 
-func (d *DependencyNode) GetDependerCount(state types.WaitForStage) (uint, error) {
-	if count, exists := d.stageWGCounter[state]; exists {
-		return count, nil
+func (d *DependencyNode) MustWait(state types.WaitForStage) (bool, error) {
+	if b, exists := d.mustWait[state]; exists {
+		return b, nil
 	}
-	return 0, fmt.Errorf("state %q not found", d.name)
+	return false, fmt.Errorf("state %q not found", d.name)
 }
 
 // dependerNodeStage is used to keep track of waitgroups that should be decreased (unblocked)

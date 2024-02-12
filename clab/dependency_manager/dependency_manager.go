@@ -18,7 +18,8 @@ type DependencyManager interface {
 	// The depender will hold off the dependerStage until the dependee completes dependeeStage.
 	// This effectively makes the dependerStage to be start only after the dependeeStage finishes.
 	AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error
-	GetDependerCount(nodeName string, stage types.WaitForStage) (uint, error)
+	// MustWait returns true if the node with the given name needs to wait for the given stage, because dependers do exist.
+	MustWait(nodeName string, stage types.WaitForStage) (bool, error)
 	// CheckAcyclicity checks if dependencies contain cycles.
 	CheckAcyclicity() error
 	// String returns a string representation of dependencies recorded with dependency manager.
@@ -60,13 +61,13 @@ func (dm *defaultDependencyManager) AddDependency(depender string, dependerStage
 	return nil
 }
 
-func (dm *defaultDependencyManager) GetDependerCount(nodeName string, state types.WaitForStage) (uint, error) {
+func (dm *defaultDependencyManager) MustWait(nodeName string, state types.WaitForStage) (bool, error) {
 	// first check if the referenced node is known to the dm
 	err := dm.checkNodesExist([]string{nodeName})
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	return dm.nodes[nodeName].GetDependerCount(state)
+	return dm.nodes[nodeName].MustWait(state)
 }
 
 func (dm *defaultDependencyManager) GetNode(nodeName string) (*DependencyNode, error) {

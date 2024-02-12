@@ -80,21 +80,6 @@ func (mr *MockDependencyManagerMockRecorder) CheckAcyclicity() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAcyclicity", reflect.TypeOf((*MockDependencyManager)(nil).CheckAcyclicity))
 }
 
-// GetDependerCount mocks base method.
-func (m *MockDependencyManager) GetDependerCount(nodeName string, stage types.WaitForStage) (uint, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDependerCount", nodeName, stage)
-	ret0, _ := ret[0].(uint)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDependerCount indicates an expected call of GetDependerCount.
-func (mr *MockDependencyManagerMockRecorder) GetDependerCount(nodeName, stage any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDependerCount", reflect.TypeOf((*MockDependencyManager)(nil).GetDependerCount), nodeName, stage)
-}
-
 // GetNode mocks base method.
 func (m *MockDependencyManager) GetNode(name string) (*dependency_manager.DependencyNode, error) {
 	m.ctrl.T.Helper()
@@ -108,6 +93,21 @@ func (m *MockDependencyManager) GetNode(name string) (*dependency_manager.Depend
 func (mr *MockDependencyManagerMockRecorder) GetNode(name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNode", reflect.TypeOf((*MockDependencyManager)(nil).GetNode), name)
+}
+
+// MustWait mocks base method.
+func (m *MockDependencyManager) MustWait(nodeName string, stage types.WaitForStage) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MustWait", nodeName, stage)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MustWait indicates an expected call of MustWait.
+func (mr *MockDependencyManagerMockRecorder) MustWait(nodeName, stage any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustWait", reflect.TypeOf((*MockDependencyManager)(nil).MustWait), nodeName, stage)
 }
 
 // String mocks base method.
