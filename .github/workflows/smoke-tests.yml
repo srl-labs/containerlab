@@ -35,6 +35,7 @@ jobs:
           - "15*.robot"
           - "16*.robot"
           - "17*.robot"
+          - "18*.robot"
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ matrix.runtime == 'podman' }}
     steps:

@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -18,9 +17,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
-	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/tklauser/numcpus"
@@ -106,6 +103,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: graceful,
 			},
 		),
+		clab.WithDependencyManager(dependency_manager.NewDependencyManager()),
 		clab.WithDebug(debug),
 	}
 
@@ -218,9 +216,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	dm := dependency_manager.NewDependencyManager()
-
-	nodesWg, err := c.CreateNodes(ctx, nodeWorkers, dm)
+	nodesWg, execCollection, err := c.CreateNodes(ctx, nodeWorkers, skipPostDeploy)
 	if err != nil {
 		return err
 	}
@@ -229,14 +225,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		nodesWg.Wait()
 	}
 
-	log.Debug("containers created, retrieving state and IP addresses...")
-	// updating nodes with runtime information such as IP addresses assigned by the runtime dynamically
-	for _, n := range c.Nodes {
-		err = n.UpdateConfigWithRuntimeInfo(ctx)
-		if err != nil {
-			log.Errorf("failed to update node runtime information for node %s: %v", n.Config().ShortName, err)
-		}
-	}
+	// write to log
+	execCollection.Log()
 
 	if err := c.GenerateInventories(); err != nil {
 		return err
@@ -246,33 +236,16 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if !skipPostDeploy {
-		wg := &sync.WaitGroup{}
-		wg.Add(len(c.Nodes))
-
-		for _, node := range c.Nodes {
-			go func(node nodes.Node, wg *sync.WaitGroup) {
-				defer wg.Done()
-
-				err := node.PostDeploy(ctx, &nodes.PostDeployParams{Nodes: c.Nodes})
-				if err != nil {
-					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
-				}
-			}(node, wg)
-		}
-		wg.Wait()
-	}
-
-	containers, err := c.ListNodesContainers(ctx)
-	if err != nil {
-		return err
-	}
-
 	// generate graph of the lab topology
 	if graph {
 		if err = c.GenerateDotGraph(); err != nil {
 			log.Error(err)
 		}
+	}
+
+	containers, err := c.ListNodesContainers(ctx)
+	if err != nil {
+		return err
 	}
 
 	log.Info("Adding containerlab host entries to /etc/hosts file")
@@ -286,28 +259,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
 	}
-
-	// execute commands specified for nodes with `exec` node parameter
-	execCollection := exec.NewExecCollection()
-	for _, n := range c.Nodes {
-		for _, e := range n.Config().Exec {
-			exec, err := exec.NewExecCmdFromString(e)
-			if err != nil {
-				log.Warnf("Failed to parse the command string: %s, %v", e, err)
-			}
-
-			res, err := n.RunExec(ctx, exec)
-			if err != nil {
-				// kinds which do not support exec functionality are skipped
-				continue
-			}
-
-			execCollection.Add(n.Config().ShortName, res)
-		}
-	}
-
-	// write to log
-	execCollection.Log()
 
 	// log new version availability info if ready
 	newVerNotification(vCh)

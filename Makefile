@@ -61,7 +61,7 @@ robot-test: build-debug
 MOCKDIR = ./mocks
 .PHONY: mocks-gen
 mocks-gen: mocks-rm ## Generate mocks for all the defined interfaces.
-	go install github.com/golang/mock/mockgen@v1.6.0
+	go install go.uber.org/mock/mockgen@latest
 	mockgen -package=mocknodes -source=nodes/node.go -destination=$(MOCKDIR)/mocknodes/node.go
 	mockgen -package=mocks -source=clab/dependency_manager/dependency_manager.go -destination=$(MOCKDIR)/dependency_manager.go
 	mockgen -package=mockruntime -source=runtime/runtime.go -destination=$(MOCKDIR)/mockruntime/runtime.go

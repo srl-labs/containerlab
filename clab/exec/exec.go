@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -178,25 +179,33 @@ type execEntries map[string][]*ExecResult
 // ExecCollection represents a datastore for exec commands execution results.
 type ExecCollection struct {
 	execEntries
+	m sync.RWMutex
 }
 
 // NewExecCollection initializes the collection of exec command results.
 func NewExecCollection() *ExecCollection {
 	return &ExecCollection{
-		execEntries{},
+		execEntries: execEntries{},
+		m:           sync.RWMutex{},
 	}
 }
 
 func (ec *ExecCollection) Add(cId string, e *ExecResult) {
+	ec.m.Lock()
+	defer ec.m.Unlock()
 	ec.execEntries[cId] = append(ec.execEntries[cId], e)
 }
 
 func (ec *ExecCollection) AddAll(cId string, e []*ExecResult) {
+	ec.m.Lock()
+	defer ec.m.Unlock()
 	ec.execEntries[cId] = append(ec.execEntries[cId], e...)
 }
 
 // Dump dumps the contents of ExecCollection as a string in one of the provided formats.
 func (ec *ExecCollection) Dump(format string) (string, error) {
+	ec.m.RLock()
+	defer ec.m.RUnlock()
 	result := strings.Builder{}
 	switch format {
 	case ExecFormatJSON:
@@ -236,6 +245,8 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 // If execution result contains error, the error log facility is used,
 // otherwise it is logged as INFO.
 func (ec *ExecCollection) Log() {
+	ec.m.RLock()
+	defer ec.m.RUnlock()
 	for k, execResults := range ec.execEntries {
 		for _, er := range execResults {
 			switch {

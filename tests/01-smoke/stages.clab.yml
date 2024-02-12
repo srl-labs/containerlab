@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: stages
+topology:
+  defaults:
+    kind: linux
+    image: alpine:3
+  nodes:
+    node1:
+      exec:
+        - ash -c "date +%s%3N > /tmp/time"
+      stages:
+        create:
+          wait-for:
+            - node: node2
+              stage: create
+
+    node2:
+      exec:
+        - ash -c "date +%s%3N > /tmp/time"
+      stages:
+        create:
+          wait-for:
+            - node: node3
+              stage: create-links
+
+    node3:
+      exec:
+        - ash -c "date +%s%3N > /tmp/time"
+      stages:
+        create:
+          wait-for:
+            - node: node4
+              stage: healthy
+
+    node4:
+      exec:
+        - ash -c "date +%s%3N > /tmp/time"
+      healthcheck:
+        start-period: 5
+        interval: 1
+        test:
+          - CMD-SHELL
+          - cat /etc/os-release
+
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
+    - endpoints: ["node1:eth3", "node4:eth3"]
+    - endpoints: ["node2:eth2", "node4:eth2"]
+    - endpoints: ["node3:eth1", "host:n3eth1"]

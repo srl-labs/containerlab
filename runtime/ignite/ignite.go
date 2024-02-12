@@ -463,3 +463,9 @@ func (*IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) 
 	}
 	return runtime.Stopped
 }
+
+// IsHealthy returns true is the container is reported as being healthy, false otherwise.
+func (c *IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
+	log.Errorf("function GetContainerHealth(...) not implemented in the Containerlab IgniteRuntime")
+	return true, nil
+}

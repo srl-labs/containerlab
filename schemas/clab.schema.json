@@ -296,14 +296,9 @@
                 "config": {
                     "$ref": "#/definitions/config-config"
                 },
-                "wait-for": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "uniqueItems": true,
-                    "description": "Define which nodes should be started before this node will start",
-                    "markdownDescription": "[wait-for](https://containerlab.dev/manual/nodes/#cmd) defines which nodes should be started before this node will start"
+                "stages": {
+                    "type": "object",
+                    "$ref": "#/definitions/stages-config"
                 },
                 "dns": {
                     "type": "object",
@@ -632,6 +627,95 @@
                         ]
                     }
                 }
+            ]
+        },
+        "stages-config": {
+            "type": "object",
+            "description": "node's stages configurations",
+            "markdownDescription": "node's [stages](https://containerlab.dev/manual/nodes/#stages) configurations",
+            "properties": {
+                "create": {
+                    "type": "object",
+                    "description": "create stage configuration",
+                    "properties": {
+                        "wait-for": {
+                            "$ref": "#/definitions/wait-for-config"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "create-links": {
+                    "type": "object",
+                    "description": "create stage configuration",
+                    "properties": {
+                        "wait-for": {
+                            "$ref": "#/definitions/wait-for-config"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "configure": {
+                    "type": "object",
+                    "description": "create stage configuration",
+                    "properties": {
+                        "wait-for": {
+                            "$ref": "#/definitions/wait-for-config"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "healthy": {
+                    "type": "object",
+                    "description": "create stage configuration",
+                    "properties": {
+                        "wait-for": {
+                            "$ref": "#/definitions/wait-for-config"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "exit": {
+                    "type": "object",
+                    "description": "create stage configuration",
+                    "properties": {
+                        "wait-for": {
+                            "$ref": "#/definitions/wait-for-config"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        },
+        "wait-for-config": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "node": {
+                        "type": "string",
+                        "description": "node name to wait for"
+                    },
+                    "stage": {
+                        "type": "string",
+                        "description": "phase to wait for",
+                        "$ref": "#/definitions/stages-enum"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "uniqueItems": true,
+            "description": "Dependency list for the node",
+            "markdownDescription": "Dependency list for the node"
+        },
+        "stages-enum": {
+            "type": "string",
+            "enum": [
+                "create",
+                "create-links",
+                "configure",
+                "healthy",
+                "exit"
             ]
         }
     },

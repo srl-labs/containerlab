@@ -9,7 +9,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	errs "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/mocks"
@@ -19,6 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/exp/slices"
 )
 
@@ -32,8 +32,17 @@ func Test_createNamespaceSharingDependencyOne(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node2", "node3")
-	createNamespaceSharingDependency(nodeMap, dm)
+	clab := &CLab{
+		Nodes: nodeMap,
+	}
+
+	err := WithDependencyManager(dm)(clab)
+	if err != nil {
+		t.Error(err)
+	}
+
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
+	clab.createNamespaceSharingDependency()
 }
 
 func Test_createStaticDynamicDependency(t *testing.T) {
@@ -46,14 +55,23 @@ func Test_createStaticDynamicDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node4", "node1")
-	dm.EXPECT().AddDependency("node4", "node2")
-	dm.EXPECT().AddDependency("node4", "node3")
-	dm.EXPECT().AddDependency("node5", "node1")
-	dm.EXPECT().AddDependency("node5", "node2")
-	dm.EXPECT().AddDependency("node5", "node3")
+	clab := &CLab{
+		Nodes: nodeMap,
+	}
 
-	createStaticDynamicDependency(nodeMap, dm)
+	err := WithDependencyManager(dm)(clab)
+	if err != nil {
+		t.Error(err)
+	}
+
+	dm.EXPECT().AddDependency("node1", types.WaitForCreate, "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node4", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node1", types.WaitForCreate, "node5", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node5", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node5", types.WaitForCreate)
+
+	clab.createStaticDynamicDependency()
 }
 
 // getNodeMap return a map of nodes for testing purpose.
@@ -64,6 +82,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 		&types.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node1",
+			Stages:    types.NewStages(),
 		},
 	).AnyTimes()
 
@@ -73,7 +92,30 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 		&types.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node2",
-			WaitFor:   []string{"node1"},
+			Stages: &types.Stages{
+				Create: &types.StageCreate{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node1",
+								Stage: types.WaitForCreate,
+							},
+						},
+					},
+				},
+				CreateLinks: &types.StageCreateLinks{
+					StageBase: types.StageBase{},
+				},
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{},
+				},
+				Healthy: &types.StageHealthy{
+					StageBase: types.StageBase{},
+				},
+				Exit: &types.StageExit{
+					StageBase: types.StageBase{},
+				},
+			},
 		},
 	).AnyTimes()
 
@@ -84,7 +126,34 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:       "alpine:3",
 			NetworkMode: "container:node2",
 			ShortName:   "node3",
-			WaitFor:     []string{"node1", "node2"},
+			Stages: &types.Stages{
+				Create: &types.StageCreate{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node1",
+								Stage: types.WaitForCreate,
+							},
+							&types.WaitFor{
+								Node:  "node2",
+								Stage: types.WaitForCreate,
+							},
+						},
+					},
+				},
+				CreateLinks: &types.StageCreateLinks{
+					StageBase: types.StageBase{},
+				},
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{},
+				},
+				Healthy: &types.StageHealthy{
+					StageBase: types.StageBase{},
+				},
+				Exit: &types.StageExit{
+					StageBase: types.StageBase{},
+				},
+			},
 		},
 	).AnyTimes()
 
@@ -96,6 +165,7 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			MgmtIPv4Address: "172.10.10.1",
 			ShortName:       "node4",
 			NetworkMode:     "container:foobar",
+			Stages:          types.NewStages(),
 		},
 	).AnyTimes()
 
@@ -106,7 +176,34 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:           "alpine:3",
 			MgmtIPv4Address: "172.10.10.2",
 			ShortName:       "node5",
-			WaitFor:         []string{"node3", "node4"},
+			Stages: &types.Stages{
+				Create: &types.StageCreate{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node3",
+								Stage: types.WaitForCreate,
+							},
+							&types.WaitFor{
+								Node:  "node4",
+								Stage: types.WaitForCreate,
+							},
+						},
+					},
+				},
+				CreateLinks: &types.StageCreateLinks{
+					StageBase: types.StageBase{},
+				},
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{},
+				},
+				Healthy: &types.StageHealthy{
+					StageBase: types.StageBase{},
+				},
+				Exit: &types.StageExit{
+					StageBase: types.StageBase{},
+				},
+			},
 		},
 	).AnyTimes()
 
@@ -133,13 +230,22 @@ func Test_createWaitForDependency(t *testing.T) {
 	// retrieve a map of nodes
 	nodeMap := getNodeMap(mockCtrl)
 
-	dm.EXPECT().AddDependency("node1", "node2")
-	dm.EXPECT().AddDependency("node1", "node3")
-	dm.EXPECT().AddDependency("node2", "node3")
-	dm.EXPECT().AddDependency("node3", "node5")
-	dm.EXPECT().AddDependency("node4", "node5")
+	clab := &CLab{
+		Nodes: nodeMap,
+	}
 
-	err := createWaitForDependency(nodeMap, dm)
+	err := WithDependencyManager(dm)(clab)
+	if err != nil {
+		t.Error(err)
+	}
+
+	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node1", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node1", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node3", types.WaitForCreate)
+	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node4", types.WaitForCreate)
+
+	err = clab.createWaitForDependency()
 	if err != nil {
 		t.Error(err)
 	}

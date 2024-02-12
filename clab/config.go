@@ -198,13 +198,16 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 		AutoRemove:      c.Config.Topology.GetNodeAutoRemove(nodeName),
 		Extras:          c.Config.Topology.GetNodeExtras(nodeName),
-		WaitFor:         c.Config.Topology.GetWaitFor(nodeName),
 		DNS:             c.Config.Topology.GetNodeDns(nodeName),
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 	}
-
 	var err error
+
+	nodeCfg.Stages, err = c.Config.Topology.GetStages(nodeName)
+	if err != nil {
+		return nil, err
+	}
 
 	// Load content of the EnvVarFiles
 	envFileContent, err := utils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
