@@ -541,9 +541,6 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					continue
 				}
 
-				// enter the create stage
-				dn.EnterStage(types.WaitForCreate)
-
 				// Deploy
 				err = node.Deploy(ctx, &nodes.DeployParams{})
 				if err != nil {
@@ -673,6 +670,21 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 			go func(node nodes.Node, dm depMgr.DependencyManager,
 				workerChan chan<- nodes.Node, wfcwg *sync.WaitGroup,
 			) {
+				// we are entering the create stage here and not in the workerFunc
+				// to avoid blocking the worker.
+				// Block can happen when you have less workers than nodes
+				// and nodes consume the worker but become stuck in waiting since
+				// no more workers available to process other nodes that would unblock
+				// the nodes stuck in waiting.
+				// Entering the Create stage here would not consume a worker and let other nodes
+				// to be scheduled.
+				dn, err := c.dependencyManager.GetNode(node.GetShortName())
+				if err != nil {
+					log.Error(err)
+				}
+
+				dn.EnterStage(types.WaitForCreate)
+
 				// wait for possible external dependencies
 				c.WaitForExternalNodeDependencies(ctx, node.Config().ShortName)
 				// when all nodes that this node depends on are created, push it into the channel
