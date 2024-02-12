@@ -211,6 +211,20 @@ func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), dst, templ)
 }
 
+// GetContainerStatus mocks base method.
+func (m *MockNode) GetContainerStatus(ctx context.Context) runtime.ContainerStatus {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainerStatus", ctx)
+	ret0, _ := ret[0].(runtime.ContainerStatus)
+	return ret0
+}
+
+// GetContainerStatus indicates an expected call of GetContainerStatus.
+func (mr *MockNodeMockRecorder) GetContainerStatus(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerStatus", reflect.TypeOf((*MockNode)(nil).GetContainerStatus), ctx)
+}
+
 // GetContainers mocks base method.
 func (m *MockNode) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	m.ctrl.T.Helper()
@@ -341,6 +355,21 @@ func (mr *MockNodeMockRecorder) Init(arg0 any, arg1 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockNode)(nil).Init), varargs...)
+}
+
+// IsHealthy mocks base method.
+func (m *MockNode) IsHealthy(ctx context.Context) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsHealthy", ctx)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsHealthy indicates an expected call of IsHealthy.
+func (mr *MockNodeMockRecorder) IsHealthy(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHealthy", reflect.TypeOf((*MockNode)(nil).IsHealthy), ctx)
 }
 
 // PostDeploy mocks base method.

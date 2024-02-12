@@ -558,3 +558,11 @@ func (d *DefaultNode) SetState(s state.NodeState) {
 func (d *DefaultNode) GetSSHConfig() *types.SSHConfig {
 	return d.SSHConfig
 }
+
+func (d *DefaultNode) GetContainerStatus(ctx context.Context) runtime.ContainerStatus {
+	return d.Runtime.GetContainerStatus(ctx, d.GetContainerName())
+}
+
+func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
+	return d.Runtime.IsHealthy(ctx, d.GetContainerName())
+}

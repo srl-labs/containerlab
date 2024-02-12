@@ -112,6 +112,8 @@ type Node interface {
 	WaitForAllLinksCreated()
 	// RunExecFromConfig executes the topologyfile defined exec commands
 	RunExecFromConfig(context.Context, *exec.ExecCollection) error
+	IsHealthy(ctx context.Context) (bool, error)
+	GetContainerStatus(ctx context.Context) runtime.ContainerStatus
 }
 
 type NodeOption func(Node)
