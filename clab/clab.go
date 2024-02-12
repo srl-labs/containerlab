@@ -570,13 +570,15 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				// deployed properly. Hence we need to wait for all the links to be created.
 				// we just wait if there is actually a dependency on this state, otherwise
 				// we head on.
-				mustWait, err := dm.MustWait(node.GetShortName(), types.WaitForCreateLinks)
+				mustWait, err := dn.MustWait(types.WaitForCreateLinks)
 				if err != nil {
 					log.Error(err)
 				}
+
 				if mustWait {
 					node.WaitForAllLinksCreated()
 				}
+
 				dn.Done(types.WaitForCreateLinks)
 
 				// start config stage
@@ -599,7 +601,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// health state processing
-				mustWait, err = dm.MustWait(node.GetShortName(), types.WaitForHealthy)
+				mustWait, err = dn.MustWait(types.WaitForHealthy)
 				if err != nil {
 					log.Error(err)
 				}
@@ -621,7 +623,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// exit state processing
-				mustWait, err = dm.MustWait(node.GetShortName(), types.WaitForExit)
+				mustWait, err = dn.MustWait(types.WaitForExit)
 				if err != nil {
 					log.Error(err)
 				}
