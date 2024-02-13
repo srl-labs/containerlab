@@ -73,11 +73,9 @@ When `graph` command is called with the `--mermaid` flag, containerlab will gene
 
 ### Online vs offline graphing
 
-When HTML graph option is used, containerlab will try to build the topology graph by inspecting the running containers which are part of the lab. This essentially means, that the lab must be running. Although this method provides some additional details (like IP addresses), it is not always convenient to run a lab to see its graph.
+If the lab is running containerlab will try to build the graph by inspecting the running containers which are part of the lab. This method provides additional details (like IP addresses). It is possible to opt out of this behavior by using the --offline flag.
 
-The other option is to use the topology file solely to build the graph. This is done by adding `--offline` flag.
-
-If `--offline` flag was not provided and no containers were found matching the lab name, containerlab will use the topo file only (as if offline mode was set).
+If --offline flag was not provided and no containers were found matching the lab name, containerlab will use the topo file only (as if offline mode was set).
 
 ### Usage
 
