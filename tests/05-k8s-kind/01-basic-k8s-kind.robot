@@ -14,12 +14,9 @@ ${if1-name}         eth1
 
 *** Test Cases ***
 Create Bridge
-    ${result} =    Run Process    sudo -E ip link add dev br01 type bridge
-    ...    shell=True
-    Log    ${result.stderr}
-    Log    ${result.stdout}
-
-    ${result} =    Run Process    sudo -E ip link set dev br01 up
+    # installing iproute for self-hosted runner, later self-hosted runner will have iproute2 installed by default
+    ${result} =    Run Process
+    ...    sudo -E bash -c "apt update && apt install iproute2 && ip link add dev br01 type bridge && ip link set dev br01 up"
     ...    shell=True
     Log    ${result.stderr}
     Log    ${result.stdout}
