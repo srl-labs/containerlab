@@ -15,10 +15,12 @@ ${if1-name}         eth1
 *** Test Cases ***
 Create Bridge
     ${result} =    Run Process    sudo -E ip link add dev br01 type bridge
+    ...    shell=True
     Log    ${result.stderr}
     Log    ${result.stdout}
 
     ${result} =    Run Process    sudo -E ip link set dev br01 up
+    ...    shell=True
     Log    ${result.stderr}
     Log    ${result.stdout}
 
