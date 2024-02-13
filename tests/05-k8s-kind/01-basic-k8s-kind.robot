@@ -14,8 +14,8 @@ ${if1-name}         eth1
 
 *** Test Cases ***
 Create Bridge
-    Run    sudo ip link add dev br01 type bridge
-    Run    sudo ip link set dev br01 up
+    Run    sudo -E ip link add dev br01 type bridge
+    Run    sudo -E ip link set dev br01 up
 
 Deploy ${lab-name} lab
     Log    ${CURDIR}
