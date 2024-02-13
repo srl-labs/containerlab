@@ -14,8 +14,13 @@ ${if1-name}         eth1
 
 *** Test Cases ***
 Create Bridge
-    Run    sudo -E ip link add dev br01 type bridge
-    Run    sudo -E ip link set dev br01 up
+    ${result} =    Run Process    sudo -E ip link add dev br01 type bridge
+    Log    ${result.stderr}
+    Log    ${result.stdout}
+
+    ${result} =    Run Process    sudo -E ip link set dev br01 up
+    Log    ${result.stderr}
+    Log    ${result.stdout}
 
 Deploy ${lab-name} lab
     Log    ${CURDIR}
