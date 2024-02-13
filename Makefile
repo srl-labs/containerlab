@@ -1,9 +1,9 @@
 BIN_DIR = $(CURDIR)/bin
 BINARY = $(BIN_DIR)/containerlab
-MKDOCS_VER = 9.1.4
+MKDOCS_VER = 9.5.9
 # insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
 # make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
-MKDOCS_INS_VER = 9.1.4-insiders-4.32.4-hellt
+MKDOCS_INS_VER = 9.5.9-insiders-4.52.2-hellt
 
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)

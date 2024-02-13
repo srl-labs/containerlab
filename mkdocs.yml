@@ -194,6 +194,7 @@ theme:
     - toc.follow
     - content.tooltips
     - navigation.indexes
+    - content.footnote.tooltips
 
   language: en
   palette:
