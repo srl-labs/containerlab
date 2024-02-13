@@ -65,20 +65,12 @@ kubectl get -n c9s pods -o wide #(1)!
 
 <div class="embed-result">
 ```
-NAME                                   READY   STATUS     RESTARTS   AGE   IP           NODE          NOMINATED NODE   READINESS GATES
-clabernetes-manager-7d8d9b4785-9xbnn   0/1     Init:0/1   0          27s   10.244.2.2   c9s-worker    <none>           <none>
-clabernetes-manager-7d8d9b4785-hpc6h   0/1     Init:0/1   0          27s   10.244.1.3   c9s-worker2   <none>           <none>
-clabernetes-manager-7d8d9b4785-z47dr   1/1     Running    0          27s   10.244.1.2   c9s-worker2   <none>           <none>
+NAME                                   READY   STATUS    RESTARTS   AGE    IP            NODE          NOMINATED NODE   READINESS GATES
+clabernetes-manager-7ccb98897c-7ctnt   1/1     Running   0          103s   10.244.2.15   c9s-worker    <none>           <none>
+clabernetes-manager-7ccb98897c-twzxw   1/1     Running   0          96s    10.244.1.15   c9s-worker2   <none>           <none>
+clabernetes-manager-7ccb98897c-xhgkl   1/1     Running   0          103s   10.244.1.14   c9s-worker2   <none>           <none>
 ```
 </div>
-
-## Setting up clabverter
-
-We will also make use of the `clabverter` CLI to convert containerlab topology files to clabernetes manifests and apply them on our behalf. Clabverter is not a requirement to run clabernetes, but it is a helper tool to convert containerlab topologies to clabernetes resources and kubernetes objects.
-
-As per clabverter's [installation instructions](install.md#clabverter) we will setup an alias that uses the latest available clabverter container image:
-
---8<-- "docs/manual/clabernetes/install.md:cv-install"
 
 ## Installing Load Balancer
 
@@ -115,35 +107,43 @@ kubectl apply -f -
 
 We can check kube-vip daemonset pods are running on both worker nodes:
 
+```{.bash .no-select}
+kubectl get pods -A -o wide | grep kube-vip
+```
+
+<div class="embed-result">
 ```bash
-$ kubectl get pods -A -o wide | grep kube-vip
 kube-system          kube-vip-cloud-provider-54c878b6c5-qwvf5    1/1     Running   0          91s   10.244.0.5   c9s-control-plane   <none>           <none>
 kube-system          kube-vip-ds-fj7qp                           1/1     Running   0          9s    172.18.0.3   c9s-worker2         <none>           <none>
 kube-system          kube-vip-ds-z8q67                           1/1     Running   0          9s    172.18.0.4   c9s-worker          <none>           <none>
 ```
+</div>
 
-## Deploying a topology
+## Clabverter
 
-Clabernetes motto is "containerlab at scale" and therefore you may expect it to work with the same topology definition file format as containerlab does. Understandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on Kubernetes cluster as is.  
-To make sure you have a smooth sailing in the clabernetes waters we've created a clabernetes companion tool called `clabverter`; it that takes a containerlab topology file and converts it to several manifests native to Kubernetes and clabernetes. Clabverter then can also apply those manifests to the cluster on your behalf.
+Clabernetes motto is "containerlab at scale" and therefore we wanted to make it work with the same topology definition file format as containerlab does. Understandably though, the original [Containerlab's topology file](../../manual/topo-def-file.md) is not something you can deploy on Kubernetes cluster as is.
 
-So how do we do that? First we need to clone the lab repository:
+To make sure you have a smooth sailing in the clabernetes waters we've created a clabernetes companion tool called `clabverter`; it takes a containerlab topology file and converts it to several manifests native to Kubernetes and clabernetes. Clabverter then can also apply those manifests to the cluster on your behalf.
+
+Clabverter is not a requirement to run clabernetes, but it is a helper tool to convert containerlab topologies to clabernetes resources and kubernetes objects.
+
+As per clabverter's [installation instructions](install.md#clabverter) we will setup an alias that uses the latest available clabverter container image:
+
+--8<-- "docs/manual/clabernetes/install.md:cv-install"
+
+## Deploying with clabverter
+
+We are now ready to deploy our lab using clabernetes with the help of clabverter. First we clone the lab repository:
 
 ```bash title="Cloning the lab"
 git clone --depth 1 https://github.com/srl-labs/srlinux-vlan-handling-lab.git \
   && cd srlinux-vlan-handling-lab
 ```
 
-Then we create a namespace for our lab nodes. To make things easily identifiable we will name the namespace after the lab name with a c9s prefix:
-
-```
-kubectl create ns c9s-vlan
-```
-
 And then, while standing in the lab directory, let `clabverter` do its job:
 
 ```{.bash .no-select title="Converting the containerlab topology to clabernetes manifests and applying it"}
-clabverter --stdout --destinationNamespace c9s-vlan | \
+clabverter --stdout | \
 kubectl apply -f - #(1)!
 ```
 
@@ -151,137 +151,186 @@ kubectl apply -f - #(1)!
 
     We will cover what `clabverter` does in more details in the user manual some time later, but if you're curious, you can check the manifests it generates by running `clabverter --stdout > manifests.yml` and inspecting the `manifests.yml` file.
 
-In the background, `clabverter` created `Containerlab` custom resource (CR) in the `clabernetes` namespace that defines our topology and also created a set of config maps for each startup config used in the lab.
+In the background, `clabverter` created the `Topology` custom resource (CR) in the `c9s-vlan`[^5] namespace that defines our topology and also created a set of config maps for each startup config used in the lab.
 
 ## Verifying the deployment
 
-Once clabverter is done, clabernetes controller casts its spell which is called reconciliation in k8s world. It takes the spec of the `Containerlab` CR (custom resource) and creates a set of deployments, config maps and services that are required to deploy the lab.
+Once clabverter is done, clabernetes controller casts its spell known as *reconciliation* in the k8s world. It takes the spec of the `Topology` CR and creates a set of deployments, config maps and services that are required for lab's operation.
 
 Let's run some verification commands to see what we have in our cluster so far.
 
-Starting with listing `Containerlab` CRs in the `clabernetes` namespace:
+Starting with listing `Topology` CRs in the `c9s-vlan` namespace:
 
 ``` {.bash .no-select}
-kubectl get --namespace clabernetes Containerlab
+kubectl get --namespace c9s-vlan Topology
 ```
 
 <div class="embed-result">
 ```
-NAME    AGE
-srl02   3m27s
+NAME   KIND           AGE
+vlan   containerlab   14h
 ```
 </div>
 
-Looking in the Containerlab CR we can see that clabverter put original topology under the `spec.config` field. Clabernetes controller on its turn took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
+Looking in the Topology CR we can see that the original containerlab topology definition can be found under the `spec.definition.containerlab` field of the custom resource. Clabernetes took the original topology and split it to sub-topologies that are outlined in the `status.configs` section of the resource:
 
 ``` {.bash .no-select}
-kubectl get --namespace clabernetes Containerlabs srl02 -o yaml
+kubectl get --namespace c9s-vlan Topology vlan -o yaml
 ```
 
 <div class="embed-result" markdown>
-=== "spec.config"
-    ```yaml
-    spec:
-      config: |-
-        # topology documentation: http://containerlab.dev/lab-examples/two-srls/
-        name: srl02
+/// tab | `spec.config`
+```yaml
+spec:
+  definition:
+    containerlab: |-
+      name: vlan
 
-        topology:
+      topology:
+        nodes:
+          srl1:
+            kind: nokia_srlinux
+            image: ghcr.io/nokia/srlinux:23.10.1
+            startup-config: configs/srl.cfg
+
+          srl2:
+            kind: nokia_srlinux
+            image: ghcr.io/nokia/srlinux:23.10.1
+            startup-config: configs/srl.cfg
+
+          client1:
+            kind: linux
+            image: ghcr.io/srl-labs/alpine
+            binds:
+              - configs/client.sh:/config.sh
+            exec:
+              - "ash -c '/config.sh 1'"
+
+          client2:
+            kind: linux
+            image: ghcr.io/srl-labs/alpine
+            binds:
+              - configs/client.sh:/config.sh
+            exec:
+              - "ash -c '/config.sh 2'"
+
+        links:
+          # links between client1 and srl1
+          - endpoints: [client1:eth1, srl1:e1-1]
+
+          # inter-switch link
+          - endpoints: [srl1:e1-10, srl2:e1-10]
+
+          # links between client2 and srl2
+          - endpoints: [srl2:e1-1, client2:eth1]
+
+```
+///
+///tab | `status.configs`
+```yaml
+# --snip--
+status:
+  configs:
+    client1: |
+      name: clabernetes-client1
+      prefix: ""
+      topology:
+          defaults:
+              ports:
+                  - 60000:21/tcp
+                  # here goes a list of exposed ports
           nodes:
-            srl1:
-              kind: nokia_srlinux
-              image: ghcr.io/nokia/srlinux
-              startup-config: srl1.cfg
-            srl2:
-              kind: nokia_srlinux
-              image: ghcr.io/nokia/srlinux
-              startup-config: srl2.cfg
-
+              client1:
+                  kind: linux
+                  image: ghcr.io/srl-labs/alpine
+                  exec:
+                      - ash -c '/config.sh 1'
+                  binds:
+                      - configs/client.sh:/config.sh
+                  ports: []
           links:
-            - endpoints: ["srl1:e1-1", "srl2:e1-1"]
-    ```
-=== "status.configs"
-    ```yaml
-    # --snip--
-    status:
-      configs: |
-        srl1:
-            name: clabernetes-srl1
-            prefix: ""
-            topology:
-                defaults:
-                    ports:
-                        - 60000:21/tcp
-                        # here goes a list of exposed ports
-                nodes:
-                    srl1:
-                        kind: nokia_srlinux
-                        startup-config: srl1.cfg
-                        image: ghcr.io/nokia/srlinux
-                links:
-                    - endpoints:
-                        - srl1:e1-1
-                        - host:srl1-e1-1
-            debug: false
-        srl2:
-            name: clabernetes-srl2
-            prefix: ""
-            topology:
-                defaults:
-                    ports:
-                        - 60000:21/tcp
-                        # here goes a list of exposed ports
-                nodes:
-                    srl2:
-                        kind: nokia_srlinux
-                        startup-config: srl2.cfg
-                        image: ghcr.io/nokia/srlinux
-                links:
-                    - endpoints:
-                        - srl2:e1-1
-                        - host:srl2-e1-1
-    ```
+              - endpoints:
+                  - client1:eth1
+                  - host:client1-eth1
+      debug: false
+    client2: |
+      name: clabernetes-client2
+      # similar configuration as for client1
+    srl1: |
+      name: clabernetes-srl1
+      prefix: ""
+      topology:
+          defaults:
+              ports:
+                  - 60000:21/tcp
+                  # here goes a list of exposed ports
+          nodes:
+              srl1:
+                  kind: nokia_srlinux
+                  startup-config: configs/srl.cfg
+                  image: ghcr.io/nokia/srlinux:23.10.1
+                  ports: []
+          links:
+              - endpoints:
+                  - srl1:e1-1
+                  - host:srl1-e1-1
+              - endpoints:
+                  - srl1:e1-10
+                  - host:srl1-e1-10
+      debug: false
+    srl2: |
+      name: clabernetes-srl2
+      # similar configuration as for srl1
+```
+
+///
 </div>
 
-The sub-topologies are then deployed as deployments (which in their turn create pods) in the cluster, and containerlab is then run inside each pod deploying the topology as it would normally do on a single node:
+If you take a closer look at the sub-topologies you will see that they are just mini, one-node-each, containerlab topologies. Clabernetes deploys these sub-topologies as deployments in the cluster.
 
-``` {.bash .no-select title="Listing pods in srl02 namespace"}
-kubectl get pods --namespace clabernetes -o wide
+Each deployment pod runs containerlab inside, and containerlab runs the sub topology; each pod deploys the sub-topology as it would normally do on a single node :exploding_head::
+
+``` {.bash .no-select title="Listing pods in c9s-vlan namespace"}
+kubectl get pods --namespace c9s-vlan -o wide
 ```
 
 <div class="embed-result">
 ```
-NAME                          READY   STATUS    RESTARTS   AGE    IP           NODE          NOMINATED NODE   READINESS GATES
-clabernetes-manager-77bcc9484c-fn2gq   1/1     Running   0          11m   10.244.2.10   c9s-worker    <none>           <none>
-clabernetes-manager-77bcc9484c-hs9c7   1/1     Running   0          11m   10.244.2.9    c9s-worker    <none>           <none>
-clabernetes-manager-77bcc9484c-tvr42   1/1     Running   0          11m   10.244.1.10   c9s-worker2   <none>           <none>
-srl02-srl1-646dbff599-c65gw            1/1     Running   0          43s   10.244.1.11   c9s-worker2   <none>           <none>
-srl02-srl2-d654ffbcd-4l2q7             1/1     Running   0          43s   10.244.2.11   c9s-worker    <none>           <none>
+NAME                            READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+vlan-client1-699dbcfd8b-r2fgc   1/1     Running   0          14h   10.244.1.12   c9s-worker2   <none>           <none>
+vlan-client2-7db5d589c6-pb8pd   1/1     Running   0          14h   10.244.2.14   c9s-worker    <none>           <none>
+vlan-srl1-868f9858cb-xqkbf      1/1     Running   0          14h   10.244.2.13   c9s-worker    <none>           <none>
+vlan-srl2-676784b5cb-7gt22      1/1     Running   0          14h   10.244.1.13   c9s-worker2   <none>           <none>
 ```
 </div>
 
-Besides the `clabernetes-manager` pods, we see that two pods running (one per each lab node our original topology had) on different worker nodes[^2].
-These pods run containerlab inside in a docker-in-docker mode and each node deploys a subset of the original topology. We can enter the pod and use containerlab CLI to verify the topology:
+We see four pods running, one pod per each lab node of our original containerlab topology. Pods are scheduled on different worker nodes by the k8s scheduler ensuring optimal resource utilization[^2].
+
+Inside each pod, containerlab runs the sub-topology as if it would run on a standalone Linux system. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists.  
+We can enter the pod's shell and use containerlab CLI to verify the topology:
 
 ```{.bash .no-select}
-kubectl exec -n clabernetes -it srl02-srl1-646dbff599-c65gw -- bash
+kubectl exec -it -n c9s-vlan pod/vlan-client1-699dbcfd8b-r2fgc -- bash
 ```
 
 And in the pod's shell we swim in the familiar containerlab waters:
 
 ```{.bash .no-select}
-root@srl02-srl1-56675cdbfd-7tbk2:/clabernetes# clab inspect
+[*]─[client1]─[/clabernetes]
+└──> containerlab inspect
 ```
 
-<div class="embed-result">
+con <div class="embed-result">
+
 ```
 INFO[0000] Parsing & checking topology file: topo.clab.yaml
-+---+------+--------------+-----------------------+------+---------+----------------+----------------------+
-| # | Name | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+------+--------------+-----------------------+------+---------+----------------+----------------------+
-| 1 | srl1 | 80fae9ccf43b | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-+---+------+--------------+-----------------------+------+---------+----------------+----------------------+
++---+---------+--------------+-------------------------+-------+---------+----------------+----------------------+
+| # |  Name   | Container ID |          Image          | Kind  |  State  |  IPv4 Address  |     IPv6 Address     |
++---+---------+--------------+-------------------------+-------+---------+----------------+----------------------+
+| 1 | client1 | 52757a04756a | ghcr.io/srl-labs/alpine | linux | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
++---+---------+--------------+-------------------------+-------+---------+----------------+----------------------+
 ```
+
 </div>
 
 If you do not see any nodes in the `inspect` output give it a few minutes, as containerlab is pulling the image and starting the nodes. The logs of this process can be seen by running `tail -f clab.log`.
@@ -506,3 +555,4 @@ When these considerations are taken care of, you can use the same topology file 
 [^2]: They may run on the same node, this is up to the kubernetes scheduler whose job it is to schedule pods on the nodes it deems most appropriate.
 [^3]: Default exposed ports can be overwritten by a user via Containerlab CR.
 [^4]: Using containerlab's [vxlan tunneling workflow](../../manual/multi-node.md#vxlan-tunneling) to create tunnels.
+[^5]: The namespace name is derived from the name of the lab in the `.clab.yml` file.
