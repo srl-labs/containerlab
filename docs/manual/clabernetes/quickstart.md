@@ -317,11 +317,12 @@ And in the pod's shell we swim in the familiar containerlab waters:
 
 ```{.bash .no-select}
 [*]─[client1]─[/clabernetes]
-└──> containerlab inspect
+└──> containerlab inspect #(1)!
 ```
 
-con <div class="embed-result">
+1. If you do not see any nodes in the `inspect` output give it a few minutes, as containerlab is pulling the image and starting the nodes. Monitor this process with `tail -f containerlab.log`.
 
+<div class="embed-result">
 ```
 INFO[0000] Parsing & checking topology file: topo.clab.yaml
 +---+---------+--------------+-------------------------+-------+---------+----------------+----------------------+
@@ -333,25 +334,64 @@ INFO[0000] Parsing & checking topology file: topo.clab.yaml
 
 </div>
 
-If you do not see any nodes in the `inspect` output give it a few minutes, as containerlab is pulling the image and starting the nodes. The logs of this process can be seen by running `tail -f clab.log`.
-
 We can `cat topo.clab.yaml` to see the subset of a topology that containerlab started in this pod.
+///details | `topo.clab.yaml`
 
-!!!note
-    It is worth repeating that unmodified containerlab runs inside a pod as if it would've run on a Linux system in a standalone mode. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists.
+```
+[*]─[client1]─[/clabernetes]
+└──> cat topo.clab.yaml
+name: clabernetes-client1
+prefix: ""
+topology:
+    defaults:
+        ports:
+            - 60000:21/tcp
+            - 60001:22/tcp
+            - 60002:23/tcp
+            - 60003:80/tcp
+            - 60000:161/udp
+            - 60004:443/tcp
+            - 60005:830/tcp
+            - 60006:5000/tcp
+            - 60007:5900/tcp
+            - 60008:6030/tcp
+            - 60009:9339/tcp
+            - 60010:9340/tcp
+            - 60011:9559/tcp
+            - 60012:57400/tcp
+    nodes:
+        client1:
+            kind: linux
+            image: ghcr.io/srl-labs/alpine
+            exec:
+                - ash -c '/config.sh 1'
+            binds:
+                - configs/client.sh:/config.sh
+            ports: []
+    links:
+        - endpoints:
+            - client1:eth1
+            - host:client1-eth1
+debug: false
+
+```
+
+///
+
+It is worth reiterating, that unmodified containerlab runs inside a pod as if it would've run on a Linux system in a standalone mode. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists.
 
 ## Accessing the nodes
 
-There are two common ways to access the lab nodes deployed by clabernetes:
+There are two common ways to access the lab nodes deployed with clabernetes:
 
-1. External access using Load Balancer service.
-2. Entering the pod's shell and from there login to the running NOS. No LB is required.
+1. Using external address provided by the Load Balancer service.
+2. Entering the pod's shell and from there log in the running lab node. No load balancer required.
 
-We are going to show you both options.
+We are going to show you both options and you can choose the one that suits you best.
 
 ### Load Balancer
 
-Adding a Load Balancer to the k8s cluster makes accessing the nodes almost as easy as when working with containerlab. The kube-vip load balancer that we added a few steps before is going to create a LoadBalancer k8s service for each exposed port.
+Adding a Load Balancer to the k8s cluster makes accessing the nodes almost as easy as when working with containerlab. The kube-vip load balancer that we added before is going to provide an external IP address for a LoadBalancer k8s service that clabernetes creates for each deployment under its control.
 
 By default, clabernetes exposes[^3] the following ports for each lab node:
 
@@ -360,26 +400,34 @@ By default, clabernetes exposes[^3] the following ports for each lab node:
 | tcp      | `21`, `80`, `443`, `830`, `5000`, `5900`, `6030`, `9339`, `9340`, `9559`, `57400` |
 | udp      | `161`                                                                             |
 
-The good work that LB is doing can be listing services in the `clabernetes` namespace:
+Let's list the services in the `c9s-vlan` namespace (exluding the VXLAN services[^6]):
 
 ```{.bash .no-select}
-kubectl get -n clabernetes svc | grep -iv vx
+kubectl get -n c9s-vlan svc | grep -iv vx
 ```
 
 <div class="embed-result">
 ```
-NAME            TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                                                                                                                                                                   AGE
-srl02-srl1      LoadBalancer   10.96.120.2     172.18.1.10   161:30700/UDP,21:32307/TCP,22:31202/TCP,23:32412/TCP,80:31940/TCP,443:31832/TCP,830:30576/TCP,5000:30702/TCP,5900:31502/TCP,6030:31983/TCP,9339:31113/TCP,9340:30835/TCP,9559:32702/TCP,57400:32037/TCP   125m
-srl02-srl2      LoadBalancer   10.96.175.237   172.18.1.11   161:30810/UDP,21:32208/TCP,22:31701/TCP,23:31177/TCP,80:31229/TCP,443:31872/TCP,830:32395/TCP,5000:31799/TCP,5900:30292/TCP,6030:31442/TCP,9339:32298/TCP,9340:30475/TCP,9559:32595/TCP,57400:31253/TCP   125m
+NAME              TYPE           CLUSTER-IP      EXTERNAL-IP                               PORT(S)                                                                                                                                                                                                   AGE
+client1           ExternalName   <none>          vlan-client1.c9s-vlan.svc.cluster.local   <none>                                                                                                                                                                                                    15h
+client2           ExternalName   <none>          vlan-client2.c9s-vlan.svc.cluster.local   <none>                                                                                                                                                                                                    15h
+srl1              ExternalName   <none>          vlan-srl1.c9s-vlan.svc.cluster.local      <none>                                                                                                                                                                                                    15h
+srl2              ExternalName   <none>          vlan-srl2.c9s-vlan.svc.cluster.local      <none>                                                                                                                                                                                                    15h
+vlan-client1      LoadBalancer   10.96.232.165   172.18.1.10                               161:32442/UDP,21:32059/TCP,22:32030/TCP,23:30920/TCP,80:31205/TCP,443:32489/TCP,830:31231/TCP,5000:31769/TCP,5900:30902/TCP,6030:31583/TCP,9339:32089/TCP,9340:30311/TCP,9559:30974/TCP,57400:31386/TCP   15h
+vlan-client2      LoadBalancer   10.96.164.37    172.18.1.11                               161:30025/UDP,21:31127/TCP,22:30779/TCP,23:30542/TCP,80:31104/TCP,443:32142/TCP,830:30102/TCP,5000:31116/TCP,5900:31559/TCP,6030:30734/TCP,9339:32250/TCP,9340:31922/TCP,9559:30745/TCP,57400:30817/TCP   15h
+vlan-srl1         LoadBalancer   10.96.221.110   172.18.1.12                               161:30581/UDP,21:32591/TCP,22:31752/TCP,23:30164/TCP,80:32272/TCP,443:32365/TCP,830:30360/TCP,5000:30618/TCP,5900:30454/TCP,6030:32155/TCP,9339:32736/TCP,9340:32268/TCP,9559:31412/TCP,57400:30100/TCP   15h
+vlan-srl2         LoadBalancer   10.96.64.176    172.18.1.13                               161:32109/UDP,21:30903/TCP,22:31495/TCP,23:32174/TCP,80:31128/TCP,443:30720/TCP,830:32017/TCP,5000:30708/TCP,5900:32520/TCP,6030:31586/TCP,9339:31917/TCP,9340:31631/TCP,9559:32731/TCP,57400:32076/TCP   15h
 ```
 </div>
 
-The two LoadBalancer services provide external IPs (`172.18.1.10` and `172.18.1.11`) for the lab nodes. The long list of ports are the ports clabernetes exposes by default which spans both regular SSH as well as other common automation interfaces.
+We see the two service types in the `c9s-vlan` namespace: `ExternalName` and `LoadBalancer`.
 
-You can immediately SSH into one of the nodes using its External-IP:
+The LoadBalancer services (implemented by the `kube-vip`) provide external IPs for the lab nodes. The long list of ports are the ports clabernetes exposes by default which spans both regular SSH and other common management interfaces.
+
+For instance, we see that `srl1` node has been assigned `172.18.1.12` IP and we can immediately SSH into it from the outside world using the following command:
 
 ```{.text .no-select}
-ssh admin@172.18.1.10
+ssh admin@172.18.1.12
 ```
 
 <div class="embed-result">
@@ -400,7 +448,7 @@ ssh admin@172.18.1.10
 : Contact:     https://go.srlinux.dev/contact-sales            :
 ................................................................
 
-admin@172.18.1.10's password:
+admin@172.18.1.12's password:
 Using configuration file(s): []
 Welcome to the srlinux CLI.
 Type 'help' (and press <ENTER>) if you need any help using this.
@@ -412,56 +460,71 @@ A:srl1#
 
 Other services, like gNMI, JSON-RPC, SNMP are available as well since those ports are already exposed.
 
-???example "gNMI access"
-    ```{.bash .no-select}
-    gnmic -a 172.18.1.10 -u admin -p 'NokiaSrl1!' --skip-verify -e json_ietf \
-      get --path /system/information/version
-    ```
-    <div class="embed-result">
-    ```
-    [
-      {
-        "source": "172.18.1.10",
-        "timestamp": 1695423561467118891,
-        "time": "2023-09-23T01:59:21.467118891+03:00",
-        "updates": [
-          {
-            "Path": "srl_nokia-system:system/srl_nokia-system-info:information/version",
-            "values": {
-              "srl_nokia-system:system/srl_nokia-system-info:information/version": "v23.7.1-163-gd408df6a0c"
-            }
-          }
-        ]
-      }
-    ]
-    ```
-    </div>
+///details | "gNMI access"
+    type: example
 
-### Pod Shell
-
-Load Balancer makes it easy to get external access to the lab nodes, but don't panic if for whatever reason you can't install one.
-It is still possible to access the nodes without LB, it will just be less convenient.
-
-For example, to access `srl1` lab node in our k8s cluster we just need to figure out which pod runs this node.
-
-Since all pods are named after the nodes they are running, we can find the right one by listing all pods in a namespace:
-
-```bash
-kubectl get pods -n clabernetes | grep -iv manager 
+```{.bash .no-select}
+gnmic -a 172.18.1.12 -u admin -p 'NokiaSrl1!' --skip-verify -e json_ietf \
+  get --path /system/information/version
 ```
 
 <div class="embed-result">
 ```
-NAME                                   READY   STATUS    RESTARTS   AGE
-srl02-srl1-646dbff599-c65gw            1/1     Running   0          8m12s
-srl02-srl2-d654ffbcd-4l2q7             1/1     Running   0          8m12s
+[
+  {
+    "source": "172.18.1.12",
+    "timestamp": 1707828542585726740,
+    "time": "2024-02-13T14:49:02.58572674+02:00",
+    "updates": [
+      {
+        "Path": "srl_nokia-system:system/srl_nokia-system-info:information/version",
+        "values": {
+          "srl_nokia-system:system/srl_nokia-system-info:information/version": "v23.10.1-218-ga3fc1bea5a"
+        }
+      }
+    ]
+  }
+]
+```
+</div>
+///
+
+The `ExternalName` services are used to provide DNS resolution for the lab nodes. They are not accessible from outside the cluster, but they can be used by other pods in the same namespace to resolve the lab nodes' names to their IPs.
+
+For instance, the pods in the `c9s-vlan` namespace can resolve the `srl1` node's name to its IP. This enables name resolution workflow similar to what you'd have in a regular containerlab deployment.
+
+### Pod Shell
+
+Load Balancer makes it easy to get external access to the lab nodes, but don't panic if for whatever reason you can't install one. It is still possible to access the nodes without LB!
+
+For example, to access `srl1` lab node in our k8s cluster we may leverage `kubectl exec` command to get to the shell of the pod that runs `srl1` node.
+
+/// note
+You may have a stellar experience with [`k9s` project](https://k9scli.io/) that offers a terminal UI to interact with k8s clusters. It is a great tool to have in your toolbox.
+
+If Terminal UI is not your jam, take a look at `kubectl` [shell completions](https://kubernetes.io/docs/reference/kubectl/quick-reference/#kubectl-autocomplete). They come in super handy, install them if you haven't yet.
+///
+
+Since all pods are named after the nodes they are running, we can find the right one by listing all pods in a namespace:
+
+```bash
+kubectl get pods -n c9s-vlan
+```
+
+<div class="embed-result">
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+vlan-client1-699dbcfd8b-r2fgc   1/1     Running   0          16h
+vlan-client2-7db5d589c6-pb8pd   1/1     Running   0          16h
+vlan-srl1-868f9858cb-xqkbf      1/1     Running   0          16h
+vlan-srl2-676784b5cb-7gt22      1/1     Running   0          16h
 ```
 </div>
 
-Looking at the pod named `srl02-srl1-56675cdbfd-7tbk2` we understand that it runs `srl1` node we specified in the topology. To get shell access to this node we can run:
+Looking at the pod named `vlan-srl1-868f9858cb-xqkbf` we understand that it runs `srl1` node we specified in the topology. To get shell access to this node we can run:
 
 ```{.bash .no-select}
-kubectl -n clabernetes exec -it srl02-srl1-646dbff599-c65gw -- ssh admin@srl1
+kubectl -n c9s-vlan exec -it vlan-srl1-868f9858cb-xqkbf -- ssh admin@srl1
 ```
 
 We essentially execute `ssh admin@srl1` command inside the pod, as you'd normally do with containerlab.
@@ -479,7 +542,7 @@ Remember our manifest file we deployed in the beginning of this quickstart? It h
 ```yaml title=""
 # snip
 links:
-  - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+  - endpoints: ["srl1:e1-10", "srl2:e1-10"]
 ```
 
 How does clabernetes layout this link when the lab nodes srl1 and srl2 can be scheduled on different worker nodes? Well, clabernetes takes the original link definition as provided by a user and transforms it into a set of point-to-point VXLAN tunnels[^4] that stitch the nodes together.
@@ -487,7 +550,7 @@ How does clabernetes layout this link when the lab nodes srl1 and srl2 can be sc
 Two nodes appear to be connected to each other as if they were connected with a veth pair. We can check that LLDP neighbors are discovered on either other side of the link:
 
 ```{.bash .no-select}
-kubectl -n clabernetes exec -it srl02-srl1-56675cdbfd-7tbk2 -- \
+kubectl -n c9s-vlan exec -it vlan-srl1-868f9858cb-xqkbf -- \
     ssh admin@srl1 #(1)!
 ```
 
@@ -509,41 +572,61 @@ A:srl1# show system lldp neighbor
 </div>
 <div class="embed-result">
 ```
-  +--------------+-------------------+----------------------+---------------------+------------------------+----------------------+---------------+
-  |     Name     |     Neighbor      | Neighbor System Name | Neighbor Chassis ID | Neighbor First Message | Neighbor Last Update | Neighbor Port |
-  +==============+===================+======================+=====================+========================+======================+===============+
-  | ethernet-1/1 | 1A:48:00:FF:00:00 | srl2                 | 1A:48:00:FF:00:00   | 2 hours ago            | 2 seconds ago        | ethernet-1/1  |
-  +--------------+-------------------+----------------------+---------------------+------------------------+----------------------+---------------+
+A:srl1# show system lldp neighbor
+  +---------------+----------------+----------------+---------------+---------------+---------------+---------------+
+  |     Name      |    Neighbor    |    Neighbor    |   Neighbor    |   Neighbor    | Neighbor Last | Neighbor Port |
+  |               |                |  System Name   |  Chassis ID   | First Message |    Update     |               |
+  +===============+================+================+===============+===============+===============+===============+
+  | ethernet-1/10 | 1A:00:00:FF:00 | srl2           | 1A:00:00:FF:0 | 16 hours ago  | 3 seconds ago | ethernet-1/10 |
+  |               | :00            |                | 0:00          |               |               |               |
+  +---------------+----------------+----------------+---------------+---------------+---------------+---------------+
 ```
 </div>
 
-We can also make sure that our startup-configuration that was provided in [external files](https://github.com/srl-labs/containerlab/tree/main/lab-examples/srl02) in original topology is applied in good order and we can perform ping between two nodes:
+We can also make sure that our startup-configuration that was provided in [external files](https://github.com/srl-labs/srlinux-vlan-handling-lab/blob/main/configs) in original topology is applied in good order and we can perform the ping between two clients
 
-```text
---{ running }--[  ]--
-A:srl1# ping 192.168.0.1 network-instance default -c 2 
-Using network instance default
-PING 192.168.0.1 (192.168.0.1) 56(84) bytes of data.
-64 bytes from 192.168.0.1: icmp_seq=1 ttl=64 time=74.8 ms
-64 bytes from 192.168.0.1: icmp_seq=2 ttl=64 time=8.82 ms
-
---- 192.168.0.1 ping statistics ---
-2 packets transmitted, 2 received, 0% packet loss, time 1002ms
-rtt min/avg/max/mdev = 8.823/41.798/74.773/32.975 ms
+```bash
+kubectl exec -it -n c9s-vlan pod/vlan-client1-699dbcfd8b-r2fgc -- \
+docker exec -it client1 ping -c 2 10.1.0.2
 ```
 
-???warning "VXLAN and MTU"
-    VXLAN tunnels are susceptible to MTU issues. Check the MTU value for `vx-*` link in your pod to see what value has been set by the kernel and adjust your node's link/IP MTU accordingly.
+<div class="embed-result">
+```text
+PING 10.1.0.2 (10.1.0.2) 56(84) bytes of data.
+64 bytes from 10.1.0.2: icmp_seq=1 ttl=64 time=2.08 ms
+64 bytes from 10.1.0.2: icmp_seq=2 ttl=64 time=1.04 ms
 
-    ```bash
-    root@clab-srl02-srl1-55477468c4-vprj4:/clabernetes# ip l | grep vx
-    9: vx-srl1-e1-1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1400 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
-    ```
-    In our kind cluster that has a single network attached, the VXLAN tunnel is routed through the management network interface of the pod. It is possible to configure kind nodes to have more than one network and therefore have a dedicated network for the VXLAN tunnels with a higher MTU value.
+--- 10.1.0.2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 1.040/1.557/2.075/0.517 ms
+
+```
+
+</div>
+
+With the command above we:
+
+1. connected to the `vlan-client1-699dbcfd8b-r2fgc` that runs the `client1` node
+2. executed `ping` command inside the `client1` node to ping the `client2` node
+3. Ensured that the datapath stitching is working as expected
+
+/// details | VXLAN and MTU
+    type: warning
+VXLAN tunnels are susceptible to MTU issues. Check the MTU value for `vx-*` link in your pod to see what value has been set by the kernel and adjust your node's link/IP MTU accordingly.
+
+```bash
+[*]─[srl1]─[/clabernetes]
+└──> ip l | grep vx
+11: vx-srl1-e1-1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1400 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+12: vx-srl1-e1-10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1400 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+```
+
+In our kind cluster that has a single network attached, the VXLAN tunnel is routed through the management network interface of the pod. It is possible to configure kind nodes to have more than one network and therefore have a dedicated network for the VXLAN tunnels with a higher MTU value.
+///
 
 ## VM-based nodes?
 
-In this quickstart we used native containerized Network OS - SR Linux - as it is lightweight and publicly available. But what if you want to use a VM-based Network OS like Nokia SR OS, Cisco IOS-XRv or Juniper vMX? Can you do that with clabernetes?
+In this quickstart we used native containerized Network OS - [SR Linux](https://learn.srlinux.dev) - as it is lightweight and publicly available. But what if you want to use a VM-based Network OS like Nokia SR OS, Cisco IOS-XRv or Juniper vMX? Can you do that with clabernetes?
 
 Short answer is yes. Clabernetes should be able to run VM-based nodes as well, but your cluster nodes must support nested virtualization, same as you would need to run VM-based nodes in containerlab.
 
@@ -553,6 +636,7 @@ When these considerations are taken care of, you can use the same topology file 
 
 [^1]: In general there are no requirements for clabernetes from a kubernetes cluster perspective, however, many device types may have requirements for nested virtualization or specific CPU flags that your nodes would need to support in order to run the device.
 [^2]: They may run on the same node, this is up to the kubernetes scheduler whose job it is to schedule pods on the nodes it deems most appropriate.
-[^3]: Default exposed ports can be overwritten by a user via Containerlab CR.
+[^3]: Default exposed ports can be overwritten by a user via Topology CR.
 [^4]: Using containerlab's [vxlan tunneling workflow](../../manual/multi-node.md#vxlan-tunneling) to create tunnels.
 [^5]: The namespace name is derived from the name of the lab in the `.clab.yml` file.
+[^6]: VXLAN services are used for datapath stitching and are not meant to be accessed from outside the cluster.
