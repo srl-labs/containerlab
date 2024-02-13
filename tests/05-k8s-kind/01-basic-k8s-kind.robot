@@ -16,10 +16,12 @@ ${if1-name}         eth1
 Create Bridge
     # installing iproute for self-hosted runner, later self-hosted runner will have iproute2 installed by default
     ${result} =    Run Process
-    ...    sudo ip link add dev br01 type bridge && sudo ip link set dev br01 up"
+    ...    sudo ip link add dev br01 type bridge && sudo ip link set dev br01 up
     ...    shell=True
     Log    ${result.stderr}
     Log    ${result.stdout}
+
+    Should Be Equal As Integers    ${result.rc}    0
 
 Deploy ${lab-name} lab
     Log    ${CURDIR}
