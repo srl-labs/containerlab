@@ -66,10 +66,9 @@ When `graph` command is called with the `--dot` flag, containerlab will generate
 
 The dot file can be used to view the graphical representation of the topology either by rendering the dot file into a PNG file or using [online dot viewer](https://dreampuf.github.io/GraphvizOnline/).
 
-
 #### Mermaid
 
-When `graph` command is called with the `--mermaid` flag, containerlab will generate a graph description file in [Mermaid graph format](https://mermaid.js.org/syntax/flowchart.html). This is useful for embedding generated graph text to Markdown. Some Markdown renderer like GitHub or Notion supports rendering the Mermaid graph in the code block. When you are not satisfying the rendering result, you can import the generated text into [draw.io](https://draw.io) and edit it.
+When `graph` is called with the `--mermaid` flag containerlab generates a graph description file in [Mermaid graph format](https://mermaid.js.org/syntax/flowchart.html). Several [Markdown renders](https://mermaid.js.org/ecosystem/integrations-community.html) such as Github, Gitlab, and Notion support rendering embeded mermaid graphs in code blocks. If the results of the render are not satisfying the result can be imported into [draw.io](https://draw.io) and further edited.
 
 ### Online vs offline graphing
 
