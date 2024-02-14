@@ -152,6 +152,31 @@ topology:
               stage: healthy
 ```
 
+### Boot delay
+
+A predecessor of the Boot Order is the boot delay that can be set with `BOOT_DELAY` environment variable that the supported VM-based nodes will respect.
+
+Consider the following example where the first SR OS nodes will boot immediately, whereas the second node will sleep for 30 seconds and then start the boot process:
+
+```yaml
+name: bootdelay
+topology:
+  nodes:
+    sr1:
+      kind: nokia_sros
+      image: nokia_sros:21.2.R1
+      license: license-sros21.txt
+    sr2:
+      kind: nokia_sros
+      image: nokia_sros:21.2.R1
+      license: license-sros21.txt
+      env:
+        # boot delay in seconds
+        BOOT_DELAY: 30
+```
+
+This method is not as flexible as the Boot Order, since you rely on the fixed delay, and it doesn't allow for the dynamic boot order based on the node health.
+
 ### Memory optimization
 
 Typically a lab consists of a few types of VMs which are spawned and interconnected with each other. Consider a lab consisting of 5 interconnected routers; one router uses VM image X, and four routers use VM image Y.
