@@ -127,11 +127,34 @@ Containerlab offers several ways of connecting VM-based routers with the rest of
             CONNECTION_MODE: bridge # use `ovs` for openvswitch datapath
     ```
 
-### Boot delay
+### Boot order
 
 A simultaneous boot of many qemu nodes may stress the underlying system, which sometimes renders in a boot loop or system halt. If the container host doesn't have enough capacity to bear the simultaneous boot of many qemu nodes, it is still possible to successfully run them by scheduling their boot time.
 
-Delaying the boot process of specific nodes by a user-defined time will allow nodes to boot successfully while "gradually" loading the system. The boot delay can be set with `BOOT_DELAY` environment variable that supported `vr-xxxx` kinds will recognize.
+Starting with v0.51.0 users may define a "staged" boot process by defining the [`stages`](nodes.md#stages) and `wait-for` dependencies between the VM-based nodes.
+
+Consider the following example where the first SR OS nodes will boot immediately, whereas the second node will wait till the first node is reached the `healthy` stage:
+
+```yaml
+name: bootdelay
+topology:
+  nodes:
+    sr1:
+      kind: nokia_sros
+      image: nokia_sros:latest
+    sr2:
+      kind: nokia_sros
+      image: nokia_sros:latest
+      stages:
+        create:
+          wait-for:
+            - node: sr1
+              stage: healthy
+```
+
+### Boot delay
+
+A predecessor of the Boot Order is the boot delay that can be set with `BOOT_DELAY` environment variable that the supported VM-based nodes will respect.
 
 Consider the following example where the first SR OS nodes will boot immediately, whereas the second node will sleep for 30 seconds and then start the boot process:
 
@@ -151,6 +174,8 @@ topology:
         # boot delay in seconds
         BOOT_DELAY: 30
 ```
+
+This method is not as flexible as the Boot Order, since you rely on the fixed delay, and it doesn't allow for the dynamic boot order based on the node health.
 
 ### Memory optimization
 
