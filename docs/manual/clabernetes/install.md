@@ -66,8 +66,8 @@ Clabverter is versioned in the same way as Clabernetes, and the easiest way to u
 ///tab | latest version
 <!-- --8<-- [start:cv-install] -->
 ```bash title="set up <code>clabverter</code> alias"
-alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
-    sudo docker run -v $(pwd):/clabernetes/work --rm \
+alias clabverter="mkdir -p converted && \
+    sudo docker run --user ${UID}:${GID} -v ${PWD}:/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter"
 ```
 <!-- --8<-- [end:cv-install] -->
@@ -76,8 +76,8 @@ alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
 In case you need to install a specific version:
 
 ```bash
-alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
-    sudo docker run -v $(pwd):/clabernetes/work --rm \
+alias clabverter="mkdir -p converted && \
+    sudo docker run --user ${UID}:${GID} -v ${PWD}:/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter:0.0.22"
 ```
 
@@ -87,8 +87,8 @@ To use the latest development version of clabverter:
 
 ```bash
 sudo docker pull ghcr.io/srl-labs/clabernetes/clabverter:dev-latest && \
-alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
-    sudo docker run -v $(pwd):/clabernetes/work --rm \
+alias clabverter="mkdir -p converted && \
+    sudo docker run --user ${UID}:${GID} -v ${PWD}:/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter:dev-latest"
 ```
 
