@@ -42,7 +42,7 @@ We use `alpine/helm` container image here instead of installing the tool locally
 
 <!-- --8<-- [start:helm-alias] -->
 ```bash
-alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
+alias helm="docker run --network host -ti --rm -v ${PWD}:/apps -w /apps \
     -v ~/.kube:/root/.kube -v ~/.helm:/root/.helm \
     -v ~/.config/helm:/root/.config/helm \
     -v ~/.cache/helm:/root/.cache/helm \
