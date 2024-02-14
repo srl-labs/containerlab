@@ -58,7 +58,7 @@ A successful installation will result in a `clabernetes-manager` deployment of t
 the cluster:
 
 ```{.bash .no-select}
-kubectl get -n c9s pods -o wide #(1)!
+kubectl get -n c9s pods -o wide --namespace clabernetes #(1)!
 ```
 
 1. Note, that `clabernetes-manager` is installed as a 3-node deployment, and you can see that two pods might be in Init stay for a little while until the leader election is completed.
