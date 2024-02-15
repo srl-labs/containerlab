@@ -28,7 +28,7 @@ To upgrade to the latest version re-run the installation command and the latest 
 To install a specific clabernetes version add `--version` flag like so:
 
 ```bash
-helm upgrade --version 0.0.22 --install \
+helm upgrade --version 0.0.25 --install \
     clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
 ```
 
@@ -66,8 +66,8 @@ Clabverter is versioned in the same way as Clabernetes, and the easiest way to u
 ///tab | latest version
 <!-- --8<-- [start:cv-install] -->
 ```bash title="set up <code>clabverter</code> alias"
-alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
-    sudo docker run -v $(pwd):/clabernetes/work --rm \
+alias clabverter="sudo docker run --user $(id -u) \
+    -v $(pwd):/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter"
 ```
 <!-- --8<-- [end:cv-install] -->
@@ -76,8 +76,8 @@ alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
 In case you need to install a specific version:
 
 ```bash
-alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
-    sudo docker run -v $(pwd):/clabernetes/work --rm \
+alias clabverter="sudo docker run --user $(id -u) \
+    -v $(pwd):/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter:0.0.22"
 ```
 
@@ -86,9 +86,8 @@ alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
 To use the latest development version of clabverter:
 
 ```bash
-sudo docker pull ghcr.io/srl-labs/clabernetes/clabverter:dev-latest && \
-alias clabverter="mkdir -p converted && chown -R 65532:65532 converted && \
-    sudo docker run -v $(pwd):/clabernetes/work --rm \
+alias clabverter="sudo docker run --pull always --user $(id -u) \
+    -v $(pwd):/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter:dev-latest"
 ```
 
