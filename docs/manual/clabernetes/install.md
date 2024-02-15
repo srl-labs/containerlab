@@ -67,7 +67,7 @@ Clabverter is versioned in the same way as Clabernetes, and the easiest way to u
 <!-- --8<-- [start:cv-install] -->
 ```bash title="set up <code>clabverter</code> alias"
 alias clabverter="mkdir -p converted && \
-    sudo docker run --user $(id -u) -v$ (pwd):/clabernetes/work --rm \
+    sudo docker run --user $(id -u) -v $(pwd):/clabernetes/work --rm \
     ghcr.io/srl-labs/clabernetes/clabverter"
 ```
 <!-- --8<-- [end:cv-install] -->
