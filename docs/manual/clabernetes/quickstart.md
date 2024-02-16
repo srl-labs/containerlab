@@ -38,9 +38,11 @@ When the cluster is ready we can proceed with installing clabernetes.
 
 Clabernetes is [installed](install.md) into a kubernetes cluster using [helm](https://helm.sh):
 
-We use `alpine/helm` container image here instead of installing the tool locally; you can skip this step if you already have `helm` installed.
+We use `alpine/helm` container image here instead of installing Helm locally; you can skip this step if you already have `helm` installed.
 
 <!-- --8<-- [start:helm-alias] -->
+/// tab | For self-hosted
+
 ```bash
 alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     -v ~/.kube:/root/.kube -v ~/.helm:/root/.helm \
@@ -48,6 +50,21 @@ alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
     -v ~/.cache/helm:/root/.cache/helm \
     alpine/helm:3.12.3"
 ```
+
+///
+/// tab | For GCP/GKE
+GKE clusters require [`gke-gcloud-auth-plugin`][gke-auth-plugin] to be available. Make sure you have it installed and mounted into the container.
+
+```bash hl_lines="2"
+alias helm="docker run --network host -ti --rm -v $(pwd):/apps -w /apps \
+    -v /usr/bin/gke-gcloud-auth-plugin:/usr/bin/gke-gcloud-auth-plugin \
+    -v ~/.kube:/root/.kube -v ~/.helm:/root/.helm \
+    -v ~/.config/helm:/root/.config/helm \
+    -v ~/.cache/helm:/root/.cache/helm \
+    alpine/helm:3.12.3"
+```
+
+///
 <!-- --8<-- [end:helm-alias] -->
 
 --8<-- "docs/manual/clabernetes/install.md:chart-install"
@@ -633,6 +650,8 @@ Short answer is yes. Clabernetes should be able to run VM-based nodes as well, b
 Also you need to ensure that your VM-based container image is accessible to your cluster nodes, either via a public registry or a private one.
 
 When these considerations are taken care of, you can use the same topology file as you would use with containerlab. The only difference is that you need to specify the image in the topology file as a fully qualified image name, including the registry name.
+
+[gke-auth-plugin]: https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-access-for-kubectl#install_plugin
 
 [^1]: In general there are no requirements for clabernetes from a kubernetes cluster perspective, however, many device types may have requirements for nested virtualization or specific CPU flags that your nodes would need to support in order to run the device.
 [^2]: They may run on the same node, this is up to the kubernetes scheduler whose job it is to schedule pods on the nodes it deems most appropriate.
