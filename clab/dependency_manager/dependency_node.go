@@ -88,11 +88,11 @@ func (d *DependencyNode) addDepender(dependerStage types.WaitForStage, depender 
 }
 
 // MustWait returns true if the node needs to wait for the given stage, because dependers do exist.
-func (d *DependencyNode) MustWait(state types.WaitForStage) (bool, error) {
+func (d *DependencyNode) MustWait(state types.WaitForStage) bool {
 	if b, exists := d.mustWait[state]; exists {
-		return b, nil
+		return b
 	}
-	return false, fmt.Errorf("stage %q not found", d.name)
+	return false
 }
 
 // dependerNodeStage is used to keep track of waitgroups that should be decreased (unblocked)
