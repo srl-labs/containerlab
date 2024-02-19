@@ -45,6 +45,15 @@ func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
 		bridgeName: bridgeName,
 	}
 
+	chains, err := nftC.getChains("DOCKER-USER")
+	if err != nil {
+		return nil, err
+	}
+	if len(chains) == 0 {
+		log.Debug("nftables does not seem to be in use, no DOCKER-USER chain found.")
+		return nil, definitions.ErrNotAvailabel
+	}
+
 	return nftC, nil
 }
 
