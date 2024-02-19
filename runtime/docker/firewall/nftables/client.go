@@ -45,7 +45,7 @@ func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
 		bridgeName: bridgeName,
 	}
 
-	chains, err := nftC.getChains("DOCKER-USER")
+	chains, err := nftC.getChains(definitions.DockerFWUserChain)
 	if err != nil {
 		return nil, err
 	}
