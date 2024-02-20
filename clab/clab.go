@@ -589,6 +589,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				// health state processing
 				if node.MustWait(types.WaitForHealthy) {
+					node.EnterStage(ctx, types.WaitForHealthy)
 					// if there is a dependecy on the healthy state of this node, enter the checking procedure
 					for {
 						healthy, err := node.IsHealthy(ctx)
@@ -607,6 +608,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				// exit state processing
 				if node.MustWait(types.WaitForExit) {
+					node.EnterStage(ctx, types.WaitForExit)
 					// if there is a dependency on the healthy state of this node, enter the checking procedure
 					for {
 						status := node.GetContainerStatus(ctx)

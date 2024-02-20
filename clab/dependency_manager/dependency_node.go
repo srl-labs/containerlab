@@ -37,6 +37,23 @@ func NewDependencyNode(node nodes.Node) *DependencyNode {
 		d.depender[p] = nil
 	}
 
+	// check if Stage based execs exist, if so make sure it will be
+	// waited for the respective phases
+	hasExecs := len(d.Config().Stages.CreateLinks.ExecContainerCommands) > 0
+	if hasExecs {
+		d.mustWait[types.WaitForCreateLinks] = true
+	}
+
+	hasExecs = len(d.Config().Stages.Configure.ExecContainerCommands) > 0
+	if hasExecs {
+		d.mustWait[types.WaitForConfigure] = true
+	}
+
+	hasExecs = len(d.Config().Stages.Healthy.ExecContainerCommands) > 0
+	if hasExecs {
+		d.mustWait[types.WaitForHealthy] = true
+	}
+
 	return d
 }
 

@@ -104,16 +104,16 @@ func (s *Stages) Merge(other *Stages) error {
 
 type ExecContainer struct {
 	// list of commands to run on the host
-	ExecCommandsHost []string `yaml:"exec,omitempty"`
+	ExecContainerCommands []string `yaml:"exec,omitempty"`
 }
 
 func (e *ExecContainer) Merge(other *ExecContainer) {
-	e.ExecCommandsHost = append(e.ExecCommandsHost, other.ExecCommandsHost...)
+	e.ExecContainerCommands = append(e.ExecContainerCommands, other.ExecContainerCommands...)
 }
 
 func (e *ExecContainer) GetExecs() ([]*exec.ExecCmd, error) {
 	ex := []*exec.ExecCmd{}
-	for _, c := range e.ExecCommandsHost {
+	for _, c := range e.ExecContainerCommands {
 		newCmd, err := exec.NewExecCmdFromString(c)
 		if err != nil {
 			return nil, err
