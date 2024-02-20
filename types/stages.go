@@ -1,6 +1,10 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/srl-labs/containerlab/clab/exec"
+)
 
 const (
 	// WaitForCreate is the wait stage name for a node creation stage.
@@ -66,31 +70,31 @@ func (s *Stages) GetWaitFor() map[WaitForStage]WaitForList {
 func (s *Stages) Merge(other *Stages) error {
 	var err error
 	if other.Configure != nil {
-		err = s.Configure.Merge(&other.Configure.StageBase)
+		err = s.Configure.Merge(other.Configure)
 		if err != nil {
 			return err
 		}
 	}
 	if other.Create != nil {
-		err = s.Create.Merge(&other.Create.StageBase)
+		err = s.Create.Merge(other.Create)
 		if err != nil {
 			return err
 		}
 	}
 	if other.CreateLinks != nil {
-		err = s.CreateLinks.Merge(&other.CreateLinks.StageBase)
+		err = s.CreateLinks.Merge(other.CreateLinks)
 		if err != nil {
 			return err
 		}
 	}
 	if other.Healthy != nil {
-		err = s.Healthy.Merge(&other.Healthy.StageBase)
+		err = s.Healthy.Merge(other.Healthy)
 		if err != nil {
 			return err
 		}
 	}
 	if other.Exit != nil {
-		err = s.Exit.Merge(&other.Exit.StageBase)
+		err = s.Exit.Merge(other.Exit)
 		if err != nil {
 			return err
 		}
@@ -98,29 +102,100 @@ func (s *Stages) Merge(other *Stages) error {
 	return err
 }
 
+type ExecContainer struct {
+	// list of commands to run on the host
+	ExecCommandsHost []string `yaml:"exec,omitempty"`
+}
+
+func (e *ExecContainer) Merge(other *ExecContainer) {
+	e.ExecCommandsHost = append(e.ExecCommandsHost, other.ExecCommandsHost...)
+}
+
+func (e *ExecContainer) GetExecs() ([]*exec.ExecCmd, error) {
+	ex := []*exec.ExecCmd{}
+	for _, c := range e.ExecCommandsHost {
+		newCmd, err := exec.NewExecCmdFromString(c)
+		if err != nil {
+			return nil, err
+		}
+		ex = append(ex, newCmd)
+	}
+	return ex, nil
+}
+
 // StageCreate represents a creation stage of a given node.
 type StageCreate struct {
-	StageBase `yaml:",inline"`
+	StageBase     `yaml:",inline"`
+	ExecContainer `yaml:",inline"`
+}
+
+func (s *StageCreate) Merge(other *StageCreate) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+	s.ExecContainer.Merge(&other.ExecContainer)
+	return nil
 }
 
 // StageCreateLinks represents a stage of a given node when links are getting added to it.
 type StageCreateLinks struct {
-	StageBase `yaml:",inline"`
+	StageBase     `yaml:",inline"`
+	ExecContainer `yaml:",inline"`
+}
+
+func (s *StageCreateLinks) Merge(other *StageCreateLinks) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+	s.ExecContainer.Merge(&other.ExecContainer)
+	return nil
 }
 
 // StageConfigure represents a stage of a given node when it enters configuration workflow.
 type StageConfigure struct {
-	StageBase `yaml:",inline"`
+	StageBase     `yaml:",inline"`
+	ExecContainer `yaml:",inline"`
+}
+
+func (s *StageConfigure) Merge(other *StageConfigure) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+	s.ExecContainer.Merge(&other.ExecContainer)
+	return nil
 }
 
 // StageHealthy represents a stage of a given node when it reaches healthy status.
 type StageHealthy struct {
-	StageBase `yaml:",inline"`
+	StageBase     `yaml:",inline"`
+	ExecContainer `yaml:",inline"`
+}
+
+func (s *StageHealthy) Merge(other *StageHealthy) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+	s.ExecContainer.Merge(&other.ExecContainer)
+	return nil
 }
 
 // StageExit represents a stage of a given node when the node reaches exit state.
 type StageExit struct {
-	StageBase `yaml:",inline"`
+	StageBase     `yaml:",inline"`
+	ExecContainer `yaml:",inline"`
+}
+
+func (s *StageExit) Merge(other *StageExit) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+	s.ExecContainer.Merge(&other.ExecContainer)
+	return nil
 }
 
 // StageBase represents a common configuration stage.
