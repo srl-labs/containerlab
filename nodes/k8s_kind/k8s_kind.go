@@ -139,7 +139,10 @@ func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	}
 
 	// create the Provider with the above runtime based options
-	return cluster.NewProvider(kindProviderOptions), nil
+	return cluster.NewProvider(
+		kindProviderOptions,
+		cluster.ProviderWithLogger(newKindLogger(n.Cfg.ShortName, 0)),
+	), nil
 }
 
 // readClusterConfig reads the kind clusterconfig from a file.
