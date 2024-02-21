@@ -136,7 +136,7 @@ Starting with v0.51.0 users may define a "staged" boot process by defining the [
 Consider the following example where the first SR OS nodes will boot immediately, whereas the second node will wait till the first node is reached the `healthy` stage:
 
 ```yaml
-name: bootdelay
+name: boot-order
 topology:
   nodes:
     sr1:
@@ -164,7 +164,7 @@ A predecessor of the Boot Order is the boot delay that can be set with `BOOT_DEL
 Consider the following example where the first SR OS nodes will boot immediately, whereas the second node will sleep for 30 seconds and then start the boot process:
 
 ```yaml
-name: bootdelay
+name: boot-delay
 topology:
   nodes:
     sr1:
