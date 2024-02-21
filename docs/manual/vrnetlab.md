@@ -152,6 +152,11 @@ topology:
               stage: healthy
 ```
 
+/// note | Warning!
+    type: warning
+When using VM-based nodes and creating the dependencies for the heatlhy stage, it is important to ensure that no links exist between the nodes that depend on each other. This is because the VM-based node do not support link hot plugging and wait till all the links are attached to the container before starting the boot process. This may lead to a deadlock situation where the nodes are waiting for each other to boot.
+///
+
 ### Boot delay
 
 A predecessor of the Boot Order is the boot delay that can be set with `BOOT_DELAY` environment variable that the supported VM-based nodes will respect.
