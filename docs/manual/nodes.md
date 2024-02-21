@@ -1,3 +1,10 @@
+---
+search:
+  boost: 6
+---
+
+# Nodes
+
 Node object is one of the containerlab' pillars. Essentially, it is nodes and links what constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
 
 The node configuration is part of the [topology definition file](topo-def-file.md) and **may** consist of the following fields that we explain in details below.
@@ -178,12 +185,14 @@ topology:
         - /root/files:/root/files:ro # (2)!
         - somefile:/somefile # (3)!
         - ~/.ssh/id_rsa:/root/.ssh/id_rsa # (4)!
+        - /var/run/somedir # (5)!
 ```
 
 1. mount a host file found by the path `/usr/local/bin/gobgp` to a container under `/root/gobgp` (implicit RW mode)
 2. mount a `/root/files` directory from a host to a container in RO mode
 3. when a host path is given in a relative format, the path is considered relative to the topology file and not a current working directory.
 4. The `~` char will be expanded to a user's home directory.
+5. mount an anonymous volume to a container under `/var/run/somedir` (implicit RW mode)
 
 ???info "Bind variables"
     By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
@@ -640,61 +649,73 @@ topology:
         net.ipv6.icmp.ratelimit: 1000
 ```
 
-### wait-for
+### stages
 
-For the explicit definition of startup dependencies between nodes, the `wait-for` knob under the `kind` or `node` level can be used.
+Containerlab v0.51.0 introduces a new concept of **stages**. Stages are a way to define stages a node goes through during its lifecycle and the interdependencies between the different stages of different nodes in the lab.
 
-In the example below node _srl3_ will wait until _srl1_ and _srl2_ are in running state before _srl3_ gets created. The _client_ node will (via the definition in the _linux_ kind) wait for all three _srlX_ nodes to be created before it gets created.
+The stages are currently mainly used to host the `wait-for` knob, which is used to define the startup dependencies between nodes.
+
+The following stages have been defined for a node:
+
+- `create` - a node enters this stage when containerlab is about to create the node's container. The node finishes this stage when the container is created and is in the `created` state.
+- `create-links` - a node enters this stage when containerlab is about to attach the links to the node. The node finishes this stage when all the links have been attached to the node.
+- `configure` - a node enters this stage when containerlab is about to run post-deploy commands associated with the node. The node finishes this stage when post deployment commands have been completed.
+- `healthy` - this stage has no distinctive enter/exit points. It is used to define a stage where a node is considered healthy. The healthiness of a node is defined by the healthcheck configuration of the node and the appropriate container status.
+- `exit` - a node reaches the exit state when the container associated with the node has `exited` status.
+
+Stages can be defined on the `defaults`, `kind` and `node` levels.
+
+#### wait-for
+
+For the explicit definition of interstage dependencies between the nodes, the `wait-for` knob under the `stages` level can be used.
+
+In the example below node four nodes are defined with different stages and `wait-for` dependencies between the stages.
+
+1. `node1` will enter the `create` stage only after `node2` has **finished** its `create` stage.
+2. `node2` will enter its `create` stage only after `node3` has **finished** its `create-links` stage. This means that all the links associated with `node3` has been attached to the `node3` node.
+3. `node3` will enter its `create` stage only after `node4` has been found `healthy`. This means that `node4` container must be healthy for `node3` to enter the creation stage.
+4. `node4` doesn't "wait" for any of the nodes, but it defines its own healthcheck configuration.
 
 ```yaml
-name: waitfor
-topology:
-  kinds:
-    nokia_srlinux:
-      image: ghcr.io/nokia/srlinux
-    linux:
-      image: alpine:3
-      wait-for:
-        - srl1
-        - srl2
-        - srl3
-
   nodes:
-    srl1:
-      kind: nokia_srlinux
-    srl2:
-      kind: nokia_srlinux
-    srl3:
-      kind: nokia_srlinux
-      wait-for:
-        - srl1
-        - srl2
-    client:
-      kind: linux
+    node1:
+      stages:
+        create:
+          wait-for:
+            - node: node2
+              stage: create
+
+    node2:
+      stages:
+        create:
+          wait-for:
+            - node: node3
+              stage: create-links
+
+    node3:
+      stages:
+        create:
+          wait-for:
+            - node: node4
+              stage: healthy
+
+    node4:
+      healthcheck:
+        start-period: 5
+        interval: 1
+        test:
+          - CMD-SHELL
+          - cat /etc/os-release
 ```
 
-The built-in Dependency Manger takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph an make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode and looks like the following:
+Containerlab's built-in Dependency Manger takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph and make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode.
 
-```yaml
-DEBU[0004] Dependencies:
-srl2 -> [  ]
-srl3 -> [ srl1, srl2 ]
-client -> [ srl1, srl2, srl3 ]
-srl1 -> [  ] 
-DEBU[0004] - cycle check round 1 - 
-srl1 <- [ client, srl3 ]
-srl2 <- [ client, srl3 ]
-srl3 <- [ client ]
-client <- [  ] 
-DEBU[0004] - cycle check round 2 - 
-srl1 <- [ srl3 ]
-srl2 <- [ srl3 ]
-srl3 <- [  ] 
-DEBU[0004] - cycle check round 3 - 
-srl2 <- [  ]
-srl1 <- [  ] 
-DEBU[0004] node creation graph is successfully validated as being acyclic 
-```
+Note, that `wait-for` is a list, a node's stage may depend on several other nodes' stages.
+
+/// admonition | Usage scenarios
+    type: tip
+One of the use cases where `wait-for` might be crucial is when a number of VM-based nodes are deployed. Typically simultaneous deployment of VMs might lead to shortage of CPU resources and VMs might fail to boot. In such cases, `wait-for` can be used to define the order of VM deployment, thus ensuring that certain VMs enter their `create` stage after certain nodes have reached `healthy` status.
+///
 
 ### certificate
 
@@ -742,8 +763,9 @@ topology:
     srl:
       kind: nokia_srlinux
       certificate:
-        SANs:
+        sans:
           - "test.com"
+          - 192.168.96.155
 ```
 
 ### healthcheck

@@ -1,9 +1,9 @@
 BIN_DIR = $(CURDIR)/bin
 BINARY = $(BIN_DIR)/containerlab
-MKDOCS_VER = 9.1.4
+MKDOCS_VER = 9.5.9
 # insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
 # make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
-MKDOCS_INS_VER = 9.1.4-insiders-4.32.4-hellt
+MKDOCS_INS_VER = 9.5.9-insiders-4.52.2-hellt
 
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
@@ -61,7 +61,7 @@ robot-test: build-debug
 MOCKDIR = ./mocks
 .PHONY: mocks-gen
 mocks-gen: mocks-rm ## Generate mocks for all the defined interfaces.
-	go install github.com/golang/mock/mockgen@v1.6.0
+	go install go.uber.org/mock/mockgen@latest
 	mockgen -package=mocknodes -source=nodes/node.go -destination=$(MOCKDIR)/mocknodes/node.go
 	mockgen -package=mocks -source=clab/dependency_manager/dependency_manager.go -destination=$(MOCKDIR)/dependency_manager.go
 	mockgen -package=mockruntime -source=runtime/runtime.go -destination=$(MOCKDIR)/mockruntime/runtime.go
@@ -121,7 +121,7 @@ oci-push: build-with-podman
 
 oci-arm-push: build-linux-arm64
 	@echo
-	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - ./containerlab deploy.... Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
+	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - do `chmod +x ./containerlab` and then `./containerlab deploy`. Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
 	@echo 'If https proxy is configured in your environment, pass the proxies via --env HTTPS_PROXY="<proxy-address>" flag of the docker run command.'
 	@echo ""
 	docker run --rm -v $(CURDIR)/bin:/workspace -v $${HOME}/.docker/config.json:/root/.docker/config.json ghcr.io/oras-project/oras:v1.1.0 push ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH) ./containerlab

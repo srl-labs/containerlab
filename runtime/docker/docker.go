@@ -331,7 +331,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
 	}
-	err = d.installIPTablesFwdRule()
+	err = d.installFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules install: %v", err)
 	}
@@ -368,7 +368,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		return err
 	}
 
-	err = d.deleteIPTablesFwdRule()
+	err = d.deleteFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules removal: %v", err)
 	}
@@ -387,7 +387,7 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 }
 
 // CreateContainer creates a docker container (but does not start it).
-func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { //skipcq: GO-R1005
+func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { // skipcq: GO-R1005
 	log.Infof("Creating container: %q", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
@@ -1002,4 +1002,17 @@ func (d *DockerRuntime) containerPid(ctx context.Context, cID string) (int, erro
 		return 0, fmt.Errorf("container %q cannot be found", cID)
 	}
 	return inspect.State.Pid, nil
+}
+
+// IsHealthy returns true is the container is reported as being healthy, false otherwise.
+func (d *DockerRuntime) IsHealthy(ctx context.Context, cID string) (bool, error) {
+	inspect, err := d.Client.ContainerInspect(ctx, cID)
+	if err != nil {
+		return false, err
+	}
+	// catch no healthchecks defined
+	if inspect.State.Health == nil {
+		return false, fmt.Errorf("no health information available for container: %s", cID)
+	}
+	return inspect.State.Health.Status == "healthy", nil
 }

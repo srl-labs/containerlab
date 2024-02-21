@@ -13,7 +13,7 @@ on:
 env:
   GO_VER: "1.20.2"
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 9.1.4-insiders-4.32.4-hellt
+  MKDOCS_INS_VER: 9.5.9-insiders-4.52.2-hellt
   GORELEASER_VER: v1.11.4
   PY_VER: "3.10"
 
@@ -314,6 +314,14 @@ jobs:
     with:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
 
+  sros-tests:
+    uses: ./.github/workflows/sros-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+    with:
+      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-22.04
@@ -326,6 +334,8 @@ jobs:
       - ixiac-one-basic-tests
       - vxlan-tests
       - kind-tests
+      - sros-tests
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -347,7 +357,9 @@ jobs:
         run: make convert-coverage
 
       - name: Upload coverage to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   docs-test:
     runs-on: ubuntu-22.04

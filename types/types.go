@@ -181,10 +181,9 @@ type NodeConfig struct {
 	Memory string  `json:"memory,omitempty"`
 
 	// Extra node parameters
-	Extras  *Extras    `json:"extras,omitempty"`
-	WaitFor []string   `json:"wait-for,omitempty"`
-	DNS     *DNSConfig `json:"dns,omitempty"`
-
+	Extras *Extras    `json:"extras,omitempty"`
+	Stages *Stages    `json:"stages,omitempty"`
+	DNS    *DNSConfig `json:"dns,omitempty"`
 	// Kind parameters
 	//
 	// IsRootNamespaceBased flag indicates that a certain nodes network

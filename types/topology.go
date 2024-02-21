@@ -472,14 +472,31 @@ func (t *Topology) GetNodeExtras(name string) *Extras {
 	return t.GetDefaults().GetExtras()
 }
 
-// GetWaitFor return the wait-for configuration for the given node.
-func (t *Topology) GetWaitFor(name string) []string {
-	if ndef, ok := t.Nodes[name]; ok {
-		return utils.MergeStringSlices(
-			t.GetKind(t.GetNodeKind(name)).GetWaitFor(),
-			ndef.GetWaitFor())
+// GetStages return the configuration stages set for the given node.
+// It merges the default, kind and node stages into a single Stages struct
+// with node stages taking precedence over kind stages and default stages.
+func (t *Topology) GetStages(name string) (*Stages, error) {
+	s := NewStages()
+
+	// default Stages
+	defaultStages := t.GetDefaults().Stages
+	if defaultStages != nil {
+		s.Merge(defaultStages)
 	}
-	return nil
+
+	// kind Stages
+	kindStages := t.GetKind(t.GetNodeKind(name)).GetStages()
+	if kindStages != nil {
+		s.Merge(kindStages)
+	}
+
+	// node Stages
+	nodeStages := t.Nodes[name].GetStages()
+	if nodeStages != nil {
+		s.Merge(nodeStages)
+	}
+
+	return s, nil
 }
 
 func (t *Topology) ImportEnvs() {

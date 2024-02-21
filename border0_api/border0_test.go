@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/h2non/gock"
 	"github.com/srl-labs/containerlab/mocks/mocknodes"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 )
 
 func TestLogin(t *testing.T) {
@@ -226,7 +226,18 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 		&types.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node2",
-			WaitFor:   []string{"node1"},
+			Stages: &types.Stages{
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node1",
+								Stage: types.WaitForCreate,
+							},
+						},
+					},
+				},
+			},
 			Publish: []string{
 				"tls/22",
 				"tls/23/myfunnypolicy",
@@ -242,8 +253,23 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:       "alpine:3",
 			NetworkMode: "container:node2",
 			ShortName:   "node3",
-			WaitFor:     []string{"node1", "node2"},
-			LongName:    "clab-TestTopo-node3",
+			Stages: &types.Stages{
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node1",
+								Stage: types.WaitForCreate,
+							},
+							&types.WaitFor{
+								Node:  "node2",
+								Stage: types.WaitForCreate,
+							},
+						},
+					},
+				},
+			},
+			LongName: "clab-TestTopo-node3",
 		},
 	).AnyTimes()
 
@@ -265,7 +291,22 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 			Image:           "alpine:3",
 			MgmtIPv4Address: "172.10.10.2",
 			ShortName:       "node5",
-			WaitFor:         []string{"node3", "node4"},
+			Stages: &types.Stages{
+				Configure: &types.StageConfigure{
+					StageBase: types.StageBase{
+						WaitFor: types.WaitForList{
+							&types.WaitFor{
+								Node:  "node3",
+								Stage: types.WaitForCreate,
+							},
+							&types.WaitFor{
+								Node:  "node4",
+								Stage: types.WaitForCreate,
+							},
+						},
+					},
+				},
+			},
 			Publish: []string{
 				"tls/22",
 				"tls/25/test,additionalpolicy",

@@ -36,6 +36,7 @@ nav:
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
+          - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
           - RARE/freeRtr: manual/kinds/rare-freertr.md
@@ -50,6 +51,7 @@ nav:
           - manual/clabernetes/index.md
           - Install: manual/clabernetes/install.md
           - Quickstart: manual/clabernetes/quickstart.md
+          - Packet capture in c9s: manual/clabernetes/pcap.md
       - Node filtering: manual/node-filtering.md
       - Publish ports: manual/published-ports.md
       - Multi-node labs: manual/multi-node.md
@@ -114,6 +116,7 @@ nav:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
+      - "0.51": rn/0.51.md
       - "0.50": rn/0.50.md
       - "0.49": rn/0.49.md
       - "0.48": rn/0.48.md
@@ -192,6 +195,7 @@ theme:
     - toc.follow
     - content.tooltips
     - navigation.indexes
+    - content.footnote.tooltips
 
   language: en
   palette:
@@ -268,8 +272,8 @@ markdown_extensions:
   - pymdownx.critic
   - pymdownx.details
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       line_spans: __span
       anchor_linenums: true

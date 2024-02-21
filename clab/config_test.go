@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/containers/podman/v4/pkg/util"
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
@@ -22,6 +21,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func setupTestCase(t *testing.T) func(t *testing.T) {
@@ -75,9 +75,6 @@ func TestLicenseInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// fmt.Println(c.Config.Topology.Defaults)
-			// fmt.Println(c.Config.Topology.Kinds)
-			// fmt.Println(c.Config.Topology.Nodes)
 			if filepath.Base(c.Nodes["node1"].Config().License) != tc.want {
 				t.Fatalf("wanted '%s' got '%s'", tc.want, c.Nodes["node1"].Config().License)
 			}

@@ -13,7 +13,8 @@ Every lab emulation software must provide its users with the packet capturing ab
 Containerlab offers a simple way to capture the packets from any interface of any node in the lab. This article will explain how to do that.
 
 ///tip
-If you are looking for a free Web UI for packet capture with Wireshark, checkout out our [Edgeshark integration](#edgeshark-integration).
+
+If you are looking for a free Web UI for packet capture with Wireshark, check out our [Edgeshark integration](#edgeshark-integration).
 ///
 
 Consider the following lab topology which highlights the typical points of packet capture.
@@ -202,6 +203,12 @@ ssh -L 5001:localhost:5001 $containerlab_host
 Then open your browser and navigate to `http://localhost:5001` to see the Edgeshark UI.
 ///
 
+Check out the Edgeshark & Containerlab integration in action:
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/iY90a_Gn5W0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
 ### Wireshark and system configuration
 
 There is a small price one needs to pay to make integrate Edgeshark with Wireshark, it consists of two steps:
@@ -215,10 +222,19 @@ Luckily, you only need to do it once and it will work for all the future capture
 
 There was a tiny gap in MacOS support, but we contributed the necessary piece[^2] and here is how you configure your MacOS system to work with Edgeshark:
 
-1. Download the zip file with the AppleScript that enables the `packetflix://` URL schema handling, unarchive it and move the EdgeShark-handler script to the Applications folder.
-2. Download the [external capture plugin](https://discord.com/channels/@me/839743608013193236/1204822102109192242) and copy it to the `/Applications/Wireshark.app/Contents/MacOS/extcap/` directory.
+1. Download the zip file with the AppleScript that enables the `packetflix://` URL schema handling, unarchive it and move the EdgeShark-handler script to the Applications folder. Here is the script that does all that, run it from your MacOS:
 
-With these steps done, you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
+    ```bash
+    mkdir -p /tmp/pflix-handler && cd /tmp/pflix-handler && \
+    rm -rf packetflix-handler.zip packetflix-handler.app __MACOSX && \
+    curl -sLO https://github.com/srl-labs/containerlab/files/14278951/packetflix-handler.zip && \
+    unzip packetflix-handler.zip && \
+    sudo mv packetflix-handler.app /Applications
+    ```
+
+2. Download the [external capture plugin](https://github.com/siemens/cshargextcap/releases/latest) for Darwin OS and your architecture, unarchive and copy it to the `/Applications/Wireshark.app/Contents/MacOS/extcap/` directory.
+
+With these steps done[^3], you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
 
 ## Examples
 
@@ -298,4 +314,5 @@ ip netns exec $netns_name ip link
 
 [^1]: It is more than just a UI for Wireshark, but in the context of pcap capture we focus on this feature solely.
 [^2]: https://github.com/siemens/cshargextcap/issues/14#issuecomment-1932267889
+[^3]: You may be asked to allow running the application downloaded from Internet as per MacOS security policy.
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

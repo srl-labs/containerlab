@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/mod/semver"
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -522,6 +521,8 @@ type srlTemplateData struct {
 	// before the prompt.
 	EnableCustomPrompt bool
 	CustomPrompt       string
+	// SNMPConfig is a string containing SNMP configuration
+	SNMPConfig string
 }
 
 // tplIFace template interface struct.
@@ -549,6 +550,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		MgmtMTU:    0,
 		MgmtIPMTU:  0,
 		DNSServers: n.Config().DNS.Servers,
+		SNMPConfig: snmpv2Config,
 	}
 
 	n.setVersionSpecificParams(&tplData)
@@ -809,23 +811,4 @@ gpgcheck=0`
 	s.Cfg.Binds = append(s.Cfg.Binds, aptPath+":/etc/apt/sources.list.d/srlinux.list:ro")
 
 	return nil
-}
-
-// setVersionSpecificParams sets version specific parameters in the template data struct
-// to enable/disable version-specific configuration blocks in the config template
-// or prepares data to conform to the expected format per specific version.
-func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
-	v := n.swVersion.String()
-
-	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
-	// so we add the keys to the template data for rendering.
-	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.major == "0") {
-		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
-	}
-
-	// in srlinux v23.10+ till 24.3 we need to enable GNMI unix socket services to enable
-	// communications over unix socket (e.g. NDK agents)
-	if semver.Compare(v, "v23.10") >= 0 && semver.Compare(v, "v24.3") < 0 {
-		tplData.EnableGNMIUnixSockServices = true
-	}
 }

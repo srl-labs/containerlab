@@ -63,7 +63,8 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 
 	// set the kind image, if provided
 	if n.Cfg.Image != "" {
-		clusterCreateOptions = append(clusterCreateOptions, cluster.CreateWithNodeImage(n.Cfg.Image))
+		clusterCreateOptions = append(clusterCreateOptions,
+			cluster.CreateWithNodeImage(n.Cfg.Image))
 	}
 
 	// Read the kind cluster config
@@ -138,7 +139,10 @@ func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	}
 
 	// create the Provider with the above runtime based options
-	return cluster.NewProvider(kindProviderOptions), nil
+	return cluster.NewProvider(
+		kindProviderOptions,
+		cluster.ProviderWithLogger(newKindLogger(n.Cfg.ShortName, 0)),
+	), nil
 }
 
 // readClusterConfig reads the kind clusterconfig from a file.

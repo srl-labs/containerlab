@@ -49,6 +49,8 @@ type DefaultNode struct {
 	// State of the node
 	state      state.NodeState
 	statemutex sync.RWMutex
+	// links created wg
+	linksCreated *sync.WaitGroup
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -60,6 +62,7 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		OverwriteNode:    n,
 		LicensePolicy:    types.LicensePolicyNone,
 		SSHConfig:        types.NewSSHConfig(),
+		linksCreated:     &sync.WaitGroup{},
 	}
 
 	return dn
@@ -70,6 +73,10 @@ func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d
 func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
 func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
+
+func (d *DefaultNode) WaitForAllLinksCreated() {
+	d.linksCreated.Wait()
+}
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
@@ -178,6 +185,24 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericConta
 	}
 
 	return cnts, err
+}
+
+func (d *DefaultNode) RunExecFromConfig(ctx context.Context, ec *exec.ExecCollection) error {
+	for _, e := range d.Config().Exec {
+		exec, err := exec.NewExecCmdFromString(e)
+		if err != nil {
+			log.Warnf("Failed to parse the command string: %s, %v", e, err)
+		}
+
+		res, err := d.OverwriteNode.RunExec(ctx, exec)
+		if err != nil {
+			// kinds which do not support exec functionality are skipped
+			continue
+		}
+
+		ec.Add(d.GetShortName(), res)
+	}
+	return nil
 }
 
 func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
@@ -298,6 +323,7 @@ type NodeOverwrites interface {
 	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	GetContainerName() string
 	VerifyLicenseFileExists(context.Context) error
+	RunExec(context.Context, *exec.ExecCmd) (*exec.ExecResult, error)
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -377,8 +403,9 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 	// if license is provided check path exists
 	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
 	if !utils.FileExists(rlic) {
-		return fmt.Errorf("license file of node %q not found by the path %s", d.Config().ShortName, rlic)
+		return fmt.Errorf("license file for node %q is not found by the path %s", d.Config().ShortName, rlic)
 	}
+
 	return nil
 }
 
@@ -447,7 +474,13 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 		return err
 	}
 	// execute the given function
-	return netns.Do(f)
+	err = netns.Do(f)
+	if err != nil {
+		return err
+	}
+	// indicate this link is created
+	d.linksCreated.Done()
+	return nil
 }
 
 // ExecFunction executes the given function in the nodes network namespace.
@@ -477,6 +510,7 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 
 func (d *DefaultNode) AddLink(l links.Link) {
 	d.Links = append(d.Links, l)
+	d.linksCreated.Add(1)
 }
 
 func (d *DefaultNode) AddEndpoint(e links.Endpoint) {
@@ -489,7 +523,7 @@ func (d *DefaultNode) GetEndpoints() []links.Endpoint {
 
 // GetLinkEndpointType returns a veth link endpoint type for default nodes.
 // The LinkEndpointTypeVeth indicates a veth endpoint which doesn't require special handling.
-func (d *DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
+func (*DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
 	return links.LinkEndpointTypeVeth
 }
 
@@ -523,4 +557,12 @@ func (d *DefaultNode) SetState(s state.NodeState) {
 
 func (d *DefaultNode) GetSSHConfig() *types.SSHConfig {
 	return d.SSHConfig
+}
+
+func (d *DefaultNode) GetContainerStatus(ctx context.Context) runtime.ContainerStatus {
+	return d.Runtime.GetContainerStatus(ctx, d.GetContainerName())
+}
+
+func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
+	return d.Runtime.IsHealthy(ctx, d.GetContainerName())
 }

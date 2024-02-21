@@ -66,8 +66,8 @@ type NodeDefinition struct {
 	Sysctls map[string]string `yaml:"sysctls,omitempty"`
 	// Extra options, may be kind specific
 	Extras *Extras `yaml:"extras,omitempty"`
-	// List of node names to wait for before satarting this particular node
-	WaitFor []string `yaml:"wait-for,omitempty"`
+	// Deployment stages
+	Stages *Stages `yaml:"stages,omitempty"`
 	// DNS configuration
 	DNS *DNSConfig `yaml:"dns,omitempty"`
 	// Certificate configuration
@@ -352,11 +352,11 @@ func (n *NodeDefinition) GetExtras() *Extras {
 	return n.Extras
 }
 
-func (n *NodeDefinition) GetWaitFor() []string {
+func (n *NodeDefinition) GetStages() *Stages {
 	if n == nil {
-		return []string{}
+		return nil
 	}
-	return n.WaitFor
+	return n.Stages
 }
 
 func (n *NodeDefinition) GetDns() *DNSConfig {

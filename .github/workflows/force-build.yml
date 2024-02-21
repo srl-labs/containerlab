@@ -7,14 +7,15 @@ on:
 
 # make sure those env vars are aligned with the ones in ci-cd.yml workflow
 env:
-  GOVER: 1.20.2
+  GO_VER: "1.20.2"
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 9.1.4-insiders-4.32.4-hellt
+  MKDOCS_INS_VER: 9.5.9-insiders-4.52.2-hellt
   GORELEASER_VER: v1.11.4
+  PY_VER: "3.10"
 
 jobs:
   get-tag:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       git_tag: ${{ steps.git_tag.outputs.git_tag }}
     steps:
@@ -31,7 +32,7 @@ jobs:
   build-and-release:
     needs: get-tag
     if: ${{ needs.get-tag.outputs.git_tag != '' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +61,7 @@ jobs:
 
   publish-docs:
     needs: build-and-release
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: contains(github.ref, '-') != true # do not publish docs for beta releases which will have something like v0.0.0-0.33.0-beta
     steps:
       - name: Checkout

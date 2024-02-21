@@ -62,22 +62,19 @@ The `group` property set to the predefined value will automatically auto-align t
 
 #### Graphviz
 
-When `graph` command is called without the `--srv` flag, containerlab will generate a [graph description file in dot format](https://en.wikipedia.org/wiki/DOT_(graph_description_language)).
+When `graph` command is called with the `--dot` flag, containerlab will generate a [graph description file in dot format](https://en.wikipedia.org/wiki/DOT_(graph_description_language)).
 
 The dot file can be used to view the graphical representation of the topology either by rendering the dot file into a PNG file or using [online dot viewer](https://dreampuf.github.io/GraphvizOnline/).
 
-
 #### Mermaid
 
-When `graph` command is called with the `--mermaid` flag, containerlab will generate a graph description file in [Mermaid graph format](https://mermaid.js.org/syntax/flowchart.html). This is useful for embedding generated graph text to Markdown. Some Markdown renderer like GitHub or Notion supports rendering the Mermaid graph in the code block. When you are not satisfying the rendering result, you can import the generated text into [draw.io](https://draw.io) and edit it.
+When `graph` is called with the `--mermaid` flag containerlab generates a graph description file in [Mermaid graph format](https://mermaid.js.org/syntax/flowchart.html). Several [Markdown renders](https://mermaid.js.org/ecosystem/integrations-community.html) such as Github, Gitlab, and Notion support rendering embeded mermaid graphs in code blocks. If the results of the render are not satisfying the result can be imported into [draw.io](https://draw.io) and further edited.
 
 ### Online vs offline graphing
 
-When HTML graph option is used, containerlab will try to build the topology graph by inspecting the running containers which are part of the lab. This essentially means, that the lab must be running. Although this method provides some additional details (like IP addresses), it is not always convenient to run a lab to see its graph.
+If the lab is running containerlab will try to build the graph by inspecting the running containers which are part of the lab. This method provides additional details (like IP addresses). It is possible to opt out of this behavior by using the --offline flag.
 
-The other option is to use the topology file solely to build the graph. This is done by adding `--offline` flag.
-
-If `--offline` flag was not provided and no containers were found matching the lab name, containerlab will use the topo file only (as if offline mode was set).
+If --offline flag was not provided and no containers were found matching the lab name, containerlab will use the topo file only (as if offline mode was set).
 
 ### Usage
 
