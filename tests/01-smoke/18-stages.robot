@@ -26,7 +26,7 @@ Pre-Pull Image
 
 Deploy ${lab-name} lab
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -d -t ${CURDIR}/${lab-file} 
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -d -t ${CURDIR}/${lab-file}
     ...    shell=True
 
     Log    ${output.stdout}

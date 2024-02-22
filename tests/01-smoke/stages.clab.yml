@@ -10,7 +10,7 @@ topology:
     image: debian:bookworm-slim
   nodes:
     node1:
-      cmd: sh -c "date +%s%N > /tmp/time & sleep 60s"
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
       stages:
         create:
           wait-for:
@@ -18,7 +18,7 @@ topology:
               stage: create
 
     node2:
-      cmd: sh -c "date +%s%N > /tmp/time & sleep 60s"
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
       stages:
         create:
           wait-for:
@@ -26,7 +26,7 @@ topology:
               stage: create-links
 
     node3:
-      cmd: sh -c "date +%s%N > /tmp/time & sleep 60s"
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
       stages:
         create:
           wait-for:
@@ -34,7 +34,7 @@ topology:
               stage: healthy
 
     node4:
-      cmd: sh -c "date +%s%N > /tmp/time & sleep 60s"
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
       healthcheck:
         start-period: 5
         interval: 1
