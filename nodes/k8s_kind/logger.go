@@ -9,7 +9,7 @@ import (
 	kindLog "sigs.k8s.io/kind/pkg/log"
 )
 
-// kindLogger inplements the log.Logger interface for kind
+// kindLogger implements the log.Logger interface for kind.
 type kindLogger struct {
 	l log.FieldLogger
 	v kindLog.Level
