@@ -118,7 +118,7 @@ func (b *mgmtBridgeLinkNode) AddLinkToContainer(_ context.Context, link netlink.
 	}
 
 	// get the bridge as netlink.Link
-	br, err := utils.LinkByNameOrAlias(b.shortname)
+	br, err := netlink.LinkByName(b.shortname)
 	if err != nil {
 		return err
 	}

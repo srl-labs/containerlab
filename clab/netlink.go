@@ -10,7 +10,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -19,7 +18,7 @@ import (
 func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 	switch {
 	case l.A.Node.Kind == "host" || l.A.Node.Kind == "bridge":
-		link, err := utils.LinkByNameOrAlias(l.A.EndpointName)
+		link, err := netlink.LinkByName(l.A.EndpointName)
 		if err != nil {
 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
 			break
@@ -33,7 +32,7 @@ func (c *CLab) RemoveHostOrBridgeVeth(l *types.Link) (err error) {
 			log.Debugf("Link %q is already gone: %v", l.A.EndpointName, err)
 		}
 	case l.B.Node.Kind == "host" || l.B.Node.Kind == "bridge":
-		link, err := utils.LinkByNameOrAlias(l.B.EndpointName)
+		link, err := netlink.LinkByName(l.B.EndpointName)
 		if err != nil {
 			log.Debugf("Link %q is already gone: %v", l.B.EndpointName, err)
 			break

@@ -18,7 +18,7 @@ import (
 
 // BridgeByName returns a *netlink.Bridge referenced by its name.
 func BridgeByName(name string) (*netlink.Bridge, error) {
-	l, err := LinkByNameOrAlias(name)
+	l, err := netlink.LinkByName(name)
 	if err != nil {
 		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
 	}
@@ -66,7 +66,7 @@ func DeleteNetnsSymlink(n string) error {
 
 // LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name.
 func LinkIPs(ln string) (v4addrs, v6addrs []netlink.Addr, err error) {
-	l, err := LinkByNameOrAlias(ln)
+	l, err := netlink.LinkByName(ln)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to lookup link %q: %w", ln, err)
 	}
@@ -124,20 +124,6 @@ func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
 		return nil, fmt.Errorf("no links found by specified prefix %s", prefix)
 	}
 	return fls, nil
-}
-
-func LinkByNameOrAlias(name string) (netlink.Link, error) {
-	var l netlink.Link
-	var err error
-
-	// long interface names (16+ chars) are aliased by clab
-	if len(name) > 15 {
-		l, err = netlink.LinkByAlias(name)
-	} else {
-		l, err = netlink.LinkByName(name)
-	}
-
-	return l, err
 }
 
 func GetRouteForIP(ip net.IP) (*rtnl.Route, error) {

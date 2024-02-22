@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -118,7 +117,7 @@ func (*LinkMacVlan) GetType() LinkType {
 }
 
 func (l *LinkMacVlan) GetParentInterfaceMTU() (int, error) {
-	hostLink, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
+	hostLink, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return 0, err
 	}
@@ -127,7 +126,7 @@ func (l *LinkMacVlan) GetParentInterfaceMTU() (int, error) {
 
 func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	// lookup the parent host interface
-	parentInterface, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
+	parentInterface, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return err
 	}
@@ -149,7 +148,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	}
 
 	// retrieve the Link by name
-	mvInterface, err := utils.LinkByNameOrAlias(l.NodeEndpoint.GetRandIfaceName())
+	mvInterface, err := netlink.LinkByName(l.NodeEndpoint.GetRandIfaceName())
 	if err != nil {
 		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandIfaceName(), err)
 	}
