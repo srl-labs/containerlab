@@ -26,7 +26,7 @@ Pre-Pull Image
 
 Deploy ${lab-name} lab
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -d -t ${CURDIR}/${lab-file} 
     ...    shell=True
 
     Log    ${output.stdout}
@@ -51,7 +51,10 @@ Ensure node3 started after node4
     Log    ${node4.stdout}
     Log    ${node4.stderr}
 
-    Should Be True    ${node3.stdout} > ${node4.stdout}
+    ${n3} =    Convert To Integer    ${node3.stdout}
+    ${n4} =    Convert To Integer    ${node4.stdout}
+
+    Should Be True    ${n3} > ${n4}
 
 Deploy ${lab-name} lab with a single worker
     Run Keyword    Teardown
@@ -82,7 +85,10 @@ Ensure node3 started after node4 after a single worker run
     Log    ${node4.stdout}
     Log    ${node4.stderr}
 
-    Should Be True    ${node3.stdout} > ${node4.stdout}
+    ${n3} =    Convert To Integer    ${node3.stdout}
+    ${n4} =    Convert To Integer    ${node4.stdout}
+
+    Should Be True    ${n3} > ${n4}
 
 
 *** Keywords ***

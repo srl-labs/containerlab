@@ -53,9 +53,9 @@ func (d *DependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 // EnterStage is called by a node that is meant to enter the specified stage.
 // The call will be blocked until all dependencies for the node to enter the stage are met.
 func (d *DependencyNode) EnterStage(p types.WaitForStage) {
-	log.Debugf("Stage Change: Enter Wait -> %s - %s", d.name, p)
+	log.Debugf("StateChange: Enter Wait -> %s - %s", d.name, p)
 	d.stageWG[p].Wait()
-	log.Debugf("Stage Change: Enter Go -> %s - %s", d.name, p)
+	log.Debugf("StateChange: Enter Go -> %s - %s", d.name, p)
 }
 
 // SignalDone is called by a node that has finished all tasks for the provided stage.
