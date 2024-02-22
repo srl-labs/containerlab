@@ -11,7 +11,7 @@ topology:
   nodes:
     node1:
       exec:
-        - ash -c "date +%s%N > /tmp/time"
+        - sh -c "date +%s%N > /tmp/time"
       stages:
         create:
           wait-for:
@@ -20,7 +20,7 @@ topology:
 
     node2:
       exec:
-        - ash -c "date +%s%N > /tmp/time"
+        - sh -c "date +%s%N > /tmp/time"
       stages:
         create:
           wait-for:
@@ -29,7 +29,7 @@ topology:
 
     node3:
       exec:
-        - ash -c "date +%s%N > /tmp/time"
+        - sh -c "date +%s%N > /tmp/time"
       stages:
         create:
           wait-for:
@@ -38,7 +38,7 @@ topology:
 
     node4:
       exec:
-        - ash -c "date +%s%N > /tmp/time"
+        - sh -c "date +%s%N > /tmp/time"
       healthcheck:
         start-period: 5
         interval: 1
