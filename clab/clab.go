@@ -922,3 +922,38 @@ func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
 
 	return nil
 }
+
+// Deploy the given topology
+func (c *CLab) Deploy() error {
+	return nil
+}
+
+// Destroy the given topology
+func (c *CLab) Destroy() error {
+	return nil
+}
+
+// Inspect the given topology
+func (c *CLab) Inspect() error {
+	return nil
+}
+
+// Save configuration of the given topology nodes
+func (c *CLab) Save() error {
+	return nil
+}
+
+// Graph the given topology
+func (c *CLab) Graph() error {
+	return nil
+}
+
+// Exec execute commands on running topology nodes
+func (c *CLab) Exec() error {
+	return nil
+}
+
+// Configure topology nodes
+func (c *CLab) Configure() error {
+	return nil
+}
