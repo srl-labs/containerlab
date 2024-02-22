@@ -225,6 +225,14 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		nodesWg.Wait()
 	}
 
+	// HOTFIX: for waitforcreate-links
+	for _, n := range c.Nodes {
+		err = n.RunExecFromConfig(ctx, execCollection)
+		if err != nil {
+			return err
+		}
+	}
+
 	// write to log
 	execCollection.Log()
 
