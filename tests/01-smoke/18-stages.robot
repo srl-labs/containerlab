@@ -15,6 +15,15 @@ ${runtime}      docker
 
 
 *** Test Cases ***
+Pre-Pull Image
+    ${output} =    Process.Run Process
+    ...    ${runtime} pull debian:bookworm-slim
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+
+    Should Be Equal As Integers    ${output.rc}    0
+
 Deploy ${lab-name} lab
     ${output} =    Process.Run Process
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}

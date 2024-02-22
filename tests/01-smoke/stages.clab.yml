@@ -7,7 +7,7 @@ name: stages
 topology:
   defaults:
     kind: linux
-    image: ubuntu:latest
+    image: debian:bookworm-slim
   nodes:
     node1:
       exec:
