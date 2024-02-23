@@ -33,6 +33,10 @@ type Endpoint interface {
 	HasSameNodeAndInterface(ept Endpoint) bool
 	Remove() error
 	Deploy(context.Context) error
+	// AutoDeployWithAEnd indicates if this endpoint is to be deployed
+	// along with the peer Endpoint. This should be true for e.g. host endpoints
+	// because there is no host node that would bring the interface and rename it.
+	AutoDeployWithAEnd() bool
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.

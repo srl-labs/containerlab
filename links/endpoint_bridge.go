@@ -12,11 +12,13 @@ import (
 
 type EndpointBridge struct {
 	EndpointGeneric
+	isMgmtBridgeEndpoint bool
 }
 
-func NewEndpointBridge(eg *EndpointGeneric) *EndpointBridge {
+func NewEndpointBridge(eg *EndpointGeneric, isMgmtBridgeEndpoint bool) *EndpointBridge {
 	return &EndpointBridge{
-		EndpointGeneric: *eg,
+		isMgmtBridgeEndpoint: isMgmtBridgeEndpoint,
+		EndpointGeneric:      *eg,
 	}
 }
 
@@ -44,6 +46,12 @@ func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
 
 func (e *EndpointBridge) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
+}
+
+func (e *EndpointBridge) AutoDeployWithAEnd() bool {
+	// the mgmt bridge needs AutoDeployment. Otherwise the regular bridge node
+	// should trigger BEnd deployment seperately
+	return e.isMgmtBridgeEndpoint
 }
 
 // CheckBridgeExists verifies that the given bridge is present in the

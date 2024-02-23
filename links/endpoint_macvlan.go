@@ -20,3 +20,7 @@ func (e *EndpointMacVlan) Deploy(ctx context.Context) error {
 func (e *EndpointMacVlan) Verify(_ *VerifyLinkParams) error {
 	return CheckEndpointExists(e)
 }
+
+func (e *EndpointMacVlan) AutoDeployWithAEnd() bool {
+	return false
+}

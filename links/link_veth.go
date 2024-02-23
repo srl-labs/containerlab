@@ -156,6 +156,12 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, ep Endpoint) error {
 		return err
 	}
 
+	// e.g. host endpoints have no trigger for the BEnd Endpoint. Hence they will indicate via
+	// the AutoDeployWithAEnd func, if the BEnd ist to automatically be provisioned on AEnd Provisioning
+	if peerEp.AutoDeployWithAEnd() {
+		return l.deployBEnd(ctx, peerEp)
+	}
+
 	return nil
 }
 

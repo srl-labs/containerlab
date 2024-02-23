@@ -37,3 +37,7 @@ func (e *EndpointVxlan) Verify(*VerifyLinkParams) error {
 func (e *EndpointVxlan) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
+
+func (e *EndpointVxlan) AutoDeployWithAEnd() bool {
+	return false
+}

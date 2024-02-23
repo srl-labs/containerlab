@@ -20,3 +20,7 @@ func (e *EndpointVeth) Verify(_ *VerifyLinkParams) error {
 func (e *EndpointVeth) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
+
+func (e *EndpointVeth) AutoDeployWithAEnd() bool {
+	return false
+}
