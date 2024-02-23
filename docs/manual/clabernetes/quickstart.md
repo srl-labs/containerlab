@@ -15,7 +15,7 @@ Let's see how it all works, buckle up!
 
 ## Creating a cluster
 
-Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use, but with the scaling powers of kubernetes. Surely, it is best to have a real deal available to you, but for demo purposes we'll use [`kind`](https://kind.sigs.k8s.io/) to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead -- clabernetes can run in any kubernetes cluster[^1]!
+Clabernetes goal is to allow users to run networking labs with containerlab's simplicity and ease of use, but with the scaling powers of kubernetes. Surely, it is best to have a real deal available to you, but for demo purposes we'll use [`kind`](https://kind.sigs.k8s.io/) v0.22.0 to create a local multi-node kubernetes cluster. If you already have a k8s cluster, feel free to use it instead -- clabernetes can run in any kubernetes cluster[^1]!
 
 With the following command we instruct kind to set up a three node k8s cluster with two worker and one control plane nodes.
 
@@ -27,12 +27,24 @@ nodes:
   - role: control-plane
   - role: worker
   - role: worker
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".containerd]
+    discard_unpacked_layers = false
 EOF
 ```
 
 Don't forget to install [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)!
 
-When the cluster is ready we can proceed with installing clabernetes.
+Check that the cluster is ready and proceed with installing clabernetes.
+
+```bash
+❯ kubectl get nodes 
+NAME                STATUS   ROLES           AGE     VERSION
+c9s-control-plane   Ready    control-plane   5m6s    v1.29.2
+c9s-worker          Ready    <none>          4m46s   v1.29.2
+c9s-worker2         Ready    <none>          4m42s   v1.29.2
+```
 
 ## Installing clabernetes
 
@@ -160,13 +172,15 @@ git clone --depth 1 https://github.com/srl-labs/srlinux-vlan-handling-lab.git \
 And then, while standing in the lab directory, let `clabverter` do its job:
 
 ```{.bash .no-select title="Converting the containerlab topology to clabernetes manifests and applying it"}
-clabverter --stdout | \
+clabverter --stdout --naming non-prefixed | \
 kubectl apply -f - #(1)!
 ```
 
 1. `clabverter` converts the original containerlab topology to a set of k8s manifests and applies them to the cluster.
 
     We will cover what `clabverter` does in more details in the user manual some time later, but if you're curious, you can check the manifests it generates by running `clabverter --stdout > manifests.yml` and inspecting the `manifests.yml` file.
+
+    The `non-prefixed` naming scheme instructs clabernetes to not use additional prefixes for the resources, as in this scenario we control the namespace and the resources are not going to clash with other resources in the cluster.
 
 In the background, `clabverter` created the `Topology` custom resource (CR) in the `c9s-vlan`[^5] namespace that defines our topology and also created a set of config maps for each startup config used in the lab.
 
@@ -176,7 +190,34 @@ Once clabverter is done, clabernetes controller casts its spell known as *reconc
 
 Let's run some verification commands to see what we have in our cluster so far.
 
-Starting with listing `Topology` CRs in the `c9s-vlan` namespace:
+### Namespace
+
+Remember how in Containerlab world if you wanted to run multiple labs on the same host you would give each lab a distinct name and containerlab would use that name to create a unique prefix for containers? In k8s world, we use namespaces to achieve the same goal.
+
+When Clabverter parses the original topology file, it takes the lab name value, prepends it with `c9s-` string and uses it as a namespace for the lab resources. This way, we can run multiple labs in the same k8s cluster without worrying about resource name clashes.
+
+``` {.bash .no-select}
+kubectl get ns
+```
+
+<div class="embed-result">
+```
+NAME                 STATUS   AGE
+c9s                  Active   11m
+c9s-vlan             Active   9m8s
+default              Active   12h
+kube-node-lease      Active   12h
+kube-public          Active   12h
+kube-system          Active   12h
+local-path-storage   Active   12h
+```
+</div>
+
+As you can see, we have two namespaces: `c9s` and `c9s-vlan`. The `c9s` namespace is where clabernetes manager is running and the `c9s-vlan` namespace is where our lab resources are deployed.
+
+### Topology resource
+
+The *main* clabernetes resource is called `Topology` and we should be able to find it in the `c9s-vlan` namespace where all lab resources are deployed:
 
 ``` {.bash .no-select}
 kubectl get --namespace c9s-vlan Topology
@@ -305,30 +346,66 @@ status:
 
 If you take a closer look at the sub-topologies you will see that they are just mini, one-node-each, containerlab topologies. Clabernetes deploys these sub-topologies as deployments in the cluster.
 
-Each deployment pod runs containerlab inside, and containerlab runs the sub topology; each pod deploys the sub-topology as it would normally do on a single node :exploding_head::
+### Deployments
 
-``` {.bash .no-select title="Listing pods in c9s-vlan namespace"}
+The deployment objects created by Clabernetes are the vessels that carry the lab nodes. Let's list those deployments:
+
+``` {.bash .no-select}
+kubectl -n c9s-vlan get deployments
+```
+
+<div class="embed-result">
+```
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+client1   1/1     1            1           16m
+client2   1/1     1            1           16m
+srl1      1/1     1            1           16m
+srl2      1/1     1            1           16m
+```
+</div>
+
+Those deployment names should be familiar as they are named exactly as the nodes in the original topology file.
+
+### Pods
+
+Each deployment consists of exactly one k8s pod.
+
+``` {.bash .no-select title="Listing lab pods"}
 kubectl get pods --namespace c9s-vlan -o wide
 ```
 
 <div class="embed-result">
 ```
-NAME                            READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
-vlan-client1-699dbcfd8b-r2fgc   1/1     Running   0          14h   10.244.1.12   c9s-worker2   <none>           <none>
-vlan-client2-7db5d589c6-pb8pd   1/1     Running   0          14h   10.244.2.14   c9s-worker    <none>           <none>
-vlan-srl1-868f9858cb-xqkbf      1/1     Running   0          14h   10.244.2.13   c9s-worker    <none>           <none>
-vlan-srl2-676784b5cb-7gt22      1/1     Running   0          14h   10.244.1.13   c9s-worker2   <none>           <none>
+NAME                       READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+client1-5c4698f68c-v4z2n   1/1     Running   0          19m   10.244.1.15   c9s-worker    <none>           <none>
+client2-6dfc49bc8f-hpkd4   1/1     Running   0          19m   10.244.2.15   c9s-worker2   <none>           <none>
+srl1-78bdc85795-l9bl4      1/1     Running   0          19m   10.244.1.14   c9s-worker    <none>           <none>
+srl2-7fffcdb79-vxfn9       1/1     Running   0          19m   10.244.2.16   c9s-worker2   <none>           <none>
 ```
 </div>
 
 We see four pods running, one pod per each lab node of our original containerlab topology. Pods are scheduled on different worker nodes by the k8s scheduler ensuring optimal resource utilization[^2].
 
-Inside each pod, containerlab runs the sub-topology as if it would run on a standalone Linux system. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists.  
-We can enter the pod's shell and use containerlab CLI to verify the topology:
+Each pod is a docker-in-docker container with Containerlab running inside.  
+Inside each pod, containerlab runs the sub-topology as if it would run on a standalone Linux system. It has access to the Docker API and schedules nodes in exactly the same way as if no k8s exists :exploding_head:  
+We can enter the pod's shell and use containerlab CLI as usual:
+
+/// tab | Fancy command to enter the pod's shell
 
 ```{.bash .no-select}
-kubectl exec -it -n c9s-vlan pod/vlan-client1-699dbcfd8b-r2fgc -- bash
+NS=c9s-vlan POD=client1; \
+kubectl -n $NS exec -it \
+  $(kubectl -n $NS get pods | grep ^$POD | awk '{print $1}') -- bash
 ```
+
+///
+/// tab | Regular command
+
+```{.bash .no-select}
+kubectl exec -it -n c9s-vlan client1-5c4698f68c-v4z2n -- bash
+```
+
+///
 
 And in the pod's shell we swim in the familiar containerlab waters:
 
@@ -345,7 +422,7 @@ INFO[0000] Parsing & checking topology file: topo.clab.yaml
 +---+---------+--------------+-------------------------+-------+---------+----------------+----------------------+
 | # |  Name   | Container ID |          Image          | Kind  |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+---------+--------------+-------------------------+-------+---------+----------------+----------------------+
-| 1 | client1 | 52757a04756a | ghcr.io/srl-labs/alpine | linux | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 1 | client1 | dbde60209a3b | ghcr.io/srl-labs/alpine | linux | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
 +---+---------+--------------+-------------------------+-------+---------+----------------+----------------------+
 ```
 
@@ -417,7 +494,7 @@ By default, clabernetes exposes[^3] the following ports for each lab node:
 | tcp      | `21`, `80`, `443`, `830`, `5000`, `5900`, `6030`, `9339`, `9340`, `9559`, `57400` |
 | udp      | `161`                                                                             |
 
-Let's list the services in the `c9s-vlan` namespace (exluding the VXLAN services[^6]):
+Let's list the services in the `c9s-vlan` namespace (excluding the services for VXLAN tunnels[^6]):
 
 ```{.bash .no-select}
 kubectl get -n c9s-vlan svc | grep -iv vx
@@ -425,26 +502,22 @@ kubectl get -n c9s-vlan svc | grep -iv vx
 
 <div class="embed-result">
 ```
-NAME              TYPE           CLUSTER-IP      EXTERNAL-IP                               PORT(S)                                                                                                                                                                                                   AGE
-client1           ExternalName   <none>          vlan-client1.c9s-vlan.svc.cluster.local   <none>                                                                                                                                                                                                    15h
-client2           ExternalName   <none>          vlan-client2.c9s-vlan.svc.cluster.local   <none>                                                                                                                                                                                                    15h
-srl1              ExternalName   <none>          vlan-srl1.c9s-vlan.svc.cluster.local      <none>                                                                                                                                                                                                    15h
-srl2              ExternalName   <none>          vlan-srl2.c9s-vlan.svc.cluster.local      <none>                                                                                                                                                                                                    15h
-vlan-client1      LoadBalancer   10.96.232.165   172.18.1.10                               161:32442/UDP,21:32059/TCP,22:32030/TCP,23:30920/TCP,80:31205/TCP,443:32489/TCP,830:31231/TCP,5000:31769/TCP,5900:30902/TCP,6030:31583/TCP,9339:32089/TCP,9340:30311/TCP,9559:30974/TCP,57400:31386/TCP   15h
-vlan-client2      LoadBalancer   10.96.164.37    172.18.1.11                               161:30025/UDP,21:31127/TCP,22:30779/TCP,23:30542/TCP,80:31104/TCP,443:32142/TCP,830:30102/TCP,5000:31116/TCP,5900:31559/TCP,6030:30734/TCP,9339:32250/TCP,9340:31922/TCP,9559:30745/TCP,57400:30817/TCP   15h
-vlan-srl1         LoadBalancer   10.96.221.110   172.18.1.12                               161:30581/UDP,21:32591/TCP,22:31752/TCP,23:30164/TCP,80:32272/TCP,443:32365/TCP,830:30360/TCP,5000:30618/TCP,5900:30454/TCP,6030:32155/TCP,9339:32736/TCP,9340:32268/TCP,9559:31412/TCP,57400:30100/TCP   15h
-vlan-srl2         LoadBalancer   10.96.64.176    172.18.1.13                               161:32109/UDP,21:30903/TCP,22:31495/TCP,23:32174/TCP,80:31128/TCP,443:30720/TCP,830:32017/TCP,5000:30708/TCP,5900:32520/TCP,6030:31586/TCP,9339:31917/TCP,9340:31631/TCP,9559:32731/TCP,57400:32076/TCP   15h
+NAME         TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                                                                                                                                                                   AGE
+client1      LoadBalancer   10.96.211.232   172.18.1.12   161:30091/UDP,21:30581/TCP,22:31874/TCP,23:32665/TCP,80:31942/TCP,443:30624/TCP,830:32443/TCP,5000:31655/TCP,5900:30127/TCP,6030:30897/TCP,9339:31986/TCP,9340:31502/TCP,9559:30593/TCP,57400:30514/TCP   34m
+client2      LoadBalancer   10.96.235.247   172.18.1.13   161:32008/UDP,21:31200/TCP,22:32186/TCP,23:30796/TCP,80:30124/TCP,443:30187/TCP,830:30599/TCP,5000:30600/TCP,5900:32719/TCP,6030:30678/TCP,9339:30998/TCP,9340:31592/TCP,9559:30312/TCP,57400:32051/TCP   34m
+srl1         LoadBalancer   10.96.229.4     172.18.1.10   161:31220/UDP,21:32631/TCP,22:30595/TCP,23:32519/TCP,80:32630/TCP,443:30780/TCP,830:32259/TCP,5000:30647/TCP,5900:30540/TCP,6030:31110/TCP,9339:31216/TCP,9340:31168/TCP,9559:32483/TCP,57400:31009/TCP   34m
+srl2         LoadBalancer   10.96.106.189   172.18.1.11   161:31380/UDP,21:30286/TCP,22:32764/TCP,23:31631/TCP,80:31049/TCP,443:32272/TCP,830:31237/TCP,5000:31495/TCP,5900:32592/TCP,6030:31776/TCP,9339:30649/TCP,9340:31538/TCP,9559:30628/TCP,57400:30586/TCP   34m
 ```
 </div>
 
-We see the two service types in the `c9s-vlan` namespace: `ExternalName` and `LoadBalancer`.
+We see four `LoadBalancer` services created for each node of our distributed topology. Each service points (using selectors) to the corresponding pod.
 
-The LoadBalancer services (implemented by the `kube-vip`) provide external IPs for the lab nodes. The long list of ports are the ports clabernetes exposes by default which spans both regular SSH and other common management interfaces.
+The LoadBalancer services (powered by the `kube-vip`) also provide us with the external IPs for the lab nodes. The long list of ports are the ports clabernetes exposes by default which spans both regular SSH and other well-known management interfaces and their ports.
 
-For instance, we see that `srl1` node has been assigned `172.18.1.12` IP and we can immediately SSH into it from the outside world using the following command:
+For instance, we see that `srl1` node has been assigned `172.18.1.10` IP, and we can immediately SSH into it from the outside world using the following command:
 
 ```{.text .no-select}
-ssh admin@172.18.1.12
+ssh admin@172.18.1.10
 ```
 
 <div class="embed-result">
@@ -458,14 +531,14 @@ ssh admin@172.18.1.12
 :                                                              :
 : Get started: https://learn.srlinux.dev                       :
 : Container:   https://go.srlinux.dev/container-image          :
-: Docs:        https://doc.srlinux.dev/23-7                    :
-: Rel. notes:  https://doc.srlinux.dev/rn23-7-1                :
-: YANG:        https://yang.srlinux.dev/v23.7.1                :
+: Docs:        https://doc.srlinux.dev/23-10                   :
+: Rel. notes:  https://doc.srlinux.dev/rn23-10-1               :
+: YANG:        https://yang.srlinux.dev/release/v23.10.1       :
 : Discord:     https://go.srlinux.dev/discord                  :
 : Contact:     https://go.srlinux.dev/contact-sales            :
 ................................................................
 
-admin@172.18.1.12's password:
+admin@172.18.1.10's password:
 Using configuration file(s): []
 Welcome to the srlinux CLI.
 Type 'help' (and press <ENTER>) if you need any help using this.
@@ -481,7 +554,7 @@ Other services, like gNMI, JSON-RPC, SNMP are available as well since those port
     type: example
 
 ```{.bash .no-select}
-gnmic -a 172.18.1.12 -u admin -p 'NokiaSrl1!' --skip-verify -e json_ietf \
+gnmic -a 172.18.1.10 -u admin -p 'NokiaSrl1!' --skip-verify -e json_ietf \
   get --path /system/information/version
 ```
 
@@ -489,7 +562,7 @@ gnmic -a 172.18.1.12 -u admin -p 'NokiaSrl1!' --skip-verify -e json_ietf \
 ```
 [
   {
-    "source": "172.18.1.12",
+    "source": "172.18.1.10",
     "timestamp": 1707828542585726740,
     "time": "2024-02-13T14:49:02.58572674+02:00",
     "updates": [
@@ -506,15 +579,11 @@ gnmic -a 172.18.1.12 -u admin -p 'NokiaSrl1!' --skip-verify -e json_ietf \
 </div>
 ///
 
-The `ExternalName` services are used to provide DNS resolution for the lab nodes. They are not accessible from outside the cluster, but they can be used by other pods in the same namespace to resolve the lab nodes' names to their IPs.
+### Pod shell
 
-For instance, the pods in the `c9s-vlan` namespace can resolve the `srl1` node's name to its IP. This enables name resolution workflow similar to what you'd have in a regular containerlab deployment.
+Load Balancer makes it easy to get external access to the lab nodes, but don't panic if for whatever reason you can't have one. It is still possible to access the nodes without the load balancer and external IP addresses using various techniques. One of them is to enter the pod's shell and from there log in the running lab node.
 
-### Pod Shell
-
-Load Balancer makes it easy to get external access to the lab nodes, but don't panic if for whatever reason you can't install one. It is still possible to access the nodes without LB!
-
-For example, to access `srl1` lab node in our k8s cluster we may leverage `kubectl exec` command to get to the shell of the pod that runs `srl1` node.
+For example, to access `srl1` lab node in our k8s cluster we can leverage `kubectl exec` command to get to the shell of the pod that runs `srl1` node.
 
 /// note
 You may have a stellar experience with [`k9s` project](https://k9scli.io/) that offers a terminal UI to interact with k8s clusters. It is a great tool to have in your toolbox.
@@ -530,31 +599,44 @@ kubectl get pods -n c9s-vlan
 
 <div class="embed-result">
 ```
-NAME                            READY   STATUS    RESTARTS   AGE
-vlan-client1-699dbcfd8b-r2fgc   1/1     Running   0          16h
-vlan-client2-7db5d589c6-pb8pd   1/1     Running   0          16h
-vlan-srl1-868f9858cb-xqkbf      1/1     Running   0          16h
-vlan-srl2-676784b5cb-7gt22      1/1     Running   0          16h
+NAME                       READY   STATUS    RESTARTS   AGE
+client1-5c4698f68c-v4z2n   1/1     Running   0          66m
+client2-6dfc49bc8f-hpkd4   1/1     Running   0          66m
+srl1-78bdc85795-l9bl4      1/1     Running   0          66m
+srl2-7fffcdb79-vxfn9       1/1     Running   0          66m
 ```
 </div>
 
-Looking at the pod named `vlan-srl1-868f9858cb-xqkbf` we understand that it runs `srl1` node we specified in the topology. To get shell access to this node we can run:
+Looking at the pod named `srl1-78bdc85795-l9bl4` we clearly see that it runs the `srl1` node we specified in the topology. To get shell access to this node we can run:
+/// tab | fancy command
 
 ```{.bash .no-select}
-kubectl -n c9s-vlan exec -it vlan-srl1-868f9858cb-xqkbf -- ssh admin@srl1
+NS=c9s-vlan POD=srl1; \
+kubectl -n $NS exec -it \
+  $(kubectl -n $NS get pods | grep ^$POD | awk '{print $1}') -- ssh $POD
 ```
 
-We essentially execute `ssh admin@srl1` command inside the pod, as you'd normally do with containerlab.
+///
+/// tab | regular command
+
+```{.bash .no-select}
+kubectl -n c9s-vlan exec -it srl1-78bdc85795-l9bl4 -- ssh srl1 #(1)!
+```
+
+1. If you installed `kubectl` shell completions, the pod names will be suggested as you type the command. Very handy!
+///
+
+We essentially execute `ssh srl1` command inside the pod, as you'd normally do with containerlab.
 
 ## Datapath stitching
 
-One of the challenges associated with distributed labs is to enable connectivity between the nodes as per user's intent.
+One of the challenges associated with the distributed labs is the connectivity between the lab nodes running on different computes.
 
-Thanks to k8s and accompanying Load Balancer service, the management network access is taken care of. You get access to the management interfaces of each pod out of the box. But what about the non-management links we defined in the original topology file?
+Thanks to Kubernetes and its services, the management network access is taken care of. You get access to the management interfaces of each pod out of the box. But what about the non-management/datapath links we have in the original topology file?
 
-In containerlab the links defined in the topology most often represented by the veth pairs between the nodes, but things are a bit more complicated in distributed environments like k8s.
+In containerlab the links defined in the topology are often represented by the veth pairs between the containers running on a single host, but things are a bit more complicated in the distributed environments.
 
-Remember our manifest file we deployed in the beginning of this quickstart? It had a single link between two nodes defined in the same way you'd do it in containerlab:
+If you rewind it back to the beginning of the quickstart where we [looked at the Topology CR](#topology-resource) you would notice that it has the familiar `links` section in the `spec.definition.containerlab` field:
 
 ```yaml title=""
 # snip
@@ -562,53 +644,50 @@ links:
   - endpoints: ["srl1:e1-10", "srl2:e1-10"]
 ```
 
-How does clabernetes layout this link when the lab nodes srl1 and srl2 can be scheduled on different worker nodes? Well, clabernetes takes the original link definition as provided by a user and transforms it into a set of point-to-point VXLAN tunnels[^4] that stitch the nodes together.
+This link connects `srl1` node with `srl2`, and as we saw these nodes are running on different worker nodes in the k8s cluster.  
+How does clabernetes lays out this link? Well, clabernetes takes the original link definition as provided by a user and transforms it into a set of point-to-point VXLAN tunnels[^4] that stitch the nodes together.
 
 Two nodes appear to be connected to each other as if they were connected with a veth pair. We can check that LLDP neighbors are discovered on either other side of the link:
 
 ```{.bash .no-select}
-kubectl -n c9s-vlan exec -it vlan-srl1-868f9858cb-xqkbf -- \
-    ssh admin@srl1 #(1)!
+NS=c9s-vlan POD=srl1; \
+kubectl -n $NS exec -it \
+  $(kubectl -n $NS get pods | grep ^$POD | awk '{print $1}') -- \
+    docker exec $POD sr_cli show system lldp neighbor
 ```
 
-1. Logging to `srl1` node
-
 <div class="embed-result">
 ```
-Last login: Fri Sep 22 23:07:30 2023 from 2001:172:20:20::1
-Using configuration file(s): []
-Welcome to the srlinux CLI.
-Type 'help' (and press <ENTER>) if you need any help using this.
-```
-</div>
-<div class="embed-result">
-```srl
---{ running }--[  ]--
-A:srl1# show system lldp neighbor
-```
-</div>
-<div class="embed-result">
-```
-A:srl1# show system lldp neighbor
-  +---------------+----------------+----------------+---------------+---------------+---------------+---------------+
-  |     Name      |    Neighbor    |    Neighbor    |   Neighbor    |   Neighbor    | Neighbor Last | Neighbor Port |
-  |               |                |  System Name   |  Chassis ID   | First Message |    Update     |               |
-  +===============+================+================+===============+===============+===============+===============+
-  | ethernet-1/10 | 1A:00:00:FF:00 | srl2           | 1A:00:00:FF:0 | 16 hours ago  | 3 seconds ago | ethernet-1/10 |
-  |               | :00            |                | 0:00          |               |               |               |
-  +---------------+----------------+----------------+---------------+---------------+---------------+---------------+
++---------------+-------------------+----------------------+---------------------+------------------------+----------------------+---------------+
+|     Name      |     Neighbor      | Neighbor System Name | Neighbor Chassis ID | Neighbor First Message | Neighbor Last Update | Neighbor Port |
++===============+===================+======================+=====================+========================+======================+===============+
+| ethernet-1/10 | 1A:C5:00:FF:00:00 | srl2                 | 1A:C5:00:FF:00:00   | an hour ago            | now                  | ethernet-1/10 |
++---------------+-------------------+----------------------+---------------------+------------------------+----------------------+---------------+
 ```
 </div>
 
 We can also make sure that our startup-configuration that was provided in [external files](https://github.com/srl-labs/srlinux-vlan-handling-lab/blob/main/configs) in original topology is applied in good order and we can perform the ping between two clients
+
+/// tab | fancy command
+
+```{.bash .no-select}
+NS=c9s-vlan POD=client1; \
+kubectl -n $NS exec -it \
+  $(kubectl -n $NS get pods | grep ^$POD | awk '{print $1}') -- \
+    docker exec -it $POD ping -c 2 10.1.0.2
+```
+
+///
+/// tab | regular command
 
 ```bash
 kubectl exec -it -n c9s-vlan pod/vlan-client1-699dbcfd8b-r2fgc -- \
 docker exec -it client1 ping -c 2 10.1.0.2
 ```
 
+///
 <div class="embed-result">
-```text
+```
 PING 10.1.0.2 (10.1.0.2) 56(84) bytes of data.
 64 bytes from 10.1.0.2: icmp_seq=1 ttl=64 time=2.08 ms
 64 bytes from 10.1.0.2: icmp_seq=2 ttl=64 time=1.04 ms
@@ -623,23 +702,10 @@ rtt min/avg/max/mdev = 1.040/1.557/2.075/0.517 ms
 
 With the command above we:
 
-1. connected to the `vlan-client1-699dbcfd8b-r2fgc` that runs the `client1` node
+1. connected to the `client1` pod that runs the `client1` lab node
 2. executed `ping` command inside the `client1` node to ping the `client2` node
 3. Ensured that the datapath stitching is working as expected
 
-/// details | VXLAN and MTU
-    type: warning
-VXLAN tunnels are susceptible to MTU issues. Check the MTU value for `vx-*` link in your pod to see what value has been set by the kernel and adjust your node's link/IP MTU accordingly.
-
-```bash
-[*]─[srl1]─[/clabernetes]
-└──> ip l | grep vx
-11: vx-srl1-e1-1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1400 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
-12: vx-srl1-e1-10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1400 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
-```
-
-In our kind cluster that has a single network attached, the VXLAN tunnel is routed through the management network interface of the pod. It is possible to configure kind nodes to have more than one network and therefore have a dedicated network for the VXLAN tunnels with a higher MTU value.
-///
 
 ## VM-based nodes?
 
