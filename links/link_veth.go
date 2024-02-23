@@ -109,11 +109,27 @@ func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
+func (l *LinkVEth) deployAEnd(ctx context.Context) error {
+	return nil
+}
+
+func (l *LinkVEth) deployBEnd(ctx context.Context) error {
+	return nil
+}
+
 func (l *LinkVEth) Deploy(ctx context.Context) error {
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()
+
+	switch l.DeploymentState {
+	case LinkDeploymentStateNotDeployed:
+		return l.deployAEnd(ctx)
+	case LinkDeploymentStateDeployed:
+		return l.deployBEnd(ctx)
+	}
+
 	if l.DeploymentState == LinkDeploymentStateDeployed {
 		return nil
 	}
