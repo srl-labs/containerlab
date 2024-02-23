@@ -186,7 +186,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
 	var err error
 	log.Debugf("Network %q does not exist", d.mgmt.Network)
-	log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%q",
+	log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%d",
 		d.mgmt.Network, d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet, d.mgmt.MTU)
 
 	enableIPv6 := false

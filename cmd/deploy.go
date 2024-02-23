@@ -225,6 +225,20 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		nodesWg.Wait()
 	}
 
+	// HOTFIX: originally execs were executed by the node, but because
+	// execs were run before all the links are connected between the nodes they could fail.
+	// we couldn't wait for all links to be created/connected since this would cause a deadlock
+	// either when a nodeA depends on nodeB and there is a link between them, or when
+	// there is more links than concurrent node worker.
+	// For the time being the execs would be executed only after the nodes are created
+	// with a more elegant fix in the works.
+	for _, n := range c.Nodes {
+		err = n.RunExecFromConfig(ctx, execCollection)
+		if err != nil {
+			return err
+		}
+	}
+
 	// write to log
 	execCollection.Log()
 
