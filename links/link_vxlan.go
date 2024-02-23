@@ -73,7 +73,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*Li
 
 	vethLink := hl.(*LinkVEth)
 
-	// host endpoint is always a 2nd element in the Endpoints slice
+	// host endpoint is always the 2nd element in the Endpoints slice
 	return vethLink, vethLink.Endpoints[1], nil
 }
 
