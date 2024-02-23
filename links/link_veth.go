@@ -3,10 +3,10 @@ package links
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -57,8 +57,6 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 		}
 		// add endpoint to the link endpoints
 		l.Endpoints = append(l.Endpoints, ep)
-		// add link to endpoint node
-		ep.GetNode().AddLink(l)
 	}
 
 	// set default link mtu if MTU is unset
@@ -109,86 +107,143 @@ func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
-func (l *LinkVEth) deployAEnd(ctx context.Context) error {
+func (l *LinkVEth) deployAEnd(ctx context.Context, ep Endpoint) error {
+
+	// Get the index of the Endpoint in the links endpoint slice
+	idx, err := l.getEndpointSliceIndex(ep)
+	if err != nil {
+		return err
+	}
+
+	// the peer Endpoint is the other of the two endpoints in the
+	// Endpoints slice. So do a +1 on the index and modulo operation
+	// to take care of the wrap around.
+	peerEp := l.Endpoints[(idx+1)%2]
+
+	log.Infof("Creating Endpoint: %s ( --> %s )", ep, peerEp)
+
+	// build the netlink.Veth struct for the link provisioning
+	linkA := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name: ep.GetRandIfaceName(),
+			MTU:  l.MTU,
+			// Mac address is set later on
+		},
+		PeerName: peerEp.GetRandIfaceName(),
+		// PeerMac address is set later on
+	}
+
+	// add the link
+	err = netlink.LinkAdd(linkA)
+	if err != nil {
+		return err
+	}
+
+	// disable TXOffloading
+	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+		return err
+	}
+
+	// the link needs to be moved to the relevant network namespace
+	// and enabled (up). This is done via linkSetupFunc.
+	// based on the endpoint type the link setup function is different.
+	// linkSetupFunc is executed in a netns of a node.
+	// if the node is a regular namespace node
+	// add link to node, rename, set mac and Up
+	err = ep.GetNode().AddLinkToContainer(ctx, linkA,
+		SetNameMACAndUpInterface(linkA, ep))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (l *LinkVEth) deployBEnd(ctx context.Context) error {
+func (l *LinkVEth) deployBEnd(ctx context.Context, ep Endpoint) error {
+
+	idx, err := l.getEndpointSliceIndex(ep)
+	if err != nil {
+		return err
+	}
+
+	peerEp := l.Endpoints[(idx+1)%2]
+
+	log.Infof("Assigning Endpoint: %s ( --> %s )", ep, peerEp)
+
+	// retrieve the netlink.Link for the provided Endpoint
+	link, err := utils.LinkByNameOrAlias(ep.GetRandIfaceName())
+	if err != nil {
+		return err
+	}
+
+	// disable TXOffloading
+	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+		return err
+	}
+
+	// the link needs to be moved to the relevant network namespace
+	// and enabled (up). This is done via linkSetupFunc.
+	// based on the endpoint type the link setup function is different.
+	// linkSetupFunc is executed in a netns of a node.
+	// if the node is a regular namespace node
+	// add link to node, rename, set mac and Up
+	err = ep.GetNode().AddLinkToContainer(ctx, link,
+		SetNameMACAndUpInterface(link, ep))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (l *LinkVEth) Deploy(ctx context.Context) error {
+// getEndpointSliceIndex returns the index of the LinkVEth internal ENdpoint slie of the given Endpoint.
+// An error is returned when the Endpoint is not part of the Links assigned Endpoints.
+func (l *LinkVEth) getEndpointSliceIndex(ep Endpoint) (int, error) {
+	// init epIndex with -1 (== not found)
+	epIndex := -1
+	for idx, e := range l.Endpoints {
+		if e == ep {
+			epIndex = idx
+			break
+		}
+	}
+	// if the ep is not found, return -1 and an error
+	if epIndex == -1 {
+		// build a string list of endpoints for usefull error output
+		epStrings := []string{}
+		for _, e := range l.Endpoints {
+			epStrings = append(epStrings, e.String())
+		}
+		// return the error
+		return epIndex, fmt.Errorf("endpoint %s does not belong to link [ %s ]", ep.String(), strings.Join(epStrings, ", "))
+	}
+
+	return epIndex, nil
+}
+
+// Deploy the link based on one of its Endpoints
+func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()
 
+	// first we need to check that the provided ep is part of this link
+	_, err := l.getEndpointSliceIndex(ep)
+	if err != nil {
+		return err
+	}
+
+	// The first node to trigger the link creation will call deployAEnd,
+	// subsequent (the second) call will end up in deployBEnd.
 	switch l.DeploymentState {
-	case LinkDeploymentStateNotDeployed:
-		return l.deployAEnd(ctx)
 	case LinkDeploymentStateDeployed:
-		return l.deployBEnd(ctx)
-	}
-
-	if l.DeploymentState == LinkDeploymentStateDeployed {
-		return nil
-	}
-
-	for _, ep := range l.GetEndpoints() {
-		if ep.GetNode().GetState() != state.Deployed {
-			return nil
-		}
-	}
-
-	log.Infof("Creating link: %s <--> %s", l.GetEndpoints()[0], l.GetEndpoints()[1])
-
-	// build the netlink.Veth struct for the link provisioning
-	linkA := &netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{
-			Name: l.Endpoints[0].GetRandIfaceName(),
-			MTU:  l.MTU,
-			// Mac address is set later on
-		},
-		PeerName: l.Endpoints[1].GetRandIfaceName(),
-		// PeerMac address is set later on
-	}
-
-	// add the link
-	err := netlink.LinkAdd(linkA)
-	if err != nil {
+		return l.deployBEnd(ctx, ep)
+	default:
+		err := l.deployAEnd(ctx, ep)
+		l.DeploymentState = LinkDeploymentStateDeployed
 		return err
 	}
-
-	// retrieve the netlink.Link for the B / Peer side of the link
-	linkB, err := utils.LinkByNameOrAlias(l.Endpoints[1].GetRandIfaceName())
-	if err != nil {
-		return err
-	}
-
-	// once veth pair is created, disable tx offload for the veth pair
-	for _, ep := range l.Endpoints {
-		if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
-			return err
-		}
-	}
-
-	// both ends of the link need to be moved to the relevant network namespace
-	// and enabled (up). This is done via linkSetupFunc.
-	// based on the endpoint type the link setup function is different.
-	// linkSetupFunc is executed in a netns of a node.
-	for idx, link := range []netlink.Link{linkA, linkB} {
-		// if the node is a regular namespace node
-		// add link to node, rename, set mac and Up
-		err = l.Endpoints[idx].GetNode().AddLinkToContainer(ctx, link,
-			SetNameMACAndUpInterface(link, l.Endpoints[idx]))
-		if err != nil {
-			return err
-		}
-	}
-
-	l.DeploymentState = LinkDeploymentStateDeployed
-
-	return nil
 }
 
 func (l *LinkVEth) Remove(_ context.Context) error {

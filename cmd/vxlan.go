@@ -108,10 +108,10 @@ var vxlanCreateCmd = &cobra.Command{
 			return fmt.Errorf("not a VxlanStitched link")
 		}
 
-		err = vxl.DeployWithExistingVeth(ctx)
-		if err != nil {
-			return err
+		for _, ep := range vxl.GetEndpoints() {
+			ep.Deploy(ctx)
 		}
+
 		return nil
 	},
 }

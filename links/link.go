@@ -295,8 +295,8 @@ type RawLink interface {
 // Link is an interface that all concrete link types must implement.
 // Concrete link types are resolved from raw links and become part of CLab.Links.
 type Link interface {
-	// Deploy deploys the link.
-	Deploy(context.Context) error
+	// Deploy deploys the link. Endpoint is the endpoint that triggers the creation of the link.
+	Deploy(context.Context, Endpoint) error
 	// Remove removes the link.
 	Remove(context.Context) error
 	// GetType returns the type of the link.
@@ -353,7 +353,6 @@ type Node interface {
 	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
 	// the master of the interface and bring the interface up.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddLink(l Link)
 	// AddEndpoint adds the Endpoint to the node
 	AddEndpoint(e Endpoint)
 	GetLinkEndpointType() LinkEndpointType

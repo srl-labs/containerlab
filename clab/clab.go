@@ -571,7 +571,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				// we just wait if there is actually a dependency on this state, otherwise
 				// we head on.
 				if dn.MustWait(types.WaitForCreateLinks) {
-					node.WaitForAllLinksCreated()
+					node.WaitForAllEndpointsCreated()
 				}
 
 				dn.Done(types.WaitForCreateLinks)

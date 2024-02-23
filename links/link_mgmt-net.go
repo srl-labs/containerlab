@@ -66,9 +66,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	link.Endpoints = []Endpoint{bridgeEp, contEp}
 
 	// add link to respective endpoint nodes
-	bridgeEp.GetNode().AddLink(link)
 	bridgeEp.GetNode().AddEndpoint(bridgeEp)
-	contEp.GetNode().AddLink(link)
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {

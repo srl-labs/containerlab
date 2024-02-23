@@ -1,6 +1,9 @@
 package links
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 type EndpointHost struct {
 	EndpointGeneric
@@ -10,6 +13,10 @@ func NewEndpointHost(eg *EndpointGeneric) *EndpointHost {
 	return &EndpointHost{
 		EndpointGeneric: *eg,
 	}
+}
+
+func (e *EndpointHost) Deploy(ctx context.Context) error {
+	return e.GetLink().Deploy(ctx, e)
 }
 
 func (e *EndpointHost) Verify(_ *VerifyLinkParams) error {

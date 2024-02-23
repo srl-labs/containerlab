@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -31,6 +32,7 @@ type Endpoint interface {
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
 	Remove() error
+	Deploy(context.Context) error
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.

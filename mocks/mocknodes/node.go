@@ -59,18 +59,6 @@ func (mr *MockNodeMockRecorder) AddEndpoint(e any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
 }
 
-// AddLink mocks base method.
-func (m *MockNode) AddLink(l links.Link) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddLink", l)
-}
-
-// AddLink indicates an expected call of AddLink.
-func (mr *MockNodeMockRecorder) AddLink(l any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLink", reflect.TypeOf((*MockNode)(nil).AddLink), l)
-}
-
 // AddLinkToContainer mocks base method.
 func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()
@@ -483,16 +471,16 @@ func (mr *MockNodeMockRecorder) VerifyStartupConfig(topoDir any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyStartupConfig", reflect.TypeOf((*MockNode)(nil).VerifyStartupConfig), topoDir)
 }
 
-// WaitForAllLinksCreated mocks base method.
-func (m *MockNode) WaitForAllLinksCreated() {
+// WaitForAllEndpointsCreated mocks base method.
+func (m *MockNode) WaitForAllEndpointsCreated() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "WaitForAllLinksCreated")
+	m.ctrl.Call(m, "WaitForAllEndpointsCreated")
 }
 
-// WaitForAllLinksCreated indicates an expected call of WaitForAllLinksCreated.
-func (mr *MockNodeMockRecorder) WaitForAllLinksCreated() *gomock.Call {
+// WaitForAllEndpointsCreated indicates an expected call of WaitForAllEndpointsCreated.
+func (mr *MockNodeMockRecorder) WaitForAllEndpointsCreated() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAllLinksCreated", reflect.TypeOf((*MockNode)(nil).WaitForAllLinksCreated))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAllEndpointsCreated", reflect.TypeOf((*MockNode)(nil).WaitForAllEndpointsCreated))
 }
 
 // WithMgmtNet mocks base method.

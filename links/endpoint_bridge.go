@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -39,6 +40,10 @@ func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (e *EndpointBridge) Deploy(ctx context.Context) error {
+	return e.GetLink().Deploy(ctx, e)
 }
 
 // CheckBridgeExists verifies that the given bridge is present in the

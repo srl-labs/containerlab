@@ -42,15 +42,13 @@ type DefaultNode struct {
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
-	// List of links that reference the node.
-	Links []links.Link
 	// List of link endpoints that are connected to the node.
 	Endpoints []links.Endpoint
 	// State of the node
 	state      state.NodeState
 	statemutex sync.RWMutex
 	// links created wg
-	linksCreated *sync.WaitGroup
+	endpointsCreate *sync.WaitGroup
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -62,7 +60,7 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		OverwriteNode:    n,
 		LicensePolicy:    types.LicensePolicyNone,
 		SSHConfig:        types.NewSSHConfig(),
-		linksCreated:     &sync.WaitGroup{},
+		endpointsCreate:  &sync.WaitGroup{},
 	}
 
 	return dn
@@ -74,8 +72,8 @@ func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { r
 func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
 
-func (d *DefaultNode) WaitForAllLinksCreated() {
-	d.linksCreated.Wait()
+func (d *DefaultNode) WaitForAllEndpointsCreated() {
+	d.endpointsCreate.Wait()
 }
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
@@ -153,8 +151,8 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 }
 
 func (d *DefaultNode) Delete(ctx context.Context) error {
-	for _, l := range d.Links {
-		err := l.Remove(ctx)
+	for _, e := range d.Endpoints {
+		err := e.GetLink().Remove(ctx)
 		if err != nil {
 			return err
 		}
@@ -479,7 +477,7 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 		return err
 	}
 	// indicate this link is created
-	d.linksCreated.Done()
+	d.endpointsCreate.Done()
 	return nil
 }
 
@@ -508,13 +506,9 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 	return netns.Do(f)
 }
 
-func (d *DefaultNode) AddLink(l links.Link) {
-	d.Links = append(d.Links, l)
-	d.linksCreated.Add(1)
-}
-
 func (d *DefaultNode) AddEndpoint(e links.Endpoint) {
 	d.Endpoints = append(d.Endpoints, e)
+	d.endpointsCreate.Add(1)
 }
 
 func (d *DefaultNode) GetEndpoints() []links.Endpoint {
@@ -533,13 +527,12 @@ func (d *DefaultNode) GetShortName() string {
 
 // DeployLinks deploys links associated with the node.
 func (d *DefaultNode) DeployLinks(ctx context.Context) error {
-	for _, l := range d.Links {
-		err := l.Deploy(ctx)
+	for _, ep := range d.Endpoints {
+		err := ep.Deploy(ctx)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 

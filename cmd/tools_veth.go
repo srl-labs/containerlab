@@ -111,9 +111,9 @@ var vethCreateCmd = &cobra.Command{
 			return err
 		}
 
-		err = link.Deploy(ctx)
-		if err != nil {
-			return err
+		// deploy the endpoints of the Link
+		for _, ep := range link.GetEndpoints() {
+			ep.Deploy(ctx)
 		}
 
 		log.Info("veth interface successfully created!")
