@@ -270,12 +270,26 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 
 // Extras contains extra node parameters which are not entitled to be part of a generic node config.
 type Extras struct {
-	SRLAgents []string `yaml:"srl-agents,omitempty"`
 	// Nokia SR Linux agents. As of now just the agents spec files can be provided here
-	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
+	SRLAgents []string `yaml:"srl-agents,omitempty"`
 	// Proxy address that mysocketctl will use
-	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
+	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
 	// paths to files which are to be copied to ceos flash dir
+	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
+	// k8s-kind node specific options
+	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
+}
+
+// K8sKindExtras represents the k8s-kind-specific extra options
+type K8sKindExtras struct {
+	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
+}
+
+// KindDeployOptions represents the options used for the kind cluster creation.
+// It is aligned with the `kind create cluster` command options, but exposes
+// only the ones that are relevant for containerlab.
+type K8sKindDeployExtras struct {
+	Wait *string `yaml:"wait,omitempty"`
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.

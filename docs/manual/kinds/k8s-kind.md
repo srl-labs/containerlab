@@ -100,6 +100,22 @@ With `k8s-kind`` nodes it is possible to use the following configuration paramet
 - [image](../nodes.md#image) - to define the kind container image to use for the kind cluster
 - [startup-config](../nodes.md#startup-config) - to provide a kind cluster configuration (optional, kind defaults apply otherwise)
 
+### Extra parameters
+
+In addition to the generic node parameters, `k8s-kind` can take following extra parameters from `extras` field.
+
+```
+topology:
+  nodes:
+    kind0:
+      kind: k8s_kind
+      extras:
+        k8s_kind:
+          deploy:
+            # Corresponds to --wait option. Wait given duration until the cluster becomes ready.
+            wait: 0s
+```
+
 ## Known issues
 
 ### Duplication of nodes in the output
