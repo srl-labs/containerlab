@@ -225,6 +225,17 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		nodesWg.Wait()
 	}
 
+	// also call deploy on the special nodes endpoints
+	for _, n := range c.GetSpecialLinkNodes() {
+		for _, ep := range n.GetEndpoints() {
+			err = ep.Deploy(ctx)
+			if err != nil {
+				log.Warnf("failed deploying endpoint %s", ep)
+			}
+		}
+
+	}
+
 	// HOTFIX: originally execs were executed by the node, but because
 	// execs were run before all the links are connected between the nodes they could fail.
 	// we couldn't wait for all links to be created/connected since this would cause a deadlock
