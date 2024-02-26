@@ -565,15 +565,6 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					continue
 				}
 
-				// DeployLinks does not necessarily create all the links already.
-				// veth links might be created by the peer node, if it was not already
-				// deployed properly. Hence we need to wait for all the links to be created.
-				// we just wait if there is actually a dependency on this state, otherwise
-				// we head on.
-				if dn.MustWait(types.WaitForCreateLinks) {
-					node.WaitForAllEndpointsCreated()
-				}
-
 				dn.Done(types.WaitForCreateLinks)
 
 				// start config stage

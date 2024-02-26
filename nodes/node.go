@@ -107,8 +107,6 @@ type Node interface {
 	GetState() state.NodeState
 	SetState(state.NodeState)
 	GetSSHConfig() *types.SSHConfig
-	// WaitForAllEndpointsCreated will block until all the nodes links are created
-	WaitForAllEndpointsCreated()
 	// RunExecFromConfig executes the topologyfile defined exec commands
 	RunExecFromConfig(context.Context, *exec.ExecCollection) error
 	IsHealthy(ctx context.Context) (bool, error)

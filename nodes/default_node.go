@@ -47,8 +47,6 @@ type DefaultNode struct {
 	// State of the node
 	state      state.NodeState
 	statemutex sync.RWMutex
-	// links created wg
-	endpointsCreate *sync.WaitGroup
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -60,7 +58,6 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		OverwriteNode:    n,
 		LicensePolicy:    types.LicensePolicyNone,
 		SSHConfig:        types.NewSSHConfig(),
-		endpointsCreate:  &sync.WaitGroup{},
 	}
 
 	return dn
@@ -71,10 +68,6 @@ func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d
 func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
 func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
-
-func (d *DefaultNode) WaitForAllEndpointsCreated() {
-	d.endpointsCreate.Wait()
-}
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
@@ -476,8 +469,6 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 	if err != nil {
 		return err
 	}
-	// indicate this link is created
-	d.endpointsCreate.Done()
 	return nil
 }
 
@@ -508,7 +499,6 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 
 func (d *DefaultNode) AddEndpoint(e links.Endpoint) {
 	d.Endpoints = append(d.Endpoints, e)
-	d.endpointsCreate.Add(1)
 }
 
 func (d *DefaultNode) GetEndpoints() []links.Endpoint {

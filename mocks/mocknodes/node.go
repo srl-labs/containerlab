@@ -471,18 +471,6 @@ func (mr *MockNodeMockRecorder) VerifyStartupConfig(topoDir any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyStartupConfig", reflect.TypeOf((*MockNode)(nil).VerifyStartupConfig), topoDir)
 }
 
-// WaitForAllEndpointsCreated mocks base method.
-func (m *MockNode) WaitForAllEndpointsCreated() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "WaitForAllEndpointsCreated")
-}
-
-// WaitForAllEndpointsCreated indicates an expected call of WaitForAllEndpointsCreated.
-func (mr *MockNodeMockRecorder) WaitForAllEndpointsCreated() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAllEndpointsCreated", reflect.TypeOf((*MockNode)(nil).WaitForAllEndpointsCreated))
-}
-
 // WithMgmtNet mocks base method.
 func (m *MockNode) WithMgmtNet(arg0 *types.MgmtNet) {
 	m.ctrl.T.Helper()
