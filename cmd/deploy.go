@@ -221,13 +221,13 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// also call deploy on the special nodes endpoints
-	for _, n := range c.GetSpecialLinkNodes() {
-		for _, ep := range n.GetEndpoints() {
-			err = ep.Deploy(ctx)
-			if err != nil {
-				log.Warnf("failed deploying endpoint %s", ep)
-			}
+	// also call deploy on the special nodes endpoints (only host is required for the
+	// vxlan stitched endpoints)
+	eps := c.GetSpecialLinkNodes()["host"].GetEndpoints()
+	for _, ep := range eps {
+		err = ep.Deploy(ctx)
+		if err != nil {
+			log.Warnf("failed deploying endpoint %s", ep)
 		}
 	}
 
