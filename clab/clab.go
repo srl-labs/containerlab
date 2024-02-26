@@ -589,12 +589,11 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				dn.Done(types.WaitForConfigure)
 
-				// HOTFIX: EXECS are for now being run after all nodes are deployed, see: deploy.go
-				// // run execs
-				// err = node.RunExecFromConfig(ctx, execCollection)
-				// if err != nil {
-				// 	log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
-				// }
+				// run execs
+				err = node.RunExecFromConfig(ctx, execCollection)
+				if err != nil {
+					log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
+				}
 
 				// health state processing
 				if dn.MustWait(types.WaitForHealthy) {
