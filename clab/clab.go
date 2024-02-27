@@ -50,7 +50,7 @@ type CLab struct {
 	dependencyManager depMgr.DependencyManager
 	m                 *sync.RWMutex
 	timeout           time.Duration
-	globalRuntime     string
+	globalRuntimeName string
 	// nodeFilter is a list of node names to be deployed,
 	// names are provided exactly as they are listed in the topology file.
 	nodeFilter []string
@@ -64,6 +64,42 @@ func WithTimeout(dur time.Duration) ClabOption {
 			return errors.New("zero or negative timeouts are not allowed")
 		}
 		c.timeout = dur
+		return nil
+	}
+}
+
+// WithLabName sets the name of the lab
+// to the provided string
+func WithLabName(n string) ClabOption {
+	return func(c *CLab) error {
+		c.Config.Name = n
+		return nil
+	}
+}
+
+// WithManagementNetworkName sets the name of the
+// management network that is to be used
+func WithManagementNetworkName(n string) ClabOption {
+	return func(c *CLab) error {
+		c.Config.Mgmt.Network = n
+		return nil
+	}
+}
+
+// WithManagementIpv4Subnet defined the IPv4 subnet
+// that will be used for the mgmt network
+func WithManagementIpv4Subnet(s string) ClabOption {
+	return func(c *CLab) error {
+		c.Config.Mgmt.IPv4Subnet = s
+		return nil
+	}
+}
+
+// WithManagementIpv6Subnet defined the IPv6 subnet
+// that will be used for the mgmt network
+func WithManagementIpv6Subnet(s string) ClabOption {
+	return func(c *CLab) error {
+		c.Config.Mgmt.IPv6Subnet = s
 		return nil
 	}
 }
@@ -92,7 +128,7 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 			return err
 		}
 
-		c.globalRuntime = name
+		c.globalRuntimeName = name
 
 		r := rInit()
 		log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
@@ -131,7 +167,7 @@ func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
 
 func WithKeepMgmtNet() ClabOption {
 	return func(c *CLab) error {
-		c.GlobalRuntime().WithKeepMgmtNet()
+		c.globalRuntime().WithKeepMgmtNet()
 		return nil
 	}
 }
@@ -142,7 +178,7 @@ func WithTopoPath(path, varsFile string) ClabOption {
 		if err != nil {
 			return err
 		}
-		if err := c.GetTopology(file, varsFile); err != nil {
+		if err := c.LoadTopology(file, varsFile); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
 
@@ -351,8 +387,8 @@ func (c *CLab) initMgmtNetwork() error {
 	return nil
 }
 
-func (c *CLab) GlobalRuntime() runtime.ContainerRuntime {
-	return c.Runtimes[c.globalRuntime]
+func (c *CLab) globalRuntime() runtime.ContainerRuntime {
+	return c.Runtimes[c.globalRuntimeName]
 }
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes
@@ -703,7 +739,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 		return
 	}
 
-	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntime], contName, nodeName)
+	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntimeName], contName, nodeName)
 }
 
 func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
@@ -757,7 +793,7 @@ func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	close(serialChan)
 
 	// also call delete on the special nodes
-	for _, n := range c.GetSpecialLinkNodes() {
+	for _, n := range c.getSpecialLinkNodes() {
 		err := n.Delete(ctx)
 		if err != nil {
 			log.Warn(err)
@@ -782,7 +818,7 @@ func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter
 }
 
 // ListNodesContainers lists all containers based on the nodes stored in clab instance.
-func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+func (c *CLab) listNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
 
 	for _, n := range c.Nodes {
@@ -812,22 +848,9 @@ func (c *CLab) ListNodesContainersIgnoreNotFound(ctx context.Context) ([]runtime
 	return containers, nil
 }
 
-func (c *CLab) GetNodeRuntime(contName string) (runtime.ContainerRuntime, error) {
-	shortName, err := getShortName(c.Config.Name, c.Config.Prefix, contName)
-	if err != nil {
-		return nil, err
-	}
-
-	if node, ok := c.Nodes[shortName]; ok {
-		return node.GetRuntime(), nil
-	}
-
-	return nil, fmt.Errorf("could not find a container matching name %q", contName)
-}
-
 // GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes - host and mgmt-net.
 // The CLab nodes are copied to a new map and thus clab.Node interface is converted to link.Node.
-func (c *CLab) GetLinkNodes() map[string]links.Node {
+func (c *CLab) getLinkNodes() map[string]links.Node {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
 	// If no circ deps were in place we could've used c.Nodes map instead.
@@ -838,7 +861,7 @@ func (c *CLab) GetLinkNodes() map[string]links.Node {
 	}
 
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
-	specialNodes := c.GetSpecialLinkNodes()
+	specialNodes := c.getSpecialLinkNodes()
 	for _, n := range specialNodes {
 		resolveNodes[n.GetShortName()] = n
 	}
@@ -849,7 +872,7 @@ func (c *CLab) GetLinkNodes() map[string]links.Node {
 // GetSpecialLinkNodes returns a map of special nodes that are used to resolve links.
 // Special nodes are host and mgmt-bridge nodes that are not typically present in the topology file
 // but are required to resolve links.
-func (c *CLab) GetSpecialLinkNodes() map[string]links.Node {
+func (c *CLab) getSpecialLinkNodes() map[string]links.Node {
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
 	specialNodes := map[string]links.Node{
 		"host":     links.GetHostLinkNode(),
@@ -862,7 +885,7 @@ func (c *CLab) GetSpecialLinkNodes() map[string]links.Node {
 // ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
 func (c *CLab) ResolveLinks() error {
 	resolveParams := &links.ResolveParams{
-		Nodes:          c.GetLinkNodes(),
+		Nodes:          c.getLinkNodes(),
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
 		NodesFilter:    c.nodeFilter,
 	}
@@ -924,36 +947,238 @@ func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
 }
 
 // Deploy the given topology
-func (c *CLab) Deploy() error {
-	return nil
+func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
+	var err error
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	err = c.ResolveLinks()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("lab Conf: %+v", c.Config)
+
+	if options.reconfigure {
+		_ = c.Destroy(ctx)
+		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
+		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
+			return nil, err
+		}
+	}
+
+	// create management network or use existing one
+	if err = c.CreateNetwork(ctx); err != nil {
+		return nil, err
+	}
+
+	err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = c.checkTopologyDefinition(ctx); err != nil {
+		return nil, err
+	}
+
+	if err = c.loadKernelModules(); err != nil {
+		return nil, err
+	}
+
+	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
+	// adjust ACL for Labdir such that SUDO_UID Users will
+	// also have access to lab directory files
+	err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
+	if err != nil {
+		log.Infof("unable to adjust Labdir file ACLs: %v", err)
+	}
+
+	// create an empty ansible inventory file that will get populated later
+	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
+	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
+	_, err = os.Create(ansibleInvFPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// in an similar fashion, create an empty topology data file
+	topoDataFPath := c.TopoPaths.TopoExportFile()
+	topoDataF, err := os.Create(topoDataFPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.certificateAuthoritySetup(); err != nil {
+		return nil, err
+	}
+
+	c.SSHPubKeys, err = c.RetrieveSSHPubKeys()
+	if err != nil {
+		log.Warn(err)
+	}
+
+	if err := c.CreateAuthzKeysFile(); err != nil {
+		return nil, err
+	}
+
+	// extraHosts holds host entries for nodes with static IPv4/6 addresses
+	// these entries will be used by container runtime to populate /etc/hosts file
+	extraHosts := make([]string, 0, len(c.Nodes))
+
+	for _, n := range c.Nodes {
+		if n.Config().MgmtIPv4Address != "" {
+			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
+				n.Config().ShortName, n.Config().MgmtIPv4Address)
+			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
+		}
+
+		if n.Config().MgmtIPv6Address != "" {
+			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
+				n.Config().ShortName, n.Config().MgmtIPv6Address)
+			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
+		}
+	}
+
+	for _, n := range c.Nodes {
+		n.Config().ExtraHosts = extraHosts
+	}
+
+	nodesWg, execCollection, err := c.CreateNodes(ctx, options.maxWorkers, options.skipPostDeploy)
+	if err != nil {
+		return nil, err
+	}
+
+	if nodesWg != nil {
+		nodesWg.Wait()
+	}
+
+	// write to log
+	execCollection.Log()
+
+	if err := c.GenerateInventories(); err != nil {
+		return nil, err
+	}
+
+	if err := c.GenerateExports(ctx, topoDataF, options.exportTemplate); err != nil {
+		return nil, err
+	}
+
+	// generate graph of the lab topology
+	if options.graph {
+		if err = c.GenerateDotGraph(); err != nil {
+			log.Error(err)
+		}
+	}
+
+	containers, err := c.listNodesContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info("Adding containerlab host entries to /etc/hosts file")
+	err = AppendHostsFileEntries(containers, c.Config.Name)
+	if err != nil {
+		log.Errorf("failed to create hosts file: %v", err)
+	}
+
+	log.Info("Adding ssh config for containerlab nodes")
+	err = c.AddSSHConfig()
+	if err != nil {
+		log.Errorf("failed to create ssh config file: %v", err)
+	}
+
+	return containers, nil
+}
+
+// certificateAuthoritySetup sets up the certificate authority parameters.
+func (c *CLab) certificateAuthoritySetup() error {
+	// init the Cert storage and CA
+	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
+	c.Cert.CA = cert.NewCA()
+
+	s := c.Config.Settings
+
+	// Set defaults for the CA parameters
+	keySize := 2048
+	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
+
+	// check that Settings.CertificateAuthority exists.
+	if s != nil && s.CertificateAuthority != nil {
+		// if ValidityDuration is set use the value
+		if s.CertificateAuthority.ValidityDuration != 0 {
+			validityDuration = s.CertificateAuthority.ValidityDuration
+		}
+
+		// if KeyLength is set use the value
+		if s.CertificateAuthority.KeySize != 0 {
+			keySize = s.CertificateAuthority.KeySize
+		}
+
+		// if external CA cert and and key are set, propagate to topopaths
+		extCACert := s.CertificateAuthority.Cert
+		extCAKey := s.CertificateAuthority.Key
+
+		// override external ca and key from env vars
+		if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
+			extCAKey = v
+		}
+
+		if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
+			extCACert = v
+		}
+
+		if extCACert != "" && extCAKey != "" {
+			err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// define the attributes used to generate the CA Cert
+	caCertInput := &cert.CACSRInput{
+		CommonName:   c.Config.Name + " lab CA",
+		Country:      "US",
+		Expiry:       validityDuration,
+		Organization: "containerlab",
+		KeySize:      keySize,
+	}
+
+	return c.LoadOrGenerateCA(caCertInput)
 }
 
 // Destroy the given topology
-func (c *CLab) Destroy() error {
+func (c *CLab) Destroy(ctx context.Context) error {
+	return nil
+}
+
+func (c *CLab) Version(ctx context.Context) error {
 	return nil
 }
 
 // Inspect the given topology
-func (c *CLab) Inspect() error {
+func (c *CLab) Inspect(ctx context.Context) error {
 	return nil
 }
 
 // Save configuration of the given topology nodes
-func (c *CLab) Save() error {
+func (c *CLab) Save(ctx context.Context) error {
 	return nil
 }
 
 // Graph the given topology
-func (c *CLab) Graph() error {
+func (c *CLab) Graph(ctx context.Context) error {
 	return nil
 }
 
 // Exec execute commands on running topology nodes
-func (c *CLab) Exec() error {
+func (c *CLab) Exec(ctx context.Context) error {
 	return nil
 }
 
 // Configure topology nodes
-func (c *CLab) Configure() error {
+func (c *CLab) Configure(ctx context.Context) error {
 	return nil
 }

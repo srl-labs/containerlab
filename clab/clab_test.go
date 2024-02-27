@@ -192,8 +192,8 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 
 	// create a barebone CLab struct
 	c := CLab{
-		Nodes:         getNodeMap(mockCtrl),
-		globalRuntime: "mock",
+		Nodes:             getNodeMap(mockCtrl),
+		globalRuntimeName: "mock",
 		Runtimes: map[string]runtime.ContainerRuntime{
 			"mock": crMock,
 		},

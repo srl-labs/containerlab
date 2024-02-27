@@ -147,7 +147,7 @@ func createNodes(ctx context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) e
 			// its namespace path.
 			// techinically we don't care which node this is, as long as it uses
 			// standard veth interface attachment process.
-			nspath, err := c.GlobalRuntime().GetNSPath(ctx, epDefinition.Node)
+			nspath, err := c.globalRuntime().GetNSPath(ctx, epDefinition.Node)
 			if err != nil {
 				return err
 			}
@@ -227,7 +227,7 @@ func createFakeNode(c *clab.CLab, kind string, nodeCfg *types.NodeConfig) error 
 	}
 
 	// Init
-	err = n.Init(nodeCfg, nodes.WithRuntime(c.GlobalRuntime()))
+	err = n.Init(nodeCfg, nodes.WithRuntime(c.globalRuntime()))
 	if err != nil {
 		return fmt.Errorf("failed to initialize node %s: %v", name, err)
 	}

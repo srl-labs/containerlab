@@ -615,13 +615,13 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			// set mockRuntime parameters
 			mockRuntime := mockruntime.NewMockContainerRuntime(ctrl)
 			c.Runtimes[rtName] = mockRuntime
-			c.globalRuntime = rtName
+			c.globalRuntimeName = rtName
 
 			// prepare runtime result
 			mockRuntime.EXPECT().ListContainers(gomock.Any(), gomock.Any()).AnyTimes().Return(tc.mockResult.c, tc.mockResult.e)
 
 			ctx := context.Background()
-			err = c.VerifyContainersUniqueness(ctx)
+			err = c.verifyContainersUniqueness(ctx)
 			if tc.wantError {
 				assert.Error(t, err)
 			} else {

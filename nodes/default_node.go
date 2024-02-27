@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"internal/itoa"
 	"os"
 	"path"
 	"path/filepath"
@@ -129,15 +130,24 @@ func (d *DefaultNode) VerifyHostRequirements() error {
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
+	// Set the "CLAB_INTFS" variable to the number of interfaces
+	// Which is required by vrnetlab to determine if all configured interfaces are present
+	// such that the internal VM can be started with these interfaces assigned.
+	d.Config().Env[types.CLAB_ENV_INTFS] = itoa.Itoa(len(d.GetEndpoints()))
+
+	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
 	if err != nil {
 		return err
 	}
+
+	// start the container
 	_, err = d.Runtime.StartContainer(ctx, cID, d)
 	if err != nil {
 		return err
 	}
 
+	// Update the nodes state
 	d.SetState(state.Deployed)
 
 	return nil
