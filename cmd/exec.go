@@ -13,7 +13,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -33,6 +32,10 @@ var execCmd = &cobra.Command{
 }
 
 func execFn(_ *cobra.Command, _ []string) error {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if len(execCommands) == 0 {
 		return errors.New("provide command to execute")
 	}
@@ -63,21 +66,13 @@ func execFn(_ *cobra.Command, _ []string) error {
 		clab.WithDebug(debug),
 	)
 
+	if name != "" {
+		opts = append(opts, clab.WithLabName(name))
+	}
+
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return err
-	}
-
-	err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if name == "" {
-		name = c.Config.Name
 	}
 
 	var filters []*types.GenericFilter
@@ -91,45 +86,7 @@ func execFn(_ *cobra.Command, _ []string) error {
 		filters = append(filters, types.FilterFromLabelStrings(labFilter)...)
 	}
 
-	// list all containers using global runtime using provided filters
-	cnts, err := c.GlobalRuntime().ListContainers(ctx, filters)
-	if err != nil {
-		return err
-	}
-
-	// make sure filter returned containers
-	if len(cnts) == 0 {
-		return fmt.Errorf("filter did not match any containers")
-	}
-
-	// prepare the exec collection and the exec command
-	resultCollection := exec.NewExecCollection()
-
-	// build execs from the string input
-	var execCmds []*exec.ExecCmd
-	for _, execCmdStr := range execCommands {
-		execCmd, err := exec.NewExecCmdFromString(execCmdStr)
-		if err != nil {
-			return err
-		}
-		execCmds = append(execCmds, execCmd)
-	}
-
-	// run the exec commands on all the containers matching the filter
-	for _, cnt := range cnts {
-		// iterate over the commands
-		for _, execCmd := range execCmds {
-			// execute the commands
-			execResult, err := cnt.RunExec(ctx, execCmd)
-			if err != nil {
-				// skip nodes that do not support exec
-				if err == exec.ErrRunExecNotSupported {
-					continue
-				}
-			}
-			resultCollection.Add(cnt.Names[0], execResult)
-		}
-	}
+	resultCollection, err := c.Exec(ctx, execCommands, clab.NewExecOptions(filters))
 
 	switch outputFormat {
 	case exec.ExecFormatPlain:
