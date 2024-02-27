@@ -1,0 +1,7 @@
+name: fortigate
+topology:
+  nodes:
+    forti:
+      kind: vr-fortigate
+      image: fortinet:0.1
+
