@@ -62,7 +62,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **IaaC approach**  
     Declarative way of defining the labs by means of the topology definition [`clab` files](https://containerlab.dev/manual/topo-def-file/).
 * **Network Operating Systems centric**  
-    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.dev/manual/kinds/kinds/) which allows the user to focus on the use cases, rather than infrastructure hurdles.
+    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.dev/manual/kinds/) which allows the user to focus on the use cases, rather than infrastructure hurdles.
 * **VM based nodes friendly**  
     With the [vrnetlab integration](https://containerlab.dev/manual/vrnetlab) it is possible to get the best of two worlds - running virtualized and containerized nodes alike with the same IaaC approach and workflows.
 * **Multi-vendor and open**  
