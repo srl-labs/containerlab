@@ -145,8 +145,6 @@ func CheckEndpointDoesNotExistYet(e Endpoint) error {
 		// we expect a netlink.LinkNotFoundError when querying for
 		// the interface with the given endpoints name
 		var err error
-		// long interface names (14+ chars) are aliased in the node's namespace
-
 		_, err = netlink.LinkByName(e.GetIfaceName())
 
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
