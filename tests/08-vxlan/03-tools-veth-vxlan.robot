@@ -52,7 +52,7 @@ Get netns id for host interface of some_very_long_node_name_l1
 
 Check host interface for some_very_long_node_name_l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "${l1_host_link}") | .ifname' | xargs ip -d l show
+    ...    sudo ip -d l show dev ${l1_host_link}
 
     Should Contain    ${output}    mtu 9500
 
@@ -77,7 +77,7 @@ Deploy vxlab link between l1 and l3 with tools cmd
 
 Verify vxlan links betweem l1 and l3
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "vx-${l1_host_link}") | .ifname' | xargs ip -d l show
+    ...    sudo ip -d l show dev vx-${l1_host_link}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    mtu 9050 qdisc noqueue state UNKNOWN
