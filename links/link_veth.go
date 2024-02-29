@@ -232,7 +232,7 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	// The first node to trigger the link creation will call deployAEnd,
 	// subsequent (the second) call will end up in deployBEnd.
 	switch l.DeploymentState {
-	case LinkDeploymentStateFullDeployed:
+	case LinkDeploymentStateHalfDeployed:
 		return l.deployBEnd(ctx, idx)
 	default:
 		return l.deployAEnd(ctx, idx)
