@@ -125,7 +125,7 @@ func (l *LinkMacVlan) GetParentInterfaceMTU() (int, error) {
 	return hostLink.Attrs().MTU, nil
 }
 
-func (l *LinkMacVlan) Deploy(ctx context.Context, ep Endpoint) error {
+func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	// lookup the parent host interface
 	parentInterface, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
 	if err != nil {

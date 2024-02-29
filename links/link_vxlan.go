@@ -205,7 +205,7 @@ type LinkVxlan struct {
 	remoteEndpoint *EndpointVxlan
 }
 
-func (l *LinkVxlan) Deploy(ctx context.Context, ep Endpoint) error {
+func (l *LinkVxlan) Deploy(ctx context.Context, _ Endpoint) error {
 	err := l.deployVxlanInterface()
 	if err != nil {
 		return err
