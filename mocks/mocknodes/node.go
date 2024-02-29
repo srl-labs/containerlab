@@ -157,18 +157,18 @@ func (mr *MockNodeMockRecorder) Deploy(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0, arg1)
 }
 
-// DeployLinks mocks base method.
-func (m *MockNode) DeployLinks(ctx context.Context) error {
+// DeployEndpoints mocks base method.
+func (m *MockNode) DeployEndpoints(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployLinks", ctx)
+	ret := m.ctrl.Call(m, "DeployEndpoints", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeployLinks indicates an expected call of DeployLinks.
-func (mr *MockNodeMockRecorder) DeployLinks(ctx any) *gomock.Call {
+// DeployEndpoints indicates an expected call of DeployEndpoints.
+func (mr *MockNodeMockRecorder) DeployEndpoints(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployLinks", reflect.TypeOf((*MockNode)(nil).DeployLinks), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEndpoints", reflect.TypeOf((*MockNode)(nil).DeployEndpoints), ctx)
 }
 
 // ExecFunction mocks base method.

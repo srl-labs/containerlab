@@ -559,7 +559,8 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				dn.EnterStage(types.WaitForCreateLinks)
 
-				err = node.DeployLinks(ctx)
+				// Deploy the Nodes link endpoints
+				err = node.DeployEndpoints(ctx)
 				if err != nil {
 					log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
 					continue
