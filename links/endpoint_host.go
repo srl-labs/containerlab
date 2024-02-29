@@ -35,6 +35,6 @@ func (e *EndpointHost) Verify(_ *VerifyLinkParams) error {
 	return nil
 }
 
-func (e *EndpointHost) AutoDeployWithAEnd() bool {
+func (e *EndpointHost) IsNodeless() bool {
 	return true
 }

@@ -21,6 +21,6 @@ func (e *EndpointMacVlan) Verify(_ *VerifyLinkParams) error {
 	return CheckEndpointExists(e)
 }
 
-func (e *EndpointMacVlan) AutoDeployWithAEnd() bool {
+func (e *EndpointMacVlan) IsNodeless() bool {
 	return false
 }

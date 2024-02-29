@@ -153,9 +153,9 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 
 	l.DeploymentState = LinkDeploymentStateHalfDeployed
 
-	// e.g. host endpoints have no trigger for the BEnd Endpoint. Hence they will indicate via
-	// the AutoDeployWithAEnd func, if the BEnd ist to automatically be provisioned on AEnd Provisioning
-	if peerEp.AutoDeployWithAEnd() {
+	// e.g. host endpoints are nodeless, and therefore the B end of the veth link should
+	// be deployed right after the A end is deployed.
+	if peerEp.IsNodeless() {
 		return l.deployBEnd(ctx, peerIdx)
 	}
 

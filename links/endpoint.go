@@ -36,10 +36,11 @@ type Endpoint interface {
 	// and passing the endpoint as an argument so that the link that consists of A and B endpoints
 	// can deploy them independently.
 	Deploy(context.Context) error
-	// AutoDeployWithAEnd indicates if this endpoint is to be deployed
-	// along with the peer Endpoint. This should be true for e.g. host endpoints
-	// because there is no host node that would bring the interface and rename it.
-	AutoDeployWithAEnd() bool
+	// IsNodeless returns true for the endpoints that has no explicit node defined in the topology.
+	// E.g. host endpoints, mgmt bridge endpoints.
+	// Because there is no node that would deploy this side of the link they should be deployed along
+	// with the A side of the veth link.
+	IsNodeless() bool
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.

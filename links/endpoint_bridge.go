@@ -48,9 +48,9 @@ func (e *EndpointBridge) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
-func (e *EndpointBridge) AutoDeployWithAEnd() bool {
-	// the mgmt bridge needs AutoDeployment. Otherwise the regular bridge node
-	// should trigger BEnd deployment seperately
+func (e *EndpointBridge) IsNodeless() bool {
+	// the mgmt bridge is nodeless.
+	// If this is a regular bridge, then it should trigger BEnd deployment.
 	return e.isMgmtBridgeEndpoint
 }
 

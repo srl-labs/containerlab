@@ -21,6 +21,6 @@ func (e *EndpointVeth) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
-func (e *EndpointVeth) AutoDeployWithAEnd() bool {
+func (e *EndpointVeth) IsNodeless() bool {
 	return false
 }
