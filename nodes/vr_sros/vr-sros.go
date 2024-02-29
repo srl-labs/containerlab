@@ -5,6 +5,8 @@
 package vr_sros
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -117,21 +119,18 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 }
 
 func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+	b := &bytes.Buffer{}
+	conf := bufio.NewReadWriter(bufio.NewReader(b), bufio.NewWriter(b))
+
 	if isPartialConfigFile(s.Cfg.StartupConfig) {
 		log.Infof("%s: applying config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
-
-		ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-		defer cancel()
 
 		r, err := os.Open(s.Cfg.StartupConfig)
 		if err != nil {
 			return err
 		}
 
-		err = s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-			r,
-		)
+		_, err = conf.ReadFrom(r)
 		if err != nil {
 			return err
 		}
@@ -145,7 +144,22 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
 
 	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
-		err := s.configureSSHPublicKeys(ctx)
+		sshConf, err := s.generateSSHPublicKeysConfig(ctx)
+		if err != nil {
+			return err
+		}
+		_, err = conf.ReadFrom(sshConf)
+		if err != nil {
+			return err
+		}
+	}
+
+	// apply the aggregated config snippets
+	if conf.Available() > 0 {
+		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
+			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
+			conf,
+		)
 		if err != nil {
 			return err
 		}
