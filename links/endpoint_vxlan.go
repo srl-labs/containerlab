@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"fmt"
 	"net"
 )
@@ -31,4 +32,12 @@ func (e *EndpointVxlan) String() string {
 // Verify verifies that the endpoint is valid and can be deployed.
 func (e *EndpointVxlan) Verify(*VerifyLinkParams) error {
 	return CheckEndpointUniqueness(e)
+}
+
+func (e *EndpointVxlan) Deploy(ctx context.Context) error {
+	return e.GetLink().Deploy(ctx, e)
+}
+
+func (e *EndpointVxlan) IsNodeless() bool {
+	return false
 }

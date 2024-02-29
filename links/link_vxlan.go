@@ -73,7 +73,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*Li
 
 	vethLink := hl.(*LinkVEth)
 
-	// host endpoint is always a 2nd element in the Endpoints slice
+	// host endpoint is always the 2nd element in the Endpoints slice
 	return vethLink, vethLink.Endpoints[1], nil
 }
 
@@ -93,9 +93,6 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error
 
 	// return the stitched vxlan link
 	stitchedLink := NewVxlanStitched(vxlanLink, vethLink, stitchEp)
-
-	// add stitched link to node
-	params.Nodes[lr.Endpoint.Node].AddLink(stitchedLink)
 
 	return stitchedLink, nil
 }
@@ -172,9 +169,6 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		link.remoteEndpoint.MAC = hwaddr
 	}
 
-	// add link to local endpoints node
-	link.localEndpoint.GetNode().AddLink(link)
-
 	return link, nil
 }
 
@@ -211,7 +205,7 @@ type LinkVxlan struct {
 	remoteEndpoint *EndpointVxlan
 }
 
-func (l *LinkVxlan) Deploy(ctx context.Context) error {
+func (l *LinkVxlan) Deploy(ctx context.Context, _ Endpoint) error {
 	err := l.deployVxlanInterface()
 	if err != nil {
 		return err

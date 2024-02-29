@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -31,6 +32,15 @@ type Endpoint interface {
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
 	Remove() error
+	// Deploy deploys the endpoint by calling the Deploy method of the link it is assigned to
+	// and passing the endpoint as an argument so that the link that consists of A and B endpoints
+	// can deploy them independently.
+	Deploy(context.Context) error
+	// IsNodeless returns true for the endpoints that has no explicit node defined in the topology.
+	// E.g. host endpoints, mgmt bridge endpoints.
+	// Because there is no node that would deploy this side of the link they should be deployed along
+	// with the A side of the veth link.
+	IsNodeless() bool
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.

@@ -1,6 +1,7 @@
 package links
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -11,11 +12,13 @@ import (
 
 type EndpointBridge struct {
 	EndpointGeneric
+	isMgmtBridgeEndpoint bool
 }
 
-func NewEndpointBridge(eg *EndpointGeneric) *EndpointBridge {
+func NewEndpointBridge(eg *EndpointGeneric, isMgmtBridgeEndpoint bool) *EndpointBridge {
 	return &EndpointBridge{
-		EndpointGeneric: *eg,
+		isMgmtBridgeEndpoint: isMgmtBridgeEndpoint,
+		EndpointGeneric:      *eg,
 	}
 }
 
@@ -39,6 +42,16 @@ func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (e *EndpointBridge) Deploy(ctx context.Context) error {
+	return e.GetLink().Deploy(ctx, e)
+}
+
+func (e *EndpointBridge) IsNodeless() bool {
+	// the mgmt bridge is nodeless.
+	// If this is a regular bridge, then it should trigger BEnd deployment.
+	return e.isMgmtBridgeEndpoint
 }
 
 // CheckBridgeExists verifies that the given bridge is present in the

@@ -96,20 +96,17 @@ type Node interface {
 	// Adds the given link to the Node (container). After adding the Link to the node,
 	// the given function f is called within the Nodes namespace to setup the link.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddLink(l links.Link)
 	AddEndpoint(e links.Endpoint)
 	GetEndpoints() []links.Endpoint
 	GetLinkEndpointType() links.LinkEndpointType
 	GetShortName() string
-	// DeployLinks deploys the links for the node.
-	DeployLinks(ctx context.Context) error
+	// DeployEndpoints deploys the links for the node.
+	DeployEndpoints(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(func(ns.NetNS) error) error
 	GetState() state.NodeState
 	SetState(state.NodeState)
 	GetSSHConfig() *types.SSHConfig
-	// WaitForAllLinksCreated will block until all the nodes links are created
-	WaitForAllLinksCreated()
 	// RunExecFromConfig executes the topologyfile defined exec commands
 	RunExecFromConfig(context.Context, *exec.ExecCollection) error
 	IsHealthy(ctx context.Context) (bool, error)

@@ -559,19 +559,11 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				dn.EnterStage(types.WaitForCreateLinks)
 
-				err = node.DeployLinks(ctx)
+				// Deploy the Nodes link endpoints
+				err = node.DeployEndpoints(ctx)
 				if err != nil {
 					log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
 					continue
-				}
-
-				// DeployLinks does not necessarily create all the links already.
-				// veth links might be created by the peer node, if it was not already
-				// deployed properly. Hence we need to wait for all the links to be created.
-				// we just wait if there is actually a dependency on this state, otherwise
-				// we head on.
-				if dn.MustWait(types.WaitForCreateLinks) {
-					node.WaitForAllLinksCreated()
 				}
 
 				dn.Done(types.WaitForCreateLinks)
@@ -589,12 +581,11 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 				dn.Done(types.WaitForConfigure)
 
-				// HOTFIX: EXECS are for now being run after all nodes are deployed, see: deploy.go
-				// // run execs
-				// err = node.RunExecFromConfig(ctx, execCollection)
-				// if err != nil {
-				// 	log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
-				// }
+				// run execs
+				err = node.RunExecFromConfig(ctx, execCollection)
+				if err != nil {
+					log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
+				}
 
 				// health state processing
 				if dn.MustWait(types.WaitForHealthy) {

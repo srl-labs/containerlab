@@ -95,21 +95,6 @@ func (mr *MockDependencyManagerMockRecorder) GetNode(name any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNode", reflect.TypeOf((*MockDependencyManager)(nil).GetNode), name)
 }
 
-// MustWait mocks base method.
-func (m *MockDependencyManager) MustWait(nodeName string, stage types.WaitForStage) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MustWait", nodeName, stage)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MustWait indicates an expected call of MustWait.
-func (mr *MockDependencyManagerMockRecorder) MustWait(nodeName, stage any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustWait", reflect.TypeOf((*MockDependencyManager)(nil).MustWait), nodeName, stage)
-}
-
 // String mocks base method.
 func (m *MockDependencyManager) String() string {
 	m.ctrl.T.Helper()

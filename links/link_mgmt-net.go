@@ -47,9 +47,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	mgmtBridgeNode := GetMgmtBrLinkNode()
 
-	bridgeEp := &EndpointBridge{
-		EndpointGeneric: *NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link),
-	}
+	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)
 
 	var err error
 	bridgeEp.MAC, err = utils.GenMac(ClabOUI)
@@ -66,9 +64,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	link.Endpoints = []Endpoint{bridgeEp, contEp}
 
 	// add link to respective endpoint nodes
-	bridgeEp.GetNode().AddLink(link)
 	bridgeEp.GetNode().AddEndpoint(bridgeEp)
-	contEp.GetNode().AddLink(link)
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
@@ -114,7 +110,7 @@ func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func (b *mgmtBridgeLinkNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *mgmtBridgeLinkNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	ns, err := ns.GetCurrentNS()
 	if err != nil {

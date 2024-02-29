@@ -103,9 +103,6 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 
-	// add endpoint links to nodes
-	link.NodeEndpoint.GetNode().AddLink(link)
-
 	return link, nil
 }
 
@@ -128,7 +125,7 @@ func (l *LinkMacVlan) GetParentInterfaceMTU() (int, error) {
 	return hostLink.Attrs().MTU, nil
 }
 
-func (l *LinkMacVlan) Deploy(ctx context.Context) error {
+func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	// lookup the parent host interface
 	parentInterface, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
 	if err != nil {
