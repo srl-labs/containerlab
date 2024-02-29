@@ -110,7 +110,7 @@ func (*LinkVEth) GetType() LinkType {
 func (l *LinkVEth) deployAEnd(ctx context.Context, ep Endpoint) error {
 
 	// Get the index of the Endpoint in the links endpoint slice
-	idx, err := l.getEndpointSliceIndex(ep)
+	idx, err := l.getEndpointIndex(ep)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, ep Endpoint) error {
 
 func (l *LinkVEth) deployBEnd(ctx context.Context, ep Endpoint) error {
 
-	idx, err := l.getEndpointSliceIndex(ep)
+	idx, err := l.getEndpointIndex(ep)
 	if err != nil {
 		return err
 	}
@@ -202,32 +202,28 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, ep Endpoint) error {
 	return nil
 }
 
-// getEndpointSliceIndex returns the index of the LinkVEth internal ENdpoint slie of the given Endpoint.
-// An error is returned when the Endpoint is not part of the Links assigned Endpoints.
-func (l *LinkVEth) getEndpointSliceIndex(ep Endpoint) (int, error) {
-	// init epIndex with -1 (== not found)
-	epIndex := -1
+// getEndpointIndex returns the index of the ep endpoint belonging to l link.
+// An error is returned when the ep is not part of the l's endpoints.
+func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 	for idx, e := range l.Endpoints {
 		if e == ep {
-			epIndex = idx
-			break
+			return idx, nil
 		}
-	}
-	// if the ep is not found, return -1 and an error
-	if epIndex == -1 {
-		// build a string list of endpoints for usefull error output
-		epStrings := []string{}
-		for _, e := range l.Endpoints {
-			epStrings = append(epStrings, e.String())
-		}
-		// return the error
-		return epIndex, fmt.Errorf("endpoint %s does not belong to link [ %s ]", ep.String(), strings.Join(epStrings, ", "))
 	}
 
-	return epIndex, nil
+	// if the endpoint is not part of the link
+	// build a string list of endpoints and return a meaningful error
+	epStrings := []string{}
+	for _, e := range l.Endpoints {
+		epStrings = append(epStrings, e.String())
+	}
+
+	return -1, fmt.Errorf("endpoint %s does not belong to link [ %s ]", ep.String(), strings.Join(epStrings, ", "))
+
 }
 
-// Deploy the link based on one of its Endpoints
+// Deploy deploys the veth link by creating the A and B sides of the veth pair independently
+// based on the calling endpoint.
 func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	// since each node calls deploy on its links, we need to make sure that we only deploy
 	// the link once, even if multiple nodes call deploy on the same link.
@@ -235,7 +231,7 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	defer l.deployMutex.Unlock()
 
 	// first we need to check that the provided ep is part of this link
-	_, err := l.getEndpointSliceIndex(ep)
+	_, err := l.getEndpointIndex(ep)
 	if err != nil {
 		return err
 	}

@@ -515,7 +515,8 @@ func (d *DefaultNode) GetShortName() string {
 	return d.Cfg.ShortName
 }
 
-// DeployEndpoints deploys links associated with the node.
+// DeployEndpoints deploys endpoints associated with the node.
+// The deployment of endpoints is done by deploying a link with the endpoint triggering it.
 func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 	for _, ep := range d.Endpoints {
 		err := ep.Deploy(ctx)
