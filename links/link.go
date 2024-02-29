@@ -20,7 +20,8 @@ const (
 	DefaultLinkMTU = 9500
 
 	LinkDeploymentStateNotDeployed = iota
-	LinkDeploymentStateDeployed
+	LinkDeploymentStateHalfDeployed
+	LinkDeploymentStateFullDeployed
 	LinkDeploymentStateRemoved
 )
 

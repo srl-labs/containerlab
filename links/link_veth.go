@@ -107,18 +107,13 @@ func (*LinkVEth) GetType() LinkType {
 	return LinkTypeVEth
 }
 
-func (l *LinkVEth) deployAEnd(ctx context.Context, ep Endpoint) error {
-
-	// Get the index of the Endpoint in the links endpoint slice
-	idx, err := l.getEndpointIndex(ep)
-	if err != nil {
-		return err
-	}
-
+func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
+	ep := l.Endpoints[idx]
 	// the peer Endpoint is the other of the two endpoints in the
 	// Endpoints slice. So do a +1 on the index and modulo operation
 	// to take care of the wrap around.
-	peerEp := l.Endpoints[(idx+1)%2]
+	peerIdx := (idx + 1) % 2
+	peerEp := l.Endpoints[peerIdx]
 
 	log.Infof("Creating Endpoint: %s ( --> %s )", ep, peerEp)
 
@@ -134,7 +129,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, ep Endpoint) error {
 	}
 
 	// add the link
-	err = netlink.LinkAdd(linkA)
+	err := netlink.LinkAdd(linkA)
 	if err != nil {
 		return err
 	}
@@ -156,22 +151,19 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, ep Endpoint) error {
 		return err
 	}
 
+	l.DeploymentState = LinkDeploymentStateHalfDeployed
+
 	// e.g. host endpoints have no trigger for the BEnd Endpoint. Hence they will indicate via
 	// the AutoDeployWithAEnd func, if the BEnd ist to automatically be provisioned on AEnd Provisioning
 	if peerEp.AutoDeployWithAEnd() {
-		return l.deployBEnd(ctx, peerEp)
+		return l.deployBEnd(ctx, peerIdx)
 	}
 
 	return nil
 }
 
-func (l *LinkVEth) deployBEnd(ctx context.Context, ep Endpoint) error {
-
-	idx, err := l.getEndpointIndex(ep)
-	if err != nil {
-		return err
-	}
-
+func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
+	ep := l.Endpoints[idx]
 	peerEp := l.Endpoints[(idx+1)%2]
 
 	log.Infof("Assigning Endpoint: %s ( --> %s )", ep, peerEp)
@@ -199,6 +191,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, ep Endpoint) error {
 		return err
 	}
 
+	l.DeploymentState = LinkDeploymentStateFullDeployed
 	return nil
 }
 
@@ -231,7 +224,7 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	defer l.deployMutex.Unlock()
 
 	// first we need to check that the provided ep is part of this link
-	_, err := l.getEndpointIndex(ep)
+	idx, err := l.getEndpointIndex(ep)
 	if err != nil {
 		return err
 	}
@@ -239,12 +232,10 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	// The first node to trigger the link creation will call deployAEnd,
 	// subsequent (the second) call will end up in deployBEnd.
 	switch l.DeploymentState {
-	case LinkDeploymentStateDeployed:
-		return l.deployBEnd(ctx, ep)
+	case LinkDeploymentStateFullDeployed:
+		return l.deployBEnd(ctx, idx)
 	default:
-		err := l.deployAEnd(ctx, ep)
-		l.DeploymentState = LinkDeploymentStateDeployed
-		return err
+		return l.deployAEnd(ctx, idx)
 	}
 }
 
