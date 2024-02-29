@@ -20,6 +20,8 @@ const (
 	DefaultLinkMTU = 9500
 
 	LinkDeploymentStateNotDeployed = iota
+	// LinkDeploymentStateHalfDeployed is a state in which one of the endpoints
+	// of the links finished deploying and the other one is not yet deployed.
 	LinkDeploymentStateHalfDeployed
 	LinkDeploymentStateFullDeployed
 	LinkDeploymentStateRemoved
