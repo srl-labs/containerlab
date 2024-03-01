@@ -212,7 +212,6 @@ func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 	}
 
 	return -1, fmt.Errorf("endpoint %s does not belong to link [ %s ]", ep.String(), strings.Join(epStrings, ", "))
-
 }
 
 // Deploy deploys the veth link by creating the A and B sides of the veth pair independently

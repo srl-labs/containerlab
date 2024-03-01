@@ -280,7 +280,7 @@ type Extras struct {
 	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
 }
 
-// K8sKindExtras represents the k8s-kind-specific extra options
+// K8sKindExtras represents the k8s-kind-specific extra options.
 type K8sKindExtras struct {
 	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
 }
