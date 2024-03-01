@@ -386,6 +386,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 					"failed to rename link: %v", err)
 			}
 		} else {
+			// when the name is too long, we add an AltName instead of a regular interface name
 			err := netlink.LinkAddAltName(l, endpt.GetIfaceName())
 			if err != nil {
 				return fmt.Errorf(
