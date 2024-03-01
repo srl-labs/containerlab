@@ -11,6 +11,7 @@ import (
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
+	cvsr "github.com/srl-labs/containerlab/nodes/cvsr"
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
 	host "github.com/srl-labs/containerlab/nodes/host"
@@ -39,7 +40,6 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
-	"github.com/srl-labs/containerlab/nodes/vsr"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
@@ -80,5 +80,5 @@ func (c *CLab) RegisterNodes() {
 	c8000.Register(c.Reg)
 	border0.Register(c.Reg)
 	k8s_kind.Register(c.Reg)
-	vsr.Register(c.Reg)
+	cvsr.Register(c.Reg)
 }

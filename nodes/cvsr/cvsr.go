@@ -2,11 +2,12 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package vsr
+package cvsr
 
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -17,20 +18,20 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"vsr", "nokia_vsr"}
+var kindnames = []string{"cvsr", "nokia_cvsr"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
-		return new(Vsr)
+		return new(Cvsr)
 	}, nil)
 }
 
-type Vsr struct {
+type Cvsr struct {
 	nodes.DefaultNode
 }
 
-func (n *Vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *Cvsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
@@ -53,15 +54,38 @@ func (n *Vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	cfgPath := filepath.Join(n.Cfg.LabDir, "config")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":/home/sros/flash3/:rw"))
 
+	// mount /usr/lib/firmware
+	n.Cfg.Binds = append(n.Cfg.Binds, "/usr/lib/firmware:/usr/lib/firmware:ro")
+
+	// mount /dev/hugepages
+	s, err := os.Stat("/dev/hugepages")
+	if err != nil && s.IsDir() {
+		n.Cfg.Binds = append(n.Cfg.Binds, "/dev/hugepages:/dev/hugepages:rw")
+	}
+
+	vsrConf := filepath.Join(n.Cfg.LabDir, "vsr.conf")
+	data := fmt.Sprintf(`mgmtIf=eth0
+	dpdk=0;0
+	dpdkHugeDir=/dev/hugepages
+	cfDirs=/home/sros/flash1;/home/sros/flash2;/home/sros/flash3
+	logDir=/root/run/log
+	bootString=TIMOS: name=%s slot=a chassis=VSR-I card=cpm-v/iom-v mda/1=m20-v mda/2=m20-v control-cpu-cores=4 features=2048
+	cpusAllowedList=
+	`, n.Cfg.ShortName)
+	err = os.WriteFile(vsrConf, []byte(data), 0644)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (s *Vsr) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (s *Cvsr) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	return s.createVSRFiles()
 }
 
-func (s *Vsr) createVSRFiles() error {
+func (s *Cvsr) createVSRFiles() error {
 	log.Debugf("Creating directory structure for VSR container: %s", s.Cfg.ShortName)
 	var src string
 
@@ -81,8 +105,8 @@ func (s *Vsr) createVSRFiles() error {
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (s *Vsr) CheckInterfaceName() error {
-	ifRe := regexp.MustCompile(`net\d+`)
+func (s *Cvsr) CheckInterfaceName() error {
+	ifRe := regexp.MustCompile(`net\d+|eth\d+`)
 	for _, e := range s.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("nokia vsr linux interface name %q doesn't match the required pattern. VSR interfaces should be named as net<x>", e.GetIfaceName())
