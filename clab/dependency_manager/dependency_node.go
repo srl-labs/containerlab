@@ -1,16 +1,19 @@
 package dependency_manager
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
 
 // DependencyNode is the representation of a node in the dependency concept.
 type DependencyNode struct {
-	name string
+	nodes.Node
 	// stageWG is a map of waitgroup per a given stage.
 	// When the waitgroup associated with the stage is Done, the node is considered to have reached the stage.
 	stageWG map[types.WaitForStage]*sync.WaitGroup
@@ -22,9 +25,9 @@ type DependencyNode struct {
 }
 
 // newDependencyNode initializes a dependencyNode with the given name.
-func newDependencyNode(name string) *DependencyNode {
+func NewDependencyNode(node nodes.Node) *DependencyNode {
 	d := &DependencyNode{
-		name:     name,
+		Node:     node,
 		stageWG:  map[types.WaitForStage]*sync.WaitGroup{},
 		mustWait: map[types.WaitForStage]bool{},
 		depender: map[types.WaitForStage][]*dependerNodeStage{},
@@ -34,6 +37,14 @@ func newDependencyNode(name string) *DependencyNode {
 		d.stageWG[p] = &sync.WaitGroup{}
 		d.depender[p] = nil
 	}
+
+	stage := d.Config().Stages
+
+	// check if Stage based execs exist, if so make sure it will be
+	// waited for the respective phases
+	d.mustWait[types.WaitForCreateLinks] = d.mustWait[types.WaitForCreateLinks] || stage.CreateLinks.Execs.HasCommands()
+	d.mustWait[types.WaitForConfigure] = d.mustWait[types.WaitForConfigure] || stage.Configure.Execs.HasCommands()
+	d.mustWait[types.WaitForHealthy] = d.mustWait[types.WaitForHealthy] || stage.Healthy.Execs.HasCommands()
 
 	return d
 }
@@ -50,29 +61,70 @@ func (d *DependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 	return d.stageWG[n]
 }
 
+func (d *DependencyNode) getExecs(p types.WaitForStage, t types.CommandType) ([]*exec.ExecCmd, error) {
+	switch p {
+	case types.WaitForCreate:
+		return d.Config().Stages.Create.GetExecCommands(t)
+	case types.WaitForCreateLinks:
+		return d.Config().Stages.CreateLinks.GetExecCommands(t)
+	case types.WaitForConfigure:
+		return d.Config().Stages.Configure.GetExecCommands(t)
+	case types.WaitForHealthy:
+		return d.Config().Stages.Healthy.GetExecCommands(t)
+	case types.WaitForExit:
+		return d.Config().Stages.Exit.GetExecCommands(t)
+	}
+	return nil, fmt.Errorf("stage %s unknown", p)
+}
+
 // EnterStage is called by a node that is meant to enter the specified stage.
 // The call will be blocked until all dependencies for the node to enter the stage are met.
-func (d *DependencyNode) EnterStage(p types.WaitForStage) {
-	log.Debugf("StateChange: Enter Wait -> %s - %s", d.name, p)
+func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
+	log.Debugf("Stage Change: Enter Wait -> %s - %s", d.GetShortName(), p)
 	d.stageWG[p].Wait()
-	log.Debugf("StateChange: Enter Go -> %s - %s", d.name, p)
+	log.Debugf("Stage Change: Enter Go -> %s - %s", d.GetShortName(), p)
+	d.runExecs(ctx, types.CommandTypeEnter, p)
+}
+
+func (d *DependencyNode) runExecs(ctx context.Context, ct types.CommandType, p types.WaitForStage) {
+	execs, err := d.getExecs(p, ct)
+	if err != nil {
+		log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
+	}
+
+	if len(execs) == 0 {
+		return
+	}
+
+	// exec the commands
+	execResultCollection := exec.NewExecCollection()
+
+	for _, exec := range execs {
+		execResult, err := d.RunExec(ctx, exec)
+		if err != nil {
+			log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), p, err)
+		}
+		execResultCollection.Add(d.GetShortName(), execResult)
+	}
+	execResultCollection.Log()
 }
 
 // Done is called by a node that has finished all tasks for the provided stage.
 // The dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (d *DependencyNode) Done(p types.WaitForStage) {
+func (d *DependencyNode) Done(ctx context.Context, p types.WaitForStage) {
 	// iterate through all the dependers, that wait for the specific stage
 	// and reduce the waitgroup
-	log.Debugf("StateChange: Done -> %s - %s", d.name, p)
+	d.runExecs(ctx, types.CommandTypeExit, p)
+	log.Debugf("StateChange: Done -> %s - %s", d.GetShortName(), p)
 	for _, depender := range d.depender[p] {
-		log.Debugf("StateChange: Node %s unblocking %s", d.name, depender.String())
+		log.Debugf("StateChange: Node %s unblocking %s", d.GetShortName(), depender.String())
 		depender.SignalDone()
 	}
 }
 
 // addDepender adds a depender to the dependencyNode. This will also add the dependee to the depender.
 // to increase the waitgroup count for the depender.
-func (d *DependencyNode) addDepender(dependerStage types.WaitForStage, depender *DependencyNode, stage types.WaitForStage) error {
+func (d *DependencyNode) AddDepender(dependerStage types.WaitForStage, depender *DependencyNode, stage types.WaitForStage) error {
 	// Create a new DependerNodeStage
 	dependerNS := newDependerNodeStage(depender, dependerStage)
 
@@ -93,30 +145,4 @@ func (d *DependencyNode) MustWait(state types.WaitForStage) bool {
 		return b
 	}
 	return false
-}
-
-// dependerNodeStage is used to keep track of waitgroups that should be decreased (unblocked)
-// as soon as a certain delpoy stage is reached.
-type dependerNodeStage struct {
-	depender *DependencyNode    // reference to the node
-	stage    types.WaitForStage // reference to the nodes wg that is to be decremented
-}
-
-func newDependerNodeStage(node *DependencyNode, stage types.WaitForStage) *dependerNodeStage {
-	return &dependerNodeStage{
-		depender: node,
-		stage:    stage,
-	}
-}
-
-func (d *dependerNodeStage) SignalDone() {
-	d.depender.getStageWG(d.stage).Done()
-}
-
-func (d *dependerNodeStage) IncreaseDependencyWG() {
-	d.depender.stageWG[d.stage].Add(1)
-}
-
-func (d *dependerNodeStage) String() string {
-	return fmt.Sprintf("Node %s, State %s", d.depender.name, d.stage)
 }

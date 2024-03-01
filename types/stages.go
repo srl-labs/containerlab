@@ -1,6 +1,12 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+
+	"golang.org/x/exp/slices"
+
+	"github.com/srl-labs/containerlab/clab/exec"
+)
 
 const (
 	// WaitForCreate is the wait stage name for a node creation stage.
@@ -28,19 +34,29 @@ type Stages struct {
 func NewStages() *Stages {
 	return &Stages{
 		Create: &StageCreate{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		CreateLinks: &StageCreateLinks{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		Configure: &StageConfigure{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		Healthy: &StageHealthy{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		Exit: &StageExit{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 	}
 }
@@ -66,31 +82,31 @@ func (s *Stages) GetWaitFor() map[WaitForStage]WaitForList {
 func (s *Stages) Merge(other *Stages) error {
 	var err error
 	if other.Configure != nil {
-		err = s.Configure.Merge(&other.Configure.StageBase)
+		err = s.Configure.Merge(other.Configure)
 		if err != nil {
 			return err
 		}
 	}
 	if other.Create != nil {
-		err = s.Create.Merge(&other.Create.StageBase)
+		err = s.Create.Merge(other.Create)
 		if err != nil {
 			return err
 		}
 	}
 	if other.CreateLinks != nil {
-		err = s.CreateLinks.Merge(&other.CreateLinks.StageBase)
+		err = s.CreateLinks.Merge(other.CreateLinks)
 		if err != nil {
 			return err
 		}
 	}
 	if other.Healthy != nil {
-		err = s.Healthy.Merge(&other.Healthy.StageBase)
+		err = s.Healthy.Merge(other.Healthy)
 		if err != nil {
 			return err
 		}
 	}
 	if other.Exit != nil {
-		err = s.Exit.Merge(&other.Exit.StageBase)
+		err = s.Exit.Merge(other.Exit)
 		if err != nil {
 			return err
 		}
@@ -98,9 +114,66 @@ func (s *Stages) Merge(other *Stages) error {
 	return err
 }
 
+// Execs represents configuration of commands to execute at a given stage.
+// Every stage has two commands lists: on-enter and on-exit.
+// On-enter commands are executed when the node enters the stage.
+// On-exit commands are executed when the node exits the stage.
+type Execs struct {
+	// Commands is a list of commands to to execute
+	CommandsOnEnter []string `yaml:"on-enter,omitempty"`
+	CommandsOnExit  []string `yaml:"on-exit,omitempty"`
+}
+
+func (e *Execs) HasCommands() bool {
+	return len(e.CommandsOnEnter) > 0 || len(e.CommandsOnExit) > 0
+}
+
+type CommandType uint
+
+const (
+	// CommandTypeEnter represents a command to be executed when the node enters the stage.
+	CommandTypeEnter CommandType = iota
+	// CommandTypeExit represents a command to be executed when the node exits the stage.
+	CommandTypeExit
+)
+
+// GetExecCommands returns a list of exec commands to be executed.
+func (e *Execs) GetExecCommands(ct CommandType) ([]*exec.ExecCmd, error) {
+	var commands []string
+
+	switch ct {
+	case CommandTypeEnter:
+		commands = e.CommandsOnEnter
+	case CommandTypeExit:
+		commands = e.CommandsOnExit
+	}
+
+	ex := []*exec.ExecCmd{}
+
+	for _, c := range commands {
+		newCmd, err := exec.NewExecCmdFromString(c)
+		if err != nil {
+			return nil, err
+		}
+
+		ex = append(ex, newCmd)
+	}
+
+	return ex, nil
+}
+
 // StageCreate represents a creation stage of a given node.
 type StageCreate struct {
 	StageBase `yaml:",inline"`
+}
+
+func (s *StageCreate) Merge(other *StageCreate) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // StageCreateLinks represents a stage of a given node when links are getting added to it.
@@ -108,9 +181,27 @@ type StageCreateLinks struct {
 	StageBase `yaml:",inline"`
 }
 
+func (s *StageCreateLinks) Merge(other *StageCreateLinks) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // StageConfigure represents a stage of a given node when it enters configuration workflow.
 type StageConfigure struct {
 	StageBase `yaml:",inline"`
+}
+
+func (s *StageConfigure) Merge(other *StageConfigure) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // StageHealthy represents a stage of a given node when it reaches healthy status.
@@ -118,16 +209,34 @@ type StageHealthy struct {
 	StageBase `yaml:",inline"`
 }
 
+func (s *StageHealthy) Merge(other *StageHealthy) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // StageExit represents a stage of a given node when the node reaches exit state.
 type StageExit struct {
 	StageBase `yaml:",inline"`
 }
 
+func (s *StageExit) Merge(other *StageExit) error {
+	err := s.StageBase.Merge(&other.StageBase)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // StageBase represents a common configuration stage.
 // Other stages embed this type to inherit its configuration options.
-// A particular member of the StageBase type is a list of WaitFor configurations.
 type StageBase struct {
 	WaitFor WaitForList `yaml:"wait-for,omitempty"`
+	Execs   `yaml:"exec,omitempty"`
 }
 
 // WaitForList is a list of WaitFor configurations.
@@ -144,8 +253,8 @@ func (wfl WaitForList) contains(wf *WaitFor) bool {
 	return false
 }
 
-// Merge merges base stage from sc into s by
-// appending WaitFor from sc to s.
+// Merge merges base stage from sc into s.
+// Merging for WaitFor and Exec commands is done by appending from sc to s without duplicates.
 func (s *StageBase) Merge(sc *StageBase) error {
 	if sc == nil {
 		return nil
@@ -157,6 +266,24 @@ func (s *StageBase) Merge(sc *StageBase) error {
 			continue
 		}
 		s.WaitFor = append(s.WaitFor, wf)
+	}
+
+	for _, cmd := range sc.Execs.CommandsOnEnter {
+		// prevent adding the same dependency twice
+		if slices.Contains(s.Execs.CommandsOnEnter, cmd) {
+			continue
+		}
+
+		s.Execs.CommandsOnEnter = append(s.Execs.CommandsOnEnter, cmd)
+	}
+
+	for _, cmd := range sc.Execs.CommandsOnExit {
+		// prevent adding the same dependency twice
+		if slices.Contains(s.Execs.CommandsOnExit, cmd) {
+			continue
+		}
+
+		s.Execs.CommandsOnExit = append(s.Execs.CommandsOnExit, cmd)
 	}
 
 	return nil

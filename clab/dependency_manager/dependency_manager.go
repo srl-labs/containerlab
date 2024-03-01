@@ -6,22 +6,20 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/nodes"
 )
 
 type DependencyManager interface {
 	// AddNode adds a node to the dependency manager.
-	AddNode(name string)
+	AddNode(node nodes.Node)
 	// GetNode gets a dependency node registered with the dependency manager.
 	GetNode(name string) (*DependencyNode, error)
-	// AddDependency adds a dependency between a depender and and a dependee.
-	// The depender will hold off the dependerStage until the dependee completes dependeeStage.
-	// This effectively makes the dependerStage to be start only after the dependeeStage finishes.
-	AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error
 	// CheckAcyclicity checks if dependencies contain cycles.
 	CheckAcyclicity() error
 	// String returns a string representation of dependencies recorded with dependency manager.
 	String() string
+	// GetNodes returns the DependencyNodes registered with the DependencyManager
+	GetNodes() map[string]*DependencyNode
 }
 
 // defaultDependencyManager is the default implementation of the DependencyManager.
@@ -37,26 +35,13 @@ func NewDependencyManager() DependencyManager {
 }
 
 // AddNode adds a node to the dependency manager.
-func (dm *defaultDependencyManager) AddNode(name string) {
-	dm.nodes[name] = newDependencyNode(name)
+func (dm *defaultDependencyManager) AddNode(node nodes.Node) {
+	dm.nodes[node.GetShortName()] = NewDependencyNode(node)
 }
 
-// AddDependency adds a dependency between a depender and and a dependee.
-// The depender will hold off its dependerStage until the dependee completes dependeeStage.
-// This effectively makes the dependerStage to be start only after the dependeeStage finishes.
-func (dm *defaultDependencyManager) AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error {
-	// first check if the referenced nodes are known to the dm
-	err := dm.checkNodesExist([]string{dependee})
-	if err != nil {
-		return err
-	}
-	err = dm.checkNodesExist([]string{depender})
-	if err != nil {
-		return err
-	}
-
-	dm.nodes[dependee].addDepender(dependerStage, dm.nodes[depender], dependeeStage)
-	return nil
+// GetNodes returns the DependencyNodes registered with the DependencyManager.
+func (dm *defaultDependencyManager) GetNodes() map[string]*DependencyNode {
+	return dm.nodes
 }
 
 func (dm *defaultDependencyManager) GetNode(nodeName string) (*DependencyNode, error) {
@@ -112,7 +97,7 @@ func (dm *defaultDependencyManager) generateDependencyMap() map[string][]string 
 		dependencies[nodeName] = []string{}
 		for _, perStateDependerNSSlice := range node.depender {
 			for _, dependerNS := range perStateDependerNSSlice {
-				dependencies[nodeName] = append(dependencies[nodeName], dependerNS.depender.name)
+				dependencies[nodeName] = append(dependencies[nodeName], dependerNS.depender.GetShortName())
 			}
 		}
 	}

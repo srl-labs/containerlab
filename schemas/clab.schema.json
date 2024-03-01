@@ -640,6 +640,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -650,6 +653,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -660,6 +666,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -670,6 +679,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -680,6 +692,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -717,6 +732,27 @@
                 "healthy",
                 "exit"
             ]
+        },
+        "stage-exec": {
+            "type": "object",
+            "description": "per-stage exec configuration",
+            "properties": {
+                "on-enter": {
+                    "$ref": "#/definitions/stage-exec-list"
+                },
+                "on-exit": {
+                    "$ref": "#/definitions/stage-exec-list"
+                }
+            }
+        },
+        "stage-exec-list": {
+            "type": "array",
+            "description": "list of commands to execute",
+            "markdownDescription": "list of [commands to execute](https://containerlab.dev/manual/nodes/#exec)",
+            "minItems": 1,
+            "items": {
+                "type": "string"
+            }
         }
     },
     "type": "object",

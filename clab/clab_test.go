@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	errs "github.com/srl-labs/containerlab/errors"
-	"github.com/srl-labs/containerlab/mocks"
 	"github.com/srl-labs/containerlab/mocks/mocknodes"
 	"github.com/srl-labs/containerlab/mocks/mockruntime"
 	"github.com/srl-labs/containerlab/nodes"
@@ -21,58 +20,6 @@ import (
 	"go.uber.org/mock/gomock"
 	"golang.org/x/exp/slices"
 )
-
-func Test_createNamespaceSharingDependencyOne(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// instantiate a dependencyManager mock
-	dm := mocks.NewMockDependencyManager(mockCtrl)
-
-	// retrieve a map of nodes
-	nodeMap := getNodeMap(mockCtrl)
-
-	clab := &CLab{
-		Nodes: nodeMap,
-	}
-
-	err := WithDependencyManager(dm)(clab)
-	if err != nil {
-		t.Error(err)
-	}
-
-	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
-	clab.createNamespaceSharingDependency()
-}
-
-func Test_createStaticDynamicDependency(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// instantiate a dependencyManager mock
-	dm := mocks.NewMockDependencyManager(mockCtrl)
-
-	// retrieve a map of nodes
-	nodeMap := getNodeMap(mockCtrl)
-
-	clab := &CLab{
-		Nodes: nodeMap,
-	}
-
-	err := WithDependencyManager(dm)(clab)
-	if err != nil {
-		t.Error(err)
-	}
-
-	dm.EXPECT().AddDependency("node1", types.WaitForCreate, "node4", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node4", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node4", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node1", types.WaitForCreate, "node5", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node5", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node5", types.WaitForCreate)
-
-	clab.createStaticDynamicDependency()
-}
 
 // getNodeMap return a map of nodes for testing purpose.
 func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
@@ -218,37 +165,6 @@ func getNodeMap(mockCtrl *gomock.Controller) map[string]nodes.Node {
 	}
 
 	return nodeMap
-}
-
-func Test_createWaitForDependency(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// instantiate a dependencyManager mock
-	dm := mocks.NewMockDependencyManager(mockCtrl)
-
-	// retrieve a map of nodes
-	nodeMap := getNodeMap(mockCtrl)
-
-	clab := &CLab{
-		Nodes: nodeMap,
-	}
-
-	err := WithDependencyManager(dm)(clab)
-	if err != nil {
-		t.Error(err)
-	}
-
-	dm.EXPECT().AddDependency("node2", types.WaitForCreate, "node1", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node1", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node3", types.WaitForCreate, "node2", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node3", types.WaitForCreate)
-	dm.EXPECT().AddDependency("node5", types.WaitForCreate, "node4", types.WaitForCreate)
-
-	err = clab.createWaitForDependency()
-	if err != nil {
-		t.Error(err)
-	}
 }
 
 func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {

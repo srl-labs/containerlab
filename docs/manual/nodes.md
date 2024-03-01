@@ -714,8 +714,30 @@ Note, that `wait-for` is a list, a node's stage may depend on several other node
 
 /// admonition | Usage scenarios
     type: tip
-One of the use cases where `wait-for` might be crucial is when a number of VM-based nodes are deployed. Typically simultaneous deployment of VMs might lead to shortage of CPU resources and VMs might fail to boot. In such cases, `wait-for` can be used to define the order of VM deployment, thus ensuring that certain VMs enter their `create` stage after certain nodes have reached `healthy` status.
+One of the use cases where `wait-for` might be crucial is when a number of VM-based nodes are deployed. Typically, simultaneous deployment of VMs might lead to shortage of CPU resources and VMs might fail to boot. In such cases, `wait-for` can be used to define the order of VM deployment, thus ensuring that certain VMs enter their `create` stage after certain nodes have reached `healthy` status.
 ///
+
+#### Per-stage command execution
+
+The existing [`exec`](#exec) node configuration parameter is used to run commands when then node has finished all its deployment stages. Whilst this is the most common use case, it has its limitations, namely you can't run commands when the node is about to deploy its links, or when it is about to enter the `healthy` stage.
+
+These more advanced command execution scenarios are enabled in the per-stage command execution feature.
+
+With per-stage command execution the user can define `exec` block under each stage; moreover, it is possible to specify when the commands should be run `on-enter` or `on-exit` of the stage.
+
+```yaml
+nodes:
+  node1:
+    stages:
+      create-links:
+        exec:
+          on-enter:
+            - ls /sys/class/net/
+```
+
+In the example above, the `ls /sys/class/net/` command will be executed when `node1` is about to enter the `create-links` stage. As expected, the command will list only interfaces provisioned by docker (eth0 and lo), but none of the containerlab-provisioned interfaces, since the create-links stage has not been finished yet.
+
+Per-stage command execution gives you additional flexibility in terms of when the commands are executed, and what commands are executed at each stage.
 
 ### certificate
 

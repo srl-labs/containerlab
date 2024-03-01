@@ -373,7 +373,7 @@ func TestVerifyLinks(t *testing.T) {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
 			}
 			if err == nil && tc.want != "" {
-				t.Fatalf("wanted %q got %q", tc.want, err.Error())
+				t.Fatalf("wanted %q got nil", tc.want)
 			}
 		})
 	}
