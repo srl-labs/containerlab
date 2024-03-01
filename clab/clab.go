@@ -505,9 +505,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 
 	execCollection := exec.NewExecCollection()
 
-	workerFunc := func(i int, input chan *depMgr.DependencyNode, wg *sync.WaitGroup,
-		dm depMgr.DependencyManager,
-	) {
+	workerFunc := func(i int, input chan *depMgr.DependencyNode, wg *sync.WaitGroup) {
 		defer wg.Done()
 		for {
 			select {
@@ -638,7 +636,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {
-		go workerFunc(i, concurrentChan, wg, c.dependencyManager)
+		go workerFunc(i, concurrentChan, wg)
 	}
 
 	// Waitgroup protects the channel towards the workers of being closed too early

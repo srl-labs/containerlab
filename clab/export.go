@@ -42,7 +42,7 @@ type TopologyExport struct {
 }
 
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
-func (c *CLab) exportTopologyDataWithTemplate(ctx context.Context, w io.Writer, p string) error {
+func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p string) error {
 	n := filepath.Base(p)
 	t, err := template.New(n).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
