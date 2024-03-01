@@ -114,8 +114,8 @@ func (d *DependencyNode) runExecs(ctx context.Context, ct types.CommandType, p t
 func (d *DependencyNode) Done(ctx context.Context, p types.WaitForStage) {
 	// iterate through all the dependers, that wait for the specific stage
 	// and reduce the waitgroup
-	log.Debugf("StateChange: Done -> %s - %s", d.GetShortName(), p)
 	d.runExecs(ctx, types.CommandTypeExit, p)
+	log.Debugf("StateChange: Done -> %s - %s", d.GetShortName(), p)
 	for _, depender := range d.depender[p] {
 		log.Debugf("StateChange: Node %s unblocking %s", d.GetShortName(), depender.String())
 		depender.SignalDone()
