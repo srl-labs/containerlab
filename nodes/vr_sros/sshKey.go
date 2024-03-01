@@ -19,9 +19,9 @@ import (
 //go:embed ssh_keys.go.tpl
 var SROSSSHKeysTemplate string
 
-// generateSSHPublicKeysConfig configures public keys extracted from clab host
-// on SR OS node using SSH.
-func (s *vrSROS) generateSSHPublicKeysConfig(ctx context.Context) (io.Reader, error) {
+// generateSSHPublicKeysConfig generates public keys configuration blob
+// to add keys extracted from the clab host.
+func (s *vrSROS) generateSSHPublicKeysConfig() (io.Reader, error) {
 	tplData := SROSTemplateData{}
 
 	s.prepareSSHPubKeys(&tplData)
