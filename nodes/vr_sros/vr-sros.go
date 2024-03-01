@@ -129,7 +129,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 			return err
 		}
 
-		defer r.Close()
+		defer r.Close() // skipcq: GO-S2307
 
 		_, err = io.Copy(b, r)
 		if err != nil {
