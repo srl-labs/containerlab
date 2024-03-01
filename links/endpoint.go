@@ -7,7 +7,6 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -86,7 +85,7 @@ func (e *EndpointGeneric) GetNode() Node {
 
 func (e *EndpointGeneric) Remove() error {
 	return e.GetNode().ExecFunction(func(n ns.NetNS) error {
-		brSideEp, err := utils.LinkByNameOrAlias(e.GetIfaceName())
+		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 
 		switch {
@@ -146,9 +145,7 @@ func CheckEndpointDoesNotExistYet(e Endpoint) error {
 		// we expect a netlink.LinkNotFoundError when querying for
 		// the interface with the given endpoints name
 		var err error
-		// long interface names (14+ chars) are aliased in the node's namespace
-
-		_, err = utils.LinkByNameOrAlias(e.GetIfaceName())
+		_, err = netlink.LinkByName(e.GetIfaceName())
 
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
 			return nil

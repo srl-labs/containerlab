@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -114,7 +113,7 @@ func stitch(ep1, ep2 Endpoint) error {
 	// retrieve the respective netlink Links
 	for _, endpointName := range []string{ep1.GetIfaceName(), ep2.GetIfaceName()} {
 		var l netlink.Link
-		if l, err = utils.LinkByNameOrAlias(endpointName); err != nil {
+		if l, err = netlink.LinkByName(endpointName); err != nil {
 			return fmt.Errorf("failed to lookup %q: %v", endpointName, err)
 		}
 		netlinkLinks = append(netlinkLinks, l)

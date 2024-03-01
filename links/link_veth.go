@@ -169,7 +169,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	log.Infof("Assigning Endpoint: %s ( --> %s )", ep, peerEp)
 
 	// retrieve the netlink.Link for the provided Endpoint
-	link, err := utils.LinkByNameOrAlias(ep.GetRandIfaceName())
+	link, err := netlink.LinkByName(ep.GetRandIfaceName())
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,6 @@ func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 	}
 
 	return -1, fmt.Errorf("endpoint %s does not belong to link [ %s ]", ep.String(), strings.Join(epStrings, ", "))
-
 }
 
 // Deploy deploys the veth link by creating the A and B sides of the veth pair independently

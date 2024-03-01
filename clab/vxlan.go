@@ -9,7 +9,6 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -31,7 +30,7 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 	log.Infof("Adding VxLAN link %s to remote address %s via %s with VNI %v", vxlan.Name, vxlan.Remote, vxlan.ParentIf, vxlan.ID)
 
 	// before creating vxlan interface, check if it doesn't exist already
-	if vxlanIf, err = utils.LinkByNameOrAlias(vxlan.Name); err != nil {
+	if vxlanIf, err = netlink.LinkByName(vxlan.Name); err != nil {
 		if _, ok := err.(netlink.LinkNotFoundError); !ok {
 			return fmt.Errorf("failed to check if VxLAN interface %s exists: %v", vxlan.Name, err)
 		}
@@ -40,7 +39,7 @@ func AddVxLanInterface(vxlan VxLAN) (err error) {
 		return fmt.Errorf("interface %s already exists", vxlan.Name)
 	}
 
-	if parentIf, err = utils.LinkByNameOrAlias(vxlan.ParentIf); err != nil {
+	if parentIf, err = netlink.LinkByName(vxlan.ParentIf); err != nil {
 		return fmt.Errorf("failed to get VxLAN parent interface %s: %v", vxlan.ParentIf, err)
 	}
 

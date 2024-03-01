@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -58,7 +57,7 @@ func (e *EndpointBridge) IsNodeless() bool {
 // network namespace referenced via the provided nspath handle.
 func CheckBridgeExists(n Node) error {
 	return n.ExecFunction(func(_ ns.NetNS) error {
-		br, err := utils.LinkByNameOrAlias(n.GetShortName())
+		br, err := netlink.LinkByName(n.GetShortName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 		switch {
 		case notfound:
