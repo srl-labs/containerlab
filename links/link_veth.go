@@ -115,7 +115,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	peerIdx := (idx + 1) % 2
 	peerEp := l.Endpoints[peerIdx]
 
-	log.Infof("Creating Endpoint: %s ( --> %s )", ep, peerEp)
+	log.Debugf("Creating Endpoint: %s ( --> %s )", ep, peerEp)
 
 	// build the netlink.Veth struct for the link provisioning
 	linkA := &netlink.Veth{
