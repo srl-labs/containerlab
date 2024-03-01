@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"io"
 	"strings"
 	"text/template"
 
@@ -18,9 +19,9 @@ import (
 //go:embed ssh_keys.go.tpl
 var SROSSSHKeysTemplate string
 
-// configureSSHPublicKeys configures public keys extracted from clab host
-// on SR OS node using SSH.
-func (s *vrSROS) configureSSHPublicKeys(ctx context.Context) error {
+// generateSSHPublicKeysConfig generates public keys configuration blob
+// to add keys extracted from the clab host.
+func (s *vrSROS) generateSSHPublicKeysConfig() (io.Reader, error) {
 	tplData := SROSTemplateData{}
 
 	s.prepareSSHPubKeys(&tplData)
@@ -28,21 +29,16 @@ func (s *vrSROS) configureSSHPublicKeys(ctx context.Context) error {
 	t, err := template.New("SSHKeys").Funcs(
 		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(SROSSSHKeysTemplate)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	buf := new(bytes.Buffer)
 	err = t.Execute(buf, tplData)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-		buf,
-	)
-
-	return err
+	return buf, nil
 }
 
 // prepareSSHPubKeys maps the ssh pub keys into the SSH key type based slice
