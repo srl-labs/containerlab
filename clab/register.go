@@ -39,6 +39,7 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	"github.com/srl-labs/containerlab/nodes/vsr"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
@@ -79,4 +80,5 @@ func (c *CLab) RegisterNodes() {
 	c8000.Register(c.Reg)
 	border0.Register(c.Reg)
 	k8s_kind.Register(c.Reg)
+	vsr.Register(c.Reg)
 }
