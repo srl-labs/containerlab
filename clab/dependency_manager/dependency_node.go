@@ -2,6 +2,7 @@ package dependency_manager
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -41,20 +42,9 @@ func NewDependencyNode(node nodes.Node) *DependencyNode {
 
 	// check if Stage based execs exist, if so make sure it will be
 	// waited for the respective phases
-	hasExecs := len(stage.CreateLinks.Execs.Commands) > 0
-	if hasExecs {
-		d.mustWait[types.WaitForCreateLinks] = true
-	}
-
-	hasExecs = len(stage.Configure.Execs.Commands) > 0
-	if hasExecs {
-		d.mustWait[types.WaitForConfigure] = true
-	}
-
-	hasExecs = len(stage.Healthy.Execs.Commands) > 0
-	if hasExecs {
-		d.mustWait[types.WaitForHealthy] = true
-	}
+	d.mustWait[types.WaitForCreateLinks] = d.mustWait[types.WaitForCreateLinks] || stage.CreateLinks.Execs.HasCommands()
+	d.mustWait[types.WaitForConfigure] = d.mustWait[types.WaitForConfigure] || stage.Configure.Execs.HasCommands()
+	d.mustWait[types.WaitForHealthy] = d.mustWait[types.WaitForHealthy] || stage.Healthy.Execs.HasCommands()
 
 	return d
 }
@@ -71,30 +61,33 @@ func (d *DependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 	return d.stageWG[n]
 }
 
+func (d *DependencyNode) getExecs(p types.WaitForStage, t types.CommandType) ([]*exec.ExecCmd, error) {
+	switch p {
+	case types.WaitForCreate:
+		return d.Config().Stages.Create.GetExecCommands(t)
+	case types.WaitForCreateLinks:
+		return d.Config().Stages.CreateLinks.GetExecCommands(t)
+	case types.WaitForConfigure:
+		return d.Config().Stages.Configure.GetExecCommands(t)
+	case types.WaitForHealthy:
+		return d.Config().Stages.Healthy.GetExecCommands(t)
+	case types.WaitForExit:
+		return d.Config().Stages.Exit.GetExecCommands(t)
+	}
+	return nil, fmt.Errorf("stage %s unknown", p)
+}
+
 // EnterStage is called by a node that is meant to enter the specified stage.
 // The call will be blocked until all dependencies for the node to enter the stage are met.
 func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 	log.Debugf("Stage Change: Enter Wait -> %s - %s", d.GetShortName(), p)
 	d.stageWG[p].Wait()
 	log.Debugf("Stage Change: Enter Go -> %s - %s", d.GetShortName(), p)
+	d.runExecs(ctx, types.CommandTypeEnter, p)
+}
 
-	var err error
-
-	execs := []*exec.ExecCmd{}
-
-	switch p {
-	case types.WaitForCreate:
-		execs, err = d.Config().Stages.Create.GetExecCommands()
-	case types.WaitForCreateLinks:
-		execs, err = d.Config().Stages.CreateLinks.GetExecCommands()
-	case types.WaitForConfigure:
-		execs, err = d.Config().Stages.Configure.GetExecCommands()
-	case types.WaitForHealthy:
-		execs, err = d.Config().Stages.Healthy.GetExecCommands()
-	case types.WaitForExit:
-		execs, err = d.Config().Stages.Exit.GetExecCommands()
-	}
-
+func (d *DependencyNode) runExecs(ctx context.Context, ct types.CommandType, p types.WaitForStage) {
+	execs, err := d.getExecs(p, ct)
 	if err != nil {
 		log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
 	}
@@ -118,10 +111,11 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 
 // Done is called by a node that has finished all tasks for the provided stage.
 // The dependent nodes will be "notified" that an additional (if multiple exist) dependency is satisfied.
-func (d *DependencyNode) Done(p types.WaitForStage) {
+func (d *DependencyNode) Done(ctx context.Context, p types.WaitForStage) {
 	// iterate through all the dependers, that wait for the specific stage
 	// and reduce the waitgroup
 	log.Debugf("StateChange: Done -> %s - %s", d.GetShortName(), p)
+	d.runExecs(ctx, types.CommandTypeExit, p)
 	for _, depender := range d.depender[p] {
 		log.Debugf("StateChange: Node %s unblocking %s", d.GetShortName(), depender.String())
 		depender.SignalDone()

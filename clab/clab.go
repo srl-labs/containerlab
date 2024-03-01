@@ -552,7 +552,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
 				}
 
-				node.Done(types.WaitForCreate)
+				node.Done(ctx, types.WaitForCreate)
 
 				node.EnterStage(ctx, types.WaitForCreateLinks)
 
@@ -563,7 +563,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					continue
 				}
 
-				node.Done(types.WaitForCreateLinks)
+				node.Done(ctx, types.WaitForCreateLinks)
 
 				// start config stage
 				node.EnterStage(ctx, types.WaitForConfigure)
@@ -576,7 +576,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 					}
 				}
 
-				node.Done(types.WaitForConfigure)
+				node.Done(ctx, types.WaitForConfigure)
 
 				// run execs
 				err = node.RunExecFromConfig(ctx, execCollection)
@@ -596,7 +596,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 						}
 						if healthy {
 							log.Infof("node %q turned healthy, continuing", node.GetShortName())
-							node.Done(types.WaitForHealthy)
+							node.Done(ctx, types.WaitForHealthy)
 							break
 						}
 						time.Sleep(time.Second)
@@ -611,7 +611,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 						status := node.GetContainerStatus(ctx)
 						if status == runtime.Stopped {
 							log.Infof("node %q stopped", node.GetShortName())
-							node.Done(types.WaitForExit)
+							node.Done(ctx, types.WaitForExit)
 							break
 						}
 						time.Sleep(time.Second)

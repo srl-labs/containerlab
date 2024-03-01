@@ -117,13 +117,33 @@ func (s *Stages) Merge(other *Stages) error {
 // Execs represents configuration of commands to execute at a given stage.
 type Execs struct {
 	// Commands is a list of commands to to execute
-	Commands []string `yaml:"exec,omitempty"`
+	CommandsOnEnter []string `yaml:"on-enter,omitempty"`
+	CommandsOnExit  []string `yaml:"on-exit,omitempty"`
 }
 
+func (e *Execs) HasCommands() bool {
+	return len(e.CommandsOnEnter) > 0 || len(e.CommandsOnExit) > 0
+}
+
+type CommandType uint
+
+const (
+	CommandTypeEnter CommandType = iota
+	CommandTypeExit
+)
+
 // GetExecCommands returns a list of exec commands to be executed.
-func (e *Execs) GetExecCommands() ([]*exec.ExecCmd, error) {
+func (e *Execs) GetExecCommands(ct CommandType) ([]*exec.ExecCmd, error) {
+	var commandsStrSl []string
+	switch ct {
+	case CommandTypeEnter:
+		commandsStrSl = e.CommandsOnEnter
+	case CommandTypeExit:
+		commandsStrSl = e.CommandsOnExit
+	}
+
 	ex := []*exec.ExecCmd{}
-	for _, c := range e.Commands {
+	for _, c := range commandsStrSl {
 		newCmd, err := exec.NewExecCmdFromString(c)
 		if err != nil {
 			return nil, err
@@ -209,7 +229,7 @@ func (s *StageExit) Merge(other *StageExit) error {
 // Other stages embed this type to inherit its configuration options.
 type StageBase struct {
 	WaitFor WaitForList `yaml:"wait-for,omitempty"`
-	Execs   `yaml:",inline"`
+	Execs   `yaml:"exec,omitempty"`
 }
 
 // WaitForList is a list of WaitFor configurations.
@@ -241,13 +261,22 @@ func (s *StageBase) Merge(sc *StageBase) error {
 		s.WaitFor = append(s.WaitFor, wf)
 	}
 
-	for _, cmd := range sc.Execs.Commands {
+	for _, cmd := range sc.Execs.CommandsOnEnter {
 		// prevent adding the same dependency twice
-		if slices.Contains(s.Execs.Commands, cmd) {
+		if slices.Contains(s.Execs.CommandsOnEnter, cmd) {
 			continue
 		}
 
-		s.Execs.Commands = append(s.Execs.Commands, cmd)
+		s.Execs.CommandsOnEnter = append(s.Execs.CommandsOnEnter, cmd)
+	}
+
+	for _, cmd := range sc.Execs.CommandsOnExit {
+		// prevent adding the same dependency twice
+		if slices.Contains(s.Execs.CommandsOnExit, cmd) {
+			continue
+		}
+
+		s.Execs.CommandsOnExit = append(s.Execs.CommandsOnExit, cmd)
 	}
 
 	return nil

@@ -33,7 +33,8 @@ topology:
             - node: node4
               stage: healthy
           exec:
-            - hostname
+            on-exit:
+              - hostname
 
     node4:
       cmd: sh -c "date +%s%N > /tmp/time & sh"
