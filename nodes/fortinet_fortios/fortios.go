@@ -2,44 +2,42 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package fortigate
+package fortinet_fortios
 
 import (
 	"context"
 	"fmt"
 	"path"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
-	kindnames          = []string{"vr-fortigate"}
+	kindnames          = []string{"fortinet_fortios"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
 const (
-	scrapliPlatformName = "fortinet_fortigate"
-	configDirName       = "config"
-	startupCfgFName     = "startup-config.cfg"
+	// scrapligo doesn't have a driver for fortios, can be copied from scrapli community
+	// scrapliPlatformName = "fortinet_fortigate"
+	configDirName   = "config"
+	startupCfgFName = "startup-config.cfg"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
-		return new(fortigate)
+		return new(fortios)
 	}, defaultCredentials)
 }
 
-type fortigate struct {
+type fortios struct {
 	nodes.DefaultNode
 }
 
-func (n *fortigate) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fortios) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
@@ -77,30 +75,17 @@ func (n *fortigate) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	return nil
 }
 
-func (n *fortigate) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *fortios) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
 	}
+
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
-func (n *fortigate) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
-	)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
-	return nil
-}
-
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *fortigate) CheckInterfaceName() error {
+func (n *fortios) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

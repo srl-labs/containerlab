@@ -2,6 +2,5 @@ name: fortigate
 topology:
   nodes:
     forti:
-      kind: vr-fortigate
+      kind: fortinet_fortios
       image: fortinet:0.1
-
