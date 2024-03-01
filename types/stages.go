@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/srl-labs/containerlab/clab/exec"
 )
 
@@ -32,19 +34,29 @@ type Stages struct {
 func NewStages() *Stages {
 	return &Stages{
 		Create: &StageCreate{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		CreateLinks: &StageCreateLinks{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		Configure: &StageConfigure{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		Healthy: &StageHealthy{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 		Exit: &StageExit{
-			StageBase: StageBase{},
+			StageBase: StageBase{
+				Execs: Execs{},
+			},
 		},
 	}
 }
@@ -102,31 +114,30 @@ func (s *Stages) Merge(other *Stages) error {
 	return err
 }
 
-type ExecContainer struct {
-	// list of commands to run on the host
-	ExecContainerCommands []string `yaml:"exec,omitempty"`
+// Execs represents configuration of commands to execute at a given stage.
+type Execs struct {
+	// Commands is a list of commands to to execute
+	Commands []string `yaml:"exec,omitempty"`
 }
 
-func (e *ExecContainer) Merge(other *ExecContainer) {
-	e.ExecContainerCommands = append(e.ExecContainerCommands, other.ExecContainerCommands...)
-}
-
-func (e *ExecContainer) GetExecs() ([]*exec.ExecCmd, error) {
+// GetExecCommands returns a list of exec commands to be executed.
+func (e *Execs) GetExecCommands() ([]*exec.ExecCmd, error) {
 	ex := []*exec.ExecCmd{}
-	for _, c := range e.ExecContainerCommands {
+	for _, c := range e.Commands {
 		newCmd, err := exec.NewExecCmdFromString(c)
 		if err != nil {
 			return nil, err
 		}
+
 		ex = append(ex, newCmd)
 	}
+
 	return ex, nil
 }
 
 // StageCreate represents a creation stage of a given node.
 type StageCreate struct {
-	StageBase     `yaml:",inline"`
-	ExecContainer `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
 func (s *StageCreate) Merge(other *StageCreate) error {
@@ -134,14 +145,13 @@ func (s *StageCreate) Merge(other *StageCreate) error {
 	if err != nil {
 		return err
 	}
-	s.ExecContainer.Merge(&other.ExecContainer)
+
 	return nil
 }
 
 // StageCreateLinks represents a stage of a given node when links are getting added to it.
 type StageCreateLinks struct {
-	StageBase     `yaml:",inline"`
-	ExecContainer `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
 func (s *StageCreateLinks) Merge(other *StageCreateLinks) error {
@@ -149,14 +159,13 @@ func (s *StageCreateLinks) Merge(other *StageCreateLinks) error {
 	if err != nil {
 		return err
 	}
-	s.ExecContainer.Merge(&other.ExecContainer)
+
 	return nil
 }
 
 // StageConfigure represents a stage of a given node when it enters configuration workflow.
 type StageConfigure struct {
-	StageBase     `yaml:",inline"`
-	ExecContainer `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
 func (s *StageConfigure) Merge(other *StageConfigure) error {
@@ -164,14 +173,13 @@ func (s *StageConfigure) Merge(other *StageConfigure) error {
 	if err != nil {
 		return err
 	}
-	s.ExecContainer.Merge(&other.ExecContainer)
+
 	return nil
 }
 
 // StageHealthy represents a stage of a given node when it reaches healthy status.
 type StageHealthy struct {
-	StageBase     `yaml:",inline"`
-	ExecContainer `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
 func (s *StageHealthy) Merge(other *StageHealthy) error {
@@ -179,14 +187,13 @@ func (s *StageHealthy) Merge(other *StageHealthy) error {
 	if err != nil {
 		return err
 	}
-	s.ExecContainer.Merge(&other.ExecContainer)
+
 	return nil
 }
 
 // StageExit represents a stage of a given node when the node reaches exit state.
 type StageExit struct {
-	StageBase     `yaml:",inline"`
-	ExecContainer `yaml:",inline"`
+	StageBase `yaml:",inline"`
 }
 
 func (s *StageExit) Merge(other *StageExit) error {
@@ -194,15 +201,15 @@ func (s *StageExit) Merge(other *StageExit) error {
 	if err != nil {
 		return err
 	}
-	s.ExecContainer.Merge(&other.ExecContainer)
+
 	return nil
 }
 
 // StageBase represents a common configuration stage.
 // Other stages embed this type to inherit its configuration options.
-// A particular member of the StageBase type is a list of WaitFor configurations.
 type StageBase struct {
 	WaitFor WaitForList `yaml:"wait-for,omitempty"`
+	Execs   `yaml:",inline"`
 }
 
 // WaitForList is a list of WaitFor configurations.
@@ -219,8 +226,8 @@ func (wfl WaitForList) contains(wf *WaitFor) bool {
 	return false
 }
 
-// Merge merges base stage from sc into s by
-// appending WaitFor from sc to s.
+// Merge merges base stage from sc into s.
+// Merging for WaitFor and Exec commands is done by appending from sc to s without duplicates.
 func (s *StageBase) Merge(sc *StageBase) error {
 	if sc == nil {
 		return nil
@@ -232,6 +239,15 @@ func (s *StageBase) Merge(sc *StageBase) error {
 			continue
 		}
 		s.WaitFor = append(s.WaitFor, wf)
+	}
+
+	for _, cmd := range sc.Execs.Commands {
+		// prevent adding the same dependency twice
+		if slices.Contains(s.Execs.Commands, cmd) {
+			continue
+		}
+
+		s.Execs.Commands = append(s.Execs.Commands, cmd)
 	}
 
 	return nil

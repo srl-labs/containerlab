@@ -37,19 +37,21 @@ func NewDependencyNode(node nodes.Node) *DependencyNode {
 		d.depender[p] = nil
 	}
 
+	stage := d.Config().Stages
+
 	// check if Stage based execs exist, if so make sure it will be
 	// waited for the respective phases
-	hasExecs := len(d.Config().Stages.CreateLinks.ExecContainerCommands) > 0
+	hasExecs := len(stage.CreateLinks.Execs.Commands) > 0
 	if hasExecs {
 		d.mustWait[types.WaitForCreateLinks] = true
 	}
 
-	hasExecs = len(d.Config().Stages.Configure.ExecContainerCommands) > 0
+	hasExecs = len(stage.Configure.Execs.Commands) > 0
 	if hasExecs {
 		d.mustWait[types.WaitForConfigure] = true
 	}
 
-	hasExecs = len(d.Config().Stages.Healthy.ExecContainerCommands) > 0
+	hasExecs = len(stage.Healthy.Execs.Commands) > 0
 	if hasExecs {
 		d.mustWait[types.WaitForHealthy] = true
 	}
@@ -77,22 +79,30 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 	log.Debugf("Stage Change: Enter Go -> %s - %s", d.GetShortName(), p)
 
 	var err error
+
 	execs := []*exec.ExecCmd{}
+
 	switch p {
 	case types.WaitForCreate:
-		execs, err = d.Config().Stages.Create.GetExecs()
+		execs, err = d.Config().Stages.Create.GetExecCommands()
 	case types.WaitForCreateLinks:
-		execs, err = d.Config().Stages.CreateLinks.GetExecs()
+		execs, err = d.Config().Stages.CreateLinks.GetExecCommands()
 	case types.WaitForConfigure:
-		execs, err = d.Config().Stages.Configure.GetExecs()
+		execs, err = d.Config().Stages.Configure.GetExecCommands()
 	case types.WaitForHealthy:
-		execs, err = d.Config().Stages.Healthy.GetExecs()
+		execs, err = d.Config().Stages.Healthy.GetExecCommands()
 	case types.WaitForExit:
-		execs, err = d.Config().Stages.Exit.GetExecs()
+		execs, err = d.Config().Stages.Exit.GetExecCommands()
 	}
+
 	if err != nil {
-		log.Errorf("error running exec on %s: %v", d.GetShortName(), err)
+		log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
 	}
+
+	if len(execs) == 0 {
+		return
+	}
+
 	// exec the commands
 	execResultCollection := exec.NewExecCollection()
 
