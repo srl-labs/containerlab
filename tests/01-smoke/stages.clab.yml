@@ -16,6 +16,10 @@ topology:
           wait-for:
             - node: node2
               stage: create
+        create-links:
+          exec:
+            on-enter:
+              - ls /sys/class/net/
 
     node2:
       cmd: sh -c "date +%s%N > /tmp/time & sh"
@@ -34,7 +38,7 @@ topology:
               stage: healthy
           exec:
             on-exit:
-              - hostname
+              - ls /sys/class/net/
 
     node4:
       cmd: sh -c "date +%s%N > /tmp/time & sh"
@@ -44,6 +48,15 @@ topology:
         test:
           - CMD-SHELL
           - cat /etc/os-release
+      stages:
+        create-links:
+          exec:
+            on-exit:
+              - ls /sys/class/net/
+        healthy:
+          exec:
+            on-exit:
+              - echo 'hey I am existing healthy stage'
 
   links:
     - endpoints: ["node1:eth1", "node2:eth1"]
