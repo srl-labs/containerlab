@@ -169,7 +169,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	log.Infof("Assigning Endpoint: %s ( --> %s )", ep, peerEp)
 
 	// retrieve the netlink.Link for the provided Endpoint
-	link, err := utils.LinkByNameOrAlias(ep.GetRandIfaceName())
+	link, err := netlink.LinkByName(ep.GetRandIfaceName())
 	if err != nil {
 		return err
 	}
