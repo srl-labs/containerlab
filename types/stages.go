@@ -115,6 +115,9 @@ func (s *Stages) Merge(other *Stages) error {
 }
 
 // Execs represents configuration of commands to execute at a given stage.
+// Every stage has two commands lists: on-enter and on-exit.
+// On-enter commands are executed when the node enters the stage.
+// On-exit commands are executed when the node exits the stage.
 type Execs struct {
 	// Commands is a list of commands to to execute
 	CommandsOnEnter []string `yaml:"on-enter,omitempty"`
@@ -128,22 +131,26 @@ func (e *Execs) HasCommands() bool {
 type CommandType uint
 
 const (
+	// CommandTypeEnter represents a command to be executed when the node enters the stage.
 	CommandTypeEnter CommandType = iota
+	// CommandTypeExit represents a command to be executed when the node exits the stage.
 	CommandTypeExit
 )
 
 // GetExecCommands returns a list of exec commands to be executed.
 func (e *Execs) GetExecCommands(ct CommandType) ([]*exec.ExecCmd, error) {
-	var commandsStrSl []string
+	var commands []string
+
 	switch ct {
 	case CommandTypeEnter:
-		commandsStrSl = e.CommandsOnEnter
+		commands = e.CommandsOnEnter
 	case CommandTypeExit:
-		commandsStrSl = e.CommandsOnExit
+		commands = e.CommandsOnExit
 	}
 
 	ex := []*exec.ExecCmd{}
-	for _, c := range commandsStrSl {
+
+	for _, c := range commands {
 		newCmd, err := exec.NewExecCmdFromString(c)
 		if err != nil {
 			return nil, err
