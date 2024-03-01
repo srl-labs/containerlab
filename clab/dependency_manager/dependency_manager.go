@@ -39,7 +39,7 @@ func (dm *defaultDependencyManager) AddNode(node nodes.Node) {
 	dm.nodes[node.GetShortName()] = NewDependencyNode(node)
 }
 
-// GetNodes returns the DependencyNodes registered with the DependencyManager
+// GetNodes returns the DependencyNodes registered with the DependencyManager.
 func (dm *defaultDependencyManager) GetNodes() map[string]*DependencyNode {
 	return dm.nodes
 }

@@ -77,7 +77,7 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 	log.Debugf("Stage Change: Enter Go -> %s - %s", d.GetShortName(), p)
 
 	var err error
-	var execs = []*exec.ExecCmd{}
+	execs := []*exec.ExecCmd{}
 	switch p {
 	case types.WaitForCreate:
 		execs, err = d.Config().Stages.Create.GetExecs()

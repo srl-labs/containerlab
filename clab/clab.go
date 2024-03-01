@@ -467,7 +467,6 @@ func (c *CLab) createStaticDynamicDependency() error {
 		for _, staticNode := range staticIPNodes {
 
 			err := staticNode.AddDepender(types.WaitForCreate, dynNode, types.WaitForCreate)
-
 			if err != nil {
 				return err
 			}
