@@ -15,7 +15,7 @@ This is also an example of how to pre-configure lab nodes of `linux` kind in con
 
 To start this lab, run the [`run.sh`][run] script, which will run the containerlab deploy commands, and then configure the PC interfaces.
 
-<!-- The lab configuration is documented in detail at: https://www.brianlinkletter.com/2021/05/use-containerlab-to-emulate-open-source-routers/ -->
+The lab configuration is documented in detail at: https://www.brianlinkletter.com/2021/05/use-containerlab-to-emulate-open-source-routers/
 
 [topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/frr01/frr01.clab.yml
 [run]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/frr01/run.sh
