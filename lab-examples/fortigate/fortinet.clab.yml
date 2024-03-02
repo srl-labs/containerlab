@@ -3,4 +3,4 @@ topology:
   nodes:
     forti:
       kind: fortinet_fortios
-      image: fortinet:0.1
+      image: vrnetlab/vr-fortios:7.0.0
