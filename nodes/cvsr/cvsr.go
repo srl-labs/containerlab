@@ -111,7 +111,7 @@ func (n *Cvsr) createCVSRFiles() error {
 
 	vsrConf := filepath.Join(n.Cfg.LabDir, "vsr.conf")
 	data := fmt.Sprintf(`mgmtIf=eth0
-dpdk=0;0
+dpdk=1;DPDK_DEVS
 dpdkHugeDir=/dev/hugepages
 cfDirs=/home/sros/flash1;/home/sros/flash2;/home/sros/flash3
 logDir=/root/run/log
@@ -155,35 +155,35 @@ echo "executing entrypoint"
 	n.Cfg.Entrypoint = "/CustEntry.sh"
 
 	vsrCliConf := filepath.Join(n.Cfg.LabDir, "cf3", "config.cfg")
-	cliConfData := fmt.Sprint(`exit all
-	configure
-		system
-			dns
-				address-pref ipv6-first
+	cliConfData := `exit all
+configure
+	system
+		dns
+			address-pref ipv6-first
+		exit
+		time
+			sntp
+				shutdown
 			exit
-			time
-				sntp
-					shutdown
-				exit
-				zone UTC
+			zone UTC
+		exit
+	exit
+	system
+		security
+			telnet-server
+			ftp-server
+			snmp
+				community private rwa version both
+				community public r version both
 			exit
 		exit
-		system
-			security
-				telnet-server
-				ftp-server
-				snmp
-					community private rwa version both
-					community public r version both
-				exit
-			exit
-		exit
-		log
-		exit
-		card 1
-			card-type iom-v
-	`)
-	err = os.WriteFile(vsrCliConf, []byte(cliConfData), 0644)
+	exit
+	log
+	exit
+	card 1
+		card-type iom-v
+	`
+	err = os.WriteFile(vsrCliConf, []byte(cliConfData), 0666)
 	if err != nil {
 		return err
 	}
