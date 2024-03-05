@@ -192,6 +192,11 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	}
 
 	l.DeploymentState = LinkDeploymentStateFullDeployed
+
+	if len(l.Endpoints) == 2 {
+		log.Infof("Created link: %s <--> %s", l.Endpoints[0], l.Endpoints[1])
+	}
+
 	return nil
 }
 
@@ -206,7 +211,7 @@ func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 
 	// if the endpoint is not part of the link
 	// build a string list of endpoints and return a meaningful error
-	epStrings := []string{}
+	var epStrings []string
 	for _, e := range l.Endpoints {
 		epStrings = append(epStrings, e.String())
 	}
