@@ -211,7 +211,7 @@ func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 
 	// if the endpoint is not part of the link
 	// build a string list of endpoints and return a meaningful error
-	epStrings := []string{}
+	var epStrings []string
 	for _, e := range l.Endpoints {
 		epStrings = append(epStrings, e.String())
 	}
