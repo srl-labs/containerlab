@@ -192,6 +192,11 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	}
 
 	l.DeploymentState = LinkDeploymentStateFullDeployed
+
+	if len(l.Endpoints) == 2 {
+		log.Infof("Created link: %s <--> %s", l.Endpoints[0], l.Endpoints[1])
+	}
+
 	return nil
 }
 

@@ -524,6 +524,7 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
