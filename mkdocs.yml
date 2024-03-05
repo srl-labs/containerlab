@@ -105,6 +105,7 @@ nav:
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
+      - Cumulus Linux leaf, spine, border: lab-examples/cvx03.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Keysight IXIA-C and Nokia SR Linux: lab-examples/ixiacone-srl.md
       - Multi-node labs: lab-examples/multinode.md

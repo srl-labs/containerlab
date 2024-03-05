@@ -1,0 +1,16 @@
+auto lo
+iface lo inet loopback
+
+auto eth1
+iface eth1
+  address 10.162.0.22/20
+
+auto eth2
+iface eth2
+
+// bond is not working in container env
+// auto bond20
+// iface bond20
+//     bond-slaves eth1 eth2
+//     bond-mode active-backup
+//     address 10.162.0.22/20

@@ -1,0 +1,199 @@
+name: poc3
+
+topology:
+  nodes:
+    # spines
+    spine-1:
+      kind: cumulus_cvx
+      # image: networkop/cx:5.3.0
+      image: cx_ebtables:5.3.0
+      runtime: docker
+      binds:
+        - /lib/modules:/lib/modules:ro # for kernel modules like ebtables
+        - 01-common/sn3700c.interfaces:/etc/network/interfaces.d/host-mounts
+        - 01-common/entrypoint.sh:/root/entrypoint.sh
+        - 01-common/apply-nvue.sh:/root/apply-nvue.sh
+        - spine-1/nvue.yml:/home/cumulus/nvue.yml
+      entrypoint: /root/entrypoint.sh
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip a | grep '172.30.0.3'
+        start-period: 10
+        retries: 5
+        interval: 5
+        timeout: 2
+
+    spine-2:
+      kind: cumulus_cvx
+      # image: networkop/cx:5.3.0
+      image: cx_ebtables:5.3.0
+      runtime: docker
+      binds:
+        - /lib/modules:/lib/modules:ro # for kernel modules like ebtables
+        - 01-common/sn3700c.interfaces:/etc/network/interfaces.d/host-mounts
+        - 01-common/entrypoint.sh:/root/entrypoint.sh
+        - 01-common/apply-nvue.sh:/root/apply-nvue.sh
+        - spine-2/nvue.yml:/home/cumulus/nvue.yml
+      entrypoint: /root/entrypoint.sh
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip a | grep '172.30.0.4'
+        start-period: 10
+        retries: 5
+        interval: 5
+        timeout: 2
+
+    # borders
+    border-1:
+      kind: cumulus_cvx
+      # image: networkop/cx:5.3.0
+      image: cx_ebtables:5.3.0
+      runtime: docker
+      binds:
+        - /lib/modules:/lib/modules:ro # for kernel modules like ebtables
+        - 01-common/sn3700c.interfaces:/etc/network/interfaces.d/host-mounts
+        - 01-common/entrypoint.sh:/root/entrypoint.sh
+        - 01-common/apply-nvue.sh:/root/apply-nvue.sh
+        - border-1/nvue.yml:/home/cumulus/nvue.yml
+      entrypoint: /root/entrypoint.sh
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip a | grep '172.30.0.1'
+        start-period: 10
+        retries: 5
+        interval: 5
+        timeout: 2
+      stages:
+        create:
+          wait-for:
+            - node: spine-1
+              stage: healthy
+            - node: spine-2
+              stage: healthy
+
+    border-2:
+      kind: cumulus_cvx
+      # image: networkop/cx:5.3.0
+      image: cx_ebtables:5.3.0
+      runtime: docker
+      binds:
+        - /lib/modules:/lib/modules:ro # for kernel modules like ebtables
+        - 01-common/sn3700c.interfaces:/etc/network/interfaces.d/host-mounts
+        - 01-common/entrypoint.sh:/root/entrypoint.sh
+        - 01-common/apply-nvue.sh:/root/apply-nvue.sh
+        - border-2/nvue.yml:/home/cumulus/nvue.yml
+      entrypoint: /root/entrypoint.sh
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip a | grep '172.30.0.2'
+        start-period: 10
+        retries: 5
+        interval: 5
+        timeout: 2
+      stages:
+        create:
+          wait-for:
+            - node: spine-1
+              stage: healthy
+            - node: spine-2
+              stage: healthy
+
+    # leaf
+    leaf-1:
+      kind: cumulus_cvx
+      # image: networkop/cx:5.3.0
+      image: cx_ebtables:5.3.0
+      runtime: docker
+      binds:
+        - /lib/modules:/lib/modules:ro # for kernel modules like ebtables
+        - 01-common/sn3700c.interfaces:/etc/network/interfaces.d/host-mounts
+        - 01-common/entrypoint.sh:/root/entrypoint.sh
+        - 01-common/apply-nvue.sh:/root/apply-nvue.sh
+        - leaf-1/nvue.yml:/home/cumulus/nvue.yml
+      entrypoint: /root/entrypoint.sh
+      stages:
+        create:
+          wait-for:
+            - node: border-1
+              stage: healthy
+            - node: border-2
+              stage: healthy
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip a | grep '172.30.0.5'
+        start-period: 10
+        retries: 5
+        interval: 5
+        timeout: 2
+
+    leaf-2:
+      kind: cumulus_cvx
+      # image: networkop/cx:5.3.0
+      image: cx_ebtables:5.3.0
+      runtime: docker
+      binds:
+        - /lib/modules:/lib/modules:ro # for kernel modules like ebtables
+        - 01-common/sn3700c.interfaces:/etc/network/interfaces.d/host-mounts
+        - 01-common/entrypoint.sh:/root/entrypoint.sh
+        - 01-common/apply-nvue.sh:/root/apply-nvue.sh
+        - leaf-2/nvue.yml:/home/cumulus/nvue.yml
+      entrypoint: /root/entrypoint.sh
+      stages:
+        create:
+          wait-for:
+            - node: border-1
+              stage: healthy
+            - node: border-2
+              stage: healthy
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip a | grep '172.30.0.6'
+        start-period: 10
+        retries: 5
+        interval: 5
+        timeout: 2
+
+    host1:
+      kind: linux
+      image: networkop/host:ifreload
+      # image: host_updated:ifreload
+      binds:
+        - host1/interfaces:/etc/network/interfaces
+      cmd: "1"
+      stages:
+        create:
+          wait-for:
+            - node: leaf-1
+              stage: healthy
+            - node: leaf-2
+              stage: healthy
+
+  links:
+    # peerlinks
+    - endpoints: ["border-1:swp30", "border-2:swp30"]
+    - endpoints: ["border-1:swp29", "border-2:swp29"]
+    - endpoints: ["spine-1:swp30", "spine-2:swp30"]
+    - endpoints: ["spine-1:swp29", "spine-2:swp29"]
+    - endpoints: ["leaf-1:swp30", "leaf-2:swp30"]
+    - endpoints: ["leaf-1:swp29", "leaf-2:swp29"]
+
+    # switch interco
+    - endpoints: ["border-1:swp28", "spine-2:swp31"]
+    - endpoints: ["border-2:swp28", "spine-1:swp31"]
+    - endpoints: ["border-1:swp27", "spine-1:swp32"]
+    - endpoints: ["border-2:swp27", "spine-2:swp32"]
+
+    - endpoints: ["spine-1:swp28", "leaf-2:swp31"]
+    - endpoints: ["spine-2:swp28", "leaf-1:swp31"]
+    - endpoints: ["spine-1:swp27", "leaf-1:swp32"]
+    - endpoints: ["spine-2:swp27", "leaf-2:swp32"]
+
+    # hosts
+    - endpoints: ["host1:eth1", "leaf-1:swp27"]
+    - endpoints: ["host1:eth2", "leaf-2:swp27"]

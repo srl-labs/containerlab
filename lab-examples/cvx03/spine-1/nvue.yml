@@ -1,0 +1,109 @@
+#
+# Ansible managed
+#
+- set:
+    system:
+      hostname: spine-1
+      timezone: Europe/Paris
+      message:
+        pre-login: |
+          #####################################################################################
+          #  Welcome to NVIDIA Cumulus VX (TM)
+          #####################################################################################
+
+        post-login: |
+          #####################################################################################
+          #  You are successfully logged in to: spine-1
+          #####################################################################################
+
+    interface:
+      lo:
+        type: loopback
+        ip:
+          address:
+            127.0.0.1/8: {}
+            172.30.0.3/32: {}
+ 
+      peerlink:
+        bond:
+          member:
+            swp30: {}
+            swp29: {}
+        type: peerlink
+        bridge:
+          domain:
+            br_default: {}
+      peerlink.4094:
+        type: sub
+        base-interface: peerlink
+        vlan: 4094
+    evpn:
+      enable: on
+    router:
+      bgp:
+        enable: on
+      vrr:
+        enable: on
+    vrf:
+      default:
+        router:
+          bgp:
+            router-id: 172.30.0.3
+            autonomous-system: 65100
+            neighbor:
+              peerlink.4094:
+                peer-group: underlay
+                type: unnumbered
+              swp32:
+                peer-group: underlay
+                type: unnumbered
+              swp31:
+                peer-group: underlay
+                type: unnumbered
+              swp28:
+                peer-group: underlay
+                type: unnumbered
+              swp27:
+                peer-group: underlay
+                type: unnumbered
+            enable: on
+            peer-group:
+              underlay:
+                remote-as: external
+                address-family:
+                  l2vpn-evpn:
+                    enable: on
+            address-family:
+              ipv4-unicast:
+                redistribute:
+                  connected:
+                    enable: on
+                enable: on
+              l2vpn-evpn:
+                enable: on
+    nve:
+      vxlan:
+        enable: on
+        arp-nd-suppress: on
+    service:
+      dns:
+        mgmt:
+          server:
+            16.110.135.51: {}
+            16.110.135.52: {}
+      ntp:
+        mgmt:
+          server:
+            ntp.hpecorp.net:
+              iburst: on
+            g1w9300.americas.hpqcorp.net:
+              iburst: on
+            g1w8781g.emea.hpqcorp.net:
+              iburst: on
+    mlag:
+      peer-ip: linklocal
+      priority: 32768
+      mac-address: 44:38:39:ff:00:11
+      backup:
+        172.30.0.4: {}
+      init-delay: 10

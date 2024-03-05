@@ -1,0 +1,34 @@
+auto lo
+iface lo inet loopback
+
+auto mgmt
+iface mgmt
+    vrf-table auto
+
+auto eth0
+iface eth0
+    vrf mgmt
+
+auto swp1s0
+iface swp1s0
+
+auto swp1s1
+iface swp1s1
+
+auto swp27
+iface swp27
+
+auto swp28
+iface swp28
+
+auto swp29
+iface swp29
+
+auto swp30
+iface swp30
+
+auto swp31
+iface swp31
+
+auto swp32
+iface swp32

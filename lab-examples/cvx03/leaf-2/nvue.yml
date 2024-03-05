@@ -1,0 +1,149 @@
+#
+# Ansible managed
+#
+- set:
+    system:
+      hostname: leaf-2
+      timezone: Europe/Paris
+      message:
+        pre-login: |
+          #####################################################################################
+          #  Welcome to NVIDIA Cumulus VX (TM)
+          #####################################################################################
+
+        post-login: |
+          #####################################################################################
+          #  You are successfully logged in to: leaf-2
+          #####################################################################################
+
+    bridge:
+      domain:
+        br_default:
+          type: vlan-aware
+          vlan:
+            '165':
+              vni:
+                '165': {}
+            '167':
+              vni:
+                '167': {}
+            '2':
+              vni:
+                '2': {}
+    interface:
+      lo:
+        type: loopback
+        ip:
+          address:
+            127.0.0.1/8: {}
+            172.30.0.6/32: {}
+      vlan165:
+        type: svi
+        vlan: 165
+        ip:
+          address:
+            10.162.0.15/20: {}
+      vlan167:
+        type: svi
+        vlan: 167
+        ip:
+          address:
+            10.162.24.15/21: {}
+      bond20:
+        bond:
+          lacp-bypass: on
+          member:
+            swp27: {}
+          mlag:
+            enable: on
+            id: 20
+        bridge:
+          domain:
+            br_default:
+              access: 165
+        type: bond
+
+      peerlink:
+        bond:
+          member:
+            swp30: {}
+            swp29: {}
+        type: peerlink
+        bridge:
+          domain:
+            br_default: {}
+      peerlink.4094:
+        type: sub
+        base-interface: peerlink
+        vlan: 4094
+    evpn:
+      enable: on
+      route-advertise:
+        svi-ip: on
+        default-gateway: on
+    router:
+      bgp:
+        enable: on
+      vrr:
+        enable: on
+    vrf:
+      default:
+        router:
+          bgp:
+            router-id: 172.30.0.6
+            autonomous-system: 65106
+            neighbor:
+              peerlink.4094:
+                peer-group: underlay
+                type: unnumbered
+              swp32:
+                peer-group: underlay
+                type: unnumbered
+              swp31:
+                peer-group: underlay
+                type: unnumbered
+            enable: on
+            peer-group:
+              underlay:
+                remote-as: external
+                address-family:
+                  l2vpn-evpn:
+                    enable: on
+            address-family:
+              ipv4-unicast:
+                redistribute:
+                  connected:
+                    enable: on
+                enable: on
+              l2vpn-evpn:
+                enable: on
+    nve:
+      vxlan:
+        enable: on
+        source:
+          address: 172.30.0.6
+        mlag:
+          shared-address: 172.31.0.3
+        arp-nd-suppress: on
+    service:
+      dns:
+        mgmt:
+          server:
+            16.110.135.51: {}
+            16.110.135.52: {}
+      ntp:
+        mgmt:
+          server:
+            ntp.hpecorp.net:
+              iburst: on
+            g1w9300.americas.hpqcorp.net:
+              iburst: on
+            g1w8781g.emea.hpqcorp.net:
+              iburst: on
+    mlag:
+      peer-ip: linklocal
+      priority: 1000
+      mac-address: 44:38:39:ff:00:12
+      backup:
+        172.30.0.5: {}
+      init-delay: 10
