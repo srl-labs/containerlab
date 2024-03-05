@@ -723,6 +723,7 @@ The existing [`exec`](#exec) node configuration parameter is used to run command
 
 These more advanced command execution scenarios are enabled in the per-stage command execution feature.
 
+<!-- --8<-- [start:per-stage-1] -->
 With per-stage command execution the user can define `exec` block under each stage; moreover, it is possible to specify when the commands should be run `on-enter` or `on-exit` of the stage.
 
 ```yaml
@@ -738,6 +739,8 @@ nodes:
 In the example above, the `ls /sys/class/net/` command will be executed when `node1` is about to enter the `create-links` stage. As expected, the command will list only interfaces provisioned by docker (eth0 and lo), but none of the containerlab-provisioned interfaces, since the create-links stage has not been finished yet.
 
 Per-stage command execution gives you additional flexibility in terms of when the commands are executed, and what commands are executed at each stage.
+
+<!-- --8<-- [end:per-stage-1] -->
 
 ### certificate
 
