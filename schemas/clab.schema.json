@@ -339,6 +339,7 @@
                             "type": {
                                 "type": "string",
                                 "enum": [
+                                    "ixsa1",
                                     "ixrd1",
                                     "ixrd2",
                                     "ixrd3",

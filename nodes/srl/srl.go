@@ -63,6 +63,7 @@ var (
 	defaultCredentials = nodes.NewCredentials("admin", "NokiaSrl1!")
 
 	srlTypes = map[string]string{
+		"ixsa1":    "7215IXSA1.yml",
 		"ixrd1":    "7220IXRD1.yml",
 		"ixrd2":    "7220IXRD2.yml",
 		"ixrd3":    "7220IXRD3.yml",
