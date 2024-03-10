@@ -1,4 +1,4 @@
-name: vxlan-test
+name: kind-test
 
 "on":
   workflow_call:
@@ -8,8 +8,8 @@ name: vxlan-test
         type: string
 
 jobs:
-  vxlan-tests:
-    runs-on: ubuntu-22.04
+  kind-tests:
+    runs-on: srl-labs-runners
     strategy:
       matrix:
         runtime:
