@@ -131,6 +131,10 @@ When a subset of nodes is specified, containerlab will only deploy those nodes a
 
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
 
+#### skip-post-deploy
+
+The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the lab deployment. This is a global flag that affects all nodes in the lab.
+
 ### Environment variables
 
 #### `CLAB_RUNTIME`
