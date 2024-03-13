@@ -130,8 +130,8 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	deploymentOptions.SetExportTemplate(exportTemplate).
+		SetReconfigure(reconfigure).
 		SetGraph(graph).
-		SetMaxWorkers(maxWorkers).
 		SetSkipPostDeploy(skipPostDeploy)
 
 	containers, err := c.Deploy(ctx, deploymentOptions)

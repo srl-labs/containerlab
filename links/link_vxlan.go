@@ -271,11 +271,11 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	return nil
 }
 
-func (l *LinkVxlan) Remove(_ context.Context) error {
+func (l *LinkVxlan) Remove(ctx context.Context) error {
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
-	err := l.localEndpoint.Remove()
+	err := l.localEndpoint.Remove(ctx)
 	if err != nil {
 		log.Debug(err)
 	}

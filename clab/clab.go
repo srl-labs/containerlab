@@ -32,6 +32,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var ErrNodeNotFound = errors.New("node not found")
+
 type CLab struct {
 	Config    *Config `json:"config,omitempty"`
 	TopoPaths *types.TopoPaths
@@ -389,6 +391,14 @@ func (c *CLab) initMgmtNetwork() error {
 
 func (c *CLab) globalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntimeName]
+}
+
+// GetNode retrieve a node from the clab instance
+func (c *CLab) GetNode(name string) (nodes.Node, error) {
+	if node, exists := c.Nodes[name]; exists {
+		return node, nil
+	}
+	return nil, fmt.Errorf("%w: %s", ErrNodeNotFound, name)
 }
 
 // CreateNodes schedules nodes creation and returns a waitgroup for all nodes
@@ -950,18 +960,14 @@ func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
 func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
 	var err error
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	err = c.ResolveLinks()
 	if err != nil {
 		return nil, err
 	}
 
 	log.Debugf("lab Conf: %+v", c.Config)
-
 	if options.reconfigure {
-		_ = c.Destroy(ctx)
+		_ = c.Destroy(ctx, uint(len(c.Nodes)), true)
 		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err
@@ -1078,7 +1084,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	log.Info("Adding containerlab host entries to /etc/hosts file")
-	err = AppendHostsFileEntries(containers, c.Config.Name)
+	err = c.AppendHostsFileEntries(ctx)
 	if err != nil {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
@@ -1150,7 +1156,68 @@ func (c *CLab) certificateAuthoritySetup() error {
 }
 
 // Destroy the given topology
-func (c *CLab) Destroy(ctx context.Context) error {
+func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
+	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(containers) == 0 {
+		return nil
+	}
+
+	if maxWorkers == 0 {
+		maxWorkers = uint(len(c.Nodes))
+	}
+
+	// a set of workers that do not support concurrency
+	serialNodes := make(map[string]struct{})
+	for _, n := range c.Nodes {
+		if n.GetRuntime().GetName() == ignite.RuntimeName {
+			serialNodes[n.Config().LongName] = struct{}{}
+			// decreasing the num of maxWorkers as they are used for concurrent nodes
+			maxWorkers = maxWorkers - 1
+		}
+	}
+
+	// Serializing ignite workers due to busy device error
+	if _, ok := c.Runtimes[ignite.RuntimeName]; ok {
+		maxWorkers = 1
+	}
+
+	log.Infof("Destroying lab: %s", c.Config.Name)
+	c.DeleteNodes(ctx, maxWorkers, serialNodes)
+
+	log.Info("Removing containerlab host entries from /etc/hosts file")
+	err = c.DeleteEntriesFromHostsFile()
+	if err != nil {
+		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
+	}
+
+	log.Info("Removing ssh config for containerlab nodes")
+	err = c.RemoveSSHConfig(c.TopoPaths)
+	if err != nil {
+		log.Errorf("failed to remove ssh config file: %v", err)
+	}
+
+	// delete container network namespaces symlinks
+	for _, node := range c.Nodes {
+		err = node.DeleteNetnsSymlink()
+		if err != nil {
+			return fmt.Errorf("error while deleting netns symlinks: %w", err)
+		}
+	}
+
+	// delete lab management network
+	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
+		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
+		if err = c.globalRuntime().DeleteNet(ctx); err != nil {
+			// do not log error message if deletion error simply says that such network doesn't exist
+			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
+				log.Error(err)
+			}
+		}
+	}
 	return nil
 }
 

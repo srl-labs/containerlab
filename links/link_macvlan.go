@@ -159,14 +159,14 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	return err
 }
 
-func (l *LinkMacVlan) Remove(_ context.Context) error {
+func (l *LinkMacVlan) Remove(ctx context.Context) error {
 	// check Deployment state, if the Link was already
 	// removed via e.g. the peer node
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
 	// trigger link removal via the NodeEndpoint
-	err := l.NodeEndpoint.Remove()
+	err := l.NodeEndpoint.Remove(ctx)
 	if err != nil {
 		log.Debug(err)
 	}

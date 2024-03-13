@@ -314,7 +314,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	var err error
-	if err = c.verifyLinks(); err != nil {
+	if err = c.verifyLinks(ctx); err != nil {
 		return err
 	}
 	if err = c.verifyRootNetNSLinks(); err != nil {
@@ -372,11 +372,11 @@ func (c *CLab) verifyRootNetNSLinks() error {
 
 // verifyLinks checks if all the endpoints in the links section of the topology file
 // appear only once.
-func (c *CLab) verifyLinks() error {
+func (c *CLab) verifyLinks(ctx context.Context) error {
 	var err error
 	verificationErrors := []error{}
 	for _, e := range c.Endpoints {
-		err = e.Verify(c.globalRuntime().Config().VerifyLinkParams)
+		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
 		}

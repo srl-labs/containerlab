@@ -28,7 +28,7 @@ func (g *GenericLinkNode) AddLinkToContainer(_ context.Context, link netlink.Lin
 	return netns.Do(f)
 }
 
-func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
+func (g *GenericLinkNode) ExecFunction(_ context.Context, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	netns, err := ns.GetNS(g.nspath)
 	if err != nil {

@@ -361,7 +361,7 @@ type Node interface {
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
 	GetEndpoints() []Endpoint
-	ExecFunction(func(ns.NetNS) error) error
+	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() state.NodeState
 	Delete(ctx context.Context) error
 }

@@ -13,7 +13,7 @@ func NewEndpointVeth(eg *EndpointGeneric) *EndpointVeth {
 }
 
 // Verify verifies the veth based deployment pre-conditions.
-func (e *EndpointVeth) Verify(_ *VerifyLinkParams) error {
+func (e *EndpointVeth) Verify(_ context.Context, _ *VerifyLinkParams) error {
 	return CheckEndpointUniqueness(e)
 }
 

@@ -103,7 +103,7 @@ type Node interface {
 	// DeployEndpoints deploys the links for the node.
 	DeployEndpoints(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
-	ExecFunction(func(ns.NetNS) error) error
+	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() state.NodeState
 	SetState(state.NodeState)
 	GetSSHConfig() *types.SSHConfig

@@ -16,7 +16,6 @@ import (
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
 	"gopkg.in/yaml.v2"
 )
@@ -169,78 +168,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
-	if err != nil {
-		return err
-	}
-
-	if len(containers) == 0 {
-		return nil
-	}
-
-	if maxWorkers == 0 {
-		maxWorkers = uint(len(c.Nodes))
-	}
-
-	// a set of workers that do not support concurrency
-	serialNodes := make(map[string]struct{})
-	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == ignite.RuntimeName {
-			serialNodes[n.Config().LongName] = struct{}{}
-			// decreasing the num of maxWorkers as they are used for concurrent nodes
-			maxWorkers = maxWorkers - 1
-		}
-	}
-
-	// Serializing ignite workers due to busy device error
-	if _, ok := c.Runtimes[ignite.RuntimeName]; ok {
-		maxWorkers = 1
-	}
-
-	// populating the nspath for the nodes
-	for _, n := range c.Nodes {
-		nsp, err := n.GetRuntime().GetNSPath(ctx, n.Config().LongName)
-		if err != nil {
-			continue
-		}
-		n.Config().NSPath = nsp
-	}
-
-	log.Infof("Destroying lab: %s", c.Config.Name)
-	c.DeleteNodes(ctx, maxWorkers, serialNodes)
-
-	log.Info("Removing containerlab host entries from /etc/hosts file")
-	err = clab.DeleteEntriesFromHostsFile(c.Config.Name)
-	if err != nil {
-		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
-	}
-
-	log.Info("Removing ssh config for containerlab nodes")
-	err = c.RemoveSSHConfig(c.TopoPaths)
-	if err != nil {
-		log.Errorf("failed to remove ssh config file: %v", err)
-	}
-
-	// delete lab management network
-	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
-		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
-		if err = c.GlobalRuntime().DeleteNet(ctx); err != nil {
-			// do not log error message if deletion error simply says that such network doesn't exist
-			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
-				log.Error(err)
-			}
-		}
-	}
-
-	// delete container network namespaces symlinks
-	for _, node := range c.Nodes {
-		err = node.DeleteNetnsSymlink()
-		if err != nil {
-			return fmt.Errorf("error while deleting netns symlinks: %w", err)
-		}
-	}
-
-	return err
+	return c.Destroy(ctx, maxWorkers, keepMgmtNet)
 }
 
 // listContainers lists containers belonging to a certain topo if topo file path is specified

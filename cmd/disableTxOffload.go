@@ -23,6 +23,9 @@ var disableTxOffloadCmd = &cobra.Command{
 	Short: "disables tx checksum offload on eth0 interface of a container",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+
+		ctx := context.Background()
+
 		opts := []clab.ClabOption{
 			clab.WithTimeout(timeout),
 			clab.WithRuntime(rt,
@@ -38,36 +41,26 @@ var disableTxOffloadCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
 
-		log.Infof("getting container '%s' information", cntName)
-
-		nodeRuntime := c.GlobalRuntime()
+		node, err := c.GetNode("cntName")
 		if err != nil {
 			return err
 		}
 
-		NSPath, err := nodeRuntime.GetNSPath(ctx, cntName)
-		if err != nil {
-			return err
-		}
-
-		nodeNS, err := ns.GetNS(NSPath)
-		if err != nil {
-			return err
-		}
-		err = nodeNS.Do(func(_ ns.NetNS) error {
+		disableTXOffload := func(_ ns.NetNS) error {
 			// disabling offload on lo0 interface
 			err = utils.EthtoolTXOff("eth0")
 			if err != nil {
 				log.Infof("Failed to disable TX checksum offload for 'eth0' interface for '%s' container", cntName)
 			}
 			return nil
-		})
+		}
+
+		err = node.ExecFunction(ctx, disableTXOffload)
 		if err != nil {
 			return err
 		}
+
 		log.Infof("Tx checksum offload disabled for eth0 interface of %s container", cntName)
 		return nil
 	},
