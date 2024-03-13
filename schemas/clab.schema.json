@@ -98,7 +98,8 @@
                         "cisco_c8000",
                         "cvx",
                         "cumulus_cvx",
-                        "openbsd"
+                        "openbsd",
+                        "fortinet_fortigate"
                     ]
                 },
                 "license": {
