@@ -8,7 +8,7 @@ Fortinet Fortigate virtualized security appliance is identified with `fortinet_f
 
 ## Getting Fortinet Fortigate disk image
 
-Users can obtain the qcow2 disk image for Fortinet Fortigate VM from the [official support site]() by making a free account. Download the FGVM64 variant for the "new deployment" for the KVM platform.
+Users can obtain the qcow2 disk image for Fortinet Fortigate VM from the [official support site](https://support.fortinet.com/Download/VMImages.aspx) by making a free account. Download the FGVM64 variant for the "new deployment" for the KVM platform.
 
 Extract the downloaded zip file and rename the `fortios.qcow2` to `fortios-vX.Y.Z.qcow2` where `X.Y.Z` is the version of the Fortigate VM. Put the renamed file in the `fortigate` directory of the cloned [hellt/vrnetlab](https://github.com/hellt/vrnetlab) project and run `make` to build the container image.
 
