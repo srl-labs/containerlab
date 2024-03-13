@@ -104,6 +104,7 @@ The images that work with containerlab will appear in the supported list as we i
 | Aruba AOS-CX          | [aruba_aoscx](kinds/vr-aoscx.md)                        |                                            |                                                                                                                                                                                                              |
 | IPInfusion OcNOS      | [ipinfusion_ocnos](kinds/ipinfusion-ocnos.md)           |                                            |                                                                                                                                                                                                              |
 | Checkpoint Cloudguard | [checkpoint_cloudguard](kinds/checkpoint_cloudguard.md) |                                            |                                                                                                                                                                                                              |
+| Fortinet Fortigate    | [fortinet_fortigate](kinds/fortinet_fortigate.md)       |                                            |                                                                                                                                                                                                              |
 
 ### Connection modes
 
