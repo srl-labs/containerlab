@@ -1,0 +1,14 @@
+name: shared-namespace-ext
+prefix: ""
+
+topology:
+  kinds:
+    linux:
+      cmd: sh
+  nodes:
+    ext-node:
+      kind: linux
+      image: alpine
+      exec:
+        - ip l add dev d1 type dummy
+        - ip a add dev d1 128.66.0.1/32
