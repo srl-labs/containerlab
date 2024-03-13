@@ -9,8 +9,7 @@ name: fortigate-test
 
 jobs:
   fortigate-tests:
-    runs-on:
-      group: Default
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         runtime:
