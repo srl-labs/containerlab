@@ -439,7 +439,7 @@ func (c *CLab) createNamespaceSharingDependency() {
 		referenceNodeName := netModeArr[1]
 		referenceNode, err := c.dependencyManager.GetNode(referenceNodeName)
 		if err != nil {
-			log.Warnf("node %s refrenced in namespace sharing not found, considering it an external dependency.", referenceNodeName)
+			log.Warnf("node %s referenced in namespace sharing not found, considering it an external dependency.", referenceNodeName)
 		}
 
 		referenceNode.AddDepender(types.WaitForCreate, n, types.WaitForCreate)
