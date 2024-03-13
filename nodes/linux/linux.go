@@ -14,6 +14,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
 
@@ -64,10 +65,12 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	return err
 }
 
-func (n *linux) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+func (n *linux) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
-	if err := types.DisableTxOffload(n.Cfg); err != nil {
-		return err
+
+	err := n.ExecFunction(ctx, utils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
+	if err != nil {
+		log.Error(err)
 	}
 
 	// when ignite runtime is in use

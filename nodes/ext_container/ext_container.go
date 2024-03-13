@@ -7,8 +7,6 @@ package ext_container
 import (
 	"context"
 
-	"github.com/pkg/errors"
-
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -47,14 +45,6 @@ func (e *extcont) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	if err != nil {
 		return err
 	}
-
-	// request nspath from runtime
-	nspath, err := e.Runtime.GetNSPath(ctx, e.Cfg.ShortName)
-	if err != nil {
-		return errors.Wrap(err, "reading external container namespace path")
-	}
-	// set nspath in node config
-	e.Cfg.NSPath = nspath
 
 	e.SetState(state.Deployed)
 

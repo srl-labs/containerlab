@@ -7,7 +7,6 @@ package cmd
 import (
 	"context"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -47,16 +46,7 @@ var disableTxOffloadCmd = &cobra.Command{
 			return err
 		}
 
-		disableTXOffload := func(_ ns.NetNS) error {
-			// disabling offload on lo0 interface
-			err = utils.EthtoolTXOff("eth0")
-			if err != nil {
-				log.Infof("Failed to disable TX checksum offload for 'eth0' interface for '%s' container", cntName)
-			}
-			return nil
-		}
-
-		err = node.ExecFunction(ctx, disableTXOffload)
+		err = node.ExecFunction(ctx, utils.NSEthtoolTXOff(cntName, "eth0"))
 		if err != nil {
 			return err
 		}

@@ -594,12 +594,11 @@ func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node run
 
 // postStartActions performs misc. tasks that are needed after the container starts.
 func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *types.NodeConfig) error {
-	var err error
-	node.NSPath, err = d.GetNSPath(ctx, cID)
+	nspath, err := d.GetNSPath(ctx, cID)
 	if err != nil {
 		return err
 	}
-	err = utils.LinkContainerNS(node.NSPath, node.LongName)
+	err = utils.LinkContainerNS(nspath, node.LongName)
 	return err
 }
 

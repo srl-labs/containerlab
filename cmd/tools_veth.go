@@ -123,7 +123,7 @@ var vethCreateCmd = &cobra.Command{
 
 // createNodes creates fake nodes in c.Nodes map to make link resolve work.
 // It checks which endpoint type is set by a user and creates a node that matches the type.
-func createNodes(ctx context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) error {
+func createNodes(_ context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) error {
 	for _, epDefinition := range []parsedEndpoint{AEnd, BEnd} {
 		switch epDefinition.Kind {
 		case links.LinkEndpointTypeHost:
@@ -147,14 +147,8 @@ func createNodes(ctx context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) e
 			// its namespace path.
 			// techinically we don't care which node this is, as long as it uses
 			// standard veth interface attachment process.
-			nspath, err := c.Runtimes[rt].GetNSPath(ctx, epDefinition.Node)
-			if err != nil {
-				return err
-			}
-
-			err = createFakeNode(c, "linux", &types.NodeConfig{
+			err := createFakeNode(c, "linux", &types.NodeConfig{
 				ShortName: epDefinition.Node,
-				NSPath:    nspath,
 			})
 			if err != nil {
 				return err

@@ -172,7 +172,6 @@ func (d *DefaultNode) getNsPath(ctx context.Context) (string, error) {
 			return "", err
 		}
 	}
-	d.Config().NSPath = nsp
 
 	return nsp, err
 }

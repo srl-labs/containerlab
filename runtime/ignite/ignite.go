@@ -264,12 +264,11 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runti
 		return nil, err
 	}
 
-	nodecfg.NSPath, err = c.GetNSPath(ctx, vm.PrefixedID())
+	nspath, err := c.GetNSPath(ctx, vm.PrefixedID())
 	if err != nil {
 		return nil, err
 	}
-
-	return vmChans, utils.LinkContainerNS(nodecfg.NSPath, nodecfg.LongName)
+	return vmChans, utils.LinkContainerNS(nspath, nodecfg.LongName)
 }
 
 func (*IgniteRuntime) CreateContainer(_ context.Context, node *types.NodeConfig) (string, error) {
