@@ -44,6 +44,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Palo Alto PAN](https://containerlab.dev/manual/kinds/vr-pan)
 * [IPInfusion OcNOS](https://containerlab.dev/manual/kinds/ipinfusion-ocnos)
 * [Check Point Cloudguard](https://containerlab.dev/manual/kinds/checkpoint_cloudguard/)
+* [Fortinet Fortigate](https://containerlab.dev/manual/kinds/fortinet_fortigate/)
 * [Aruba AOS-CX](https://containerlab.dev/manual/kinds/vr-aoscx)
 * [OpenBSD](https://containerlab.dev/manual/kinds/openbsd)
 

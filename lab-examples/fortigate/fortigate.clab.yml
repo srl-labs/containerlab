@@ -2,10 +2,10 @@ name: fortigate
 topology:
   nodes:
     forti1:
-      kind: fortinet_fortios
+      kind: fortinet_fortigate
       image: vrnetlab/vr-fortios:7.0.0
     forti2:
       kind: fortinet_fortios
-      image: vrnetlab/vr-fortios:7.0.0
+      image: vrnetlab/vr-fortigate:7.0.0
   links:
     - endpoints: ["forti1:eth1", "forti2:eth1"]

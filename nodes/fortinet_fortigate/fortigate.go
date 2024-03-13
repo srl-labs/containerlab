@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package fortinet_fortios
+package fortinet_fortigate
 
 import (
 	"context"
@@ -15,12 +15,12 @@ import (
 )
 
 var (
-	kindnames          = []string{"fortinet_fortios"}
+	kindnames          = []string{"fortinet_fortigate"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
 const (
-	// scrapligo doesn't have a driver for fortios, can be copied from scrapli community
+	// scrapligo doesn't have a driver for fortigate, can be copied from scrapli community
 	// scrapliPlatformName = "fortinet_fortigate"
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
@@ -29,15 +29,15 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
-		return new(fortios)
+		return new(fortigate)
 	}, defaultCredentials)
 }
 
-type fortios struct {
+type fortigate struct {
 	nodes.DefaultNode
 }
 
-func (n *fortios) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fortigate) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
@@ -74,7 +74,7 @@ func (n *fortios) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *fortios) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *fortigate) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -85,6 +85,6 @@ func (n *fortios) PreDeploy(_ context.Context, params *nodes.PreDeployParams) er
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *fortios) CheckInterfaceName() error {
+func (n *fortigate) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

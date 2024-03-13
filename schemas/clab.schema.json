@@ -99,7 +99,7 @@
                         "cvx",
                         "cumulus_cvx",
                         "openbsd",
-                        "fortinet_fortios"
+                        "fortinet_fortigate"
                     ]
                 },
                 "license": {

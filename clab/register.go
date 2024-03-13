@@ -13,7 +13,7 @@ import (
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
-	fortinet_fortios "github.com/srl-labs/containerlab/nodes/fortinet_fortios"
+	fortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
 	host "github.com/srl-labs/containerlab/nodes/host"
 	ipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
 	k8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
@@ -51,7 +51,7 @@ func (c *CLab) RegisterNodes() {
 	crpd.Register(c.Reg)
 	cvx.Register(c.Reg)
 	ext_container.Register(c.Reg)
-	fortinet_fortios.Register(c.Reg)
+	fortinet_fortigate.Register(c.Reg)
 	host.Register(c.Reg)
 	ipinfusion_ocnos.Register(c.Reg)
 	keysight_ixiacone.Register(c.Reg)
