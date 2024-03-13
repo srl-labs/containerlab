@@ -155,9 +155,22 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 
 // getNsPath retrieve the nodes nspath
 func (d *DefaultNode) getNsPath(ctx context.Context) (string, error) {
-	nsp, err := d.Runtime.GetNSPath(ctx, d.Cfg.LongName)
-	if err != nil {
-		log.Errorf("Unable to determine NetNS Path for node %s: %v", d.Cfg.ShortName, err)
+	var err error
+	nsp := ""
+
+	if d.Cfg.IsRootNamespaceBased {
+		netns, err := ns.GetCurrentNS()
+		if err != nil {
+			return "", err
+		}
+		nsp = netns.Path()
+	}
+	if nsp == "" {
+		nsp, err = d.Runtime.GetNSPath(ctx, d.Cfg.LongName)
+		if err != nil {
+			log.Errorf("Unable to determine NetNS Path for node %s: %v", d.Cfg.ShortName, err)
+			return "", err
+		}
 	}
 	d.Config().NSPath = nsp
 
