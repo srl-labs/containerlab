@@ -8,7 +8,7 @@ type ExecOptions struct {
 
 func NewExecOptions(filters []*types.GenericFilter) *ExecOptions {
 	return &ExecOptions{
-		filters: []*types.GenericFilter{},
+		filters: filters,
 	}
 }
 

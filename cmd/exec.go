@@ -87,6 +87,9 @@ func execFn(_ *cobra.Command, _ []string) error {
 	}
 
 	resultCollection, err := c.Exec(ctx, execCommands, clab.NewExecOptions(filters))
+	if err != nil {
+		return err
+	}
 
 	switch outputFormat {
 	case exec.ExecFormatPlain:
