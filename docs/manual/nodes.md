@@ -573,6 +573,22 @@ my-node:
 
 The `exec` is particularly helpful to provide some startup configuration for linux nodes such as IP addressing and routing instructions.
 
+/// details | exec and access to env vars
+When you want the `exec` command to have access to the env variables defined in the topology file or in the container' environment you have to escape the `$` sign:
+
+```yaml
+  nodes:
+    test:
+      kind: linux
+      image: alpine:3
+      env:
+        FOO: BAR
+      exec:
+        - ash -c 'echo $$FOO'
+```
+
+///
+
 ### memory
 
 By default, container runtimes do not impose any memory resource constraints[^1].
