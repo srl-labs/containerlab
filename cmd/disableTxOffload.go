@@ -41,7 +41,7 @@ var disableTxOffloadCmd = &cobra.Command{
 			return err
 		}
 
-		node, err := c.GetNode("cntName")
+		node, err := c.GetNode(cntName)
 		if err != nil {
 			return err
 		}

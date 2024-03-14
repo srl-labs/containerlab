@@ -55,7 +55,7 @@ endif
 ifndef suite
 override suite = .
 endif
-robot-test: build-debug
+robot-test: build-with-podman-debug
 	CLAB_BIN=$(BINARY) $$PWD/tests/rf-run.sh $(runtime) $$PWD/tests/$(suite)
 
 MOCKDIR = ./mocks

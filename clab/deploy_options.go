@@ -1,8 +1,6 @@
 package clab
 
 import (
-	"math"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/tklauser/numcpus"
 )
@@ -16,9 +14,7 @@ type DeployOptions struct {
 }
 
 func NewDeployOptions(maxWorkers uint) (*DeployOptions, error) {
-	d := &DeployOptions{
-		maxWorkers: math.MaxUint,
-	}
+	d := &DeployOptions{}
 	err := d.initWorkerCount(maxWorkers)
 	return d, err
 }
