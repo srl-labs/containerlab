@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/kinds/kind_registry"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
@@ -32,8 +33,8 @@ type SSHConfigNodeTmpl struct {
 //go:embed ssh_config.go.tpl
 var sshConfigTemplate string
 
-// RemoveSSHConfig removes the lab specific ssh config file.
-func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
+// removeSSHConfig removes the lab specific ssh config file.
+func (c *CLab) removeSSHConfig(topoPaths *types.TopoPaths) error {
 	err := os.Remove(topoPaths.SSHConfigPath())
 	// if there is an error, thats not "Not Exists", then return it
 	if err != nil && !os.IsNotExist(err) {
@@ -65,7 +66,7 @@ func (c *CLab) addSSHConfig() error {
 	for _, n := range c.Nodes {
 		// get the Kind from the KindRegistry and and extract
 		// the kind registered Username
-		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
+		NodeRegistryEntry := kind_registry.KindRegistryInstance.Kind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
 			Name:      n.Config().LongName,
 			Username:  NodeRegistryEntry.Credentials().GetUsername(),

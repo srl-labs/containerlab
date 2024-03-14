@@ -11,6 +11,7 @@ import (
 	"sort"
 	"text/template"
 
+	"github.com/srl-labs/containerlab/kinds/kind_registry"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -74,7 +75,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 		// add username and password to kind properties
 		// assumption is that all nodes of the same kind have the same credentials
-		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
+		nodeRegEntry := kind_registry.KindRegistryInstance.Kind(n.Config().Kind)
 		if nodeRegEntry != nil {
 			kindProps.Username = nodeRegEntry.Credentials().GetUsername()
 			kindProps.Password = nodeRegEntry.Credentials().GetPassword()

@@ -18,8 +18,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-// GenerateExports generates various export files and writes it to a lab location.
-func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error {
+// generateExports generates various export files and writes it to a lab location.
+func (c *CLab) generateExports(ctx context.Context, f io.Writer, p string) error {
 	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
 		log.Warningf("Cannot parse export template %s: %v", p, err)

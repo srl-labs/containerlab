@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/kinds/kind_registry"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -64,7 +65,7 @@ func PrepareVars(c *clab.CLab) map[string]*NodeConfig {
 			vars[vkRole] = nodeCfg.Kind
 		}
 
-		creds := c.Reg.Kind(nodeCfg.Kind).Credentials().Slice()
+		creds := kind_registry.KindRegistryInstance.Kind(nodeCfg.Kind).Credentials().Slice()
 
 		res[name] = &NodeConfig{
 			TargetNode:  nodeCfg,

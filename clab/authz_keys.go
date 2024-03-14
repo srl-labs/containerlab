@@ -30,7 +30,7 @@ const (
 func (c *CLab) createAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
-	for _, k := range c.SSHPubKeys {
+	for _, k := range c.sSHPubKeys {
 		x := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(k)))
 		addKeyToBuffer(b, x)
 	}
@@ -70,9 +70,9 @@ func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 	return keys, nil
 }
 
-// RetrieveSSHPubKeys retrieves the PubKeys from the different sources
+// retrieveSSHPubKeys retrieves the PubKeys from the different sources
 // SSHAgent as well as all home dir based /.ssh/*.pub files.
-func (c *CLab) RetrieveSSHPubKeys() ([]ssh.PublicKey, error) {
+func (c *CLab) retrieveSSHPubKeys() ([]ssh.PublicKey, error) {
 	keys := make([]ssh.PublicKey, 0)
 
 	var errs error

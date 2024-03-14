@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/kinds/kind_registry"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -226,7 +227,7 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 func createFakeNode(c *clab.CLab, kind string, nodeCfg *types.NodeConfig) error {
 	name := nodeCfg.ShortName
 	// construct node
-	n, err := c.Reg.NewNodeOfKind(kind)
+	n, err := kind_registry.KindRegistryInstance.NewNodeOfKind(kind)
 	if err != nil {
 		return fmt.Errorf("error constructing node %s: %v", name, err)
 	}

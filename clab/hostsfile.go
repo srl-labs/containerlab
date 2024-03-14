@@ -32,7 +32,7 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 		}
 	}
 	// lets make sure to remove the entries of a non-properly destroyed lab in the hosts file
-	err := c.DeleteEntriesFromHostsFile()
+	err := c.deleteEntriesFromHostsFile()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,8 @@ func generateHostsEntries(containers []runtime.GenericContainer, labname string)
 	return entries.Bytes()
 }
 
-func (c *CLab) DeleteEntriesFromHostsFile() error {
+func (c *CLab) deleteEntriesFromHostsFile() error {
+
 	if c.Config.Name == "" {
 		return errors.New("missing containerlab name")
 	}

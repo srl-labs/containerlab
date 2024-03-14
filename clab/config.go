@@ -14,6 +14,7 @@ import (
 
 	"github.com/pmorjan/kmod"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/kinds/kind_registry"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -117,7 +118,7 @@ func (c *CLab) parseTopology() error {
 	}
 
 	for idx, nodeName := range nodeNames {
-		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
+		err = c.newNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
 		if err != nil {
 			return err
 		}
@@ -126,15 +127,15 @@ func (c *CLab) parseTopology() error {
 	return nil
 }
 
-// NewNode initializes a new node object.
-func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int) error {
+// newNode initializes a new node object.
+func (c *CLab) newNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefinition, idx int) error {
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
 	}
 
 	// construct node
-	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
+	n, err := kind_registry.KindRegistryInstance.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
 		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
@@ -375,7 +376,7 @@ func (c *CLab) verifyRootNetNSLinks() error {
 func (c *CLab) verifyLinks(ctx context.Context) error {
 	var err error
 	verificationErrors := []error{}
-	for _, e := range c.Endpoints {
+	for _, e := range c.endpoints {
 		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
 		if err != nil {
 			verificationErrors = append(verificationErrors, err)
@@ -525,18 +526,6 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 	}
 
 	return nil
-}
-
-// HasKind returns true if kind k is found in the list of nodes.
-func (c *CLab) HasKind(k string) bool {
-	for _, n := range c.Nodes {
-		if n.Config().Kind == k {
-			log.Warn("found")
-			return true
-		}
-	}
-
-	return false
 }
 
 // addDefaultLabels adds default labels to node's config struct.

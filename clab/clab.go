@@ -20,6 +20,7 @@ import (
 	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
 	errs "github.com/srl-labs/containerlab/errors"
+	_ "github.com/srl-labs/containerlab/kinds/all"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -39,15 +40,13 @@ type CLab struct {
 	TopoPaths *types.TopoPaths
 	Nodes     map[string]nodes.Node `json:"nodes,omitempty"`
 	Links     map[int]links.Link    `json:"links,omitempty"`
-	Endpoints []links.Endpoint
+	endpoints []links.Endpoint
 	Runtimes  map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
-	// reg is a registry of node kinds
-	Reg  *nodes.NodeRegistry
-	Cert *cert.Cert
+	cert      *cert.Cert
 	// List of SSH public keys extracted from the ~/.ssh/authorized_keys file
 	// and ~/.ssh/*.pub files.
 	// The keys are used to enable key-based SSH access for the nodes.
-	SSHPubKeys []ssh.PublicKey
+	sSHPubKeys []ssh.PublicKey
 
 	dependencyManager depMgr.DependencyManager
 	m                 *sync.RWMutex
@@ -176,47 +175,16 @@ func WithKeepMgmtNet() ClabOption {
 
 func WithTopoPath(path, varsFile string) ClabOption {
 	return func(c *CLab) error {
-		file, err := c.ProcessTopoPath(path)
+		file, err := ProcessTopoPath(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return err
 		}
-		if err := c.LoadTopologyFromFile(file, varsFile); err != nil {
+		if err := c.loadTopologyFromFile(file, varsFile); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
 
 		return c.initMgmtNetwork()
 	}
-}
-
-// ProcessTopoPath takes a topology path, which might be the path to a directory or a file
-// or stdin or a URL and returns the topology file name if found.
-func (c *CLab) ProcessTopoPath(path string) (string, error) {
-	var file string
-	var err error
-
-	switch {
-	case path == "-" || path == "stdin":
-		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
-		if err != nil {
-			return "", err
-		}
-	// if the path is not a local file and a URL, download the file and store it in the tmp dir
-	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
-		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
-		if err != nil {
-			return "", err
-		}
-
-	case path == "":
-		return "", fmt.Errorf("provide a path to the clab topology file")
-
-	default:
-		file, err = FindTopoFileByPath(path)
-		if err != nil {
-			return "", err
-		}
-	}
-	return file, nil
 }
 
 // FindTopoFileByPath takes a topology path, which might be the path to a directory
@@ -337,12 +305,8 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Nodes:    make(map[string]nodes.Node),
 		Links:    make(map[int]links.Link),
 		Runtimes: make(map[string]runtime.ContainerRuntime),
-		Cert:     &cert.Cert{},
+		cert:     &cert.Cert{},
 	}
-
-	// init a new NodeRegistry
-	c.Reg = nodes.NewNodeRegistry()
-	c.RegisterNodes()
 
 	for _, opt := range opts {
 		err := opt(c)
@@ -574,10 +538,10 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				err := node.PreDeploy(
 					ctx,
 					&nodes.PreDeployParams{
-						Cert:         c.Cert,
+						Cert:         c.cert,
 						TopologyName: c.Config.Name,
 						TopoPaths:    c.TopoPaths,
-						SSHPubKeys:   c.SSHPubKeys,
+						SSHPubKeys:   c.sSHPubKeys,
 					},
 				)
 				if err != nil {
@@ -911,7 +875,7 @@ func (c *CLab) ResolveLinks() error {
 			continue
 		}
 
-		c.Endpoints = append(c.Endpoints, l.GetEndpoints()...)
+		c.endpoints = append(c.endpoints, l.GetEndpoints()...)
 		c.Links[i] = l
 	}
 
@@ -1020,7 +984,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	c.SSHPubKeys, err = c.RetrieveSSHPubKeys()
+	c.sSHPubKeys, err = c.retrieveSSHPubKeys()
 	if err != nil {
 		log.Warn(err)
 	}
@@ -1077,7 +1041,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	if err := c.GenerateExports(ctx, topoDataF, options.exportTemplate); err != nil {
+	if err := c.generateExports(ctx, topoDataF, options.exportTemplate); err != nil {
 		return nil, err
 	}
 
@@ -1111,8 +1075,8 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 // certificateAuthoritySetup sets up the certificate authority parameters.
 func (c *CLab) certificateAuthoritySetup() error {
 	// init the Cert storage and CA
-	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-	c.Cert.CA = cert.NewCA()
+	c.cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
+	c.cert.CA = cert.NewCA()
 
 	s := c.Config.Settings
 
@@ -1162,7 +1126,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 		KeySize:      keySize,
 	}
 
-	return c.LoadOrGenerateCA(caCertInput)
+	return c.loadOrGenerateCA(caCertInput)
 }
 
 // Destroy the given topology.
@@ -1199,13 +1163,13 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
 	log.Info("Removing containerlab host entries from /etc/hosts file")
-	err = c.DeleteEntriesFromHostsFile()
+	err = c.deleteEntriesFromHostsFile()
 	if err != nil {
 		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
 	log.Info("Removing ssh config for containerlab nodes")
-	err = c.RemoveSSHConfig(c.TopoPaths)
+	err = c.removeSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)
 	}
