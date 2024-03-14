@@ -262,7 +262,7 @@ type K8sKindExtras struct {
 	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
 }
 
-// KindDeployOptions represents the options used for the kind cluster creation.
+// K8sKindDeployExtras represents the options used for the kind cluster creation.
 // It is aligned with the `kind create cluster` command options, but exposes
 // only the ones that are relevant for containerlab.
 type K8sKindDeployExtras struct {
