@@ -86,7 +86,7 @@ Ensure CLAB_INTFS env var is set
     ...    This test ensures that the CLAB_INTFS environment variable is set in the container
     ...    and that it contains the correct number of interfaces.
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $$CLAB_INTFS"'
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS"'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}

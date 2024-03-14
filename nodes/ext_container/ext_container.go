@@ -36,6 +36,7 @@ func (s *extcont) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Indicate that the pre-deployment UniquenessCheck is to be skipped.
 	// Since we would stop deployment on pre-existing containers.
 	s.Cfg.SkipUniquenessCheck = true
+	s.Cfg.LongName = s.Cfg.ShortName
 	return nil
 }
 
