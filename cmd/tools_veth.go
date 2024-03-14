@@ -77,7 +77,7 @@ var vethCreateCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		rtName, _, err := clab.RuntimeInitializer(name)
+		rtName, _, err := clab.RuntimeInitializer(rt)
 		if err != nil {
 			return err
 		}
