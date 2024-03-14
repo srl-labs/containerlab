@@ -77,8 +77,13 @@ var vethCreateCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		rtName, _, err := clab.RuntimeInitializer(name)
+		if err != nil {
+			return err
+		}
+
 		// create fake nodes to make links resolve work
-		err = createNodes(ctx, c, parsedAEnd, parsedBEnd)
+		err = createNodes(ctx, c, parsedAEnd, parsedBEnd, rtName)
 		if err != nil {
 			return err
 		}
@@ -123,12 +128,14 @@ var vethCreateCmd = &cobra.Command{
 
 // createNodes creates fake nodes in c.Nodes map to make link resolve work.
 // It checks which endpoint type is set by a user and creates a node that matches the type.
-func createNodes(_ context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) error {
+func createNodes(_ context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint, rt string) error {
 	for _, epDefinition := range []parsedEndpoint{AEnd, BEnd} {
 		switch epDefinition.Kind {
 		case links.LinkEndpointTypeHost:
 			err := createFakeNode(c, "host", &types.NodeConfig{
 				ShortName: epDefinition.Node,
+				LongName:  epDefinition.Node,
+				Runtime:   rt,
 			})
 			if err != nil {
 				return err
@@ -137,6 +144,8 @@ func createNodes(_ context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) err
 		case links.LinkEndpointTypeBridge:
 			err := createFakeNode(c, "bridge", &types.NodeConfig{
 				ShortName: epDefinition.Node,
+				LongName:  epDefinition.Node,
+				Runtime:   rt,
 			})
 			if err != nil {
 				return err
@@ -149,6 +158,8 @@ func createNodes(_ context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint) err
 			// standard veth interface attachment process.
 			err := createFakeNode(c, "linux", &types.NodeConfig{
 				ShortName: epDefinition.Node,
+				LongName:  epDefinition.Node,
+				Runtime:   rt,
 			})
 			if err != nil {
 				return err
@@ -221,7 +232,7 @@ func createFakeNode(c *clab.CLab, kind string, nodeCfg *types.NodeConfig) error 
 	}
 
 	// Init
-	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[rt]))
+	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeCfg.Runtime]))
 	if err != nil {
 		return fmt.Errorf("failed to initialize node %s: %v", name, err)
 	}
