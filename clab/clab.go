@@ -359,7 +359,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	// Extract the host systems DNS servers and populate the
 	// Nodes DNS Config with these if not specifically provided
 	fileSystem := os.DirFS("/")
-	if err := c.ExtractDNSServers(fileSystem); err != nil {
+	if err := c.extractDNSServers(fileSystem); err != nil {
 		return nil, err
 	}
 
@@ -401,12 +401,12 @@ func (c *CLab) GetNode(name string) (nodes.Node, error) {
 	return nil, fmt.Errorf("%w: %s", ErrNodeNotFound, name)
 }
 
-// CreateNodes schedules nodes creation and returns a waitgroup for all nodes
+// createNodes schedules nodes creation and returns a waitgroup for all nodes
 // with the exec collection created from the exec config of each node.
 // The exec collection is returned to the caller to ensure that the execution log
 // is printed after the nodes are created.
 // Nodes interdependencies are created in this function.
-func (c *CLab) CreateNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
+func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
 	for _, node := range c.Nodes {
 		c.dependencyManager.AddNode(node)
 	}
@@ -709,7 +709,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				node.EnterStage(ctx, types.WaitForCreate)
 
 				// wait for possible external dependencies
-				c.WaitForExternalNodeDependencies(ctx, node.Config().ShortName)
+				c.waitForExternalNodeDependencies(ctx, node.Config().ShortName)
 				// when all nodes that this node depends on are created, push it into the channel
 				workerChan <- node
 				// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
@@ -726,10 +726,10 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	return wg, execCollection
 }
 
-// WaitForExternalNodeDependencies makes nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>)
+// waitForExternalNodeDependencies makes nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>)
 // to wait until the referenced container is in started status.
 // The wait time is 15 minutes by default.
-func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName string) {
+func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName string) {
 	if _, exists := c.Nodes[nodeName]; !exists {
 		log.Errorf("unable to find referenced node %q", nodeName)
 		return
@@ -752,7 +752,7 @@ func (c *CLab) WaitForExternalNodeDependencies(ctx context.Context, nodeName str
 	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntimeName], contName, nodeName)
 }
 
-func (c *CLab) DeleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
+func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
 	wg := new(sync.WaitGroup)
 
 	concurrentChan := make(chan nodes.Node)
@@ -918,9 +918,9 @@ func (c *CLab) ResolveLinks() error {
 	return nil
 }
 
-// ExtractDNSServers extracts DNS servers from the resolv.conf files
+// extractDNSServers extracts DNS servers from the resolv.conf files
 // and populates the Nodes DNS Config with these if not specifically provided.
-func (c *CLab) ExtractDNSServers(filesys fs.FS) error {
+func (c *CLab) extractDNSServers(filesys fs.FS) error {
 	// extract DNS servers from the relevant resolv.conf files
 	DNSServers, err := utils.ExtractDNSServersFromResolvConf(filesys,
 		[]string{"etc/resolv.conf", "run/systemd/resolve/resolv.conf"})
@@ -1025,7 +1025,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		log.Warn(err)
 	}
 
-	if err := c.CreateAuthzKeysFile(); err != nil {
+	if err := c.createAuthzKeysFile(); err != nil {
 		return nil, err
 	}
 
@@ -1051,7 +1051,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		n.Config().ExtraHosts = extraHosts
 	}
 
-	nodesWg, execCollection, err := c.CreateNodes(ctx, options.maxWorkers, options.skipPostDeploy)
+	nodesWg, execCollection, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
 	if err != nil {
 		return nil, err
 	}
@@ -1094,13 +1094,13 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	log.Info("Adding containerlab host entries to /etc/hosts file")
-	err = c.AppendHostsFileEntries(ctx)
+	err = c.appendHostsFileEntries(ctx)
 	if err != nil {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
 
 	log.Info("Adding ssh config for containerlab nodes")
-	err = c.AddSSHConfig()
+	err = c.addSSHConfig()
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
 	}
@@ -1196,7 +1196,7 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	log.Infof("Destroying lab: %s", c.Config.Name)
-	c.DeleteNodes(ctx, maxWorkers, serialNodes)
+	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
 	log.Info("Removing containerlab host entries from /etc/hosts file")
 	err = c.DeleteEntriesFromHostsFile()
@@ -1228,20 +1228,6 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			}
 		}
 	}
-	return nil
-}
-
-func (c *CLab) Version(ctx context.Context) error {
-	return nil
-}
-
-// Save configuration of the given topology nodes
-func (c *CLab) Save(ctx context.Context) error {
-	return nil
-}
-
-// Graph the given topology
-func (c *CLab) Graph(ctx context.Context) error {
 	return nil
 }
 
@@ -1294,9 +1280,4 @@ func (c *CLab) Exec(ctx context.Context, cmds []string, options *ExecOptions) (*
 	}
 
 	return resultCollection, nil
-}
-
-// Configure topology nodes
-func (c *CLab) Configure(ctx context.Context) error {
-	return nil
 }

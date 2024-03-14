@@ -200,7 +200,7 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 	}
 
 	// run the check
-	c.WaitForExternalNodeDependencies(ctx, "node4")
+	c.waitForExternalNodeDependencies(ctx, "node4")
 
 	// check that the function was called "counterMax" times
 	if counter != counterMax {
@@ -218,7 +218,7 @@ func Test_WaitForExternalNodeDependencies_NoContainerNetworkMode(t *testing.T) {
 	}
 
 	// run the check with a node that has no "network-mode: container:<CONTAINERNAME>"
-	c.WaitForExternalNodeDependencies(context.TODO(), "node5")
+	c.waitForExternalNodeDependencies(context.TODO(), "node5")
 	// should simply and quickly return
 }
 
@@ -232,7 +232,7 @@ func Test_WaitForExternalNodeDependencies_NodeNonExisting(t *testing.T) {
 	}
 
 	// run the check with a node that has no "network-mode: container:<CONTAINERNAME>"
-	c.WaitForExternalNodeDependencies(context.TODO(), "NonExistingNode")
+	c.waitForExternalNodeDependencies(context.TODO(), "NonExistingNode")
 	// should simply and quickly return
 }
 

@@ -42,8 +42,8 @@ func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
 	return nil
 }
 
-// AddSSHConfig adds the lab specific ssh config file.
-func (c *CLab) AddSSHConfig() error {
+// addSSHConfig adds the lab specific ssh config file.
+func (c *CLab) addSSHConfig() error {
 	sshConfigDir := path.Dir(c.TopoPaths.SSHConfigPath())
 	if !utils.FileOrDirExists(sshConfigDir) {
 		log.Debugf("ssh config directory %s does not exist, skipping ssh config generation", sshConfigDir)

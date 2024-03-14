@@ -20,7 +20,7 @@ const (
 	clabHostsFilename    = "/etc/hosts"
 )
 
-func (c *CLab) AppendHostsFileEntries(ctx context.Context) error {
+func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 	filename := clabHostsFilename
 	if c.Config.Name == "" {
 		return fmt.Errorf("missing lab name")
