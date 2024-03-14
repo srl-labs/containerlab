@@ -7,6 +7,7 @@ package linux
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -50,6 +51,11 @@ func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
+	// Set the "CLAB_INTFS" variable to the number of interfaces
+	// Which is required by vrnetlab to determine if all configured interfaces are present
+	// such that the internal VM can be started with these interfaces assigned.
+	n.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(n.GetEndpoints()))
+
 	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {
 		return err
