@@ -1056,6 +1056,16 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
+	// also call deploy on the special nodes endpoints (only host is required for the
+	// vxlan stitched endpoints)
+	eps := c.getSpecialLinkNodes()["host"].GetEndpoints()
+	for _, ep := range eps {
+		err = ep.Deploy(ctx)
+		if err != nil {
+			log.Warnf("failed deploying endpoint %s", ep)
+		}
+	}
+
 	if nodesWg != nil {
 		nodesWg.Wait()
 	}
