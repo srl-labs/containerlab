@@ -71,7 +71,7 @@ func WithTimeout(dur time.Duration) ClabOption {
 }
 
 // WithLabName sets the name of the lab
-// to the provided string
+// to the provided string.
 func WithLabName(n string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Name = n
@@ -80,7 +80,7 @@ func WithLabName(n string) ClabOption {
 }
 
 // WithManagementNetworkName sets the name of the
-// management network that is to be used
+// management network that is to be used.
 func WithManagementNetworkName(n string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.Network = n
@@ -89,7 +89,7 @@ func WithManagementNetworkName(n string) ClabOption {
 }
 
 // WithManagementIpv4Subnet defined the IPv4 subnet
-// that will be used for the mgmt network
+// that will be used for the mgmt network.
 func WithManagementIpv4Subnet(s string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.IPv4Subnet = s
@@ -98,7 +98,7 @@ func WithManagementIpv4Subnet(s string) ClabOption {
 }
 
 // WithManagementIpv6Subnet defined the IPv6 subnet
-// that will be used for the mgmt network
+// that will be used for the mgmt network.
 func WithManagementIpv6Subnet(s string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.IPv6Subnet = s
@@ -393,7 +393,7 @@ func (c *CLab) globalRuntime() runtime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntimeName]
 }
 
-// GetNode retrieve a node from the clab instance
+// GetNode retrieve a node from the clab instance.
 func (c *CLab) GetNode(name string) (nodes.Node, error) {
 	if node, exists := c.Nodes[name]; exists {
 		return node, nil
@@ -956,7 +956,7 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 	return nil
 }
 
-// Deploy the given topology
+// Deploy the given topology.
 func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
 	var err error
 
@@ -1165,7 +1165,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 	return c.LoadOrGenerateCA(caCertInput)
 }
 
-// Destroy the given topology
+// Destroy the given topology.
 func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
 	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
 	if err != nil {
@@ -1231,9 +1231,8 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	return nil
 }
 
-// Exec execute commands on running topology nodes
+// Exec execute commands on running topology nodes.
 func (c *CLab) Exec(ctx context.Context, cmds []string, options *ExecOptions) (*exec.ExecCollection, error) {
-
 	err := links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err

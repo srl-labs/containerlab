@@ -88,7 +88,6 @@ func generateHostsEntries(containers []runtime.GenericContainer, labname string)
 }
 
 func (c *CLab) DeleteEntriesFromHostsFile() error {
-
 	if c.Config.Name == "" {
 		return errors.New("missing containerlab name")
 	}

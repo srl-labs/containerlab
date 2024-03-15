@@ -22,7 +22,6 @@ var disableTxOffloadCmd = &cobra.Command{
 	Short: "disables tx checksum offload on eth0 interface of a container",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		ctx := context.Background()
 
 		opts := []clab.ClabOption{

@@ -153,7 +153,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	return nil
 }
 
-// getNsPath retrieve the nodes nspath
+// getNsPath retrieve the nodes nspath.
 func (d *DefaultNode) getNsPath(ctx context.Context) (string, error) {
 	var err error
 	nsp := ""
@@ -177,7 +177,6 @@ func (d *DefaultNode) getNsPath(ctx context.Context) (string, error) {
 }
 
 func (d *DefaultNode) Delete(ctx context.Context) error {
-
 	for _, e := range d.Endpoints {
 		err := e.GetLink().Remove(ctx)
 		if err != nil {
@@ -513,7 +512,6 @@ func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link,
 
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
-
 	// retrieve nodes nspath
 	nspath, err := d.getNsPath(ctx)
 	if err != nil {

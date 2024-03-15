@@ -40,7 +40,7 @@ func ioctlEthtool(fd int, argp uintptr) error {
 	return nil
 }
 
-// NSEthtoolTXOff EthtoolTXOff wrapper that can be handed straight to Node.ExecFunc()
+// NSEthtoolTXOff EthtoolTXOff wrapper that can be handed straight to Node.ExecFunc().
 func NSEthtoolTXOff(cntName, ifaceName string) func(ns.NetNS) error {
 	return func(ns.NetNS) error {
 		// disabling offload on given interface

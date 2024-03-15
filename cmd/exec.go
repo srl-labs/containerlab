@@ -32,7 +32,6 @@ var execCmd = &cobra.Command{
 }
 
 func execFn(_ *cobra.Command, _ []string) error {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
