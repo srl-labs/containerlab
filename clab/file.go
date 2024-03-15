@@ -27,7 +27,8 @@ const (
 	varFileSuffix = "_vars"
 )
 
-// LoadTopology parses the topology file into c.Conf structure
+// LoadTopologyFromFile loads a topology by the topo file path
+// parses the topology file into c.Conf structure
 // as well as populates the TopoFile structure with the topology file related information.
 func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	var err error
