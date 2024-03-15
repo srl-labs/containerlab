@@ -21,19 +21,19 @@ func NewEndpointBridge(eg *EndpointGeneric, isMgmtBridgeEndpoint bool) *Endpoint
 	}
 }
 
-func (e *EndpointBridge) Verify(p *VerifyLinkParams) error {
+func (e *EndpointBridge) Verify(ctx context.Context, p *VerifyLinkParams) error {
 	var errs []error
 	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)
 	}
 	if p.RunBridgeExistsCheck {
-		err = CheckBridgeExists(e.GetNode())
+		err = CheckBridgeExists(ctx, e.GetNode())
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
-	err = CheckEndpointDoesNotExistYet(e)
+	err = CheckEndpointDoesNotExistYet(ctx, e)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -55,8 +55,8 @@ func (e *EndpointBridge) IsNodeless() bool {
 
 // CheckBridgeExists verifies that the given bridge is present in the
 // network namespace referenced via the provided nspath handle.
-func CheckBridgeExists(n Node) error {
-	return n.ExecFunction(func(_ ns.NetNS) error {
+func CheckBridgeExists(ctx context.Context, n Node) error {
+	return n.ExecFunction(ctx, func(_ ns.NetNS) error {
 		br, err := netlink.LinkByName(n.GetShortName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 		switch {

@@ -349,6 +349,8 @@ func TestVerifyLinks(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
+	ctx := context.Background()
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
@@ -368,7 +370,7 @@ func TestVerifyLinks(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = c.verifyLinks()
+			err = c.verifyLinks(ctx)
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
 			}
@@ -615,13 +617,13 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			// set mockRuntime parameters
 			mockRuntime := mockruntime.NewMockContainerRuntime(ctrl)
 			c.Runtimes[rtName] = mockRuntime
-			c.globalRuntime = rtName
+			c.globalRuntimeName = rtName
 
 			// prepare runtime result
 			mockRuntime.EXPECT().ListContainers(gomock.Any(), gomock.Any()).AnyTimes().Return(tc.mockResult.c, tc.mockResult.e)
 
 			ctx := context.Background()
-			err = c.VerifyContainersUniqueness(ctx)
+			err = c.verifyContainersUniqueness(ctx)
 			if tc.wantError {
 				assert.Error(t, err)
 			} else {

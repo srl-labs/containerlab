@@ -21,7 +21,7 @@ var (
 
 const (
 	// scrapligo doesn't have a driver for fortigate, can be copied from scrapli community
-	// scrapliPlatformName = "fortinet_fortigate"
+	// scrapliPlatformName = "fortinet_fortigate".
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
 )

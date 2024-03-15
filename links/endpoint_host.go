@@ -19,13 +19,13 @@ func (e *EndpointHost) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
-func (e *EndpointHost) Verify(_ *VerifyLinkParams) error {
+func (e *EndpointHost) Verify(ctx context.Context, _ *VerifyLinkParams) error {
 	var errs []error
 	err := CheckEndpointUniqueness(e)
 	if err != nil {
 		errs = append(errs, err)
 	}
-	err = CheckEndpointDoesNotExistYet(e)
+	err = CheckEndpointDoesNotExistYet(ctx, e)
 	if err != nil {
 		errs = append(errs, err)
 	}

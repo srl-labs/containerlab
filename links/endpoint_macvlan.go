@@ -17,8 +17,8 @@ func (e *EndpointMacVlan) Deploy(ctx context.Context) error {
 }
 
 // Verify runs verification to check if the endpoint can be deployed.
-func (e *EndpointMacVlan) Verify(_ *VerifyLinkParams) error {
-	return CheckEndpointExists(e)
+func (e *EndpointMacVlan) Verify(ctx context.Context, _ *VerifyLinkParams) error {
+	return CheckEndpointExists(ctx, e)
 }
 
 func (e *EndpointMacVlan) IsNodeless() bool {

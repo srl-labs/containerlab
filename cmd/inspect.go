@@ -50,6 +50,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 		return nil
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	opts := []clab.ClabOption{
 		clab.WithTimeout(timeout),
 		clab.WithRuntime(rt,
@@ -69,23 +73,20 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		)
 	}
 
+	if name != "" {
+		opts = append(opts, clab.WithLabName(name))
+	}
+
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
-	if name == "" {
-		name = c.Config.Name
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	var containers []runtime.GenericContainer
 
 	// if the topo file is available, use it
 	if topo != "" {
-		containers, err = c.ListNodesContainers(ctx)
+		containers, err = c.ListContainers(ctx, nil)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %s", err)
 		}

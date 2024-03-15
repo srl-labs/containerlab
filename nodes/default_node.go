@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"text/template"
 
@@ -129,18 +130,50 @@ func (d *DefaultNode) VerifyHostRequirements() error {
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
+	// Set the "CLAB_INTFS" variable to the number of interfaces
+	// Which is required by vrnetlab to determine if all configured interfaces are present
+	// such that the internal VM can be started with these interfaces assigned.
+	d.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
+
+	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
 	if err != nil {
 		return err
 	}
+
+	// start the container
 	_, err = d.Runtime.StartContainer(ctx, cID, d)
 	if err != nil {
 		return err
 	}
 
+	// Update the nodes state
 	d.SetState(state.Deployed)
 
 	return nil
+}
+
+// getNsPath retrieve the nodes nspath.
+func (d *DefaultNode) getNsPath(ctx context.Context) (string, error) {
+	var err error
+	nsp := ""
+
+	if d.Cfg.IsRootNamespaceBased {
+		netns, err := ns.GetCurrentNS()
+		if err != nil {
+			return "", err
+		}
+		nsp = netns.Path()
+	}
+	if nsp == "" {
+		nsp, err = d.Runtime.GetNSPath(ctx, d.Cfg.LongName)
+		if err != nil {
+			log.Errorf("Unable to determine NetNS Path for node %s: %v", d.Cfg.ShortName, err)
+			return "", err
+		}
+	}
+
+	return nsp, err
 }
 
 func (d *DefaultNode) Delete(ctx context.Context) error {
@@ -454,9 +487,14 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
-func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	// retrieve nodes nspath
+	nsp, err := d.getNsPath(ctx)
+	if err != nil {
+		return err
+	}
 	// retrieve the namespace handle
-	netns, err := ns.GetNS(d.Cfg.NSPath)
+	netns, err := ns.GetNS(nsp)
 	if err != nil {
 		return err
 	}
@@ -473,8 +511,12 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 }
 
 // ExecFunction executes the given function in the nodes network namespace.
-func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
-	nspath := d.Cfg.NSPath
+func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
+	// retrieve nodes nspath
+	nspath, err := d.getNsPath(ctx)
+	if err != nil {
+		return err
+	}
 
 	if d.Cfg.IsRootNamespaceBased {
 		nshandle, err := ns.GetCurrentNS()

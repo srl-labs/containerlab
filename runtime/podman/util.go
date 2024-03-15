@@ -501,14 +501,14 @@ func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *t
 		return nil
 	}
 	var err error
-	// Add NSpath to the node config struct
-	cfg.NSPath, err = r.GetNSPath(ctx, cID)
+
+	// And setup netns alias. Not really needed with podman
+	// But currently (Oct 2021) clab depends on the specific naming scheme of veth aliases.
+	nspath, err := r.GetNSPath(ctx, cID)
 	if err != nil {
 		return err
 	}
-	// And setup netns alias. Not really needed with podman
-	// But currently (Oct 2021) clab depends on the specific naming scheme of veth aliases.
-	err = utils.LinkContainerNS(cfg.NSPath, cfg.LongName)
+	err = utils.LinkContainerNS(nspath, cfg.LongName)
 	if err != nil {
 		return err
 	}

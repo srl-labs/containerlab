@@ -26,11 +26,11 @@ type Endpoint interface {
 	// GetLink retrieves the link that the endpoint is assigned to
 	GetLink() Link
 	// Verify verifies that the endpoint is valid and can be deployed
-	Verify(*VerifyLinkParams) error
+	Verify(context.Context, *VerifyLinkParams) error
 	// HasSameNodeAndInterface returns true if an endpoint that implements this interface
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
-	Remove() error
+	Remove(context.Context) error
 	// Deploy deploys the endpoint by calling the Deploy method of the link it is assigned to
 	// and passing the endpoint as an argument so that the link that consists of A and B endpoints
 	// can deploy them independently.
@@ -83,8 +83,8 @@ func (e *EndpointGeneric) GetNode() Node {
 	return e.Node
 }
 
-func (e *EndpointGeneric) Remove() error {
-	return e.GetNode().ExecFunction(func(n ns.NetNS) error {
+func (e *EndpointGeneric) Remove(ctx context.Context) error {
+	return e.GetNode().ExecFunction(ctx, func(n ns.NetNS) error {
 		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 
@@ -130,8 +130,8 @@ func CheckEndpointUniqueness(e Endpoint) error {
 
 // CheckEndpointExists checks that a certain
 // interface exists in the network namespace of the given node.
-func CheckEndpointExists(e Endpoint) error {
-	err := CheckEndpointDoesNotExistYet(e)
+func CheckEndpointExists(ctx context.Context, e Endpoint) error {
+	err := CheckEndpointDoesNotExistYet(ctx, e)
 	if err == nil {
 		return fmt.Errorf("interface %q does not exist", e.String())
 	}
@@ -140,8 +140,8 @@ func CheckEndpointExists(e Endpoint) error {
 
 // CheckEndpointDoesNotExistYet verifies that the interface referenced in the
 // provided endpoint does not yet exist in the referenced node.
-func CheckEndpointDoesNotExistYet(e Endpoint) error {
-	return e.GetNode().ExecFunction(func(_ ns.NetNS) error {
+func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
+	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
 		// we expect a netlink.LinkNotFoundError when querying for
 		// the interface with the given endpoints name
 		var err error

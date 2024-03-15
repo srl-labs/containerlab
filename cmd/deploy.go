@@ -10,17 +10,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
-	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
-	"github.com/tklauser/numcpus"
 )
 
 const (
@@ -107,168 +102,41 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		clab.WithDebug(debug),
 	}
 
+	// process optional settings
+	if name != "" {
+		opts = append(opts, clab.WithLabName(name))
+	}
+	if mgmtNetName != "" {
+		opts = append(opts, clab.WithManagementNetworkName(mgmtNetName))
+	}
+	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
+		opts = append(opts, clab.WithManagementIpv4Subnet(v4))
+	}
+	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
+		opts = append(opts, clab.WithManagementIpv6Subnet(v6))
+	}
+
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
 
-	err = c.ResolveLinks()
-	if err != nil {
-		return err
-	}
-
-	c.SetClabIntfsEnvVar()
-
-	setFlags(c.Config)
-	log.Debugf("lab Conf: %+v", c.Config)
-
 	// dispatch a version check that will run in background
 	vCh := getLatestClabVersion(ctx)
 
-	if reconfigure {
-		_ = destroyLab(ctx, c)
-		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
-		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
-			return err
-		}
-	}
-
-	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
-		return err
-	}
-
-	err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
+	deploymentOptions, err := clab.NewDeployOptions(maxWorkers)
 	if err != nil {
 		return err
 	}
 
-	if err = c.CheckTopologyDefinition(ctx); err != nil {
-		return err
-	}
+	deploymentOptions.SetExportTemplate(exportTemplate).
+		SetReconfigure(reconfigure).
+		SetGraph(graph).
+		SetSkipPostDeploy(skipPostDeploy)
 
-	if err = c.LoadKernelModules(); err != nil {
-		return err
-	}
-
-	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
-	// adjust ACL for Labdir such that SUDO_UID Users will
-	// also have access to lab directory files
-	err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
-	if err != nil {
-		log.Infof("unable to adjust Labdir file ACLs: %v", err)
-	}
-
-	// create an empty ansible inventory file that will get populated later
-	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
-	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
-	_, err = os.Create(ansibleInvFPath)
+	containers, err := c.Deploy(ctx, deploymentOptions)
 	if err != nil {
 		return err
-	}
-
-	// in an similar fashion, create an empty topology data file
-	topoDataFPath := c.TopoPaths.TopoExportFile()
-	topoDataF, err := os.Create(topoDataFPath)
-	if err != nil {
-		return err
-	}
-
-	if err := certificateAuthoritySetup(c); err != nil {
-		return err
-	}
-
-	c.SSHPubKeys, err = c.RetrieveSSHPubKeys()
-	if err != nil {
-		log.Warn(err)
-	}
-
-	if err := c.CreateAuthzKeysFile(); err != nil {
-		return err
-	}
-
-	// determine the number of node and link worker
-	nodeWorkers, _, err := countWorkers(uint(len(c.Nodes)), uint(len(c.Links)), maxWorkers)
-	if err != nil {
-		return err
-	}
-
-	// extraHosts holds host entries for nodes with static IPv4/6 addresses
-	// these entries will be used by container runtime to populate /etc/hosts file
-	extraHosts := make([]string, 0, len(c.Nodes))
-
-	for _, n := range c.Nodes {
-		if n.Config().MgmtIPv4Address != "" {
-			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
-				n.Config().ShortName, n.Config().MgmtIPv4Address)
-			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
-		}
-
-		if n.Config().MgmtIPv6Address != "" {
-			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
-				n.Config().ShortName, n.Config().MgmtIPv6Address)
-			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
-		}
-	}
-
-	for _, n := range c.Nodes {
-		n.Config().ExtraHosts = extraHosts
-	}
-
-	nodesWg, execCollection, err := c.CreateNodes(ctx, nodeWorkers, skipPostDeploy)
-	if err != nil {
-		return err
-	}
-
-	// also call deploy on the special nodes endpoints (only host is required for the
-	// vxlan stitched endpoints)
-	eps := c.GetSpecialLinkNodes()["host"].GetEndpoints()
-	for _, ep := range eps {
-		err = ep.Deploy(ctx)
-		if err != nil {
-			log.Warnf("failed deploying endpoint %s", ep)
-		}
-	}
-
-	// wait for all the containers to get created
-	if nodesWg != nil {
-		nodesWg.Wait()
-	}
-
-	// write to log
-	execCollection.Log()
-
-	if err := c.GenerateInventories(); err != nil {
-		return err
-	}
-
-	if err := c.GenerateExports(ctx, topoDataF, exportTemplate); err != nil {
-		return err
-	}
-
-	// generate graph of the lab topology
-	if graph {
-		if err = c.GenerateDotGraph(); err != nil {
-			log.Error(err)
-		}
-	}
-
-	containers, err := c.ListNodesContainers(ctx)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Adding containerlab host entries to /etc/hosts file")
-	err = clab.AppendHostsFileEntries(containers, c.Config.Name)
-	if err != nil {
-		log.Errorf("failed to create hosts file: %v", err)
-	}
-
-	log.Info("Adding ssh config for containerlab nodes")
-	err = c.AddSSHConfig()
-	if err != nil {
-		log.Errorf("failed to create ssh config file: %v", err)
 	}
 
 	// log new version availability info if ready
@@ -276,63 +144,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	// print table summary
 	return printContainerInspect(containers, deployFormat)
-}
-
-// certificateAuthoritySetup sets up the certificate authority parameters.
-func certificateAuthoritySetup(c *clab.CLab) error {
-	// init the Cert storage and CA
-	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-	c.Cert.CA = cert.NewCA()
-
-	s := c.Config.Settings
-
-	// Set defaults for the CA parameters
-	keySize := 2048
-	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
-
-	// check that Settings.CertificateAuthority exists.
-	if s != nil && s.CertificateAuthority != nil {
-		// if ValidityDuration is set use the value
-		if s.CertificateAuthority.ValidityDuration != 0 {
-			validityDuration = s.CertificateAuthority.ValidityDuration
-		}
-
-		// if KeyLength is set use the value
-		if s.CertificateAuthority.KeySize != 0 {
-			keySize = s.CertificateAuthority.KeySize
-		}
-
-		// if external CA cert and and key are set, propagate to topopaths
-		extCACert := s.CertificateAuthority.Cert
-		extCAKey := s.CertificateAuthority.Key
-
-		// override external ca and key from env vars
-		if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
-			extCAKey = v
-		}
-
-		if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
-			extCACert = v
-		}
-
-		if extCACert != "" && extCAKey != "" {
-			err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	// define the attributes used to generate the CA Cert
-	caCertInput := &cert.CACSRInput{
-		CommonName:   c.Config.Name + " lab CA",
-		Country:      "US",
-		Expiry:       validityDuration,
-		Organization: "containerlab",
-		KeySize:      keySize,
-	}
-
-	return c.LoadOrGenerateCA(caCertInput)
 }
 
 // setupCTRLCHandler sets-up the handler for CTRL-C
@@ -355,57 +166,4 @@ func setupCTRLCHandler(cancel context.CancelFunc) {
 
 		os.Exit(1) // skipcq: RVV-A0003
 	}()
-}
-
-func setFlags(conf *clab.Config) {
-	if name != "" {
-		conf.Name = name
-	}
-	if mgmtNetName != "" {
-		conf.Mgmt.Network = mgmtNetName
-	}
-	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
-		conf.Mgmt.IPv4Subnet = v4
-	}
-	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
-		conf.Mgmt.IPv6Subnet = v6
-	}
-}
-
-// countWorkers calculates the number workers used for the creation of links and nodes.
-// If a user provided --max-workers value it is used for both links and nodes workers.
-// If maxWorkers is not set then the workers are limited by the number of available CPUs when
-// number of nodes/links exceeds the number of available CPUs.
-func countWorkers(nodeCount, linkCount, maxWorkers uint) (nodeWorkers, linkWorkers uint, err error) {
-	// init number of Workers to the number of links and nodes
-	nodeWorkers = nodeCount
-	linkWorkers = linkCount
-
-	switch {
-	// if maxWorkers is not set, limit workers number by number of available CPUs
-	case maxWorkers <= 0:
-		// retrieve vCPU count
-		vCpus, err := numcpus.GetOnline()
-		if err != nil {
-			return 0, 0, err
-		}
-
-		numCPUs := uint(vCpus)
-
-		// limit node/link workers only if there is more node/links thans CPU cores available
-		if nodeCount > numCPUs {
-			nodeWorkers = numCPUs
-		}
-
-		if linkCount > numCPUs {
-			linkWorkers = numCPUs
-		}
-	case maxWorkers > 0:
-		nodeWorkers = maxWorkers
-		linkWorkers = maxWorkers
-	}
-
-	log.Debugf("Number of Node workers: %d, Number of Link workers: %d", nodeWorkers, linkWorkers)
-
-	return nodeWorkers, linkWorkers, nil
 }

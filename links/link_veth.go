@@ -243,14 +243,14 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	}
 }
 
-func (l *LinkVEth) Remove(_ context.Context) error {
+func (l *LinkVEth) Remove(ctx context.Context) error {
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
 	for _, ep := range l.GetEndpoints() {
-		err := ep.Remove()
+		err := ep.Remove(ctx)
 		if err != nil {
 			log.Debug(err)
 		}
