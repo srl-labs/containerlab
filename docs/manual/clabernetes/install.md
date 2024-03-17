@@ -13,6 +13,8 @@ Clabernetes manager (a.k.a. controller) is packaged as a [Helm chart][chart-arti
 
 --8<-- "docs/manual/clabernetes/quickstart.md:helm-alias"
 
+With Helm installed, proceed to install the Clabernetes manager.
+
 /// tab | install latest version
 To install the latest Clabernetes release with Helm to an existing k8s cluster[^1] run the following command:
 <!-- --8<-- [start:chart-install] -->
