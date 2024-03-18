@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 chassis_configuration:
-  "chassis_type": 82
+  "chassis_type": 81
   "base_mac": "{{ .MAC }}"
   "cpm_card_type": 27
 
