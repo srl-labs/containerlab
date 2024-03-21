@@ -333,7 +333,7 @@ func (s *srl) Ready(ctx context.Context) error {
 					logMsg += fmt.Sprintf(" error: %v", err)
 				}
 
-				if execResult.GetReturnCode() != 0 {
+				if execResult != nil && execResult.GetReturnCode() != 0 {
 					logMsg += fmt.Sprintf(", output: \n%s", execResult)
 				}
 
