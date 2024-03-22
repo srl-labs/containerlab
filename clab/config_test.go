@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/containers/podman/v4/pkg/util"
+	"github.com/containers/podman/v5/pkg/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
