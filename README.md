@@ -47,6 +47,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Fortinet Fortigate](https://containerlab.dev/manual/kinds/fortinet_fortigate/)
 * [Aruba AOS-CX](https://containerlab.dev/manual/kinds/vr-aoscx)
 * [OpenBSD](https://containerlab.dev/manual/kinds/openbsd)
+* [OpenBSD](https://containerlab.dev/manual/kinds/freebsd)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 

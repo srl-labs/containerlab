@@ -35,7 +35,7 @@ FreeBSD node launched with containerlab can be managed via the following interfa
     ```bash
     # from container host
     telnet <container-name> 5000
-    ```  
+    ```
     You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
 
 !!!info
