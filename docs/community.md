@@ -122,6 +122,14 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+### Powering up your Netbox labs with Containerlab
+
+<small>:material-text: [Blog](https://netboxlabs.com/blog/network-configuration-assurance-with-netbox-and-ansible/) by [Rich Bibby](https://netboxlabs.com/author/richard-bibby/) · :material-calendar: 2024-03-20</small>
+
+Our friends at NetboxLabs have authored a nice blog post - Network Configuration Assurance With NetBox and Ansible - and they have used containerlab to create a lab environment to present their solution.
+
+It is always great to see containerlab being used to augment other tools and solutions, providing the glue between the applications and the network devices all within a tiny declarative packaging and a lightweight CLI to make it all work.
+
 ### Containerlab - Creating Network Labs Can't Be Any Easier
 
 <small>:material-text: [Blog](https://www.packetswitch.co.uk/containerlabs-intro/) by [Suresh Vina](https://www.linkedin.com/in/suresh-vina-282545a9) · :material-calendar: 2024-03-15</small>
