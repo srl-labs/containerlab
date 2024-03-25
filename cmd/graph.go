@@ -31,6 +31,8 @@ var (
 	dot              bool
 	mermaid          bool
 	mermaidDirection string
+	drawio           bool
+	drawioVersion    string
 	staticDir        string
 )
 
@@ -74,6 +76,10 @@ func graphFn(_ *cobra.Command, _ []string) error {
 
 	if mermaid {
 		return c.GenerateMermaidGraph(mermaidDirection)
+	}
+
+	if drawio {
+		return c.GenerateDrawioDiagram(drawioVersion)
 	}
 
 	gtopo := clab.GraphTopo{
@@ -143,12 +149,15 @@ func init() {
 		"use only information from topo file when building graph")
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file")
 	graphCmd.Flags().BoolVarP(&mermaid, "mermaid", "", false, "print mermaid flowchart to stdout")
-	graphCmd.MarkFlagsMutuallyExclusive("dot", "mermaid")
 	graphCmd.Flags().StringVarP(&mermaidDirection, "mermaid-direction", "", "TD", "specify direction of mermaid dirgram")
+	graphCmd.Flags().BoolVarP(&drawio, "drawio", "", false, "generate drawio diagram file")
+	graphCmd.Flags().StringVarP(&drawioVersion, "drawio-version", "", "latest",
+		"version of the clab-io-draw container to use for generating drawio diagram file")
 	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultGraphTemplatePath,
 		"Go html template used to generate the graph")
 	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath,
 		"Serve static files from the specified directory")
 	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
+	graphCmd.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
 }
