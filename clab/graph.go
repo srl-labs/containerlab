@@ -289,5 +289,4 @@ func (c *CLab) GenerateDrawioDiagram(version string) error {
 	log.Infof("Diagram created. %s", out)
 
 	return nil
-
 }

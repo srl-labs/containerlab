@@ -16,13 +16,13 @@ set / system snmp network-instance mgmt admin-state enable`
 	snmpv2ConfigPre24_3 = `set / system snmp community public
 set / system snmp network-instance mgmt admin-state enable`
 
-	// grpcConfigPre24_3 contains the gnmi server configuration for srlinux versions < 24.3
+	// grpcConfigPre24_3 contains the gnmi server configuration for srlinux versions < 24.3.
 	grpcConfigPre24_3 = `set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
 set / system gnmi-server rate-limit 65000
 set / system gnmi-server trace-options [ request response common ]
 set / system gnmi-server unix-socket admin-state enable`
 
-	// grpc contains the grpc server(s) configuration for srlinux versions >= 24.3
+	// grpc contains the grpc server(s) configuration for srlinux versions >= 24.3.
 	grpcConfig = `set / system grpc-server clab services [ gnmi gnoi gribi p4rt ]
 set / system grpc-server clab tls-profile clab-profile
 set / system grpc-server clab rate-limit 65000
