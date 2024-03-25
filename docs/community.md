@@ -122,6 +122,12 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+### Containerlab - Creating Network Labs Can't Be Any Easier
+
+<small>:material-text: [Blog](https://www.packetswitch.co.uk/containerlabs-intro/) by [Suresh Vina](https://www.linkedin.com/in/suresh-vina-282545a9) · :material-calendar: 2024-03-15</small>
+
+Suresh, a Networking enthusiast based in the lovely city of London, shares his experience with Containerlab after being married to traditional lab emulation tools for a long time. He explains Containerlab's core concepts using a lab with cEOS and Palo Alto nodes, showcasing the ease of use and flexibility of the tool in a multivendor setting.
+
 ### Rapid deployment of Cilium BGP environments using Containerlab + Kind
 
 <small>:material-text: [Blog](https://www.sobyte.net/post/2022-09/containerlab-kind-cilium-bgp/) by [SoByte](https://www.sobyte.net/about/) · :material-calendar: 2022-09-02</small>
