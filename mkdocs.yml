@@ -33,6 +33,7 @@ nav:
           - MikroTik RouterOS: manual/kinds/vr-ros.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
           - OpenBSD: manual/kinds/openbsd.md
+          - FreeBSD: manual/kinds/freebsd.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
