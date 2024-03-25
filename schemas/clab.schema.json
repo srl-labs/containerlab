@@ -99,6 +99,7 @@
                         "cvx",
                         "cumulus_cvx",
                         "openbsd",
+                        "freebsd",
                         "fortinet_fortigate"
                     ]
                 },
@@ -983,6 +984,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "openbsd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "freebsd": {
                             "$ref": "#/definitions/node-config"
                         }
                     }

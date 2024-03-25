@@ -1,0 +1,21 @@
+name: freebsd01
+topology:
+  nodes:
+    fbsd1:
+      kind: freebsd
+      image: vrnetlab/vr-freebsd:13.2
+    client1:
+      kind: "linux"
+      image: wbitt/network-multitool:alpine-extra
+      exec:
+        - ip addr add 192.168.1.2/30 dev eth1
+        - ip route add 192.168.2.0/30 via 192.168.1.1
+    client2:
+      kind: "linux"
+      image: wbitt/network-multitool:alpine-extra
+      exec:
+        - ip addr add 192.168.2.2/30 dev eth1
+        - ip route add 192.168.1.0/30 via 192.168.2.1
+  links:
+    - endpoints: ["fbsd1:eth1", "client1:eth1"]
+    - endpoints: ["fbsd1:eth2", "client2:eth1"]
