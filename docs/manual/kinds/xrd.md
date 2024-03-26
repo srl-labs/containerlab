@@ -128,6 +128,10 @@ XRd nodes persist their configuration in `<lab-directory>/<node-name>/xr-storage
 
 This capability allows users to configure the XRd node, commit the changes, then destroy the lab (without using `--cleanup` flag to keep the lab dir intact) and on a subsequent deploy action, the node will boot with the previously saved configuration.
 
+## Known issues and limitations
+
+Note, that XRd requires elevated number of inotify resources. If you happen to see errors in the xrd bootlog about inotify resources, consult with [this article](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-setting-up-host-environment-to-run-xrd/#inotify-max-user-watches-and-inotify-max-user-instances-settings) on how to increase them.
+
 ## Lab examples
 
 The following labs feature XRd nodes:
