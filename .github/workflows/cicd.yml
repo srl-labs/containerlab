@@ -14,7 +14,7 @@ env:
   GO_VER: "1.20.2"
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.5.9-insiders-4.52.2-hellt
-  GORELEASER_VER: v1.11.4
+  GORELEASER_VER: v1.19.2
   PY_VER: "3.10"
 
 jobs:
