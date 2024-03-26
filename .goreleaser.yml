@@ -30,8 +30,7 @@ dockers:
       - 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}'
     dockerfile: goreleaser.dockerfile
 archives:
-  - replacements:
-      linux: Linux
+  - name_template: '{{ .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Os }}_{{ .Arch }}'
     files:
       - lab-examples/**/*
       - templates/**/*
@@ -52,9 +51,9 @@ changelog:
 
 nfpms:
   - id: containerlab-nfpms
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    file_name_template: '{{ .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Os }}_{{ .Arch }}'
     package_name: containerlab
-    maintainer: Roman Dodin <dodin.roman@gmail.com>, Karim Radhouani <medkarimrdi@gmail.com>
+    maintainer: Roman Dodin <dodin.roman@gmail.com>, Markus Vahlenkamp <markus.vahlenkamp@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>
     homepage: https://containerlab.dev
     description: |
       containerlab deploys containerized networking topologies
@@ -64,6 +63,8 @@ nfpms:
       - rpm
       - deb
       - apk
+    scripts:
+      postinstall: ./utils/postinstall.sh
     bindir: /usr/bin
     contents:
       - src: ./lab-examples
