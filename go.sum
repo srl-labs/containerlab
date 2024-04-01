@@ -1125,8 +1125,8 @@ github.com/containernetworking/plugins v0.9.1/go.mod h1:xP/idU2ldlzN6m4p5LmGiwRD
 github.com/containernetworking/plugins v1.0.1/go.mod h1:QHCfGpaTwYTbbH+nZXKVTxNBDZcxSOplJT5ico8/FLE=
 github.com/containernetworking/plugins v1.4.1 h1:+sJRRv8PKhLkXIl6tH1D7RMi+CbbHutDGU+ErLBORWA=
 github.com/containernetworking/plugins v1.4.1/go.mod h1:n6FFGKcaY4o2o5msgu/UImtoC+fpQXM3076VHfHbj60=
-github.com/containers/buildah v1.33.5 h1:BGzGAbK6B5VLOQlqX0V8DrteMbKGh6Q8ntHTahGqGMY=
-github.com/containers/buildah v1.33.5/go.mod h1:w3paMzMa5/3uaNSi2xq4hsQDTH9aFkoBmrHyPQ8Ixjo=
+github.com/containers/buildah v1.33.7 h1:Y2kNea+hNNyZ74ppYFWmD0cLc/DwZ5A4NEUPQWPj5Zw=
+github.com/containers/buildah v1.33.7/go.mod h1:pphfdjrwtTWkuIy1aDyZMEVyMfmm0DsbvxLGxxEU1cM=
 github.com/containers/common v0.57.4 h1:kmfBad92kUjP5X44BPpOwMe+eZQqaKETfS+ASeL0g+g=
 github.com/containers/common v0.57.4/go.mod h1:o3L3CyOI9yr+JC8l4dZgvqTxcjs3qdKmkek00uchgvw=
 github.com/containers/image v3.0.2+incompatible h1:B1lqAE8MUPCrsBLE86J0gnXleeRq8zJnQryhiiGQNyE=
@@ -1141,8 +1141,8 @@ github.com/containers/ocicrypt v1.1.1/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B
 github.com/containers/ocicrypt v1.1.2/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B0oB3dj3jFxY=
 github.com/containers/ocicrypt v1.1.9 h1:2Csfba4jse85Raxk5HIyEk8OwZNjRvfkhEGijOjIdEM=
 github.com/containers/ocicrypt v1.1.9/go.mod h1:dTKx1918d8TDkxXvarscpNVY+lyPakPNFN4jwA9GBys=
-github.com/containers/podman/v4 v4.9.3 h1:3tEnvIqijxBYtILRdHcbn0UNHAyUiQ1Y5hcvkYmutZA=
-github.com/containers/podman/v4 v4.9.3/go.mod h1:J2qLop+mWjAOxh0QQyYPdnPA3jI6ay2eU0OKakgMniQ=
+github.com/containers/podman/v4 v4.9.4 h1:jWQKG8G8Fq8Gecpce1rrztwggBXEc/gRdaOtT+2uBvg=
+github.com/containers/podman/v4 v4.9.4/go.mod h1:cV1LSpxITFd3TDcmdt6qIx/NzcDsM/F6oQp6IX7CKaU=
 github.com/containers/psgo v1.8.0 h1:2loGekmGAxM9ir5OsXWEfGwFxorMPYnc6gEDsGFQvhY=
 github.com/containers/psgo v1.8.0/go.mod h1:T8ZxnX3Ur4RvnhxFJ7t8xJ1F48RhiZB4rSrOaR/qGHc=
 github.com/containers/storage v1.43.0/go.mod h1:uZ147thiIFGdVTjMmIw19knttQnUCl3y9zjreHrg11s=
