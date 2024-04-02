@@ -425,6 +425,15 @@ A:srl# info system dns
 
 If you wish to turn off the automatic DNS provisioning, set the `servers` list to an empty value in the [node configuration](../nodes.md#dns).
 
+### ACL configuration
+
+Starting with SR Linux 24.3.1 release, containerlab adds CPM filter rules to the default factory configuration to allow the following traffic:
+
+* HTTP access over port 80 for v4 and v6
+* Telnet access over port 23 for v4 and v6
+
+These protocols were removed from the default factory configuration in SR Linux 24.3.1 as a security hardening measure, but they are valuable for lab environments, hence containerlab adds them back.
+
 ## Host Requirements
 
 SR Linux is a containerized NOS, therefore it depends on the host's kernel and CPU. It is recommended to run a kernel v4 and newer, though it might also run on the older kernels.
