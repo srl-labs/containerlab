@@ -34,7 +34,7 @@ func GetCanonicalImageName(imageName string) string {
 		if strings.Contains(nameSplit[0], ".") {
 			canonicalImageName = imageName
 		} else if strings.Contains(nameSplit[0], "localhost") {
-			//case of localhost/foo:bar - podman prefixes local images with "localhost"
+			// case of localhost/foo:bar - podman prefixes local images with "localhost"
 			canonicalImageName = imageName
 		} else {
 			canonicalImageName = "docker.io/" + imageName
