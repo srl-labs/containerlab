@@ -90,7 +90,7 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
 
-func (n *srl) parseVersionString(s string) *SrlVersion {
+func (*srl) parseVersionString(s string) *SrlVersion {
 	re, _ := regexp.Compile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
