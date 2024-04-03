@@ -22,15 +22,6 @@ set / system gnmi-server rate-limit 65000
 set / system gnmi-server trace-options [ request response common ]
 set / system gnmi-server unix-socket admin-state enable`
 
-	// grpc contains the grpc server(s) configuration for srlinux versions >= 24.3.
-	grpcConfig = `set / system grpc-server clab services [ gnmi gnoi gribi p4rt ]
-set / system grpc-server clab tls-profile clab-profile
-set / system grpc-server clab rate-limit 65000
-set / system grpc-server clab network-instance mgmt
-set / system grpc-server clab trace-options [ request response common ]
-set / system grpc-server clab unix-socket admin-state enable
-set / system grpc-server clab admin-state enable`
-
 	// aclConfig contains the ACL configuration for srlinux versions >= 24.3 to enable
 	// non secure telnet and http access to the router which are useful for labs.
 	aclConfig = `set / acl acl-filter cpm type ipv4 entry 88 description "Containerlab-added rule: Accept incoming Telnet when the other host initiates the TCP connection"
@@ -63,6 +54,16 @@ set / acl acl-filter cpm type ipv6 entry 188 match ipv6 next-header tcp
 set / acl acl-filter cpm type ipv6 entry 188 match transport destination-port operator eq
 set / acl acl-filter cpm type ipv6 entry 188 match transport destination-port value 80
 set / acl acl-filter cpm type ipv6 entry 188 action accept`
+
+	// grpc contains the grpc server(s) configuration for srlinux versions >= 24.3.
+	grpcConfig = `set / system grpc-server mgmt services [ gnmi gnoi gribi p4rt ]
+set / system grpc-server mgmt tls-profile clab-profile
+set / system grpc-server mgmt rate-limit 65000
+set / system grpc-server mgmt network-instance mgmt
+set / system grpc-server mgmt trace-options [ request response common ]
+set / system grpc-server mgmt unix-socket admin-state enable
+set / system grpc-server mgmt admin-state enable
+set / system grpc-server mgmt default-tls-profile`
 )
 
 // SrlVersion represents an sr linux version as a set of fields.
