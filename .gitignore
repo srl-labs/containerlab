@@ -11,6 +11,7 @@ rpm/*
 dist
 private
 clab-*
+.envrc
 
 tmp/
 # Test binary, built with `go test -c`
