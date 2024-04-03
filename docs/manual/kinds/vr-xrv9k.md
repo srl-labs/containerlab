@@ -8,7 +8,7 @@ search:
 
 Cisco XRv9k nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
 
-/// note | Resource requirements
+/// admonition | Resource requirements
     type: warning
 XRv9k node is a resource hungry image. As of XRv9k 7.2.1 version the minimum resources should be set to 2vcpu/14GB. To be safe the defaults used in containerlab are 2vCPU/16G RAM.  
 Image may take 25 minutes to fully boot, be patient. You can monitor the loading status with `docker logs -f <container-name>`.

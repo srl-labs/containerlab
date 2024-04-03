@@ -96,6 +96,7 @@
                         "cisco_xrd",
                         "c8000",
                         "cisco_c8000",
+                        "cisco_c8000v",
                         "cvx",
                         "cumulus_cvx",
                         "openbsd",
@@ -975,6 +976,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "c8000": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "c8000v": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cvx": {
