@@ -25,6 +25,7 @@ nav:
           - Cisco CSR1000v: manual/kinds/vr-csr.md
           - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - Cisco 8000: manual/kinds/c8000.md
+          - Cisco c8000v: manual/kinds/vr-c8000v.md
           - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
