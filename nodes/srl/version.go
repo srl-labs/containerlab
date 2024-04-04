@@ -63,7 +63,7 @@ set / system grpc-server mgmt network-instance mgmt
 set / system grpc-server mgmt trace-options [ request response common ]
 set / system grpc-server mgmt unix-socket admin-state enable
 set / system grpc-server mgmt admin-state enable
-set / system grpc-server mgmt default-tls-profile`
+delete / system grpc-server mgmt default-tls-profile`
 )
 
 // SrlVersion represents an sr linux version as a set of fields.
