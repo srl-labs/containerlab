@@ -30,6 +30,39 @@ set / system grpc-server clab network-instance mgmt
 set / system grpc-server clab trace-options [ request response common ]
 set / system grpc-server clab unix-socket admin-state enable
 set / system grpc-server clab admin-state enable`
+
+	// aclConfig contains the ACL configuration for srlinux versions >= 24.3 to enable
+	// non secure telnet and http access to the router which are useful for labs.
+	aclConfig = `set / acl acl-filter cpm type ipv4 entry 88 description "Containerlab-added rule: Accept incoming Telnet when the other host initiates the TCP connection"
+set / acl acl-filter cpm type ipv4 entry 88 match ipv4 protocol tcp
+set / acl acl-filter cpm type ipv4 entry 88 match transport source-port operator eq
+set / acl acl-filter cpm type ipv4 entry 88 match transport source-port value 23
+set / acl acl-filter cpm type ipv4 entry 88 action accept
+set / acl acl-filter cpm type ipv4 entry 98 description "Containerlab-added rule: Accept incoming Telnet when this router initiates the TCP connection"
+set / acl acl-filter cpm type ipv4 entry 98 match ipv4 protocol tcp
+set / acl acl-filter cpm type ipv4 entry 98 match transport destination-port operator eq
+set / acl acl-filter cpm type ipv4 entry 98 match transport destination-port value 23
+set / acl acl-filter cpm type ipv4 entry 98 action accept
+set / acl acl-filter cpm type ipv4 entry 158 description "Containerlab-added rule: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection"
+set / acl acl-filter cpm type ipv4 entry 158 match ipv4 protocol tcp
+set / acl acl-filter cpm type ipv4 entry 158 match transport destination-port operator eq
+set / acl acl-filter cpm type ipv4 entry 158 match transport destination-port value 80
+set / acl acl-filter cpm type ipv4 entry 158 action accept
+set / acl acl-filter cpm type ipv6 entry 128 description "Containerlab-added rule: Accept incoming Telnet when the other host initiates the TCP connection"
+set / acl acl-filter cpm type ipv6 entry 128 match ipv6 next-header tcp
+set / acl acl-filter cpm type ipv6 entry 128 match transport source-port operator eq
+set / acl acl-filter cpm type ipv6 entry 128 match transport source-port value 23
+set / acl acl-filter cpm type ipv6 entry 128 action accept
+set / acl acl-filter cpm type ipv6 entry 138 description "Containerlab-added rule: Accept incoming Telnet when this router initiates the TCP connection"
+set / acl acl-filter cpm type ipv6 entry 138 match ipv6 next-header tcp
+set / acl acl-filter cpm type ipv6 entry 138 match transport destination-port operator eq
+set / acl acl-filter cpm type ipv6 entry 138 match transport destination-port value 23
+set / acl acl-filter cpm type ipv6 entry 138 action accept
+set / acl acl-filter cpm type ipv6 entry 188 description "Containerlab-added rule: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection"
+set / acl acl-filter cpm type ipv6 entry 188 match ipv6 next-header tcp
+set / acl acl-filter cpm type ipv6 entry 188 match transport destination-port operator eq
+set / acl acl-filter cpm type ipv6 entry 188 match transport destination-port value 80
+set / acl acl-filter cpm type ipv6 entry 188 action accept`
 )
 
 // SrlVersion represents an sr linux version as a set of fields.
@@ -57,7 +90,7 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
 
-func (n *srl) parseVersionString(s string) *SrlVersion {
+func (*srl) parseVersionString(s string) *SrlVersion {
 	re, _ := regexp.Compile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
@@ -91,6 +124,12 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 	// so we add the keys to the template data for rendering.
 	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.major == "0") {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
+	}
+
+	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access
+	// that are useful for labs and were removed as a security hardening measure.
+	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v24.3") >= 0 || n.swVersion.major == "0") {
+		tplData.ACLConfig = aclConfig
 	}
 
 	// in srlinux v23.10.x we need to enable GNMI unix socket services to enable

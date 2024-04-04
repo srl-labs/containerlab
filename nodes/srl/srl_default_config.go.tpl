@@ -1,3 +1,5 @@
+{{ .ACLConfig }}
+
 set / system tls server-profile clab-profile
 set / system tls server-profile clab-profile key "{{ .TLSKey }}"
 set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"

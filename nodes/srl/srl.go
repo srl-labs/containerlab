@@ -528,6 +528,8 @@ type srlTemplateData struct {
 	SNMPConfig string
 	// GRPCConfig is a string containing GRPC configuration
 	GRPCConfig string
+	// ACLConfig is a string containing ACL configuration
+	ACLConfig string
 }
 
 // tplIFace template interface struct.
