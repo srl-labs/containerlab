@@ -327,6 +327,17 @@ IP Address:172.20.20.3, IP Address:2001:172:20:20:0:0:0:3
 
 Nokia SR Linux nodes support setting of [SANs](../nodes.md#subject-alternative-names-san).
 
+### gRPC server
+
+Starting with SR Linux 24.3.1, the gRPC server config block is used to configure gRPC-based services such as gNMI, gNOI, gRIBI and P4RT. The factory configuration includes the `mgmt` gRPC server block to which containerlab adds all those services and:
+
+* generated TLS profile
+* unix-socket access for gRPC services
+* increased rate limit
+* trace options
+
+These additions are meant to make all gRPC services available to the user out of the box with the enabled tracing and a custom TLS profile.
+
 ### License
 
 SR Linux container can run without a license emulating the datacenter types (7220 IXR) :partying_face:.  
