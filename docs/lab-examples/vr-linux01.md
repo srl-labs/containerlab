@@ -1,6 +1,6 @@
 |                               |                                                                        |
 | ----------------------------- | ---------------------------------------------------------------------- |
-| **Description**               | Two vr_linux (ubuntu) hosts connected to cEOS                          |
+| **Description**               | Two vr_linux (ubuntu) hosts connected to cEOS switch                   |
 | **Components**                | [Ubuntu Hosts][ubuntu], [cEOS Switch][client]                          |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 1024 MB |
 | **Topology file**             | [vr_linux01.yml][topofile]                                              |
@@ -12,7 +12,7 @@
 This lab consists of two vr_linux (ubuntu) nodes connected to a cEOS switch.
 
 ```
-ubuntu-01<---->cEOS<---->ubuntu-01
+ubuntu-01<---->cEOS<---->ubuntu-02
 ```
 
 ## Configuration
