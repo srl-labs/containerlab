@@ -42,6 +42,7 @@ nav:
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
+          - Linux VM: manual/kinds/vr-linux.md
           - RARE/freeRtr: manual/kinds/rare-freertr.md
           - Openvswitch bridge: manual/kinds/ovs-bridge.md
           - External container: manual/kinds/ext-container.md
