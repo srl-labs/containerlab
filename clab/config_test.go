@@ -10,9 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 
-	"github.com/containers/podman/v4/pkg/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
@@ -138,7 +138,7 @@ func TestBindsInit(t *testing.T) {
 			}
 
 			for _, b := range tc.want {
-				if !util.StringInSlice(b, binds) {
+				if !slices.Contains(binds, b) {
 					t.Errorf("bind %q is not found in resulting binds %q", b, binds)
 				}
 			}

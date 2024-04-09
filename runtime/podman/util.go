@@ -14,13 +14,13 @@ import (
 
 	netTypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/image/v5/manifest"
-	"github.com/containers/podman/v4/pkg/bindings/containers"
-	"github.com/containers/podman/v4/pkg/domain/entities"
-	"github.com/containers/podman/v4/pkg/specgen"
+	"github.com/containers/podman/v5/pkg/bindings/containers"
+	"github.com/containers/podman/v5/pkg/domain/entities"
+	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
-	"github.com/containers/podman/v4/pkg/bindings"
+	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
@@ -60,15 +60,15 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		Name:       cfg.LongName,
 		Entrypoint: entrypoint,
 		Command:    cmd,
-		EnvHost:    false,
-		HTTPProxy:  false,
+		EnvHost:    utils.Pointer(false),
+		HTTPProxy:  utils.Pointer(false),
 		Env:        cfg.Env,
-		Terminal:   true,
-		Stdin:      true,
+		Terminal:   utils.Pointer(true),
+		Stdin:      utils.Pointer(true),
 		Labels:     cfg.Labels,
 		Hostname:   cfg.ShortName,
 		Sysctl:     cfg.Sysctls,
-		Remove:     false,
+		Remove:     utils.Pointer(false),
 	}
 	// Storage, image and mounts
 	mounts, err := r.convertMounts(ctx, cfg.Binds)
@@ -98,7 +98,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	}
 	// Security
 	specSecurityConfig := specgen.ContainerSecurityConfig{
-		Privileged: true,
+		Privileged: utils.Pointer(true),
 		User:       cfg.User,
 	}
 	// Going with the defaults for cgroups
@@ -187,7 +187,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{NSMode: "host"},
 			// UseImageResolvConf:  false,
-			UseImageHosts: false,
+			UseImageHosts: utils.Pointer(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
@@ -229,11 +229,11 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS:               specgen.Namespace{NSMode: "bridge"},
 			PortMappings:        portmap,
-			PublishExposedPorts: false,
+			PublishExposedPorts: utils.Pointer(false),
 			Expose:              expose,
 			Networks:            nets,
 			// UseImageResolvConf:  false,
-			UseImageHosts: false,
+			UseImageHosts: utils.Pointer(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
