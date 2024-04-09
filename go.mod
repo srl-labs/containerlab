@@ -11,7 +11,7 @@ require (
 	github.com/containers/podman/v4 v4.9.4
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.5.0
-	github.com/docker/docker v24.0.7+incompatible
+	github.com/docker/docker v25.0.5+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
@@ -115,8 +115,8 @@ require (
 	github.com/vbauerster/mpb/v8 v8.6.2 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
-	go.opentelemetry.io/otel/metric v1.21.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
+	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240123012728-ef4313101c80 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
@@ -283,8 +283,8 @@ require (
 	go.etcd.io/bbolt v1.3.9 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/otel v1.21.0 // indirect
-	go.opentelemetry.io/otel/trace v1.21.0 // indirect
+	go.opentelemetry.io/otel v1.24.0 // indirect
+	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go4.org/intern v0.0.0-20230205224052-192e9f60865c // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
 	gocloud.dev v0.30.0 // indirect
@@ -294,7 +294,7 @@ require (
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.17.0 // indirect
+	golang.org/x/tools v0.19.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.155.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
@@ -316,6 +316,6 @@ require (
 )
 
 replace (
-	github.com/weaveworks/ignite v0.10.0 => github.com/networkop/ignite v0.9.1-0.20230216143638-632a28f81c77
+	github.com/weaveworks/ignite v0.10.0 => github.com/networkop/ignite v0.9.1-0.20240402115852-5f94b8e9ce09
 	github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c => github.com/networkop/libgitops v0.0.0-20221014201752-02ecf9790f58
 )
