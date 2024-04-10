@@ -537,7 +537,7 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 	// default for issuing node certificates is false
 	cc := &CertificateConfig{
-		Issue: utils.BoolPointer(false),
+		Issue: utils.Pointer(false),
 	}
 
 	// merge defaults, kind and node certificate config into the default certificate config

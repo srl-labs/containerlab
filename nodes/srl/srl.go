@@ -141,7 +141,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg = cfg
 
 	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = utils.BoolPointer(true)
+	n.Cfg.Certificate.Issue = utils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
