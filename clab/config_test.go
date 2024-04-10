@@ -27,8 +27,8 @@ import (
 func setupTestCase(t *testing.T) func(t *testing.T) {
 	// setup function
 	// create node' labdir with a file that is used in topo2 definition for binds resolver to check path existence
-	f, _ := filepath.Abs("clab-topo2/node1/somefile") // skipcq: GSC-G301
-	os.MkdirAll("clab-topo2/node1", 0777)
+	f, _ := filepath.Abs("clab-topo2/node1/somefile")
+	os.MkdirAll("clab-topo2/node1", 0777) // skipcq: GSC-G301
 
 	if _, err := os.Create(f); err != nil {
 		t.Error(err)
