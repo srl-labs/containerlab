@@ -44,7 +44,7 @@ using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an exampl
 
 ```bash
 gnmic -a <container-name/node-mgmt-address> --skip-verify \
--u admin -p admin \
+-u admin -p "NokiaSrl1!" \
 -e json_ietf \
 get --path /system/name/host-name
 ```
