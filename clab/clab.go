@@ -546,6 +546,7 @@ func (c *CLab) createWaitForDependency() error {
 	return nil
 }
 
+// skipcq: GO-R1005
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection) {
 	concurrentChan := make(chan *depMgr.DependencyNode)
 
@@ -882,7 +883,7 @@ func (c *CLab) getLinkNodes() map[string]links.Node {
 // GetSpecialLinkNodes returns a map of special nodes that are used to resolve links.
 // Special nodes are host and mgmt-bridge nodes that are not typically present in the topology file
 // but are required to resolve links.
-func (c *CLab) getSpecialLinkNodes() map[string]links.Node {
+func (*CLab) getSpecialLinkNodes() map[string]links.Node {
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
 	specialNodes := map[string]links.Node{
 		"host":     links.GetHostLinkNode(),
@@ -957,6 +958,7 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 }
 
 // Deploy the given topology.
+// skipcq: GO-R1005
 func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
 	var err error
 
