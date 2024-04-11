@@ -83,27 +83,30 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	// if the topo file is available, use it
 	if topo != "" {
-		name = c.Config.Name
-	}
-
-	// or when just the name is given
-	if name != "" {
-		// if name is set, filter for name
-		glabels = []*types.GenericFilter{{
-			FilterType: "label", Match: name,
-			Field: labels.Containerlab, Operator: "=",
-		}}
+		containers, err = c.ListNodesContainers(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list containers: %s", err)
+		}
 	} else {
-		// this is the --all case
-		glabels = []*types.GenericFilter{{
-			FilterType: "label",
-			Field:      labels.Containerlab, Operator: "exists",
-		}}
-	}
+		// or when just the name is given
+		if name != "" {
+			// if name is set, filter for name
+			glabels = []*types.GenericFilter{{
+				FilterType: "label", Match: name,
+				Field: labels.Containerlab, Operator: "=",
+			}}
+		} else {
+			// this is the --all case
+			glabels = []*types.GenericFilter{{
+				FilterType: "label",
+				Field:      labels.Containerlab, Operator: "exists",
+			}}
+		}
 
-	containers, err = c.ListContainers(ctx, glabels)
-	if err != nil {
-		return fmt.Errorf("failed to list containers: %s", err)
+		containers, err = c.ListContainers(ctx, glabels)
+		if err != nil {
+			return fmt.Errorf("failed to list containers: %s", err)
+		}
 	}
 
 	if len(containers) == 0 {
