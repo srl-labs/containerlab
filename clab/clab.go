@@ -813,7 +813,7 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	wg.Wait()
 }
 
-// ListContainers lists all containers using provided filter.
+// ListContainers lists all containers matching the provided filter.
 func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
 
@@ -828,7 +828,7 @@ func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter
 }
 
 // ListNodesContainers lists all containers based on the nodes stored in clab instance.
-func (c *CLab) listNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
 
 	for _, n := range c.Nodes {
@@ -1088,7 +1088,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		}
 	}
 
-	containers, err := c.listNodesContainers(ctx)
+	containers, err := c.ListNodesContainers(ctx)
 	if err != nil {
 		return nil, err
 	}

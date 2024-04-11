@@ -37,7 +37,7 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 		return err
 	}
 
-	containers, err := c.listNodesContainers(ctx)
+	containers, err := c.ListNodesContainers(ctx)
 	if err != nil {
 		return err
 	}
