@@ -73,43 +73,37 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	if name != "" {
-		opts = append(opts, clab.WithLabName(name))
-	}
-
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
 	var containers []runtime.GenericContainer
+	var glabels []*types.GenericFilter
 
 	// if the topo file is available, use it
 	if topo != "" {
-		containers, err = c.ListContainers(ctx, nil)
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %s", err)
-		}
+		name = c.Config.Name
+	}
+
+	// or when just the name is given
+	if name != "" {
+		// if name is set, filter for name
+		glabels = []*types.GenericFilter{{
+			FilterType: "label", Match: name,
+			Field: labels.Containerlab, Operator: "=",
+		}}
 	} else {
-		var glabels []*types.GenericFilter
-		// or when just the name is given
-		if name != "" {
-			// if name is set, filter for name
-			glabels = []*types.GenericFilter{{
-				FilterType: "label", Match: name,
-				Field: labels.Containerlab, Operator: "=",
-			}}
-		} else {
-			// this is the --all case
-			glabels = []*types.GenericFilter{{
-				FilterType: "label",
-				Field:      labels.Containerlab, Operator: "exists",
-			}}
-		}
-		containers, err = c.ListContainers(ctx, glabels)
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %s", err)
-		}
+		// this is the --all case
+		glabels = []*types.GenericFilter{{
+			FilterType: "label",
+			Field:      labels.Containerlab, Operator: "exists",
+		}}
+	}
+
+	containers, err = c.ListContainers(ctx, glabels)
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %s", err)
 	}
 
 	if len(containers) == 0 {
