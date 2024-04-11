@@ -15,27 +15,66 @@ Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy --al
 
 *** Variables ***
 ${runtime}      docker
+${lab1-file}    01-linux-nodes.clab.yml
+${lab1-name}    2-linux-nodes
+${lab2-file}    01-linux-single-node.clab.yml
+${lab2-name}    single-node
+# ${orig_dir}    ${EMPTY}
 
 
 *** Test Cases ***
 Deploy first lab
     ${result} =    Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-nodes.clab.yml
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab1-file}
     ...    shell=True
     Log    ${result.stdout}
     Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
     Should Exist    %{PWD}/clab-2-linux-nodes
 
+    Set Suite Variable    ${orig_dir}    ${CURDIR}
+
 Deploy second lab
     ${result} =    Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/01-linux-single-node.clab.yml
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab2-file}
     ...    cwd=/tmp    # using a different cwd to check lab resolution via container labels
     ...    shell=True
     Log    ${result.stdout}
     Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
     Should Exist    /tmp/clab-single-node
+
+Inspect ${lab2-name} lab using its name
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab2-name}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    ${num_lines} =    Run    bash -c "echo '${output}' | wc -l"
+    # lab2 only has 1 nodes and therefore inspect output should contain only 1 node (+4 lines for the table header and footer)
+    Should Be Equal As Integers    ${num_lines}    5
+
+Inspect ${lab2-name} lab using topology file reference
+    ${result} =    Run Process
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect -t ${orig_dir}/${lab2-file}
+    ...    shell=True
+    Log    ${result.stdout}
+    Log    ${result.stderr}
+    Should Be Equal As Integers    ${result.rc}    0
+
+    ${num_lines} =    Run    bash -c "echo '${result.stdout}' | wc -l"
+    # lab2 only has 1 nodes and therefore inspect output should contain only 1 node
+    Should Be Equal As Integers    ${num_lines}    5
+
+Inspect all
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    ${num_lines} =    Run    bash -c "echo '${output}' | wc -l"
+    # 3 nodes in lab1 and 1 node in lab2 (+4 lines for the header and footer)
+    Should Be Equal As Integers    ${num_lines}    8
 
 Verify host mode networking for node l3
     # l3 node is launched with host mode networking

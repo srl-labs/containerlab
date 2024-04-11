@@ -546,6 +546,7 @@ func (c *CLab) createWaitForDependency() error {
 	return nil
 }
 
+// skipcq: GO-R1005
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection) {
 	concurrentChan := make(chan *depMgr.DependencyNode)
 
@@ -828,7 +829,7 @@ func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter
 }
 
 // ListNodesContainers lists all containers based on the nodes stored in clab instance.
-func (c *CLab) listNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
 
 	for _, n := range c.Nodes {
@@ -882,7 +883,7 @@ func (c *CLab) getLinkNodes() map[string]links.Node {
 // GetSpecialLinkNodes returns a map of special nodes that are used to resolve links.
 // Special nodes are host and mgmt-bridge nodes that are not typically present in the topology file
 // but are required to resolve links.
-func (c *CLab) getSpecialLinkNodes() map[string]links.Node {
+func (*CLab) getSpecialLinkNodes() map[string]links.Node {
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
 	specialNodes := map[string]links.Node{
 		"host":     links.GetHostLinkNode(),
@@ -957,6 +958,7 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 }
 
 // Deploy the given topology.
+// skipcq: GO-R1005
 func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
 	var err error
 
@@ -1088,7 +1090,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		}
 	}
 
-	containers, err := c.listNodesContainers(ctx)
+	containers, err := c.ListNodesContainers(ctx)
 	if err != nil {
 		return nil, err
 	}

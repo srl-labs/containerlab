@@ -41,6 +41,18 @@ Verify ip and thereby exec on ext1
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.0.1/24
 
+Inspect the lab using topology file reference
+    ${result} =    Run Process
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file-name}
+    ...    shell=True
+    Log    ${result.stdout}
+    Log    ${result.stderr}
+    Should Be Equal As Integers    ${result.rc}    0
+
+    ${num_nodes} =    Run    bash -c "echo '${result.stdout}' | wc -l"
+    # the inspect command should return only two external nodes (+4 lines for the header and footer)
+    Should Be Equal As Integers    ${num_nodes}    6
+
 Verify links in node ext2
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext2 --cmd "ip link show dev eth1"
