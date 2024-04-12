@@ -140,19 +140,19 @@ func handleDeviceAuthorization(ctx context.Context, deviceAuthToken string, disa
 }
 
 // Login performs a login to border0.com and stores the retrieved the access-token in the cwd.
-func Login(ctx context.Context, email, password string, disableBrowser bool) error {
+func Login(ctx context.Context, email, password string, disableBrowser, writeToCWD bool) (string, error) {
 	var token string
 
 	// if email is not set, we default to Border0's OAuth2 Device Authorization Flow.
 	if email == "" {
 		deviceAuthToken, err := createDeviceAuthorization(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to initiate Border0 device authorization flow: %v", err)
+			return "", fmt.Errorf("failed to initiate Border0 device authorization flow: %v", err)
 		}
 
 		token, err = handleDeviceAuthorization(ctx, deviceAuthToken, disableBrowser)
 		if err != nil {
-			return fmt.Errorf("failed to authenticate you against Border0: %v", err)
+			return "", fmt.Errorf("failed to authenticate you against Border0: %v", err)
 		}
 	} else {
 		// if password not set read from terminal
@@ -160,7 +160,7 @@ func Login(ctx context.Context, email, password string, disableBrowser bool) err
 			var err error
 			password, err = utils.ReadPasswordFromTerminal()
 			if err != nil {
-				return err
+				return "", err
 			}
 		}
 		// prepare a LoginRequest
@@ -174,16 +174,18 @@ func Login(ctx context.Context, email, password string, disableBrowser bool) err
 		// execute the request
 		err := Request(ctx, http.MethodPost, "login", loginResp, loginReq, false, "")
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		token = loginResp.Token
 	}
 
-	if err := writeToken(token); err != nil {
-		return err
+	if writeToCWD {
+		if err := writeToken(token); err != nil {
+			return "", err
+		}
 	}
-	return nil
+	return token, nil
 }
 
 func getApiUrl() string {

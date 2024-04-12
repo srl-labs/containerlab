@@ -86,6 +86,8 @@ nav:
           - netem:
               - set: cmd/tools/netem/set.md
               - show: cmd/tools/netem/show.md
+          - border0:
+              - setup: cmd/tools/border0/setup.md
       - completions: cmd/completion.md
   - Lab examples:
       - About: lab-examples/lab-examples.md
