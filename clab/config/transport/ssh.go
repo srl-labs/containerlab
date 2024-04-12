@@ -86,7 +86,7 @@ func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 
 func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SSHTransport, error) {
 	switch node.Kind {
-	case "vr-sros", "srl":
+	case "vr-sros", "srl", "nokia_sros", "nokia_srlinux":
 		c := &SSHTransport{}
 		c.SSHConfig = &ssh.ClientConfig{}
 
@@ -99,9 +99,9 @@ func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SS
 		}
 
 		switch node.Kind {
-		case "vr-sros":
+		case "vr-sros", "nokia_sros":
 			c.K = &VrSrosSSHKind{}
-		case "srl":
+		case "srl", "nokia_srlinux":
 			c.K = &SrlSSHKind{}
 		}
 		return c, nil
