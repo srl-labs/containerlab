@@ -14,7 +14,7 @@ type VxlanStitched struct {
 	LinkCommonParams
 	vxlanLink *LinkVxlan
 	vethLink  *LinkVEth
-	// the veth does not distinguist between endpoints. but we
+	// the veth does not distinguish between endpoints. but we
 	// need to  know which endpoint is the one used for
 	// stitching therefore we get that endpoint seperately
 	vethStitchEp Endpoint

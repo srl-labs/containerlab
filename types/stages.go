@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"golang.org/x/exp/slices"
 
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -316,14 +314,4 @@ func GetWaitForStages() []WaitForStage {
 		WaitForCreate, WaitForCreateLinks,
 		WaitForConfigure, WaitForHealthy, WaitForExit,
 	}
-}
-
-func WaitForStageFromString(s string) (WaitForStage, error) {
-	for _, val := range GetWaitForStages() {
-		if s == string(val) {
-			return val, nil
-		}
-	}
-
-	return "", fmt.Errorf("unknown stage %q", s)
 }
