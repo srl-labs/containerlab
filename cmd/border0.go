@@ -13,6 +13,7 @@ import (
 
 	"github.com/borderzero/border0-go"
 	"github.com/borderzero/border0-go/client"
+	"github.com/borderzero/border0-go/client/auth"
 	"github.com/borderzero/border0-go/types/service"
 	"github.com/gosimple/slug"
 	"github.com/spf13/cobra"
@@ -89,8 +90,16 @@ var border0LoginCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
 
-		_, err := border0_api.Login(ctx, border0Email, border0Password, border0DisableBrowser, true)
-		return err
+		opts := []auth.Option{
+			auth.WithTokenWriting(true),
+			auth.WithTokenStorageFilePath(border0_api.CwdTokenFilePath()),
+		}
+
+		if border0Email != "" || border0Password != "" {
+			opts = append(opts, auth.WithLegacyCredentials(border0Email, border0Password))
+		}
+
+		return border0.NewAPIClient(client.WithRetryMax(2)).Authenticate(ctx, opts...)
 	},
 }
 
@@ -109,17 +118,12 @@ var border0InitCmd = &cobra.Command{
 			return fmt.Errorf("lab-name must be in slug format e.g. my-border0-clab-123")
 		}
 
-		// always force a fresh login for now...
-		token, err := border0_api.Login(ctx, border0Email, border0Password, border0DisableBrowser, false)
-		if err != nil {
-			return fmt.Errorf("failed to authenticate with Border0: %v", err)
-		}
-
 		// initialize border0 sdk
-		api := border0.NewAPIClient(
-			client.WithAuthToken(token),
-			client.WithRetryMax(2),
-		)
+		api := border0.NewAPIClient(client.WithRetryMax(2))
+
+		if err := api.Authenticate(ctx, auth.WithTokenWriting(false)); err != nil {
+			return fmt.Errorf("failed to authenticate against the Border0 api: %v", err)
+		}
 
 		// create new connector
 		connector, err := api.CreateConnector(ctx, &client.Connector{

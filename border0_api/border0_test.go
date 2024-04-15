@@ -6,7 +6,6 @@ package border0_api
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -16,51 +15,6 @@ import (
 	"github.com/srl-labs/containerlab/types"
 	"go.uber.org/mock/gomock"
 )
-
-func TestLogin(t *testing.T) {
-	type args struct {
-		email    string
-		password string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "test login fail",
-			args: args{
-				email:    "fgsdfg@dfgsdfg.fr",
-				password: "1defsdffgd",
-			},
-			wantErr: true,
-		},
-		// // re-add this line and create a seperate file in this folder
-		// // defining the two variables BORDER0USER and BORDER0PASSWORD with
-		// // valid border0 credentials to test again live api
-		// // e.g.:
-		// // package border0_api
-		// // const BORDER0USER = "e@mail.address"
-		// // const BORDER0PASSWORD = "PASSWORD"
-		// //
-		// {
-		// 	name: "test login fail",
-		// 	args: args{
-		// 		email:    BORDER0USER,
-		// 		password: BORDER0PASSWORD,
-		// 	},
-		// 	wantErr: false,
-		// },
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.TODO()
-			if _, err := Login(ctx, tt.args.email, tt.args.password, false, false); (err != nil) != tt.wantErr {
-				t.Errorf("Login() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
 
 func Test_createBorder0Config(t *testing.T) {
 	type args struct {
@@ -137,10 +91,7 @@ func Test_createBorder0Config(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// set the token variable first
-			err := os.Setenv(ENV_NAME_BORDER0_ADMIN_TOKEN, "SomeValueOtherThenNil")
-			if err != nil {
-				t.Error(err)
-			}
+			t.Setenv(ENV_NAME_BORDER0_ADMIN_TOKEN, "SomeValueOtherThenNil")
 
 			// mock the http client, to be able to inject responses
 			defer gock.Off()
@@ -195,7 +146,7 @@ func Test_createBorder0Config(t *testing.T) {
 			mockerNodes := tt.args.nodesMap(mockCtrl)
 
 			// call function under test
-			_, err = CreateBorder0Config(tt.args.ctx, mockerNodes, tt.args.labname)
+			_, err := CreateBorder0Config(tt.args.ctx, mockerNodes, tt.args.labname)
 
 			// signal finish to mock
 			mockCtrl.Finish()

@@ -5,8 +5,7 @@ go 1.21
 require (
 	github.com/a8m/envsubst v1.4.2
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
-	github.com/borderzero/border0-go v1.4.29
-	github.com/cenkalti/backoff v2.2.1+incompatible
+	github.com/borderzero/border0-go v1.4.30
 	github.com/containernetworking/plugins v1.4.1
 	github.com/containers/common v0.58.1
 	github.com/containers/podman/v5 v5.0.1
@@ -17,7 +16,6 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/florianl/go-tc v0.4.3
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/go-cmp v0.6.0
 	github.com/google/nftables v0.2.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
@@ -37,7 +35,6 @@ require (
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.2.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.8.0
 	github.com/steiler/acls v0.1.1
 	github.com/stretchr/testify v1.9.0
@@ -62,6 +59,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.15.5 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cilium/ebpf v0.12.3 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
@@ -86,6 +84,7 @@ require (
 	github.com/go-openapi/strfmt v0.22.2 // indirect
 	github.com/go-openapi/swag v0.22.10 // indirect
 	github.com/go-openapi/validate v0.22.1 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-containerregistry v0.19.0 // indirect
@@ -112,6 +111,7 @@ require (
 	github.com/sigstore/rekor v1.2.2 // indirect
 	github.com/sigstore/sigstore v1.8.2 // indirect
 	github.com/skeema/knownhosts v1.2.2 // indirect
+	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/vbauerster/mpb/v8 v8.7.2 // indirect
