@@ -40,6 +40,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vJunos Evolved](manual/kinds/vr-vjunosevolved.md)
 * [Cisco IOS XRv9k](manual/kinds/vr-xrv9k.md)
 * [Cisco Nexus 9000v](manual/kinds/vr-n9kv.md)
+* [Cisco c8000v](manual/kinds/vr-c8000v.md)
 * [Cisco CSR 1000v](manual/kinds/vr-csr.md)
 * [Cisco FTDv](manual/kinds/vr-ftdv.md)
 * [Dell FTOS10v](manual/kinds/vr-ftosv.md)
@@ -47,8 +48,10 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Palo Alto PAN](manual/kinds/vr-pan.md)
 * [IPInfusion OcNOS](manual/kinds/ipinfusion-ocnos.md)
 * [Check Point Cloudguard](manual/kinds/checkpoint_cloudguard.md)
+* [Fortinet Fortigate](manual/kinds/fortinet_fortigate.md)
 * [Aruba AOS-CX](manual/kinds/vr-aoscx.md)
 * [OpenBSD](manual/kinds/openbsd.md)
+* [FreeBSD](manual/kinds/freebsd.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span all the needed variants of nodes:
 

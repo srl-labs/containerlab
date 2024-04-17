@@ -9,10 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docker/go-connections/nat"
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -164,7 +162,7 @@ type NodeConfig struct {
 	Certificate *CertificateConfig
 	// Healthcheck configuration parameters
 	Healthcheck *HealthcheckConfig
-	NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
+	// NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
 	// list of ports to publish with mysocketctl
 	Publish []string `json:"publish,omitempty"`
 	// Extra /etc/hosts entries for all nodes.
@@ -194,27 +192,6 @@ type NodeConfig struct {
 	// Introduced to prevent the check from running with ext-containers, since
 	// they should be present by definition.
 	SkipUniquenessCheck bool
-}
-
-func DisableTxOffload(n *NodeConfig) error {
-	// skip this if node runs in host mode
-	if strings.ToLower(n.NetworkMode) == "host" || strings.ToLower(n.NetworkMode) == "none" {
-		return nil
-	}
-	// disable tx checksum offload for linux containers on eth0 interfaces
-	nodeNS, err := ns.GetNS(n.NSPath)
-	if err != nil {
-		return err
-	}
-	err = nodeNS.Do(func(_ ns.NetNS) error {
-		// disabling offload on eth0 interface
-		err := utils.EthtoolTXOff("eth0")
-		if err != nil {
-			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
-		}
-		return err
-	})
-	return err
 }
 
 type GenericFilter struct {
@@ -270,12 +247,26 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 
 // Extras contains extra node parameters which are not entitled to be part of a generic node config.
 type Extras struct {
-	SRLAgents []string `yaml:"srl-agents,omitempty"`
 	// Nokia SR Linux agents. As of now just the agents spec files can be provided here
-	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
+	SRLAgents []string `yaml:"srl-agents,omitempty"`
 	// Proxy address that mysocketctl will use
-	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
+	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
 	// paths to files which are to be copied to ceos flash dir
+	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
+	// k8s-kind node specific options
+	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
+}
+
+// K8sKindExtras represents the k8s-kind-specific extra options.
+type K8sKindExtras struct {
+	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
+}
+
+// K8sKindDeployExtras represents the options used for the kind cluster creation.
+// It is aligned with the `kind create cluster` command options, but exposes
+// only the ones that are relevant for containerlab.
+type K8sKindDeployExtras struct {
+	Wait *string `yaml:"wait,omitempty"`
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.

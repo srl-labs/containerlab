@@ -8,7 +8,7 @@ name: vxlan-test
         type: string
 
 jobs:
-  vxlan-tests:
+  kind-tests:
     runs-on: ubuntu-22.04
     strategy:
       matrix:

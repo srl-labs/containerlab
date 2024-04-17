@@ -3,6 +3,7 @@ name: vxlan-stitch
 mgmt:
   network: clab-vxlan
   bridge: clab-vxlan-br
+  mtu: 9100
   ipv4-subnet: 172.20.25.0/24
 
 topology:

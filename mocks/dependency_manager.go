@@ -13,7 +13,7 @@ import (
 	reflect "reflect"
 
 	dependency_manager "github.com/srl-labs/containerlab/clab/dependency_manager"
-	types "github.com/srl-labs/containerlab/types"
+	nodes "github.com/srl-labs/containerlab/nodes"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -40,30 +40,16 @@ func (m *MockDependencyManager) EXPECT() *MockDependencyManagerMockRecorder {
 	return m.recorder
 }
 
-// AddDependency mocks base method.
-func (m *MockDependencyManager) AddDependency(depender string, dependerStage types.WaitForStage, dependee string, dependeeStage types.WaitForStage) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddDependency", depender, dependerStage, dependee, dependeeStage)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddDependency indicates an expected call of AddDependency.
-func (mr *MockDependencyManagerMockRecorder) AddDependency(depender, dependerStage, dependee, dependeeStage any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDependency", reflect.TypeOf((*MockDependencyManager)(nil).AddDependency), depender, dependerStage, dependee, dependeeStage)
-}
-
 // AddNode mocks base method.
-func (m *MockDependencyManager) AddNode(name string) {
+func (m *MockDependencyManager) AddNode(node nodes.Node) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddNode", name)
+	m.ctrl.Call(m, "AddNode", node)
 }
 
 // AddNode indicates an expected call of AddNode.
-func (mr *MockDependencyManagerMockRecorder) AddNode(name any) *gomock.Call {
+func (mr *MockDependencyManagerMockRecorder) AddNode(node any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNode", reflect.TypeOf((*MockDependencyManager)(nil).AddNode), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNode", reflect.TypeOf((*MockDependencyManager)(nil).AddNode), node)
 }
 
 // CheckAcyclicity mocks base method.
@@ -95,19 +81,18 @@ func (mr *MockDependencyManagerMockRecorder) GetNode(name any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNode", reflect.TypeOf((*MockDependencyManager)(nil).GetNode), name)
 }
 
-// MustWait mocks base method.
-func (m *MockDependencyManager) MustWait(nodeName string, stage types.WaitForStage) (bool, error) {
+// GetNodes mocks base method.
+func (m *MockDependencyManager) GetNodes() map[string]*dependency_manager.DependencyNode {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MustWait", nodeName, stage)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "GetNodes")
+	ret0, _ := ret[0].(map[string]*dependency_manager.DependencyNode)
+	return ret0
 }
 
-// MustWait indicates an expected call of MustWait.
-func (mr *MockDependencyManagerMockRecorder) MustWait(nodeName, stage any) *gomock.Call {
+// GetNodes indicates an expected call of GetNodes.
+func (mr *MockDependencyManagerMockRecorder) GetNodes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustWait", reflect.TypeOf((*MockDependencyManager)(nil).MustWait), nodeName, stage)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodes", reflect.TypeOf((*MockDependencyManager)(nil).GetNodes))
 }
 
 // String mocks base method.

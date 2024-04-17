@@ -272,3 +272,21 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 
 	return http.ListenAndServe(srv, nil)
 }
+
+func (c *CLab) GenerateDrawioDiagram(version string) error {
+	topoFile := c.TopoPaths.TopologyFilenameBase()
+
+	cmd := exec.Command("sudo", "docker", "run", "-v",
+		fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
+		fmt.Sprintf("ghcr.io/srl-labs/clab-io-draw:%s", version),
+		"-i", topoFile)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("cmd.CombinedOutput() failed with %s\n", err)
+	}
+
+	log.Infof("Diagram created. %s", out)
+
+	return nil
+}

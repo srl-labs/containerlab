@@ -117,7 +117,7 @@ topology:
 
 The `border0` node is a tiny linux container with border0 client installed. Containerlab uses this node to create the sockets and start the tunnels as per `publish` block instructions.
 
-Internally containerlab utilizes the [Static Sockets Plugin](https://docs.border0.com/docs/static-sockets-plugin) to provide the necessary configuration to the border0 process.
+Internally containerlab utilizes the Static Sockets Plugin to provide the necessary configuration to the border0 process.
 
 ## Border0.com policies
 

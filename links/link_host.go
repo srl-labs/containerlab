@@ -79,9 +79,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	link.Endpoints = []Endpoint{ep, hostEp}
 
 	// add the link to the endpoints node
-	hostEp.GetNode().AddLink(link)
 	hostEp.GetNode().AddEndpoint(hostEp)
-	ep.GetNode().AddLink(link)
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {

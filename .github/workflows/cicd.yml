@@ -11,10 +11,10 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VER: "1.20.2"
+  GO_VER: "1.21.8"
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.5.9-insiders-4.52.2-hellt
-  GORELEASER_VER: v1.11.4
+  GORELEASER_VER: v1.19.2
   PY_VER: "3.10"
 
 jobs:
@@ -322,6 +322,14 @@ jobs:
     with:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
 
+  fortigate-tests:
+    uses: ./.github/workflows/fortigate-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+    with:
+      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-22.04
@@ -335,6 +343,7 @@ jobs:
       - vxlan-tests
       - kind-tests
       - sros-tests
+      - fortigate-tests
 
     steps:
       - name: Checkout

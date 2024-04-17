@@ -59,18 +59,6 @@ func (mr *MockNodeMockRecorder) AddEndpoint(e any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
 }
 
-// AddLink mocks base method.
-func (m *MockNode) AddLink(l links.Link) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddLink", l)
-}
-
-// AddLink indicates an expected call of AddLink.
-func (mr *MockNodeMockRecorder) AddLink(l any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLink", reflect.TypeOf((*MockNode)(nil).AddLink), l)
-}
-
 // AddLinkToContainer mocks base method.
 func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()
@@ -169,32 +157,32 @@ func (mr *MockNodeMockRecorder) Deploy(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockNode)(nil).Deploy), arg0, arg1)
 }
 
-// DeployLinks mocks base method.
-func (m *MockNode) DeployLinks(ctx context.Context) error {
+// DeployEndpoints mocks base method.
+func (m *MockNode) DeployEndpoints(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployLinks", ctx)
+	ret := m.ctrl.Call(m, "DeployEndpoints", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeployLinks indicates an expected call of DeployLinks.
-func (mr *MockNodeMockRecorder) DeployLinks(ctx any) *gomock.Call {
+// DeployEndpoints indicates an expected call of DeployEndpoints.
+func (mr *MockNodeMockRecorder) DeployEndpoints(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployLinks", reflect.TypeOf((*MockNode)(nil).DeployLinks), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEndpoints", reflect.TypeOf((*MockNode)(nil).DeployEndpoints), ctx)
 }
 
 // ExecFunction mocks base method.
-func (m *MockNode) ExecFunction(arg0 func(ns.NetNS) error) error {
+func (m *MockNode) ExecFunction(arg0 context.Context, arg1 func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecFunction", arg0)
+	ret := m.ctrl.Call(m, "ExecFunction", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ExecFunction indicates an expected call of ExecFunction.
-func (mr *MockNodeMockRecorder) ExecFunction(arg0 any) *gomock.Call {
+func (mr *MockNodeMockRecorder) ExecFunction(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecFunction", reflect.TypeOf((*MockNode)(nil).ExecFunction), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecFunction", reflect.TypeOf((*MockNode)(nil).ExecFunction), arg0, arg1)
 }
 
 // GenerateConfig mocks base method.
@@ -481,18 +469,6 @@ func (m *MockNode) VerifyStartupConfig(topoDir string) error {
 func (mr *MockNodeMockRecorder) VerifyStartupConfig(topoDir any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyStartupConfig", reflect.TypeOf((*MockNode)(nil).VerifyStartupConfig), topoDir)
-}
-
-// WaitForAllLinksCreated mocks base method.
-func (m *MockNode) WaitForAllLinksCreated() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "WaitForAllLinksCreated")
-}
-
-// WaitForAllLinksCreated indicates an expected call of WaitForAllLinksCreated.
-func (mr *MockNodeMockRecorder) WaitForAllLinksCreated() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAllLinksCreated", reflect.TypeOf((*MockNode)(nil).WaitForAllLinksCreated))
 }
 
 // WithMgmtNet mocks base method.

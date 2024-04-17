@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -103,9 +102,6 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, err
 	}
 
-	// add endpoint links to nodes
-	link.NodeEndpoint.GetNode().AddLink(link)
-
 	return link, nil
 }
 
@@ -121,16 +117,16 @@ func (*LinkMacVlan) GetType() LinkType {
 }
 
 func (l *LinkMacVlan) GetParentInterfaceMTU() (int, error) {
-	hostLink, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
+	hostLink, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return 0, err
 	}
 	return hostLink.Attrs().MTU, nil
 }
 
-func (l *LinkMacVlan) Deploy(ctx context.Context) error {
+func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	// lookup the parent host interface
-	parentInterface, err := utils.LinkByNameOrAlias(l.HostEndpoint.GetIfaceName())
+	parentInterface, err := netlink.LinkByName(l.HostEndpoint.GetIfaceName())
 	if err != nil {
 		return err
 	}
@@ -152,7 +148,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	}
 
 	// retrieve the Link by name
-	mvInterface, err := utils.LinkByNameOrAlias(l.NodeEndpoint.GetRandIfaceName())
+	mvInterface, err := netlink.LinkByName(l.NodeEndpoint.GetRandIfaceName())
 	if err != nil {
 		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandIfaceName(), err)
 	}
@@ -163,14 +159,14 @@ func (l *LinkMacVlan) Deploy(ctx context.Context) error {
 	return err
 }
 
-func (l *LinkMacVlan) Remove(_ context.Context) error {
+func (l *LinkMacVlan) Remove(ctx context.Context) error {
 	// check Deployment state, if the Link was already
 	// removed via e.g. the peer node
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
 	// trigger link removal via the NodeEndpoint
-	err := l.NodeEndpoint.Remove()
+	err := l.NodeEndpoint.Remove(ctx)
 	if err != nil {
 		log.Debug(err)
 	}

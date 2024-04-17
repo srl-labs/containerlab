@@ -4,7 +4,7 @@ search:
 ---
 # Juniper vMX
 
-[Juniper vMX](https://www.juniper.net/us/en/products/routers/mx-series/vmx-virtual-router-software.html) virtualized router is identified with `juniper_vmx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vMX](https://www.juniper.net/documentation/product/us/en/vmx/) virtualized router is identified with `juniper_vmx` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Juniper vMX nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 

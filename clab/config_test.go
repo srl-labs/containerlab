@@ -10,9 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 
-	"github.com/containers/podman/v4/pkg/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
@@ -28,7 +28,7 @@ func setupTestCase(t *testing.T) func(t *testing.T) {
 	// setup function
 	// create node' labdir with a file that is used in topo2 definition for binds resolver to check path existence
 	f, _ := filepath.Abs("clab-topo2/node1/somefile")
-	os.MkdirAll("clab-topo2/node1", 0777)
+	os.MkdirAll("clab-topo2/node1", 0777) // skipcq: GSC-G301
 
 	if _, err := os.Create(f); err != nil {
 		t.Error(err)
@@ -138,7 +138,7 @@ func TestBindsInit(t *testing.T) {
 			}
 
 			for _, b := range tc.want {
-				if !util.StringInSlice(b, binds) {
+				if !slices.Contains(binds, b) {
 					t.Errorf("bind %q is not found in resulting binds %q", b, binds)
 				}
 			}
@@ -349,6 +349,8 @@ func TestVerifyLinks(t *testing.T) {
 	teardownTestCase := setupTestCase(t)
 	defer teardownTestCase(t)
 
+	ctx := context.Background()
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
@@ -368,12 +370,12 @@ func TestVerifyLinks(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = c.verifyLinks()
+			err = c.verifyLinks(ctx)
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
 			}
 			if err == nil && tc.want != "" {
-				t.Fatalf("wanted %q got %q", tc.want, err.Error())
+				t.Fatalf("wanted %q got nil", tc.want)
 			}
 		})
 	}
@@ -615,13 +617,13 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			// set mockRuntime parameters
 			mockRuntime := mockruntime.NewMockContainerRuntime(ctrl)
 			c.Runtimes[rtName] = mockRuntime
-			c.globalRuntime = rtName
+			c.globalRuntimeName = rtName
 
 			// prepare runtime result
 			mockRuntime.EXPECT().ListContainers(gomock.Any(), gomock.Any()).AnyTimes().Return(tc.mockResult.c, tc.mockResult.e)
 
 			ctx := context.Background()
-			err = c.VerifyContainersUniqueness(ctx)
+			err = c.verifyContainersUniqueness(ctx)
 			if tc.wantError {
 				assert.Error(t, err)
 			} else {

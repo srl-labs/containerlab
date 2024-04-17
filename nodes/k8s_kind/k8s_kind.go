@@ -77,8 +77,25 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 		// set the byteConfig as the config to use
 		cluster.CreateWithV1Alpha4Config(conf),
 		// make the Create call synchronous, but use a timeout of 15 min.
+		// This may be overridden by the user in the extra config.
 		cluster.CreateWithWaitForReady(time.Duration(15)*time.Minute),
 	)
+
+	// Handle extra deploy options
+	if n.Cfg.Extras != nil && n.Cfg.Extras.K8sKind != nil &&
+		n.Cfg.Extras.K8sKind.Deploy != nil {
+		opts := n.Cfg.Extras.K8sKind.Deploy
+
+		// Override the default wait duration
+		if opts.Wait != nil {
+			duration, err := time.ParseDuration(*opts.Wait)
+			if err != nil {
+				return fmt.Errorf("failed to parse wait duration: %w", err)
+			}
+			clusterCreateOptions = append(clusterCreateOptions,
+				cluster.CreateWithWaitForReady(duration))
+		}
+	}
 
 	// create the kind cluster
 	err = kindProvider.Create(n.Cfg.ShortName, clusterCreateOptions...)

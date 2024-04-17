@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"syscall"
 	"unsafe"
+
+	"github.com/containernetworking/plugins/pkg/ns"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -35,6 +38,18 @@ func ioctlEthtool(fd int, argp uintptr) error {
 		return errno
 	}
 	return nil
+}
+
+// NSEthtoolTXOff EthtoolTXOff wrapper that can be handed straight to Node.ExecFunc().
+func NSEthtoolTXOff(cntName, ifaceName string) func(ns.NetNS) error {
+	return func(ns.NetNS) error {
+		// disabling offload on given interface
+		err := EthtoolTXOff(ifaceName)
+		if err != nil {
+			log.Infof("failed to disable TX checksum offload for %s interface for %s container", ifaceName, cntName)
+		}
+		return nil
+	}
 }
 
 // EthtoolTXOff disables TX checksum offload on specified interface.

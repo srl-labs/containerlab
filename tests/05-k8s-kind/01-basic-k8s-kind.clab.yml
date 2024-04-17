@@ -3,8 +3,8 @@ name: 01-basic-k8s-kind
 topology:
   kinds:
     srl:
-     type: ixrd3
-     image: ghcr.io/nokia/srlinux
+      type: ixrd3
+      image: ghcr.io/nokia/srlinux
   nodes:
     br01:
       kind: bridge
@@ -12,7 +12,7 @@ topology:
       kind: linux
       image: alpine
       cmd: ash -c "sleep 9999"
-      exec: 
+      exec:
         - "ip a add dev eth1 192.168.237.20/24"
     k01:
       kind: k8s-kind
@@ -23,23 +23,23 @@ topology:
     # k01 -> resulting nodes due to startup-config assigned config `k01-config.yaml`
     k01-control-plane:
       kind: ext-container
-      exec: 
+      exec:
         - "ip a del dev eth1"
         - "ip a add dev eth1 192.168.237.1/24"
 
     k01-worker:
       kind: ext-container
-      exec: 
+      exec:
         - "ip a del dev eth1"
         - "ip a add dev eth1 192.168.237.2/24"
 
     k02-control-plane:
       kind: ext-container
-      exec: 
+      exec:
         - "ip a del dev eth1"
         - "ip a add dev eth1 192.168.237.3/24"
 
-  links: 
+  links:
     - endpoints: ["br01:e1", "k01-control-plane:eth1"]
     - endpoints: ["br01:e2", "k01-worker:eth1"]
     - endpoints: ["br01:e3", "k02-control-plane:eth1"]
@@ -47,4 +47,3 @@ topology:
 
     - endpoints: ["br01:e5", "k01-control-plane:eth2"]
     - endpoints: ["br01:e6", "k02-control-plane:eth2"]
-

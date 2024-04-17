@@ -73,7 +73,7 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*Li
 
 	vethLink := hl.(*LinkVEth)
 
-	// host endpoint is always a 2nd element in the Endpoints slice
+	// host endpoint is always the 2nd element in the Endpoints slice
 	return vethLink, vethLink.Endpoints[1], nil
 }
 
@@ -93,9 +93,6 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error
 
 	// return the stitched vxlan link
 	stitchedLink := NewVxlanStitched(vxlanLink, vethLink, stitchEp)
-
-	// add stitched link to node
-	params.Nodes[lr.Endpoint.Node].AddLink(stitchedLink)
 
 	return stitchedLink, nil
 }
@@ -172,9 +169,6 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		link.remoteEndpoint.MAC = hwaddr
 	}
 
-	// add link to local endpoints node
-	link.localEndpoint.GetNode().AddLink(link)
-
 	return link, nil
 }
 
@@ -211,14 +205,14 @@ type LinkVxlan struct {
 	remoteEndpoint *EndpointVxlan
 }
 
-func (l *LinkVxlan) Deploy(ctx context.Context) error {
+func (l *LinkVxlan) Deploy(ctx context.Context, _ Endpoint) error {
 	err := l.deployVxlanInterface()
 	if err != nil {
 		return err
 	}
 
 	// retrieve the Link by name
-	mvInterface, err := utils.LinkByNameOrAlias(l.localEndpoint.GetRandIfaceName())
+	mvInterface, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
 	if err != nil {
 		return fmt.Errorf("failed to lookup %q: %v", l.localEndpoint.GetRandIfaceName(), err)
 	}
@@ -232,7 +226,7 @@ func (l *LinkVxlan) Deploy(ctx context.Context) error {
 // deployVxlanInterface internal function to create the vxlan interface in the host namespace.
 func (l *LinkVxlan) deployVxlanInterface() error {
 	// retrieve the parent interface netlink handle
-	parentIface, err := utils.LinkByNameOrAlias(l.remoteEndpoint.parentIface)
+	parentIface, err := netlink.LinkByName(l.remoteEndpoint.parentIface)
 	if err != nil {
 		return err
 	}
@@ -267,7 +261,7 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 
 	// fetch the mtu from the actual state for templated config generation
 	if l.MTU == 0 {
-		interf, err := utils.LinkByNameOrAlias(l.localEndpoint.GetRandIfaceName())
+		interf, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
 		if err != nil {
 			return err
 		}
@@ -277,11 +271,11 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	return nil
 }
 
-func (l *LinkVxlan) Remove(_ context.Context) error {
+func (l *LinkVxlan) Remove(ctx context.Context) error {
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
-	err := l.localEndpoint.Remove()
+	err := l.localEndpoint.Remove(ctx)
 	if err != nil {
 		log.Debug(err)
 	}

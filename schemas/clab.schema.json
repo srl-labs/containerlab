@@ -96,9 +96,12 @@
                         "cisco_xrd",
                         "c8000",
                         "cisco_c8000",
+                        "cisco_c8000v",
                         "cvx",
                         "cumulus_cvx",
-                        "openbsd"
+                        "openbsd",
+                        "freebsd",
+                        "fortinet_fortigate"
                     ]
                 },
                 "license": {
@@ -339,6 +342,7 @@
                             "type": {
                                 "type": "string",
                                 "enum": [
+                                    "ixsa1",
                                     "ixrd1",
                                     "ixrd2",
                                     "ixrd3",
@@ -355,7 +359,9 @@
                                     "ixr10",
                                     "ixr10e",
                                     "sxr1x44s",
-                                    "sxr1d32d"
+                                    "sxr1d32d",
+                                    "ixrx1b",
+                                    "ixrx3b"
                                 ]
                             }
                         }
@@ -640,6 +646,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -650,6 +659,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -660,6 +672,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -670,6 +685,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -680,6 +698,9 @@
                     "properties": {
                         "wait-for": {
                             "$ref": "#/definitions/wait-for-config"
+                        },
+                        "exec": {
+                            "$ref": "#/definitions/stage-exec"
                         }
                     },
                     "additionalProperties": false
@@ -717,6 +738,27 @@
                 "healthy",
                 "exit"
             ]
+        },
+        "stage-exec": {
+            "type": "object",
+            "description": "per-stage exec configuration",
+            "properties": {
+                "on-enter": {
+                    "$ref": "#/definitions/stage-exec-list"
+                },
+                "on-exit": {
+                    "$ref": "#/definitions/stage-exec-list"
+                }
+            }
+        },
+        "stage-exec-list": {
+            "type": "array",
+            "description": "list of commands to execute",
+            "markdownDescription": "list of [commands to execute](https://containerlab.dev/manual/nodes/#exec)",
+            "minItems": 1,
+            "items": {
+                "type": "string"
+            }
         }
     },
     "type": "object",
@@ -936,6 +978,9 @@
                         "c8000": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "c8000v": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "cvx": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -943,6 +988,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "openbsd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "freebsd": {
                             "$ref": "#/definitions/node-config"
                         }
                     }

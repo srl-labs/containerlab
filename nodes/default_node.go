@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"text/template"
 
@@ -42,15 +43,11 @@ type DefaultNode struct {
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
-	// List of links that reference the node.
-	Links []links.Link
 	// List of link endpoints that are connected to the node.
 	Endpoints []links.Endpoint
 	// State of the node
 	state      state.NodeState
 	statemutex sync.RWMutex
-	// links created wg
-	linksCreated *sync.WaitGroup
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -62,7 +59,6 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		OverwriteNode:    n,
 		LicensePolicy:    types.LicensePolicyNone,
 		SSHConfig:        types.NewSSHConfig(),
-		linksCreated:     &sync.WaitGroup{},
 	}
 
 	return dn
@@ -73,10 +69,6 @@ func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d
 func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
 func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
-
-func (d *DefaultNode) WaitForAllLinksCreated() {
-	d.linksCreated.Wait()
-}
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
@@ -138,23 +130,55 @@ func (d *DefaultNode) VerifyHostRequirements() error {
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
+	// Set the "CLAB_INTFS" variable to the number of interfaces
+	// Which is required by vrnetlab to determine if all configured interfaces are present
+	// such that the internal VM can be started with these interfaces assigned.
+	d.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
+
+	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
 	if err != nil {
 		return err
 	}
+
+	// start the container
 	_, err = d.Runtime.StartContainer(ctx, cID, d)
 	if err != nil {
 		return err
 	}
 
+	// Update the nodes state
 	d.SetState(state.Deployed)
 
 	return nil
 }
 
+// getNsPath retrieve the nodes nspath.
+func (d *DefaultNode) getNsPath(ctx context.Context) (string, error) {
+	var err error
+	nsp := ""
+
+	if d.Cfg.IsRootNamespaceBased {
+		netns, err := ns.GetCurrentNS()
+		if err != nil {
+			return "", err
+		}
+		nsp = netns.Path()
+	}
+	if nsp == "" {
+		nsp, err = d.Runtime.GetNSPath(ctx, d.Cfg.LongName)
+		if err != nil {
+			log.Errorf("Unable to determine NetNS Path for node %s: %v", d.Cfg.ShortName, err)
+			return "", err
+		}
+	}
+
+	return nsp, err
+}
+
 func (d *DefaultNode) Delete(ctx context.Context) error {
-	for _, l := range d.Links {
-		err := l.Remove(ctx)
+	for _, e := range d.Endpoints {
+		err := e.GetLink().Remove(ctx)
 		if err != nil {
 			return err
 		}
@@ -463,9 +487,14 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
-func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	// retrieve nodes nspath
+	nsp, err := d.getNsPath(ctx)
+	if err != nil {
+		return err
+	}
 	// retrieve the namespace handle
-	netns, err := ns.GetNS(d.Cfg.NSPath)
+	netns, err := ns.GetNS(nsp)
 	if err != nil {
 		return err
 	}
@@ -478,14 +507,16 @@ func (d *DefaultNode) AddLinkToContainer(_ context.Context, link netlink.Link, f
 	if err != nil {
 		return err
 	}
-	// indicate this link is created
-	d.linksCreated.Done()
 	return nil
 }
 
 // ExecFunction executes the given function in the nodes network namespace.
-func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
-	nspath := d.Cfg.NSPath
+func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
+	// retrieve nodes nspath
+	nspath, err := d.getNsPath(ctx)
+	if err != nil {
+		return err
+	}
 
 	if d.Cfg.IsRootNamespaceBased {
 		nshandle, err := ns.GetCurrentNS()
@@ -508,11 +539,6 @@ func (d *DefaultNode) ExecFunction(f func(ns.NetNS) error) error {
 	return netns.Do(f)
 }
 
-func (d *DefaultNode) AddLink(l links.Link) {
-	d.Links = append(d.Links, l)
-	d.linksCreated.Add(1)
-}
-
 func (d *DefaultNode) AddEndpoint(e links.Endpoint) {
 	d.Endpoints = append(d.Endpoints, e)
 }
@@ -531,10 +557,11 @@ func (d *DefaultNode) GetShortName() string {
 	return d.Cfg.ShortName
 }
 
-// DeployLinks deploys links associated with the node.
-func (d *DefaultNode) DeployLinks(ctx context.Context) error {
-	for _, l := range d.Links {
-		err := l.Deploy(ctx)
+// DeployEndpoints deploys endpoints associated with the node.
+// The deployment of endpoints is done by deploying a link with the endpoint triggering it.
+func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
+	for _, ep := range d.Endpoints {
+		err := ep.Deploy(ctx)
 		if err != nil {
 			return err
 		}

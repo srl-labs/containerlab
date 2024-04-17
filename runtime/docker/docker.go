@@ -579,7 +579,7 @@ func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node run
 	log.Debugf("Start container: %q", nodecfg.LongName)
 	err := d.Client.ContainerStart(nctx,
 		cID,
-		dockerTypes.ContainerStartOptions{
+		container.StartOptions{
 			CheckpointID:  "",
 			CheckpointDir: "",
 		},
@@ -594,12 +594,11 @@ func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node run
 
 // postStartActions performs misc. tasks that are needed after the container starts.
 func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *types.NodeConfig) error {
-	var err error
-	node.NSPath, err = d.GetNSPath(ctx, cID)
+	nspath, err := d.GetNSPath(ctx, cID)
 	if err != nil {
 		return err
 	}
-	err = utils.LinkContainerNS(node.NSPath, node.LongName)
+	err = utils.LinkContainerNS(nspath, node.LongName)
 	return err
 }
 
@@ -610,7 +609,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 
 	filter := d.buildFilterString(gfilters)
 
-	ctrs, err := d.Client.ContainerList(ctx, dockerTypes.ContainerListOptions{
+	ctrs, err := d.Client.ContainerList(ctx, container.ListOptions{
 		All:     true,
 		Filters: filter,
 	})
@@ -882,7 +881,7 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 		}
 	}
 	log.Debugf("Removing container: %s", cID)
-	err = d.Client.ContainerRemove(ctx, cID, dockerTypes.ContainerRemoveOptions{Force: force, RemoveVolumes: true})
+	err = d.Client.ContainerRemove(ctx, cID, container.RemoveOptions{Force: force, RemoveVolumes: true})
 	if err != nil {
 		return err
 	}

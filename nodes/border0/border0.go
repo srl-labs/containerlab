@@ -87,9 +87,10 @@ func (b *border0) PreDeploy(_ context.Context, params *nodes.PreDeployParams) er
 func (b *border0) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	// disable tx offloading
 	log.Debugf("Running postdeploy actions for border0.com node %q", b.Cfg.ShortName)
-	err := types.DisableTxOffload(b.Cfg)
+
+	err := b.ExecFunction(ctx, utils.NSEthtoolTXOff(b.GetShortName(), "eth0"))
 	if err != nil {
-		return fmt.Errorf("failed to disable tx checksum offload for border0 kind: %v", err)
+		log.Error(err)
 	}
 
 	log.Infof("Creating border0.com tunnels...")

@@ -7,6 +7,7 @@ package linux
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
 
@@ -49,6 +51,11 @@ func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
+	// Set the "CLAB_INTFS" variable to the number of interfaces
+	// Which is required by vrnetlab to determine if all configured interfaces are present
+	// such that the internal VM can be started with these interfaces assigned.
+	n.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(n.GetEndpoints()))
+
 	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {
 		return err
@@ -64,10 +71,12 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	return err
 }
 
-func (n *linux) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+func (n *linux) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
-	if err := types.DisableTxOffload(n.Cfg); err != nil {
-		return err
+
+	err := n.ExecFunction(ctx, utils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
+	if err != nil {
+		log.Error(err)
 	}
 
 	// when ignite runtime is in use

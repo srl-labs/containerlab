@@ -63,6 +63,7 @@ var (
 	defaultCredentials = nodes.NewCredentials("admin", "NokiaSrl1!")
 
 	srlTypes = map[string]string{
+		"ixsa1":    "7215IXSA1.yml",
 		"ixrd1":    "7220IXRD1.yml",
 		"ixrd2":    "7220IXRD2.yml",
 		"ixrd3":    "7220IXRD3.yml",
@@ -80,6 +81,8 @@ var (
 		"ixr10e":   "7250IXR10e.yml",
 		"sxr1x44s": "7730SXR-1x-44s.yml",
 		"sxr1d32d": "7730SXR-1d-32d.yml",
+		"ixrx1b":   "7250IXRX1b.yml",
+		"ixrx3b":   "7250IXRX3b.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -138,7 +141,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg = cfg
 
 	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = utils.BoolPointer(true)
+	n.Cfg.Certificate.Issue = utils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
@@ -330,7 +333,7 @@ func (s *srl) Ready(ctx context.Context) error {
 					logMsg += fmt.Sprintf(" error: %v", err)
 				}
 
-				if execResult.GetReturnCode() != 0 {
+				if execResult != nil && execResult.GetReturnCode() != 0 {
 					logMsg += fmt.Sprintf(", output: \n%s", execResult)
 				}
 
@@ -523,6 +526,10 @@ type srlTemplateData struct {
 	CustomPrompt       string
 	// SNMPConfig is a string containing SNMP configuration
 	SNMPConfig string
+	// GRPCConfig is a string containing GRPC configuration
+	GRPCConfig string
+	// ACLConfig is a string containing ACL configuration
+	ACLConfig string
 }
 
 // tplIFace template interface struct.
@@ -551,6 +558,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		MgmtIPMTU:  0,
 		DNSServers: n.Config().DNS.Servers,
 		SNMPConfig: snmpv2Config,
+		GRPCConfig: grpcConfig,
 	}
 
 	n.setVersionSpecificParams(&tplData)

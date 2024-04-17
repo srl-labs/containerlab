@@ -25,6 +25,7 @@ nav:
           - Cisco CSR1000v: manual/kinds/vr-csr.md
           - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
           - Cisco 8000: manual/kinds/c8000.md
+          - Cisco c8000v: manual/kinds/vr-c8000v.md
           - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
@@ -33,8 +34,10 @@ nav:
           - MikroTik RouterOS: manual/kinds/vr-ros.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
           - OpenBSD: manual/kinds/openbsd.md
+          - FreeBSD: manual/kinds/freebsd.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
+          - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
@@ -58,6 +61,9 @@ nav:
       - Certificate management: manual/cert.md
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
+      - Developers guide:
+          - manual/dev/index.md
+          - Testing: manual/dev/test.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
@@ -116,6 +122,9 @@ nav:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
   - Release notes:
+      - "0.54": rn/0.54.md
+      - "0.53": rn/0.53.md
+      - "0.52": rn/0.52.md
       - "0.51": rn/0.51.md
       - "0.50": rn/0.50.md
       - "0.49": rn/0.49.md
@@ -246,9 +255,24 @@ extra:
       link: https://twitter.com/ntdvps
     - icon: fontawesome/brands/discord
       link: https://discord.gg/vAyddtaEV9
+  consent:
+    title: Cookie consent
+    consent:
+    actions:
+      - accept
+      - manage
+      - reject
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
   analytics:
     provider: google
     property: G-368XR9X5MG
+
+copyright: >
+  <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.87 9.5C20.6 9 20 9 20 9h-2V8c0-1-1-1-1-1h-2V6c0-1-1-1-1-1h-1V3c0-1-1-1-1-1a9 9 0 1 0 9 9c0-.5-.04-1-.13-1.5M6.5 12c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8  10.5 7.33 12 6.5 12M8 6.5C8 5.67 8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8 8 7.33 8 6.5M11 18c-.83 0-1.5-.67-1.5-1.5S10.17 15 11 15s1.5.67 1.5 1.5S11.83 18 11 18m.5-5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5m5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5M7 22h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2Z"></path></svg></span> <a href="#__consent">Cookie settings</a>
 
 extra_css:
   - stylesheets/extra.css

@@ -136,7 +136,7 @@ func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f fu
 	}
 
 	// get the bridge as netlink.Link
-	br, err := utils.LinkByNameOrAlias(b.Cfg.ShortName)
+	br, err := netlink.LinkByName(b.Cfg.ShortName)
 	if err != nil {
 		return err
 	}

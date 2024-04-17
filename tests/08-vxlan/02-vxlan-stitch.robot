@@ -29,7 +29,7 @@ Check VxLAN interface parameters on the host for srl1 node
 
     Should Contain        ${output}    mtu 9050
 
-    Should Contain        ${output}    vxlan id 100 remote 172.20.25.22 dev clab-vxlan-br srcport 0 0 dstport 14788
+    Should Contain        ${output}    vxlan id 100 remote 172.20.25.22 dev ${vxlan-br} srcport 0 0 dstport 14788
     
     Should Not Contain    ${output}    nolearning
 
@@ -43,7 +43,7 @@ Check veth interface parameters on the host for srl1 node
 
 Check VxLAN interface parameters on the host for very long name node
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "vx-some_very_long_node_name_l1_e1-1") | .ifname' | xargs ip -d l show
+    ...    sudo ip -d l show dev vx-some_very_long_node_name_l1_e1-1
 
     Should Contain    ${output}    mtu 9050
 
@@ -51,14 +51,14 @@ Check VxLAN interface parameters on the host for very long name node
 
 Check veth interface parameters on the host for very long name node
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "ve-some_very_long_node_name_l1_e1-1") | .ifname' | xargs ip -d l show
+    ...    sudo ip -d l show dev ve-some_very_long_node_name_l1_e1-1
 
     Should Contain    ${output}    mtu 9500 qdisc noqueue state UP
 
     # in github actions the output for this link weirdly state the netnsid instead of nsname, thus we check for any of those
     Should Contain Any    ${output}    link-netns clab-vxlan-stitch-some_very_long_node_name_l1    link-netnsid 2
 
-    Should Contain    ${output}    alias ve-some_very_long_node_name_l1_e1-1
+    Should Contain    ${output}    altname ve-some_very_long_node_name_l1_e1-1
 
 Check VxLAN connectivity srl-linux
     # CI env var is set to true in Github Actions

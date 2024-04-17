@@ -1,3 +1,5 @@
+{{ .ACLConfig }}
+
 set / system tls server-profile clab-profile
 set / system tls server-profile clab-profile key "{{ .TLSKey }}"
 set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
@@ -9,10 +11,7 @@ set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
 set / system tls server-profile clab-profile authenticate-client false
 {{- end }}
 
-set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
-set / system gnmi-server rate-limit 65000
-set / system gnmi-server trace-options [ request response common ]
-set / system gnmi-server unix-socket admin-state enable
+{{ .GRPCConfig }}
 
 {{- if .EnableGNMIUnixSockServices }}
 system gnmi-server unix-socket services [ gnmi gnoi ] admin-state enable

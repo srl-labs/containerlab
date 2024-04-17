@@ -10,7 +10,6 @@ import (
 
 type GenericLinkNode struct {
 	shortname string
-	links     []Link
 	endpoints []Endpoint
 	nspath    string
 }
@@ -29,7 +28,7 @@ func (g *GenericLinkNode) AddLinkToContainer(_ context.Context, link netlink.Lin
 	return netns.Do(f)
 }
 
-func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
+func (g *GenericLinkNode) ExecFunction(_ context.Context, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	netns, err := ns.GetNS(g.nspath)
 	if err != nil {
@@ -37,10 +36,6 @@ func (g *GenericLinkNode) ExecFunction(f func(ns.NetNS) error) error {
 	}
 	// execute the given function
 	return netns.Do(f)
-}
-
-func (g *GenericLinkNode) AddLink(l Link) {
-	g.links = append(g.links, l)
 }
 
 func (g *GenericLinkNode) AddEndpoint(e Endpoint) {
@@ -62,8 +57,8 @@ func (*GenericLinkNode) GetState() state.NodeState {
 }
 
 func (g *GenericLinkNode) Delete(ctx context.Context) error {
-	for _, l := range g.links {
-		err := l.Remove(ctx)
+	for _, e := range g.endpoints {
+		err := e.GetLink().Remove(ctx)
 		if err != nil {
 			return err
 		}

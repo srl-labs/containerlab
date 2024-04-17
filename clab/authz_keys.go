@@ -25,9 +25,9 @@ const (
 	authzKeysFPath = "~/.ssh/authorized_keys"
 )
 
-// CreateAuthzKeysFile creates the authorized_keys file in the lab directory
+// createAuthzKeysFile creates the authorized_keys file in the lab directory
 // using the public ssh keys retrieved from agent and local files.
-func (c *CLab) CreateAuthzKeysFile() error {
+func (c *CLab) createAuthzKeysFile() error {
 	b := new(bytes.Buffer)
 
 	for _, k := range c.SSHPubKeys {

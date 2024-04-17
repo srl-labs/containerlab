@@ -13,6 +13,7 @@ import (
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
+	fortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
 	host "github.com/srl-labs/containerlab/nodes/host"
 	ipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
 	k8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
@@ -23,7 +24,9 @@ import (
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
+	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	vr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
+	vr_freebsd "github.com/srl-labs/containerlab/nodes/vr_freebsd"
 	vr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
 	vr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
 	vr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
@@ -50,6 +53,7 @@ func (c *CLab) RegisterNodes() {
 	crpd.Register(c.Reg)
 	cvx.Register(c.Reg)
 	ext_container.Register(c.Reg)
+	fortinet_fortigate.Register(c.Reg)
 	host.Register(c.Reg)
 	ipinfusion_ocnos.Register(c.Reg)
 	keysight_ixiacone.Register(c.Reg)
@@ -59,6 +63,8 @@ func (c *CLab) RegisterNodes() {
 	srl.Register(c.Reg)
 	vr_aoscx.Register(c.Reg)
 	vr_csr.Register(c.Reg)
+	vr_c8000v.Register(c.Reg)
+	vr_freebsd.Register(c.Reg)
 	vr_ftosv.Register(c.Reg)
 	vr_n9kv.Register(c.Reg)
 	vr_pan.Register(c.Reg)

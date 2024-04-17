@@ -38,14 +38,17 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vJunosEvolved](https://containerlab.dev/manual/kinds/vr-vjunosevolved/)
 * [Cisco IOS XRv9k](https://containerlab.dev/manual/kinds/vr-xrv9k/)
 * [Cisco Nexus 9000v](https://containerlab.dev/manual/kinds/vr-n9kv)
+* [Cisco c8000v](https://containerlab.dev/manual/kinds/vr-c8000v/)
 * [Cisco CSR 1000v](https://containerlab.dev/manual/kinds/vr-csr)
 * [Dell FTOS10v](https://containerlab.dev/manual/kinds/vr-ftosv)
 * [Arista vEOS](https://containerlab.dev/manual/kinds/vr-veos)
 * [Palo Alto PAN](https://containerlab.dev/manual/kinds/vr-pan)
 * [IPInfusion OcNOS](https://containerlab.dev/manual/kinds/ipinfusion-ocnos)
 * [Check Point Cloudguard](https://containerlab.dev/manual/kinds/checkpoint_cloudguard/)
+* [Fortinet Fortigate](https://containerlab.dev/manual/kinds/fortinet_fortigate/)
 * [Aruba AOS-CX](https://containerlab.dev/manual/kinds/vr-aoscx)
 * [OpenBSD](https://containerlab.dev/manual/kinds/openbsd)
+* [FreeBSD](https://containerlab.dev/manual/kinds/freebsd)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 
@@ -62,7 +65,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **IaaC approach**  
     Declarative way of defining the labs by means of the topology definition [`clab` files](https://containerlab.dev/manual/topo-def-file/).
 * **Network Operating Systems centric**  
-    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.dev/manual/kinds/kinds/) which allows the user to focus on the use cases, rather than infrastructure hurdles.
+    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.dev/manual/kinds/) which allows the user to focus on the use cases, rather than infrastructure hurdles.
 * **VM based nodes friendly**  
     With the [vrnetlab integration](https://containerlab.dev/manual/vrnetlab) it is possible to get the best of two worlds - running virtualized and containerized nodes alike with the same IaaC approach and workflows.
 * **Multi-vendor and open**  

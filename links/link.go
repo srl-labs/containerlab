@@ -20,7 +20,10 @@ const (
 	DefaultLinkMTU = 9500
 
 	LinkDeploymentStateNotDeployed = iota
-	LinkDeploymentStateDeployed
+	// LinkDeploymentStateHalfDeployed is a state in which one of the endpoints
+	// of the links finished deploying and the other one is not yet deployed.
+	LinkDeploymentStateHalfDeployed
+	LinkDeploymentStateFullDeployed
 	LinkDeploymentStateRemoved
 )
 
@@ -295,8 +298,8 @@ type RawLink interface {
 // Link is an interface that all concrete link types must implement.
 // Concrete link types are resolved from raw links and become part of CLab.Links.
 type Link interface {
-	// Deploy deploys the link.
-	Deploy(context.Context) error
+	// Deploy deploys the link. Endpoint is the endpoint that triggers the creation of the link.
+	Deploy(context.Context, Endpoint) error
 	// Remove removes the link.
 	Remove(context.Context) error
 	// GetType returns the type of the link.
@@ -353,13 +356,12 @@ type Node interface {
 	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
 	// the master of the interface and bring the interface up.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddLink(l Link)
 	// AddEndpoint adds the Endpoint to the node
 	AddEndpoint(e Endpoint)
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
 	GetEndpoints() []Endpoint
-	ExecFunction(func(ns.NetNS) error) error
+	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() state.NodeState
 	Delete(ctx context.Context) error
 }
@@ -384,10 +386,8 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 					"failed to rename link: %v", err)
 			}
 		} else {
-			// else we set the desired long name as alias
-			// in future we need to set it as an alternative name,
-			// pending https://github.com/vishvananda/netlink/pull/862
-			err := netlink.LinkSetAlias(l, endpt.GetIfaceName())
+			// when the name is too long, we add an AltName instead of a regular interface name
+			err := netlink.LinkAddAltName(l, endpt.GetIfaceName())
 			if err != nil {
 				return fmt.Errorf(
 					"failed to add alias: %v", err)

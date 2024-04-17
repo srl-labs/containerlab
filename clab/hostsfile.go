@@ -3,6 +3,7 @@ package clab
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -19,9 +20,9 @@ const (
 	clabHostsFilename    = "/etc/hosts"
 )
 
-func AppendHostsFileEntries(containers []runtime.GenericContainer, labname string) error {
+func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 	filename := clabHostsFilename
-	if labname == "" {
+	if c.Config.Name == "" {
 		return fmt.Errorf("missing lab name")
 	}
 	if !utils.FileExists(filename) {
@@ -31,11 +32,17 @@ func AppendHostsFileEntries(containers []runtime.GenericContainer, labname strin
 		}
 	}
 	// lets make sure to remove the entries of a non-properly destroyed lab in the hosts file
-	err := DeleteEntriesFromHostsFile(labname)
+	err := c.DeleteEntriesFromHostsFile()
 	if err != nil {
 		return err
 	}
-	data := generateHostsEntries(containers, labname)
+
+	containers, err := c.ListNodesContainers(ctx)
+	if err != nil {
+		return err
+	}
+
+	data := generateHostsEntries(containers, c.Config.Name)
 	if len(data) == 0 {
 		return nil
 	}
@@ -46,11 +53,13 @@ func AppendHostsFileEntries(containers []runtime.GenericContainer, labname strin
 		return err
 	}
 
-	defer f.Close()
+	defer f.Close() // skipcq: GO-S2307
+
 	_, err = f.Write(data)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -77,23 +86,26 @@ func generateHostsEntries(containers []runtime.GenericContainer, labname string)
 	entries.Write(v6entries.Bytes())
 	fmt.Fprintf(&entries, clabHostEntryPostfix, labname)
 	entries.WriteByte('\n')
+
 	return entries.Bytes()
 }
 
-func DeleteEntriesFromHostsFile(labname string) error {
-	if labname == "" {
+func (c *CLab) DeleteEntriesFromHostsFile() error {
+	if c.Config.Name == "" {
 		return errors.New("missing containerlab name")
 	}
+
 	f, err := os.OpenFile(clabHostsFilename, os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() // skipcq: GO-S2307
+
 	reader := bufio.NewReader(f)
 	skiplines := false
 	output := bytes.Buffer{}
-	prefix := fmt.Sprintf(clabHostEntryPrefix, labname)
-	postfix := fmt.Sprintf(clabHostEntryPostfix, labname)
+	prefix := fmt.Sprintf(clabHostEntryPrefix, c.Config.Name)
+	postfix := fmt.Sprintf(clabHostEntryPostfix, c.Config.Name)
 	for {
 		line, err := reader.ReadString(byte('\n'))
 		if err == io.EOF {
