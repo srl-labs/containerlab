@@ -133,8 +133,6 @@ The available 7220 IXR models support the following types: `ixrd1`, `ixrd2`, `ix
 
 Nokia 7250 IXR chassis identified with types `ixr6e`, `ixr10e`, `ixrx3b` and `ixrx1b` require a valid license to operate.
 
-Nokia 7730 SXR models are identified with types `sxr1x44s`, `sxr1d32d` and require a valid license to operate.
-
 If type is not set in the clab file `ixrd2` value will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
