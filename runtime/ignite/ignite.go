@@ -8,10 +8,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 	api "github.com/weaveworks/ignite/pkg/apis/ignite"
 	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
 	igniteConstants "github.com/weaveworks/ignite/pkg/constants"
@@ -25,6 +21,11 @@ import (
 	"github.com/weaveworks/ignite/pkg/providers/ignite"
 	igniteRuntimes "github.com/weaveworks/ignite/pkg/runtime"
 	"github.com/weaveworks/ignite/pkg/util"
+
+	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -153,6 +154,8 @@ func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ types.Pul
 	return nil
 }
 
+// StartContainer starts a container with the provided node configuration.
+// skipcq: GO-R1005
 func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runtime.Node) (interface{}, error) {
 	vm := c.baseVM.DeepCopy()
 
@@ -224,7 +227,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runti
 	}
 	defer os.Remove(udevFile.Name())
 
-	if _, err := udevFile.Write([]byte(strings.Join(udevRules, "\n") + "\n")); err != nil {
+	if _, err := udevFile.WriteString(strings.Join(udevRules, "\n") + "\n"); err != nil {
 		return nil, err
 	}
 	if err := udevFile.Close(); err != nil {
@@ -264,7 +267,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runti
 		return nil, err
 	}
 
-	nspath, err := c.GetNSPath(ctx, vm.PrefixedID())
+	nspath, err := c.ctrRuntime.GetNSPath(ctx, vm.PrefixedID())
 	if err != nil {
 		return nil, err
 	}
@@ -396,12 +399,12 @@ func (ir *IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]runtime
 	return result, nil
 }
 
-func (c *IgniteRuntime) GetNSPath(ctx context.Context, ctrId string) (string, error) {
-	result, err := c.ctrRuntime.GetNSPath(ctx, ctrId)
+func (c *IgniteRuntime) GetNSPath(ctx context.Context, vmName string) (string, error) {
+	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(vmName))
 	if err != nil {
 		return "", err
 	}
-	return result, nil
+	return c.ctrRuntime.GetNSPath(ctx, vm.PrefixedID())
 }
 
 func (*IgniteRuntime) Exec(_ context.Context, _ string, _ *exec.ExecCmd) (*exec.ExecResult, error) {
@@ -464,7 +467,7 @@ func (*IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) 
 }
 
 // IsHealthy returns true is the container is reported as being healthy, false otherwise.
-func (c *IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
+func (*IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
 	log.Errorf("function GetContainerHealth(...) not implemented in the Containerlab IgniteRuntime")
 	return true, nil
 }
