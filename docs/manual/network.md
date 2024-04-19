@@ -1,4 +1,5 @@
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
+
 One of the most important tasks in the process of building container based labs is to create a virtual wiring between the containers and the host. That is one of the problems that containerlab was designed to solve.
 
 In this document we will discuss the networking concepts that containerlab employs to provide the following connectivity scenarios:
@@ -154,6 +155,20 @@ Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses
     1. If user-defined IP addresses are needed, they must be provided for all containers attached to a given network to avoid address collision.
     2. IPv4/6 addresses set on a node level must be from the management network range.
     3. IPv6 addresses are truncated by Docker[^1], therefore do not use bytes 5 through 8 of the IPv6 network range.
+
+#### auto-assigned addresses
+
+The default network addresses chosen by containerlab - 172.20.20.0/24 and 2001:172:20:20::/64 - may clash with the existing addressing scheme on the lab host. With the [user-defined addresses](#user-defined-addresses) discussed above, users can avoid such conflicts, but this requires manual changes to the lab topology file and may not be convenient.
+
+To address this issue, containerlab provides a way to automatically assign the management network v4/v6 addresses. This is achieved by setting the `ipv4-subnet` and/or `ipv6-subnet` to `auto`:
+
+```yaml
+mgmt:
+  ipv4-subnet: auto
+  ipv6-subnet: auto
+```
+
+With this setting in place, containerlab will rely on the container runtime to assign the management network addresses that is not conflicting with the existing addressing scheme on the lab host.
 
 #### MTU
 
