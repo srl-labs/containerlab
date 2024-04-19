@@ -154,6 +154,8 @@ func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ types.Pul
 	return nil
 }
 
+// StartContainer starts a container with the provided node configuration.
+// skipcq: GO-R1005
 func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runtime.Node) (interface{}, error) {
 	vm := c.baseVM.DeepCopy()
 
@@ -225,7 +227,7 @@ func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runti
 	}
 	defer os.Remove(udevFile.Name())
 
-	if _, err := udevFile.Write([]byte(strings.Join(udevRules, "\n") + "\n")); err != nil {
+	if _, err := udevFile.WriteString(strings.Join(udevRules, "\n") + "\n"); err != nil {
 		return nil, err
 	}
 	if err := udevFile.Close(); err != nil {
@@ -465,7 +467,7 @@ func (*IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) 
 }
 
 // IsHealthy returns true is the container is reported as being healthy, false otherwise.
-func (c *IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
+func (*IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
 	log.Errorf("function GetContainerHealth(...) not implemented in the Containerlab IgniteRuntime")
 	return true, nil
 }
