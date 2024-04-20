@@ -146,7 +146,7 @@ func (e *Execs) GetExecCommands(ct CommandType) ([]*exec.ExecCmd, error) {
 		commands = e.CommandsOnExit
 	}
 
-	ex := []*exec.ExecCmd{}
+	var ex []*exec.ExecCmd
 
 	for _, c := range commands {
 		newCmd, err := exec.NewExecCmdFromString(c)
