@@ -7,10 +7,6 @@ import (
 	"strings"
 )
 
-const (
-	cniBin = "/opt/cni/bin"
-)
-
 // GetCanonicalImageName produces a canonical image name.
 // if the input name did not specify a tag, the implicit "latest" tag is returned.
 func GetCanonicalImageName(imageName string) string {
