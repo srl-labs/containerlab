@@ -183,6 +183,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	return d.postCreateNetActions()
 }
 
+// skipcq: GO-R1005
 func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
 	var err error
 	log.Debugf("Network %q does not exist", d.mgmt.Network)
