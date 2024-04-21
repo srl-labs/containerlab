@@ -2,14 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-)
-
-const (
-	cniBin = "/opt/cni/bin"
 )
 
 // GetCanonicalImageName produces a canonical image name.
@@ -46,15 +41,6 @@ func GetCanonicalImageName(imageName string) string {
 	}
 
 	return canonicalImageName
-}
-
-func GetCNIBinaryPath() string {
-	var cniPath string
-	var ok bool
-	if cniPath, ok = os.LookupEnv("CNI_BIN"); !ok {
-		cniPath = cniBin
-	}
-	return cniPath
 }
 
 // ContainerNSToPID resolves the name of a container via

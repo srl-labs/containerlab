@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"golang.org/x/exp/slices"
 
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -148,7 +146,7 @@ func (e *Execs) GetExecCommands(ct CommandType) ([]*exec.ExecCmd, error) {
 		commands = e.CommandsOnExit
 	}
 
-	ex := []*exec.ExecCmd{}
+	var ex []*exec.ExecCmd
 
 	for _, c := range commands {
 		newCmd, err := exec.NewExecCmdFromString(c)
@@ -316,14 +314,4 @@ func GetWaitForStages() []WaitForStage {
 		WaitForCreate, WaitForCreateLinks,
 		WaitForConfigure, WaitForHealthy, WaitForExit,
 	}
-}
-
-func WaitForStageFromString(s string) (WaitForStage, error) {
-	for _, val := range GetWaitForStages() {
-		if s == string(val) {
-			return val, nil
-		}
-	}
-
-	return "", fmt.Errorf("unknown stage %q", s)
 }
