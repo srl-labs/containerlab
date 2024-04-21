@@ -15,7 +15,7 @@ The following graphing options are available:
 
 The HTML-based graph representation is the default graphing option. The topology will be graphed and served online using the embedded web server.
 
-The default graph template is based on the [NeXt UI](https://developer.cisco.com/site/neXt/) framework[^2].
+The default graph template is based on the NeXt UI framework[^2].
 
 ![animation](https://user-images.githubusercontent.com/11521160/155654224-d46b346d-7051-49f8-ba93-6dee6d22a39f.gif)
 
