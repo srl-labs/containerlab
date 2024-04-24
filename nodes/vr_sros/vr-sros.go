@@ -253,7 +253,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	}
 
 	// check file contains content, otherwise exit early
-	if len(strings.TrimSpace(string(configContent))) == 0 {
+	if strings.TrimSpace(string(configContent)) == "" {
 		return nil
 	}
 
