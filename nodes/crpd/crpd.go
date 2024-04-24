@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -19,7 +20,9 @@ import (
 )
 
 const (
-	licDir = "/config/license/safenet"
+	// licDir is the directory where Junos 22+ expects to find the license file
+	licDir  = "/config/license"
+	licFile = "license.lic"
 )
 
 var (
@@ -86,7 +89,29 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error 
 	}
 
 	if len(execResult.GetStdErrString()) > 0 {
-		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
+		// If "ssh: unrecognized service" appears in the output we are probably
+		// on Junos >=23.4, where the SSH daemon configuration is fully owned by
+		// the management interface
+		if strings.Contains(execResult.GetStdErrString(), "ssh: unrecognized service") {
+			log.Debug(`Caught "ssh: unrecognized service" error, ignoring`)
+		} else {
+			return fmt.Errorf("crpd post-deploy sshd restart failed: %s", execResult.GetStdErrString())
+		}
+	}
+
+	nodeCfg := s.Config()
+
+	if nodeCfg.License != "" {
+		cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)))
+		execResult, err = s.RunExec(ctx, cmd)
+		if err != nil {
+			return err
+		}
+
+		if len(execResult.GetStdErrString()) > 0 {
+			return fmt.Errorf("crpd post-deploy license add failed: %s", execResult.GetStdErrString())
+		}
+		log.Debugf("crpd post-deploy license add result: %s", execResult.GetStdOutString())
 	}
 
 	return err
@@ -152,7 +177,7 @@ func createCRPDFiles(node nodes.Node) error {
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
-		dst = filepath.Join(nodeCfg.LabDir, licDir, "junos_sfnt.lic")
+		dst = filepath.Join(nodeCfg.LabDir, licDir, licFile)
 
 		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir), 0777); err != nil { // skipcq: GSC-G301
 			return err
