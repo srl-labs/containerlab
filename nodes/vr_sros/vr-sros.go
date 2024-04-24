@@ -96,7 +96,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.Cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", s.Cfg.Env["CONNECTION_MODE"],
+	s.Cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant %q", s.Cfg.Env["CONNECTION_MODE"],
 		s.Cfg.ShortName,
 		s.Cfg.NodeType,
 	)
