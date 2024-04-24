@@ -4,9 +4,9 @@ function check_os {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         if [ "$ID" = "debian" ]; then
-            ${DISTRO_TYPE}="debian"
+            DISTRO_TYPE="debian"
         elif [ "$ID" = "ubuntu" ]; then
-            ${DISTRO_TYPE}="ubuntu"
+            DISTRO_TYPE="ubuntu"
         else
             echo "This is not Debian or Ubuntu"
         fi
