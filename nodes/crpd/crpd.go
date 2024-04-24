@@ -64,7 +64,7 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "config"), ":/config"),
 		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "log"), ":/var/log"),
 		// mount sshd_config
-		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "config/sshd_config"), ":/etc/ssh/sshd_config"),
+		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "config", "sshd_config"), ":/etc/ssh/sshd_config"),
 	)
 
 	return nil
@@ -99,9 +99,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error 
 		}
 	}
 
-	nodeCfg := s.Config()
-
-	if nodeCfg.License != "" {
+	if s.Config().License != "" {
 		cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)))
 		execResult, err = s.RunExec(ctx, cmd)
 		if err != nil {
@@ -146,7 +144,7 @@ func createCRPDFiles(node nodes.Node) error {
 	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0777)
 
 	// copy crpd config from default template or user-provided conf file
-	cfg := filepath.Join(nodeCfg.LabDir, "/config/juniper.conf")
+	cfg := filepath.Join(nodeCfg.LabDir, "config", "juniper.conf")
 	var cfgTemplate string
 
 	if nodeCfg.StartupConfig != "" {
@@ -167,7 +165,7 @@ func createCRPDFiles(node nodes.Node) error {
 	}
 
 	// write crpd sshd conf file to crpd node dir
-	dst := filepath.Join(nodeCfg.LabDir, "/config/sshd_config")
+	dst := filepath.Join(nodeCfg.LabDir, "config", "sshd_config")
 	err = utils.CreateFile(dst, sshdCfg)
 	if err != nil {
 		return fmt.Errorf("failed to write sshd_config file %v", err)
