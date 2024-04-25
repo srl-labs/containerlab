@@ -90,8 +90,8 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error 
 
 	if len(execResult.GetStdErrString()) > 0 {
 		// If "ssh: unrecognized service" appears in the output we are probably
-		// on Junos >=23.4, where the SSH daemon configuration is fully owned by
-		// the management interface
+		// on Junos >=23.4, where the SSH service was renamed to junos-ssh and
+		// is fully managed by MGD
 		if strings.Contains(execResult.GetStdErrString(), "ssh: unrecognized service") {
 			log.Debug(`Caught "ssh: unrecognized service" error, ignoring`)
 		} else {
@@ -165,6 +165,9 @@ func createCRPDFiles(node nodes.Node) error {
 	}
 
 	// write crpd sshd conf file to crpd node dir
+	// Note: this only applies to older versions of Junos (before 23). In later
+	// versions the config file is placed in /var/etc/sshd_config and is owned
+	// by MGD.
 	dst := filepath.Join(nodeCfg.LabDir, "config", "sshd_config")
 	err = utils.CreateFile(dst, sshdCfg)
 	if err != nil {
