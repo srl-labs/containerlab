@@ -145,7 +145,7 @@ With the following topology file, containerlab is instructed to take a `mymappin
           image: ceos:4.28.0F
           binds:
             - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
-    links:
+      links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
 
@@ -201,7 +201,7 @@ topology:
     ceos2: 
       kind: ceos
       image: ceos:4.28.0F
-links:
+  links:
     - endpoints: ["ceos1:eth1_1", "ceos2:eth2_1_1"]
 ```
 
