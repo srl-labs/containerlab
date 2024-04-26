@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # this post install script is used to count the number of installations of containerlab
 # when the installation is done via apt or yum package manager
