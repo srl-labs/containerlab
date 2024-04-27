@@ -44,7 +44,7 @@ Juniper vJunosEvolved node launched with containerlab can be managed via the fol
 Juniper vJunosEvolved container can have up to 17 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to a first data port of vJunosEvolved VM
+* `eth1` - first data interface, mapped to a first data port of vJunosEvolved VM, which is `et-0/0/0` **and not `et-0/0/1`**.
 * `eth2+` - second and subsequent data interface
 
 When containerlab launches Juniper vJunosEvolved node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach the management plane of the router.
