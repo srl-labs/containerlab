@@ -135,6 +135,14 @@ Read more about [node filtering](../manual/node-filtering.md) in the documentati
 
 The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the lab deployment. This is a global flag that affects all nodes in the lab.
 
+#### skip-labdir-acl
+
+The `--skip-labdir-acl` flag can be used to skip the lab directory access control list (ACL) provisioning.
+
+The extended File ACLs are provisioned for the lab directory by default, unless this flag is set. Extended File ACLs allow a sudo user to access the files in the lab directory that might be created by the `root` user from within the container node.
+
+While this is useful in most cases, sometimes extended File ACLs might prevent your lab from working, especially when your lab directory end up being mounted from the network filesystem (NFS, CIFS, etc.). In such cases, you can use this flag to skip the ACL provisioning.
+
 ### Environment variables
 
 #### `CLAB_RUNTIME`

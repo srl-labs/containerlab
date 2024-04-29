@@ -34,7 +34,7 @@ Create linux bridge
 
 Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy --skip-labdir-acl -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
