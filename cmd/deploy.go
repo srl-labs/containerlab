@@ -47,8 +47,8 @@ var deployFormat string
 // subset of nodes to work with.
 var nodeFilter []string
 
-// skipACLAdjustment skip the adjustemnt of the lab directory with extended ACLs
-var skipACLAdjustment bool
+// skipLabDirFileACLs skips provisioning of extended File ACLs for the Lab directory.
+var skipLabDirFileACLs bool
 
 // deployCmd represents the deploy command.
 var deployCmd = &cobra.Command{
@@ -77,7 +77,7 @@ func init() {
 		defaultExportTemplateFPath, "template file for topology data export")
 	deployCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
-	deployCmd.Flags().BoolVarP(&skipACLAdjustment, "skip-labdir-acl", "", false, "skip the adjustemnt of the lab directory with extended ACLs")
+	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false, "skip the lab directory extended ACLs provisioning")
 }
 
 // deployFn function runs deploy sub command.
@@ -137,7 +137,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		SetReconfigure(reconfigure).
 		SetGraph(graph).
 		SetSkipPostDeploy(skipPostDeploy).
-		SetSkipACLAdjustment(skipACLAdjustment)
+		SetSkipLabDirFileACLs(skipLabDirFileACLs)
 
 	containers, err := c.Deploy(ctx, deploymentOptions)
 	if err != nil {

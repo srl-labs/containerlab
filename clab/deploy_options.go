@@ -7,12 +7,12 @@ import (
 
 // DeployOptions represents the options for deploying a lab.
 type DeployOptions struct {
-	reconfigure       bool   // reconfigure indicates whether to reconfigure the lab.
-	skipPostDeploy    bool   // skipPostDeploy indicates whether to skip post-deployment steps.
-	graph             bool   // graph indicates whether to generate a graph of the lab.
-	maxWorkers        uint   // maxWorkers is the maximum number of workers for node creation.
-	exportTemplate    string // exportTemplate is the path to the export template.
-	skipACLAdjustment bool   // skip setting the extended ACL entries on the lab directory.
+	reconfigure        bool   // reconfigure indicates whether to reconfigure the lab.
+	skipPostDeploy     bool   // skipPostDeploy indicates whether to skip post-deployment steps.
+	graph              bool   // graph indicates whether to generate a graph of the lab.
+	maxWorkers         uint   // maxWorkers is the maximum number of workers for node creation.
+	exportTemplate     string // exportTemplate is the path to the export template.
+	skipLabDirFileACLs bool   // skip setting the extended File ACL entries on the lab directory.
 }
 
 // NewDeployOptions creates a new DeployOptions instance with the specified maxWorkers value.
@@ -39,9 +39,9 @@ func (d *DeployOptions) SetSkipPostDeploy(b bool) *DeployOptions {
 	return d
 }
 
-// SetSkipACLAdjustment skip setting the extended ACL entries on the lab directory.
-func (d *DeployOptions) SetSkipACLAdjustment(b bool) *DeployOptions {
-	d.skipACLAdjustment = b
+// SetSkipLabDirFileACLs sets the skipLabDirFileACLs deployment option.
+func (d *DeployOptions) SetSkipLabDirFileACLs(b bool) *DeployOptions {
+	d.skipLabDirFileACLs = b
 	return d
 }
 

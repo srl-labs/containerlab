@@ -997,8 +997,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
 	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 
-	// check if the ACL Adjustment is to be skipped.
-	if !options.skipACLAdjustment {
+	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will
 		// also have access to lab directory files
 		err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
