@@ -89,7 +89,7 @@ function install-gh-cli {
 }
 
 function install-containerlab {
-    echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
+    echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
     sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
     sudo apt update && sudo apt install -y containerlab
