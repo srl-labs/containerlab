@@ -52,9 +52,9 @@ containerlab gen -n 3tier --nodes 4,2,1
 #### image
 Use `--image` flag to specify the container image that should be used by a given kind.
 
-The value of this flag follows the `kind=image` pattern. For example, to set the container image `ceos:4.21.F` for the `ceos` kind the flag will be: `--image ceos=ceos:4.21.F`.
+The value of this flag follows the `kind=image` pattern. For example, to set the container image `ceos:4.32.0F` for the `ceos` kind the flag will be: `--image ceos=ceos:4.32.0F`.
 
-To set images for multiple kinds repeat the flag: `--image srl=srlinux:latest --image ceos=ceos:4.21.F` or use the comma separated form: `--image srl=srlinux:latest,ceos=ceos:latest`
+To set images for multiple kinds repeat the flag: `--image srl=srlinux:latest --image ceos=ceos:4.32.0F` or use the comma separated form: `--image srl=srlinux:latest,ceos=ceos:latest`
 
 If the kind information is not provided in the `image` flag, the kind value will be taken from the `--kind` flag.
 
