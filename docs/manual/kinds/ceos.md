@@ -425,7 +425,7 @@ sudo ip6tables -P INPUT ACCEPT
 
 ### Scale
 
-From version 4.28.0F, the ceos-lab image supports up to 50 nodes per host. On previous releases and/or with higher scale there might be issues cores inside the ceos-lab nodes and erros like `Error: Too many open files`.
+From version 4.28.0F, the ceos-lab image supports up to 50 nodes per host. On previous releases and/or with higher scale there might be issues cores inside the ceos-lab nodes and errors like `Error: Too many open files`.
 
 Example solution for 60 ceos-lab nodes:
 
