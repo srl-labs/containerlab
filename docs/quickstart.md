@@ -120,7 +120,7 @@ The node name presented in the summary table is the fully qualified node name, i
 Since the topology nodes are regular containers, you can connect to them just like to any other container.
 
 ```bash
-docker exec -it clab-srlceos01-srl1 bash
+docker exec -it clab-srlceos01-srl bash
 ```
 
 !!!info
