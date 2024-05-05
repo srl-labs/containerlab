@@ -5,7 +5,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB             |
 | **Topology file**             | [srlceos01.clab.yml][topofile]                                                   |
 | **Name**                      | srlceos01                                                                        |
-| **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `ceos:4.25.0F`, `docker-ce:19.03.13` |
+| **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `ceos:4.32.0F`, `docker-ce:19.03.13` |
 
 ## Description
 A lab consists of an SR Linux node connected with Arista cEOS via a point-to-point ethernet link. Both nodes are also connected with their management interfaces to the `containerlab` docker network.

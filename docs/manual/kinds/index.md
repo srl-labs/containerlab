@@ -21,7 +21,7 @@ topology:
       image: ghcr.io/nokia/srlinux
     node2:
       kind: ceos             # node2 is of ceos kind
-      image: ceos:4.25F
+      image: ceos:4.32.0F
 
   links:
     - endpoints: ["node1:e1-1", "node2:eth1"]

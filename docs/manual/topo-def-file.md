@@ -18,7 +18,7 @@ topology:
       image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos
-      image: ceos:4.25.0F
+      image: ceos:4.32.0F
 
   links:
     - endpoints: ["srl:e1-1", "ceos:eth1"]
@@ -105,7 +105,7 @@ topology:
       image: ghcr.io/nokia/srlinux
     ceos:                   # this is a name of the 2nd node
       kind: ceos
-      image: ceos:4.25.0F
+      image: ceos:4.32.0F
 ```
 
 We defined individual nodes under the `topology.nodes` container. The name of the node is the key under which it is defined. Following the example, our two nodes are named `srl` and `ceos` respectively.
