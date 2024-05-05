@@ -796,11 +796,11 @@ func (s *srl) CheckInterfaceName() error {
 func (s *srl) createRepoFiles() error {
 	yumRepo := `[srlinux]
 name=SR Linux NDK apps
-baseurl=https://yum.fury.io/srlinux/
+baseurl=https://srlinux.fury.site/yum/
 enabled=1
 gpgcheck=0`
 
-	aptRepo := `deb [trusted=yes] https://apt.fury.io/srlinux/ /`
+	aptRepo := `deb [trusted=yes] https://srlinux.fury.site/apt/ /`
 
 	yumPath := s.Cfg.LabDir + "/yum.repo"
 	err := utils.CreateFile(yumPath, yumRepo)
