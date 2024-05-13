@@ -71,7 +71,6 @@ var (
 		"ixrd3l":   "7220IXRD3L.yml",
 		"ixrd4":    "7220IXRD4.yml",
 		"ixrd5":    "7220IXRD5.yml",
-		"ixrd5t":   "7220IXRD5T.yml",
 		"ixrh2":    "7220IXRH2.yml",
 		"ixrh3":    "7220IXRH3.yml",
 		"ixrh4":    "7220IXRH4.yml",
