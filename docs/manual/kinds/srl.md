@@ -129,7 +129,7 @@ The breakout interfaces will have the name `eX-Y-Z` where `Z` is the breakout po
 
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
-The available 7220 IXR models support the following types: `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrd4`, `ixrd5`, `ixrd5t`, `ixrh2`, `ixrh3` and `ixrh4`.
+The available 7220 IXR models support the following types: `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrd4`, `ixrd5`, `ixrh2`, `ixrh3` and `ixrh4`.
 
 Nokia 7250 IXR chassis identified with types `ixr6e`, `ixr10e`, `ixrx3b` and `ixrx1b` require a valid license to operate.
 
