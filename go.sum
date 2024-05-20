@@ -1120,8 +1120,8 @@ github.com/containernetworking/plugins v0.9.1/go.mod h1:xP/idU2ldlzN6m4p5LmGiwRD
 github.com/containernetworking/plugins v1.0.1/go.mod h1:QHCfGpaTwYTbbH+nZXKVTxNBDZcxSOplJT5ico8/FLE=
 github.com/containernetworking/plugins v1.4.1 h1:+sJRRv8PKhLkXIl6tH1D7RMi+CbbHutDGU+ErLBORWA=
 github.com/containernetworking/plugins v1.4.1/go.mod h1:n6FFGKcaY4o2o5msgu/UImtoC+fpQXM3076VHfHbj60=
-github.com/containers/buildah v1.35.3 h1:Dn8Krwm2PemBNNOMwp7uiMK2e5cW2ZjTdLRzKM789pc=
-github.com/containers/buildah v1.35.3/go.mod h1:kYi6vTHdbr1gnRo3B/RhTHsY2if/w398+/RvCxAXqkQ=
+github.com/containers/buildah v1.35.4 h1:M/M5RJW07ZIDsngmJDb6bnWxZA2RRFulp0MW7EwPATg=
+github.com/containers/buildah v1.35.4/go.mod h1:gh6xe/VXW7TTIDWCRtAvx0/YaNuEJWYabDKrHKj17So=
 github.com/containers/common v0.58.3 h1:Iy/CdYjluEK926QT+ejonz7YvoRHazeW7BAiLIkmUQ4=
 github.com/containers/common v0.58.3/go.mod h1:p4V1SNk+WOISgp01m+axuqCUxaDP3WSZPPzvnJnS/cQ=
 github.com/containers/image v3.0.2+incompatible h1:B1lqAE8MUPCrsBLE86J0gnXleeRq8zJnQryhiiGQNyE=
@@ -1134,10 +1134,10 @@ github.com/containers/ocicrypt v1.0.1/go.mod h1:MeJDzk1RJHv89LjsH0Sp5KTY3ZYkjXO/
 github.com/containers/ocicrypt v1.1.0/go.mod h1:b8AOe0YR67uU8OqfVNcznfFpAzu3rdgUV4GP9qXPfu4=
 github.com/containers/ocicrypt v1.1.1/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B0oB3dj3jFxY=
 github.com/containers/ocicrypt v1.1.2/go.mod h1:Dm55fwWm1YZAjYRaJ94z2mfZikIyIN4B0oB3dj3jFxY=
-github.com/containers/ocicrypt v1.1.9 h1:2Csfba4jse85Raxk5HIyEk8OwZNjRvfkhEGijOjIdEM=
-github.com/containers/ocicrypt v1.1.9/go.mod h1:dTKx1918d8TDkxXvarscpNVY+lyPakPNFN4jwA9GBys=
-github.com/containers/podman/v5 v5.0.2 h1:xutkGrVfLZupfqo1pERid1tZ3ivFjDXDRbUK9z4ms80=
-github.com/containers/podman/v5 v5.0.2/go.mod h1:g4eTcOHzWWuANV5V6C5ovUxXjSrTxTz9ZWpKdfIYvto=
+github.com/containers/ocicrypt v1.1.10 h1:r7UR6o8+lyhkEywetubUUgcKFjOWOaWz8cEBrCPX0ic=
+github.com/containers/ocicrypt v1.1.10/go.mod h1:YfzSSr06PTHQwSTUKqDSjish9BeW1E4HUmreluQcMd8=
+github.com/containers/podman/v5 v5.0.3 h1:SVJZButvmykHaCLS0+SjEM39J0oanXfWC4fW9LzXnQU=
+github.com/containers/podman/v5 v5.0.3/go.mod h1:goPIZj29q+7Z5Teoe8w0QIz5sk+rKdWfEvH30FPPzBg=
 github.com/containers/psgo v1.9.0 h1:eJ74jzSaCHnWt26OlKZROSyUyRcGDf+gYBdXnxrMW4g=
 github.com/containers/psgo v1.9.0/go.mod h1:0YoluUm43Mz2UnBIh1P+6V6NWcbpTL5uRtXyOcH0B5A=
 github.com/containers/storage v1.53.0 h1:VSES3C/u1pxjTJIXvLrSmyP7OBtDky04oGu07UvdTEA=
