@@ -49,7 +49,7 @@ require (
 	golang.org/x/sys v0.20.0
 	golang.org/x/term v0.20.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/kind v0.22.0
+	sigs.k8s.io/kind v0.23.0
 )
 
 require (
