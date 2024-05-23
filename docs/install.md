@@ -42,7 +42,7 @@ curl -sL https://containerlab.dev/setup | sudo bash -s "install-docker"
 Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) that detects the operating system type and installs the relevant package:
 
 /// note
-Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.
+Containerlab is distributed via deb/rpm packages, thus only Debian- and RHEL-like distributives can leverage package installation.  
 Other systems can follow the [manual installation](#manual-installation) procedure.
 ///
 
@@ -236,7 +236,7 @@ By running this command you will download the `clab_debian12.utm` file which is 
 
 Open the downloaded image with UTM **File -> Open -> select .utm file** and start the VM.
 
-Once the VM is started, you can log in using `debian:debian` credentials. Run `ip -4 addr` in the terminal to find out which IP got assigned to this VM.
+Once the VM is started, you can log in using `debian:debian` credentials. Run `ip -4 addr` in the terminal to find out which IP got assigned to this VM.  
 Now you can use this IP for your Mac terminal to connect to the VM via SSH[^10].
 
 When logged in, you can upgrade the containerlab to the latest version with:
@@ -478,7 +478,7 @@ To build containerlab from source, clone the repository and issue `go build` at 
 ///
 
 /// tab | with goreleaser
-When we release containerlab we use [goreleaser](https://goreleaser.com/) project to build binaries for all supported platforms as well as the deb/rpm packages.
+When we release containerlab we use [goreleaser](https://goreleaser.com/) project to build binaries for all supported platforms as well as the deb/rpm packages.  
 Users can install `goreleaser` and do the same locally by issuing the following command:
 
 ```
