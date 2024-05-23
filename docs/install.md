@@ -98,7 +98,7 @@ sudo apt update && sudo apt install containerlab
 /// tab | YUM
 
 ```
-yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
+yum-config-manager --add-repo=https://netdevops.fury.site/yum/ && \
 echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
 sudo yum install containerlab
