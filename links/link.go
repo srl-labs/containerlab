@@ -293,6 +293,15 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 			Type:         string(LinkTypeMacVLan),
 		}
 		return x, nil
+	case LinkTypeDummy:
+		x := struct {
+			Type         string `yaml:"type"`
+			LinkDummyRaw `yaml:",inline"`
+		}{
+			LinkDummyRaw: *r.Link.(*LinkDummyRaw),
+			Type:         string(LinkTypeDummy),
+		}
+		return x, nil
 	case LinkTypeBrief:
 		return r.Link, nil
 	}
