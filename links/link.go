@@ -56,6 +56,7 @@ const (
 	LinkTypeHost        LinkType = "host"
 	LinkTypeVxlan       LinkType = "vxlan"
 	LinkTypeVxlanStitch LinkType = "vxlan-stitch"
+	LinkTypeDummy       LinkType = "dummy"
 
 	// LinkTypeBrief is a link definition where link types
 	// are encoded in the endpoint definition as string and allow users
@@ -86,6 +87,9 @@ func parseLinkType(s string) (LinkType, error) {
 
 	case string(LinkTypeVxlanStitch):
 		return LinkTypeVxlanStitch, nil
+
+	case string(LinkTypeDummy):
+		return LinkTypeDummy, nil
 
 	default:
 		return "", fmt.Errorf("unable to parse %q as LinkType", s)
@@ -197,8 +201,18 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 		if err != nil {
 			return err
 		}
-		l.LinkVxlanRaw.LinkType = LinkTypeVxlanStitch
 		ld.Link = &l.LinkVxlanRaw
+
+	case LinkTypeDummy:
+		var l struct {
+			Type         string `yaml:"type"`
+			LinkDummyRaw `yaml:",inline"`
+		}
+		err := unmarshal(&l)
+		if err != nil {
+			return err
+		}
+		ld.Link = &l.LinkDummyRaw
 
 	case LinkTypeBrief:
 		// brief link's endpoint format

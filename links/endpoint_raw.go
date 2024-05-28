@@ -65,8 +65,11 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 
 	case LinkEndpointTypeVeth:
 		e = NewEndpointVeth(genericEndpoint)
-	}
 
+	}
+	if l.GetType() == LinkTypeDummy {
+		e = NewEndpointDummy(genericEndpoint)
+	}
 	// also add the endpoint to the node
 	node.AddEndpoint(e)
 
