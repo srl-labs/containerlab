@@ -34,7 +34,7 @@ jobs:
             type=sha
 
       - name: Extract tags
-        id: extract_tags
+        id: extract-tags
         run: |
           TAGS=$(echo '${{ steps.meta.outputs.tags }}' | awk -F: '{print $2}' | paste -sd "," -)
           echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
