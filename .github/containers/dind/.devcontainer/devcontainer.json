@@ -8,6 +8,16 @@
         // }
     },
     "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "installOhMyZsh": true,
+            "configureZshAsDefaultShell": true,
+            // "username": "${localEnv:USERNAME}",
+            // "userUid": "${localEnv:UID}",
+            // "userGid": "${localEnv:GID}",
+            // do not update packages to reduce build time
+            "upgradePackages": "false"
+        },
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "version": "latest",
             "dockerDashComposeVersion": "none"

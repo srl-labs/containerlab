@@ -10,5 +10,5 @@ RUN apt update && apt install -y --no-install-recommends \
     containerlab
 
 # Switch to user
-USER user
-ENV PATH=$PATH:/home/${USERNAME}/.local/bin
+# USER user
+# ENV PATH=$PATH:/home/${USERNAME}/.local/bin
