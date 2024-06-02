@@ -7,7 +7,6 @@ env:
 
 jobs:
   dind-devcontainer:
-    name: lint
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -37,8 +36,8 @@ jobs:
       - name: Extract tags
         id: extract_tags
         run: |
-          echo "tags=${{ steps.meta.outputs.tags }}" | sed -e 's/[^:]*://g' > tags.txt
-          echo "::set-output name=tags::$(cat tags.txt)"
+          TAGS=$(echo '${{ steps.meta.outputs.tags }}' | awk -F: '{print $2}' | paste -sd "," -)
+          echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Pre-build dev container image 🔨
