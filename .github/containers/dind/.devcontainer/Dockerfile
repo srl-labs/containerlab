@@ -3,7 +3,11 @@ FROM public.ecr.aws/docker/library/debian:12-slim
 RUN echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
     tee -a /etc/apt/sources.list.d/netdevops.list
 
-RUN apt update && apt install -y containerlab
+RUN apt update && apt install -y --no-install-recommends \
+    ca-certificates
+
+RUN apt update && apt install -y --no-install-recommends \
+    containerlab
 
 # Switch to user
 USER user
