@@ -1,0 +1,37 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python.
+{
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "context": "."
+        // "args": {
+        //     "FROM_IMAGE": "${localEnv:FROM_IMAGE}",
+        //     "FROM_VARIANT": "${localEnv:FROM_VARIANT}",
+        //     "ANSIBLE_INSTALL_LOCATION": "${localEnv:ANSIBLE_INSTALL_LOCATION}",
+        //     "ANSIBLE_CORE_VERSION": "${localEnv:ANSIBLE_CORE_VERSION}",
+        //     "USERNAME": "${localEnv:USERNAME}"
+        // }
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "latest",
+            "dockerDashComposeVersion": "none"
+        },
+        // Add sshd to support gh cli codespace cp.
+        "ghcr.io/devcontainers/features/sshd:1": {
+            "version": "latest"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // Python.
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                // Errors and highlighters.
+                "mechatroner.rainbow-csv",
+                "oderwat.indent-rainbow"
+            ]
+        }
+    }
+}
