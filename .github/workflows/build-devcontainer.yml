@@ -34,6 +34,13 @@ jobs:
             # git short commit
             type=sha
 
+      - name: Extract tags
+        id: extract_tags
+        run: |
+          echo "tags=${{ steps.meta.outputs.tags }}" | sed -e 's/[^:]*://g' > tags.txt
+          echo "::set-output name=tags::$(cat tags.txt)"
+        shell: bash
+
       - name: Pre-build dev container image 🔨
         uses: devcontainers/ci@v0.3
         # env:
@@ -43,5 +50,5 @@ jobs:
         with:
           subFolder: .github/containers/dind
           imageName: ghcr.io/${{ github.repository }}/clab-dind
-          imageTag: ${{ steps.meta.outputs.tags }}
+          imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
