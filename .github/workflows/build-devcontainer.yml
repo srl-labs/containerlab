@@ -1,0 +1,47 @@
+name: dind-devcontainer
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  dind-devcontainer:
+    name: lint
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            # git short commit
+            type=sha
+
+      - name: Pre-build dev container image 🔨
+        uses: devcontainers/ci@v0.3
+        # env:
+        #   USERNAME: ${{ inputs.username }}
+        #   UID: ${{ inputs.user_id }}
+        #   GID: ${{ inputs.group_id }}
+        with:
+          subFolder: .github/containers/dind
+          imageName: ghcr.io/${{ github.repository }}/clab-dind
+          imageTag: ${{ steps.meta.outputs.tags }}
+          push: always

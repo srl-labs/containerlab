@@ -1,0 +1,32 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "context": "."
+        // "args": {
+        //     "USERNAME": "${localEnv:USERNAME}"
+        // }
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "latest",
+            "dockerDashComposeVersion": "none"
+        },
+        // Add sshd to support gh cli codespace cp.
+        "ghcr.io/devcontainers/features/sshd:1": {
+            "version": "latest"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // Python.
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                // Errors and highlighters.
+                "mechatroner.rainbow-csv",
+                "oderwat.indent-rainbow"
+            ]
+        }
+    }
+}
