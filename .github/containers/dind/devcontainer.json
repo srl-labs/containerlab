@@ -1,14 +1,9 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/python.
+// For format details, see https://aka.ms/devcontainer.json.
 {
     "build": {
         "dockerfile": "./Dockerfile",
         "context": "."
         // "args": {
-        //     "FROM_IMAGE": "${localEnv:FROM_IMAGE}",
-        //     "FROM_VARIANT": "${localEnv:FROM_VARIANT}",
-        //     "ANSIBLE_INSTALL_LOCATION": "${localEnv:ANSIBLE_INSTALL_LOCATION}",
-        //     "ANSIBLE_CORE_VERSION": "${localEnv:ANSIBLE_CORE_VERSION}",
         //     "USERNAME": "${localEnv:USERNAME}"
         // }
     },

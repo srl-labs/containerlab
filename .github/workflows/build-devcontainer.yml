@@ -6,7 +6,7 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  devcontainer:
+  dind-devcontainer:
     name: lint
     runs-on: ubuntu-22.04
     steps:
@@ -43,6 +43,5 @@ jobs:
         with:
           subFolder: .github/containers/dind
           imageName: ghcr.io/${{ github.repository }}/clab-dind
-          imageTag: ${{ steps.meta.outputs.image_tags }}
-          platform: ${{ inputs.platform }}
+          imageTag: ${{ steps.meta.outputs.tags }}
           push: always
