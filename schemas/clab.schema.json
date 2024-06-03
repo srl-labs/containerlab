@@ -56,6 +56,8 @@
                         "vr-vjunosswitch",
                         "vr-juniper_vjunosswitch",
                         "juniper_vjunosswitch",
+                        "vr-vjunosevolved",
+                        "vr-juniper_vjunosevolved",
                         "juniper_vjunosevolved",
                         "vr-xrv",
                         "vr-cisco_xrv",
