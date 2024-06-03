@@ -201,6 +201,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 		if err != nil {
 			return err
 		}
+		l.LinkVxlanRaw.LinkType = LinkTypeVxlanStitch
 		ld.Link = &l.LinkVxlanRaw
 
 	case LinkTypeDummy:
