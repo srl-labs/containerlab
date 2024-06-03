@@ -98,7 +98,7 @@ Ensure CLAB_INTFS env var is set
     # the result is printed today.
     Should Contain    ${output.stderr}    stdout:\\n3
 
-Inspect ${lab-name} lab
+Inspect ${lab-name} lab using its name
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
     Log    ${output}
@@ -271,7 +271,10 @@ Verify iptables allow rule is set
     ${ipt} =    Run
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
-    Should Contain    ${ipt}    ACCEPT all -- * ${MgmtBr}
+    # debian 12 uses `0` for protocol, while previous versions use `all`
+    Should Contain Any    ${ipt}
+    ...    ACCEPT all -- * ${MgmtBr}
+    ...    ACCEPT 0 -- * ${MgmtBr}
     ...    ignore_case=True
     ...    collapse_spaces=True
 

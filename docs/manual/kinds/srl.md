@@ -44,7 +44,7 @@ using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an exampl
 
 ```bash
 gnmic -a <container-name/node-mgmt-address> --skip-verify \
--u admin -p admin \
+-u admin -p "NokiaSrl1!" \
 -e json_ietf \
 get --path /system/name/host-name
 ```
@@ -337,6 +337,8 @@ Starting with SR Linux 24.3.1, the gRPC server config block is used to configure
 * trace options
 
 These additions are meant to make all gRPC services available to the user out of the box with the enabled tracing and a custom TLS profile.
+
+Besides augmenting the factory-provided `mgmt` gRPC server block, containerlab also adds a new `insecure-mgmt` gRPC server that provides the same services as the `mgmt` server but without TLS. This server runs on port 57401 and is meant to be used for testing purposes as well as for local gNMI clients running as part of the NDK apps or local Event Handler scripts.
 
 ### License
 

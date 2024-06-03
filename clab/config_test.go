@@ -10,9 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 
-	"github.com/containers/podman/v4/pkg/util"
 	"github.com/google/go-cmp/cmp"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
@@ -28,7 +28,7 @@ func setupTestCase(t *testing.T) func(t *testing.T) {
 	// setup function
 	// create node' labdir with a file that is used in topo2 definition for binds resolver to check path existence
 	f, _ := filepath.Abs("clab-topo2/node1/somefile")
-	os.MkdirAll("clab-topo2/node1", 0777)
+	os.MkdirAll("clab-topo2/node1", 0777) // skipcq: GSC-G301
 
 	if _, err := os.Create(f); err != nil {
 		t.Error(err)
@@ -138,7 +138,7 @@ func TestBindsInit(t *testing.T) {
 			}
 
 			for _, b := range tc.want {
-				if !util.StringInSlice(b, binds) {
+				if !slices.Contains(binds, b) {
 					t.Errorf("bind %q is not found in resulting binds %q", b, binds)
 				}
 			}

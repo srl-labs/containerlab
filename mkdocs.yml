@@ -62,6 +62,9 @@ nav:
       - Certificate management: manual/cert.md
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
+      - Developers guide:
+          - manual/dev/index.md
+          - Testing: manual/dev/test.md
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md

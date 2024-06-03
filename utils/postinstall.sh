@@ -26,9 +26,9 @@ rel_version=v${version}
 REPO_URL="https://github.com/srl-labs/containerlab/releases/download/${rel_version}/checksums.txt"
 
 if type "curl" &>/dev/null; then
-    curl -sL -o /dev/null $REPO_URL || true
+    curl --max-time 2 -sL -o /dev/null $REPO_URL || true
     exit 0
 elif type "wget" &>/dev/null; then
-    wget -q -O /dev/null $REPO_URL || true
+    wget -T 2 -q -O /dev/null $REPO_URL || true
     exit 0
 fi

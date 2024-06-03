@@ -37,7 +37,7 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 		return err
 	}
 
-	containers, err := c.listNodesContainers(ctx)
+	containers, err := c.ListNodesContainers(ctx)
 	if err != nil {
 		return err
 	}
@@ -53,11 +53,13 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 		return err
 	}
 
-	defer f.Close()
+	defer f.Close() // skipcq: GO-S2307
+
 	_, err = f.Write(data)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -84,6 +86,7 @@ func generateHostsEntries(containers []runtime.GenericContainer, labname string)
 	entries.Write(v6entries.Bytes())
 	fmt.Fprintf(&entries, clabHostEntryPostfix, labname)
 	entries.WriteByte('\n')
+
 	return entries.Bytes()
 }
 
@@ -91,11 +94,13 @@ func (c *CLab) DeleteEntriesFromHostsFile() error {
 	if c.Config.Name == "" {
 		return errors.New("missing containerlab name")
 	}
+
 	f, err := os.OpenFile(clabHostsFilename, os.O_RDWR, 0644) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() // skipcq: GO-S2307
+
 	reader := bufio.NewReader(f)
 	skiplines := false
 	output := bytes.Buffer{}

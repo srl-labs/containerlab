@@ -73,25 +73,21 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	if name != "" {
-		opts = append(opts, clab.WithLabName(name))
-	}
-
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
 	var containers []runtime.GenericContainer
+	var glabels []*types.GenericFilter
 
 	// if the topo file is available, use it
 	if topo != "" {
-		containers, err = c.ListContainers(ctx, nil)
+		containers, err = c.ListNodesContainers(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %s", err)
 		}
 	} else {
-		var glabels []*types.GenericFilter
 		// or when just the name is given
 		if name != "" {
 			// if name is set, filter for name
@@ -106,6 +102,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 				Field:      labels.Containerlab, Operator: "exists",
 			}}
 		}
+
 		containers, err = c.ListContainers(ctx, glabels)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %s", err)
