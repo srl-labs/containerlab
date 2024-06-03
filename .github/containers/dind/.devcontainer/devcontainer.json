@@ -1,23 +1,9 @@
 // For format details, see https://aka.ms/devcontainer.json.
 {
-    "build": {
-        "dockerfile": "./Dockerfile",
-        "context": "."
-        // "args": {
-        //     "USERNAME": "${localEnv:USERNAME}"
-        // }
-    },
+    // Use Microsoft image to avoid installing features that are already included
+    // Avoid Dockerfile unless complex setup is required
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
     "features": {
-        "ghcr.io/devcontainers/features/common-utils:2": {
-            "installZsh": true,
-            "installOhMyZsh": true,
-            "configureZshAsDefaultShell": true,
-            // "username": "${localEnv:USERNAME}",
-            // "userUid": "${localEnv:UID}",
-            // "userGid": "${localEnv:GID}",
-            // do not update packages to reduce build time
-            "upgradePackages": "false"
-        },
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "version": "latest",
             "dockerDashComposeVersion": "none"
@@ -27,6 +13,8 @@
             "version": "latest"
         }
     },
+    "remoteUser": "vscode",
+    "onCreateCommand": "bash -c \"$(curl -sL https://get.containerlab.dev)\" -- -v ${localEnv:CLAB_VERSION}",
     "customizations": {
         "vscode": {
             "extensions": [

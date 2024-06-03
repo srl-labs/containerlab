@@ -42,10 +42,9 @@ jobs:
 
       - name: Pre-build dev container image 🔨
         uses: devcontainers/ci@v0.3
-        # env:
-        #   USERNAME: ${{ inputs.username }}
-        #   UID: ${{ inputs.user_id }}
-        #   GID: ${{ inputs.group_id }}
+        env:
+          # this can be dynamically updated int the workflow if required
+          CLAB_VERSION: "0.54.2"
         with:
           subFolder: .github/containers/dind
           imageName: ghcr.io/${{ github.repository }}/clab-dind
