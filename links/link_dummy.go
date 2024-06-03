@@ -7,7 +7,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// LinkVEthRaw is the raw (string) representation of a veth link as defined in the topology file.
+// LinkDummyRaw is the raw (string) representation of a dummy link as defined in the topology file.
 type LinkDummyRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
@@ -18,8 +18,8 @@ func (*LinkDummyRaw) GetType() LinkType {
 }
 
 // Resolve resolves the raw veth link definition into a Link interface that is implemented
-// by a concrete LinkVEth struct.
-// Resolving a veth link resolves its endpoints.
+// by a concrete LinkDummyRaw struct.
+// Resolving a dummy links endpoints.
 func (r *LinkDummyRaw) Resolve(params *ResolveParams) (Link, error) {
 	// filtered true means the link is in the filter provided by a user
 	// aka it should be resolved/created/deployed
@@ -28,7 +28,7 @@ func (r *LinkDummyRaw) Resolve(params *ResolveParams) (Link, error) {
 		return nil, nil
 	}
 
-	// create LinkVEth struct
+	// create LinkDummyRaw struct
 	l := NewLinkDummy()
 	l.LinkCommonParams = r.LinkCommonParams
 
@@ -61,13 +61,12 @@ func (*LinkDummy) GetType() LinkType {
 	return LinkTypeDummy
 }
 
-// Deploy deploys the veth link by creating the A and B sides of the veth pair independently
-// based on the calling endpoint.
+// Deploy deploys the dummy link
 func (l *LinkDummy) Deploy(ctx context.Context, ep Endpoint) error {
 
 	log.Debugf("Creating Endpoint: %s ( --> dummy )", ep)
 
-	// build the netlink.Veth struct for the link provisioning
+	// build the netlink.Dummy struct for the link provisioning
 	link := &netlink.Dummy{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: ep.GetRandIfaceName(),
