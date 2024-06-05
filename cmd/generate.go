@@ -39,7 +39,7 @@ var interfaceFormat = map[string]string{
 
 var supportedKinds = []string{
 	"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-vsrx",
-	"vr-vqfx", "vr-vjunosevolved", "vr-vjunosrouter", "vr-vjunosswitch", "vr-xrv9k", "vr-veos",
+	"vr-vqfx", "juniper_vjunosevolved", "juniper_vjunosrouter", "juniper_vjunosswitch", "vr-xrv9k", "vr-veos",
 	"xrd", "rare", "openbsd", "cisco_ftdv", "freebsd",
 }
 
