@@ -15,7 +15,7 @@ The qcow2 image can be freely downloaded from the [Juniper support portal](https
 ## Managing Juniper vJunos-switch nodes
 
 !!!note
-    Containers with vJunos-switch inside will take ~15min to fully boot.
+    Containers with vJunos-switch inside will take ~15min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>`.
 
 Juniper vJunos-switch node launched with containerlab can be managed via the following interfaces:

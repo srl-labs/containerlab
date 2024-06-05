@@ -15,7 +15,7 @@ The qcow2 image can be freely downloaded from the [Juniper support portal](https
 ## Managing Juniper vJunos-router nodes
 
 !!!note
-    Containers with vJunos-router inside can take up to ~5-10min to fully boot.
+    Containers with vJunos-router inside can take up to ~5-10min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>`.
 
 Juniper vJunos-router node launched with containerlab can be managed via the following interfaces:

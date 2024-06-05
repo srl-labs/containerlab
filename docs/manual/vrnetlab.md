@@ -53,8 +53,8 @@ The following table provides a link between the version combinations:
 | `0.54.0`         | [`0.16.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.16.0) | Added support for Cisco c8000v                                                                                                                                       |
 
 ???note "how to understand version inter-dependency between containerlab and vrnetlab?"
-    When new VM-based platform support is added to vrnetlab, it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.
-    When vrnetlab adds new features that don't require containerlab changes, the table will have only vrnetlab version.
+    When new VM-based platform support is added to vrnetlab, it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.  
+    When vrnetlab adds new features that don't require containerlab changes, the table will have only vrnetlab version.  
     When containerlab adds new features that don't require vrnetlab changes, the table will not list containerlab version.
 
     It is worth noting, that you can use the latest containerlab version with a given vrnetlab version, even if the table doesn't list the latest containerlab version.
@@ -67,7 +67,7 @@ To build a vrnetlab image compatible with containerlab, users first need to ensu
 
    ```bash
    git clone https://github.com/hellt/vrnetlab && cd vrnetlab
-
+   
    # assuming we are running containerlab 0.11.0,
    # the latest compatible vrnetlab version is 0.2.3
    # at the moment of this writing
@@ -118,7 +118,7 @@ Containerlab offers several ways of connecting VM-based routers with the rest of
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
 
 ??? "Any other datapaths?"
-    Although `tc` based datapath should cover all the needed connectivity requirements, if other bridge-like datapaths are needed, Containerlab offers OpenvSwitch and Linux bridge modes.
+    Although `tc` based datapath should cover all the needed connectivity requirements, if other bridge-like datapaths are needed, Containerlab offers OpenvSwitch and Linux bridge modes.  
     Users can plug in those datapaths by specifying `CONNECTION_MODE` env variable:
     ```yaml
     # the env variable can also be set in the defaults section

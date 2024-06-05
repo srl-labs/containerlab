@@ -15,7 +15,7 @@ The qcow2 image can be freely downloaded from the [Juniper support portal](https
 ## Managing Juniper vJunosEvolved nodes
 
 !!!note
-    Containers with vJunosEvolved inside will take ~15min to fully boot.
+    Containers with vJunosEvolved inside will take ~15min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>`.
 
 Juniper vJunosEvolved node launched with containerlab can be managed via the following interfaces:
