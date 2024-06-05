@@ -4,13 +4,13 @@ search:
 ---
 # Juniper vJunos-router
 
-[Juniper vJunos-router](https://support.juniper.net/support/downloads/?p=vjunos) is a virtualized MX router, a single-VM version of the vMX that can be freely downloaded, requires no feature licenses and is meant for lab/testing use. It is identified with `juniper_vjunosrouter` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vJunos-router](https://www.juniper.net/documentation/product/us/en/vjunos-router/) is a virtualized MX router, a single-VM version of the vMX that requires no feature licenses and is meant for lab/testing use. It is identified with `juniper_vjunosrouter` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Juniper vJunos-router nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## How to obtain the image
 
-The qcow2 image can be downloaded from [Juniper website](https://support.juniper.net/support/downloads/?p=vjunos-router) and built with [vrnetlab](../vrnetlab.md).
+The qcow2 image can be freely downloaded from the [Juniper support portal](https://support.juniper.net/support/downloads/?p=vjunos-router) without a Juniper account and built with [vrnetlab](../vrnetlab.md).
 
 ## Managing Juniper vJunos-router nodes
 

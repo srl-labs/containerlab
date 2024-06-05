@@ -907,10 +907,28 @@
                         "vr-vsrx": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "vr-vjunosrouter": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-juniper_vjunosrouter": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "juniper_vjunosrouter": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "vr-vjunosswitch": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-juniper_vjunosswitch": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "juniper_vjunosswitch": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-vjunosevolved": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vr-juniper_vjunosevolved": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vjunosevolved": {
