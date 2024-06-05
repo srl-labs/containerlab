@@ -50,14 +50,8 @@
                         "vr-vsrx",
                         "vr-juniper_vsrx",
                         "juniper_vsrx",
-                        "vr-vjunosrouter",
-                        "vr-juniper_vjunosrouter",
                         "juniper_vjunosrouter",
-                        "vr-vjunosswitch",
-                        "vr-juniper_vjunosswitch",
                         "juniper_vjunosswitch",
-                        "vr-vjunosevolved",
-                        "vr-juniper_vjunosevolved",
                         "juniper_vjunosevolved",
                         "vr-xrv",
                         "vr-cisco_xrv",
@@ -907,28 +901,10 @@
                         "vr-vsrx": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-vjunosrouter": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-juniper_vjunosrouter": {
-                            "$ref": "#/definitions/node-config"
-                        },
                         "juniper_vjunosrouter": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-vjunosswitch": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-juniper_vjunosswitch": {
-                            "$ref": "#/definitions/node-config"
-                        },
                         "juniper_vjunosswitch": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-vjunosevolved": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-juniper_vjunosevolved": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vjunosevolved": {
