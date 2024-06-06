@@ -17,6 +17,7 @@ nav:
           - Juniper vMX: manual/kinds/vr-vmx.md
           - Juniper vQFX: manual/kinds/vr-vqfx.md
           - Juniper vSRX: manual/kinds/vr-vsrx.md
+          - Juniper vJunos-router: manual/kinds/vr-vjunosrouter.md
           - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
           - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
           - Cisco XRd: manual/kinds/xrd.md

@@ -50,8 +50,7 @@
                         "vr-vsrx",
                         "vr-juniper_vsrx",
                         "juniper_vsrx",
-                        "vr-vjunosswitch",
-                        "vr-juniper_vjunosswitch",
+                        "juniper_vjunosrouter",
                         "juniper_vjunosswitch",
                         "juniper_vjunosevolved",
                         "vr-xrv",
@@ -900,6 +899,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-vsrx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "juniper_vjunosrouter": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vjunosswitch": {

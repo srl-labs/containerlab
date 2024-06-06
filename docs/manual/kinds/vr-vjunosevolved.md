@@ -4,13 +4,13 @@ search:
 ---
 # Juniper vJunosEvolved
 
-[Juniper vJunosEvolved](https://support.juniper.net/support/downloads/?p=vjunos-evolved) is a virtualized PTX10001 router identified with `juniper_vjunosevolved` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vJunosEvolved](https://www.juniper.net/documentation/product/us/en/vjunosevolved/) is a virtualized PTX10001 router identified with `juniper_vjunosevolved` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Juniper vJunosEvolved nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## How to obtain the image
 
-The qcow2 image can be downloaded from [Juniper website](https://support.juniper.net/support/downloads/?p=vjunos-evolved) and built with [vrnetlab](../vrnetlab.md).
+The qcow2 image can be freely downloaded from the [Juniper support portal](https://support.juniper.net/support/downloads/?p=vjunos-evolved) without a Juniper account and built with [vrnetlab](../vrnetlab.md).
 
 ## Managing Juniper vJunosEvolved nodes
 

@@ -4,13 +4,13 @@ search:
 ---
 # Juniper vJunos-switch
 
-[Juniper vJunos-switch](https://support.juniper.net/support/downloads/?p=vjunos) is a virtualized EX9214 switch identified with `juniper_vjunosswitch` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vJunos-switch](https://www.juniper.net/documentation/product/us/en/vjunos-switch/) is a virtualized EX9214 switch identified with `juniper_vjunosswitch` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Juniper vJunos-switch nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## How to obtain the image
 
-The qcow2 image can be downloaded from [Juniper website](https://support.juniper.net/support/downloads/?p=vjunos) and built with [vrnetlab](../vrnetlab.md).
+The qcow2 image can be freely downloaded from the [Juniper support portal](https://support.juniper.net/support/downloads/?p=vjunos-switch) without a Juniper account and built with [vrnetlab](../vrnetlab.md).
 
 ## Managing Juniper vJunos-switch nodes
 
