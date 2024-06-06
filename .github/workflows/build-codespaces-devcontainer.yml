@@ -49,7 +49,7 @@ jobs:
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
-          subFolder: .github/containers/dind
+          subFolder: .github/containers/codespaces
           imageName: ghcr.io/${{ github.repository }}/clab-codespaces
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
