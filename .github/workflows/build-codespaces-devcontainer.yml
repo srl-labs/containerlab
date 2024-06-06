@@ -1,12 +1,16 @@
-name: dind-devcontainer
+name: codespaces-devcontainer
 on:
   workflow_dispatch:
+    inputs:
+      CLAB_VERSION:
+        description: "Containerlab version"
+        required: false
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  dind-devcontainer:
+  codespaces-devcontainer:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -42,12 +46,10 @@ jobs:
 
       - name: Pre-build dev container image 🔨
         uses: devcontainers/ci@v0.3
-        # env:
-        #   USERNAME: ${{ inputs.username }}
-        #   UID: ${{ inputs.user_id }}
-        #   GID: ${{ inputs.group_id }}
+        env:
+          CLAB_VERSION: ${{ inputs.clab_version }}
         with:
           subFolder: .github/containers/dind
-          imageName: ghcr.io/${{ github.repository }}/clab-dind
+          imageName: ghcr.io/${{ github.repository }}/clab-codespaces
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
