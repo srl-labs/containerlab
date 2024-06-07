@@ -61,9 +61,8 @@ func (*LinkDummy) GetType() LinkType {
 	return LinkTypeDummy
 }
 
-// Deploy deploys the dummy link
+// Deploy deploys the dummy link.
 func (l *LinkDummy) Deploy(ctx context.Context, ep Endpoint) error {
-
 	log.Debugf("Creating Endpoint: %s ( --> dummy )", ep)
 
 	// build the netlink.Dummy struct for the link provisioning

@@ -281,8 +281,9 @@ In addition to these interfaces, tc rules are being provisioned to stitch the vx
 
 ###### dummy
 
-The dummy type creates an interface thats basically wired to /dev/null.
-It can be set up or down, it does not require, neither have a peer interface to be operational up. 
+The dummy type creates a dummy interface that provides a virtual network device to route packets through without actually transmitting them.
+
+Such interfaces are useful for testing and debugging purposes where we want to make sure that the NOS detects network ports, but doesn't actually need to send or receive packets via these ports.
 
 ```yaml
   links:
