@@ -1,12 +1,6 @@
 // For format details, see https://aka.ms/devcontainer.json.
 {
-    "build": {
-        "dockerfile": "./Dockerfile",
-        "context": "."
-        // "args": {
-        //     "USERNAME": "${localEnv:USERNAME}"
-        // }
-    },
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "version": "latest",
@@ -17,6 +11,7 @@
             "version": "latest"
         }
     },
+    "remoteUser": "vscode",
     "customizations": {
         "vscode": {
             "extensions": [
