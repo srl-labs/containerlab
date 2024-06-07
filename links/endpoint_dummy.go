@@ -21,6 +21,6 @@ func (e *EndpointDummy) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
-func (e *EndpointDummy) IsNodeless() bool {
+func (*EndpointDummy) IsNodeless() bool {
 	return false
 }
