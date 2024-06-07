@@ -9,6 +9,11 @@ on:
       TAG:
         description: "Additional container image tag"
         required: false
+  # trigger on published release event
+  # to created the devspace container when the packages are published
+  release:
+    types:
+      - published
 
 env:
   REGISTRY: ghcr.io
@@ -36,6 +41,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}
           tags: |
+            type=semver,pattern={{version}}
             type=ref,event=branch
             type=ref,event=pr
             # git short commit

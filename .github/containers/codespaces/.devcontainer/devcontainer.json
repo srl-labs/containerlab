@@ -29,7 +29,14 @@
                 "ms-python.vscode-pylance",
                 // Errors and highlighters.
                 "mechatroner.rainbow-csv",
-                "oderwat.indent-rainbow"
+                "oderwat.indent-rainbow",
+                "redhat.vscode-yaml",
+                "jinliming2.vscode-go-template",
+                // markdown
+                "yzhang.markdown-all-in-one",
+                "davidanson.vscode-markdownlint",
+                // proto
+                "zxh404.vscode-proto3"
             ]
         }
     }
