@@ -1,6 +1,12 @@
 // For format details, see https://aka.ms/devcontainer.json.
 {
-    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "context": "."
+        // "args": {
+        //     "USERNAME": "${localEnv:USERNAME}"
+        // }
+    },
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "version": "latest",
