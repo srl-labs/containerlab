@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/debian:12-slim
+FROM mcr.microsoft.com/devcontainers/base:bookworm
 
 ARG CLAB_VERSION
 
