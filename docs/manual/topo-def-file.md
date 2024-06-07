@@ -279,6 +279,24 @@ In addition to these interfaces, tc rules are being provisioned to stitch the vx
       labels: <link-labels>                  # optional (used in templating)
 ```
 
+###### dummy
+
+The dummy type creates a dummy interface that provides a virtual network device to route packets through without actually transmitting them.
+
+Such interfaces are useful for testing and debugging purposes where we want to make sure that the NOS detects network ports, but doesn't actually need to send or receive packets via these ports.
+
+```yaml
+  links:
+  - type: dummy
+    endpoint:
+      node: <NodeA-Name>                    # mandatory
+      interface: <NodeA-Interface-Name>     # mandatory
+      mac: <NodeA-Interface-Mac>            # optional
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
+```
+
 #### Kinds
 
 Kinds define the behavior and the nature of a node, it says if the node is a specific containerized Network OS, virtualized router or something else. We go into details of kinds in its own [document section](kinds/index.md), so here we will discuss what happens when `kinds` section appears in the topology definition:

@@ -30,6 +30,7 @@ topology:
         retries: 1
         interval: 5
         timeout: 2
+
     l2:
       kind: linux
       image: nginx:stable-alpine
@@ -77,3 +78,7 @@ topology:
         node: l2
         interface: eth5
         mac: 02:00:00:00:00:05
+    - type: dummy
+      endpoint:
+        node: l2
+        interface: somedummy
