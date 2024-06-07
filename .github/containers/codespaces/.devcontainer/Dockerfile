@@ -18,7 +18,7 @@ RUN if [ -z "$CLAB_VERSION" ]; then \
 RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && bash -c "$(curl -sL https://get-gnoic.kmrd.dev)"
 
 # vscode user is created in the MS devcontainer image
-# USER vscode
+USER vscode
 
 # setup zsh/oh-my-zsh
 COPY ./zsh/.zshrc /home/vscode/.zshrc
