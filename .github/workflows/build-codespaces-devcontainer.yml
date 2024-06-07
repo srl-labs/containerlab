@@ -6,6 +6,10 @@ on:
         description: "Containerlab version"
         required: false
 
+      TAG:
+        description: "Additional container image tag"
+        required: false
+
 env:
   REGISTRY: ghcr.io
 
@@ -36,6 +40,8 @@ jobs:
             type=ref,event=pr
             # git short commit
             type=sha
+            # manually set tag
+            type=raw,value=${{ inputs.tag }}
 
       - name: Extract tags
         id: extract-tags
