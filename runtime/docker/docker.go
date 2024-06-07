@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
@@ -566,7 +567,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 	}
 
 	log.Infof("Pulling %s Docker image", canonicalImageName)
-	reader, err := d.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{
+	reader, err := d.Client.ImagePull(ctx, canonicalImageName, image.PullOptions{
 		RegistryAuth: authString,
 	})
 	if err != nil {
