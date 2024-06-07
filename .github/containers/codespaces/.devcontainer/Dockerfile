@@ -20,6 +20,9 @@ RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && bash -c "$(curl -s
 # vscode user is created in the MS devcontainer image
 USER vscode
 
+# create ssh key for vscode user to enable passwordless ssh to devices
+RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
+
 # setup zsh/oh-my-zsh
 COPY ./zsh/.zshrc /home/vscode/.zshrc
 COPY ./zsh/.p10k.zsh /home/vscode/.p10k.zsh
