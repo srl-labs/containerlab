@@ -118,7 +118,6 @@ nav:
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
       - OpenBSD: lab-examples/openbsd01.md
-      - Linux VM: lab-examples/vr-linux01.md
       - Cisco FTDv: lab-examples/ftdv01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
