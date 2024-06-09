@@ -100,6 +100,7 @@
                         "cumulus_cvx",
                         "openbsd",
                         "freebsd",
+                        "generic_vm",
                         "fortinet_fortigate"
                     ]
                 },
@@ -992,6 +993,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "freebsd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "generic_vm": {
                             "$ref": "#/definitions/node-config"
                         }
                     }

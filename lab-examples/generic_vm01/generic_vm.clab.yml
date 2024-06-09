@@ -1,0 +1,17 @@
+name: generic_vm
+
+topology:
+  nodes:
+    ubuntu:
+      kind: generic_vm
+      image: vrnetlab/vr-ubuntu:jammy
+    srl:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:24.3.2
+      startup-config: |
+        set / interface ethernet-1/1 admin-state enable
+        set / interface ethernet-1/1 subinterface 0 ipv4 admin-state enable
+        set / interface ethernet-1/1 subinterface 0 ipv4 address 192.168.0.2/24
+        set / network-instance default interface ethernet-1/1.0
+  links:
+    - endpoints: ["srl:e1-1", "ubuntu:eth1"]

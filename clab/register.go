@@ -14,6 +14,7 @@ import (
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
 	fortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
+	generic_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
 	host "github.com/srl-labs/containerlab/nodes/host"
 	ipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
 	k8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
@@ -65,6 +66,7 @@ func (c *CLab) RegisterNodes() {
 	vr_csr.Register(c.Reg)
 	vr_c8000v.Register(c.Reg)
 	vr_freebsd.Register(c.Reg)
+	generic_vm.Register(c.Reg)
 	vr_ftosv.Register(c.Reg)
 	vr_n9kv.Register(c.Reg)
 	vr_pan.Register(c.Reg)
