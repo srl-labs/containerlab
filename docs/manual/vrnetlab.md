@@ -51,6 +51,7 @@ The following table provides a link between the version combinations:
 | `0.49.0`         | [`0.14.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.14.0) | Added support for [Juniper vJunos-Evolved](kinds/vr-vjunosevolved.md), [Cisco FTDv](kinds/vr-ftdv.md), [OpenBSD](kinds/openbsd.md)                                   |
 | `0.53.0`         | [`0.15.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.15.0) | Added support for [Fortigate](kinds/fortinet_fortigate.md), [freebsd](kinds/freebsd.md), added lots of FP5 types to Nokia SR OS and support for external cf1/2 disks |
 | `0.54.0`         | [`0.16.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.16.0) | Added support for Cisco c8000v                                                                                                                                       |
+| `0.55.0`         | [`0.17.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.17.0) | Added support for [Generic VM](kinds/generic_vm.md), support for setting qemu parameters via env vars nodes                                                          |
 
 ???note "how to understand version inter-dependency between containerlab and vrnetlab?"
     When new VM-based platform support is added to vrnetlab, it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.  
@@ -109,6 +110,17 @@ The images that work with containerlab will appear in the supported list as we i
 | Fortinet Fortigate    | [fortinet_fortigate](kinds/fortinet_fortigate.md)       |                                            |                                                                                                                                                                                                              |
 | OpenBSD               | [openbsd](kinds/openbsd.md)                             |                                            |                                                                                                                                                                                                              |
 | FreeBSD               | [freebsd](kinds/freebsd.md)                             |                                            |                                                                                                                                                                                                              |
+
+### Tuning qemu parameters
+
+When vrnetlab starts a VM inside the container it uses `qemu` command to define the VM parameters such as disk drives, cpu type, memory, etc. Containerlab allows users to tune some of these parameters by setting the environment variables in the topology file. The values from these variables will override defaults set by vrnetlab for this particular VM image.
+
+The following env vars are supported:
+
+- `QEMU_SMP` - sets the number of vCPU cores and their configuration. Use this when the default number of vCPUs is not enough or excessive.
+- `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM. Note, that some kinds have a different way to set CPU/MEM parameters, which is explained in the kind's documentation.
+- `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
+- `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
 
 ### Connection modes
 
@@ -186,7 +198,25 @@ This method is not as flexible as the Boot Order, since you rely on the fixed de
 
 Typically a lab consists of a few types of VMs which are spawned and interconnected with each other. Consider a lab consisting of 5 interconnected routers; one router uses VM image X, and four routers use VM image Y.
 
-Effectively we run just two types of VMs in that lab, and thus we can implement a memory deduplication technique that drastically reduces the memory footprint of a lab. In Linux, this can be achieved with technologies like UKSM/KSM. Refer to [this article](https://netdevops.me/2021/how-to-patch-ubuntu-2004-focal-fossa-with-uksm/) that explains the methodology and provides steps to get UKSM working on Ubuntu/Fedora systems.
+Effectively we run just two types of VMs in that lab, and thus we can implement a memory deduplication technique that drastically reduces the memory footprint of a lab. In Linux, this can be achieved with technologies like KSM (via `ksmtuned`). Install KSM package on your distribution and enable it to save memory.
+
+Find some examples below (or contribut a new one)
+
+/// tab | Debian/Ububntu
+
+```bash
+sudo apt-get update -y
+sudo apt-get install -y ksmtuned
+
+sudo systemctl status ksm.service
+sudo systemctl restart ksm.service
+sudo echo 1 > /sys/kernel/mm/ksm/run
+
+grep . /sys/kernel/mm/ksm/*
+```
+
+If you want KSM always active you could change `#KSM_THRES_COEF=20` in `/etc/ksmtuned.conf` to `KSM_THRES_COEF=99`. That way KSM will kick in as soon as free RAM dops below 99% instead of below the default 20% of free RAM.
+///
 
 [^1]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
 [^2]: pros and cons of different datapaths were examined [here](https://netdevops.me/2021/transparently-redirecting-packetsframes-between-interfaces/)

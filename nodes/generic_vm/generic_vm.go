@@ -2,20 +2,21 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package vr_linux
+package generic_vm
 
 import (
 	"context"
 	"fmt"
 	"path"
+
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
-	kindnames          = []string{"vr_linux"}
-	defaultCredentials = nodes.NewCredentials("sysadmin", "sysadmin")
+	kindnames          = []string{"generic_vm"}
+	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
 )
 
 const (
@@ -25,15 +26,15 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
-		return new(vrLinux)
+		return new(genericVM)
 	}, defaultCredentials)
 }
 
-type vrLinux struct {
+type genericVM struct {
 	nodes.DefaultNode
 }
 
-func (n *vrLinux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *genericVM) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
@@ -67,7 +68,7 @@ func (n *vrLinux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vrLinux) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *genericVM) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -77,8 +78,7 @@ func (n *vrLinux) PreDeploy(_ context.Context, params *nodes.PreDeployParams) er
 	return err
 }
 
-
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrLinux) CheckInterfaceName() error {
+func (n *genericVM) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }
