@@ -23,6 +23,12 @@ USER vscode
 # create ssh key for vscode user to enable passwordless ssh to devices
 RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 
+# install pyenv
+RUN bash -c "$(curl https://pyenv.run)"
+
+# touch empty docker config files to avoid warnings
+RUN touch /root/.docker/config.json && touch /home/vscode/.docker/config.json
+
 # setup zsh/oh-my-zsh
 COPY ./zsh/.zshrc /home/vscode/.zshrc
 COPY ./zsh/.p10k.zsh /home/vscode/.p10k.zsh
