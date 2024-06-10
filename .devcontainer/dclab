@@ -1,2 +1,2 @@
 #!/bin/bash
-/workspaces/containerlab/bin/containerlab "$@"
+/clab/bin/containerlab "$@"
