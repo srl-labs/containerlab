@@ -61,7 +61,6 @@ jobs:
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
-          subFolder: .github/containers/codespaces
-          imageName: ghcr.io/${{ github.repository }}/clab-codespaces
+          imageName: ghcr.io/${{ github.repository }}/clab-devcontainer
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always

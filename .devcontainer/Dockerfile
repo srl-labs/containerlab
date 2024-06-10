@@ -23,6 +23,8 @@ RUN mkdir -p /root/.docker && echo "{}" > /root/.docker/config.json
 # vscode user is created in the MS devcontainer image
 USER vscode
 
+COPY ./dclab /usr/local/bin/dclab
+
 # create ssh key for vscode user to enable passwordless ssh to devices
 RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 
