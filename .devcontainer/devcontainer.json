@@ -42,5 +42,7 @@
                 "zxh404.vscode-proto3"
             ]
         }
-    }
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind",
+    "workspaceFolder": "/clab"
 }
