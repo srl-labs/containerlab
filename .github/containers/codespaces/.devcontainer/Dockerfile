@@ -30,7 +30,7 @@ RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 RUN bash -c "$(curl https://pyenv.run)"
 
 # add empty docker config files to avoid clab warnings for vscode user
-RUN mkdir -p /vscode/.docker && touch /home/vscode/.docker/config.json
+RUN mkdir -p /home/vscode/.docker && touch /home/vscode/.docker/config.json
 
 # setup zsh/oh-my-zsh
 COPY ./zsh/.zshrc /home/vscode/.zshrc
