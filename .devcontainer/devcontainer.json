@@ -2,7 +2,7 @@
 {
     "build": {
         "dockerfile": "./Dockerfile",
-        "context": "."
+        "context": ".."
         // "args": {
         //     "USERNAME": "${localEnv:USERNAME}"
         // }
@@ -32,7 +32,6 @@
                 "ms-python.vscode-pylance",
                 // Errors and highlighters.
                 "mechatroner.rainbow-csv",
-                "oderwat.indent-rainbow",
                 "redhat.vscode-yaml",
                 "jinliming2.vscode-go-template",
                 // markdown
