@@ -17,6 +17,9 @@ RUN if [ -z "$CLAB_VERSION" ]; then \
 # install gNMIc and gNOIc
 RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && bash -c "$(curl -sL https://get-gnoic.kmrd.dev)"
 
+# add empty docker config files to avoid clab warnings for root user
+RUN touch /root/.docker/config.json
+
 # vscode user is created in the MS devcontainer image
 USER vscode
 
@@ -26,8 +29,8 @@ RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 # install pyenv
 RUN bash -c "$(curl https://pyenv.run)"
 
-# touch empty docker config files to avoid warnings
-RUN touch /root/.docker/config.json /home/vscode/.docker/config.json
+# add empty docker config files to avoid clab warnings for vscode user
+RUN touch /home/vscode/.docker/config.json
 
 # setup zsh/oh-my-zsh
 COPY ./zsh/.zshrc /home/vscode/.zshrc
