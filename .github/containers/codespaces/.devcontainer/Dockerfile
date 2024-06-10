@@ -27,7 +27,7 @@ RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 RUN bash -c "$(curl https://pyenv.run)"
 
 # touch empty docker config files to avoid warnings
-RUN touch /root/.docker/config.json && touch /home/vscode/.docker/config.json
+RUN touch /root/.docker/config.json /home/vscode/.docker/config.json
 
 # setup zsh/oh-my-zsh
 COPY ./zsh/.zshrc /home/vscode/.zshrc
