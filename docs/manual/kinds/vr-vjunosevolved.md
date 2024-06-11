@@ -4,13 +4,13 @@ search:
 ---
 # Juniper vJunosEvolved
 
-[Juniper vJunosEvolved](https://support.juniper.net/support/downloads/?p=vjunos-evolved) is a virtualized PTX10001 router identified with `juniper_vjunosevolved` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vJunosEvolved](https://www.juniper.net/documentation/product/us/en/vjunosevolved/) is a virtualized PTX10001 router identified with `juniper_vjunosevolved` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Juniper vJunosEvolved nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## How to obtain the image
 
-The qcow2 image can be downloaded from [Juniper website](https://support.juniper.net/support/downloads/?p=vjunos-evolved) and built with [vrnetlab](../vrnetlab.md).
+The qcow2 image can be freely downloaded from the [Juniper support portal](https://support.juniper.net/support/downloads/?p=vjunos-evolved) without a Juniper account and built with [vrnetlab](../vrnetlab.md).
 
 ## Managing Juniper vJunosEvolved nodes
 
@@ -44,7 +44,7 @@ Juniper vJunosEvolved node launched with containerlab can be managed via the fol
 Juniper vJunosEvolved container can have up to 17 interfaces and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to a first data port of vJunosEvolved VM
+* `eth1` - first data interface, mapped to a first data port of vJunosEvolved VM, which is `et-0/0/0` **and not `et-0/0/1`**.
 * `eth2+` - second and subsequent data interface
 
 When containerlab launches Juniper vJunosEvolved node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach the management plane of the router.

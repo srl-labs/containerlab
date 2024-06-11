@@ -51,8 +51,6 @@ The Route Servers receive NLRIs from peers and pass them over to the other IXP m
 
 Every component of this lab is openly available and can be downloaded from public repositories, but Nokia SR OS, which has to be obtained from Nokia representatives. In this lab SR OS container image name is `sros:23.3.R1`.
 
-!!!tip "Request Nokia SR OS containerlab image"
-    We are working on making the Nokia SR OS simulator image accessible to users. In the meantime, users might request a containerlab image from Nokia representatives by filling in the [request form](https://sros.dev/get-image).
 
 ## Topology definition
 

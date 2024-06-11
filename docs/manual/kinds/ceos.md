@@ -20,8 +20,8 @@ Arista requires its users to register with arista.com before downloading any ima
 Once downloaded, import the archive with docker:
 
 ```bash
-# import container image and save it under ceos:4.28.0F name
-docker import cEOS64-lab-4.28.0F.tar.xz ceos:4.28.0F
+# import container image and save it under ceos:4.32.0F name
+docker import cEOS64-lab-4.32.0F.tar.xz ceos:4.32.0F
 ```
 
 ## Managing ceos nodes
@@ -137,15 +137,15 @@ With the following topology file, containerlab is instructed to take a `mymappin
       nodes:
         ceos1:
           kind: ceos
-          image: ceos:4.28.0F
+          image: ceos:4.32.0F
           binds:
             - mymapping.json:/mnt/flash/EosIntfMapping.json:ro # (1)!
-        ceos2: 
+        ceos2:
           kind: ceos
-          image: ceos:4.28.0F
+          image: ceos:4.32.0F
           binds:
             - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
-    links:
+      links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
 
@@ -160,10 +160,10 @@ With the following topology file, containerlab is instructed to take a `mymappin
           nodes:
             ceos1:
               kind: ceos
-              image: ceos:4.28.0F
-            ceos2: 
+              image: ceos:4.32.0F
+            ceos2:
               kind: ceos
-              image: ceos:4.28.0F
+              image: ceos:4.32.0F
     ```
 
     This way the bind is set only once, and nodes of `ceos` kind will have these binds applied.
@@ -197,11 +197,11 @@ topology:
   nodes:
     ceos1:
       kind: ceos
-      image: ceos:4.28.0F
-    ceos2: 
+      image: ceos:4.32.0F
+    ceos2:
       kind: ceos
-      image: ceos:4.28.0F
-links:
+      image: ceos:4.32.0F
+  links:
     - endpoints: ["ceos1:eth1_1", "ceos2:eth2_1_1"]
 ```
 
@@ -293,11 +293,11 @@ It is possible to change the default config which every ceos node will start wit
         # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
         ceos1:
           kind: ceos
-          image: ceos:4.25.0F
+          image: ceos:4.32.0F
         # ceos2 will boot with its own specific startup config, as it overrides the kind variables
-        ceos2: 
+        ceos2:
           kind: ceos
-          image: ceos:4.25.0F
+          image: ceos:4.32.0F
           startup-config: node-specific-startup.cfg
       links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
@@ -314,13 +314,13 @@ To start an Arista cEOS node containerlab uses the following configuration:
 === "Startup command"
     `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
 === "Environment variables"
-    `CEOS:1`  
-    `EOS_PLATFORM":ceoslab`  
-    `container:docker`  
-    `ETBA:1`  
-    `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
-    `INTFTYPE:eth`  
-    `MAPETH0:1`  
+    `CEOS:1`
+    `EOS_PLATFORM":ceoslab`
+    `container:docker`
+    `ETBA:1`
+    `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`
+    `INTFTYPE:eth`
+    `MAPETH0:1`
     `MGMT_INTF:eth0`
 
 ### File mounts
@@ -384,11 +384,11 @@ The following labs feature a cEOS node:
 
 ### cgroups v1
 
-In versions prior to EOS-4.28.0F, the ceos-lab image requires a cgroups v1 environment. For many users, this should not require any changes to the runtime environment. However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.  
+In versions prior to EOS-4.32.0F, the ceos-lab image requires a cgroups v1 environment. For many users, this should not require any changes to the runtime environment. However, some Linux distributions (ref: [#467](https://github.com/srl-labs/containerlab/issues/467)) may be configured to use cgroups v2 out-of-the-box[^4], which will prevent ceos-lab image from booting. In such cases, the users will need to configure their system to utilize a cgroups v1 environment.
 
 Consult your distribution's documentation for details regarding configuring cgroups v1 in case you see similar startup issues as indicated in [#467](https://github.com/srl-labs/containerlab/issues/467).
 
-Starting with EOS-4.28.0F, ceos-lab will automatically determine whether the container host is using cgroups v1 or cgroups v2 and act appropriately. No configuration is required.
+Starting with EOS-4.32.0F, ceos-lab will automatically determine whether the container host is using cgroups v1 or cgroups v2 and act appropriately. No configuration is required.
 
 ??? "Switching to cgroup v1 in Ubuntu 21.04"
     To switch back to cgroup v1 in Ubuntu 21+ users need to add a kernel parameter `systemd.unified_cgroup_hierarchy=0` to GRUB config. Below is a snippet of `/etc/default/grub` file with the added `systemd.unified_cgroup_hierarchy=0` parameter.
@@ -425,7 +425,7 @@ sudo ip6tables -P INPUT ACCEPT
 
 ### Scale
 
-From version 4.28.0F, the ceos-lab image supports up to 50 nodes per host. On previous releases and/or with higher scale there might be issues cores inside the ceos-lab nodes and erros like `Error: Too many open files`.
+From version 4.32.0F, the ceos-lab image supports up to 50 nodes per host. On previous releases and/or with higher scale there might be issues cores inside the ceos-lab nodes and errors like `Error: Too many open files`.
 
 Example solution for 60 ceos-lab nodes:
 

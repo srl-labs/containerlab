@@ -139,29 +139,39 @@ Verify links in node l2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth3
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
     Should Contain    ${output}    02:00:00:00:00:01
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth4
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
     Should Contain    ${output}    02:00:00:00:00:04
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth5
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
     Should Contain    ${output}    02:00:00:00:00:05
+
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show somedummy
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    LOWER_UP
 
 Verify links on host
     ${rc}    ${output} =    Run And Return Rc And Output

@@ -4,7 +4,7 @@ hide:
 ---
 Containerlab is distributed as a Linux deb/rpm package and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
 
-### Pre-requisites
+## Pre-requisites
 
 The following requirements must be satisfied to let containerlab tool run successfully:
 
@@ -12,7 +12,32 @@ The following requirements must be satisfied to let containerlab tool run succes
 * A Linux server/VM[^2] and [Docker](https://docs.docker.com/engine/install/) installed.
 * Load container images (e.g. Nokia SR Linux, Arista cEOS) that are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
-### Install script
+## Quick setup
+
+The easiest way to get started with containerlab is to use the [quick setup script](https://github.com/srl-labs/containerlab/blob/main/utils/quick-setup.sh) that installs all of the following components in one go (or allows to install them separately):
+
+* docker (docker-ce), docker compose
+* Containerlab (using the package repository)
+* [`gh` CLI tool](https://cli.github.com/)
+
+The script supports the following OSes:
+
+* Ubuntu 20.04, 22.04, 23.10
+* Debian 11, 12
+
+To install all components at once, run the following command on any of the supported OSes:
+
+```bash
+curl -sL https://containerlab.dev/setup | sudo bash -s "all"
+```
+
+To install an individual component, specify the function name as an argument to the script. For example, to install only `docker`:
+
+```bash
+curl -sL https://containerlab.dev/setup | sudo bash -s "install-docker"
+```
+
+## Install script
 
 Containerlab can be installed using the [installation script](https://github.com/srl-labs/containerlab/blob/main/get.sh) that detects the operating system type and installs the relevant package:
 
@@ -56,14 +81,14 @@ Since the installation script uses GitHub API, users may hit the rate limit impo
 GITHUB_TOKEN=<your token> bash -c "$(curl -sL https://get.containerlab.dev)"
 ```
 
-### Package managers
+## Package managers
 
 It is possible to install official containerlab releases via public APT/YUM repository.
 
 /// tab | APT
 
 ```bash
-echo "deb [trusted=yes] https://apt.fury.io/netdevops/ /" | \
+echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
 sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
 sudo apt update && sudo apt install containerlab
@@ -73,7 +98,7 @@ sudo apt update && sudo apt install containerlab
 /// tab | YUM
 
 ```
-yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
+yum-config-manager --add-repo=https://netdevops.fury.site/yum/ && \
 echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
 
 sudo yum install containerlab
@@ -109,7 +134,7 @@ yum install https://github.com/srl-labs/containerlab/releases/download/v0.7.0/co
 ///
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
 
-### Container
+## Container
 
 Containerlab is also available in a container packaging. The latest containerlab release can be pulled with:
 
@@ -150,7 +175,7 @@ ghcr.io/srl-labs/clab deploy -t somelab.clab.yml
 
 ///
 
-### Manual installation
+## Manual installation
 
 If the linux distributive can't install deb/rpm packages, containerlab can be installed from the archive:
 
@@ -172,15 +197,14 @@ tar -zxvf /tmp/clab.tar.gz -C /etc/containerlab
 mv /etc/containerlab/containerlab /usr/bin && chmod a+x /usr/bin/containerlab
 ```
 
-### Windows Subsystem Linux (WSL)
+## Windows Subsystem Linux (WSL)
 
 Containerlab [runs](https://twitter.com/ntdvps/status/1380915270328401922) on WSL, but you need to [install docker-ce](https://docs.docker.com/engine/install/) inside the WSL2 linux system instead of using Docker Desktop[^3].
 
-If you are running Ubuntu 20.04 as your WSL2 machine, you can run [this script](https://gist.github.com/hellt/e8095c1719a3ea0051165ff282d2b62a) to install docker-ce.
+If you are running Ubuntu/Debian as your WSL2 machine, you can use the [quick setup this script](https://github.com/srl-labs/containerlab/blob/main/utils/quick-setup.sh) to install docker-ce.
 
 ```bash
-curl -L https://gist.githubusercontent.com/hellt/e8095c1719a3ea0051165ff282d2b62a/raw/1dffb71d0495bb2be953c489cd06a25656d974a4/docker-install.sh | \
-bash
+curl -L https://containerlab.dev/setup | sudo bash -s "install-docker" | \
 ```
 
 Once installed, issue `sudo service docker start` to start the docker service inside WSL2 machine.
@@ -189,15 +213,15 @@ Once installed, issue `sudo service docker start` to start the docker service in
 In Windows 11 with WSL2 it is now possible to [enable KVM support](https://serverfault.com/a/1115773/351978). Let us know if that worked for you in our [Discord](community.md).
 ///
 
-### Apple macOS
+## Apple macOS
 
 Running containerlab on macOS is possible both on ARM (M1/M2) and Intel chipsets with certain limitations and caveats rooted in different architectures and underlying OS.
 
-#### ARM
+### ARM
 
 At the moment of this writing, there are not a lot[^6] of Network OSes built for arm64 architecture. This fact alone makes it not practical to run containerlab natively on ARM-based Macs. Nevertheless, it is technically possible to run containerlab on ARM-based Macs by launching a Linux VM with x86_64 architecture and running containerlab inside this VM. This approach comes with a hefty performance penalty, therefore it is suitable only for tiny labs.
 
-##### UTM
+#### UTM
 
 The easiest way to start a Linux VM with x86_64 architecture on macOS is to use [UTM](https://mac.getutm.app/). UTM is a free[^7] and open-source graphical virtual machine manager that provides a simple and intuitive interface for creating, managing, and running virtual machines with qemu.
 
@@ -223,7 +247,7 @@ sudo clab version upgrade
 
 and start downloading the labs you want to run.
 
-##### Docker in Docker
+#### Docker in Docker
 
 Another option to run containerlab on ARM-based Macs is to use Docker in Docker approach. With this approach, a docker-in-docker container is launched on the macOS inside the VM providing a docker environment. This setup also works on other operating systems where Docker is available. Below is a step-by-step guide on how to set it up.
 
@@ -329,7 +353,7 @@ Once the devcontainer is defined as described above:
 * Start your Containerlab
 ////
 
-#### Intel
+### Intel
 
 On Intel based Macs, containerlab can be run in a Linux VM started by Docker Desktop for Mac[^4]. To start using containerlab in this Linux VM we start a container with containerlab inside and mount the directory with our lab files into the container.
 
@@ -415,14 +439,14 @@ Now you can launch the lab, as containerlab is already part of the image:
 
 ```
 root@docker-desktop:/Users/romandodin/clab# clab dep -t 2srl.clab.yml
-INFO[0000] Parsing & checking topology file: 2srl.clab.yml 
-INFO[0000] Creating lab directory: /Users/romandodin/clab/clab-2srl 
-INFO[0000] Creating root CA                             
-INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500' 
-INFO[0000] Creating container: srl1                     
-INFO[0000] Creating container: srl2                     
-INFO[0001] Creating virtual wire: srl1:e1-1 <--> srl2:e1-1 
-INFO[0001] Adding containerlab host entries to /etc/hosts file 
+INFO[0000] Parsing & checking topology file: 2srl.clab.yml
+INFO[0000] Creating lab directory: /Users/romandodin/clab/clab-2srl
+INFO[0000] Creating root CA
+INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500'
+INFO[0000] Creating container: srl1
+INFO[0000] Creating container: srl2
+INFO[0001] Creating virtual wire: srl1:e1-1 <--> srl2:e1-1
+INFO[0001] Adding containerlab host entries to /etc/hosts file
 +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
 | # |      Name      | Container ID |         Image         | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
@@ -433,7 +457,7 @@ INFO[0001] Adding containerlab host entries to /etc/hosts file
 
 ///
 
-### Upgrade
+## Upgrade
 
 To upgrade `containerlab` to the latest available version issue the following command[^1]:
 
@@ -445,7 +469,7 @@ This command will fetch the installation script and will upgrade the tool to its
 
 Or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.
 
-### From source
+## From source
 
 To build containerlab from source:
 
@@ -463,7 +487,7 @@ goreleaser --snapshot --skip-publish --rm-dist
 
 ///
 
-### Uninstall
+## Uninstall
 
 To uninstall containerlab when it was installed via installation script or packages:
 
@@ -487,7 +511,7 @@ yum remove containerlab
 Containerlab binary is located at `/usr/bin/containerlab`. In addition to the binary, containerlab directory with static files may be found at `/etc/containerlab`.
 ///
 
-### SELinux
+## SELinux
 
 When SELinux set to enforced mode containerlab binary might fail to execute with `Segmentation fault (core dumped)` error. This might be because containerlab binary is compressed with [upx](https://upx.github.io/) and selinux prevents it from being decompressed by default.
 

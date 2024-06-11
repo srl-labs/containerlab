@@ -175,8 +175,6 @@ Since this initial configuration is meant to provide a bare minimum configuratio
 When a user provides a path to a file that has a complete configuration for the node, containerlab will copy that file to the lab directory for that specific node under the `/tftpboot/config.txt` name and mount that dir to the container. This will result in this config to act as a startup-config for the node:
 
 ```yaml
-
-```yaml
 name: sros_lab
 topology:
   nodes:

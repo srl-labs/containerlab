@@ -18,7 +18,7 @@ topology:
       image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos
-      image: ceos:4.25.0F
+      image: ceos:4.32.0F
 
   links:
     - endpoints: ["srl:e1-1", "ceos:eth1"]
@@ -105,7 +105,7 @@ topology:
       image: ghcr.io/nokia/srlinux
     ceos:                   # this is a name of the 2nd node
       kind: ceos
-      image: ceos:4.25.0F
+      image: ceos:4.32.0F
 ```
 
 We defined individual nodes under the `topology.nodes` container. The name of the node is the key under which it is defined. Following the example, our two nodes are named `srl` and `ceos` respectively.
@@ -277,6 +277,24 @@ In addition to these interfaces, tc rules are being provisioned to stitch the vx
       mtu: <link-mtu>                        # optional
       vars: <link-variables>                 # optional (used in templating)
       labels: <link-labels>                  # optional (used in templating)
+```
+
+###### dummy
+
+The dummy type creates a dummy interface that provides a virtual network device to route packets through without actually transmitting them.
+
+Such interfaces are useful for testing and debugging purposes where we want to make sure that the NOS detects network ports, but doesn't actually need to send or receive packets via these ports.
+
+```yaml
+  links:
+  - type: dummy
+    endpoint:
+      node: <NodeA-Name>                    # mandatory
+      interface: <NodeA-Interface-Name>     # mandatory
+      mac: <NodeA-Interface-Mac>            # optional
+    mtu: <link-mtu>                         # optional
+    vars: <link-variables>                  # optional (used in templating)
+    labels: <link-labels>                   # optional (used in templating)
 ```
 
 #### Kinds

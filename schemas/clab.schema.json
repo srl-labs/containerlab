@@ -50,8 +50,7 @@
                         "vr-vsrx",
                         "vr-juniper_vsrx",
                         "juniper_vsrx",
-                        "vr-vjunosswitch",
-                        "vr-juniper_vjunosswitch",
+                        "juniper_vjunosrouter",
                         "juniper_vjunosswitch",
                         "juniper_vjunosevolved",
                         "vr-xrv",
@@ -101,6 +100,7 @@
                         "cumulus_cvx",
                         "openbsd",
                         "freebsd",
+                        "generic_vm",
                         "fortinet_fortigate"
                     ]
                 },
@@ -350,7 +350,6 @@
                                     "ixrd3l",
                                     "ixrd4",
                                     "ixrd5",
-                                    "ixrd5t",
                                     "ixrh2",
                                     "ixrh3",
                                     "ixrh4",
@@ -791,13 +790,13 @@
                     "description": "IPv4 subnet to use for the custom management network. e.g. 172.100.100.0/24",
                     "markdownDescription": "[IPv4 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to use for the custom management network. e.g. 172.100.100.0/24",
                     "type": "string",
-                    "pattern": "^.+\/[0-9]{1,2}$"
+                    "pattern": "(^.+\/[0-9]{1,2}$)|(auto)"
                 },
                 "ipv6-subnet": {
                     "description": "IPv6 subnet to use for the custom management network. e.g. 2001:172:100:100::/64",
                     "markdownDescription": "[IPv6 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 2001:172:100:100::/64",
                     "type": "string",
-                    "pattern": "^.+\/[0-9]{1,3}$"
+                    "pattern": "(^.+\/[0-9]{1,3}$)|(auto)"
                 },
                 "ipv4-gw": {
                     "description": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
@@ -903,6 +902,9 @@
                         "vr-vsrx": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "juniper_vjunosrouter": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "juniper_vjunosswitch": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -991,6 +993,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "freebsd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "generic_vm": {
                             "$ref": "#/definitions/node-config"
                         }
                     }

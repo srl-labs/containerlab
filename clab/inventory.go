@@ -50,7 +50,13 @@ func (c *CLab) GenerateInventories() error {
 		return err
 	}
 
-	return c.generateAnsibleInventory(f)
+	err = c.generateAnsibleInventory(f)
+
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
 }
 
 // generateAnsibleInventory generates and writes ansible inventory file to w.

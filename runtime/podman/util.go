@@ -421,7 +421,7 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	)
 	// parse mgmt subnets
 	// check if v4 is defined
-	if r.mgmt.IPv4Subnet != "" {
+	if r.mgmt.IPv4Subnet != "" && r.mgmt.IPv4Subnet != "auto" {
 		v4subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv4Subnet)
 		if err != nil {
 			return netTypes.Network{}, err
@@ -434,7 +434,7 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 		log.Debugf("Added v4 subnet info to the net definion: \n%v, \n%v\n", subnets, v4subnet)
 	}
 	// check if v6 is defined
-	if r.mgmt.IPv6Subnet != "" {
+	if r.mgmt.IPv6Subnet != "" && r.mgmt.IPv6Subnet != "auto" {
 		v6subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv6Subnet)
 		if err != nil {
 			return netTypes.Network{}, err

@@ -44,7 +44,7 @@ topology:
       image: ghcr.io/nokia/srlinux
     ceos:
       kind: ceos
-      image: ceos:4.25.0F
+      image: ceos:4.32.0F
 
   links:
     - endpoints: ["srl:e1-1", "ceos:eth1"]
@@ -88,9 +88,9 @@ srlceos01.clab.yml
 
 # checking that container images are available
 docker images | grep -E "srlinux|ceos"
-REPOSITORY             TAG                 IMAGE ID            CREATED             SIZE
-ghcr.io/nokia/srlinux  latest              79019d14cfc7        3 months ago        1.32GB
-ceos                   4.25.0F             15a5f97fe8e8        3 months ago        1.76GB
+REPOSITORY                        TAG        IMAGE ID       CREATED         SIZE
+ceos                              4.32.0F    40d39e1a92c2   24 hours ago    2.4GB
+ghcr.io/nokia/srlinux             latest     b4daaa73edd1   4 weeks ago     2.73GB
 
 # start the lab deployment
 containerlab deploy # (1)!
@@ -108,7 +108,7 @@ After a couple of seconds you will see the summary of the deployed nodes:
 +---+---------------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
 | # |        Name         | Container ID |       Image           | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+---------------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
-| 1 | clab-srlceos01-ceos | 2e2e04a42cea | ceos:4.25.0F          | ceos |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
+| 1 | clab-srlceos01-ceos | 2e2e04a42cea | ceos:4.32.0F          | ceos |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
 | 2 | clab-srlceos01-srl  | 1b9568fcdb01 | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
 +---+---------------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
 ```
@@ -120,7 +120,7 @@ The node name presented in the summary table is the fully qualified node name, i
 Since the topology nodes are regular containers, you can connect to them just like to any other container.
 
 ```bash
-docker exec -it clab-srlceos01-srl1 bash
+docker exec -it clab-srlceos01-srl bash
 ```
 
 !!!info

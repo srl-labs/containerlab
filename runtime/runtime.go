@@ -102,12 +102,6 @@ func WithMgmtNet(mgmt *types.MgmtNet) RuntimeOption {
 	}
 }
 
-func WithKeepMgmtNet() RuntimeOption {
-	return func(r ContainerRuntime) {
-		r.WithKeepMgmtNet()
-	}
-}
-
 // WaitForContainerRunning waits for container to become running by polling its status.
 func WaitForContainerRunning(ctx context.Context, r ContainerRuntime, contName, nodeName string) error {
 	// how long to wait for the external container to become running

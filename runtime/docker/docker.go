@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
@@ -183,6 +184,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	return d.postCreateNetActions()
 }
 
+// skipcq: GO-R1005
 func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
 	var err error
 	log.Debugf("Network %q does not exist", d.mgmt.Network)
@@ -206,7 +208,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		log.Debugf("bridge %q has ipv4 addr of %q and ipv6 addr of %q", d.mgmt.Bridge, v4gw, v6gw)
 	}
 
-	if d.mgmt.IPv4Subnet != "" {
+	if d.mgmt.IPv4Subnet != "" && d.mgmt.IPv4Subnet != "auto" {
 		if d.mgmt.IPv4Gw != "" {
 			v4gw = d.mgmt.IPv4Gw
 		}
@@ -220,12 +222,22 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		ipamConfig = append(ipamConfig, ipamCfg)
 	}
 
-	if d.mgmt.IPv6Subnet != "" {
+	var ipv6_subnet string
+	if d.mgmt.IPv6Subnet == "auto" {
+		ipv6_subnet, err = utils.GenerateIPv6ULASubnet()
+		if err != nil {
+			return "", err
+		}
+	} else {
+		ipv6_subnet = d.mgmt.IPv6Subnet
+	}
+
+	if ipv6_subnet != "" {
 		if d.mgmt.IPv6Gw != "" {
 			v6gw = d.mgmt.IPv6Gw
 		}
 		ipamCfg := network.IPAMConfig{
-			Subnet:  d.mgmt.IPv6Subnet,
+			Subnet:  ipv6_subnet,
 			Gateway: v6gw,
 		}
 		if d.mgmt.IPv6Range != "" {
@@ -555,7 +567,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 	}
 
 	log.Infof("Pulling %s Docker image", canonicalImageName)
-	reader, err := d.Client.ImagePull(ctx, canonicalImageName, dockerTypes.ImagePullOptions{
+	reader, err := d.Client.ImagePull(ctx, canonicalImageName, image.PullOptions{
 		RegistryAuth: authString,
 	})
 	if err != nil {

@@ -71,7 +71,6 @@ var (
 		"ixrd3l":   "7220IXRD3L.yml",
 		"ixrd4":    "7220IXRD4.yml",
 		"ixrd5":    "7220IXRD5.yml",
-		"ixrd5t":   "7220IXRD5T.yml",
 		"ixrh2":    "7220IXRH2.yml",
 		"ixrh3":    "7220IXRH3.yml",
 		"ixrh4":    "7220IXRH4.yml",
@@ -796,11 +795,11 @@ func (s *srl) CheckInterfaceName() error {
 func (s *srl) createRepoFiles() error {
 	yumRepo := `[srlinux]
 name=SR Linux NDK apps
-baseurl=https://yum.fury.io/srlinux/
+baseurl=https://srlinux.fury.site/yum/
 enabled=1
 gpgcheck=0`
 
-	aptRepo := `deb [trusted=yes] https://apt.fury.io/srlinux/ /`
+	aptRepo := `deb [trusted=yes] https://srlinux.fury.site/apt/ /`
 
 	yumPath := s.Cfg.LabDir + "/yum.repo"
 	err := utils.CreateFile(yumPath, yumRepo)

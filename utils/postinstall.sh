@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 
 # this post install script is used to count the number of installations of containerlab
 # when the installation is done via apt or yum package manager
 
-# exit if bash shell is not found
-if [ ! -e /bin/bash ]; then
+# exit if sh shell is not found
+if [ ! -e /bin/sh ]; then
     exit 0
 fi
 
@@ -25,10 +25,10 @@ rel_version=v${version}
 
 REPO_URL="https://github.com/srl-labs/containerlab/releases/download/${rel_version}/checksums.txt"
 
-if type "curl" &>/dev/null; then
-    curl --max-time 2 -sL -o /dev/null $REPO_URL || true
+if type "curl" > /dev/null 2>&1; then
+    curl --max-time 2 -sL -o /dev/null "$REPO_URL" || true
     exit 0
-elif type "wget" &>/dev/null; then
-    wget -T 2 -q -O /dev/null $REPO_URL || true
+elif type "wget" > /dev/null 2>&1; then
+    wget -T 2 -q -O /dev/null "$REPO_URL" || true
     exit 0
 fi

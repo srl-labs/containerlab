@@ -50,12 +50,6 @@ func NewTopoPaths(topologyFile string) (*TopoPaths, error) {
 	return t, err
 }
 
-func NewCaTopoPaths(labDir string) (*TopoPaths, error) {
-	return &TopoPaths{
-		labDir: labDir,
-	}, nil
-}
-
 // SetTopologyFilePath sets the topology file path.
 func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	absTopoFile, err := filepath.Abs(topologyFile)
