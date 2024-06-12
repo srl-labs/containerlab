@@ -2,18 +2,13 @@ FROM mcr.microsoft.com/devcontainers/python:3.11-bookworm
 
 ARG CLAB_VERSION
 
-RUN apt update && apt install -y --no-install-recommends \
-    direnv
-
 RUN echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
     tee -a /etc/apt/sources.list.d/netdevops.list
 
 # install containerlab
-RUN if [ -z "$CLAB_VERSION" ]; then \
-    apt update && apt install -y --no-install-recommends containerlab; \
-    else \
-    apt update && apt install -y --no-install-recommends containerlab=${CLAB_VERSION}; \
-    fi
+RUN apt update && apt install -y --no-install-recommends containerlab${CLAB_VERSION:+=$CLAB_VERSION} \
+    direnv \
+    btop
 
 # install gNMIc and gNOIc
 RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && bash -c "$(curl -sL https://get-gnoic.kmrd.dev)"
