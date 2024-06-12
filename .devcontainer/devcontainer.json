@@ -16,7 +16,6 @@
         "ghcr.io/devcontainers/features/sshd:1": {
             "version": "latest"
         },
-        "ghcr.io/devcontainers/features/github-cli:1": {},
         "ghcr.io/devcontainers/features/go:1": {
             "version": "1.21"
         }

@@ -12,7 +12,6 @@ git clone --depth 1 https://github.com/marlonrichert/zsh-autocomplete.git ${ZSH_
 # syntax highlighting
 git clone --depth 1 https://github.com/z-shell/F-Sy-H.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/F-Sy-H
 
-
 ###
 ### Shell completions
 ###
