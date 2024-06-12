@@ -18,9 +18,9 @@ We started to ship containerlab in a [Dev Container][devcontainers-doc][^1] pack
 With Containerlab in Codespaces you can:
 
 1. Spin up an existing lab with a single click without having to install anything on your local machine.
-2. Start with Containerlab from scratch using the cloud IDE provided by Codespaces.
+2. Start with Containerlab using the cloud IDE provided by Codespaces.
 
-Here is a quick demo how anyone can run the full SR Linux Streaming Telemetry lab by just clicking on a link. It is hard to imagine a more easy and convenient way to run your labs in the cloud.
+Here is a quick demo how anyone can run the full [SR Linux Streaming Telemetry lab][srl-telemetry-lab] by just clicking on a [link](https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1). It is hard to imagine a more easy and convenient way to run your labs in the cloud.
 
 <video width="100%" controls>
   <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/b3e83eb56d674a0e967a74e020399e29/srl-tel-sneak.mp4" type="video/mp4">
@@ -30,7 +30,7 @@ Here is a quick demo how anyone can run the full SR Linux Streaming Telemetry la
 
 ### How does it work?
 
-The key ingredients in this recipe are [GitHub codespaces][codespaces-doc] and the [Dev Container][devcontainers-doc] image that we provide for Containerlab. When a GitHub user clicks on a link[^3] to open the lab in Codespaces, GitHub spins up a Codespace environment and uses the Dev Container image to set up the environment. The [Containerlab' Dev Container image][clab-devcontainer] contains all the necessary tools and dependencies to run Containerlab:
+The key ingredients in this recipe are [GitHub codespaces][codespaces-doc] and the [Dev Container][devcontainers-doc] image that we provide for Containerlab. When a user clicks on a link[^3] to open the lab in Codespaces, GitHub spins up a Codespace environment and uses the Dev Container image to set it up. The [Containerlab' Dev Container image][clab-devcontainer] has all the necessary tools and dependencies to run Containerlab:
 
 - containerlab binary
 - shell configuration
@@ -38,29 +38,33 @@ The key ingredients in this recipe are [GitHub codespaces][codespaces-doc] and t
 - VS Code plugins
 - and anything else we consider useful to have in the environment
 
-A user can choose to open the Codespace in a browser or in the local VS Code instance. In both cases, the user gets a fully functional environment with Containerlab installed and ready to use.
+A user can choose to open the Codespace in a browser or in the local VS Code instance. In both cases, you get a fully functional environment with Containerlab installed and ready to use.
 
-It takes a couple of minutes to set up and start the environment, but once it is up and running, you see the familiar VS Code interface with the terminal window where you can run containerlab (and any other) commands.
+Codespaces environment boots for a couple of minutes, but once it is up and running, you see the familiar VS Code interface with the terminal window where you can run containerlab (and any other) commands.
 
 ### Codespaces
 
-As we mentioned, the Codepsaces environment is a VM in the cloud, you can install packages, run other workloads, and use the VM in any way you like, you have the full control of it. We mentioned it is free, but it is free to a certain extent, let's dig in.
+As we mentioned, the Codepsaces environment is a VM in the cloud; you can install packages, run other workloads, and use the VM in any way you like, you have the full control of it. We said it is free, but it is free to a certain extent, let's dig in.
 
 #### Free plan
 
-The best part about Codespaces is that it has a suitable free tier. GitHub offers **120 cpu-hours/month and 15 GB storage for free** to all users. This means that you can run a Codespace environment for 120 cpu-hours per month without any charges. This is a compelling offer for those who don't need to run the labs 24/7.
+The best part about Codespaces is that it has a suitable free tier. GitHub offers **120 cpu-hours/month and 15 GB storage for free** to all users. This means that you can run a Codespace environment for 120 cpu-hours per month without any charges. This is a compelling offer for those who
 
-You can select which GitHub machine you want to use for your project; each machine type is characterized by the amount of CPUs/RAM/Storage that it is equipped with, and based on that you can calculate how many cpu-hours you would consume with a given machine type.
+- want to spin up a lab provided by others to get through a tutorial or a demo
+- don't need to run the labs 24/7
+- want to demo labs on-the-go without managing the local environment
+
+You can select which GitHub machine type you want to use for your project; each machine type is characterized by the amount of CPUs/RAM/Storage that it is equipped with, and based on that you can calculate how many cpu-hours you would consume running a lab with a chosen machine type.
 
 ![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/fc7bfa89c921f965ce61f6eb5e86f312/image.png){.img-shadow}
 
-<small>If you need more than 120 cpu-hours, you can pay for the additional hours, but the cost is reasonable, and you can always stop the environment when you don't need it to save the hours.</small>
+<small>If you need more than 120 cpu-hours, you can pay for the additional hours, but the cost is reasonable, and you can always stop the environment when you don't need it to save the quota.</small>
 
-Your cpu-hours counter is reset at the beginning of each month, so you can use the free plan every month. Awesome!
+Your cpu-hours counter is reset at the beginning of each month, so you can use the free plan every month. And by default you have a $0 spending limit, so you won't be charged unless you explicitly allowed it. Good!
 
 #### Control panel
 
-Whenever you need to check what Codespaces environments you have running or created, you can do it in the [Codespaces panel][codespace-panel] in the GitHub UI.
+Whenever you need to check what Codespaces environments you have running or created, you can do it in the [Codespaces panel][codespace-panel].
 
 ![panel](https://gitlab.com/rdodin/pics/-/wikis/uploads/73aa0c2154959d4b25f2b1c2dbd1380b/image.png){.img-shadow}
 
@@ -90,11 +94,11 @@ Editor preference
 
 #### Billing
 
-It is always a good idea to periodically check how much you are spending with Codespaces against the free tier quota. Your billing information is available in the [GitHub settings][billing].
+It is always a good idea to periodically check how much of the cpu-hours you've consumed and check the remaining quota. Your billing information is available in the [Billing settings][billing].
 
 ![billing](https://gitlab.com/rdodin/pics/-/wikis/uploads/4bf6eb89bd3b4f2d4b05ecdc3ab22675/image.png){.img-shadow}
 
-The panel indicates that 10 cpu-hours out of 120 available were consumed in the current month' period and the codespaces environments occupy 8.15 GB of storage out of 15 GB included. So far it is all well within the free tier limits.
+The screenshot shows that 10 cpu-hours out of 120 available were consumed in the current month' period and the codespaces environments occupy 8.15 GB of storage out of 15 GB included. So far it is all well within the free tier limits.[^5]
 
 /// note
 All users by default have a $0 spending limit[^4], which means that if you exceed the free tier limits, your environments will be stopped and you will **not** be charged. You can change this limit to a higher value if you want to be able to use Codespaces even after you exceed the free tier limits.
@@ -108,17 +112,162 @@ To avoid any surprises and lower your anxiety levels, GitHub Codespaces have two
     When you stopped the codespaces environment or it was suspended due to inactivity, it will be automatically deleted after a certain period of time. The default (and maximum) retention period is 30 days, but you can change it to a shorter period.  
     The stopped environment won't count against your cpu-hours quota, but it will still consume storage space, hence you might want to remove the stopped environments to free up the space.
 
-## Onboarding a lab to Codespaces
+## Adding codespaces to your lab
+
+By now you should be willing to try running your labs in Codespaces. To our luck, it is super simple, all you need to do is create a `.devcontainer/devcontainer.json` file in your lab repository that will define the Codespaces environment. The file should look similar to this:
+
+```json
+{
+    "image": "ghcr.io/srl-labs/containerlab/clab-devcontainer:0.55.0",
+    "hostRequirements": {
+        "cpus": 2,
+        "memory": "8gb",
+        "storage": "32gb"
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind",
+    "workspaceFolder": "/srl-vlan-handling-lab"
+}
+```
+
+### Image
+
+The `image` field points to the Containerlab Dev Container image that would define your Codespaces environment. Containerlab provides devcontainer images, and you can see all available tags on the [package' page][clab-devcontainer].
+
+The image tag corresponds to the containerlab release version that is pre-installed in the image. You can choose the version that you want to use in your lab.
+
+### Host requirements
+
+Another important part of the `devcontainer.json` file is the `hostRequirements` field that defines the machine type that Codespaces environment will run on. Codespaces offer a small selection of machine types that differ in the number of CPUs, RAM, and storage. You can choose the machine type that fits your lab requirements.
+
+<figure markdown>
+![machines](https://docs.github.com/assets/cb-35329/mw-1440/images/help/codespaces/change-machine-type-choice.webp){width=80%}
+</figure>
+
+Using the machine types displayed above you can tune the `hostRequirements` section by choosing the machine type that fits the requirements of your lab.
+
+/// note
+Codespaces VMs support nested virtualization, so you can run [VM-based kinds](../manual/vrnetlab.md) :partying_face:
+///
+
+### Mounts
+
+Lastly we specify the folder name we want our repo to be cloned in, this is governed by the `workspaceFolder` field. The `workspaceMount` field is used to mount the local workspace folder to the Codespaces environment and is static for all labs.
+
+### Testing the environment
+
+Once you added the `.devcontainer/devcontainer.json` file to your lab repository, you can test the environment locally and in Codespaces.
+
+#### Local testing
+
+Testing the environment locally is a litmus test to ensure that the devcontainer.json file is correct and the environment can be started. But since the environment runs locally, it doesn't test the Codespaces-specific settings like the machine type and CPU/RAM requirements.
+
+To deploy the environment locally, use the VS Code command panel (`Cmd/Ctrl+Shift+P`) and execute `Dev Containers: Rebuild And Reopen In Container` action. This will trigger the VS Code to build the container and open the environment in the container.
+
+#### Remote testing
+
+Once you tested the environment locally, you should test it in Codespaces to ensure that the selected machine type is sufficient for your lab.
+
+Hopefully you've been adding the Codespaces support in a git branch and created a PR for it. You can open the PR in the GitHub UI and click on the "Code" -> "Create codespace on codespaces" button to start the environment for the branch you're working on:
+
+![pr-codespaces](https://gitlab.com/rdodin/pics/-/wikis/uploads/915d9e48891da03f3f92f336e29b4829/image.png)
+
+You'll get the environment up and running in a couple of minutes and you can test it to ensure that it works as expected.
+
+### Launching the environment
+
+Once you are satisfied with the environment, you can add a nice button to the README file that will allow users to start the environment with a single click.
+
+/// tab | Button
+<div align=center markdown>
+<a href="https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1">
+<img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/d78a6f9f6869b3ac3c286928dd52fa08/run_in_codespaces-v1.svg?sanitize=true" style="width:50%"/></a>
+
+**[Run](https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1) this lab in GitHub Codespaces for free**.  
+[Learn more](https://containerlab.dev/manual/codespaces) about Containerlab for Codespaces.  
+<small>Machine type: 2 vCPU · 8 GB RAM</small>
+</div>
+///
+/// tab | Button code
+**Do not forget to change the lab repo URL and machine type in the code below!**
+
+```html
+---
+<div align=center markdown>
+<a href="https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1">
+<img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/d78a6f9f6869b3ac3c286928dd52fa08/run_in_codespaces-v1.svg?sanitize=true" style="width:50%"/></a>
+
+**[Run](https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1) this lab in GitHub Codespaces for free**.  
+[Learn more](https://containerlab.dev/manual/codespaces) about Containerlab for Codespaces.  
+<small>Machine type: 2 vCPU · 8 GB RAM</small>
+</div>
+
+---
+```
+
+///
+
+Check out [srl-labs/srl-streaming-telemetry](https://github.com/srl-labs/srl-telemetry-lab?tab=readme-ov-file#nokia-sr-linux-streaming-telemetry-lab) README where this button is used to start the lab in Codespaces.
+
+And of course, you can always launch the Codespace using the GitHub UI by clicking on the "Code" button.
+
+![start](https://gitlab.com/rdodin/pics/-/wikis/uploads/34a9e417d61c02cf9a4283cc1c2cf8cb/image.png)
+
+1. Click on the "Code" button in the GitHub UI.
+2. Start the Codespace on the `main` branch using the devcontainer settings defined in the `.devcontainer/devcontainer.json` file.
+3. Or open up an advanced menu
+4. And configure the Codespace settings manually.
 
 ## Dev Container
+
+The key pillar behind Codespaces is the Containerlab' Dev Container image that defines the environment in which the lab will run. The Dev Container image is a Docker image that contains all the necessary tools and dependencies to run Containerlab and other tools that you might need in the lab.
+
+The following two files define Containerlab's Dev Container image:
+
+1. [devcontainer.json](https://github.com/srl-labs/containerlab/blob/main/.devcontainer/devcontainer.json) - the Dev Container configuration file that defines how the environment is built, configured and launched.
+2. [Dockerfile](https://github.com/srl-labs/containerlab/blob/main/.devcontainer/Dockerfile) - the Dockerfile that the Dev Container is built from.
+
+The resulting Dev Container image contains the following tools and dependencies:
+
+- containerlab binary installed via the deb repository
+- docker in docker setup
+- [gNMIc](https://gnmic.openconfig.net) and [gNOIc](https://gnoic.kmrd.dev) tools
+- Go SDK
+- Python 3 with pyenv
+- `gh` CLI tool
+- zsh shell with oh-my-zsh configuration
+- VS Code plugins
+
+## Tips, tricks and known issues
+
+### Authenticating with ghcr.io container registry
+
+While we still live in a world where vendor' Network OS images are not available in the public container registries, you might want to push the images you've built to your GitHub container registry as a `private` image. That way you get to benefit from building the image once and reusing it across different labs while keeping the image private.
+
+To do that you need to authenticate with the `read:packages` entitlement against the GitHub registry. First, unset the existing token and request the one with `read:packages` capability:
+
+```bash
+unset GITHUB_TOKEN && gh auth refresh -s read:packages
+```
+
+Then you can login to the registry using the token:
+
+```bash
+gh auth token | \
+docker login ghcr.io -u $(cat /home/vscode/.config/gh/hosts.yml | \
+grep user: | awk '{print $2}') --password-stdin
+```
+
+But of course you can also install tailscale or any other 0-tier VPN to access the private registry.
 
 [devcontainers-doc]: https://containers.dev/
 [codespaces-doc]: https://github.com/features/codespaces
 [clab-devcontainer]: https://github.com/srl-labs/containerlab/pkgs/container/containerlab%2Fclab-devcontainer
 [billing]: https://github.com/settings/billing/summary
 [codespace-panel]: https://github.com/codespaces
+[srl-telemetry-lab]: https://github.com/srl-labs/srl-telemetry-lab
 
 [^1]: Check out the [Dev Container section](#dev-container) to learn more about the Containerlab' Dev Container package.
 [^2]: At the moment of writing, GitHub Codespaces offer 120 cpu-hours/month and 15 GB storage for free to all users. See [here](#free-plan) for more details.
 [^3]: A link points to the codespaces environment and refers a repo with the `.devcontainer` folder that defines the environment. For example: https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1
 [^4]: As indicated by the "Montly spending limit" text at the very bottom of the report table.
+[^5]: You can also see message about when the quota reset happens.
