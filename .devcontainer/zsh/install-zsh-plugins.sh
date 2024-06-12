@@ -25,4 +25,4 @@ gnmic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/
 # generate gnoic completions
 gnoic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gnoic"
 # generate gh
-gnoic completion -s zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gh"
+gh completion -s zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gh"
