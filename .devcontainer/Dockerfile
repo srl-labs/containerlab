@@ -15,7 +15,13 @@ RUN sudo mkdir -p -m 755 /etc/apt/keyrings \
 RUN apt update && apt install -y --no-install-recommends containerlab${CLAB_VERSION:+=$CLAB_VERSION} \
     direnv \
     btop \
-    gh
+    gh \
+    iputils-ping \
+    tcpdump \
+    iproute2 \
+    qemu-kvm \
+    dnsutils \
+    telnet
 
 # install gNMIc and gNOIc
 RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && bash -c "$(curl -sL https://get-gnoic.kmrd.dev)"
