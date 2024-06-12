@@ -717,6 +717,13 @@ Also you need to ensure that your VM-based container image is accessible to your
 
 When these considerations are taken care of, you can use the same topology file as you would use with containerlab. The only difference is that you need to specify the image in the topology file as a fully qualified image name, including the registry name.
 
+## Cleaning up
+
+When you are done with the lab, you may free resources using:
+```{.bash .no-select}
+kind delete clusters c9s
+```
+
 [gke-auth-plugin]: https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-access-for-kubectl#install_plugin
 
 [^1]: In general there are no requirements for clabernetes from a kubernetes cluster perspective, however, many device types may have requirements for nested virtualization or specific CPU flags that your nodes would need to support in order to run the device.
