@@ -1,0 +1,36 @@
+# topology documentation: TODO: write the documemt somewhere in the git repo
+name: vmx_ceos
+
+mgmt:
+  network: vmx_network
+  ipv4-subnet: 172.35.255.0/24
+  ipv6-subnet: 1001:172:35:255::/80
+
+topology:
+  kinds:
+    ceos:
+      image: ceos:4.27.3F
+    vr-vmx:
+      image: vrnetlab/vr-vmx:20.2R1.10
+  nodes:
+    sw1:
+      kind: ceos
+      mgmt-ipv4: 172.35.255.26
+      mgmt-ipv6: 1001:172:35:255::26
+    sw2:
+      kind: ceos
+      mgmt-ipv4: 172.35.255.25
+      mgmt-ipv6: 1001:172:35:255::25
+    rtr1:
+      kind: vr-vmx
+      mgmt-ipv4: 172.35.255.235
+      mgmt-ipv6: 1001:172:35:255::235
+    rtr2:
+      kind: vr-vmx
+      mgmt-ipv4: 172.35.255.232
+      mgmt-ipv6: 1001:172:35:255::232
+  links:
+    - endpoints: ["sw1:eth1", "rtr1:eth1"]
+    - endpoints: ["sw1:eth2", "rtr2:eth2"]
+    - endpoints: ["sw2:eth1", "rtr2:eth1"]
+    - endpoints: ["sw2:eth2", "rtr1:eth2"]
