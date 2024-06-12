@@ -2,18 +2,20 @@ FROM mcr.microsoft.com/devcontainers/python:3.11-bookworm
 
 ARG CLAB_VERSION
 
-RUN apt update && apt install -y --no-install-recommends \
-    direnv
-
 RUN echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
     tee -a /etc/apt/sources.list.d/netdevops.list
 
-# install containerlab
-RUN if [ -z "$CLAB_VERSION" ]; then \
-    apt update && apt install -y --no-install-recommends containerlab; \
-    else \
-    apt update && apt install -y --no-install-recommends containerlab=${CLAB_VERSION}; \
-    fi
+# setup keyring for github cli
+RUN sudo mkdir -p -m 755 /etc/apt/keyrings \
+    && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+    && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+
+# install containerlab and tools
+RUN apt update && apt install -y --no-install-recommends containerlab${CLAB_VERSION:+=$CLAB_VERSION} \
+    direnv \
+    btop \
+    gh
 
 # install gNMIc and gNOIc
 RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && bash -c "$(curl -sL https://get-gnoic.kmrd.dev)"

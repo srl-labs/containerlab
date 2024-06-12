@@ -2,10 +2,10 @@
 {
     "build": {
         "dockerfile": "./Dockerfile",
-        "context": ".."
-        // "args": {
-        //     "USERNAME": "${localEnv:USERNAME}"
-        // }
+        "context": "..",
+        "args": {
+            "CLAB_VERSION": "${localEnv:CLAB_VERSION}"
+        }
     },
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
@@ -16,7 +16,6 @@
         "ghcr.io/devcontainers/features/sshd:1": {
             "version": "latest"
         },
-        "ghcr.io/devcontainers/features/github-cli:1": {},
         "ghcr.io/devcontainers/features/go:1": {
             "version": "1.21"
         }
