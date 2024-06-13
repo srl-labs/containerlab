@@ -34,6 +34,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vMX](https://containerlab.dev/manual/kinds/vr-vmx/)
 * [Juniper vQFX](https://containerlab.dev/manual/kinds/vr-vqfx/)
 * [Juniper vSRX](https://containerlab.dev/manual/kinds/vr-vsrx/)
+* [Juniper vJunos-router](https://containerlab.dev/manual/kinds/vr-vjunosrouter/)
 * [Juniper vJunos-switch](https://containerlab.dev/manual/kinds/vr-vjunosswitch/)
 * [Juniper vJunosEvolved](https://containerlab.dev/manual/kinds/vr-vjunosevolved/)
 * [Cisco IOS XRv9k](https://containerlab.dev/manual/kinds/vr-xrv9k/)
