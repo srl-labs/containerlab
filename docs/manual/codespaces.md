@@ -237,6 +237,12 @@ The resulting Dev Container image contains the following tools and dependencies:
 - zsh shell with oh-my-zsh configuration
 - VS Code plugins
 
+## Catalog of Codespaces-enabled labs
+
+Having a codespace-enabled lab makes it super easy for users to start the lab and get to the fun part of the labbing.
+
+We encourage lab authors to add `codespaces` and `clab-topo` topics to the lab repository that supports Codespaces; that way users would be able to find the labs that they can run in Codespaces by following [**this link**](https://github.com/search?q=topic%3Aclab-topo+topic%3Acodespaces&type=repositories).
+
 ## Tips, tricks and known issues
 
 ### Authenticating with ghcr.io container registry
