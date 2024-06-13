@@ -50,8 +50,8 @@ The following table provides a link between the version combinations:
 | `0.45.0`         | [`0.12.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.12.0) | Added support for Juniper vJunos-switch via [`juniper_vjunosswitch`](kinds/vr-vjunosswitch.md) kind                                                                  |
 | `0.49.0`         | [`0.14.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.14.0) | Added support for [Juniper vJunos-Evolved](kinds/vr-vjunosevolved.md), [Cisco FTDv](kinds/vr-ftdv.md), [OpenBSD](kinds/openbsd.md)                                   |
 | `0.53.0`         | [`0.15.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.15.0) | Added support for [Fortigate](kinds/fortinet_fortigate.md), [freebsd](kinds/freebsd.md), added lots of FP5 types to Nokia SR OS and support for external cf1/2 disks |
-| `0.54.0`         | [`0.16.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.16.0) | Added support for Cisco c8000v                                                                                                                                       |
-| `0.55.0`         | [`0.17.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.17.0) | Added support for [Generic VM](kinds/generic_vm.md), support for setting qemu parameters via env vars nodes                                                          |
+| `0.54.0`         | [`0.16.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.16.0) | Added support for [Cisco c8000v](kinds/c8000.md)                                                                                                                     |
+| `0.55.0`         | [`0.17.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.17.0) | Added support for [Juniper vJunos-router](kinds/vr-vjunosrouter.md), [Generic VM](kinds/generic_vm.md), support for setting qemu parameters via env vars nodes       |
 
 ???note "how to understand version inter-dependency between containerlab and vrnetlab?"
     When new VM-based platform support is added to vrnetlab, it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.  
