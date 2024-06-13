@@ -241,15 +241,17 @@ The resulting Dev Container image contains the following tools and dependencies:
 
 ### Authenticating with ghcr.io container registry
 
-While we still live in a world where vendor' Network OS images are not available in the public container registries, you might want to push the images you've built to your GitHub container registry as a `private` image. That way you get to benefit from building the image once and reusing it across different labs while keeping the image private.
+If you happen to have a _private_ image that you want to use in Codespaces you can push this image to your personal GitHub registry.
 
-To do that you need to authenticate with the `read:packages` entitlement against the GitHub registry. First, unset the existing token and request the one with `read:packages` capability:
+To be able to access a private image you would need to (re)authenticate with the `read:packages` token entitlement against the GitHub registry. Thankfully, it is a matter of a copy-paste exerceise.
+
+First, unset the existing token and request the one with `read:packages` capability:
 
 ```bash
 unset GITHUB_TOKEN && gh auth refresh -s read:packages
 ```
 
-Then you can login to the registry using the token:
+You will be prompted to authenticate with your GitHub account and the new token will be generated for you. Then you can login to the registry using the newly acquired token:
 
 ```bash
 gh auth token | \
@@ -257,7 +259,7 @@ docker login ghcr.io -u $(cat /home/vscode/.config/gh/hosts.yml | \
 grep user: | awk '{print $2}') --password-stdin
 ```
 
-But of course you can also install tailscale or any other 0-tier VPN to access the private registry.
+<small>Of course you can also install tailscale or any other 0-tier VPN to access any other self-hosted private registry.</small>
 
 [devcontainers-doc]: https://containers.dev/
 [codespaces-doc]: https://github.com/features/codespaces
