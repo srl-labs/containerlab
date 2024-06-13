@@ -56,9 +56,17 @@ The best part about Codespaces is that it has a suitable free tier. GitHub offer
 
 You can select which GitHub machine type you want to use for your project; each machine type is characterized by the amount of CPUs/RAM/Storage that it is equipped with, and based on that you can calculate how many cpu-hours you would consume running a lab with a chosen machine type.
 
-![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/fc7bfa89c921f965ce61f6eb5e86f312/image.png){.img-shadow}
+By the time of this writing (Jun 2024) the following machine types were available for GitHub users by default and beefier machines can be requested via [GitHub support form](https://support.github.com/contact?tags=rr-general-technical).
 
-<small>If you need more than 120 cpu-hours, you can pay for the additional hours, but the cost is reasonable, and you can always stop the environment when you don't need it to save the quota.</small>
+| Machine type | RAM (GB) | Disk (GB) | Run time included in the free tier[^6]<br>(hours/month) |
+| ------------ | -------- | --------- | ------------------------------------------------------- |
+| 2 core       | 4        | 32        | 60 (2cpu*60h=120 cpu/hours)                             |
+| 4 core       | 8        | 32        | 30                                                      |
+| 8 core       | 16       | 32        | 15                                                      |
+| 16 core      | 32       | 64        | 7.5                                                     |
+| 32 core      | 64       | 128       | 3.75                                                    |
+
+<small>If you need more than 120 cpu-hours, you can pay for the additional usage ([consult with pricing](https://github.com/features/codespaces#pricing)), and you can always stop the environment when you don't need it to save the quota.</small>
 
 Your cpu-hours counter is reset at the beginning of each month, so you can use the free plan every month. And by default you have a $0 spending limit, so you won't be charged unless you explicitly allowed it. Good!
 
@@ -279,3 +287,4 @@ grep user: | awk '{print $2}') --password-stdin
 [^3]: A link points to the codespaces environment and refers a repo with the `.devcontainer` folder that defines the environment. For example: https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1
 [^4]: As indicated by the "Montly spending limit" text at the very bottom of the report table.
 [^5]: You can also see message about when the quota reset happens.
+[^6]: The runtime assumes no other environments are running at the same time and storage quota is not exceeded.
