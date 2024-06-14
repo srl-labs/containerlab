@@ -121,6 +121,16 @@ To avoid any surprises and lower your anxiety levels, GitHub Codespaces have two
     When you stopped the codespaces environment or it was suspended due to inactivity, it will be automatically deleted after a certain period of time. The default (and maximum) retention period is 30 days, but you can change it to a shorter period.  
     The stopped environment won't count against your cpu-hours quota, but it will still consume storage space, hence you might want to remove the stopped environments to free up the space.
 
+/// admonition | Safe settings
+    type: tip
+To keep a tight control on the Codespaces free quota usage you can set the following in your [Codespaces Settings](https://github.com/settings/codespaces):
+
+- Idle timeout to **15 minutes**
+- Retention period to **1 day**
+
+That way you can be sure that the environment is not running when you don't need it and it will be deleted after a day of inactivity saving up on the storage space.
+///
+
 ## Adding codespaces to your lab
 
 By now you should be willing to try running your labs in Codespaces. To our luck, it is super simple, all you need to do is create a `.devcontainer/devcontainer.json` file in your lab repository that will define the Codespaces environment. The file should look similar to this:
