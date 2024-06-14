@@ -55,16 +55,17 @@ The best part about Codespaces is that it has a suitable free tier. GitHub offer
 - want to demo labs on-the-go without managing the local environment
 
 You can select which GitHub machine type you want to use for your project; each machine type is characterized by the amount of CPUs/RAM/Storage that it is equipped with, and based on that you can calculate how many cpu-hours you would consume running a lab with a chosen machine type.
+<!-- --8<-- [start:request-beefier] -->
+<small>By the time of this writing (Jun 2024) the following machine types were available for GitHub users by default and beefier machines can be requested via [GitHub support form](https://support.github.com/contact?tags=rr-general-technical).</small>
+<!-- --8<-- [end:request-beefier] -->
 
-By the time of this writing (Jun 2024) the following machine types were available for GitHub users by default and beefier machines can be requested via [GitHub support form](https://support.github.com/contact?tags=rr-general-technical).
-
-| Machine type | RAM (GB) | Disk (GB) | Run time included in the free tier[^6]<br>(hours/month) |
-| ------------ | -------- | --------- | ------------------------------------------------------- |
-| 2 core       | 4        | 32        | 60 (2cpu*60h=120 cpu/hours)                             |
-| 4 core       | 8        | 32        | 30                                                      |
-| 8 core       | 16       | 32        | 15                                                      |
-| 16 core      | 32       | 64        | 7.5                                                     |
-| 32 core      | 64       | 128       | 3.75                                                    |
+| Machine type | Memory (GB) | Storage (GB) | Run time included in the free tier[^6]<br>(hours/month) |
+| ------------ | ----------- | ------------ | ------------------------------------------------------- |
+| 2 core       | 4           | 32           | 60 (2cpu*60h=120 cpu/hours)                             |
+| 4 core       | 8           | 32           | 30                                                      |
+| 8 core       | 16          | 32           | 15                                                      |
+| 16 core      | 32          | 64           | 7.5                                                     |
+| 32 core      | 64          | 128          | 3.75                                                    |
 
 <small>If you need more than 120 cpu-hours, you can pay for the additional usage ([consult with pricing](https://github.com/features/codespaces#pricing)), and you can always stop the environment when you don't need it to save the quota.</small>
 
@@ -149,9 +150,15 @@ The image tag corresponds to the containerlab release version that is pre-instal
 
 Another important part of the `devcontainer.json` file is the `hostRequirements` field that defines the machine type that Codespaces environment will run on. Codespaces offer a small selection of machine types that differ in the number of CPUs, RAM, and storage. You can choose the machine type that fits your lab requirements.
 
-<figure markdown>
-![machines](https://docs.github.com/assets/cb-35329/mw-1440/images/help/codespaces/change-machine-type-choice.webp){width=80%}
-</figure>
+--8<-- "docs/manual/codespaces.md:request-beefier"
+
+| Machine type | CPU | Memory (GB) | Storage (GB) |
+| ------------ | --- | ----------- | ------------ |
+| 2 core       | 2   | 4           | 32           |
+| 4 core       | 4   | 8           | 32           |
+| 8 core       | 8   | 16          | 32           |
+| 16 core      | 16  | 32          | 64           |
+| 32 core      | 32  | 64          | 128          |
 
 Using the machine types displayed above you can tune the `hostRequirements` section by choosing the machine type that fits the requirements of your lab.
 
