@@ -75,7 +75,7 @@ Deploy vxlab link between l1 and l3 with tools cmd
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Verify vxlan links betweem l1 and l3
+Verify vxlan links between l1 and l3
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ip -d l show dev vx-${l1_host_link}
     Log    ${output}
@@ -96,7 +96,7 @@ Deploy vxlab link between l2 and l4 with tools cmd
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Verify vxlan links betweem l2 and l4
+Verify vxlan links between l2 and l4
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ip -d link show vx-${l2_host_link}
     Log    ${output}
@@ -117,14 +117,19 @@ Setup
     # skipping this test suite for podman for now
     Skip If    '${runtime}' == 'podman'
     # setup vxlan underlay bridge
-    # we have to setup an underlay management bridge with big enought mtu to support vxlan and srl requirements for link mtu
+    # we have to setup an underlay management bridge with big enough mtu to support vxlan and srl requirements for link mtu
     # we set mtu 9100 (and not the default 9500) because srl can't set vxlan mtu > 9412 and < 1500
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ip link add ${vxlan-br} type bridge || true
+    Log    ${output}
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ip link set dev ${vxlan-br} up && sudo ip link set dev ${vxlan-br} mtu 9100 && sudo ip addr add ${vxlan-br-ip} dev ${vxlan-br} || true
     Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link show ${vxlan-br}
+    Log    ${output}
 
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
