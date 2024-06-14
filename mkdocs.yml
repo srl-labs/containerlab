@@ -63,6 +63,7 @@ nav:
       - Certificate management: manual/cert.md
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
+      - Labs and Codespaces: manual/codespaces.md
       - Developers guide:
           - manual/dev/index.md
           - Testing: manual/dev/test.md
