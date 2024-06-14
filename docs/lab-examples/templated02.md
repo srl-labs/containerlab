@@ -35,7 +35,7 @@ pods:
     prefix: spine
   leaves:
     # SRL leaf type
-    type: ixrd2
+    type: ixrd2l
     # number of leaves per pod
     num: 4
     # prefix of leaf name: ${prefix}${index}
@@ -60,6 +60,5 @@ bash configure.sh
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab.gotmpl
 [topovarfile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab_vars.yaml
-
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

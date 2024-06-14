@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/nodes/srl"
 	"github.com/srl-labs/containerlab/types"
 	"gopkg.in/yaml.v2"
 )
@@ -44,7 +45,7 @@ var supportedKinds = []string{
 }
 
 const (
-	defaultSRLType     = "ixrd2"
+	defaultSRLType     = srl.SRLinuxDefaultType
 	defaultNodePrefix  = "node"
 	defaultGroupPrefix = "tier"
 )

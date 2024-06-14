@@ -30,7 +30,7 @@ name: br01
 topology:
   kinds:
     nokia_srlinux:
-      type: ixrd2
+      type: ixrd2l
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:

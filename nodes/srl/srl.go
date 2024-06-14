@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	srlDefaultType = "ixrd2" // default srl node type
+	SRLinuxDefaultType = "ixrd2l" // default srl node type
 
 	readyTimeout = time.Minute * 5 // max wait time for node to boot
 	retryTimer   = time.Second
@@ -147,7 +147,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	if n.Cfg.NodeType == "" {
-		n.Cfg.NodeType = srlDefaultType
+		n.Cfg.NodeType = SRLinuxDefaultType
 	}
 
 	if _, found := srlTypes[n.Cfg.NodeType]; !found {
