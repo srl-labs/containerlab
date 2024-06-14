@@ -4,7 +4,7 @@ topology:
     license: default.lic
     binds:
       - default.lic:/dst
-    type: ixrd2
+    type: ixrd2l
     env:
       env1: val1
     user: customglobal
@@ -13,6 +13,6 @@ topology:
   nodes:
     node1:
       kind: nokia_srlinux
-      type: ixrd3
+      type: ixrd3l
     node2:
       kind: nokia_srlinux

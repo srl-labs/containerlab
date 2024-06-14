@@ -101,7 +101,7 @@ topology:
   nodes:
     srl:                    # this is a name of the 1st node
       kind: nokia_srlinux
-      type: ixrd2
+      type: ixrd2l
       image: ghcr.io/nokia/srlinux
     ceos:                   # this is a name of the 2nd node
       kind: ceos
@@ -115,7 +115,7 @@ Each node can have multiple configuration properties which make containerlab qui
 ```yaml
 srl:
   kind: nokia_srlinux
-  type: ixrd2
+  type: ixrd2l
   image: ghcr.io/nokia/srlinux
 ```
 
@@ -305,7 +305,7 @@ Kinds define the behavior and the nature of a node, it says if the node is a spe
 topology:
   kinds:
     nokia_srlinux:
-      type: ixrd2
+      type: ixrd2l
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
@@ -327,15 +327,15 @@ topology:
   nodes:
     srl1:
       kind: nokia_srlinux
-      type: ixrd2
+      type: ixrd2l
       image: ghcr.io/nokia/srlinux
     srl2:
       kind: nokia_srlinux
-      type: ixrd2
+      type: ixrd2l
       image: ghcr.io/nokia/srlinux
     srl3:
       kind: nokia_srlinux
-      type: ixrd2
+      type: ixrd2l
       image: ghcr.io/nokia/srlinux
 ```
 

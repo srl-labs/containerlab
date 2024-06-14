@@ -13,6 +13,7 @@ Every lab emulation software must provide its users with the packet capturing ab
 Containerlab offers a simple way to capture the packets from any interface of any node in the lab. This article will explain how to do that.
 
 ///tip
+
 If you are looking for a free Web UI for packet capture with Wireshark, check out our [Edgeshark integration](#edgeshark-integration).
 ///
 

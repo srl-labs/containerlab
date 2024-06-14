@@ -3,7 +3,7 @@ topology:
   kinds:
     nokia_srlinux:
       license: kind.lic
-      type: ixrd2
+      type: ixrd2l
       env:
         env1: val1
       user: customkind

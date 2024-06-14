@@ -155,7 +155,7 @@ func TestTypeInit(t *testing.T) {
 		"undefined_type_returns_default": {
 			got:  "test_data/topo1.yml",
 			node: "node2",
-			want: "ixrd2",
+			want: "ixrd2l",
 		},
 		"node_type_override_kind_type": {
 			got:  "test_data/topo2.yml",
@@ -165,12 +165,12 @@ func TestTypeInit(t *testing.T) {
 		"node_inherits_kind_type": {
 			got:  "test_data/topo2.yml",
 			node: "node1",
-			want: "ixrd2",
+			want: "ixrd2l",
 		},
 		"node_inherits_default_type": {
 			got:  "test_data/topo3.yml",
 			node: "node2",
-			want: "ixrd2",
+			want: "ixrd2l",
 		},
 	}
 
@@ -394,7 +394,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.Containerlab: "topo1",
 				labels.NodeName:     "node1",
 				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2",
+				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
 				labels.NodeLabDir:   "../clab-topo1/node1",
 				labels.TopoFile:     "topo1.yml",
@@ -407,7 +407,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.Containerlab: "topo1",
 				labels.NodeName:     "node2",
 				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2",
+				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
 				labels.NodeLabDir:   "../clab-topo1/node2",
 				labels.TopoFile:     "topo1.yml",
@@ -421,7 +421,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.Containerlab: "topo2",
 				labels.NodeName:     "node1",
 				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2",
+				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
 				labels.NodeLabDir:   "../clab-topo2/node1",
 				labels.TopoFile:     "topo2.yml",
@@ -435,7 +435,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.Containerlab: "topo3",
 				labels.NodeName:     "node2",
 				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2",
+				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
 				labels.NodeLabDir:   "../clab-topo3/node2",
 				labels.TopoFile:     "topo3.yml",
