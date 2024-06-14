@@ -1,15 +1,16 @@
 ---
 status: new
+comments: true
 ---
 
 # Containerlab labs in Codespaces
 
 The best labs are the labs that you can run anywhere, anytime, with a single click and preferrably for free.
 
-Containerlab commoditized the labbing experience by providing a simple and easy to use tool to create and manage network topologies. But still you have to have a machine to run it on.  
+Containerlab commoditized the labbing experience by providing a simple and easy to use tool to create and manage network topologies. But still you have to think a machine to run the lab on.  
 Or, rather, you **had**.
 
-We started to ship containerlab in a [Dev Container][devcontainers-doc][^1] package that allows you to run containerlab in a [GitHub Codespaces][codespaces-doc] for free[^2] and this unlocks a whole new level of flexibility and convenience for the users.
+We started to ship a [Dev Container][devcontainers-doc][^1] package for Containerlab that allows you to run containerlab-based labs in a [GitHub Codespaces][codespaces-doc] for free[^2] unlocking a whole new level of flexibility and convenience for users.
 
 ## Labs in Codespaces
 
@@ -44,11 +45,13 @@ Codespaces environment boots for a couple of minutes, but once it is up and runn
 
 ### Codespaces
 
-As we mentioned, the Codepsaces environment is a VM in the cloud; you can install packages, run other workloads, and use the VM in any way you like, you have the full control of it. We said it is free, but it is free to a certain extent, let's dig in.
+As we mentioned, the Codepsaces environment is a VM in the cloud; you can install packages, run other workloads, and use the VM in any way you like, you have the full control of it. What makes Codespaces VM different from a any other VM in the cloud is that it is tightly integrated with GitHub and VS Code, and provides a configurable and ready-to-use environment.
+
+We said it is free, but it is free to a certain extent, let's dig in.
 
 #### Free plan
 
-The best part about Codespaces is that it has a suitable free tier. GitHub offers **120 cpu-hours/month and 15 GB storage for free** to all users. This means that you can run a Codespace environment for 120 cpu-hours per month without any charges. This is a compelling offer for those who
+The best part about Codespaces is that it has a suitable free tier. GitHub offers **120 cpu-hours/month and 15 GB storage for free**[^7] to all users. This means that you can run a Codespace environment for 120 cpu-hours per month without any charges. This is a compelling offer for those who
 
 - want to spin up a lab provided by others to get through a tutorial or a demo
 - don't need to run the labs 24/7
@@ -79,11 +82,15 @@ Whenever you need to check what Codespaces environments you have running or crea
 
 The panel allows you to see and interact with the available Codespaces environments, including starting, stopping, and deleting them. You can also check what repositories are associated with each environment which is useful for a Containerlab user to quickly identify the lab environments.
 
-/// details | Codespaces settings
+#### Codespaces settings
 
 Codespaces expose a bunch of per-user settings at the [github.com/settings/codespaces](https://github.com/settings/codespaces) page. The following settings are worth mentioning:
 
 //// define
+
+Idle timeout and retention period
+
+- Maybe the most important settings that you can configure in Codespaces. They allow you to control how long the environment will be running and when it will be deleted. Read more on this in [Billing](#billing) section
 
 Secrets
 
@@ -98,8 +105,6 @@ Editor preference
 - You can choose if you want to run the codespaces in a browser, in a local VS Code instance, or via a bridge to a JetBrains IDE.
 
 ////
-
-///
 
 #### Billing
 
@@ -305,3 +310,4 @@ grep user: | awk '{print $2}') --password-stdin
 [^4]: As indicated by the "Montly spending limit" text at the very bottom of the report table.
 [^5]: You can also see message about when the quota reset happens.
 [^6]: The runtime assumes no other environments are running at the same time and storage quota is not exceeded.
+[^7]: The terms of the free plan may be subject to change, consult with the [official documentation](https://docs.github.com/en/billing/managing-billing-for-github-codespaces/about-billing-for-github-codespaces#monthly-included-storage-and-core-hours-for-personal-accounts) for the most recent information.
