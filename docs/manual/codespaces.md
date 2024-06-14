@@ -169,9 +169,9 @@ Once you added the `.devcontainer/devcontainer.json` file to your lab repository
 
 #### Local testing
 
-Testing the environment locally is a litmus test to ensure that the devcontainer.json file is correct and the environment can be started. But since the environment runs locally, it doesn't test the Codespaces-specific settings like the machine type and CPU/RAM requirements.
+Testing the environment locally is a litmus test to ensure that the `devcontainer.json` file is correct and the environment can be started. But since the environment runs locally, it doesn't test the Codespaces-specific settings like the machine type and CPU/RAM requirements.
 
-To deploy the environment locally, use the VS Code command panel (`Cmd/Ctrl+Shift+P`) and execute `Dev Containers: Rebuild And Reopen In Container` action. This will trigger the VS Code to build the container and open the environment in the container.
+To deploy the environment locally, make sure you have [Dev Containers VS Code extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) installed and then use the VS Code command panel (`Cmd/Ctrl+Shift+P`) to execute `Dev Containers: Rebuild And Reopen In Container` action. This will trigger the VS Code to build the container and open the environment in the container.
 
 #### Remote testing
 
