@@ -208,6 +208,9 @@ Once you are satisfied with the environment, you can add a nice button to the RE
 </div>
 ///
 /// tab | Button code
+
+The URL used in the link uses deep link configuration provided by Codespaces, read more about it in the [official docs](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/setting-up-your-repository/facilitating-quick-creation-and-resumption-of-codespaces).
+
 **Do not forget to change the lab repo URL and machine type in the code below!**
 
 ```html
