@@ -28,10 +28,26 @@ ${runtime-cli-exec-cmd}     sudo docker exec
 *** Test Cases ***
 Deploy ${lab-name} lab
     Log    ${CURDIR}
+
+    Sleep    5s
+
+    # log bridge details to check if its mtu is really set to 9100
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link show ${vxlan-br}
+
+    Should Contain    ${output}    mtu 9100    msg=Bridge mtu is not 9100 before lab deployment
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+
+    # log bridge details to check if its mtu is really set to 9100 after the lab deployment
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link show ${vxlan-br}
+
+    Should Contain    ${output}    mtu 9100    msg=Bridge mtu is not 9100 after lab deployment
+
     # save output to be used in next steps
     Set Suite Variable    ${deploy-output}    ${output}
 
@@ -41,6 +57,12 @@ Define runtime exec command
     END
 
 Get netns id for host interface of some_very_long_node_name_l1
+    # log bridge details to check if its mtu is really set to 9100 after the lab deployment
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link show ${vxlan-br}
+
+    Should Contain    ${output}    mtu 9100
+
     ${output} =    Run
     ...    ip netns list-id
     Log    ${output}
@@ -49,6 +71,12 @@ Get netns id for host interface of some_very_long_node_name_l1
     ...    ip netns list-id | awk '/clab-${lab-name}-${l1_name}/ {print $2}'
 
     Set Suite Variable    ${l1_host_link_netnsid}    ${output}
+
+    # log bridge details to check if its mtu is really set to 9100 after the lab deployment
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link show ${vxlan-br}
+
+    Should Contain    ${output}    mtu 9100
 
 Check host interface for some_very_long_node_name_l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -70,6 +98,12 @@ Check host interface for l2 node
     Should Contain    ${output}    link-netns clab-vxlan-tools-l2
 
 Deploy vxlab link between l1 and l3 with tools cmd
+    # log bridge details to check if its mtu is really set to 9100 after the lab deployment
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ip link show ${vxlan-br}
+
+    Should Contain    ${output}    mtu 9100
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.23 --link ${l1_host_link} --id 101 --port 14788
     Log    ${output}
@@ -124,7 +158,7 @@ Setup
     Log    ${output}
 
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip link set dev ${vxlan-br} up && sudo ip link set dev ${vxlan-br} mtu 9100 && sudo ip addr add ${vxlan-br-ip} dev ${vxlan-br} || true
+    ...    sudo ip link set dev ${vxlan-br} up && sleep 2 && sudo ip link set dev ${vxlan-br} mtu 9100 && sudo ip addr add ${vxlan-br-ip} dev ${vxlan-br} || true
     Log    ${output}
 
     ${rc}    ${output} =    Run And Return Rc And Output
