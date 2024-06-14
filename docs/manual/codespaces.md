@@ -128,7 +128,7 @@ By now you should be willing to try running your labs in Codespaces. To our luck
 {
     "image": "ghcr.io/srl-labs/containerlab/clab-devcontainer:0.55.0",
     "hostRequirements": {
-        "cpus": 2,
+        "cpus": 4, // (1)!
         "memory": "8gb",
         "storage": "32gb"
     },
@@ -136,6 +136,8 @@ By now you should be willing to try running your labs in Codespaces. To our luck
     "workspaceFolder": "/srl-vlan-handling-lab"
 }
 ```
+
+1. 4-core machine type is used in this example, you can tune the machine type to fit your lab requirements. Maybe it will fit in a 2-core/4GB machine, or you need a beefier 8-core machine, it is up to you.
 
 ### Image
 
