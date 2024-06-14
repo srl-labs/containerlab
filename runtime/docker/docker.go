@@ -99,18 +99,24 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 		return
 	}
 
-	// detect default MTU if this config parameter was not provided in the clab file
-	netRes, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
-	if err != nil {
-		d.mgmt.MTU = 1500
-		log.Debugf("an error occurred when trying to detect docker default network mtu")
-	}
-
-	if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
-		log.Debugf("detected docker network mtu value - %s", mtu)
-		d.mgmt.MTU, err = strconv.Atoi(mtu)
+	// if the network name is not "clab", which is a default network name used by containerlab
+	// then likely a user wants to keep the custom network mtu value.
+	// however, if the network name is "clab" and mtu is not provided in the topology file
+	// we should detect the mtu value of the default docker network and set it for the clab network
+	// as most often this is desired.
+	if n.Network == "clab" {
+		netRes, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
 		if err != nil {
-			log.Errorf("Error parsing MTU value of %q as int", mtu)
+			d.mgmt.MTU = 1500
+			log.Debugf("an error occurred when trying to detect docker default network mtu")
+		}
+
+		if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
+			log.Debugf("detected docker network mtu value - %s", mtu)
+			d.mgmt.MTU, err = strconv.Atoi(mtu)
+			if err != nil {
+				log.Errorf("Error parsing MTU value of %q as int", mtu)
+			}
 		}
 	}
 
