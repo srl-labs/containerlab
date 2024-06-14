@@ -65,7 +65,7 @@ You can select which GitHub machine type you want to use for your project; each 
 | 4 core       | 8           | 32           | 30                                                      |
 | 8 core       | 16          | 32           | 15                                                      |
 | 16 core      | 32          | 64           | 7.5                                                     |
-| 32 core      | 64          | 128          | 3.75                                                    |
+| 32 core      | 64          | 128          | 3.75 (may not be available in your account)             |
 
 <small>If you need more than 120 cpu-hours, you can pay for the additional usage ([consult with pricing](https://github.com/features/codespaces#pricing)), and you can always stop the environment when you don't need it to save the quota.</small>
 
@@ -132,9 +132,7 @@ By now you should be willing to try running your labs in Codespaces. To our luck
         "cpus": 4, // (1)!
         "memory": "8gb",
         "storage": "32gb"
-    },
-    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind",
-    "workspaceFolder": "/srl-vlan-handling-lab"
+    }
 }
 ```
 
@@ -154,21 +152,16 @@ Another important part of the `devcontainer.json` file is the `hostRequirements`
 
 | Machine type | CPU | Memory (GB) | Storage (GB) |
 | ------------ | --- | ----------- | ------------ |
-| 2 core       | 2   | 4           | 32           |
-| 4 core       | 4   | 8           | 32           |
-| 8 core       | 8   | 16          | 32           |
-| 16 core      | 16  | 32          | 64           |
-| 32 core      | 32  | 64          | 128          |
+| 2 core       | 2   | 8           | 32           |
+| 4 core       | 4   | 16          | 32           |
+| 8 core       | 8   | 32          | 64           |
+| 16 core      | 16  | 64          | 128          |
 
 Using the machine types displayed above you can tune the `hostRequirements` section by choosing the machine type that fits the requirements of your lab.
 
 /// note
 Codespaces VMs support nested virtualization, so you can run [VM-based kinds](../manual/vrnetlab.md) :partying_face:
 ///
-
-### Mounts
-
-Lastly we specify the folder name we want our repo to be cloned in, this is governed by the `workspaceFolder` field. The `workspaceMount` field is used to mount the local workspace folder to the Codespaces environment and is static for all labs.
 
 ### Testing the environment
 
