@@ -27,7 +27,7 @@ Here is a quick demo how anyone can run the full [SR Linux Streaming Telemetry l
   <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/b3e83eb56d674a0e967a74e020399e29/srl-tel-sneak.mp4" type="video/mp4">
 </video>
 
-<small>Want to try it yourself? [Click here](https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1).</small>
+<small>Fancy a full demo? Check out the 17min [:simple-youtube: video](https://www.youtube.com/watch?v=kpmTa9h0I-Q) by Roman. Would you rather straight try it yourself, then [click here](https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1).</small>
 
 ### How does it work?
 
