@@ -64,6 +64,7 @@ nav:
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
       - Labs and Codespaces: manual/codespaces.md
+      - Link Impairments: manual/impairments.md
       - Developers guide:
           - manual/dev/index.md
           - Testing: manual/dev/test.md
