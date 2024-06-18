@@ -6,6 +6,19 @@ With the `containerlab tools netem set` command users can set link impairments o
 * packet loss
 * rate limiting
 
+/// details | Considerations
+Note, that `netem` is a Linux kernel module and it might not be available in particular kernel configurations.
+
+For example, on some RHEL 8 systems the following commands might be needed to run to add the support for netem:
+
+```bash
+dnf install kernel-debug-modules-extra
+dnf install kernel-modules-extra
+systemctl reboot now 
+```
+
+///
+
 Note, that setting link impairments with `netem set` command is implemented in a way that all impairments are applied to the interface at once. This means that if an interface had a packet loss of 10% and you execute `netem set` command with a delay of 100ms, the packet loss will be reset to 0% and the delay will be set to 100ms.
 
 Once the impairments are set, they act for as long as the underlying node/container is running. To clear the impairments, set them to the [default values](#clear-any-existing-impairments).
