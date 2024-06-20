@@ -6,5 +6,5 @@ topology:
   nodes:
     srl:
       kind: nokia_srlinux
-      image: ghcr.io/nokia/srlinux:${SRL_VERSION:=latest}
+      image: ${SRL_IMAGE:=ghcr.io/nokia/srlinux}:${SRL_VERSION:=latest}
       type: ${SRL_TYPE:=ixrd3l}
