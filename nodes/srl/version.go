@@ -159,7 +159,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 
 	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access
 	// that are useful for labs and were removed as a security hardening measure.
-	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v24.3") >= 0 || n.swVersion.major == "0") {
+	if semver.Compare(v, "v24.3") >= 0 || n.swVersion.major == "0" {
 		tplData.ACLConfig = aclConfig
 	}
 
