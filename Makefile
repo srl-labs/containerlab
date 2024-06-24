@@ -86,10 +86,20 @@ docs:
 site:
 	docker run -it --rm -p 8000:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
 
-# serve the site locally using mkdocs-material insiders container
+# serve the site locally using mkdocs-material insiders or public container
+# to serve using a public container image run as `make serve-docs-full PUBLIC=yes`
+# this will remove the typeset and glightbox plugins from the mkdocs.yml file since they are not available in the public image
+# when PUBLIC=yes is not set, the mkdocs-material insiders image is used with all the dependencies included.
 .PHONY: serve-docs-full
 serve-docs-full:
-	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
+ifeq ($(PUBLIC),yes)
+	@{ 	\
+		sed -i 's/^  - typeset/#- typeset/g; s/^  - glightbox/#- glightbox/g' mkdocs.yml; \
+	}
+	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
+else
+	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
+endif
 
 # serve the site locally using mkdocs-material insiders container and dirty-reload
 # in this mode navigation might not update properly, but the content will be updated
