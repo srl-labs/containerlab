@@ -44,7 +44,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Juniper vJunos-router**  | [`vr-vjunosrouter/juniper_vjunosrouter`](vr-vjunosrouter.md)    | supported |    VM     |
 | **Juniper vJunos-switch**  | [`vr-vjunosswitch/juniper_vjunosswitch`](vr-vjunosswitch.md)    | supported |    VM     |
 | **Juniper vJunosEvolved**  | [`vr-vjunosevolved/juniper_vjunosevolved`](vr-vjunosevolved.md) | supported |    VM     |
-| **Cisco XRd**              | [`xrd/cisco_xrd'](xrd.md)                                       | supported | container |
+| **Cisco XRd**              | [`xrd/cisco_xrd`](xrd.md)                                       | supported | container |
 | **Cisco XRv9k**            | [`vr-xrv9k/vr-cisco_xrv9k`](vr-xrv9k.md)                        | supported |    VM     |
 | **Cisco XRv**              | [`vr-xrv/vr-cisco_xrv`](vr-xrv.md)                              | supported |    VM     |
 | **Cisco CSR1000v**         | [`vr-csr/vr-cisco_csr1000v`](vr-csr.md)                         | supported |    VM     |
