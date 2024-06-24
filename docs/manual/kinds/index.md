@@ -59,6 +59,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **IPInfusion OcNOS**       | [`ipinfusion_ocnos`](ipinfusion-ocnos.md)                       | supported |    VM     |
 | **OpenBSD**                | [`openbsd`](openbsd.md)                                         | supported |    VM     |
 | **Keysight ixia-c-one**    | [`keysight_ixia-c-one`](keysight_ixia-c-one.md)                 | supported | container |
+| **Ostinato**               | [`linux`](ostinato.md)                                          | supported | container |
 | **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md)             | supported |    VM     |
 | **Fortinet Fortigate**     | [`fortinet_fortigate`](fortinet_fortigate.md)                   | supported |    VM     |
 | **Palo Alto PAN**          | [`vr-panos/vr-paloalto_panos`](vr-pan.md)                       | supported |    VM     |
