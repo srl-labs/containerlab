@@ -29,6 +29,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Cumulus VX](manual/kinds/cvx.md)
 * [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
 * [RARE/freeRtr](manual/kinds/rare-freertr.md)
+* [Ostinato](manual/kinds/ostinato.md)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](manual/vrnetlab.md):
 

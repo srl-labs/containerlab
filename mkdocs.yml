@@ -37,6 +37,7 @@ nav:
           - OpenBSD: manual/kinds/openbsd.md
           - FreeBSD: manual/kinds/freebsd.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
+          - Ostinato: manual/kinds/ostinato.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
