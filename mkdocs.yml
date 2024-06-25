@@ -68,6 +68,7 @@ nav:
       - Link Impairments: manual/impairments.md
       - Developers guide:
           - manual/dev/index.md
+          - Documentation: manual/dev/doc.md
           - Testing: manual/dev/test.md
   - Command reference:
       - deploy: cmd/deploy.md
