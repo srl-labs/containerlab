@@ -20,6 +20,14 @@ Containerlab supports only the control-plane flavor of XRd, as it allows to buil
 
 XRd image is available for download only for users who have an active service account[^1].
 
+## Host server requirements
+
+You should increase the value of `user.max_inotify_instances`:
+
+```bash
+sysctl -w user.max_inotify_instances=64000
+```
+
 ## Managing XRd nodes
 
 There are several management interfaces supported by XRd nodes:
