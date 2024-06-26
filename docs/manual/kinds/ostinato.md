@@ -52,8 +52,6 @@ Ostinato **does not have any CLI or commands to generate traffic - use the GUI**
 ```
 docker exec -it <container-name/id> bash
 ```
-
-Credentials: `ostinatotg/ostinatotg`
 ///
 
 ## Interfaces mapping
@@ -84,7 +82,7 @@ You can read more about [node binds](../nodes.md#binds)
 
 ## Lab examples
 
-Coming soon...
+A simple [Ostinato and Nokia SR Linux](../../lab-examples/ost-srl.md) lab demonstrates a simple test topology, IPv4 traffic streams to verify L3 forwarding and a short video clip that shows it in action.
 
 ## More
 

@@ -117,6 +117,7 @@ nav:
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
       - BGP VPLS between Nokia and Juniper: lab-examples/bgp-vpls-nok-jun.md
       - Keysight IXIA-C and Nokia SR Linux: lab-examples/ixiacone-srl.md
+      - Ostinato and Nokia SR Linux: lab-examples/ost-srl.md
       - Multi-node labs: lab-examples/multinode.md
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
