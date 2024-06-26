@@ -1,3 +1,4 @@
+"MD007": false # allow 4 spaced indentation for ul as this is used by mkdocs for nested lists
 "MD026": false # allow trailing punctuation to support icons shortcodes at the end of a sentence
 "MD038": false
 "MD033": false # inline html
