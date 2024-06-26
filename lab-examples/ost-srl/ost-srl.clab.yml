@@ -1,0 +1,20 @@
+name: ost-srl
+
+topology:
+  nodes:
+    ost:
+      kind: linux
+      image: ostinato/ostinato:v1.3.0-1
+      ports:
+        - 5900:5900/tcp
+        - 7878:7878/tcp
+      binds:
+        - .:/root/shared
+    srl:
+      kind: srl
+      image: ghcr.io/nokia/srlinux
+      startup-config: srl.cfg
+  links:
+    - endpoints: ["ost:eth1", "srl:e1-1"]
+    - endpoints: ["ost:eth2", "srl:e1-2"]
+
