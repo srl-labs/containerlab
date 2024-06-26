@@ -15,7 +15,7 @@ This lab consists of a [Ostinato](../manual/kinds/ostinato.md) node with 2 ports
 
 [Ostinato][ostinato] is a software based network packet traffic generator managed via a GUI or a Python script using the [Ostinato API][ostinato-api]. This example will demonstrate how to use the Ostinato GUI included with the Ostinato for Containerlab image to verify IPv4 forwarding.
 
-<div class='mxgraph' style='max-width:100%;border:1px solid transparent;margin:0 auto; display:block;' data-mxgraph='{"page":0,"zoom":2,"highlight":"#0000ff","nav":true,"resize":true,"edit":"_blank","url":"https://raw.githubusercontent.com/srl-labs/containerlab/ab5112e8d7c66027b01f3656592f2b700dfc0caa/ost-srl-clab.drawio"}'></div>
+<div class='mxgraph' style='max-width:100%;border:1px solid transparent;margin:0 auto; display:block;' data-mxgraph='{"page":0,"zoom":2,"highlight":"#0000ff","nav":true,"resize":true,"edit":"_blank","url":"https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ost-srl-clab.drawio"}'></div>
 
 ## Deployment
 
@@ -37,7 +37,7 @@ This lab allows users to validate IPv4 forwarding on Nokia SR Linux (the DUT) us
 
 ### IPv4 Traffic forwarding
 
-<div class='mxgraph' style='max-width:100%;border:1px solid transparent;margin:0 auto; display:block;' data-mxgraph='{"page":1,"zoom":1.5,"highlight":"#0000ff","nav":true,"resize":true,"edit":"_blank","url":"https://raw.githubusercontent.com/srl-labs/containerlab/ab5112e8d7c66027b01f3656592f2b700dfc0caa/ost-srl-clab.drawio"}'></div>
+<div class='mxgraph' style='max-width:100%;border:1px solid transparent;margin:0 auto; display:block;' data-mxgraph='{"page":1,"zoom":1.5,"highlight":"#0000ff","nav":true,"resize":true,"edit":"_blank","url":"https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/ost-srl-clab.drawio"}'></div>
 
 This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
