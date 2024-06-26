@@ -1,13 +1,13 @@
 # Ostinato and Nokia SR Linux
 
-|                               |                                                                                        |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| **Description**               | Ostinato node connected with Nokia SR Linux                                            |
-| **Components**                | [Ostinato][ostinato], [Nokia SR Linux][srl]                                            |
-| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                   |
-| **Topology file**             | [ost-srl.clab.yaml][topofile]                                                          |
-| **Name**                      | ost-srl                                                                                |
-| **Version information**[^2]   | `containerlab:0.34.0`, `ostinato:v1.3.0-1`, `srlinux:22.11.1`, `docker-ce:20.10.21`    |
+|                               |                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| **Description**               | Ostinato traffic generator connected with Nokia SR Linux                           |
+| **Components**                | [Ostinato][ostinato], [Nokia SR Linux][srl]                                        |
+| **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 4 GB               |
+| **Topology file**             | [ost-srl.clab.yaml][topofile]                                                      |
+| **Name**                      | ost-srl                                                                            |
+| **Version information**[^2]   | `containerlab:0.55.1`, `ostinato:v1.3.0-1`, `srlinux:24.3.2`, `docker-ce:26.0.0` |
 
 ## Description
 
@@ -51,14 +51,16 @@ This lab demonstrates a simple IPv4 traffic forwarding scenario where
 
 During the lab deployment and test execution the following configuration is applied to the lab nodes to forward and receive traffic.
 
-- **SR Linux**
+- **SR Linux**  
     SR Linux node comes up pre-configured with the commands listed in [srl.cfg][srlcfg] file which configure IPv4 addresses on both interfaces.
 
-- **Ostinato**
+- **Ostinato**  
     Ostinato configuration is saved in the [ost-srl.ossn][ostcfg] file which will configure the emulated hosts and traffic streams. The configuration file needs to be loaded manually as explained in the next section
 
-!!!warning
-    All Ostinato stream and session files are NOT in text (or human readable) format but a binary format read and written by Ostinato
+/// admonition
+    type: warning
+All Ostinato stream and session files are NOT in text (or human readable) format but a binary format read and written by Ostinato
+///
 
 #### Execution
 
@@ -73,12 +75,9 @@ During the lab deployment and test execution the following configuration is appl
 
 Here's a short video showing the above steps -
 
-<iframe type="text/html"
-    width="100%"
-    height="500"
-    src="https://www.youtube.com/embed/KHUTuL7fc2I"
-    frameborder="0">
-</iframe>
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/KHUTuL7fc2I" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
 
 #### Next Steps
 
@@ -86,11 +85,11 @@ You can edit the Ostinato emulated devices and streams to experiment further.
 
 Here are some suggestions -
 
-* Override the IPv4 checksum to an invalid value and verify the DUT silently discards the packets (some DUTs may send an ICMP parameter problem)
-* Try setting IPv4 TTL to 1 and verify
-    * traffic is not forwarded by the DUT
-    * DUT sends back ICMP TTL Exceeded (you can capture and view captured packets)
-* Try IPv6 traffic streams
+- Override the IPv4 checksum to an invalid value and verify the DUT silently discards the packets (some DUTs may send an ICMP parameter problem)
+- Try setting IPv4 TTL to 1 and verify
+  - traffic is not forwarded by the DUT
+  - DUT sends back ICMP TTL Exceeded (you can capture and view captured packets)
+- Try IPv6 traffic streams
 
 Learn more about [Ostinato traffic streams][ostinato-streams].
 

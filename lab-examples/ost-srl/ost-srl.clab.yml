@@ -11,10 +11,9 @@ topology:
       binds:
         - .:/root/shared
     srl:
-      kind: srl
-      image: ghcr.io/nokia/srlinux
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:24.3.2
       startup-config: srl.cfg
   links:
     - endpoints: ["ost:eth1", "srl:e1-1"]
     - endpoints: ["ost:eth2", "srl:e1-2"]
-
