@@ -87,8 +87,8 @@ Here are some suggestions -
 
 - Override the IPv4 checksum to an invalid value and verify the DUT silently discards the packets (some DUTs may send an ICMP parameter problem)
 - Try setting IPv4 TTL to 1 and verify
-  - traffic is not forwarded by the DUT
-  - DUT sends back ICMP TTL Exceeded (you can capture and view captured packets)
+    - traffic is not forwarded by the DUT
+    - DUT sends back ICMP TTL Exceeded (you can capture and view captured packets)
 - Try IPv6 traffic streams
 
 Learn more about [Ostinato traffic streams][ostinato-streams].
