@@ -43,6 +43,7 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	vr_sonic "github.com/srl-labs/containerlab/nodes/vr_sonic"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
@@ -82,6 +83,7 @@ func (c *CLab) RegisterNodes() {
 	vr_vjunosevolved.Register(c.Reg)
 	vr_xrv.Register(c.Reg)
 	vr_xrv9k.Register(c.Reg)
+	vr_sonic.Register(c.Reg)
 	xrd.Register(c.Reg)
 	rare.Register(c.Reg)
 	c8000.Register(c.Reg)
