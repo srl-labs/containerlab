@@ -20,7 +20,7 @@ import (
 
 var (
 	kindnames          = []string{"vr-sonic"}
-	defaultCredentials = nodes.NewCredentials("admin", "YourPaSsWoRd")
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
 const (
