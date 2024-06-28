@@ -25,6 +25,20 @@ For those who cherish IRC in their hearts, a community-led IRC channel `#contain
 
 We are always happy to showcase containerlab and demonstrate its powers. Luckily, the network engineering community has lots of events worldwide, and we participated in some. Below you will find recordings of containerlab talks in different formats and on various venues listed in reverse chronological order[^1].
 
+### Autocon 1
+
+<small>:material-youtube: [When to use and not to use Containerlab?](https://youtu.be/zKHqiWdN91s) · :material-calendar: 2024-05-29</small>
+
+As with every tool, it is important to use it in the right context. It is possible to drive a nail with a screwdriver, but a hammer would be more appropriate. In this talk, Roman Dodin explains the use cases where containerlab shines and where it might not be the best fit.
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/zKHqiWdN91s" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+Participants:
+
+* [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
+
 ### NFD 33
 
 <small>:material-youtube: [Lab as Code with Containerlab](https://www.youtube.com/watch?v=rjZjerjTrSY) · :material-calendar: 2023-10-30</small>
@@ -37,7 +51,7 @@ Three years in the making with monthly releases, containerlab has become a de-fa
 
 Participants:
 
-* [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+* [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 
 ### Telco podcast
 
@@ -75,7 +89,7 @@ Our very first NANOG appearance and we went full-steam there. This talk is the m
 
 Participants:
 
-* [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+* [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 * [:material-linkedin:][karim-linkedin] Karim Radhouani
 
 ### Open Networking & Edge Summit 2021
@@ -90,7 +104,7 @@ The talk starts with the reasoning as to why containerlab development was warran
 <iframe width="100%" src="https://www.youtube.com/embed/snQTlFahY1c" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-Participants: [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+Participants: [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 
 ### NLNOG 2021
 
@@ -114,13 +128,36 @@ Building large-scale network labs can be tedious and error-prone — More import
 <iframe src="https://anchor.fm/modulate-demodulate/embed/episodes/Containerlab-Declarative-Network-Labbing-with-Roman-Dodin-e129cuc/a-a5q33b1" height="102px" width="400px" frameborder="0" scrolling="no"></iframe>
 </div>
 
-Participants: [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+Participants: [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 
 ## Blogs
 
 The power of the community is in its members. We are delighted to have containerlab users who share their experience working with the tool, unveiling new use cases, and providing a personal touch to the workflows.
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
+
+### Extending the Kubernetes (host) network with EVPN tunnels
+
+<small>:material-text: [Blog](https://fedepaol.github.io/blog/2024/06/14/extending-the-kubernetes-host-network-with-evpn-tunnels-and-frr/) by [Federico Paolinelli](https://fedepaol.github.io/about/) · :material-calendar: 2024-06-14</small>
+
+It is refreshing to see how people find new ways to use containerlab. In this blog post, Federico Paolinelli explains how he used containerlab to create a lab environment to test a solution to extend the Kubernetes host network with EVPN tunnels and FRR.
+
+Containerlab helped to build the lab environment where a KinD-based k8s cluster is connected to an EVPN emulated fabric. Thanks to the native KinD support in containerlab it was all a single lab package to deploy and test the solution.
+
+### Building a home lab with containerlab
+
+<small>:material-text: [Blog](https://write.as/rarovar/my-experience-as-a-network-engineer-and-my-introduction-to-containerlab#this-is-cool-and-all-but-how-do-i-use-it) by [rarovar](https://write.as/rarovar/my-experience-as-a-network-engineer-and-my-introduction-to-containerlab) · :material-calendar: 2024-04-18</small>
+
+It is rare to see a blog post series that starts from, literally, bare metal and builds up to an in-depth explanation of how to use containerlab to build a network lab. In this blog post series, rarovar shares his Containerlab journey in 4 acts:
+
+* Part 1: Preparing your Server
+* Part 2: Creating your Containerlab VM
+* Part 3: Installing Containerlab on your VM
+* Part 4: Creating your first lab
+
+You will find links to all parts [here](https://write.as/rarovar/my-experience-as-a-network-engineer-and-my-introduction-to-containerlab#this-is-cool-and-all-but-how-do-i-use-it).
+
+It was especially interesting to read how rarovar built the lab environment based on NUC hardware in Part1. But do check other parts as well!
 
 ### Powering up your Netbox labs with Containerlab
 
