@@ -70,7 +70,7 @@ func (n *vrXRV9K) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace",
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName,
+		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"], n.Cfg.Env["VCPU"], n.Cfg.Env["RAM"])
 
 	return nil
