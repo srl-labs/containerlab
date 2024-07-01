@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // The author of this code is Adam Kulagowski (adam.kulagowski@codilime.com), CodiLime (codilime.com).
 
-package vr_sonic
+package sonic_vm
 
 import (
 	"context"
@@ -19,28 +19,28 @@ import (
 )
 
 var (
-	kindnames          = []string{"vr-sonic"}
+	kindnames          = []string{"sonic_vm"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
 const (
 	configDirName   = "config"
 	startupCfgFName = "config_db.json"
-	saveCmd            = `sh -c "/backup.sh -u $USERNAME -p $PASSWORD backup"`
+	saveCmd         = `sh -c "/backup.sh -u $USERNAME -p $PASSWORD backup"`
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
-		return new(vrSONiC)
+		return new(sonic_vm)
 	}, defaultCredentials)
 }
 
-type vrSONiC struct {
+type sonic_vm struct {
 	nodes.DefaultNode
 }
 
-func (n *vrSONiC) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
@@ -63,50 +63,46 @@ func (n *vrSONiC) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
 
-	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
-		// mount dev dir to enable macvtap
-		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
-	}
-
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
 }
 
-func (n *vrSONiC) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *sonic_vm) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		log.Errorf("Error handling certifcate for %s: %w", n.Cfg.ShortName, err)
+		log.Errorf("Error handling certifcate for %s: %v", n.Cfg.ShortName, err)
+
 		return nil
 	}
 
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
-func (n *vrSONiC) SaveConfig(ctx context.Context) error {
-        cmd, err := exec.NewExecCmdFromString(saveCmd)
-        if err != nil {
-			return fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
-		}
+func (n *sonic_vm) SaveConfig(ctx context.Context) error {
+	cmd, err := exec.NewExecCmdFromString(saveCmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
+	}
 
-        execResult, err := n.RunExec(ctx, cmd)
-        if err != nil {
-                return fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
-        }
+	execResult, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
+	}
 
-        if len(execResult.GetStdErrString()) > 0 {
-                return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
-        }
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+	}
 
-        confPath := n.Cfg.LabDir + "/" + configDirName
-        log.Infof("saved /etc/sonic/config_db.json backup from %s node to %s\n", n.Cfg.ShortName, confPath)
+	confPath := n.Cfg.LabDir + "/" + configDirName
+	log.Infof("saved /etc/sonic/config_db.json backup from %s node to %s\n", n.Cfg.ShortName, confPath)
 
-        return nil
+	return nil
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrSONiC) CheckInterfaceName() error {
+func (n *sonic_vm) CheckInterfaceName() error {
 	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }
