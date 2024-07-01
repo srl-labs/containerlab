@@ -23,6 +23,7 @@ import (
 	ovs "github.com/srl-labs/containerlab/nodes/ovs"
 	rare "github.com/srl-labs/containerlab/nodes/rare"
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
+	vr_sonic "github.com/srl-labs/containerlab/nodes/sonic_vm"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
@@ -43,7 +44,6 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
-	vr_sonic "github.com/srl-labs/containerlab/nodes/vr_sonic"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
