@@ -268,6 +268,12 @@ func (*DefaultNode) CheckInterfaceName() error {
 	return nil
 }
 
+// CalculateInterfaceIndex returns with the interface index offset from the first valid dataplane interface based on the interface name.
+// A no-op for the default node, specific nodes (vrnetlab nodes specifically) should implement this method.
+func (*DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
+	return 0, nil
+}
+
 // VerifyStartupConfig verifies that startup config files exists on disks.
 func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 	cfg := d.Config().StartupConfig
@@ -539,8 +545,10 @@ func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) 
 	return netns.Do(f)
 }
 
-func (d *DefaultNode) AddEndpoint(e links.Endpoint) {
+func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
 	d.Endpoints = append(d.Endpoints, e)
+
+	return nil
 }
 
 func (d *DefaultNode) GetEndpoints() []links.Endpoint {

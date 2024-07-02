@@ -20,6 +20,7 @@ const (
 type Endpoint interface {
 	GetNode() Node
 	GetIfaceName() string
+	GetIfaceAlias() string
 	GetRandIfaceName() string
 	GetMac() net.HardwareAddr
 	String() string
@@ -40,12 +41,16 @@ type Endpoint interface {
 	// Because there is no node that would deploy this side of the link they should be deployed along
 	// with the A side of the veth link.
 	IsNodeless() bool
+	// Setters for ifaceName and Alias
+	SetIfaceName(string)
+	SetIfaceAlias(string)
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
 type EndpointGeneric struct {
-	Node      Node
-	IfaceName string
+	Node       Node
+	IfaceName  string
+	IfaceAlias string
 	// Link is the link this endpoint belongs to.
 	Link     Link
 	MAC      net.HardwareAddr
@@ -56,6 +61,7 @@ func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
 	return &EndpointGeneric{
 		Node:      node,
 		IfaceName: iface,
+		IfaceAlias: "",
 		// random name is generated for the endpoint to avoid name collisions
 		// when it is first deployed in the root namespace
 		randName: genRandomIfName(),
@@ -69,6 +75,18 @@ func (e *EndpointGeneric) GetRandIfaceName() string {
 
 func (e *EndpointGeneric) GetIfaceName() string {
 	return e.IfaceName
+}
+
+func (e *EndpointGeneric) GetIfaceAlias() string {
+	return e.IfaceAlias
+}
+
+func (e *EndpointGeneric) SetIfaceName(ifaceName string) {
+	e.IfaceName = ifaceName
+}
+
+func (e *EndpointGeneric) SetIfaceAlias(ifaceAlias string) {
+	e.IfaceAlias = ifaceAlias
 }
 
 func (e *EndpointGeneric) GetMac() net.HardwareAddr {

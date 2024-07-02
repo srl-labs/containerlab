@@ -381,7 +381,7 @@ type Node interface {
 	// the master of the interface and bring the interface up.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 	// AddEndpoint adds the Endpoint to the node
-	AddEndpoint(e Endpoint)
+	AddEndpoint(e Endpoint) error
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
 	GetEndpoints() []Endpoint
@@ -421,6 +421,13 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 		// lets set the MAC address if provided
 		if len(endpt.GetMac()) == 6 {
 			err := netlink.LinkSetHardwareAddr(l, endpt.GetMac())
+			if err != nil {
+				return err
+			}
+		}
+
+		if len(endpt.GetIfaceAlias()) != 0 {
+			err := netlink.LinkSetAlias(l, endpt.GetIfaceAlias())
 			if err != nil {
 				return err
 			}

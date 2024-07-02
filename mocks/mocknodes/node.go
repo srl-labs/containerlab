@@ -48,9 +48,11 @@ func (m *MockNode) EXPECT() *MockNodeMockRecorder {
 }
 
 // AddEndpoint mocks base method.
-func (m *MockNode) AddEndpoint(e links.Endpoint) {
+func (m *MockNode) AddEndpoint(e links.Endpoint) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddEndpoint", e)
+	ret := m.ctrl.Call(m, "AddEndpoint", e)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // AddEndpoint indicates an expected call of AddEndpoint.
@@ -71,6 +73,21 @@ func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f 
 func (mr *MockNodeMockRecorder) AddLinkToContainer(ctx, link, f any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLinkToContainer", reflect.TypeOf((*MockNode)(nil).AddLinkToContainer), ctx, link, f)
+}
+
+// CalculateInterfaceIndex mocks base method.
+func (m *MockNode) CalculateInterfaceIndex(ifName string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CalculateInterfaceIndex")
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CalculateInterfaceIndex indicates an expected call of CalculateInterfaceIndex.
+func (mr *MockNodeMockRecorder) CalculateInterfaceIndex() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateInterfaceIndex", reflect.TypeOf((*MockNode)(nil).CalculateInterfaceIndex))
 }
 
 // CheckDeploymentConditions mocks base method.
