@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
@@ -19,6 +20,9 @@ import (
 var (
 	kindnames          = []string{"cisco_xrv", "vr-xrv", "vr-cisco_xrv"}
 	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+	InterfaceRegexp    = regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?0/0/0/(?P<port>\d+)$`)
+	InterfaceOffset    = 0
+	InterfaceHelp      = "GigabitEthernet0/0/0/X or Gi0/0/0/X (where X >= 0) or ethX (where X >= 1)"
 )
 
 const (
@@ -36,12 +40,12 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type vrXRV struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *vrXRV) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// Init VRNode
+	n.VRNode = *nodes.NewVRNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
