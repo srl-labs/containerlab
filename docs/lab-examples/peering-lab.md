@@ -51,7 +51,6 @@ The Route Servers receive NLRIs from peers and pass them over to the other IXP m
 
 Every component of this lab is openly available and can be downloaded from public repositories, but Nokia SR OS, which has to be obtained from Nokia representatives. In this lab SR OS container image name is `sros:23.3.R1`.
 
-
 ## Topology definition
 
 The topology definition file for this lab is available in the [lab repository][lab]. The topology file - [`ixp.clab.yml`][lab-file] - declaratively describes the lab topology and is used by containerlab to create the lab environment.
@@ -381,7 +380,7 @@ The following resources were used to create this lab:
 [obgpd-container]: https://quay.io/openbgpd/openbgpd:7.9
 [rd-twitter]: https://twitter.com/ntdvps
 [rd-linkedin]: https://www.linkedin.com/in/romandodin/
-[frr-container]: https://quay.io/openbgpd/openbgpd:7.9
+[frr-container]: https://quay.io/repository/frrouting/frr:8.4.1
 [lab-file]: https://github.com/hellt/sros-frr-ixp-lab/blob/euro-ix/ixp.clab.yml
 [sros-partial-cfg]: https://github.com/hellt/sros-frr-ixp-lab/blob/euro-ix/configs/sros.partial.cfg
 [frr-conf-basic]: https://github.com/hellt/sros-frr-ixp-lab/blob/euro-ix/configs/frr.conf
