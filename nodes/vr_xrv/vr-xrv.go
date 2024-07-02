@@ -74,6 +74,10 @@ func (n *vrXRV) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
+
 	return nil
 }
 
