@@ -2,12 +2,12 @@
 search:
   boost: 4
 ---
-# SONiC (container)
+# SONiC (VM)
 
 [SONiC](https://sonic-net.github.io/SONiC/) Network OS is distributed in two formats suitable for testing with containerlab
 
-1. Containerized SONiC (topic of this document)
-2. Virtual Machine SONiC
+1. Containerized SONiC
+2. Virtual Machine SONiC (topic of this document)
 
 This document covers the containerized SONiC that is identified with `sonic-vs` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vs` node.
 
@@ -47,9 +47,3 @@ sonic-vs container uses the following mapping for its linux interfaces:
 * `eth1` - first data (front-panel port) interface
 
 When containerlab launches sonic-vs node, it will assign IPv4/6 address to the `eth0` interface. Data interface `eth1` mapped to `Ethernet0` port and needs to be configured with IP addressing manually. See Lab examples for exact configurations.
-
-## Lab examples
-
-The following labs feature sonic-vs node:
-
-* [SR Linux and sonic-vs](../../lab-examples/srl-sonic.md)
