@@ -1,7 +1,7 @@
 |                               |                                                                      |
 | ----------------------------- | -------------------------------------------------------------------- |
 | **Description**               | A 3-node ring of FRR routers with OSPF IGP                           |
-| **Components**                | [FRR](http://docs.frrouting.org/en/latest/overview.html)             |
+| **Components**                | [FRR](https://docs.frrouting.org/en/stable-7.5/overview.html)        |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [frr01.clab.yml][topofile]                                           |
 | **Name**                      | frr01                                                                |
