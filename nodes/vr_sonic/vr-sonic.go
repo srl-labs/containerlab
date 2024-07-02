@@ -78,7 +78,7 @@ func (n *vrSONiC) PreDeploy(_ context.Context, params *nodes.PreDeployParams) er
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		log.Errorf("Error handling certifcate for %s: %w", n.Cfg.ShortName, err)
+		log.Errorf("Error handling certifcate for %s: %v", n.Cfg.ShortName, err)
 		return nil
 	}
 
@@ -88,12 +88,12 @@ func (n *vrSONiC) PreDeploy(_ context.Context, params *nodes.PreDeployParams) er
 func (n *vrSONiC) SaveConfig(ctx context.Context) error {
         cmd, err := exec.NewExecCmdFromString(saveCmd)
         if err != nil {
-			return fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
+			return fmt.Errorf("%s: failed to create execute cmd: %v", n.Cfg.ShortName, err)
 		}
 
         execResult, err := n.RunExec(ctx, cmd)
         if err != nil {
-                return fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
+                return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
         }
 
         if len(execResult.GetStdErrString()) > 0 {
