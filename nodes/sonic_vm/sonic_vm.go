@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"sonic_vm"}
+	kindnames          = []string{"sonic-vm"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
