@@ -90,28 +90,20 @@ sonic#
 ```
 
 ///
-/// tab | bash
-to connect to a `bash` shell of a running sonic-vs container:
+/// tab | Telnet
+to connect to sonic-vm CLI via telnet
 
 ```bash
-docker exec -it <container-name/id> bash
-```
-
-///
-/// tab | CLI
-to connect to the sonic-vs CLI (vtysh)
-
-```bash
-docker exec -it <container-name/id> vtysh
+telnet <container-name/id> 5000
 ```
 
 ///
 
 ## Interfaces mapping
 
-sonic-vs container uses the following mapping for its linux interfaces:
+sonic-vm container uses the following mapping for its linux interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data (front-panel port) interface
+* `eth1` - first data (front-panel port) interface that is mapped to Ethernet0 port
 
-When containerlab launches sonic-vs node, it will assign IPv4/6 address to the `eth0` interface. Data interface `eth1` mapped to `Ethernet0` port and needs to be configured with IP addressing manually. See Lab examples for exact configurations.
+When containerlab launches sonic-vs node, it will assign IPv4/6 address to the `eth0` interface. Data interface `eth1` mapped to `Ethernet0` port and needs to be configured with IP addressing manually.
