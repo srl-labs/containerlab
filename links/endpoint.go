@@ -59,8 +59,8 @@ type EndpointGeneric struct {
 
 func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
 	return &EndpointGeneric{
-		Node:      node,
-		IfaceName: iface,
+		Node:       node,
+		IfaceName:  iface,
 		IfaceAlias: "",
 		// random name is generated for the endpoint to avoid name collisions
 		// when it is first deployed in the root namespace
@@ -125,7 +125,11 @@ func (e *EndpointGeneric) HasSameNodeAndInterface(ept Endpoint) bool {
 }
 
 func (e *EndpointGeneric) String() string {
-	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), e.IfaceName)
+	ifDisplayName := e.IfaceName
+	if e.IfaceAlias != "" {
+		ifDisplayName += fmt.Sprintf(" (%s)", e.IfaceAlias)
+	}
+	return fmt.Sprintf("%s:%s", e.Node.GetShortName(), ifDisplayName)
 }
 
 // CheckEndpointUniqueness checks that the given endpoint appears only once for the node

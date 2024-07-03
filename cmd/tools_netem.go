@@ -21,6 +21,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/runtime"
+	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -123,7 +124,16 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		link, err := net.InterfaceByName(netemInterface)
+		netemIfLink, err := netlink.LinkByName(netemInterface)
+		if err != nil {
+			// Look for aliased interfaces as well
+			netemIfLink, err = netlink.LinkByAlias(netemInterface)
+			if err != nil {
+				return err
+			}
+		}
+		netemIfName := netemIfLink.Attrs().Name
+		link, err := net.InterfaceByName(netemIfName)
 		if err != nil {
 			return err
 		}
@@ -178,18 +188,23 @@ func printImpairments(qdiscs []gotc.Object) {
 }
 
 func qdiscToTableData(qdisc gotc.Object) []string {
-	iface, err := net.InterfaceByIndex(int(qdisc.Ifindex))
+	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
 	if err != nil {
-		log.Errorf("could not get interface by index: %v", err)
+		log.Errorf("could not get netlink interface by index: %v", err)
 	}
 
 	var delay, jitter, loss, rate string
+
+	ifDisplayName := link.Attrs().Name
+	if link.Attrs().Alias != "" {
+		ifDisplayName += fmt.Sprintf(" (%s)", link.Attrs().Alias)
+	}
 
 	// return N/A values when netem is not set
 	// which is the case when qdisc is not set for an interface
 	if qdisc.Netem == nil {
 		return []string{
-			iface.Name,
+			ifDisplayName,
 			"N/A", // delay
 			"N/A", // jitter
 			"N/A", // loss
@@ -209,7 +224,7 @@ func qdiscToTableData(qdisc gotc.Object) []string {
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
 
 	return []string{
-		iface.Name,
+		ifDisplayName,
 		delay,
 		jitter,
 		loss,
