@@ -21,17 +21,17 @@ func TestParseInterfaces(t *testing.T) {
 		"basic-parse": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/2",
 					},
 				},
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/4",
 					},
 				},
@@ -54,17 +54,17 @@ func TestParseInterfaces(t *testing.T) {
 		"basic-parse-2": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "GigabitEthernet2",
 					},
 				},
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Gi3",
 					},
 				},
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "GigabitEthernet 5",
 					},
 				},
@@ -87,17 +87,17 @@ func TestParseInterfaces(t *testing.T) {
 		"original-parse": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth1",
 					},
 				},
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
@@ -120,12 +120,12 @@ func TestParseInterfaces(t *testing.T) {
 		"overlap": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth1",
 					},
 				},
@@ -146,7 +146,7 @@ func TestParseInterfaces(t *testing.T) {
 		"out-of-bounds-index": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Gi1",
 					},
 				},
@@ -167,7 +167,7 @@ func TestParseInterfaces(t *testing.T) {
 		"regexp-no-match": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
@@ -188,7 +188,7 @@ func TestParseInterfaces(t *testing.T) {
 		"regexp-no-group": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Gi2",
 					},
 				},
@@ -209,7 +209,7 @@ func TestParseInterfaces(t *testing.T) {
 		"nomatch": {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
-					links.EndpointGeneric{
+					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "0/0/1",
 					},
 				},

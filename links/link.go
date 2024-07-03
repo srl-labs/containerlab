@@ -426,7 +426,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		}
 
-		if len(endpt.GetIfaceAlias()) != 0 {
+		if endpt.GetIfaceAlias() != "" {
 			err := netlink.LinkSetAlias(l, endpt.GetIfaceAlias())
 			if err != nil {
 				return err

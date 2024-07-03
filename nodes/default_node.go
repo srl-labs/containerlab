@@ -270,7 +270,7 @@ func (*DefaultNode) CheckInterfaceName() error {
 
 // CalculateInterfaceIndex returns with the interface index offset from the first valid dataplane interface based on the interface name.
 // A no-op for the default node, specific nodes (vrnetlab nodes specifically) should implement this method.
-func (*DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
+func (*DefaultNode) CalculateInterfaceIndex(_ string) (int, error) {
 	return 0, nil
 }
 

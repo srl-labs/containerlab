@@ -11,7 +11,7 @@ import (
 
 const FirstEthDataInterfaceIndex = 1
 
-var VMInterfaceRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`)
+var VMInterfaceRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`) // skipcq: GO-C4007
 
 type VRNode struct {
 	DefaultNode
@@ -78,7 +78,7 @@ func (vr *VRNode) GetMappedInterfaceName(ifName string) (string, error) {
 	return mappedIfName, nil
 }
 
-// The vrnetlab version of AddEndpoint maps the endpoint name to an ethX-based name before adding it to the node endpoints. Returns an error if the mapping goes wrong.
+// AddEndpoint's vrnetlab version maps the endpoint name to an ethX-based name before adding it to the node endpoints. Returns an error if the mapping goes wrong.
 func (vr *VRNode) AddEndpoint(e links.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	if vr.InterfaceRegexp != nil && !(VMInterfaceRegexp.MatchString(endpointName)) {
@@ -95,7 +95,7 @@ func (vr *VRNode) AddEndpoint(e links.Endpoint) error {
 	return nil
 }
 
-// GenericVMInterfaceCheck checks interface names for generic VM-based nodes.
+// CheckInterfaceName checks interface names for generic VM-based nodes.
 // Displays InterfaceHelp if the check fails for interface naming hints.
 func (vr *VRNode) CheckInterfaceName() error {
 	var seenEps []links.Endpoint
