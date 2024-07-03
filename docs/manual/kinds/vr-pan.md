@@ -32,6 +32,13 @@ Palo Alto PA-VM node launched with containerlab can be managed via the following
 !!!info
     Default user credentials: `admin:Admin@123`
 
+## Interface naming
+
+PA-VM nodes use the interface naming convention `Ethernet1/X`, where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `1`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 Palo Alto PA-VM container supports up to 24 interfaces (plus mgmt) and uses the following mapping rules:

@@ -31,6 +31,13 @@ MikroTik RouterOS node launched with containerlab can be managed via the followi
 !!!info
     Default user credentials: `admin:admin`
 
+## Interface naming
+
+RouterOS nodes use the interface naming convention `etherX`, where X denotes the port number.
+
+!!!warning
+    Data port numbering starts at `2`, as `ether1` is reserved for management connectivity. Attempting to use `ether1` in a containerlab topology will result in an error.
+
 ## Interfaces mapping
 
 MikroTik RouterOS container can have up to 30 interfaces and uses the following mapping rules:

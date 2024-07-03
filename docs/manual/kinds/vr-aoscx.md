@@ -28,7 +28,14 @@ Aruba AOS-CX node launched with containerlab can be managed via the following in
 !!!info
     Default user credentials: `admin:admin`
 
-## Interfaces mapping
+## Interface naming
+
+ArubaOS-CX nodes use the interface naming convention `1/1/X`, where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `1`, like one would normally expect in the NOS.
+
+## Interface mapping
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1+` - second and subsequent data interface

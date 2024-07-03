@@ -35,12 +35,19 @@ Cisco CSR1000v node launched with containerlab can be managed via the following 
 !!!info
     Default user credentials: `admin:admin`
 
+## Interface naming
+
+CSR1000v nodes use the interface naming convention `GigabitEthernetX` (or `GiX`, both are accepted), where X denotes the port number.
+
+!!!warning
+    Data port numbering starts at `2`, as `Gi1` is reserved for management connectivity. Attempting to use `Gi1` in a containerlab topology will result in an error.
+
 ## Interfaces mapping
 
 Cisco CSR1000v container can have up to 144 interfaces and uses the following mapping rules:
 
-* `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to first data port of CSR1000v line card
+* `eth0` - management interface (`Gi1`) connected to the containerlab management network
+* `eth1` - first data interface, mapped to first usable data port (`Gi2`)
 * `eth2+` - second and subsequent data interface
 
 When containerlab launches Cisco CSR1000v node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.

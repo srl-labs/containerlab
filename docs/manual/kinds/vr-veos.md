@@ -43,6 +43,13 @@ Arista vEOS node launched with containerlab can be managed via the following int
 !!!info
     Default user credentials: `admin:admin`
 
+## Interface naming
+
+Arista vEOS nodes use the interface naming convention `Ethernet1/X` (or `Et1/X`, both are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at 1, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 Arista vEOS container can have up to 144 interfaces and uses the following mapping rules:

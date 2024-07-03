@@ -56,6 +56,22 @@ Cisco XRv9k node launched with containerlab can be managed via the following int
 !!!info
     Default user credentials: `clab:clab@123`
 
+## Interface naming
+
+Cisco XRv9k nodes can use the following interface naming conventions,
+
+- `GigabitEthernet0/0/0/X` or `Gi0/0/0/X`
+- `TenGigabitEthernet0/0/0/X`, `TenGigE0/0/0X` or `Te0/0/0/X`
+
+where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `0`, like one would normally expect in the NOS.
+
+/// note
+You must have at least one data interface defined for the XRv9k boot process to complete successfully.
+///
+
 ## Interfaces mapping
 
 Cisco XRv9k container can have up to 90 interfaces and uses the following mapping rules:
@@ -67,10 +83,6 @@ Cisco XRv9k container can have up to 90 interfaces and uses the following mappin
 When containerlab launches Cisco XRv9k node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
 
 Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
-
-/// note
-You must have at least one data interface defined for the XRv9k boot process to complete successfully.
-///
 
 ## Features and options
 

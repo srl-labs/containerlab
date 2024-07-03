@@ -41,10 +41,17 @@ OpenBSD node launched with containerlab can be managed via the following interfa
 !!!info
     Default user credentials: `admin:admin`
 
+## Interface naming
+
+OpenBSD nodes use the interface naming convention `vioX`, where X denotes the port number.
+
+!!!warning
+    Data port numbering starts at `1`, as `vio0` is reserved for management connectivity. Attempting to use `vio0` in a containerlab topology will result in an error.
+
 ## Interfaces mapping
 
-* `eth0` - management interface (vio0) connected to the containerlab management network
-* `eth1+` - second and subsequent data interfaces (vio1, vio2, etc.)
+* `eth0` - management interface (`vio0`) connected to the containerlab management network
+* `eth1+` - second and subsequent data interfaces (`vio1`, `vio2`, etc.)
 
 When containerlab launches OpenBSD node, it will assign IPv4/6 address to the `eth0` interface. These addresses are used to reach the management plane of the router.
 

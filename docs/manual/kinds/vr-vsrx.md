@@ -30,6 +30,13 @@ Juniper vSRX node launched with containerlab can be managed via the following in
 !!!info
     Default user credentials: `admin:admin@123`
 
+## Interface naming
+
+Juniper vSRX nodes use the interface naming convention `ge-0/0/X` (or `et-0/0/X`, `xe-0/0/X`, all are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `0`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 * `eth0` - management interface (fxp0) connected to the containerlab management network

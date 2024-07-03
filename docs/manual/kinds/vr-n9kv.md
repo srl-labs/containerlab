@@ -37,6 +37,13 @@ Cisco Nexus 9000v node launched with containerlab can be managed via the followi
 !!!info
     Default user credentials: `admin:admin`
 
+## Interface naming
+
+Nexus 9000v nodes use the interface naming convention `Ethernet1/X` (or `Et1/X`, both are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `1`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 Cisco Nexus 9000v container can have up to 128 interfaces and uses the following mapping rules:

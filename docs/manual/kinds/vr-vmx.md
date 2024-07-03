@@ -42,6 +42,13 @@ Juniper vMX node launched with containerlab can be managed via the following int
 !!!info
     Default user credentials: `admin:admin@123`
 
+## Interface naming
+
+vMX nodes use the interface naming convention `ge-0/0/X` (or `et-0/0/X`, `xe-0/0/X`, all are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `0`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 Juniper vMX container can have up to 90 interfaces and uses the following mapping rules:

@@ -37,6 +37,13 @@ Cisco FTDv node launched with containerlab can be managed via the following inte
 !!!info
     Default user credentials: `admin:Admin@123`
 
+## Interface naming
+
+FTDv nodes use the interface naming convention `GigabitEthernet0/X` (or `GiX`, both are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `0`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 * `eth0` - management interface (Management0/0) connected to the containerlab management network

@@ -39,6 +39,13 @@ Juniper vJunos-switch node launched with containerlab can be managed via the fol
 !!!info
     Default user credentials: `admin:admin@123`
 
+## Interface naming
+
+vJunos-router nodes use the interface naming convention `ge-0/0/X` (or `et-0/0/X`, `xe-0/0/X`, all are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `0`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 Juniper vJunos-switch container can have up to 11 interfaces and uses the following mapping rules:
