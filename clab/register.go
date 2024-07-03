@@ -23,6 +23,7 @@ import (
 	ovs "github.com/srl-labs/containerlab/nodes/ovs"
 	rare "github.com/srl-labs/containerlab/nodes/rare"
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
+	vr_sonic "github.com/srl-labs/containerlab/nodes/sonic_vm"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
@@ -82,6 +83,7 @@ func (c *CLab) RegisterNodes() {
 	vr_vjunosevolved.Register(c.Reg)
 	vr_xrv.Register(c.Reg)
 	vr_xrv9k.Register(c.Reg)
+	vr_sonic.Register(c.Reg)
 	xrd.Register(c.Reg)
 	rare.Register(c.Reg)
 	c8000.Register(c.Reg)
