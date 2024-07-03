@@ -24,7 +24,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Nokia SR Linux](manual/kinds/srl.md)
 * [Arista cEOS](manual/kinds/ceos.md)
 * [Cisco XRd](manual/kinds/xrd.md)
-* [Azure SONiC](manual/kinds/sonic-vs.md)
+* [SONiC](manual/kinds/sonic-vs.md)
 * [Juniper cRPD](manual/kinds/crpd.md)
 * [Cumulus VX](manual/kinds/cvx.md)
 * [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
@@ -54,6 +54,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Aruba AOS-CX](manual/kinds/vr-aoscx.md)
 * [OpenBSD](manual/kinds/openbsd.md)
 * [FreeBSD](manual/kinds/freebsd.md)
+* [SONiC](manual/kinds/sonic-vm.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span all the needed variants of nodes:
 
