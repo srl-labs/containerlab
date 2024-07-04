@@ -33,7 +33,9 @@ nav:
           - SONiC:
               - Container: manual/kinds/sonic-vs.md
               - VM: manual/kinds/sonic-vm.md
-          - Dell FTOS10v: manual/kinds/vr-ftosv.md
+          - Dell:
+              - FTOS10v: manual/kinds/vr-ftosv.md
+              - Enterprise SONiC: manual/kinds/dell_sonic.md
           - MikroTik RouterOS: manual/kinds/vr-ros.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
           - OpenBSD: manual/kinds/openbsd.md

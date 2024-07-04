@@ -12,6 +12,7 @@ import (
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
+	"github.com/srl-labs/containerlab/nodes/dell_sonic"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
 	fortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
 	generic_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
@@ -68,6 +69,7 @@ func (c *CLab) RegisterNodes() {
 	vr_c8000v.Register(c.Reg)
 	vr_freebsd.Register(c.Reg)
 	generic_vm.Register(c.Reg)
+	dell_sonic.Register(c.Reg)
 	vr_ftosv.Register(c.Reg)
 	vr_n9kv.Register(c.Reg)
 	vr_pan.Register(c.Reg)
