@@ -338,7 +338,7 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 	return f.Close()
 }
 
-// NodeOverwrites is an interface that every node implementation implements.
+// NodeOverwrites is an interface that every node implements.
 // It is used to enable DefaultNode to get access to the particular node structs
 // and is provided as an argument of the NewDefaultNode function.
 // The methods defined for this interfaces are the methods that particular node has a custom
