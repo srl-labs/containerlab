@@ -234,6 +234,7 @@ func TestParseInterfaces(t *testing.T) {
 		t.Run(name, func(tt *testing.T) {
 			foundError := false
 			tc.node.OverwriteVRNode = tc.node
+			tc.node.FirstEthDataInterfaceIndex = 1
 			for _, ep := range tc.endpoints {
 				gotEndpointErr := tc.node.AddEndpoint(ep)
 				if gotEndpointErr != nil {
