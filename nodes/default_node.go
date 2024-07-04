@@ -93,22 +93,27 @@ func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	err = d.OverwriteNode.VerifyStartupConfig(d.Cfg.LabDir)
 	if err != nil {
 		return err
 	}
+
 	err = d.OverwriteNode.CheckInterfaceName()
 	if err != nil {
 		return err
 	}
+
 	err = d.OverwriteNode.VerifyLicenseFileExists(ctx)
 	if err != nil {
 		return err
 	}
+
 	err = d.OverwriteNode.PullImage(ctx)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -153,8 +158,8 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	return nil
 }
 
-// getNsPath retrieve the nodes nspath.
-func (d *DefaultNode) getNsPath(ctx context.Context) (string, error) {
+// getNSPath retrieves the nodes nspath.
+func (d *DefaultNode) getNSPath(ctx context.Context) (string, error) {
 	var err error
 	nsp := ""
 
@@ -489,7 +494,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 
 func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
-	nsp, err := d.getNsPath(ctx)
+	nsp, err := d.getNSPath(ctx)
 	if err != nil {
 		return err
 	}
@@ -513,7 +518,7 @@ func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link,
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
-	nspath, err := d.getNsPath(ctx)
+	nspath, err := d.getNSPath(ctx)
 	if err != nil {
 		return err
 	}
