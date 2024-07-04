@@ -15,9 +15,9 @@ var (
 	kindnames          = []string{"aruba_aoscx", "vr-aoscx", "vr-aruba_aoscx"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
-	InterfaceRegexp    = regexp.MustCompile(`1/1/(?P<port>\d+)`)
-	InterfaceOffset    = 1
-	InterfaceHelp      = "1/1/X (where X >= 1) or ethX (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "1/1/X (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -81,9 +81,4 @@ func (n *vrAosCX) PreDeploy(_ context.Context, params *nodes.PreDeployParams) er
 		return nil
 	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrAosCX) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

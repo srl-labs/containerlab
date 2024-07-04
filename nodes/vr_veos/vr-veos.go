@@ -106,8 +106,3 @@ func (n *vrVEOS) SaveConfig(_ context.Context) error {
 	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
 	return nil
 }
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrVEOS) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
-}

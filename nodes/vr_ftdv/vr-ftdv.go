@@ -18,9 +18,9 @@ var (
 	kindnames          = []string{"cisco_ftdv"}
 	defaultCredentials = nodes.NewCredentials("admin", "Admin@123")
 
-	InterfaceRegexp    = regexp.MustCompile(`(?:GigabitEthernet|Gi)\s?0/(?P<port>\d+)`)
-	InterfaceOffset    = 0
-	InterfaceHelp      = "GigabitEthernet0/X or Gi0/X (where X >= 0) or ethX (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`(?:GigabitEthernet|Gi)\s?0/(?P<port>\d+)`)
+	InterfaceOffset = 0
+	InterfaceHelp   = "GigabitEthernet0/X or Gi0/X (where X >= 0) or ethX (where X >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
@@ -76,9 +76,4 @@ func (n *vrFtdv) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 		return nil
 	}
 	return nil
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrFtdv) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

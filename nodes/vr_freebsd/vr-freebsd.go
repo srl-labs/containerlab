@@ -105,8 +105,3 @@ func (n *vrFreeBSD) SaveConfig(ctx context.Context) error {
 
 	return nil
 }
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrFreeBSD) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
-}

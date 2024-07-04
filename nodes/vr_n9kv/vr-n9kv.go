@@ -20,9 +20,9 @@ var (
 	kindnames          = []string{"cisco_n9kv", "vr-n9kv", "vr-cisco_n9kv"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
-	InterfaceRegexp    = regexp.MustCompile(`(?:Ethernet|Et)\s?1/(?P<port>\d+)`)
-	InterfaceOffset    = 1
-	InterfaceHelp      = "Ethernet1/X or Et1/X (where X >= 1) or ethX (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`(?:Ethernet|Et)\s?1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "Ethernet1/X or Et1/X (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -86,9 +86,4 @@ func (n *vrN9kv) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 		return nil
 	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrN9kv) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

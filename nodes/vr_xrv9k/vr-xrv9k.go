@@ -21,9 +21,9 @@ var (
 	kindnames          = []string{"cisco_xrv9k", "vr-xrv9k", "vr-cisco_xrv9k"}
 	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
 
-	InterfaceRegexp    = regexp.MustCompile(`(?:Gi|GigabitEthernet|Te|TenGigE|TenGigabitEthernet)\s?0/0/0/(?P<port>\d+)`)
-	InterfaceOffset    = 0
-	InterfaceHelp      = "GigabitEthernet0/0/0/X, Gi0/0/0/X or TenGigabitEthernet0/0/0/X, TenGigE0/0/0/X, Te0/0/0/X (where X >= 0) or ethX (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet|Te|TenGigE|TenGigabitEthernet)\s?0/0/0/(?P<port>\d+)`)
+	InterfaceOffset = 0
+	InterfaceHelp   = "GigabitEthernet0/0/0/X, Gi0/0/0/X or TenGigabitEthernet0/0/0/X, TenGigE0/0/0/X, Te0/0/0/X (where X >= 0) or ethX (where X >= 1)"
 )
 
 const (
@@ -106,9 +106,4 @@ func (n *vrXRV9K) SaveConfig(_ context.Context) error {
 
 	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
 	return nil
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrXRV9K) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

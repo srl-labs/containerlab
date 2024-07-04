@@ -22,9 +22,9 @@ var (
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 	saveCmd            = "sh -c \"/backup.sh -u $USERNAME -p $PASSWORD backup\""
 
-	InterfaceRegexp    = regexp.MustCompile(`vio(?P<port>\d+)`)
-	InterfaceOffset    = 1
-	InterfaceHelp      = "vioX (where X >= 1) or ethX (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`vio(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "vioX (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -105,9 +105,4 @@ func (n *vrOpenBSD) SaveConfig(ctx context.Context) error {
 	log.Infof("saved /etc backup from %s node to %s\n", n.Cfg.ShortName, confPath)
 
 	return nil
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrOpenBSD) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

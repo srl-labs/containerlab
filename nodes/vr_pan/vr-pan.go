@@ -19,9 +19,9 @@ var (
 	kindnames          = []string{"paloalto_panos", "vr-pan", "vr-paloalto_panos"}
 	defaultCredentials = nodes.NewCredentials("admin", "Admin@123")
 
-	InterfaceRegexp    = regexp.MustCompile(`Ethernet1/(?P<port>\d+)`)
-	InterfaceOffset    = 1
-	InterfaceHelp      = "Ethernet1/1 (where X >= 1) or ethX (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`Ethernet1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "Ethernet1/1 (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -87,9 +87,4 @@ func (n *vrPan) PreDeploy(_ context.Context, params *nodes.PreDeployParams) erro
 		return nil
 	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrPan) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

@@ -19,9 +19,9 @@ var (
 	kindnames          = []string{"mikrotik_ros", "vr-ros", "vr-mikrotik_ros"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
-	InterfaceRegexp    = regexp.MustCompile(`ether(?P<port>\d+)`)
-	InterfaceOffset    = 2
-	InterfaceHelp      = "etherX (where X >= 2) or ethX (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`ether(?P<port>\d+)`)
+	InterfaceOffset = 2
+	InterfaceHelp   = "etherX (where X >= 2) or ethX (where X >= 1)"
 )
 
 const (
@@ -83,9 +83,4 @@ func (n *vrRos) PreDeploy(_ context.Context, params *nodes.PreDeployParams) erro
 		return nil
 	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrRos) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }
