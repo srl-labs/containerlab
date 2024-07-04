@@ -15,10 +15,11 @@ var VMInterfaceRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`) // skipcq: GO-C400
 
 type VRNode struct {
 	DefaultNode
-	OverwriteVRNode VRNodeOverwrites
-	InterfaceRegexp *regexp.Regexp
-	InterfaceOffset int
-	InterfaceHelp   string
+	OverwriteVRNode            VRNodeOverwrites
+	InterfaceRegexp            *regexp.Regexp
+	InterfaceOffset            int
+	InterfaceHelp              string
+	FirstEthDataInterfaceIndex int
 }
 
 type VRNodeOverwrites interface {
@@ -32,6 +33,8 @@ func NewVRNode(n VRNodeOverwrites) *VRNode {
 	}
 
 	vrn.DefaultNode = *NewDefaultNode(n.(NodeOverwrites))
+	vrn.InterfaceOffset = 0
+	vrn.FirstEthDataInterfaceIndex = 1
 
 	return vrn
 }
@@ -56,7 +59,7 @@ func (vr *VRNode) CalculateInterfaceIndex(ifName string) (int, error) {
 		if err != nil {
 			return 0, fmt.Errorf("%q parsed index %q could not be cast to an integer", ifName, parsedIndex)
 		}
-		calculatedIndex := parsedIndexInt - vr.InterfaceOffset + FirstEthDataInterfaceIndex
+		calculatedIndex := parsedIndexInt - vr.InterfaceOffset + vr.FirstEthDataInterfaceIndex
 		return calculatedIndex, nil
 	} else {
 		return 0, fmt.Errorf("%q does not have extracted interface index with regexp %q, 'port' capture group missing?", ifName, vr.InterfaceRegexp)
