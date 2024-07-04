@@ -27,7 +27,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/kellerza/template v0.0.6
-	github.com/klauspost/cpuid v1.3.1
+	github.com/klauspost/cpuid/v2 v2.2.7
 	github.com/mackerelio/go-osstat v0.2.5
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5

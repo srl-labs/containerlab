@@ -35,14 +35,15 @@ func NewHostRequirements() *HostRequirements {
 	}
 }
 
+// Verify runs verification checks against the host requirements set for a node.
 func (h *HostRequirements) Verify(kindName, nodeName string) error {
 	// check virtualization Support
 	if h.VirtRequired && !virt.VerifyVirtSupport() {
-		return fmt.Errorf("for node %q (%s) the CPU virtualization support is required, but not available", nodeName, kindName)
+		return fmt.Errorf("CPU virtualization support is required for node %q (%s)", nodeName, kindName)
 	}
-	// check SSSE3 support
-	if h.SSSE3 && !virt.VerifySSSE3Support() {
-		return fmt.Errorf("for node %q (%s) the SSSE3 CPU feature is required, but not available", nodeName, kindName)
+	// check SSSE3 support on amd64 arch only as it is an x86_64 instruction
+	if runtime.GOARCH == "amd64" && h.SSSE3 && !virt.VerifySSSE3Support() {
+		return fmt.Errorf("SSSE3 CPU feature is required for node %q (%s)", nodeName, kindName)
 	}
 	// check minimum vCPUs
 	if valid, num := h.verifyMinVCpu(); !valid {
