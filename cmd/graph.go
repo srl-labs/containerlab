@@ -119,11 +119,20 @@ func graphFn(_ *cobra.Command, _ []string) error {
 
 		eps := l.GetEndpoints()
 
+		ifaceDisplayNameA := eps[0].GetIfaceName()
+		if eps[0].GetIfaceAlias() != "" {
+			ifaceDisplayNameA = eps[0].GetIfaceAlias()
+		}
+		ifaceDisplayNameB := eps[1].GetIfaceName()
+		if eps[1].GetIfaceAlias() != "" {
+			ifaceDisplayNameB = eps[1].GetIfaceAlias()
+		}
+
 		gtopo.Links = append(gtopo.Links, clab.Link{
 			Source:         eps[0].GetNode().GetShortName(),
-			SourceEndpoint: eps[0].GetIfaceName(),
+			SourceEndpoint: ifaceDisplayNameA,
 			Target:         eps[1].GetNode().GetShortName(),
-			TargetEndpoint: eps[1].GetIfaceName(),
+			TargetEndpoint: ifaceDisplayNameB,
 		})
 	}
 
