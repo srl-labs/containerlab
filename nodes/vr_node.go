@@ -81,7 +81,7 @@ func (vr *VRNode) GetMappedInterfaceName(ifName string) (string, error) {
 	return mappedIfName, nil
 }
 
-// AddEndpoint's vrnetlab version maps the endpoint name to an ethX-based name before adding it to the node endpoints. Returns an error if the mapping goes wrong.
+// AddEndpoint override version maps the endpoint name to an ethX-based name before adding it to the node endpoints. Returns an error if the mapping goes wrong.
 func (vr *VRNode) AddEndpoint(e links.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	if vr.InterfaceRegexp != nil && !(VMInterfaceRegexp.MatchString(endpointName)) {
