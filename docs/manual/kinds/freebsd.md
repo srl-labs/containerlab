@@ -46,7 +46,7 @@ FreeBSD node launched with containerlab can be managed via the following interfa
 FreeBSD nodes use the interface naming convention `vtnetX`, where X denotes the port number.
 
 !!!warning
-    Data port numbering starts at `1`, as `vtnet0` is reserved for management connectivity. Attempting to use `vio0` in a containerlab topology will result in an error.
+    Data port numbering starts at `1`, as `vtnet0` is reserved for management connectivity. Attempting to use `vtnet0` in a containerlab topology will result in an error.
 
 ## Interfaces mapping
 

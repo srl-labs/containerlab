@@ -52,6 +52,13 @@ You can expose container's port 80 with the [`ports`](../nodes.md#ports) setting
 Default login credentials: `admin:admin`
 ///
 
+## Interface naming
+
+Fortinet Fortigate nodes use the interface naming convention `portX`, where X denotes the port number.
+
+!!!warning
+    Data port numbering starts at `2`, as `port1` is reserved for management connectivity. Attempting to use `port1` in a containerlab topology will result in an error.
+
 ## Interfaces mapping
 
 Fortinet Fortigate interfaces are named as follows in the topology file:
