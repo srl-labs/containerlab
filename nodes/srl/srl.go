@@ -105,8 +105,8 @@ var (
 		Revision: 0,
 	}
 
-	InterfaceRegexp = regexp.MustCompile(`ethernet(?P<linecard>\d+)-(?<port>\d+)(?:-(?P<channel>\d+))?`)
-	InterfaceHelp   = "ethernetL-P, ethernetL-P-C or eL-P, eL-P-C (where L, P, C >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?<port>\d+)(?:/(?P<channel>\d+))?`)
+	InterfaceHelp   = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.

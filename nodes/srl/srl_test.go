@@ -21,22 +21,22 @@ func TestSRLInterfaceParsing(t *testing.T) {
 			endpoints: []*links.EndpointVeth{
 				&links.EndpointVeth{
 					EndpointGeneric: links.EndpointGeneric{
-						IfaceName: "ethernet1-1",
+						IfaceName: "ethernet-1/1",
 					},
 				},
 				&links.EndpointVeth{
 					EndpointGeneric: links.EndpointGeneric{
-						IfaceName: "ethernet3-2",
+						IfaceName: "ethernet-3/2",
 					},
 				},
 				&links.EndpointVeth{
 					EndpointGeneric: links.EndpointGeneric{
-						IfaceName: "ethernet2-3-4",
+						IfaceName: "ethernet-2/3/4",
 					},
 				},
 				&links.EndpointVeth{
 					EndpointGeneric: links.EndpointGeneric{
-						IfaceName: "ethernet1-5",
+						IfaceName: "ethernet-1/5",
 					},
 				},
 			},
