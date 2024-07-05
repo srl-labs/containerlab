@@ -38,9 +38,9 @@ func TestVEOSInterfaceParsing(t *testing.T) {
 						Cfg: &types.NodeConfig{
 							ShortName: "veos",
 						},
+						InterfaceRegexp: InterfaceRegexp,
+						InterfaceOffset: InterfaceOffset,
 					},
-					InterfaceRegexp: InterfaceRegexp,
-					InterfaceOffset: InterfaceOffset,
 				},
 			},
 			resultEps: []string{
@@ -71,9 +71,9 @@ func TestVEOSInterfaceParsing(t *testing.T) {
 						Cfg: &types.NodeConfig{
 							ShortName: "veos",
 						},
+						InterfaceRegexp: InterfaceRegexp,
+						InterfaceOffset: InterfaceOffset,
 					},
-					InterfaceRegexp: InterfaceRegexp,
-					InterfaceOffset: InterfaceOffset,
 				},
 			},
 			resultEps: []string{
@@ -85,8 +85,9 @@ func TestVEOSInterfaceParsing(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(tt *testing.T) {
 			foundError := false
-			tc.node.OverwriteVRNode = tc.node
-			tc.node.FirstEthDataInterfaceIndex = 1
+			tc.node.OverwriteNode = tc.node
+			tc.node.InterfaceMappedPrefix = "eth"
+			tc.node.FirstDataIfIndex = 1
 			for _, ep := range tc.endpoints {
 				gotEndpointErr := tc.node.AddEndpoint(ep)
 				if gotEndpointErr != nil {
