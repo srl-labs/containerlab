@@ -1,4 +1,5 @@
 ---
+comments: true
 hide:
   - navigation
 ---
@@ -38,6 +39,23 @@ As with every tool, it is important to use it in the right context. It is possib
 Participants:
 
 * [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
+
+### RIPE 88
+
+<small>:material-youtube: [Simulating Networks at Scale with Clabernetes](https://ripe88.ripe.net/archives/video/1290/) · :material-calendar: 2024-05-20</small>
+
+Carl Montanari and Simon Peccaud introduced [Clabernetes](https://c9s.run) to RIPE 88 attendees.
+
+OVHCloud was an early adopter of Clabernetes, which helped them to simulate the WAN network in a way horizontally scalable way that naturally plugged into the rest of their network automation and CI workflow.
+
+<video width="100%" controls>
+  <source src="https://ripe88.ripe.net/archive/video/carl-montanari-simon-peccaud_simulating-networks-at-scale-with-clabernetes-and-ovhcloud_main_20240521-090009.mp4" type="video/mp4">
+</video>
+
+Participants:
+
+* [:material-twitter:](https://x.com/carlrmontanari) [:material-linkedin:](https://www.linkedin.com/in/carl-montanari-47888931/) Carl Montanari
+* [:material-twitter:](https://x.com/SimPeccaud) [:material-linkedin:](https://www.linkedin.com/in/simonpeccaud/) Simon Peccaud
 
 ### NFD 33
 
@@ -136,6 +154,11 @@ The power of the community is in its members. We are delighted to have container
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
 
+/// admonition | Want to share your experience?
+    type: question
+Do you have a blog around containerlab that you want to share with the community? Please let us know by mentioning it in the [Comments](#__comments) section at the bottom of this page.
+///
+
 ### Extending the Kubernetes (host) network with EVPN tunnels
 
 <small>:material-text: [Blog](https://fedepaol.github.io/blog/2024/06/14/extending-the-kubernetes-host-network-with-evpn-tunnels-and-frr/) by [Federico Paolinelli](https://fedepaol.github.io/about/) · :material-calendar: 2024-06-14</small>
@@ -143,6 +166,17 @@ This section logs the most notable blogs, streams, and and demos delivered by co
 It is refreshing to see how people find new ways to use containerlab. In this blog post, Federico Paolinelli explains how he used containerlab to create a lab environment to test a solution to extend the Kubernetes host network with EVPN tunnels and FRR.
 
 Containerlab helped to build the lab environment where a KinD-based k8s cluster is connected to an EVPN emulated fabric. Thanks to the native KinD support in containerlab it was all a single lab package to deploy and test the solution.
+
+### Using Containerlab and Google Cloud Platform to lab Aruba CX
+
+<small>:material-text: [Blog](https://blog.crispyfi.com/2024/06/02/aruba-cx-infrastructure-as-code-lab-with-containerlab-in-google-cloud-platform/) by [Crispy](https://blog.crispyfi.com/about/) · :material-calendar: 2024-06-02</small>
+
+Crispy [shares his experience](https://blog.crispyfi.com/2024/06/02/aruba-cx-infrastructure-as-code-lab-with-containerlab-in-google-cloud-platform/) with switching from EVE-NG to Containerlab to lab Aruba CX switches. The blog post is a step-by-step guide on how to create a lab environment in GCP with containerlab and run Aruba CX switches in it.
+
+/// admonition | From Containerlab team
+    type: tip
+Note, that while GCP is a nice way to run containerlab labs, it is not the only one. You may also try [Codespaces](manual/codespaces.md) as a "free" alternative.
+///
 
 ### Building a home lab with containerlab
 
@@ -158,6 +192,16 @@ It is rare to see a blog post series that starts from, literally, bare metal and
 You will find links to all parts [here](https://write.as/rarovar/my-experience-as-a-network-engineer-and-my-introduction-to-containerlab#this-is-cool-and-all-but-how-do-i-use-it).
 
 It was especially interesting to read how rarovar built the lab environment based on NUC hardware in Part1. But do check other parts as well!
+
+### Containerlab for Kubernetes Networking Experimentation
+
+<small>:material-text: [Blog](https://virtualizestuff.com/exploring-containerlab) by [Dave Davis](https://hashnode.com/@Virtualizestuff) · :material-calendar: 2024-03-25</small>
+
+Dave' opening paragraph sets the stage for the blog post:
+
+> Recently, my focus has shifted towards Kubernetes, where I've been assisting customers in designing resilient and scalable clusters. I'm on the lookout for a tool that can quickly set up test Kubernetes clusters with diverse network topologies. Ideally the solution would offer version control, rapid deployments, Kubernetes support, and ease of sharing.
+
+As you can see, containerlab fits this bill quite nicely. Dave goes on to [explain](https://virtualizestuff.com/exploring-containerlab) how he used containerlab to create a lab environment to test Kubernetes networking solutions.
 
 ### Powering up your Netbox labs with Containerlab
 
