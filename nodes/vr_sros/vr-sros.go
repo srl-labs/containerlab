@@ -34,6 +34,10 @@ import (
 var (
 	kindnames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
+
+	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "1/1/X (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -58,14 +62,14 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type vrSROS struct {
-	nodes.DefaultNode
+	nodes.VRNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 }
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	s.VRNode = *nodes.NewVRNode(s)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
 	s.LicensePolicy = types.LicensePolicyWarn
@@ -100,6 +104,10 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.ShortName,
 		s.Cfg.NodeType,
 	)
+
+	s.InterfaceRegexp = InterfaceRegexp
+	s.InterfaceOffset = InterfaceOffset
+	s.InterfaceHelp = InterfaceHelp
 
 	return nil
 }
@@ -181,22 +189,6 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
-	return nil
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (s *vrSROS) CheckInterfaceName() error {
-	// vsim doesn't seem to support >30 interfaces on a single line card,
-	// but since we use a througout enumeration for the multi line card depployment
-	// we allow any number of interfaces
-	// https://regex101.com/r/bx6kzM/3
-	ifRe := regexp.MustCompile(`eth([1-9]+|[1-9]\d+)$`)
-	for _, e := range s.Endpoints {
-		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is >=1", e.GetIfaceName())
-		}
-	}
-
 	return nil
 }
 
