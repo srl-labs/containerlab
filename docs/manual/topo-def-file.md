@@ -129,6 +129,21 @@ Links are defined under the `topology.links` section of the topology file. Conta
 A brief form of a link definition compresses link parameters in a single string and provide a quick way to define a link at the cost of link features available.  
 A more expressive extended form exposes all link features, but requires more typing if done manually. The extended format is perfect for machine-generated link topologies.
 
+##### Interface naming
+
+Containerlab supports two kinds of interface naming: Linux interfaces (also referred to as "mapped" interfaces in some parts of the documentation) and interface aliases.
+
+Interface aliases are the convenient, since they use the same naming convention as the containerised or virtualised NOS does. Many Kinds support interface aliases (which is indicated on their Kind documentation), but not all of them at the moment of writing.  
+Linux (or "mapped") interface names are the interface names directly used inside the container, which usually does not match the name of the interface as represented inside the NOS.
+
+Containerlab transparently maps from interface aliases to Linux interface names, and there's no additional syntax or configuration needed to specify either an interface alias or a Linux interface name in topologies.
+
+
+!!!note
+Internally, interface aliases end up being deterministically mapped to Linux interface names, which conform to Linux interface naming standards: at most 15 characters, spaces and forward slashes ('/') not permitted.  
+Since many NOSes use long interface names (`GigabitEthernet1`, that's exactly 1 character longer than permitted), and like to use slashes in their interface naming conventions, these NOS interface names cannot be directly used as interface names for the container interfaces created by Containerlab.  
+For example, SR Linux maps its `ethernet-1/2` interface to the Linux interface `e1-2`. On the other hand, Juniper vSRX maps its `ge-0/0/1` interface to `eth2`.
+
 ##### Brief format
 
 The brief version looks as follows.
@@ -141,7 +156,7 @@ topology:
     ceos:
 
   links:
-    - endpoints: ["srl:e1-1", "ceos:eth1"]
+    - endpoints: ["srl:ethernet-1/1", "ceos:eth1"]
     - endpoints: ["srl:e1-2", "ceos:eth2"]
 ```
 

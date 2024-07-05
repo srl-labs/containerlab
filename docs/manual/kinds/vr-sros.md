@@ -49,6 +49,14 @@ Nokia SR OS node launched with containerlab can be managed via the following int
 !!!info
     Default user credentials: `admin:admin`
 
+## Interface naming
+
+Nokia SR OS nodes currently only support the simplified interface alias `1/1/X`, where X denotes the port number.  
+Multi-chassis, multi-linecard setups, and channelized interfaces are not supported by interface aliasing at the moment, and you must fall back to the old `ethX`-based naming scheme (see below) in these scenarios. 
+
+!!!info
+    Data port numbering starts at `1`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 Nokia SR OS container uses the following mapping for its interfaces:
