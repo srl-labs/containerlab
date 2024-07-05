@@ -21,6 +21,7 @@ type Endpoint interface {
 	GetNode() Node
 	GetIfaceName() string
 	GetIfaceAlias() string
+	GetIfaceDisplayName() string
 	GetRandIfaceName() string
 	GetMac() net.HardwareAddr
 	String() string
@@ -79,6 +80,13 @@ func (e *EndpointGeneric) GetIfaceName() string {
 
 func (e *EndpointGeneric) GetIfaceAlias() string {
 	return e.IfaceAlias
+}
+
+func (e *EndpointGeneric) GetIfaceDisplayName() string {
+	if e.IfaceAlias != "" {
+		return e.IfaceAlias
+	}
+	return e.IfaceName
 }
 
 func (e *EndpointGeneric) SetIfaceName(ifaceName string) {
