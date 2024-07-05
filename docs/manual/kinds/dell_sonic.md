@@ -6,17 +6,16 @@ search:
 
 Dell Enterprise SONiC VM is identified with `dell_sonic` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-## Managing Dell FTOSv nodes
+## Managing Dell SONiC nodes
+
+Dell SONiC node launched with containerlab can be managed via the following interfaces:
 
 /// note
-Containers with FTOS10v inside will take ~2-4min to fully boot.  
+
+1. Dell SONiC node will take ~2min to fully boot.  
 You can monitor the progress with `docker logs -f <container-name>`.
-///
 
-Dell FTOS10v node launched with containerlab can be managed via the following interfaces:
-
-/// note
-Default credentials are `admin:admin`
+2. Default credentials are `admin:admin`
 ///
 
 /// tab | SSH
