@@ -811,7 +811,7 @@ func (s *srl) GetMappedInterfaceName(ifName string) (string, error) {
 			return fmt.Sprintf("e%d-%d", parsedIndices["linecard"], parsedIndices["port"]), nil
 		}
 	} else {
-		return "", fmt.Errorf("%q missing linecard or port index!", ifName)
+		return "", fmt.Errorf("%q missing linecard or port index", ifName)
 	}
 }
 
