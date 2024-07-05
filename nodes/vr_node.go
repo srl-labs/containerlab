@@ -17,7 +17,7 @@ type VRNode struct {
 func NewVRNode(n NodeOverwrites) *VRNode {
 	vr := &VRNode{}
 
-	vr.DefaultNode = *NewDefaultNode(n.(NodeOverwrites))
+	vr.DefaultNode = *NewDefaultNode(n)
 
 	vr.InterfaceMappedPrefix = "eth"
 	vr.InterfaceOffset = 0
