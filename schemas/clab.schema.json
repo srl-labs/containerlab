@@ -76,9 +76,8 @@
                         "vr-cisco_n9kv",
                         "cisco_n9kv",
                         "cisco_ftdv",
-                        "vr-ftosv",
-                        "vr-dell_ftosv",
                         "dell_ftosv",
+                        "dell_sonic",
                         "vr-aoscx",
                         "vr-aruba_aoscx",
                         "aruba_aoscx",
@@ -886,6 +885,12 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "sonic-vm": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "dell_ftosv": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "dell_sonic": {
                             "$ref": "#/definitions/node-config"
                         },
                         "vr-nokia_sros": {
