@@ -103,6 +103,11 @@ var (
 		Minor:    10,
 		Revision: 0,
 	}
+
+	InterfaceRegexp       = regexp.MustCompile(`ethernet1-(?:\d+-)?(?P<port>\d+)`)
+	InterfaceMappedPrefix = "e1-"
+	InterfaceOffset       = 0
+	InterfaceHelp         = "ethernet1-X, ethernet1-1-X or e1-X, e1-1-X (where X >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
@@ -188,6 +193,11 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// mount srlinux topology
 	topoPath := filepath.Join(n.Cfg.LabDir, "topology.yml")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceMappedPrefix = InterfaceMappedPrefix
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
 
 	return nil
 }
@@ -773,13 +783,18 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (s *srl) CheckInterfaceName() error {
-	// allow eX-X-X and mgmt0 interface names
-	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|mgmt0`)
+	// allow ethernetX-X-X, eX-X-X and mgmt0 interface names
+	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|mgmt0`)
 	nm := strings.ToLower(s.Cfg.NetworkMode)
+
+	err := s.CheckInterfaceOverlap()
+	if err != nil {
+		return err
+	}
 
 	for _, e := range s.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.GetIfaceName())
+			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), s.InterfaceHelp)
 		}
 
 		if e.GetIfaceName() == "mgmt0" && nm != "none" {
