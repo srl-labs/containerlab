@@ -105,7 +105,7 @@ var (
 		Revision: 0,
 	}
 
-	InterfaceRegexp = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?<port>\d+)(?:/(?P<channel>\d+))?`)
+	InterfaceRegexp = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
 	InterfaceHelp   = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
