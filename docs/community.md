@@ -40,6 +40,23 @@ Participants:
 
 * [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 
+### RIPE 88
+
+<small>:material-youtube: [Simulating Networks at Scale with Clabernetes](https://ripe88.ripe.net/archives/video/1290/) · :material-calendar: 2024-05-20</small>
+
+Carl Montanari and Simon Peccaud introduced [Clabernetes](https://c9s.run) to RIPE 88 attendees.
+
+OVHCloud was an early adopter of Clabernetes, which helped them to simulate the WAN network in a way horizontally scalable way that naturally plugged into the rest of their network automation and CI workflow.
+
+<video width="100%" controls>
+  <source src="https://ripe88.ripe.net/archive/video/carl-montanari-simon-peccaud_simulating-networks-at-scale-with-clabernetes-and-ovhcloud_main_20240521-090009.mp4" type="video/mp4">
+</video>
+
+Participants:
+
+* [:material-twitter:](https://x.com/carlrmontanari) [:material-linkedin:](https://www.linkedin.com/in/carl-montanari-47888931/) Carl Montanari
+* [:material-twitter:](https://x.com/SimPeccaud) [:material-linkedin:](https://www.linkedin.com/in/simonpeccaud/) Simon Peccaud
+
 ### NFD 33
 
 <small>:material-youtube: [Lab as Code with Containerlab](https://www.youtube.com/watch?v=rjZjerjTrSY) · :material-calendar: 2023-10-30</small>
