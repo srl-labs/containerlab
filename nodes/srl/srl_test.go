@@ -26,7 +26,12 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				},
 				&links.EndpointVeth{
 					EndpointGeneric: links.EndpointGeneric{
-						IfaceName: "ethernet1-1-3",
+						IfaceName: "ethernet3-2",
+					},
+				},
+				&links.EndpointVeth{
+					EndpointGeneric: links.EndpointGeneric{
+						IfaceName: "ethernet2-3-4",
 					},
 				},
 				&links.EndpointVeth{
@@ -40,14 +45,12 @@ func TestSRLInterfaceParsing(t *testing.T) {
 					Cfg: &types.NodeConfig{
 						ShortName: "srl",
 					},
-					InterfaceRegexp:       InterfaceRegexp,
-					InterfaceMappedPrefix: InterfaceMappedPrefix,
-					InterfaceOffset:       InterfaceOffset,
+					InterfaceRegexp: InterfaceRegexp,
 				},
 			},
 			checkErrContains: "",
 			resultEps: []string{
-				"e1-1", "e1-3", "e1-5", "mgmt0",
+				"e1-1", "e3-2", "e2-3-4", "e1-5",
 			},
 		},
 		"original-parse": {
@@ -59,12 +62,12 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				},
 				&links.EndpointVeth{
 					EndpointGeneric: links.EndpointGeneric{
-						IfaceName: "e1-1-4",
+						IfaceName: "e1-2-4",
 					},
 				},
 				&links.EndpointVeth{
 					EndpointGeneric: links.EndpointGeneric{
-						IfaceName: "e1-6",
+						IfaceName: "e3-6",
 					},
 				},
 				&links.EndpointVeth{
@@ -79,14 +82,12 @@ func TestSRLInterfaceParsing(t *testing.T) {
 						ShortName:   "srl",
 						NetworkMode: "none",
 					},
-					InterfaceRegexp:       InterfaceRegexp,
-					InterfaceMappedPrefix: InterfaceMappedPrefix,
-					InterfaceOffset:       InterfaceOffset,
+					InterfaceRegexp: InterfaceRegexp,
 				},
 			},
 			checkErrContains: "",
 			resultEps: []string{
-				"e1-2", "e1-1-4", "e1-6", "mgmt0",
+				"e1-2", "e1-2-4", "e3-6", "mgmt0",
 			},
 		},
 		"parse-fail": {
@@ -102,10 +103,8 @@ func TestSRLInterfaceParsing(t *testing.T) {
 					Cfg: &types.NodeConfig{
 						ShortName: "srl",
 					},
-					InterfaceRegexp:       InterfaceRegexp,
-					InterfaceMappedPrefix: InterfaceMappedPrefix,
-					InterfaceOffset:       InterfaceOffset,
-					InterfaceHelp:         InterfaceHelp,
+					InterfaceRegexp: InterfaceRegexp,
+					InterfaceHelp:   InterfaceHelp,
 				},
 			},
 			checkErrContains: InterfaceHelp,

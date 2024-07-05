@@ -35,7 +35,7 @@ func TestVMInterfaceAliases(t *testing.T) {
 					InterfaceOffset: 2,
 				},
 			},
-			endpointErrContains: "does not match interface alias regexp",
+			endpointErrContains: "does not match regexp",
 			checkErrContains:    "",
 			resultEps:           []string{},
 		},

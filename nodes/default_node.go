@@ -298,16 +298,9 @@ func (d *DefaultNode) CheckInterfaceName() error {
 // CalculateInterfaceIndex parses the supplied interface name with the InterfaceRegexp.
 // Using the the port offset, it calculates the mapped interface index based on the InterfaceOffset and the first data interface index.
 func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
-	matches := d.InterfaceRegexp.FindStringSubmatch(ifName)
-	if len(matches) == 0 {
-		return 0, fmt.Errorf("%q does not match interface alias regexp %q, no match", ifName, d.InterfaceRegexp)
-	}
-
-	captureGroups := make(map[string]string)
-	for i, name := range d.InterfaceRegexp.SubexpNames() {
-		if i != 0 && name != "" {
-			captureGroups[name] = matches[i]
-		}
+	captureGroups, err := utils.GetRegexpCaptureGroups(d.InterfaceRegexp, ifName)
+	if err != nil {
+		return 0, err
 	}
 
 	if parsedIndex, found := captureGroups["port"]; found {

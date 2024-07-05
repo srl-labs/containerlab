@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -104,10 +105,8 @@ var (
 		Revision: 0,
 	}
 
-	InterfaceRegexp       = regexp.MustCompile(`ethernet1-(?:\d+-)?(?P<port>\d+)`)
-	InterfaceMappedPrefix = "e1-"
-	InterfaceOffset       = 0
-	InterfaceHelp         = "ethernet1-X, ethernet1-1-X or e1-X, e1-1-X (where X >= 1)"
+	InterfaceRegexp = regexp.MustCompile(`ethernet(?P<linecard>\d+)-(?<port>\d+)(?:-(?P<channel>\d+))?`)
+	InterfaceHelp   = "ethernetL-P, ethernetL-P-C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
@@ -195,8 +194,6 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
 
 	n.InterfaceRegexp = InterfaceRegexp
-	n.InterfaceMappedPrefix = InterfaceMappedPrefix
-	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
@@ -779,6 +776,43 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	}
 
 	return file.Close()
+}
+
+func (s *srl) GetMappedInterfaceName(ifName string) (string, error) {
+	captureGroups, err := utils.GetRegexpCaptureGroups(s.InterfaceRegexp, ifName)
+
+	if err != nil {
+		return "", err
+	}
+
+	indexGroups := []string{"linecard", "port", "channel"}
+	parsedIndices := make(map[string]int)
+	foundIndices := make(map[string]bool)
+
+	for _, indexKey := range indexGroups {
+		if index, found := captureGroups[indexKey]; found && index != "" {
+			foundIndices[indexKey] = true
+			parsedIndices[indexKey], err = strconv.Atoi(index)
+			if err != nil {
+				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+			}
+			if !(parsedIndices[indexKey] >= 1) {
+				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
+			}
+		} else {
+			foundIndices[indexKey] = false
+		}
+	}
+
+	if foundIndices["linecard"] && foundIndices["port"] {
+		if foundIndices["channel"] {
+			return fmt.Sprintf("e%d-%d-%d", parsedIndices["linecard"], parsedIndices["port"], parsedIndices["channel"]), nil
+		} else {
+			return fmt.Sprintf("e%d-%d", parsedIndices["linecard"], parsedIndices["port"]), nil
+		}
+	} else {
+		return "", fmt.Errorf("%q missing linecard or port index!", ifName)
+	}
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
