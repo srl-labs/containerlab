@@ -5,13 +5,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/klauspost/cpuid"
+	"github.com/klauspost/cpuid/v2"
 	log "github.com/sirupsen/logrus"
 )
 
 // VerifySSSE3Support check if SSSE3 is supported on the host.
 func VerifySSSE3Support() bool {
-	return cpuid.CPU.SSSE3()
+	return cpuid.CPU.Has(cpuid.SSSE3)
 }
 
 // VerifyVirtSupport checks if virtualization is supported by a cpu in case topology contains VM-based nodes

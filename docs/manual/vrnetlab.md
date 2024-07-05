@@ -111,6 +111,7 @@ The images that work with containerlab will appear in the supported list as we i
 | Fortinet Fortigate    | [fortinet_fortigate](kinds/fortinet_fortigate.md)       |                                            |                                                                                                                                                                                                              |
 | OpenBSD               | [openbsd](kinds/openbsd.md)                             |                                            |                                                                                                                                                                                                              |
 | FreeBSD               | [freebsd](kinds/freebsd.md)                             |                                            |                                                                                                                                                                                                              |
+| SONiC (VM)            | [sonic-vm](kinds/sonic-vm.md)                           |                                            |                                                                                                                                                                                                              |
 
 ### Tuning qemu parameters
 

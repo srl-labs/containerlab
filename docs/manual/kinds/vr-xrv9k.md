@@ -84,6 +84,11 @@ When containerlab launches Cisco XRv9k node, it will assign IPv4/6 address to th
 
 Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
 
+
+/// note
+Data interfaces may take 10+ minutes to come up, please be patient.
+///
+
 ## Features and options
 
 ### Node configuration
