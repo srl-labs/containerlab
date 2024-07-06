@@ -67,7 +67,7 @@ func TestGenerateConfigs(t *testing.T) {
 	}
 }
 
-func TestInterfacesAliases(t *testing.T) {
+func TestInterfacesAliases(t *testing.T) { //skipcq: GO-R1005
 	tests := map[string]struct {
 		endpoints           []*links.EndpointVeth
 		node                *DefaultNode
@@ -77,17 +77,17 @@ func TestInterfacesAliases(t *testing.T) {
 	}{
 		"basic-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/4",
 					},
@@ -108,17 +108,17 @@ func TestInterfacesAliases(t *testing.T) {
 		},
 		"parse-offset": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "GigabitEthernet2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Gi3",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "GigabitEthernet 5",
 					},
@@ -140,17 +140,17 @@ func TestInterfacesAliases(t *testing.T) {
 		},
 		"skip-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth1",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth4",
 					},
@@ -171,12 +171,12 @@ func TestInterfacesAliases(t *testing.T) {
 		},
 		"overlap": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/1",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth1",
 					},
@@ -195,7 +195,7 @@ func TestInterfacesAliases(t *testing.T) {
 		},
 		"out-of-bounds-index": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Gi1",
 					},
@@ -215,7 +215,7 @@ func TestInterfacesAliases(t *testing.T) {
 		},
 		"regexp-no-group": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Gi2",
 					},

@@ -10,7 +10,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-func TestVMInterfaceAliases(t *testing.T) {
+func TestVMInterfaceAliases(t *testing.T) { //skipcq: GO-R1005
 	tests := map[string]struct {
 		endpoints           []*links.EndpointVeth
 		node                *VRNode
@@ -20,7 +20,7 @@ func TestVMInterfaceAliases(t *testing.T) {
 	}{
 		"regexp-no-match": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
@@ -41,7 +41,7 @@ func TestVMInterfaceAliases(t *testing.T) {
 		},
 		"nomatch": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "0/0/1",
 					},
