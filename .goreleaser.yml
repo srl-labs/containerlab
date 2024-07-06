@@ -1,7 +1,7 @@
 # Copyright 2020 Nokia
 # Licensed under the BSD 3-Clause License.
 # SPDX-License-Identifier: BSD-3-Clause
-
+version: 2
 project_name: containerlab
 builds:
   - id: clab-bin
@@ -21,31 +21,62 @@ builds:
     # hooks:
     #   post:
     #     - upx "{{ .Path }}"
+
 dockers:
   - goos: linux
     goarch: amd64
     image_templates:
-      # if version starts with v0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
-      - '{{ $pfx := slice .Version 0 6}}{{- if eq $pfx "v0.0.0"}}ghcr.io/srl-labs/clab:beta{{else}}ghcr.io/srl-labs/clab:latest{{- end }}'
-      - 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}'
+      # if version contains 0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
+      - &amd_latest_image '{{- if contains .Version "0.0.0"}}ghcr.io/srl-labs/clab:beta-amd64{{- else}}{{- if not .IsSnapshot}}ghcr.io/srl-labs/clab:latest-amd64{{- end}}{{- end }}'
+      - &amd_versioned_image 'ghcr.io/srl-labs/clab:{{ replace .Version "v" "" }}-amd64'
+    build_flag_templates:
+      - "--platform=linux/amd64"
+    use: buildx
     dockerfile: goreleaser.dockerfile
+  - goos: linux
+    goarch: arm64
+    image_templates:
+      # if version contains 0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
+      - &arm_latest_image '{{- if contains .Version "0.0.0"}}ghcr.io/srl-labs/clab:beta-arm64{{- else}}{{- if not .IsSnapshot}}ghcr.io/srl-labs/clab:latest-arm64{{- end}}{{- end }}'
+      - &arm_versioned_image 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}-arm64'
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    dockerfile: goreleaser.dockerfile
+    use: buildx
+
+docker_manifests:
+  - name_template: 'ghcr.io/srl-labs/clab:{{ replace .Version "v" "" }}'
+    image_templates:
+      - *amd_versioned_image
+      - *arm_versioned_image
+  # this manifest creates a `latest` or `beta` tag based on the version of the release
+  - name_template: '{{- if contains .Version "0.0.0"}}ghcr.io/srl-labs/clab:beta{{- else}}{{- if not .IsSnapshot}}ghcr.io/srl-labs/clab:latest{{- end}}{{- end }}'
+    image_templates:
+      - *amd_latest_image
+      - *arm_latest_image
+
 archives:
   - name_template: '{{ .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Os }}_{{ .Arch }}'
     files:
       - lab-examples/**/*
       - templates/**/*
+
 checksum:
   name_template: checksums.txt
+
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 publishers:
   - name: fury.io deb/rpm packages
     ids:
       - containerlab-nfpms # this id belongs to nfpm section and is used to only upload artifacts from nfpm
     dir: "{{ dir .ArtifactPath }}"
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/netdevops/
+
 release:
   prerelease: auto
+
 changelog:
   use: github-native
 

@@ -14,7 +14,7 @@ env:
   GO_VER: "1.21.8"
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.5.9-insiders-4.52.2-hellt
-  GORELEASER_VER: v1.19.2
+  GORELEASER_VER: v2.0.1
   PY_VER: "3.10"
 
 jobs:
@@ -447,11 +447,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           version: ${{ env.GORELEASER_VER }}
-          args: release --rm-dist --debug
+          args: release --clean --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}

@@ -1,4 +1,4 @@
-name: vxlan-test
+name: kind-test
 
 "on":
   workflow_call:
