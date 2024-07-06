@@ -177,7 +177,7 @@ func printImpairments(qdiscs []gotc.Object) {
 	table.SetAutoFormatHeaders(false)
 	table.SetAutoWrapText(false)
 
-	rows := [][]string{}
+	var rows [][]string
 
 	for _, qdisc := range qdiscs {
 		rows = append(rows, qdiscToTableData(qdisc))
