@@ -19,22 +19,22 @@ func TestSRLInterfaceParsing(t *testing.T) {
 	}{
 		"alias-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ethernet-1/1",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ethernet-3/2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ethernet-2/3/4",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ethernet-1/5",
 					},
@@ -55,22 +55,22 @@ func TestSRLInterfaceParsing(t *testing.T) {
 		},
 		"original-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "e1-2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "e1-2-4",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "e3-6",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "mgmt0",
 					},
