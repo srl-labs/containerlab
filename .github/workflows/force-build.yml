@@ -10,7 +10,7 @@ env:
   GO_VER: "1.21.8"
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.5.9-insiders-4.52.2-hellt
-  GORELEASER_VER: v1.11.4
+  GORELEASER_VER: v2.0.1
   PY_VER: "3.10"
 
 jobs:
@@ -51,10 +51,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           version: ${{ env.GORELEASER_VER }}
-          args: release --rm-dist
+          args: release --clean --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
